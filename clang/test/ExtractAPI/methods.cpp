@@ -106,8 +106,8 @@ protected:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 1
+          "character": 6,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -170,8 +170,8 @@ protected:
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 2
+          "character": 6,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -284,8 +284,8 @@ protected:
       },
       "location": {
         "position": {
-          "character": 8,
-          "line": 4
+          "character": 7,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -365,8 +365,8 @@ protected:
       },
       "location": {
         "position": {
-          "character": 17,
-          "line": 10
+          "character": 16,
+          "line": 9
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -438,8 +438,8 @@ protected:
       },
       "location": {
         "position": {
-          "character": 17,
-          "line": 7
+          "character": 16,
+          "line": 6
         },
         "uri": "file://INPUT_DIR/input.h"
       },

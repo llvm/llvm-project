@@ -187,10 +187,6 @@ def main():
             if is_in_function:
                 if common.should_add_line_to_output(input_line, prefix_set):
                     # This input line of the function body will go as-is into the output.
-                    # Except make leading whitespace uniform: 2 spaces.
-                    input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(
-                        r"  ", input_line
-                    )
                     output_lines.append(input_line)
                 else:
                     continue

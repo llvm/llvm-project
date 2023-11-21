@@ -12,6 +12,7 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
@@ -1223,15 +1224,39 @@ bool SBThread::GetDescription(SBStream &description, bool stop_format) const {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (exe_ctx.HasThreadScope()) {
-    exe_ctx.GetThreadPtr()->DumpUsingSettingsFormat(strm,
-                                                    LLDB_INVALID_THREAD_ID,
-                                                    stop_format);
-    // strm.Printf("SBThread: tid = 0x%4.4" PRIx64,
-    // exe_ctx.GetThreadPtr()->GetID());
+    exe_ctx.GetThreadPtr()->DumpUsingSettingsFormat(
+        strm, LLDB_INVALID_THREAD_ID, stop_format);
   } else
     strm.PutCString("No value");
 
   return true;
+}
+
+SBError SBThread::GetDescriptionWithFormat(const SBFormat &format,
+                                           SBStream &output) {
+  Stream &strm = output.ref();
+
+  SBError error;
+  if (!format) {
+    error.SetErrorString("The provided SBFormat object is invalid");
+    return error;
+  }
+
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  if (exe_ctx.HasThreadScope()) {
+    if (exe_ctx.GetThreadPtr()->DumpUsingFormat(
+            strm, LLDB_INVALID_THREAD_ID, format.GetFormatEntrySP().get())) {
+      return error;
+    }
+  }
+
+  error.SetErrorStringWithFormat(
+      "It was not possible to generate a thread description with the given "
+      "format string '%s'",
+      format.GetFormatEntrySP()->string.c_str());
+  return error;
 }
 
 SBThread SBThread::GetExtendedBacktraceThread(const char *type) {

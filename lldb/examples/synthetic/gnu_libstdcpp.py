@@ -914,6 +914,11 @@ def VariantSummaryProvider(valobj, dict):
     if index == npos_value:
         return " No Value"
 
+    # Invalid index can happen when the variant is not initialized yet.
+    template_arg_count = data_obj.GetType().GetNumberOfTemplateArguments()
+    if index >= template_arg_count:
+        return " <Invalid>"
+
     active_type = data_obj.GetType().GetTemplateArgumentType(index)
     return f" Active Type = {active_type.GetDisplayTypeName()} "
 

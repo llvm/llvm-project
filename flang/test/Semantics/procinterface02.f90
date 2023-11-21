@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 subroutine foo(A, B, P)
   interface
     real elemental function foo_elemental(x)

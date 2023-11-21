@@ -527,7 +527,7 @@ define i32 @select_icmp_and_8_eq_0_xor_8(i32 %x) {
 define i64 @select_icmp_x_and_8_eq_0_y_xor_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_eq_0_y_xor_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[AND]] to i64
 ; CHECK-NEXT:    [[Y_XOR:%.*]] = xor i64 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i64 [[Y_XOR]]
 ;
@@ -542,7 +542,7 @@ define i64 @select_icmp_x_and_8_ne_0_y_xor_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_xor_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[XOR_Y:%.*]] = xor i64 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i64 [[XOR_Y]]
 ;
@@ -557,7 +557,7 @@ define i64 @select_icmp_x_and_8_ne_0_y_or_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[OR_Y:%.*]] = or i64 [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i64 [[OR_Y]]
 ;
@@ -572,7 +572,7 @@ define <2 x i64> @select_icmp_x_and_8_ne_0_y_or_8_vec(<2 x i32> %x, <2 x i64> %y
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8_vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[AND]], <i32 8, i32 8>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[OR_Y:%.*]] = or <2 x i64> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i64> [[OR_Y]]
 ;

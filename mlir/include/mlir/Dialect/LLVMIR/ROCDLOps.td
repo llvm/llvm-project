@@ -275,7 +275,7 @@ def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
 // raw buffer mode).
 //===---------------------------------------------------------------------===//
 
-def ROCDLBufferRsrc : LLVM_OpaquePointerInAddressSpace<8>;
+def ROCDLBufferRsrc : LLVM_PointerInAddressSpace<8>;
 
 def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [], [0], [Pure], 1>,

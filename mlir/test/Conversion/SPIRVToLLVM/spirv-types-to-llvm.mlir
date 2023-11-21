@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -convert-spirv-to-llvm='use-opaque-pointers=1' -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-spirv-to-llvm -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Array type

@@ -205,6 +205,10 @@ class Register<string n, list<string> altNames = []> {
   // isConstant - This register always holds a constant value (e.g. the zero
   // register in architectures such as MIPS)
   bit isConstant = false;
+
+  /// PositionOrder - Indicate tablegen to place the newly added register at a later
+  /// position to avoid iterations on them on unsupported target.
+  int PositionOrder = 0;
 }
 
 // RegisterWithSubRegs - This can be used to define instances of Register which
@@ -417,6 +421,10 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
 
   // List of asm names for the generated tuple registers.
   list<string> RegAsmNames = RegNames;
+
+  // PositionOrder - Indicate tablegen to place the newly added register at a later
+  // position to avoid iterations on them on unsupported target.
+  int PositionOrder = 0;
 }
 
 // RegisterCategory - This class is a list of RegisterClasses that belong to a

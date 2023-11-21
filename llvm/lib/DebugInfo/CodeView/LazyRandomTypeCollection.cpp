@@ -15,7 +15,6 @@
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>

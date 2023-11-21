@@ -1,18 +1,20 @@
-//
 // NOTE: this test requires gpu-sm80 and cusparselt
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE: --sparse-compiler="enable-runtime-library=true enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE: --shared-libs=%mlir_cuda_runtime \
-// DEFINE: --shared-libs=%mlir_c_runner_utils \
-// DEFINE: --e main --entry-point-result=void \
+// DEFINE:   --shared-libs=%mlir_cuda_runtime \
+// DEFINE:   --shared-libs=%mlir_c_runner_utils \
+// DEFINE:   --e main --entry-point-result=void \
 // DEFINE: | FileCheck %s
-
-//  RUN:  %{compile}" | %{run}
-//  RUN:  %{compile} gpu-data-transfer-strategy=pinned-dma" | %{run}
-//  Tracker #64316
-//  RUNNOT: %{compile} gpu-data-transfer-strategy=zero-copy" | %{run}
+//
+// with RT lib:
+//
+// RUN: %{compile} enable-runtime-library=true"  | %{run}
+//
+// without RT lib:
+//
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
@@ -34,7 +36,6 @@ module {
     } -> tensor<16x16xf16>
     return %0 : tensor<16x16xf16>
   }
-  
 
   //
   // This test performs a matrix multiplication
@@ -195,7 +196,7 @@ module {
       %pc0 = vector.transfer_read %c_out[%pci, %c0], %f0 : tensor<16x16xf16>, vector<16xf16>
       vector.print %pc0 : vector<16xf16>
     }
-    
+
     llvm.call @mgpuDestroySparseLtEnv() : () -> ()
     return
   }

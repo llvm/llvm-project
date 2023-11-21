@@ -235,37 +235,6 @@ static_assert(std::is_trivially_copyable<OptionalFileEntryRef>::value,
 
 namespace llvm {
 
-template <> struct PointerLikeTypeTraits<clang::FileEntryRef> {
-  static inline void *getAsVoidPointer(clang::FileEntryRef File) {
-    return const_cast<clang::FileEntryRef::MapEntry *>(&File.getMapEntry());
-  }
-
-  static inline clang::FileEntryRef getFromVoidPointer(void *Ptr) {
-    return clang::FileEntryRef(
-        *reinterpret_cast<const clang::FileEntryRef::MapEntry *>(Ptr));
-  }
-
-  static constexpr int NumLowBitsAvailable = PointerLikeTypeTraits<
-      const clang::FileEntryRef::MapEntry *>::NumLowBitsAvailable;
-};
-
-template <> struct PointerLikeTypeTraits<clang::OptionalFileEntryRef> {
-  static inline void *getAsVoidPointer(clang::OptionalFileEntryRef File) {
-    if (!File)
-      return nullptr;
-    return PointerLikeTypeTraits<clang::FileEntryRef>::getAsVoidPointer(*File);
-  }
-
-  static inline clang::OptionalFileEntryRef getFromVoidPointer(void *Ptr) {
-    if (!Ptr)
-      return std::nullopt;
-    return PointerLikeTypeTraits<clang::FileEntryRef>::getFromVoidPointer(Ptr);
-  }
-
-  static constexpr int NumLowBitsAvailable =
-      PointerLikeTypeTraits<clang::FileEntryRef>::NumLowBitsAvailable;
-};
-
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
   static inline clang::FileEntryRef getEmptyKey() {

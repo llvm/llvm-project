@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify %s
 // RUN: %clang_cc1 -verify=ref -Wno-bitfield-constant-conversion %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -Wno-bitfield-constant-conversion -verify %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref -Wno-bitfield-constant-conversion %s
 
 // expected-no-diagnostics
 // ref-no-diagnostics
@@ -31,6 +33,27 @@ namespace Basic {
     return a.a = 10;
   }
   static_assert(storeA2() == 2, "");
+
+#if __cplusplus >= 202002
+  struct Init1 {
+    unsigned a : 2 = 1;
+  };
+  constexpr Init1 I1{};
+  static_assert(I1.a == 1, "");
+
+  struct Init2 {
+    unsigned a : 2 = 100;
+  };
+  constexpr Init2 I2{};
+  static_assert(I2.a == 0, "");
+#endif
+
+  struct Init3 {
+    unsigned a : 2;
+    constexpr Init3() : a(100) {}
+  };
+  constexpr Init3 I3{};
+  static_assert(I3.a == 0, "");
 }
 
 namespace Overflow {

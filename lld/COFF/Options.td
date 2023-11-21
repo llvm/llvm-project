@@ -56,6 +56,9 @@ def filealign : P<"filealign", "Section alignment in the output file">;
 def functionpadmin : F<"functionpadmin">;
 def functionpadmin_opt : P<"functionpadmin",
     "Prepares an image for hotpatching">;
+def dependentloadflag : F<"dependentloadflag">;
+def dependentloadflag_opt : P<"dependentloadflag",
+    "Sets the default load flags used to resolve the statically linked imports of a module">;
 def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
@@ -232,6 +235,7 @@ defm demangle : B<"demangle",
 def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
     HelpText<"Add symbol as undefined, but allow it to remain undefined">;
 def kill_at : F<"kill-at">;
+defm lld_allow_duplicate_weak : B_priv<"lld-allow-duplicate-weak">;
 def lldemit : P<"lldemit", "Specify output type">;
 def lldmingw : F<"lldmingw">;
 def noseh : F<"noseh">;

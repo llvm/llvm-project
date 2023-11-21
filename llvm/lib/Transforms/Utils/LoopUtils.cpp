@@ -296,7 +296,7 @@ std::optional<MDNode *> llvm::makeFollowupLoopID(
         StringRef AttrName = cast<MDString>(NameMD)->getString();
 
         // Do not inherit excluded attributes.
-        return !AttrName.startswith(InheritOptionsExceptPrefix);
+        return !AttrName.starts_with(InheritOptionsExceptPrefix);
       };
 
       if (InheritThisAttribute(Op))
@@ -1690,7 +1690,7 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
     End = Builder.CreateFreeze(End, End->getName() + ".fr");
   }
   Value *StrideVal =
-      Stride ? Exp.expandCodeFor(Stride, Type::getInt64Ty(Ctx), Loc) : nullptr;
+      Stride ? Exp.expandCodeFor(Stride, Stride->getType(), Loc) : nullptr;
   LLVM_DEBUG(dbgs() << "Start: " << *Low << " End: " << *High << "\n");
   return {Start, End, StrideVal};
 }

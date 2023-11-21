@@ -15,9 +15,9 @@
 
 #include <stdint.h>
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcExp10fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibcExp10fTest, SpecialNumbers) {
+TEST_F(LlvmLibcExp10fTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp10f(aNaN));
@@ -40,7 +40,7 @@ TEST(LlvmLibcExp10fTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(1000.0f, LIBC_NAMESPACE::exp10f(3.0f));
 }
 
-TEST(LlvmLibcExp10fTest, Overflow) {
+TEST_F(LlvmLibcExp10fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::exp10f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);

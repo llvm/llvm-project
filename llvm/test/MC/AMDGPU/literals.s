@@ -925,3 +925,13 @@ v_sqrt_f32 v2, lit(123.0
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: expected immediate with lit modifier
 // NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: expected immediate with lit modifier
 v_sqrt_f32 v2, lit(v1)
+
+// Make sure lit() is accepted on operands without modifiers.
+
+// SICI: v_madak_f32 v4, 0x7e8, v8, 0x7e8        ; encoding: [0xff,0x10,0x08,0x42,0xe8,0x07,0x00,0x00]
+// GFX89: v_madak_f32 v4, 0x7e8, v8, 0x7e8        ; encoding: [0xff,0x10,0x08,0x30,0xe8,0x07,0x00,0x00]
+v_madak_f32 v4, lit(0x7e8), v8, lit(0x7e8)
+
+// NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: not a valid operand.
+// NOGFX89: :[[@LINE+1]]:{{[0-9]+}}: error: not a valid operand.
+v_madak_f32 v4, lit(lit(0x7e8)), v8, lit(0x7e8)

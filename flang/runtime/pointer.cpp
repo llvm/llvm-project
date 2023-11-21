@@ -56,17 +56,7 @@ void RTNAME(PointerSetDerivedLength)(
 
 void RTNAME(PointerApplyMold)(
     Descriptor &pointer, const Descriptor &mold, int rank) {
-  pointer = mold;
-  pointer.set_base_addr(nullptr);
-  pointer.raw().attribute = CFI_attribute_pointer;
-  pointer.raw().rank = rank;
-  if (auto *pointerAddendum{pointer.Addendum()}) {
-    if (const auto *moldAddendum{mold.Addendum()}) {
-      if (const auto *derived{moldAddendum->derivedType()}) {
-        pointerAddendum->set_derivedType(derived);
-      }
-    }
-  }
+  pointer.ApplyMold(mold, rank);
 }
 
 void RTNAME(PointerAssociateScalar)(Descriptor &pointer, void *target) {
@@ -183,14 +173,15 @@ int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
   int stat{RTNAME(PointerDeallocate)(
       pointer, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
-    DescriptorAddendum *addendum{pointer.Addendum()};
-    if (addendum) {
+    if (DescriptorAddendum * addendum{pointer.Addendum()}) {
       addendum->set_derivedType(derivedType);
+      pointer.raw().type = derivedType ? CFI_type_struct : CFI_type_other;
     } else {
       // Unlimited polymorphic descriptors initialized with
       // PointerNullifyIntrinsic do not have an addendum. Make sure the
       // derivedType is null in that case.
       INTERNAL_CHECK(!derivedType);
+      pointer.raw().type = CFI_type_other;
     }
   }
   return stat;

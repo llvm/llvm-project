@@ -9,7 +9,8 @@ watchpoints of the target."
 ) lldb::SBWatchpoint;
 
 %feature("docstring", "
-    With -1 representing an invalid hardware index."
+    Deprecated.  Previously: Return the hardware index of the 
+    watchpoint register.  Now: -1 is always returned."
 ) lldb::SBWatchpoint::GetHardwareIndex;
 
 %feature("docstring", "

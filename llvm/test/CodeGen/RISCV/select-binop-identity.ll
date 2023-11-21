@@ -2,15 +2,15 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64,RV64I %s
+; RUN:   | FileCheck -check-prefixes=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=SFB64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64,VTCONDOPS64 %s
+; RUN:   | FileCheck -check-prefixes=VTCONDOPS64 %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,ZICOND,ZICOND32 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicond -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=RV64,ZICOND,ZICOND64 %s
+; RUN:   | FileCheck -check-prefixes=ZICOND,ZICOND64 %s
 
 ; InstCombine canonicalizes (c ? x | y : x) to (x | (c ? y : 0)) similar for
 ; other binary operations using their identity value as the constant.
@@ -19,19 +19,19 @@
 ; the basic block we create when we expand select.
 
 define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 signext %y) {
-; RV32-LABEL: and_select_all_ones_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    or a0, a0, a1
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    ret
+; RV32I-LABEL: and_select_all_ones_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    ret
 ;
-; RV64-LABEL: and_select_all_ones_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, a0, -1
-; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    ret
+; RV64I-LABEL: and_select_all_ones_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    ret
 ;
 ; SFB64-LABEL: and_select_all_ones_i32:
 ; SFB64:       # %bb.0:
@@ -41,6 +41,118 @@ define signext i32 @and_select_all_ones_i32(i1 zeroext %c, i32 signext %x, i32 s
 ; SFB64-NEXT:  .LBB0_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
+;
+; VTCONDOPS64-LABEL: and_select_all_ones_i32:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskcn a0, a2, a0
+; VTCONDOPS64-NEXT:    and a1, a2, a1
+; VTCONDOPS64-NEXT:    or a0, a1, a0
+; VTCONDOPS64-NEXT:    ret
+;
+; ZICOND-LABEL: and_select_all_ones_i32:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    czero.nez a0, a2, a0
+; ZICOND-NEXT:    and a1, a2, a1
+; ZICOND-NEXT:    or a0, a1, a0
+; ZICOND-NEXT:    ret
+  %a = select i1 %c, i32 %x, i32 -1
+  %b = and i32 %a, %y
+  ret i32 %b
+}
+
+define signext i32 @and_select_all_ones_i32_cmp(i32 signext %x, i32 signext %y, i32 signext %z) {
+; RV32I-LABEL: and_select_all_ones_i32_cmp:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, a2, -4
+; RV32I-NEXT:    seqz a2, a2
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and_select_all_ones_i32_cmp:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a2, a2, -4
+; RV64I-NEXT:    seqz a2, a2
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; SFB64-LABEL: and_select_all_ones_i32_cmp:
+; SFB64:       # %bb.0:
+; SFB64-NEXT:    li a3, 4
+; SFB64-NEXT:    bne a2, a3, .LBB1_2
+; SFB64-NEXT:  # %bb.1:
+; SFB64-NEXT:    and a1, a1, a0
+; SFB64-NEXT:  .LBB1_2:
+; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    ret
+;
+; VTCONDOPS64-LABEL: and_select_all_ones_i32_cmp:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    addi a2, a2, -4
+; VTCONDOPS64-NEXT:    and a0, a1, a0
+; VTCONDOPS64-NEXT:    vt.maskc a1, a1, a2
+; VTCONDOPS64-NEXT:    or a0, a0, a1
+; VTCONDOPS64-NEXT:    ret
+;
+; ZICOND-LABEL: and_select_all_ones_i32_cmp:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    addi a2, a2, -4
+; ZICOND-NEXT:    and a0, a1, a0
+; ZICOND-NEXT:    czero.eqz a1, a1, a2
+; ZICOND-NEXT:    or a0, a0, a1
+; ZICOND-NEXT:    ret
+  %c = icmp eq i32 %z, 4
+  %a = select i1 %c, i32 %x, i32 -1
+  %b = and i32 %a, %y
+  ret i32 %b
+}
+
+define signext i32 @and_select_all_ones_i32_cmp2(i32 signext %x, i32 signext %y, i32 signext %z) {
+; RV32I-LABEL: and_select_all_ones_i32_cmp2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slti a2, a2, 4
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and_select_all_ones_i32_cmp2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slti a2, a2, 4
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; SFB64-LABEL: and_select_all_ones_i32_cmp2:
+; SFB64:       # %bb.0:
+; SFB64-NEXT:    li a3, 4
+; SFB64-NEXT:    bge a2, a3, .LBB2_2
+; SFB64-NEXT:  # %bb.1:
+; SFB64-NEXT:    and a1, a1, a0
+; SFB64-NEXT:  .LBB2_2:
+; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    ret
+;
+; VTCONDOPS64-LABEL: and_select_all_ones_i32_cmp2:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    slti a2, a2, 4
+; VTCONDOPS64-NEXT:    and a0, a1, a0
+; VTCONDOPS64-NEXT:    vt.maskcn a1, a1, a2
+; VTCONDOPS64-NEXT:    or a0, a0, a1
+; VTCONDOPS64-NEXT:    ret
+;
+; ZICOND-LABEL: and_select_all_ones_i32_cmp2:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    slti a2, a2, 4
+; ZICOND-NEXT:    and a0, a1, a0
+; ZICOND-NEXT:    czero.nez a1, a1, a2
+; ZICOND-NEXT:    or a0, a0, a1
+; ZICOND-NEXT:    ret
+  %c = icmp slt i32 %z, 4
   %a = select i1 %c, i32 %x, i32 -1
   %b = and i32 %a, %y
   ret i32 %b
@@ -56,23 +168,160 @@ define i64 @and_select_all_ones_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ; RV32-NEXT:    and a1, a4, a2
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: and_select_all_ones_i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    neg a0, a0
-; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    and a0, a2, a0
-; RV64-NEXT:    ret
+; RV64I-LABEL: and_select_all_ones_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a2, a0
+; RV64I-NEXT:    ret
 ;
 ; SFB64-LABEL: and_select_all_ones_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    bnez a0, .LBB1_2
+; SFB64-NEXT:    bnez a0, .LBB3_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    and a2, a2, a1
-; SFB64-NEXT:  .LBB1_2:
+; SFB64-NEXT:  .LBB3_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
+;
+; VTCONDOPS64-LABEL: and_select_all_ones_i64:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    vt.maskc a0, a2, a0
+; VTCONDOPS64-NEXT:    and a1, a2, a1
+; VTCONDOPS64-NEXT:    or a0, a1, a0
+; VTCONDOPS64-NEXT:    ret
+;
+; ZICOND64-LABEL: and_select_all_ones_i64:
+; ZICOND64:       # %bb.0:
+; ZICOND64-NEXT:    czero.eqz a0, a2, a0
+; ZICOND64-NEXT:    and a1, a2, a1
+; ZICOND64-NEXT:    or a0, a1, a0
+; ZICOND64-NEXT:    ret
   %a = select i1 %c, i64 -1, i64 %x
   %b = and i64 %y, %a
+  ret i64 %b
+}
+
+define i64 @and_select_all_ones_i64_cmp(i64 %x, i64 %y, i64 %z) {
+; RV32-LABEL: and_select_all_ones_i64_cmp:
+; RV32:       # %bb.0:
+; RV32-NEXT:    xori a4, a4, 4
+; RV32-NEXT:    or a4, a4, a5
+; RV32-NEXT:    seqz a4, a4
+; RV32-NEXT:    addi a4, a4, -1
+; RV32-NEXT:    or a1, a4, a1
+; RV32-NEXT:    or a0, a4, a0
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    ret
+;
+; RV64I-LABEL: and_select_all_ones_i64_cmp:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a2, a2, -4
+; RV64I-NEXT:    seqz a2, a2
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; SFB64-LABEL: and_select_all_ones_i64_cmp:
+; SFB64:       # %bb.0:
+; SFB64-NEXT:    li a3, 4
+; SFB64-NEXT:    bne a2, a3, .LBB4_2
+; SFB64-NEXT:  # %bb.1:
+; SFB64-NEXT:    and a1, a1, a0
+; SFB64-NEXT:  .LBB4_2:
+; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    ret
+;
+; VTCONDOPS64-LABEL: and_select_all_ones_i64_cmp:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    addi a2, a2, -4
+; VTCONDOPS64-NEXT:    and a0, a1, a0
+; VTCONDOPS64-NEXT:    vt.maskc a1, a1, a2
+; VTCONDOPS64-NEXT:    or a0, a0, a1
+; VTCONDOPS64-NEXT:    ret
+;
+; ZICOND64-LABEL: and_select_all_ones_i64_cmp:
+; ZICOND64:       # %bb.0:
+; ZICOND64-NEXT:    addi a2, a2, -4
+; ZICOND64-NEXT:    and a0, a1, a0
+; ZICOND64-NEXT:    czero.eqz a1, a1, a2
+; ZICOND64-NEXT:    or a0, a0, a1
+; ZICOND64-NEXT:    ret
+  %c = icmp eq i64 %z, 4
+  %a = select i1 %c, i64 %x, i64 -1
+  %b = and i64 %a, %y
+  ret i64 %b
+}
+
+define i64 @and_select_all_ones_i64_cmp2(i64 %x, i64 %y, i64 %z) {
+; RV32I-LABEL: and_select_all_ones_i64_cmp2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    beqz a5, .LBB5_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    slti a4, a5, 0
+; RV32I-NEXT:    j .LBB5_3
+; RV32I-NEXT:  .LBB5_2:
+; RV32I-NEXT:    sltiu a4, a4, 4
+; RV32I-NEXT:  .LBB5_3:
+; RV32I-NEXT:    addi a4, a4, -1
+; RV32I-NEXT:    or a1, a4, a1
+; RV32I-NEXT:    or a0, a4, a0
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    and a1, a1, a3
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and_select_all_ones_i64_cmp2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slti a2, a2, 4
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; SFB64-LABEL: and_select_all_ones_i64_cmp2:
+; SFB64:       # %bb.0:
+; SFB64-NEXT:    li a3, 4
+; SFB64-NEXT:    bge a2, a3, .LBB5_2
+; SFB64-NEXT:  # %bb.1:
+; SFB64-NEXT:    and a1, a1, a0
+; SFB64-NEXT:  .LBB5_2:
+; SFB64-NEXT:    mv a0, a1
+; SFB64-NEXT:    ret
+;
+; VTCONDOPS64-LABEL: and_select_all_ones_i64_cmp2:
+; VTCONDOPS64:       # %bb.0:
+; VTCONDOPS64-NEXT:    slti a2, a2, 4
+; VTCONDOPS64-NEXT:    and a0, a1, a0
+; VTCONDOPS64-NEXT:    vt.maskcn a1, a1, a2
+; VTCONDOPS64-NEXT:    or a0, a0, a1
+; VTCONDOPS64-NEXT:    ret
+;
+; ZICOND32-LABEL: and_select_all_ones_i64_cmp2:
+; ZICOND32:       # %bb.0:
+; ZICOND32-NEXT:    slti a6, a5, 0
+; ZICOND32-NEXT:    czero.eqz a6, a6, a5
+; ZICOND32-NEXT:    sltiu a4, a4, 4
+; ZICOND32-NEXT:    czero.nez a4, a4, a5
+; ZICOND32-NEXT:    or a4, a4, a6
+; ZICOND32-NEXT:    addi a4, a4, -1
+; ZICOND32-NEXT:    or a1, a4, a1
+; ZICOND32-NEXT:    or a0, a4, a0
+; ZICOND32-NEXT:    and a0, a0, a2
+; ZICOND32-NEXT:    and a1, a1, a3
+; ZICOND32-NEXT:    ret
+;
+; ZICOND64-LABEL: and_select_all_ones_i64_cmp2:
+; ZICOND64:       # %bb.0:
+; ZICOND64-NEXT:    slti a2, a2, 4
+; ZICOND64-NEXT:    and a0, a1, a0
+; ZICOND64-NEXT:    czero.nez a1, a1, a2
+; ZICOND64-NEXT:    or a0, a0, a1
+; ZICOND64-NEXT:    ret
+  %c = icmp slt i64 %z, 4
+  %a = select i1 %c, i64 %x, i64 -1
+  %b = and i64 %a, %y
   ret i64 %b
 }
 
@@ -93,10 +342,10 @@ define signext i32 @or_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 s
 ;
 ; SFB64-LABEL: or_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    beqz a0, .LBB2_2
+; SFB64-NEXT:    beqz a0, .LBB6_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    or a2, a2, a1
-; SFB64-NEXT:  .LBB2_2:
+; SFB64-NEXT:  .LBB6_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -135,10 +384,10 @@ define i64 @or_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: or_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    bnez a0, .LBB3_2
+; SFB64-NEXT:    bnez a0, .LBB7_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    or a2, a2, a1
-; SFB64-NEXT:  .LBB3_2:
+; SFB64-NEXT:  .LBB7_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -183,10 +432,10 @@ define signext i32 @xor_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; SFB64-LABEL: xor_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    bnez a0, .LBB4_2
+; SFB64-NEXT:    bnez a0, .LBB8_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    xor a2, a2, a1
-; SFB64-NEXT:  .LBB4_2:
+; SFB64-NEXT:  .LBB8_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -225,10 +474,10 @@ define i64 @xor_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: xor_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    beqz a0, .LBB5_2
+; SFB64-NEXT:    beqz a0, .LBB9_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    xor a2, a2, a1
-; SFB64-NEXT:  .LBB5_2:
+; SFB64-NEXT:  .LBB9_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -273,10 +522,10 @@ define signext i32 @add_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; SFB64-LABEL: add_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    bnez a0, .LBB6_2
+; SFB64-NEXT:    bnez a0, .LBB10_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    addw a2, a2, a1
-; SFB64-NEXT:  .LBB6_2:
+; SFB64-NEXT:  .LBB10_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -323,10 +572,10 @@ define i64 @add_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: add_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    beqz a0, .LBB7_2
+; SFB64-NEXT:    beqz a0, .LBB11_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    add a2, a2, a1
-; SFB64-NEXT:  .LBB7_2:
+; SFB64-NEXT:  .LBB11_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -373,10 +622,10 @@ define signext i32 @sub_select_all_zeros_i32(i1 zeroext %c, i32 signext %x, i32 
 ;
 ; SFB64-LABEL: sub_select_all_zeros_i32:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    bnez a0, .LBB8_2
+; SFB64-NEXT:    bnez a0, .LBB12_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    subw a2, a2, a1
-; SFB64-NEXT:  .LBB8_2:
+; SFB64-NEXT:  .LBB12_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;
@@ -423,10 +672,10 @@ define i64 @sub_select_all_zeros_i64(i1 zeroext %c, i64 %x, i64 %y) {
 ;
 ; SFB64-LABEL: sub_select_all_zeros_i64:
 ; SFB64:       # %bb.0:
-; SFB64-NEXT:    beqz a0, .LBB9_2
+; SFB64-NEXT:    beqz a0, .LBB13_2
 ; SFB64-NEXT:  # %bb.1:
 ; SFB64-NEXT:    sub a2, a2, a1
-; SFB64-NEXT:  .LBB9_2:
+; SFB64-NEXT:  .LBB13_2:
 ; SFB64-NEXT:    mv a0, a2
 ; SFB64-NEXT:    ret
 ;

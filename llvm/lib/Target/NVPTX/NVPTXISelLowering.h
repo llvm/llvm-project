@@ -57,6 +57,7 @@ enum NodeType : unsigned {
   MUL_WIDE_UNSIGNED,
   IMAD,
   SETP_F16X2,
+  SETP_BF16X2,
   BFE,
   BFI,
   PRMT,
@@ -585,6 +586,12 @@ public:
 
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
+    // There's rarely any point of packing something into a vector type if we
+    // already have the source data.
+    return true;
+  }
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here

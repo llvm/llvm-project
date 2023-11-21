@@ -5546,10 +5546,12 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
              "a scale at the same time!");
       Constant *C = ConstantInt::getSigned(SE.getEffectiveSCEVType(OpTy),
                                            -(uint64_t)Offset);
-      if (C->getType() != OpTy)
-        C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
-                                                          OpTy, false),
-                                  C, OpTy);
+      if (C->getType() != OpTy) {
+        C = ConstantFoldCastOperand(
+            CastInst::getCastOpcode(C, false, OpTy, false), C, OpTy,
+            CI->getModule()->getDataLayout());
+        assert(C && "Cast of ConstantInt should have folded");
+      }
 
       CI->setOperand(1, C);
     }

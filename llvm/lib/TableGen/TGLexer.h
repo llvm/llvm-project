@@ -98,6 +98,7 @@ enum TokKind {
   Defm,
   Defset,
   Defvar,
+  Dump,
   Foreach,
   If,
   Let,

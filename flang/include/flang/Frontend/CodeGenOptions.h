@@ -16,6 +16,7 @@
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
@@ -68,6 +69,9 @@ public:
 
   /// The format used for serializing remarks (default: YAML)
   std::string OptRecordFormat;
+
+  /// Options to add to the linker for the object file
+  std::vector<std::string> DependentLibs;
 
   // The RemarkKind enum class and OptRemark struct are identical to what Clang
   // has

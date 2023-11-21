@@ -31,7 +31,7 @@
 using namespace __asan;
 
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
-  static bool UseImpl() { return asan_init_is_running; }
+  static bool UseImpl() { return AsanInitIsRunning(); }
   static void OnAllocate(const void *ptr, uptr size) {
 #  if CAN_SANITIZE_LEAKS
     // Suppress leaks from dlerror(). Previously dlsym hack on global array was

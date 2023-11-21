@@ -78,7 +78,7 @@ public:
     class _LIBCPP_EXPORTED_FROM_ABI id;
 
     typedef int category;
-    _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
+
     static const category // values assigned here are for exposition only
         none     = 0,
         collate  = LC_COLLATE_MASK,

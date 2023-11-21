@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Annotations/Annotations.h"
+#include "gtest/gtest.h"
 #include <cassert>
 #include <functional>
 #include <memory>
@@ -216,5 +217,20 @@ const IndirectFieldDecl *test::findIndirectFieldDecl(ASTContext &ASTCtx,
   assert(TargetNodes.size() == 1 && "Name must be unique");
   const auto *Result = selectFirst<IndirectFieldDecl>("i", TargetNodes);
   assert(Result != nullptr);
+  return Result;
+}
+
+std::vector<const Formula *> test::parseFormulas(Arena &A, StringRef Lines) {
+  std::vector<const Formula *> Result;
+  while (!Lines.empty()) {
+    auto [First, Rest] = Lines.split('\n');
+    Lines = Rest;
+    if (First.trim().empty())
+      continue;
+    if (auto F = A.parseFormula(First))
+      Result.push_back(&*F);
+    else
+      ADD_FAILURE() << llvm::toString(F.takeError());
+  }
   return Result;
 }

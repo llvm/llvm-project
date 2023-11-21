@@ -4416,9 +4416,9 @@ define amdgpu_kernel void @max_i64_constant(ptr addrspace(1) %out) {
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX7LESS-NEXT:  ; %bb.1:
-; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v1, 0
+; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    s_mov_b32 m0, -1
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    ds_max_rtn_i64 v[0:1], v2, v[0:1]
@@ -4452,8 +4452,8 @@ define amdgpu_kernel void @max_i64_constant(ptr addrspace(1) %out) {
 ; GFX8-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 5
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    ds_max_rtn_i64 v[0:1], v2, v[0:1]
@@ -4966,9 +4966,9 @@ define amdgpu_kernel void @min_i64_constant(ptr addrspace(1) %out) {
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX7LESS-NEXT:  ; %bb.1:
-; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v1, 0
+; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    s_mov_b32 m0, -1
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    ds_min_rtn_i64 v[0:1], v2, v[0:1]
@@ -5002,8 +5002,8 @@ define amdgpu_kernel void @min_i64_constant(ptr addrspace(1) %out) {
 ; GFX8-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 5
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    ds_min_rtn_i64 v[0:1], v2, v[0:1]
@@ -5516,9 +5516,9 @@ define amdgpu_kernel void @umax_i64_constant(ptr addrspace(1) %out) {
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB22_2
 ; GFX7LESS-NEXT:  ; %bb.1:
-; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v1, 0
+; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    s_mov_b32 m0, -1
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    ds_max_rtn_u64 v[0:1], v2, v[0:1]
@@ -5551,8 +5551,8 @@ define amdgpu_kernel void @umax_i64_constant(ptr addrspace(1) %out) {
 ; GFX8-NEXT:    s_cbranch_execz .LBB22_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 5
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    ds_max_rtn_u64 v[0:1], v2, v[0:1]
@@ -6061,9 +6061,9 @@ define amdgpu_kernel void @umin_i64_constant(ptr addrspace(1) %out) {
 ; GFX7LESS-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX7LESS-NEXT:    s_cbranch_execz .LBB24_2
 ; GFX7LESS-NEXT:  ; %bb.1:
-; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v0, 5
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v1, 0
+; GFX7LESS-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7LESS-NEXT:    s_mov_b32 m0, -1
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    ds_min_rtn_u64 v[0:1], v2, v[0:1]
@@ -6096,8 +6096,8 @@ define amdgpu_kernel void @umin_i64_constant(ptr addrspace(1) %out) {
 ; GFX8-NEXT:    s_cbranch_execz .LBB24_2
 ; GFX8-NEXT:  ; %bb.1:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 5
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    ds_min_rtn_u64 v[0:1], v2, v[0:1]

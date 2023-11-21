@@ -364,10 +364,6 @@ define <4 x i16> @test_v4i16(<4 x i16> %a) {
 ; CHECK-NEXT: .param .align 16 .b8 test_v5i16_param_0[16]
 ; CHECK-DAG:  ld.param.u16    [[E4:%rs[0-9]+]], [test_v5i16_param_0+8];
 ; CHECK-DAG:  ld.param.v4.u16 {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]], [[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}, [test_v5i16_param_0]
-; CHECK-DAG:	mov.b32 	[[R0:%r[0-9]+]], {[[E0]], [[E1]]};
-; CHECK-DAG:	mov.b32 	{[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[R0]];
-; CHECK-DAG:	mov.b32 	[[R1:%r[0-9]+]], {[[E2]], [[E3]]};
-; CHECK-DAG:	mov.b32 	{[[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}, [[R1]];
 ; CHECK:      .param .align 16 .b8 param0[16];
 ; CHECK-DAG:  st.param.v4.b16 [param0+0], {[[E0]], [[E1]], [[E2]], [[E3]]};
 ; CHECK-DAG:  st.param.b16    [param0+8], [[E4]];
@@ -496,7 +492,6 @@ define <4 x half> @test_v4f16(<4 x half> %a) {
 ; CHECK-LABEL: test_v5f16(
 ; CHECK:      .param .align 16 .b8 test_v5f16_param_0[16]
 ; CHECK-DAG:  ld.param.v4.b16  {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]], [[E2:%rs[0-9]+]], [[E3:%rs[0-9]+]]}, [test_v5f16_param_0];
-; CHECK-DAG:  mov.b32         {[[E0:%rs[0-9]+]], [[E1:%rs[0-9]+]]}, [[HH01]];
 ; CHECK-DAG:  ld.param.b16    [[E4:%rs[0-9]+]], [test_v5f16_param_0+8];
 ; CHECK:      .param .align 16 .b8 param0[16];
 ; CHECK-DAG:  st.param.v4.b16 [param0+0],

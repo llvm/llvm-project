@@ -88,7 +88,7 @@ processOperands(llvm::IRBuilderBase &builder,
                 struct OpenACCIRBuilder::MapperAllocas &mapperAllocas) {
   OpenACCIRBuilder *accBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::LLVMContext &ctx = builder.getContext();
-  auto *i8PtrTy = llvm::Type::getInt8PtrTy(ctx);
+  auto *i8PtrTy = llvm::PointerType::getUnqual(ctx);
   auto *arrI8PtrTy = llvm::ArrayType::get(i8PtrTy, totalNbOperand);
   auto *i64Ty = llvm::Type::getInt64Ty(ctx);
   auto *arrI64Ty = llvm::ArrayType::get(i64Ty, totalNbOperand);
@@ -115,17 +115,13 @@ processOperands(llvm::IRBuilderBase &builder,
     llvm::Value *ptrBaseGEP = builder.CreateInBoundsGEP(
         arrI8PtrTy, mapperAllocas.ArgsBase,
         {builder.getInt32(0), builder.getInt32(index)});
-    llvm::Value *ptrBaseCast = builder.CreateBitCast(
-        ptrBaseGEP, dataPtrBase->getType()->getPointerTo());
-    builder.CreateStore(dataPtrBase, ptrBaseCast);
+    builder.CreateStore(dataPtrBase, ptrBaseGEP);
 
     // Store pointer extracted from operand into the i-th position of args.
     llvm::Value *ptrGEP = builder.CreateInBoundsGEP(
         arrI8PtrTy, mapperAllocas.Args,
         {builder.getInt32(0), builder.getInt32(index)});
-    llvm::Value *ptrCast =
-        builder.CreateBitCast(ptrGEP, dataPtr->getType()->getPointerTo());
-    builder.CreateStore(dataPtr, ptrCast);
+    builder.CreateStore(dataPtr, ptrGEP);
 
     // Store size extracted from operand into the i-th position of argSizes.
     llvm::Value *sizeGEP = builder.CreateInBoundsGEP(
@@ -369,7 +365,7 @@ static LogicalResult convertDataOp(acc::DataOp &op,
   llvm::GlobalVariable *mapnames =
       accBuilder->createOffloadMapnames(names, ".offload_mapnames");
   llvm::Value *mapnamesArg = builder.CreateConstInBoundsGEP2_32(
-      llvm::ArrayType::get(llvm::Type::getInt8PtrTy(ctx), totalNbOperand),
+      llvm::ArrayType::get(llvm::PointerType::getUnqual(ctx), totalNbOperand),
       mapnames, /*Idx0=*/0, /*Idx1=*/0);
 
   // Create call to start the data region.
@@ -466,7 +462,7 @@ convertStandaloneDataOp(OpTy &op, llvm::IRBuilderBase &builder,
   llvm::GlobalVariable *mapnames =
       accBuilder->createOffloadMapnames(names, ".offload_mapnames");
   llvm::Value *mapnamesArg = builder.CreateConstInBoundsGEP2_32(
-      llvm::ArrayType::get(llvm::Type::getInt8PtrTy(ctx), totalNbOperand),
+      llvm::ArrayType::get(llvm::PointerType::getUnqual(ctx), totalNbOperand),
       mapnames, /*Idx0=*/0, /*Idx1=*/0);
 
   accBuilder->emitMapperCall(builder.saveIP(), mapperFunc, srcLocInfo,

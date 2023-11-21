@@ -301,6 +301,35 @@ value llvm_targetmachine_set_verbose_asm(value Verb, value Machine) {
   return Val_unit;
 }
 
+/* bool -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_fast_isel(value Enable, value Machine) {
+  LLVMSetTargetMachineFastISel(TargetMachine_val(Machine), Bool_val(Enable));
+  return Val_unit;
+}
+
+/* bool -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_global_isel(value Enable, value Machine) {
+  LLVMSetTargetMachineGlobalISel(TargetMachine_val(Machine), Bool_val(Enable));
+  return Val_unit;
+}
+
+/* ?mode:GlobalISelAbortMode.t -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_global_isel_abort(value Mode, value Machine) {
+  LLVMGlobalISelAbortMode AbortModeEnum = LLVMGlobalISelAbortEnable;
+  if (Mode != Val_int(0))
+    AbortModeEnum = Int_val(Field(Mode, 0));
+  LLVMSetTargetMachineGlobalISelAbort(TargetMachine_val(Machine),
+                                      AbortModeEnum);
+  return Val_unit;
+}
+
+/* bool -> TargetMachine.t -> unit */
+value llvm_targetmachine_set_machine_outliner(value Enable, value Machine) {
+  LLVMSetTargetMachineMachineOutliner(TargetMachine_val(Machine),
+                                      Bool_val(Enable));
+  return Val_unit;
+}
+
 /* Llvm.llmodule -> CodeGenFileType.t -> string -> TargetMachine.t -> unit */
 value llvm_targetmachine_emit_to_file(value Module, value FileType,
                                       value FileName, value Machine) {

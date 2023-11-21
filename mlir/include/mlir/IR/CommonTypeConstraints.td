@@ -117,7 +117,8 @@ class DialectType<Dialect d, Pred condition, string descr = "",
 
 // A variadic type constraint. It expands to zero or more of the base type. This
 // class is used for supporting variadic operands/results.
-class Variadic<Type type> : TypeConstraint<type.predicate, type.summary,
+class Variadic<Type type> : TypeConstraint<type.predicate,
+                                           "variadic of " # type.summary,
                                            type.cppClassName> {
   Type baseType = type;
   int minSize = 0;

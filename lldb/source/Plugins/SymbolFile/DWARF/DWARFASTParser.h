@@ -29,6 +29,9 @@ class SymbolFileDWARF;
 
 class DWARFASTParser {
 public:
+  enum class Kind { DWARFASTParserClang };
+  DWARFASTParser(Kind kind) : m_kind(kind) {}
+
   virtual ~DWARFASTParser() = default;
 
   virtual lldb::TypeSP ParseTypeFromDWARF(const SymbolContext &sc,
@@ -61,7 +64,14 @@ public:
   ParseChildArrayInfo(const DWARFDIE &parent_die,
                       const ExecutionContext *exe_ctx = nullptr);
 
+  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
+
   static lldb::AccessType GetAccessTypeFromDWARF(uint32_t dwarf_accessibility);
+
+  Kind GetKind() const { return m_kind; }
+
+private:
+  const Kind m_kind;
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

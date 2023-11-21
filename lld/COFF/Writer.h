@@ -64,6 +64,12 @@ public:
   // Used only when the name is longer than 8 bytes.
   void setStringTableOff(uint32_t v) { stringTableOff = v; }
 
+  bool isCodeSection() const {
+    return (header.Characteristics & llvm::COFF::IMAGE_SCN_CNT_CODE) &&
+           (header.Characteristics & llvm::COFF::IMAGE_SCN_MEM_READ) &&
+           (header.Characteristics & llvm::COFF::IMAGE_SCN_MEM_EXECUTE);
+  }
+
   // N.B. The section index is one based.
   uint32_t sectionIndex = 0;
 

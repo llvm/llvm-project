@@ -347,7 +347,7 @@ define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, ptr %p) {
 define i32 @zext_ctpop(i16 %x) {
 ; CHECK-LABEL: @zext_ctpop(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X:%.*]]), !range [[RNG4:![0-9]+]]
-; CHECK-NEXT:    [[P:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[P:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
   %z = zext i16 %x to i32
@@ -358,7 +358,7 @@ define i32 @zext_ctpop(i16 %x) {
 define <2 x i32> @zext_ctpop_vec(<2 x i7> %x) {
 ; CHECK-LABEL: @zext_ctpop_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i7> @llvm.ctpop.v2i7(<2 x i7> [[X:%.*]]), !range [[RNG2]]
-; CHECK-NEXT:    [[P:%.*]] = zext <2 x i7> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[P:%.*]] = zext nneg <2 x i7> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[P]]
 ;
   %z = zext <2 x i7> %x to <2 x i32>

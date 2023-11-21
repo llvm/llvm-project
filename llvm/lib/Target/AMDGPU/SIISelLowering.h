@@ -586,6 +586,10 @@ public:
   getTargetMMOFlags(const Instruction &I) const override;
 };
 
+// Returns true if argument is a boolean value which is not serialized into
+// memory or argument and does not require v_cndmask_b32 to be deserialized.
+bool isBoolSGPR(SDValue V);
+
 } // End namespace llvm
 
 #endif

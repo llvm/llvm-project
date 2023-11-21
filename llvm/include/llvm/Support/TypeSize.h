@@ -16,7 +16,6 @@
 #define LLVM_SUPPORT_TYPESIZE_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -319,12 +318,6 @@ public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
-  static constexpr TypeSize getFixed(ScalarTy ExactSize) {
-    return TypeSize(ExactSize, false);
-  }
-  static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
-    return TypeSize(MinimumSize, true);
-  }
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);
   }
@@ -334,12 +327,6 @@ public:
   static constexpr TypeSize Scalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
-
-  LLVM_DEPRECATED("Use getFixedValue() instead", "getFixedValue")
-  constexpr ScalarTy getFixedSize() const { return getFixedValue(); }
-  
-  LLVM_DEPRECATED("Use getKnownMinValue() instead", "getKnownMinValue")
-  constexpr ScalarTy getKnownMinSize() const { return getKnownMinValue(); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

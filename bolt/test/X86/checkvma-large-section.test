@@ -19,7 +19,7 @@ ProgramHeaders:
     Flags: [ PF_R, PF_W ]
     FirstSec: .large_sec
     LastSec: .large_sec
-    VAddr: 0x4a0279a8
+    VAddr: 0x80000000
   - Type: PT_GNU_RELRO
     Flags: [ PF_R ]
 Sections:
@@ -28,8 +28,8 @@ Sections:
     Content: 00
     AddressAlign: 0x1
   - Name: .large_sec
-    Type: SHT_PROGBITS
+    Type: SHT_NOBITS
     Flags: [ SHF_WRITE, SHF_ALLOC ]
-    Address: 0x4a0279a8
-    Size: 0xdf8bb1a0
+    Address: 0x80000000
+    Size: 0x80000000
 ...

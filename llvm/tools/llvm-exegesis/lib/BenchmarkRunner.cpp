@@ -292,13 +292,13 @@ private:
 
     close(PipeFiles[0]);
 
-    int CounterFileDescriptor = Counter->getFileDescriptor();
-    Error SendError =
-        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
-
-    if (SendError)
-      return SendError;
-
+    // Make sure to attach to the process (and wait for the sigstop to be
+    // delivered and for the process to continue) before we write to the counter
+    // file descriptor. Attaching to the process before writing to the socket
+    // ensures that the subprocess at most has blocked on the read call. If we
+    // attach afterwards, the subprocess might exit before we get to the attach
+    // call due to effects like scheduler contention, introducing transient
+    // failures.
     if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
       return make_error<Failure>("Failed to attach to the child process: " +
                                  Twine(strerror(errno)));
@@ -313,6 +313,13 @@ private:
       return make_error<Failure>(
           "Failed to continue execution of the child process: " +
           Twine(strerror(errno)));
+
+    int CounterFileDescriptor = Counter->getFileDescriptor();
+    Error SendError =
+        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
+
+    if (SendError)
+      return SendError;
 
     int ChildStatus;
     if (wait(&ChildStatus) == -1) {

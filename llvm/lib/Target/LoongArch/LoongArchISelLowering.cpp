@@ -218,16 +218,76 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Set operations for 'LSX' feature.
 
-  if (Subtarget.hasExtLSX())
-    setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN},
-                       {MVT::v2i64, MVT::v4i32, MVT::v8i16, MVT::v16i8}, Legal);
+  if (Subtarget.hasExtLSX()) {
+    for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+      // Expand all truncating stores and extending loads.
+      for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
+        setTruncStoreAction(VT, InnerVT, Expand);
+        setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
+      }
+      // By default everything must be expanded. Then we will selectively turn
+      // on ones that can be effectively codegen'd.
+      for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
+        setOperationAction(Op, VT, Expand);
+    }
+
+    for (MVT VT : LSXVTs) {
+      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Legal);
+      setOperationAction(ISD::BITCAST, VT, Legal);
+      setOperationAction(ISD::UNDEF, VT, Legal);
+
+      // FIXME: For BUILD_VECTOR, it is temporarily set to `Legal` here, and it
+      // will be `Custom` handled in the future.
+      setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
+    }
+    for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+      setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
+      setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
+                         Legal);
+      setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
+                         VT, Legal);
+      setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
+      setOperationAction(ISD::CTPOP, VT, Legal);
+    }
+    for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
+      setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
+      setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
+      setOperationAction(ISD::FMA, VT, Legal);
+    }
+  }
 
   // Set operations for 'LASX' feature.
 
-  if (Subtarget.hasExtLASX())
-    setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN},
-                       {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8},
-                       Legal);
+  if (Subtarget.hasExtLASX()) {
+    for (MVT VT : LASXVTs) {
+      setOperationAction({ISD::LOAD, ISD::STORE}, VT, Legal);
+      setOperationAction(ISD::BITCAST, VT, Legal);
+      setOperationAction(ISD::UNDEF, VT, Legal);
+
+      // FIXME: Same as above.
+      setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
+    }
+    for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
+      setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
+      setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
+                         Legal);
+      setOperationAction({ISD::MUL, ISD::SDIV, ISD::SREM, ISD::UDIV, ISD::UREM},
+                         VT, Legal);
+      setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
+      setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
+      setOperationAction(ISD::CTPOP, VT, Legal);
+    }
+    for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
+      setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
+      setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
+      setOperationAction(ISD::FMA, VT, Legal);
+    }
+  }
 
   // Set DAG combine for LA32 and LA64.
 
@@ -4184,8 +4244,9 @@ LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
 Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
-  Value *Ordering =
-      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(Ord));
+  AtomicOrdering FailOrd = CI->getFailureOrdering();
+  Value *FailureOrdering =
+      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(FailOrd));
 
   // TODO: Support cmpxchg on LA32.
   Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
@@ -4196,7 +4257,7 @@ Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Function *MaskedCmpXchg =
       Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
   Value *Result = Builder.CreateCall(
-      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, FailureOrdering});
   Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }

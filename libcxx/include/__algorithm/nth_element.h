@@ -13,6 +13,7 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/sort.h>
+#include <__assert>
 #include <__config>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
@@ -42,6 +43,7 @@ __nth_element_find_guard(_RandomAccessIterator& __i, _RandomAccessIterator& __j,
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp)
 {
     using _Ops = _IterOps<_AlgPolicy>;
@@ -116,10 +118,18 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
                     return;
                 }
                 while (true) {
-                    while (!__comp(*__first, *__i))
+                    while (!__comp(*__first, *__i)) {
                         ++__i;
-                    while (__comp(*__first, *--__j))
-                        ;
+                        _LIBCPP_ASSERT_UNCATEGORIZED(
+                            __i != __last,
+                            "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                    }
+                    do {
+                        _LIBCPP_ASSERT_UNCATEGORIZED(
+                            __j != __first,
+                            "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                        --__j;
+                    } while (__comp(*__first, *__j));
                     if (__i >= __j)
                         break;
                     _Ops::iter_swap(__i, __j);
@@ -146,11 +156,19 @@ __nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Rando
             while (true)
             {
                 // __m still guards upward moving __i
-                while (__comp(*__i, *__m))
+                while (__comp(*__i, *__m)) {
                     ++__i;
+                    _LIBCPP_ASSERT_UNCATEGORIZED(
+                        __i != __last,
+                        "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                }
                 // It is now known that a guard exists for downward moving __j
-                while (!__comp(*--__j, *__m))
-                    ;
+                do {
+                    _LIBCPP_ASSERT_UNCATEGORIZED(
+                        __j != __first,
+                        "Would read out of bounds, does your comparator satisfy the strict-weak ordering requirement?");
+                    --__j;
+                } while (!__comp(*__j, *__m));
                 if (__i >= __j)
                     break;
                 _Ops::iter_swap(__i, __j);

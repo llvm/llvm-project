@@ -90,30 +90,23 @@ func.func @alloca_non_integer_alignment() {
 
 // -----
 
-func.func @alloca_opaque_ptr_no_type(%sz : i64) {
-  // expected-error@below {{expected 'elem_type' attribute if opaque pointer type is used}}
-  "llvm.alloca"(%sz) : (i64) -> !llvm.ptr
-}
-
-// -----
-
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{2 operands present, but expected 0}}
-  llvm.getelementptr %base[%pos] : () -> ()
+  llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{2 operands present, but expected 0}}
-  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr)
+  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 
 // -----
 
 func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{op requires one result}}
-  llvm.getelementptr %base[%pos] : (!llvm.ptr, i64) -> ()
+  llvm.getelementptr %base[%pos] : (!llvm.ptr, i64) -> (), i64
 }
 
 // -----
@@ -133,15 +126,8 @@ func.func @gep_too_few_dynamic(%base : !llvm.ptr) {
 // -----
 
 func.func @load_non_llvm_type(%foo : memref<f32>) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.load %foo : memref<f32>
-}
-
-// -----
-
-func.func @load_non_ptr_type(%foo : f32) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.load %foo : f32
+  // expected-error@+1 {{op operand #0 must be LLVM pointer type}}
+  llvm.load %foo : memref<f32> -> f32
 }
 
 // -----
@@ -177,27 +163,6 @@ func.func @load_unsupported_type(%ptr : !llvm.ptr) {
 func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
   // expected-error@below {{expected alignment for atomic access}}
   %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
-}
-
-// -----
-
-func.func @store_non_llvm_type(%foo : memref<f32>, %bar : f32) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.store %bar, %foo : memref<f32>
-}
-
-// -----
-
-func.func @store_non_ptr_type(%foo : f32, %bar : f32) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.store %bar, %foo : f32
-}
-
-// -----
-
-func.func @store_malformed_elem_type(%foo: !llvm.ptr, %bar: f32) {
-  // expected-error@+1 {{expected non-function type}}
-  llvm.store %bar, %foo : !llvm.ptr, "f32"
 }
 
 // -----
@@ -306,7 +271,7 @@ func.func @call_non_llvm() {
 // -----
 
 func.func @call_non_llvm_arg(%arg0 : tensor<*xi32>) {
-  // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect-compatible type}}
+  // expected-error@+1 {{'llvm.call' op operand #0 must be variadic of LLVM dialect-compatible type}}
   "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
   llvm.return
 }
@@ -632,14 +597,6 @@ func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
 
 // -----
 
-func.func @atomicrmw_expected_ptr(%f32 : f32) {
-  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM pointer type or integer}}
-  %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (f32, f32) -> f32
-  llvm.return
-}
-
-// -----
-
 func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
   %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
@@ -667,14 +624,6 @@ func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
-  llvm.return
-}
-
-// -----
-
-func.func @cmpxchg_expected_ptr(%f32 : f32) {
-  // expected-error@+1 {{op operand #0 must be LLVM pointer to integer or LLVM pointer type}}
-  %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (f32, f32, f32) -> !llvm.struct<(f32, i1)>
   llvm.return
 }
 
@@ -1429,5 +1378,13 @@ llvm.func @variadic(...)
 llvm.func @invalid_variadic_call(%arg: i32)  {
   // expected-error@+1 {{missing callee type attribute for vararg call}}
   "llvm.call"(%arg) <{callee = @variadic}> : (i32) -> ()
+  llvm.return
+}
+
+// -----
+
+llvm.func @foo(%arg: !llvm.ptr) {
+  // expected-error@+1 {{type '!llvm.ptr' cannot be indexed (index #1)}}
+  %0 = llvm.getelementptr %arg[0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
   llvm.return
 }

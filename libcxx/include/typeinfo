@@ -92,7 +92,6 @@ class _LIBCPP_EXPORTED_FROM_ABI type_info
     int __compare(const type_info &__rhs) const _NOEXCEPT;
 
 public:
-    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
     virtual ~type_info();
 
     const char *name() const _NOEXCEPT;
@@ -314,7 +313,6 @@ class _LIBCPP_EXPORTED_FROM_ABI type_info
       : __type_name(__impl::__string_to_type_name(__n)) {}
 
 public:
-    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
     virtual ~type_info();
 
     _LIBCPP_INLINE_VISIBILITY

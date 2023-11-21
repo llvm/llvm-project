@@ -176,6 +176,7 @@ set(BENCHMARK_TESTS
     algorithms/count.bench.cpp
     algorithms/equal.bench.cpp
     algorithms/find.bench.cpp
+    algorithms/for_each.bench.cpp
     algorithms/lower_bound.bench.cpp
     algorithms/make_heap.bench.cpp
     algorithms/make_heap_then_sort_heap.bench.cpp
@@ -213,6 +214,7 @@ set(BENCHMARK_TESTS
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
+    stop_token.bench.cpp
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp

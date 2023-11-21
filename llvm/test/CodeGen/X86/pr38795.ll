@@ -23,21 +23,22 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    # implicit-def: $esi
+; CHECK-NEXT:    # implicit-def: $ecx
 ; CHECK-NEXT:    # implicit-def: $edi
-; CHECK-NEXT:    # implicit-def: $ch
-; CHECK-NEXT:    # implicit-def: $dl
+; CHECK-NEXT:    # implicit-def: $al
+; CHECK-NEXT:    # kill: killed $al
+; CHECK-NEXT:    # implicit-def: $al
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_14: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movb %dl, %ch
-; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:  .LBB0_16: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movb %dh, %al
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_22 Depth 2
-; CHECK-NEXT:    cmpb $8, %dl
-; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    cmpb $8, %al
 ; CHECK-NEXT:    ja .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %for.cond
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -45,37 +46,36 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.4: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl a
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    movl %eax, %esi
+; CHECK-NEXT:    movb %cl, %dh
 ; CHECK-NEXT:    movl $0, h
-; CHECK-NEXT:    cmpb $8, %dl
+; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
+; CHECK-NEXT:    cmpb $8, %al
 ; CHECK-NEXT:    jg .LBB0_8
 ; CHECK-NEXT:  # %bb.5: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    movl $.str, (%esp)
-; CHECK-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movb %dh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    calll printf
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
 ; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # implicit-def: $eax
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
+; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movb %dh, %dl
 ; CHECK-NEXT:    je .LBB0_6
 ; CHECK-NEXT:    jmp .LBB0_18
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_3: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $.str, (%esp)
-; CHECK-NEXT:    movb %ch, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    calll printf
-; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %ch # 1-byte Reload
-; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
 ; CHECK-NEXT:    # implicit-def: $eax
+; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
 ; CHECK-NEXT:  .LBB0_6: # %for.cond35
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testl %edi, %edi
@@ -96,31 +96,20 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    calll printf
 ; CHECK-NEXT:  .LBB0_21: # %for.end46
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    # implicit-def: $ch
-; CHECK-NEXT:    # implicit-def: $cl
+; CHECK-NEXT:    # implicit-def: $al
+; CHECK-NEXT:    # implicit-def: $dh
 ; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_22
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_8: # %if.end21
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $ebp
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    je .LBB0_13
+; CHECK-NEXT:    jmp .LBB0_9
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_10: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    # implicit-def: $eax
-; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    je .LBB0_19
-; CHECK-NEXT:  .LBB0_12: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    # implicit-def: $edi
-; CHECK-NEXT:    # implicit-def: $ch
-; CHECK-NEXT:    # implicit-def: $dl
-; CHECK-NEXT:    # implicit-def: $ebp
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB0_11
 ; CHECK-NEXT:  .LBB0_7: # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    movb %dl, %cl
+; CHECK-NEXT:    movb %dl, %dh
+; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_22: # %for.cond47
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -129,16 +118,15 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_22
 ; CHECK-NEXT:  # %bb.23: # %for.cond47
 ; CHECK-NEXT:    # in Loop: Header=BB0_22 Depth=2
-; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_22
-; CHECK-NEXT:  # %bb.24: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movb %ch, %dl
+; CHECK-NEXT:  .LBB0_9: # %ae
+; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_10
-; CHECK-NEXT:  .LBB0_13: # %if.end26
+; CHECK-NEXT:  # %bb.13: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    testb %dl, %dl
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_14
 ; CHECK-NEXT:  # %bb.15: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -146,17 +134,31 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_16
 ; CHECK-NEXT:  # %bb.17: # %if.then31
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    movb %dl, %ch
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:  .LBB0_18: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    movb %dh, %al
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_16: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movb %dl, %ch
-; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:  .LBB0_10: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    # implicit-def: $eax
+; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    je .LBB0_19
+; CHECK-NEXT:  .LBB0_12: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    # implicit-def: $edi
+; CHECK-NEXT:    # implicit-def: $cl
+; CHECK-NEXT:    # kill: killed $cl
+; CHECK-NEXT:    # implicit-def: $dl
+; CHECK-NEXT:    # implicit-def: $ebp
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    jne .LBB0_11
+; CHECK-NEXT:    jmp .LBB0_7
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB0_14: # in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    movb %dh, %al
 ; CHECK-NEXT:    jmp .LBB0_1
 entry:
   br label %for.cond

@@ -125,11 +125,11 @@ def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
 def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))>;
 
-class CustomOperandClass<string name, bit optional, string parserMethod,
-                         string defaultMethod>
+class CustomOperandClass<string name, bit optional, string predicateMethod,
+                         string parserMethod, string defaultMethod>
     : AsmOperandClass {
   let Name = name;
-  let PredicateMethod = "is"#name;
+  let PredicateMethod = predicateMethod;
   let ParserMethod = parserMethod;
   let RenderMethod = "addImmOperands";
   let IsOptional = optional;
@@ -138,6 +138,7 @@ class CustomOperandClass<string name, bit optional, string parserMethod,
 
 class CustomOperandProps<bit optional = 0, string name = NAME> {
   string ImmTy = "ImmTy"#name;
+  string PredicateMethod = "is"#name;
   string ParserMethod = "parse"#name;
   string DefaultValue = "0";
   string DefaultMethod = "[this]() { return "#
@@ -145,7 +146,8 @@ class CustomOperandProps<bit optional = 0, string name = NAME> {
     "AMDGPUOperand::"#ImmTy#"); }";
   string PrintMethod = "print"#name;
   AsmOperandClass ParserMatchClass =
-    CustomOperandClass<name, optional, ParserMethod, DefaultMethod>;
+    CustomOperandClass<name, optional, PredicateMethod, ParserMethod,
+                       DefaultMethod>;
   string OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -162,6 +164,20 @@ class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
 
 def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
 def u16imm : ImmOperand<i16, "U16Imm", 0, "printU16ImmOperand">;
+
+class ValuePredicatedOperand<CustomOperand op, string valuePredicate,
+                             bit optional = 0>
+    : CustomOperand<op.Type, optional> {
+  let ImmTy = op.ImmTy;
+  defvar OpPredicate = op.ParserMatchClass.PredicateMethod;
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op."#OpPredicate#"() && "#valuePredicate#"; })";
+  let ParserMethod = op.ParserMatchClass.ParserMethod;
+  let DefaultValue = op.DefaultValue;
+  let DefaultMethod = op.DefaultMethod;
+  let PrintMethod = op.PrintMethod;
+}
 
 //===--------------------------------------------------------------------===//
 // Custom Operands

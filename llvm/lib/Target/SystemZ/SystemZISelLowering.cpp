@@ -872,6 +872,15 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
   return false;
 }
 
+TargetLowering::AtomicExpansionKind
+SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  return (RMW->isFloatingPointOperation() ||
+          RMW->getOperation() == AtomicRMWInst::UIncWrap ||
+          RMW->getOperation() == AtomicRMWInst::UDecWrap)
+             ? AtomicExpansionKind::CmpXChg
+             : AtomicExpansionKind::None;
+}
+
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
   // We can use CGFI or CLGFI.
   return isInt<32>(Imm) || isUInt<32>(Imm);
@@ -3620,9 +3629,17 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
   int BackChainIdx = TFL->getOrCreateFramePointerSaveIndex(MF);
   SDValue BackChain = DAG.getFrameIndex(BackChainIdx, PtrVT);
 
-  // FIXME The frontend should detect this case.
   if (Depth > 0) {
-    report_fatal_error("Unsupported stack frame traversal count");
+    // FIXME The frontend should detect this case.
+    if (!MF.getSubtarget<SystemZSubtarget>().hasBackChain())
+      report_fatal_error("Unsupported stack frame traversal count");
+
+    SDValue Offset = DAG.getConstant(TFL->getBackchainOffset(MF), DL, PtrVT);
+    while (Depth--) {
+      BackChain = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), BackChain,
+                              MachinePointerInfo());
+      BackChain = DAG.getNode(ISD::ADD, DL, PtrVT, BackChain, Offset);
+    }
   }
 
   return BackChain;
@@ -3641,9 +3658,19 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
-  // FIXME The frontend should detect this case.
   if (Depth > 0) {
-    report_fatal_error("Unsupported stack frame traversal count");
+    // FIXME The frontend should detect this case.
+    if (!MF.getSubtarget<SystemZSubtarget>().hasBackChain())
+      report_fatal_error("Unsupported stack frame traversal count");
+
+    SDValue FrameAddr = lowerFRAMEADDR(Op, DAG);
+    auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
+    int Offset = (TFL->usePackedStack(MF) ? -2 : 14) *
+                 getTargetMachine().getPointerSize(0);
+    SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
+                              DAG.getConstant(Offset, DL, PtrVT));
+    return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
+                       MachinePointerInfo());
   }
 
   // Return R14D, which has the return address. Mark it an implicit live-in.
@@ -3859,7 +3886,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_ELF(SDValue Op,
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
   bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
@@ -4536,7 +4563,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *Regs = Subtarget.getSpecialRegisters();
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "

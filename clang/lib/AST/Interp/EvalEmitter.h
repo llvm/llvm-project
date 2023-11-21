@@ -40,7 +40,7 @@ protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
               APValue &Result);
 
-  virtual ~EvalEmitter() {}
+  virtual ~EvalEmitter();
 
   /// Define a label.
   void emitLabel(LabelTy Label);

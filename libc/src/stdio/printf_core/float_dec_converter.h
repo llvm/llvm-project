@@ -85,11 +85,13 @@ LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
 
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_integral_v<T>, bool>
-zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa) {
+zero_after_digits(int32_t base_2_exp, int32_t digits_after_point, T mantissa,
+                  const int32_t mant_width) {
   const int32_t required_twos = -base_2_exp - digits_after_point - 1;
+  // Add 8 to mant width since this is a loose bound.
   const bool has_trailing_zeros =
       required_twos <= 0 ||
-      (required_twos < 60 &&
+      (required_twos < (mant_width + 8) &&
        multiple_of_power_of_2(mantissa, static_cast<uint32_t>(required_twos)));
   return has_trailing_zeros;
 }
@@ -568,7 +570,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         RoundDirection round;
         const bool truncated =
             !zero_after_digits(exponent - MANT_WIDTH, precision,
-                               float_bits.get_explicit_mantissa());
+                               float_bits.get_explicit_mantissa(), MANT_WIDTH);
         round = get_round_direction(last_digit, truncated, is_negative);
 
         RET_IF_RESULT_NEGATIVE(
@@ -733,7 +735,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
       // Use the formula from %f.
       truncated =
           !zero_after_digits(exponent - MANT_WIDTH, precision - final_exponent,
-                             float_bits.get_explicit_mantissa());
+                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
     }
   }
   round = get_round_direction(last_digit, truncated, is_negative);
@@ -979,7 +981,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       // Use the formula from %f.
       truncated =
           !zero_after_digits(exponent - MANT_WIDTH, exp_precision - base_10_exp,
-                             float_bits.get_explicit_mantissa());
+                             float_bits.get_explicit_mantissa(), MANT_WIDTH);
     }
   }
 

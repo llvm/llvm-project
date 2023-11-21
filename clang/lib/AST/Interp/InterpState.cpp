@@ -65,9 +65,9 @@ void InterpState::deallocate(Block *B) {
         std::memcpy(D->rawData(), B->rawData(), Desc->getMetadataSize());
     }
 
+    // We moved the contents over to the DeadBlock.
+    B->IsInitialized = false;
   } else {
-    // Free storage, if necessary.
-    if (Desc->DtorFn)
-      Desc->DtorFn(B, B->data(), Desc);
+    B->invokeDtor();
   }
 }

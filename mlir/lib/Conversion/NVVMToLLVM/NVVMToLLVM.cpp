@@ -41,6 +41,7 @@ using namespace mlir;
 using namespace NVVM;
 
 namespace {
+
 struct PtxLowering
     : public OpInterfaceRewritePattern<BasicPtxBuilderInterface> {
   using OpInterfaceRewritePattern<

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file --verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file --verify-diagnostics | FileCheck %s
 
 func.func @simple_depth_2_unpeeled(%global: memref<?xf32>, %result: memref<?xf32> ) {
   %c0 = arith.constant 0 : index
@@ -19,12 +19,14 @@ func.func @simple_depth_2_unpeeled(%global: memref<?xf32>, %result: memref<?xf32
 
 !t = !transform.any_op
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !t):
-  %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-  // expected-error @below {{irreversible pipelining failure}}
-  // expected-note @below {{try setting "peel_epilogue"}}
-  transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2 } : (!t) -> !t
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
+    // expected-error @below {{irreversible pipelining failure}}
+    // expected-note @below {{try setting "peel_epilogue"}}
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2 } : (!t) -> !t
+    transform.yield
+  }
 }
 
 // -----
@@ -64,10 +66,12 @@ func.func @simple_depth_2_peeled(%global: memref<?xf32>) {
 
 !t = !transform.any_op
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !t):
-  %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-  transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2, peel_epilogue } : (!t) -> !t
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2, peel_epilogue } : (!t) -> !t
+    transform.yield
+  }
 }
 
 // -----
@@ -135,10 +139,12 @@ func.func @async_depth_2_predicated(%global: memref<?xf32>) {
 
 !t = !transform.any_op
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !t):
-  %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-  transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2 } : (!t) -> !t
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2 } : (!t) -> !t
+    transform.yield
+  }
 }
 
 // -----
@@ -175,8 +181,10 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
 
 !t = !transform.any_op
 
-transform.sequence failures(propagate) {
-^bb0(%arg0: !t):
-  %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
-  transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2, peel_epilogue } : (!t) -> !t
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !t {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]} in %arg0 : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies failures(propagate) %loop { depth = 2, peel_epilogue } : (!t) -> !t
+    transform.yield
+  }
 }

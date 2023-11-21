@@ -26,6 +26,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include <numeric>
+#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -247,6 +248,35 @@ public:
     llvm::append_range(pad, padAttr.asArrayRef());
     pad.resize(pad.size() + 2, 0);
     input = applyPad(loc, input, pad, zeroAttr, rewriter);
+
+    if (4 == inputTy.getRank()) {
+      // For 2D convolutions, we need to check if the target convolution op
+      // wants a HWCF kernel layout.
+      bool wantHwcf =
+          isQuantized ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
+                      : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
+      if (wantHwcf) {
+        // Transpose the kernel to match dimension ordering of the linalg
+        // convolution operation.
+        // TODO(suderman): See if this can be efficiently folded - check whether
+        // the input is used anywhere else, if not fold the constant.
+        SmallVector<int64_t> weightPerm;
+        for (int i = 1; i < resultTy.getRank(); i++)
+          weightPerm.push_back(i);
+        weightPerm.push_back(0);
+
+        SmallVector<int64_t> newWeightShape;
+        for (auto dim : weightPerm)
+          newWeightShape.push_back(weightShape[dim]);
+        auto weightPermAttr = rewriter.getI64TensorAttr(weightPerm);
+        Value weightPermValue =
+            rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
+        Type newWeightTy =
+            RankedTensorType::get(newWeightShape, weightTy.getElementType());
+        weight = rewriter.create<tosa::TransposeOp>(loc, newWeightTy, weight,
+                                                    weightPermValue);
+      }
+    }
 
     // For Conv3D transpose the kernel to match dimension ordering of the linalg
     // convolution operation. Conv2D has a 1-1 mapping in linalg so better to
@@ -691,7 +721,7 @@ public:
 
     // Determine what the initial value needs to be for the max pool op.
     TypedAttr initialAttr;
-    if (resultETy.isF32())
+    if (resultETy.isF32() || resultETy.isBF16() || resultETy.isF16())
       initialAttr = rewriter.getFloatAttr(
           resultETy, APFloat::getLargest(
                          cast<FloatType>(resultETy).getFloatSemantics(), true));
@@ -977,10 +1007,18 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
-    RewritePatternSet *patterns) {
+    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options) {
+  if (options.preferConv2DKernelLayoutHWCF) {
+    patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcHwcfOp,
+                                linalg::Conv2DNhwcHwcfQOp>>(
+        patterns->getContext());
+  } else {
+    patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcFhwcOp,
+                                linalg::Conv2DNhwcFhwcQOp>>(
+        patterns->getContext());
+  }
   patterns->add<
       // clang-format off
-      ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcFhwcOp, linalg::Conv2DNhwcFhwcQOp>,
       ConvConverter<tosa::Conv3DOp, linalg::Conv3DNdhwcDhwcfOp, linalg::Conv3DNdhwcDhwcfQOp>,
       DepthwiseConvConverter,
       MatMulConverter,

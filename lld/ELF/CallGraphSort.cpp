@@ -287,7 +287,6 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
     if (res.second) {
       // inSec does not appear before in the graph.
       sections.push_back(inSec);
-      assert(inSec->getSize() > 0 && "found a function with zero size");
       funcSizes.push_back(inSec->getSize());
       funcCounts.push_back(0);
     }

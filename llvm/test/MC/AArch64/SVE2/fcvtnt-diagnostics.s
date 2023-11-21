@@ -5,7 +5,7 @@
 // Invalid element width
 
 fcvtnt z0.b, p0/m, z0.b
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fcvtnt z0.b, p0/m, z0.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -25,7 +25,7 @@ fcvtnt z0.d, p0/m, z0.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 fcvtnt z0.b, p0/m, z0.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: fcvtnt z0.b, p0/m, z0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

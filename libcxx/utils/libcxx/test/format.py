@@ -45,11 +45,12 @@ def _executeScriptInternal(test, litConfig, commands):
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
-    res = lit.TestRunner.executeScriptInternal(
-        test, litConfig, tmpBase, parsedCommands, execDir, debug=False
-    )
-    if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
-        res = ("", res.output, 127, None)
+    try:
+        res = lit.TestRunner.executeScriptInternal(
+            test, litConfig, tmpBase, parsedCommands, execDir, debug=False
+        )
+    except lit.TestRunner.ScriptFatal as e:
+        res = ("", str(e), 127, None)
     (out, err, exitCode, timeoutInfo) = res
 
     return (out, err, exitCode, timeoutInfo, parsedCommands)
@@ -74,10 +75,20 @@ def parseScript(test, preamble):
     tmpDir, tmpBase = _getTempPaths(test)
     substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase)
 
-    # Check base substitutions and add the %{build} and %{run} convenience substitutions
+    # Check base substitutions and add the %{build}, %{verify} and %{run} convenience substitutions
+    #
+    # Note: We use -Wno-error with %{verify} to make sure that we don't treat all diagnostics as
+    #       errors, which doesn't make sense for clang-verify tests because we may want to check
+    #       for specific warning diagnostics.
     _checkBaseSubstitutions(substitutions)
     substitutions.append(
         ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
+    )
+    substitutions.append(
+        (
+            "%{verify}",
+            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+        )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
 
@@ -226,6 +237,13 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             file with the %{flags}, %{compile_flags} and %{link_flags}
             substitutions, and that produces an executable named %t.exe.
 
+        %{verify}
+            Expands to a command-line that builds the current source
+            file with the %{flags} and %{compile_flags} substitutions
+            and enables clang-verify. This can be used to write .sh.cpp
+            tests that use clang-verify. Note that this substitution can
+            only be used when the 'verify-support' feature is available.
+
         %{run}
             Equivalent to `%{exec} %t.exe`. This is intended to be used
             in conjunction with the %{build} substitution.
@@ -264,9 +282,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             yield lit.Test.Test(testSuite, pathInSuite, localConfig)
 
     def execute(self, test, litConfig):
-        VERIFY_FLAGS = (
-            "-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0"
-        )
         supportsVerify = "verify-support" in test.config.available_features
         filename = test.path_in_suite[-1]
 
@@ -304,13 +319,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                         test.getFullName()
                     ),
                 )
-            steps = [
-                # Note: Use -Wno-error to make sure all diagnostics are not treated as errors,
-                #       which doesn't make sense for clang-verify tests.
-                "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(
-                    VERIFY_FLAGS
-                )
-            ]
+            steps = ["%dbg(COMPILED WITH) %{verify}"]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
         # suffixes above too.

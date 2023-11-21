@@ -183,6 +183,7 @@ namespace std {
 #include <__compare/three_way_comparable.h>
 #include <__concepts/invocable.h>
 #include <__config>
+#include <__exception/exception.h>
 #include <__functional/hash.h>
 #include <__functional/invoke.h>
 #include <__functional/reference_wrapper.h>
@@ -227,7 +228,6 @@ namespace std {
 #include <__verbose_abort>
 #include <initializer_list>
 #include <new>
-#include <stdexcept>
 #include <version>
 
 // standard-mandated includes
@@ -1686,6 +1686,7 @@ _LIBCPP_POP_MACROS
 #  include <iterator>
 #  include <memory>
 #  include <ratio>
+#  include <stdexcept>
 #  include <tuple>
 #  include <type_traits>
 #  include <typeinfo>

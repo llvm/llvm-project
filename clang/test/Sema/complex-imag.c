@@ -27,3 +27,9 @@ void f4(void) {
   double *c = &__real a;
   double *d = &__imag a;
 }
+
+// PR69218
+int f5(void) {
+  float _Complex a;
+  return (0 < &__real__ a) && (0 < &__imag__ a);
+}

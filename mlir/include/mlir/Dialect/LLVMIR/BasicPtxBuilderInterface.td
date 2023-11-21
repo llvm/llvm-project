@@ -22,6 +22,8 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 // Basic PTX Builder Interface
 //===----------------------------------------------------------------------===//
 
+def PtxPredicate : Optional<I1>;
+
 def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
   let description = [{
     This interface is used to generate inline assembly with PTX for basic 
@@ -62,6 +64,22 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
   }];
   let cppNamespace = "::mlir::NVVM";
   let methods = [
+    InterfaceMethod<
+        /*desc=*/[{
+          Optional function for setting a predicate, which 
+          always returns a `PtxPredicate` value of type i1. If no predicate is 
+          provided, the instruction is unguarded; otherwise, it's guarded by the 
+          predicate value. The `PtxPredicate` value must always be the last argument. 
+          The provided PTX code by `getPtx` should not include the predicate usage.
+          The interface automatically handles predicate usage in the generated
+          PTX code when necessary.
+        }],
+        /*retType=*/"std::optional<::mlir::Value>",
+        /*methodName=*/"getPredicate",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return {};"
+      >,
     InterfaceMethod<
         /*desc=*/[{ Returns PTX assembly with operand number. }],
         /*retType=*/"std::string",

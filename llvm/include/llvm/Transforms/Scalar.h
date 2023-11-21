@@ -39,16 +39,6 @@ Pass *createRedundantDbgInstEliminationPass();
 //
 FunctionPass *createDeadCodeEliminationPass();
 
-
-//===----------------------------------------------------------------------===//
-//
-// GuardWidening - An optimization over the @llvm.experimental.guard intrinsic
-// that (optimistically) combines multiple guards into one to have fewer checks
-// at runtime.
-//
-FunctionPass *createGuardWideningPass();
-
-
 //===----------------------------------------------------------------------===//
 //
 // LoopGuardWidening - Analogous to the GuardWidening pass, but restricted to a
@@ -73,13 +63,6 @@ Pass *createLICMPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopSink - This pass sinks invariants from preheader to loop body where
-// frequency is lower than loop preheader.
-//
-Pass *createLoopSinkPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopPredication - This pass does loop predication on guards.
 //
 Pass *createLoopPredicationPass();
@@ -90,12 +73,6 @@ Pass *createLoopPredicationPass();
 // a loop's canonical induction variable as one of their indices.
 //
 Pass *createLoopStrengthReducePass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopInstSimplify - This pass simplifies instructions in a loop's body.
-//
-Pass *createLoopInstSimplifyPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -172,13 +149,6 @@ FunctionPass *createEarlyCSEPass(bool UseMemorySSA = false);
 
 //===----------------------------------------------------------------------===//
 //
-// MergedLoadStoreMotion - This pass merges loads and stores in diamonds. Loads
-// are hoisted into the header, while stores sink into the footer.
-//
-FunctionPass *createMergedLoadStoreMotionPass(bool SplitFooterBB = false);
-
-//===----------------------------------------------------------------------===//
-//
 // ConstantHoisting - This pass prepares a function for expensive constants.
 //
 FunctionPass *createConstantHoistingPass();
@@ -197,12 +167,6 @@ Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LowerWidenableCondition - Lower widenable condition to i1 true.
-//
-Pass *createLowerWidenableConditionPass();
-
-//===----------------------------------------------------------------------===//
-//
 // MergeICmps - Merge integer comparison chains into a memcmp
 //
 Pass *createMergeICmpsLegacyPass();
@@ -216,12 +180,6 @@ Pass *createMergeICmpsLegacyPass();
 //
 FunctionPass *createInferAddressSpacesPass(unsigned AddressSpace = ~0u);
 extern char &InferAddressSpacesID;
-
-//===----------------------------------------------------------------------===//
-//
-// LowerExpectIntrinsics - Removes llvm.expect intrinsics and creates
-// "block_weights" metadata.
-FunctionPass *createLowerExpectIntrinsicPass();
 
 //===----------------------------------------------------------------------===//
 //

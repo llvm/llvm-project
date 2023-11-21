@@ -736,6 +736,38 @@ static void run_CFI_is_contiguous_tests() {
   MATCH(true, retCode == CFI_SUCCESS);
   MATCH(true, CFI_is_contiguous(section) == 0);
   MATCH(false, sectionDesc->IsContiguous());
+
+  // Test section B = A(0:3:1,0:0:2) is contiguous.
+  lb[0] = 0;
+  lb[1] = 0;
+  ub[0] = 3;
+  ub[1] = 0;
+  strides[0] = 1;
+  strides[1] = 2;
+  retCode = CFI_section(section, dv, lb, ub, strides);
+  MATCH(true, retCode == CFI_SUCCESS);
+  MATCH(true, CFI_is_contiguous(section) == 1);
+  MATCH(true, sectionDesc->IsContiguous());
+
+  // INTEGER :: C(0:0, 0:3)
+  CFI_index_t c_extents[rank] = {1, 4};
+  CFI_CDESC_T(rank) c_dv_storage;
+  CFI_cdesc_t *cdv{&c_dv_storage};
+  retCode = CFI_establish(cdv, base_addr, CFI_attribute_other, CFI_type_int,
+      /*elem_len=*/0, rank, c_extents);
+  MATCH(retCode == CFI_SUCCESS, true);
+
+  // Test section B = C(0:0:2, 0:3:1) is contiguous.
+  lb[0] = 0;
+  lb[1] = 0;
+  ub[0] = 0;
+  ub[1] = 3;
+  strides[0] = 2;
+  strides[1] = 1;
+  retCode = CFI_section(section, cdv, lb, ub, strides);
+  MATCH(true, retCode == CFI_SUCCESS);
+  MATCH(true, CFI_is_contiguous(section) == 1);
+  MATCH(true, sectionDesc->IsContiguous());
 }
 
 int main() {

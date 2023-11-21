@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file -verify-diagnostics --allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -split-input-file -verify-diagnostics --allow-unregistered-dialect | FileCheck %s
 
 func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   scf.if %cond {
@@ -8,13 +8,15 @@ func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %if = transform.structured.match ops{["scf.if"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  // expected-error @+1 {{requires an scf.if op with a single-block `else` region}}
-  transform.scf.take_assumed_branch %if take_else_branch
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %if = transform.structured.match ops{["scf.if"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    // expected-error @+1 {{requires an scf.if op with a single-block `else` region}}
+    transform.scf.take_assumed_branch %if take_else_branch
+      : (!transform.any_op) -> ()
+      transform.yield
+  }
 }
 
 // -----
@@ -28,31 +30,33 @@ func.func @if_no_else(%cond: i1, %a: index, %b: memref<?xf32>, %c: i8) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %if = transform.structured.match ops{["scf.if"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  %some_op = transform.structured.match ops{["some_op"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %if = transform.structured.match ops{["scf.if"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %some_op = transform.structured.match ops{["some_op"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.scf.take_assumed_branch %if : (!transform.any_op) -> ()
-  
-  // Handle to formerly nested `some_op` is still valid after the transform.
-  transform.print %some_op: !transform.any_op
+    transform.scf.take_assumed_branch %if : (!transform.any_op) -> ()
+
+    // Handle to formerly nested `some_op` is still valid after the transform.
+    transform.print %some_op: !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
 
 // CHECK-LABEL: tile_tensor_pad
 func.func @tile_tensor_pad(
-  %arg0 : tensor<?x?xf32>, %cst : f32, %low: index, %high: index) 
+  %arg0 : tensor<?x?xf32>, %cst : f32, %low: index, %high: index)
     -> tensor<20x40xf32>
 {
   //     CHECK: scf.forall
   // CHECK-NOT:   scf.if
   // CHECK-NOT:     tensor.generate
   // CHECK-NOT:   else
-  //     CHECK:     tensor.pad {{.*}} nofold 
+  //     CHECK:     tensor.pad {{.*}} nofold
   %0 = tensor.pad %arg0 nofold low[%low, %low] high[%high, %high] {
         ^bb0(%arg9: index, %arg10: index):
           tensor.yield %cst : f32
@@ -60,15 +64,17 @@ func.func @tile_tensor_pad(
   return %0 : tensor<20x40xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb0(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.tile_using_forall %0 tile_sizes[1, 1] 
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.tile_using_forall %0 tile_sizes[1, 1]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %if = transform.structured.match ops{["scf.if"]} in %arg1 
-    : (!transform.any_op) -> !transform.any_op
-  transform.scf.take_assumed_branch %if take_else_branch 
-    : (!transform.any_op) -> ()
+    %if = transform.structured.match ops{["scf.if"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.scf.take_assumed_branch %if take_else_branch
+      : (!transform.any_op) -> ()
+      transform.yield
+  }
 }

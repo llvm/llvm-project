@@ -22,7 +22,8 @@ define i32 @g(i32 %x) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
-  %b = add i32 %x, zext (i1 icmp eq (ptr inttoptr (i32 1000000 to ptr), ptr inttoptr (i32 2000000 to ptr)) to i32)
+  %ext = zext i1 icmp eq (ptr inttoptr (i32 1000000 to ptr), ptr inttoptr (i32 2000000 to ptr)) to i32
+  %b = add i32 %x, %ext
   ret i32 %b
 }
 

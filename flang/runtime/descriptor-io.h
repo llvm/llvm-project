@@ -288,7 +288,11 @@ static bool DefaultComponentwiseIO(IoStatementState &io,
           *compArray.Element<typeInfo::Component>(at)};
       if (!DefaultComponentIO<DIR>(
               io, component, descriptor, subscripts, handler, table)) {
-        return false;
+        // Truncated nonempty namelist input sequence?
+        auto *listInput{
+            io.get_if<ListDirectedStatementState<Direction::Input>>()};
+        return DIR == Direction::Input && (j > 0 || k > 0) && listInput &&
+            listInput->inNamelistSequence();
       }
     }
   }

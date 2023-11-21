@@ -11,18 +11,14 @@
 #include "src/math/expm1.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 #include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
-using LIBC_NAMESPACE::testing::tlog;
+using LlvmLibcExpm1Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
-DECLARE_SPECIAL_CONSTANTS(double)
-
-TEST(LlvmLibcExpm1Test, SpecialNumbers) {
+TEST_F(LlvmLibcExpm1Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::expm1(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0, LIBC_NAMESPACE::expm1(neg_inf));

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: availability-bad_optional_access-missing && !no-exceptions
-
 // <optional>
 
 // constexpr const T& optional<T>::value() const &&;

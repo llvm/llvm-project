@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Scalar.h"
 #include <optional>
 using namespace llvm;
 
@@ -83,6 +85,16 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    EnableLoopDataPrefetch("riscv-enable-loop-data-prefetch", cl::Hidden,
+                           cl::desc("Enable the loop data prefetch pass"),
+                           cl::init(true));
+
+static cl::opt<bool>
+    EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
+                        cl::desc("Enable Split RegisterAlloc for RVV"),
+                        cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -96,12 +108,15 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPreparePass(*PR);
+  initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
+  initializeRISCVFoldMasksPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
+  initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
   initializeRISCVInitUndefPass(*PR);
   initializeRISCVMoveMergePass(*PR);
@@ -244,10 +259,82 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 }
 
 namespace {
+
+class RVVRegisterRegAlloc : public RegisterRegAllocBase<RVVRegisterRegAlloc> {
+public:
+  RVVRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
+      : RegisterRegAllocBase(N, D, C) {}
+};
+
+static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
+                               const TargetRegisterClass &RC) {
+  return RISCV::VRRegClass.hasSubClassEq(&RC) ||
+         RISCV::VRM2RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRM4RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRM8RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN2M1RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN2M2RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN2M4RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN3M1RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN3M2RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN4M1RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN4M2RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN5M1RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN6M1RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN7M1RegClass.hasSubClassEq(&RC) ||
+         RISCV::VRN8M1RegClass.hasSubClassEq(&RC);
+}
+
+static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
+
+static llvm::once_flag InitializeDefaultRVVRegisterAllocatorFlag;
+
+/// -riscv-rvv-regalloc=<fast|basic|greedy> command line option.
+/// This option could designate the rvv register allocator only.
+/// For example: -riscv-rvv-regalloc=basic
+static cl::opt<RVVRegisterRegAlloc::FunctionPassCtor, false,
+               RegisterPassParser<RVVRegisterRegAlloc>>
+    RVVRegAlloc("riscv-rvv-regalloc", cl::Hidden,
+                cl::init(&useDefaultRegisterAllocator),
+                cl::desc("Register allocator to use for RVV register."));
+
+static void initializeDefaultRVVRegisterAllocatorOnce() {
+  RegisterRegAlloc::FunctionPassCtor Ctor = RVVRegisterRegAlloc::getDefault();
+
+  if (!Ctor) {
+    Ctor = RVVRegAlloc;
+    RVVRegisterRegAlloc::setDefault(RVVRegAlloc);
+  }
+}
+
+static FunctionPass *createBasicRVVRegisterAllocator() {
+  return createBasicRegisterAllocator(onlyAllocateRVVReg);
+}
+
+static FunctionPass *createGreedyRVVRegisterAllocator() {
+  return createGreedyRegisterAllocator(onlyAllocateRVVReg);
+}
+
+static FunctionPass *createFastRVVRegisterAllocator() {
+  return createFastRegisterAllocator(onlyAllocateRVVReg, false);
+}
+
+static RVVRegisterRegAlloc basicRegAllocRVVReg("basic",
+                                               "basic register allocator",
+                                               createBasicRVVRegisterAllocator);
+static RVVRegisterRegAlloc
+    greedyRegAllocRVVReg("greedy", "greedy register allocator",
+                         createGreedyRVVRegisterAllocator);
+
+static RVVRegisterRegAlloc fastRegAllocRVVReg("fast", "fast register allocator",
+                                              createFastRVVRegisterAllocator);
+
 class RISCVPassConfig : public TargetPassConfig {
 public:
   RISCVPassConfig(RISCVTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {
+    if (TM.getOptLevel() != CodeGenOptLevel::None)
+      substitutePass(&PostRASchedulerID, &PostMachineSchedulerID);
     setEnableSinkAndFold(EnableSinkFold);
   }
 
@@ -290,6 +377,9 @@ public:
   void addPreEmitPass2() override;
   void addPreSched2() override;
   void addMachineSSAOptimization() override;
+  FunctionPass *createRVVRegAllocPass(bool Optimized);
+  bool addRegAssignAndRewriteFast() override;
+  bool addRegAssignAndRewriteOptimized() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addOptimizedRegAlloc() override;
@@ -301,10 +391,42 @@ TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new RISCVPassConfig(*this, PM);
 }
 
+FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
+  // Initialize the global default.
+  llvm::call_once(InitializeDefaultRVVRegisterAllocatorFlag,
+                  initializeDefaultRVVRegisterAllocatorOnce);
+
+  RegisterRegAlloc::FunctionPassCtor Ctor = RVVRegisterRegAlloc::getDefault();
+  if (Ctor != useDefaultRegisterAllocator)
+    return Ctor();
+
+  if (Optimized)
+    return createGreedyRVVRegisterAllocator();
+
+  return createFastRVVRegisterAllocator();
+}
+
+bool RISCVPassConfig::addRegAssignAndRewriteFast() {
+  if (EnableSplitRegAlloc)
+    addPass(createRVVRegAllocPass(false));
+  return TargetPassConfig::addRegAssignAndRewriteFast();
+}
+
+bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
+  if (EnableSplitRegAlloc) {
+    addPass(createRVVRegAllocPass(true));
+    addPass(createVirtRegRewriter(false));
+  }
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
+}
+
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
+    if (EnableLoopDataPrefetch)
+      addPass(createLoopDataPrefetchPass());
+
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
@@ -370,6 +492,8 @@ bool RISCVPassConfig::addGlobalInstructionSelect() {
 }
 
 void RISCVPassConfig::addPreSched2() {
+  addPass(createRISCVPostRAExpandPseudoPass());
+
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
 }
@@ -409,7 +533,10 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
+  addPass(createRISCVFoldMasksPass());
+
   TargetPassConfig::addMachineSSAOptimization();
+
   if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
@@ -427,6 +554,7 @@ void RISCVPassConfig::addPreRegAlloc() {
       EnableRISCVDeadRegisterElimination)
     addPass(createRISCVDeadRegisterDefinitionsPass());
   addPass(createRISCVInsertReadWriteCSRPass());
+  addPass(createRISCVInsertWriteVXRMPass());
 }
 
 void RISCVPassConfig::addOptimizedRegAlloc() {

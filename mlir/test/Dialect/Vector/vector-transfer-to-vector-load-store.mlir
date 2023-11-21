@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter -canonicalize --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter -canonicalize --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @vector_transfer_ops_0d_memref(
 //  CHECK-SAME:   %[[MEM:.*]]: memref<f32>
@@ -182,8 +182,8 @@ func.func @transfer_perm_map(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32
 #broadcast_1d = affine_map<(d0, d1) -> (0)>
 func.func @transfer_broadcasting(%mem : memref<8x8xf32>, %i : index) -> vector<4xf32> {
   %cf0 = arith.constant 0.0 : f32
-  %res = vector.transfer_read %mem[%i, %i], %cf0 
-    {in_bounds = [true], permutation_map = #broadcast_1d} 
+  %res = vector.transfer_read %mem[%i, %i], %cf0
+    {in_bounds = [true], permutation_map = #broadcast_1d}
       : memref<8x8xf32>, vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -213,8 +213,8 @@ func.func @transfer_scalar(%mem : memref<?x?xf32>, %i : index) -> vector<1xf32> 
 #broadcast_2d = affine_map<(d0, d1) -> (0, 0)>
 func.func @transfer_broadcasting_2D(%mem : memref<8x8xf32>, %i : index) -> vector<4x4xf32> {
   %cf0 = arith.constant 0.0 : f32
-  %res = vector.transfer_read %mem[%i, %i], %cf0 
-    {in_bounds = [true, true], permutation_map = #broadcast_2d} 
+  %res = vector.transfer_read %mem[%i, %i], %cf0
+    {in_bounds = [true, true], permutation_map = #broadcast_2d}
       : memref<8x8xf32>, vector<4x4xf32>
   return %res : vector<4x4xf32>
 }
@@ -231,19 +231,21 @@ func.func @transfer_broadcasting_2D(%mem : memref<8x8xf32>, %i : index) -> vecto
 #broadcast_2d_in_4d = affine_map<(d0, d1, d2, d3, d4) -> (d1, 0, 0, d4)>
 func.func @transfer_broadcasting_complex(%mem : memref<10x20x30x8x8xf32>, %i : index) -> vector<3x2x4x5xf32> {
   %cf0 = arith.constant 0.0 : f32
-  %res = vector.transfer_read %mem[%i, %i, %i, %i, %i], %cf0 
-    {in_bounds = [true, true, true, true], permutation_map = #broadcast_2d_in_4d} 
+  %res = vector.transfer_read %mem[%i, %i, %i, %i, %i], %cf0
+    {in_bounds = [true, true, true, true], permutation_map = #broadcast_2d_in_4d}
       : memref<10x20x30x8x8xf32>, vector<3x2x4x5xf32>
   return %res : vector<3x2x4x5xf32>
 }
 
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
-    transform.apply_patterns.vector.transfer_permutation_patterns
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
+      transform.apply_patterns.vector.transfer_permutation_patterns
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -360,12 +362,14 @@ func.func @transfer_write_broadcast_unit_dim(
   return %0 : tensor<?x?x?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
-    transform.apply_patterns.vector.transfer_permutation_patterns
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transfer max_transfer_rank = 99
+      transform.apply_patterns.vector.transfer_permutation_patterns
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 // -----
@@ -386,9 +390,11 @@ func.func @transfer_2D_masked(%mem : memref<?x?xf32>, %mask : vector<2x4xi1>) ->
   return %res : vector<2x4xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%func_op: !transform.op<"func.func">):
-  transform.apply_patterns to %func_op {
-    transform.apply_patterns.vector.lower_transfer max_transfer_rank = 2
-  } : !transform.op<"func.func">
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.lower_transfer max_transfer_rank = 2
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }

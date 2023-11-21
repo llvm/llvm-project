@@ -223,13 +223,13 @@ MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I,
-                                          bool SkipPseudoOp) {
+                                          Register Reg, bool SkipPseudoOp) {
   const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
 
   iterator E = end();
   while (I != E && (I->isPHI() || I->isPosition() || I->isDebugInstr() ||
                     (SkipPseudoOp && I->isPseudoProbe()) ||
-                    TII->isBasicBlockPrologue(*I)))
+                    TII->isBasicBlockPrologue(*I, Reg)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.
@@ -567,7 +567,9 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
     }
     if (getBBID().has_value()) {
       os << (hasAttributes ? ", " : " (");
-      os << "bb_id " << *getBBID();
+      os << "bb_id " << getBBID()->BaseID;
+      if (getBBID()->CloneID != 0)
+        os << " " << getBBID()->CloneID;
       hasAttributes = true;
     }
     if (CallFrameSize != 0) {
@@ -886,7 +888,7 @@ void MachineBasicBlock::replaceSuccessor(MachineBasicBlock *Old,
   removeSuccessor(OldI);
 }
 
-void MachineBasicBlock::copySuccessor(MachineBasicBlock *Orig,
+void MachineBasicBlock::copySuccessor(const MachineBasicBlock *Orig,
                                       succ_iterator I) {
   if (!Orig->Probs.empty())
     addSuccessor(*I, Orig->getSuccProbability(I));
@@ -1101,6 +1103,7 @@ class SlotIndexUpdateDelegate : public MachineFunction::Delegate {
 private:
   MachineFunction &MF;
   SlotIndexes *Indexes;
+  SmallSetVector<MachineInstr *, 2> Insertions;
 
 public:
   SlotIndexUpdateDelegate(MachineFunction &MF, SlotIndexes *Indexes)
@@ -1108,15 +1111,20 @@ public:
     MF.setDelegate(this);
   }
 
-  ~SlotIndexUpdateDelegate() { MF.resetDelegate(this); }
+  ~SlotIndexUpdateDelegate() {
+    MF.resetDelegate(this);
+    for (auto MI : Insertions)
+      Indexes->insertMachineInstrInMaps(*MI);
+  }
 
   void MF_HandleInsertion(MachineInstr &MI) override {
+    // This is called before MI is inserted into block so defer index update.
     if (Indexes)
-      Indexes->insertMachineInstrInMaps(MI);
+      Insertions.insert(&MI);
   }
 
   void MF_HandleRemoval(MachineInstr &MI) override {
-    if (Indexes)
+    if (Indexes && !Insertions.remove(&MI))
       Indexes->removeMachineInstrFromMaps(MI);
   }
 };
@@ -1275,6 +1283,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(VNI &&
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+          for (auto &SR : LI.subranges())
+            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
         }
       }
     }
@@ -1294,8 +1304,16 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
         assert(VNI && "LiveInterval should have VNInfo where it is live.");
         LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+        // Update subranges with live values
+        for (auto &SR : LI.subranges()) {
+          VNInfo *VNI = SR.getVNInfoAt(PrevIndex);
+          if (VNI)
+            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+        }
       } else if (!isLiveOut && !isLastMBB) {
         LI.removeSegment(StartIndex, EndIndex);
+        for (auto &SR : LI.subranges())
+          SR.removeSegment(StartIndex, EndIndex);
       }
     }
 

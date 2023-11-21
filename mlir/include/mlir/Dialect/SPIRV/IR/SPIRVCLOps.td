@@ -268,6 +268,67 @@ def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLFMaxOp : SPIRV_CLBinaryArithmeticOp<"fmax", 27, SPIRV_Float> {
+  let summary = "Return maximum of two floating-point operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x. If one argument is a NaN,
+    Fmax returns the other argument. If both arguments are NaNs, Fmax returns a NaN.
+
+    Result Type, x and y must be floating-point or vector(2,3,4,8,16)
+    of floating-point values.
+
+    All of the operands, including the Result Type operand,
+    must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    fmax-op ::= ssa-id `=` `spirv.CL.fmax` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.fmax %0, %1 : f32
+    %3 = spirv.CL.fmax %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
+  let summary = "Return minimum of two floating-point operands";
+
+  let description = [{
+    Returns y if y < x, otherwise it returns x. If one argument is a NaN, Fmin returns the other argument.
+    If both arguments are NaNs, Fmin returns a NaN.
+
+    Result Type,x and y must be floating-point or vector(2,3,4,8,16) of floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    fmin-op ::= ssa-id `=` `spirv.CL.fmin` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.fmin %0, %1 : f32
+    %3 = spirv.CL.fmin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
   let summary = [{
     Round x to the integral value using the round to negative infinity
@@ -328,67 +389,6 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
     ```mlir
     %0 = spirv.CL.fma %a, %b, %c : f32
     %1 = spirv.CL.fma %a, %b, %c : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLFMaxOp : SPIRV_CLBinaryArithmeticOp<"fmax", 27, SPIRV_Float> {
-  let summary = "Return maximum of two floating-point operands";
-
-  let description = [{
-    Returns y if x < y, otherwise it returns x. If one argument is a NaN,
-    Fmax returns the other argument. If both arguments are NaNs, Fmax returns a NaN.
-
-    Result Type, x and y must be floating-point or vector(2,3,4,8,16)
-    of floating-point values.
-
-    All of the operands, including the Result Type operand,
-    must be of the same type.
-
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fmax-op ::= ssa-id `=` `spirv.CL.fmax` ssa-use `:`
-                float-scalar-vector-type
-    ```
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.fmax %0, %1 : f32
-    %3 = spirv.CL.fmax %0, %1 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
-  let summary = "Return minimum of two floating-point operands";
-
-  let description = [{
-    Returns y if y < x, otherwise it returns x. If one argument is a NaN, Fmin returns the other argument.
-    If both arguments are NaNs, Fmin returns a NaN.
-
-    Result Type,x and y must be floating-point or vector(2,3,4,8,16) of floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the same type.
-
-
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fmin-op ::= ssa-id `=` `spirv.CL.fmin` ssa-use `:`
-                float-scalar-vector-type
-    ```
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.fmin %0, %1 : f32
-    %3 = spirv.CL.fmin %0, %1 : vector<3xf16>
     ```
   }];
 }
@@ -456,38 +456,6 @@ def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
-  let summary = [{
-    Return the integral value nearest to x rounding halfway cases away from
-    zero, regardless of the current rounding direction.
-  }];
-
-  let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    round-op ::= ssa-id `=` `spirv.CL.round` ssa-use `:`
-               float-scalar-vector-type
-    ```
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.round %0 : f32
-    %3 = spirv.CL.round %0 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
 def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
   let summary = [{
     Round x to integral value (using round to nearest even rounding mode) in
@@ -521,6 +489,38 @@ def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
+  let summary = [{
+    Return the integral value nearest to x rounding halfway cases away from
+    zero, regardless of the current rounding direction.
+  }];
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    round-op ::= ssa-id `=` `spirv.CL.round` ssa-use `:`
+               float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.round %0 : f32
+    %3 = spirv.CL.round %0 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
   let summary = "Compute inverse square root of x.";
 
@@ -545,6 +545,90 @@ def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.rsqrt %0 : f32
     %3 = spirv.CL.rsqrt %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
+  let summary = "Absolute value of operand";
+
+  let description = [{
+    Returns |x|, where x is treated as signed integer.
+
+    Result Type and x must be integer or vector(2,3,4,8,16) of
+    integer values.
+
+    All of the operands, including the Result Type operand,
+    must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    abs-op ::= ssa-id `=` `spirv.CL.s_abs` ssa-use `:`
+               integer-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.s_abs %0 : i32
+    %3 = spirv.CL.s_abs %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
+  let summary = "Return maximum of two signed integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as signed integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smax-op ::= ssa-id `=` `spirv.CL.s_max` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spirv.CL.s_max %0, %1 : i32
+    %3 = spirv.CL.s_max %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
+  let summary = "Return minimum of two signed integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as signed integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    smin-op ::= ssa-id `=` `spirv.CL.s_min` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spirv.CL.s_min %0, %1 : i32
+    %3 = spirv.CL.s_min %0, %1 : vector<3xi16>
     ```
   }];
 }
@@ -641,63 +725,6 @@ def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
-  let summary = "Absolute value of operand";
-
-  let description = [{
-    Returns |x|, where x is treated as signed integer.
-
-    Result Type and x must be integer or vector(2,3,4,8,16) of
-    integer values.
-
-    All of the operands, including the Result Type operand,
-    must be of the same type.
-
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spirv.CL.s_abs` ssa-use `:`
-               integer-scalar-vector-type
-    ```
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.s_abs %0 : i32
-    %3 = spirv.CL.s_abs %1 : vector<3xi16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
-  let summary = "Return maximum of two signed integer operands";
-
-  let description = [{
-    Returns y if x < y, otherwise it returns x, where x and y are treated as signed integers.
-
-    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
-
-    All of the operands, including the Result Type operand, must be of the same type.
-
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spirv.CL.s_max` ssa-use `:`
-                integer-scalar-vector-type
-    ```
-    #### Example:
-    ```mlir
-    %2 = spirv.CL.s_max %0, %1 : i32
-    %3 = spirv.CL.s_max %0, %1 : vector<3xi16>
-    ```
-  }];
-}
-
-// -----
-
 def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
   let summary = "Return maximum of two unsigned integer operands";
 
@@ -719,33 +746,6 @@ def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
     ```mlir
     %2 = spirv.CL.u_max %0, %1 : i32
     %3 = spirv.CL.u_max %0, %1 : vector<3xi16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
-  let summary = "Return minimum of two signed integer operands";
-
-  let description = [{
-    Returns y if x < y, otherwise it returns x, where x and y are treated as signed integers.
-
-    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
-
-    All of the operands, including the Result Type operand, must be of the same type.
-
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spirv.CL.s_min` ssa-use `:`
-                integer-scalar-vector-type
-    ```
-    #### Example:
-    ```mlir
-    %2 = spirv.CL.s_min %0, %1 : i32
-    %3 = spirv.CL.s_min %0, %1 : vector<3xi16>
     ```
   }];
 }
