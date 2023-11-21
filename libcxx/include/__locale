@@ -372,7 +372,7 @@ public:
 #else
     static const mask __regex_word = 1<<10;
 #endif // defined(__BIONIC__)
-#elif defined(__GLIBC__)
+#elif defined(__GLIBC__) || defined(__BIG_ENDIAN__)
     typedef unsigned short mask;
     static const mask space  = _ISspace;
     static const mask print  = _ISprint;
