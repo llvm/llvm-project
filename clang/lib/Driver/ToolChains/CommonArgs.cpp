@@ -979,7 +979,8 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
 
 void tools::addFortranRuntimeLibs(const ToolChain &TC,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  // These are handled by adding link options to the object file on Windows
+  // These are handled earlier on Windows by telling the frontend driver to add
+  // the correct libraries to link against as dependents in the object file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back("-lFortran_main");
     CmdArgs.push_back("-lFortranRuntime");
