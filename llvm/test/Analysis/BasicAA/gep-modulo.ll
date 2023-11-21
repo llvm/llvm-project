@@ -362,7 +362,6 @@ define i8 @mul_nsw_var_nonzero_minabsvarindex_one_index(ptr %arr, i8 %x, i64 %v)
   ret i8 %l
 }
 
-; FIXME: %gep and %p can alias.
 define i8 @test_pr72831_may_wrap(i64 %off) {
 ; CHECK-LABEL: Function: test_pr72831_may_wrap: 2 pointers, 0 call sites
 ; CHECK-NEXT:  MayAlias:    i8* %gep, i8* %p
