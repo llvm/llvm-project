@@ -517,6 +517,18 @@ def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def ErrnoChecker : Checker<"Errno">,
+  HelpText<"Check for improper use of 'errno'">,
+  Dependencies<[ErrnoModeling]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "AllowErrnoReadOutsideConditionExpressions",
+                  "Allow read of undefined value from errno outside of conditions",
+                  "true",
+                  InAlpha>,
+  ]>,
+  Documentation<HasDocumentation>;
+
 def MallocChecker: Checker<"Malloc">,
   HelpText<"Check for memory leaks, double free, and use-after-free problems. "
            "Traces memory managed by malloc()/free().">,
@@ -560,18 +572,6 @@ def VforkChecker : Checker<"Vfork">,
 } // end "unix"
 
 let ParentPackage = UnixAlpha in {
-
-def ErrnoChecker : Checker<"Errno">,
-  HelpText<"Check for improper use of 'errno'">,
-  Dependencies<[ErrnoModeling]>,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "AllowErrnoReadOutsideConditionExpressions",
-                  "Allow read of undefined value from errno outside of conditions",
-                  "true",
-                  InAlpha>,
-  ]>,
-  Documentation<HasDocumentation>;
 
 def ChrootChecker : Checker<"Chroot">,
   HelpText<"Check improper use of chroot">,
