@@ -53,6 +53,7 @@
 #include "llvm/Transforms/Yk/Linkage.h"
 #include "llvm/Transforms/Yk/ShadowStack.h"
 #include "llvm/Transforms/Yk/Stackmaps.h"
+#include "llvm/Transforms/Yk/NoCallsInEntryBlocks.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -281,6 +282,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     YkInsertStackMaps("yk-insert-stackmaps", cl::init(false), cl::NotHidden,
                       cl::desc("Insert stackmaps for JIT deoptimisation"));
+
+static cl::opt<bool>
+    YkNoCallsInEntryBlocks("yk-no-calls-in-entryblocks", cl::init(false), cl::NotHidden,
+                      cl::desc("Ensure there are no calls in the entryblock."));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -1125,6 +1130,15 @@ bool TargetPassConfig::addISelPasses() {
   addPassesToHandleExceptions();
   if (YkBlockDisambiguate)
     addPass(createYkBlockDisambiguatePass());
+
+  if (YkNoCallsInEntryBlocks) {
+    // Make sure this pass runs before the shadowstack pass, so that we don't
+    // split the entry block after that pass inserted a `malloc` into `main`.
+    // This would otherwise result in allocas being moved outside the entry
+    // block which makes them dynamic allocas, and results in stackmaps not
+    // being able to record the functions stack size.
+    addPass(createYkNoCallsInEntryBlocksPass());
+  }
 
   if (YkShadowStack) {
     addPass(createYkShadowStackPass());

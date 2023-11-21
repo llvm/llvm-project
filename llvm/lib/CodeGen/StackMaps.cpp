@@ -305,8 +305,22 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     // each one of them. Note, that the stackmap may track either of %rbx or
     // %rcx, resulting in different ways below to retrieve the mappings.
     int ExtraReg = 0;
+    Register R = MOI->getReg();
     if (MOI->isReg()) {
-      Register R = MOI->getReg();
+      if (MOI->isKill()) {
+        // There's no point in tracking a killed register. Instead, try and
+        // find a copy of the register and use that to increase the likelyhood
+        // of us tracking that value.
+        // YKFIXME: This is likely only a temporary fix. In the future we might
+        // want to allow stackmaps to track arbitrarily many locations per live
+        // variable. Currently, we can only track two.
+        for (auto I : SpillOffsets) {
+          if (I.second == R) {
+            R = I.first;
+            break;
+          }
+        }
+      }
       if (SpillOffsets.count(R) > 0) {
         RHS = SpillOffsets[R];
         assert(SpillOffsets[R] != 0);
@@ -333,9 +347,9 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       }
     }
 
-    unsigned DwarfRegNum = getDwarfRegNum(MOI->getReg(), TRI);
+    unsigned DwarfRegNum = getDwarfRegNum(R, TRI);
     unsigned LLVMRegNum = *TRI->getLLVMRegNum(DwarfRegNum, false);
-    unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, MOI->getReg());
+    unsigned SubRegIdx = TRI->getSubRegIndex(LLVMRegNum, R);
     if (SubRegIdx)
       Offset = TRI->getSubRegIdxOffset(SubRegIdx);
 
