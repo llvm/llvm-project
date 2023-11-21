@@ -310,8 +310,7 @@ TEST(ExternalIOTests, TestSequentialVariableUnformatted) {
     io = IONAME(BeginUnformattedInput)(unit, __FILE__, __LINE__);
     desc.Establish(TypeCode{sizeof *buffer}, j * sizeof *buffer, buffer, 0);
     desc.Check();
-    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc))
-        << "InputDescriptor()";
+    ASSERT_TRUE(IONAME(InputDescriptor)(io, desc)) << "InputDescriptor()";
     ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
         << "EndIoStatement() for InputUnformattedBlock";
     for (int k{0}; k < j; ++k) {
