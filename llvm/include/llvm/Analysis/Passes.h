@@ -48,12 +48,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // Minor pass prototypes, allowing us to expose them through bugpoint and
-  // analyze.
-  FunctionPass *createInstCountPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   // createRegionInfoPass - This pass finds all single entry single exit regions
   // in a function and builds the region hierarchy.
   //
