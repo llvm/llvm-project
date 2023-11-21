@@ -4433,6 +4433,11 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   if (Instruction *NewXor = foldNotXor(I, Builder))
     return NewXor;
 
+  // TODO: Could handle multi-use better by checking if all uses of NotOp (other
+  // than I) can be inverted.
+  if (Value *R = getFreelyInverted(NotOp, NotOp->hasOneUse(), &Builder))
+    return replaceInstUsesWith(I, R);
+
   return nullptr;
 }
 
