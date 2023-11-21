@@ -1114,6 +1114,343 @@ func.func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.BitwiseAnd
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @bitwise_and_x_0
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @bitwise_and_x_0(%arg0 : i32) -> i32 {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0 : i32
+  %c1 = spirv.Constant 0 : i32
+  %0 = spirv.BitwiseAnd %arg0, %c1 : i32
+
+  // CHECK: return %[[C0]]
+  return %0 : i32
+}
+
+// CHECK-LABEL: @bitwise_and_x_n1
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @bitwise_and_x_n1(%arg0 : i32) -> i32 {
+  %c1 = spirv.Constant -1 : i32
+  %0 = spirv.BitwiseAnd %arg0, %c1 : i32
+
+  // CHECK: return %[[ARG]]
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_band
+func.func @const_fold_scalar_band() -> i32 {
+  %c1 = spirv.Constant -268464129 : i32   // 0xefff 8fff
+  %c2 = spirv.Constant 268464128: i32     // 0x1000 7000
+
+  // 0xefff 8fff | 0x1000 7000 = 0xffff ffff = -1
+  // CHECK: spirv.Constant 0
+  %0 = spirv.BitwiseAnd %c1, %c2 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_vector_band
+func.func @const_fold_vector_band() -> vector<3xi32> {
+  %c1 = spirv.Constant dense<[42, -55, 127]> : vector<3xi32>
+  %c2 = spirv.Constant dense<[-3, -15, 28]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[40, -63, 28]>
+  %0 = spirv.BitwiseAnd %c1, %c2 : vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.BitwiseOr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @bitwise_or_x_0
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @bitwise_or_x_0(%arg0 : i32) -> i32 {
+  %c1 = spirv.Constant 0 : i32
+  %0 = spirv.BitwiseOr %arg0, %c1 : i32
+
+  // CHECK: return %[[ARG]]
+  return %0 : i32
+}
+
+// CHECK-LABEL: @bitwise_or_x_n1
+func.func @bitwise_or_x_n1(%arg0 : i32) -> i32 {
+  // CHECK: %[[CN1:.*]] = spirv.Constant -1 : i32
+  %c1 = spirv.Constant -1 : i32
+  %0 = spirv.BitwiseOr %arg0, %c1 : i32
+
+  // CHECK: return %[[CN1]]
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_bor
+func.func @const_fold_scalar_bor() -> i32 {
+  %c1 = spirv.Constant -268464129 : i32   // 0xefff 8fff
+  %c2 = spirv.Constant 268464128: i32     // 0x1000 7000
+
+  // 0xefff 8fff | 0x1000 7000 = 0xffff ffff = -1
+  // CHECK: spirv.Constant -1
+  %0 = spirv.BitwiseOr %c1, %c2 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_vector_bor
+func.func @const_fold_vector_bor() -> vector<3xi32> {
+  %c1 = spirv.Constant dense<[42, -55, 127]> : vector<3xi32>
+  %c2 = spirv.Constant dense<[-3, -15, 28]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[-1, -7, 127]>
+  %0 = spirv.BitwiseOr %c1, %c2 : vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.BitwiseXor
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @bitwise_xor_x_0
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @bitwise_xor_x_0(%arg0 : i32) -> i32 {
+  %c1 = spirv.Constant 0 : i32
+  %0 = spirv.BitwiseXor %arg0, %c1 : i32
+
+  // CHECK: return %[[ARG]]
+  return %0 : i32
+}
+
+// CHECK-LABEL: @bitwise_xor_x_x
+func.func @bitwise_xor_x_x(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK-DAG: spirv.Constant 0
+  // CHECK-DAG: spirv.Constant dense<0>
+  %0 = spirv.BitwiseXor %arg0, %arg0 : i32
+  %1 = spirv.BitwiseXor %arg1, %arg1 : vector<3xi32>
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @const_fold_scalar_bxor
+func.func @const_fold_scalar_bxor() -> i32 {
+  %c1 = spirv.Constant 4294967295 : i32  // 2^32 - 1: 0xffff ffff
+  %c2 = spirv.Constant -2147483648 : i32 // -2^31   : 0x8000 0000
+
+  // 0x8000 0000 ^ 0xffff fffe = 0xefff ffff
+  // CHECK: spirv.Constant 2147483647
+  %0 = spirv.BitwiseXor %c1, %c2 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_vector_bxor
+func.func @const_fold_vector_bxor() -> vector<3xi32> {
+  %c1 = spirv.Constant dense<[42, -55, 127]> : vector<3xi32>
+  %c2 = spirv.Constant dense<[-3, -15, 28]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[-41, 56, 99]>
+  %0 = spirv.BitwiseXor %c1, %c2 : vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.LeftShiftLogical
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @lsl_x_0
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: vector<3xi32>)
+func.func @lsl_x_0(%arg0 : i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  %c0 = spirv.Constant 0 : i32
+  %cv0 = spirv.Constant dense<0> : vector<3xi32>
+
+  %0 = spirv.ShiftLeftLogical %arg0, %c0 : i32, i32
+  %1 = spirv.ShiftLeftLogical %arg1, %cv0 : vector<3xi32>, vector<3xi32>
+
+  // CHECK: return %[[ARG0]], %[[ARG1]]
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @lsl_shift_overflow
+func.func @lsl_shift_overflow(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK: spirv.ShiftLeftLogical
+  // CHECK: spirv.ShiftLeftLogical
+  %c32 = spirv.Constant 32 : i32
+  %cv = spirv.Constant dense<[6, 18, 128]> : vector<3xi32>
+
+  %0 = spirv.ShiftLeftLogical %arg0, %c32 : i32, i32
+  %1 = spirv.ShiftLeftLogical %arg1, %cv : vector<3xi32>, vector<3xi32>
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @const_fold_scalar_lsl
+func.func @const_fold_scalar_lsl() -> i32 {
+  %c1 = spirv.Constant 65535 : i32  // 0x0000 ffff
+  %c2 = spirv.Constant 17 : i32
+  // 0x0000 ffff << 17 -> 0xfffe 0000
+  // CHECK: spirv.Constant -131072
+  %0 = spirv.ShiftLeftLogical %c1, %c2 : i32, i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_vector_lsl
+func.func @const_fold_vector_lsl() -> vector<3xi32> {
+  %c1 = spirv.Constant dense<[1, -1, 127]> : vector<3xi32>
+  %c2 = spirv.Constant dense<[31, 16, 13]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[-2147483648, -65536, 1040384]>
+  %0 = spirv.ShiftLeftLogical %c1, %c2 : vector<3xi32>, vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.RightShiftArithmetic
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @asr_x_0
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: vector<3xi32>)
+func.func @asr_x_0(%arg0 : i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  %c0 = spirv.Constant 0 : i32
+  %cv0 = spirv.Constant dense<0> : vector<3xi32>
+
+  %0 = spirv.ShiftRightArithmetic %arg0, %c0 : i32, i32
+  %1 = spirv.ShiftRightArithmetic %arg1, %cv0 : vector<3xi32>, vector<3xi32>
+
+  // CHECK: return %[[ARG0]], %[[ARG1]]
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @asr_shift_overflow
+func.func @asr_shift_overflow(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK: spirv.ShiftRightArithmetic
+  // CHECK: spirv.ShiftRightArithmetic
+  %c32 = spirv.Constant 32 : i32
+  %cv = spirv.Constant dense<[6, 18, 128]> : vector<3xi32>
+
+  %0 = spirv.ShiftRightArithmetic %arg0, %c32 : i32, i32
+  %1 = spirv.ShiftRightArithmetic %arg1, %cv : vector<3xi32>, vector<3xi32>
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @const_fold_scalar_asr
+func.func @const_fold_scalar_asr() -> i32 {
+  %c1 = spirv.Constant -131072 : i32  // 0xfffe 0000
+  %c2 = spirv.Constant 17 : i32
+  // 0x0000 ffff ashr 17 -> 0xffff ffff
+  // CHECK: spirv.Constant -1
+  %0 = spirv.ShiftRightArithmetic %c1, %c2 : i32, i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_vector_asr
+func.func @const_fold_vector_asr() -> vector<3xi32> {
+  %c1 = spirv.Constant dense<[-2147483648, 239847, 127]> : vector<3xi32>
+  %c2 = spirv.Constant dense<[31, 16, 13]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[-1, 3, 0]>
+  %0 = spirv.ShiftRightArithmetic %c1, %c2 : vector<3xi32>, vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.RightShiftLogical
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @lsr_x_0
+// CHECK-SAME: (%[[ARG0:.*]]: i32, %[[ARG1:.*]]: vector<3xi32>)
+func.func @lsr_x_0(%arg0 : i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  %c0 = spirv.Constant 0 : i32
+  %cv0 = spirv.Constant dense<0> : vector<3xi32>
+
+  %0 = spirv.ShiftRightLogical %arg0, %c0 : i32, i32
+  %1 = spirv.ShiftRightLogical %arg1, %cv0 : vector<3xi32>, vector<3xi32>
+
+  // CHECK: return %[[ARG0]], %[[ARG1]]
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @lsr_shift_overflow
+func.func @lsr_shift_overflow(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK: spirv.ShiftRightLogical
+  // CHECK: spirv.ShiftRightLogical
+  %c32 = spirv.Constant 32 : i32
+  %cv = spirv.Constant dense<[6, 18, 128]> : vector<3xi32>
+
+  %0 = spirv.ShiftRightLogical %arg0, %c32 : i32, i32
+  %1 = spirv.ShiftRightLogical %arg1, %cv : vector<3xi32>, vector<3xi32>
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @const_fold_scalar_lsr
+func.func @const_fold_scalar_lsr() -> i32 {
+  %c1 = spirv.Constant -131072 : i32  // 0xfffe 0000
+  %c2 = spirv.Constant 17 : i32
+  // 0x0000 ffff << 17 -> 0x0000 7fff
+  // CHECK: spirv.Constant 32767
+  %0 = spirv.ShiftRightLogical %c1, %c2 : i32, i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_vector_lsr
+func.func @const_fold_vector_lsr() -> vector<3xi32> {
+  %c1 = spirv.Constant dense<[-2147483648, -1, -127]> : vector<3xi32>
+  %c2 = spirv.Constant dense<[31, 16, 13]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[1, 65535, 524287]>
+  %0 = spirv.ShiftRightLogical %c1, %c2 : vector<3xi32>, vector<3xi32>
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Not
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @not_twice
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @not_twice(%arg0 : i32) -> i32 {
+  %0 = spirv.Not %arg0 : i32
+  %1 = spirv.Not %0 : i32
+
+  // CHECK: return %[[ARG]] : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_not
+func.func @const_fold_scalar_not() -> (i32, i32, i32) {
+  %c0 = spirv.Constant 0 : i32
+  %c3 = spirv.Constant 3 : i32
+  %cn3 = spirv.Constant -3 : i32
+
+  // CHECK-DAG: %[[TWO:.*]] = spirv.Constant 2 : i32
+  // CHECK-DAG: %[[NFOUR:.*]] = spirv.Constant -4 : i32
+  // CHECK-DAG: %[[NONE:.*]] = spirv.Constant -1 : i32
+  %0 = spirv.Not %c0 : i32
+  %1 = spirv.Not %c3 : i32
+  %2 = spirv.Not %cn3 : i32
+
+  // CHECK: return %[[NONE]], %[[NFOUR]], %[[TWO]]
+  return %0, %1, %2  : i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_not
+func.func @const_fold_vector_not() -> vector<3xi32> {
+  %cv = spirv.Constant dense<[-1, -4, 2]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[0, 3, -3]>
+  %0 = spirv.Not %cv : vector<3xi32>
+
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.selection
 //===----------------------------------------------------------------------===//
 
