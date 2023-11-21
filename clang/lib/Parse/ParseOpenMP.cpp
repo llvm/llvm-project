@@ -2670,7 +2670,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   }
   case OMPD_threadprivate: {
     // FIXME: Should this be permitted in C++?
-    if ((StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;
@@ -2689,7 +2689,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   }
   case OMPD_allocate: {
     // FIXME: Should this be permitted in C++?
-    if ((StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+    if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
           << getOpenMPDirectiveName(DKind) << 0;

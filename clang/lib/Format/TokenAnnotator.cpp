@@ -2206,8 +2206,10 @@ private:
       return false;
 
     if (const auto *NextNonComment = Tok.getNextNonComment();
-        !NextNonComment || NextNonComment->isPointerOrReference() ||
-        NextNonComment->isOneOf(tok::identifier, tok::string_literal)) {
+        (!NextNonComment && !Line.InMacroBody) ||
+        (NextNonComment &&
+         (NextNonComment->isPointerOrReference() ||
+          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
       return false;
     }
 
@@ -3472,6 +3474,19 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       }
       SeenName = true;
       break;
+    }
+  }
+
+  if (IsCpp && LineIsFunctionDeclaration &&
+      Line.endsWith(tok::semi, tok::r_brace)) {
+    auto *Tok = Line.Last->Previous;
+    while (Tok->isNot(tok::r_brace))
+      Tok = Tok->Previous;
+    if (auto *LBrace = Tok->MatchingParen; LBrace) {
+      assert(LBrace->is(tok::l_brace));
+      Tok->setBlockKind(BK_Block);
+      LBrace->setBlockKind(BK_Block);
+      LBrace->setFinalizedType(TT_FunctionLBrace);
     }
   }
 

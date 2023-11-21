@@ -3415,7 +3415,7 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
   verifyFormat("myFunc(public);");
   verifyFormat("std::vector<int> testVec = {private};");
   verifyFormat("private.p = 1;");
-  verifyFormat("void function(private...){};");
+  verifyFormat("void function(private...) {};");
   verifyFormat("if (private && public)");
   verifyFormat("private &= true;");
   verifyFormat("int x = private * public;");
@@ -16093,16 +16093,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
   Tab.IndentWidth = 8;
   Tab.UseTab = FormatStyle::UT_Never;
   Tab.TabWidth = 0;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16110,16 +16110,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_ForIndentation;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16127,16 +16127,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16144,16 +16144,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_AlignWithSpaces;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16161,7 +16161,7 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_Always;
-  verifyFormat("void a(){\n"
+  verifyFormat("void a() {\n"
                "// line starts with '\t'\n"
                "};",
                "void a(){\n"
@@ -16169,7 +16169,7 @@ TEST_F(FormatTest, ZeroTabWidth) {
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
+  verifyFormat("void a() {\n"
                "// line starts with '\t'\n"
                "};",
                "void a(){\n"

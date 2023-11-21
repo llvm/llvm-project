@@ -2679,10 +2679,10 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_st1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
 
   // Spill + fill
-  def int_aarch64_sme_ldr : DefaultAttrsIntrinsic<
-    [], [llvm_i32_ty, llvm_ptr_ty]>;
-  def int_aarch64_sme_str : DefaultAttrsIntrinsic<
-    [], [llvm_i32_ty, llvm_ptr_ty]>;
+  class SME_LDR_STR_ZA_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty, llvm_i32_ty]>;
+  def int_aarch64_sme_ldr : SME_LDR_STR_ZA_Intrinsic;
+  def int_aarch64_sme_str : SME_LDR_STR_ZA_Intrinsic;
 
   class SME_TileToVector_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -3454,4 +3454,50 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sel_x2  : SVE2_VG2_Sel_Intrinsic;
   def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
 
+  class SME_LDR_STR_ZT_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty]>;
+  def int_aarch64_sme_ldr_zt : SME_LDR_STR_ZT_Intrinsic;
+  def int_aarch64_sme_str_zt : SME_LDR_STR_ZT_Intrinsic;
+
 }
+
+// SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
+//
+def int_aarch64_sve_zipq1     : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_zipq2     : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_uzpq1     : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_uzpq2     : AdvSIMD_2VectorArg_Intrinsic;
+
+// SVE2.1 - Programmable table lookup within each quadword vector segment
+// (zeroing)/(merging)
+//
+def int_aarch64_sve_tblq : AdvSIMD_SVE_TBL_Intrinsic;
+def int_aarch64_sve_tbxq : AdvSIMD_SVE2_TBX_Intrinsic;
+
+// SVE2.1 - Extract vector segment from each pair of quadword segments.
+//
+def int_aarch64_sve_extq_lane : AdvSIMD_2VectorArgIndexed_Intrinsic;
+
+//
+// SVE2.1 - Move predicate to/from vector
+//
+def int_aarch64_sve_pmov_to_pred_lane :
+    DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                          [llvm_anyvector_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+def int_aarch64_sve_pmov_to_pred_lane_zero :
+    DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                          [llvm_anyvector_ty],
+                          [IntrNoMem]>;
+
+def int_aarch64_sve_pmov_to_vector_lane_merging :
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>,
+                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_sve_pmov_to_vector_lane_zeroing :
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                          [IntrNoMem]>;
