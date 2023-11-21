@@ -319,6 +319,12 @@ let TargetGuard = "sve2p1" in {
   defm SVLD2Q_VNUM : StructLoad<"svld2q_vnum[_{2}]", "2Pcl", "aarch64_sve_ld2q_sret">;
   defm SVLD3Q_VNUM : StructLoad<"svld3q_vnum[_{2}]", "3Pcl", "aarch64_sve_ld3q_sret">;
   defm SVLD4Q_VNUM : StructLoad<"svld4q_vnum[_{2}]", "4Pcl", "aarch64_sve_ld4q_sret">;
+
+  // Load quadwords (scalar base + vector index)
+  def SVLD1Q_GATHER_INDICES_U : MInst<"svld1q_gather_[{3}]index[_{d}]", "dPcg", "sUsiUilUlbhfd", [IsGatherLoad], MemEltTyDefault, "aarch64_sve_ld1q_gather_index">;
+
+  // Load quadwords (vector base + scalar index)
+  def SVLD1Q_GATHER_INDEX_S   : MInst<"svld1q_gather[_{2}base]_index_{d}", "dPgl", "sUsiUilUlbhfd", [IsGatherLoad], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -464,6 +470,12 @@ let TargetGuard = "sve2p1" in {
   defm SVST2Q_VNUM : StructStore<"svst2q_vnum[_{d}]", "vPcl2", "aarch64_sve_st2q">;
   defm SVST3Q_VNUM : StructStore<"svst3q_vnum[_{d}]", "vPcl3", "aarch64_sve_st3q">;
   defm SVST4Q_VNUM : StructStore<"svst4q_vnum[_{d}]", "vPcl4", "aarch64_sve_st4q">;
+
+  // Scatter store quadwords (scalar base + vector index)
+  def SVST1Q_SCATTER_INDICES_U : MInst<"svst1q_scatter_[{3}]index[_{d}]", "vPpgd", "sUsiUilUlbhfd", [IsScatterStore], MemEltTyDefault, "aarch64_sve_st1q_scatter_index">;
+
+  // Scatter store quadwords (vector base + scalar index)
+  def SVST1Q_SCATTER_INDEX_S   : MInst<"svst1q_scatter[_{2}base]_index[_{d}]", "vPgld", "sUsiUilUlbhfd", [IsScatterStore], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
