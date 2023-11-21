@@ -113,26 +113,21 @@ class SelectionDAGBuilder {
     DIExpression *Expression;
     DebugLoc dl;
     DanglingDebugInfo() = default;
-    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DebugLoc DL, unsigned SDNO)
-        : SDNodeOrder(SDNO), Variable(Var), Expression(Expr), dl(std::move(DL)) {}
+    DanglingDebugInfo(DILocalVariable *Var, DIExpression *Expr, DebugLoc DL,
+                      unsigned SDNO)
+        : SDNodeOrder(SDNO), Variable(Var), Expression(Expr),
+          dl(std::move(DL)) {}
 
-    DILocalVariable *getVariable() const {
-      return Variable;
-    }
-    DIExpression *getExpression() const {
-      return Expression;
-    }
-    DebugLoc getDebugLoc() const {
-      return dl;
-    }
+    DILocalVariable *getVariable() const { return Variable; }
+    DIExpression *getExpression() const { return Expression; }
+    DebugLoc getDebugLoc() const { return dl; }
     unsigned getSDNodeOrder() const { return SDNodeOrder; }
 
     /// Helper for printing DanglingDebugInfo. This hoop-jumping is to
     /// store a Value pointer, so that we can print a whole DDI as one object.
     /// Call SelectionDAGBuilder::printDDI instead of using directly.
     struct Print {
-      Print(const Value *V, const DanglingDebugInfo &DDI)
-          : V(V), DDI(DDI) {}
+      Print(const Value *V, const DanglingDebugInfo &DDI) : V(V), DDI(DDI) {}
       const Value *V;
       const DanglingDebugInfo &DDI;
       friend raw_ostream &operator<<(raw_ostream &OS,
@@ -154,7 +149,8 @@ class SelectionDAGBuilder {
   /// Returns an object that defines `raw_ostream &operator<<` for printing.
   /// Usage example:
   ////    errs() << printDDI(MyDanglingInfo) << " is dangling\n";
-  DanglingDebugInfo::Print printDDI(const Value *V, const DanglingDebugInfo &DDI) {
+  DanglingDebugInfo::Print printDDI(const Value *V,
+                                    const DanglingDebugInfo &DDI) {
     return DanglingDebugInfo::Print(V, DDI);
   }
 
@@ -344,8 +340,8 @@ public:
 
   /// Register a dbg_value which relies on a Value which we have not yet seen.
   void addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
-    DILocalVariable *Var, DIExpression *Expr, bool IsVariadic,
-                                                 DebugLoc DL, unsigned Order);
+                            DILocalVariable *Var, DIExpression *Expr,
+                            bool IsVariadic, DebugLoc DL, unsigned Order);
 
   /// If we have dangling debug info that describes \p Variable, or an
   /// overlapping part of variable considering the \p Expr, then this method

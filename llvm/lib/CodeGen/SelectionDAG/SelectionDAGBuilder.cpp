@@ -1168,7 +1168,9 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
         SmallVector<Value *, 4> Vals;
         for (Value *V : It->Values.location_ops())
           Vals.push_back(V);
-        addDanglingDebugInfo(Vals, FnVarLocs->getDILocalVariable(It->VariableID), It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
+        addDanglingDebugInfo(Vals,
+                             FnVarLocs->getDILocalVariable(It->VariableID),
+                             It->Expr, Vals.size() > 1, It->DL, SDNodeOrder);
       }
     }
   }
@@ -1183,20 +1185,24 @@ void SelectionDAGBuilder::visitDbgInfo(const Instruction &I) {
     // A DPValue with no locations is a kill location.
     SmallVector<Value *, 4> Values(DPV.location_ops());
     if (Values.empty()) {
-      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(), SDNodeOrder);
+      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(),
+                           SDNodeOrder);
       continue;
     }
 
     // A DPValue with an undef or absent location is also a kill location.
-    if (llvm::any_of(Values, [](Value *V) { return !V || isa<UndefValue>(V);})) {
-      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(), SDNodeOrder);
+    if (llvm::any_of(Values,
+                     [](Value *V) { return !V || isa<UndefValue>(V); })) {
+      handleKillDebugValue(Variable, Expression, DPV.getDebugLoc(),
+                           SDNodeOrder);
       continue;
     }
 
     bool IsVariadic = DPV.hasArgList();
     if (!handleDebugValue(Values, Variable, Expression, DPV.getDebugLoc(),
                           SDNodeOrder, IsVariadic)) {
-      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic, DPV.getDebugLoc(), SDNodeOrder);
+      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
+                           DPV.getDebugLoc(), SDNodeOrder);
     }
   }
 }
@@ -1267,7 +1273,7 @@ void SelectionDAGBuilder::visit(unsigned Opcode, const User &I) {
 static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
                                             DILocalVariable *Variable,
                                             DebugLoc DL, unsigned Order,
-                                            SmallVectorImpl<Value*> &Values,
+                                            SmallVectorImpl<Value *> &Values,
                                             DIExpression *Expression) {
   // For variadic dbg_values we will now insert an undef.
   // FIXME: We can potentially recover these!
@@ -1284,11 +1290,12 @@ static bool handleDanglingVariadicDebugInfo(SelectionDAG &DAG,
 }
 
 void SelectionDAGBuilder::addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
-                                               DILocalVariable *Var, DIExpression *Expr, bool IsVariadic,
-                                               DebugLoc DL, unsigned Order) {
+                                               DILocalVariable *Var,
+                                               DIExpression *Expr,
+                                               bool IsVariadic, DebugLoc DL,
+                                               unsigned Order) {
   if (IsVariadic) {
-    handleDanglingVariadicDebugInfo(
-          DAG, Var, DL, Order, Values, Expr);
+    handleDanglingVariadicDebugInfo(DAG, Var, DL, Order, Values, Expr);
     return;
   }
   // TODO: Dangling debug info will eventually either be resolved or produce
@@ -1305,8 +1312,8 @@ void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,
     DIVariable *DanglingVariable = DDI.getVariable();
     DIExpression *DanglingExpr = DDI.getExpression();
     if (DanglingVariable == Variable && Expr->fragmentsOverlap(DanglingExpr)) {
-      LLVM_DEBUG(dbgs() << "Dropping dangling debug info for " << printDDI(nullptr, DDI)
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping dangling debug info for "
+                        << printDDI(nullptr, DDI) << "\n");
       return true;
     }
     return false;
@@ -1352,8 +1359,8 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
       // calling EmitFuncArgumentDbgValue here.
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, DL,
                                     FuncArgumentDbgValueKind::Value, Val)) {
-        LLVM_DEBUG(dbgs() << "Resolve dangling debug info for " << printDDI(V, DDI)
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "Resolve dangling debug info for "
+                          << printDDI(V, DDI) << "\n");
         LLVM_DEBUG(dbgs() << "  By mapping to:\n    "; Val.dump());
         // Increase the SDNodeOrder for the DbgValue here to make sure it is
         // inserted after the definition of Val when emitting the instructions
@@ -1367,9 +1374,11 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
         DAG.AddDbgValue(SDV, false);
       } else
         LLVM_DEBUG(dbgs() << "Resolved dangling debug info for "
-                          << printDDI(V, DDI) << " in EmitFuncArgumentDbgValue\n");
+                          << printDDI(V, DDI)
+                          << " in EmitFuncArgumentDbgValue\n");
     } else {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << printDDI(V, DDI) << "\n");
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << printDDI(V, DDI)
+                        << "\n");
       auto Undef = UndefValue::get(V->getType());
       auto SDV =
           DAG.getConstantDbgValue(Variable, Expr, Undef, DL, DbgSDNodeOrder);
@@ -1379,7 +1388,8 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
   DDIV.clear();
 }
 
-void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V, DanglingDebugInfo &DDI) {
+void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V,
+                                                    DanglingDebugInfo &DDI) {
   // TODO: For the variadic implementation, instead of only checking the fail
   // state of `handleDebugValue`, we need know specifically which values were
   // invalid, so that we attempt to salvage only those values when processing
@@ -1406,7 +1416,7 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V, DanglingDebu
     // Temporary "0", awaiting real implementation.
     SmallVector<uint64_t, 16> Ops;
     SmallVector<Value *, 4> AdditionalValues;
-    V = salvageDebugInfoImpl(const_cast<Instruction&>(VAsInst),
+    V = salvageDebugInfoImpl(const_cast<Instruction &>(VAsInst),
                              Expr->getNumLocationOperands(), Ops,
                              AdditionalValues);
     // If we cannot salvage any further, and haven't yet found a suitable debug
@@ -1440,8 +1450,8 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(const Value *V, DanglingDebu
   auto *Undef = UndefValue::get(OrigV->getType());
   auto *SDV = DAG.getConstantDbgValue(Var, Expr, Undef, DL, SDNodeOrder);
   DAG.AddDbgValue(SDV, false);
-  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  " << printDDI(OrigV, DDI)
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "Dropping debug value info for:\n  "
+                    << printDDI(OrigV, DDI) << "\n");
 }
 
 void SelectionDAGBuilder::handleKillDebugValue(DILocalVariable *Var,
@@ -1591,7 +1601,7 @@ void SelectionDAGBuilder::resolveOrClearDbgInfo() {
   // Try to fixup any remaining dangling debug info -- and drop it if we can't.
   for (auto &Pair : DanglingDebugInfoMap)
     for (auto &DDI : Pair.second)
-      salvageUnresolvedDbgValue(const_cast<Value*>(Pair.first), DDI);
+      salvageUnresolvedDbgValue(const_cast<Value *>(Pair.first), DDI);
   clearDanglingDebugInfo();
 }
 
@@ -6332,7 +6342,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool IsVariadic = DI.hasArgList();
     if (!handleDebugValue(Values, Variable, Expression, DI.getDebugLoc(),
                           SDNodeOrder, IsVariadic))
-      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic, DI.getDebugLoc(), SDNodeOrder);
+      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
+                           DI.getDebugLoc(), SDNodeOrder);
     return;
   }
 
