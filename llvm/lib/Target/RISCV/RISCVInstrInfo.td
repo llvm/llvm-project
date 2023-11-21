@@ -2013,7 +2013,7 @@ def : Pat<(XLenVT (abs GPR:$rs1)),
 let Predicates = [HasShortForwardBranchOpt, IsRV64] in
 def : Pat<(sext_inreg (abs 33signbits_node:$rs1), i32),
           (PseudoCCSUBW (i64 GPR:$rs1), (i64 X0), /* COND_LT */ 2,
-           (XLenVT GPR:$rs1), (i64 X0), (i64 GPR:$rs1))>;
+           (i64 GPR:$rs1), (i64 X0), (i64 GPR:$rs1))>;
 
 //===----------------------------------------------------------------------===//
 // Experimental RV64 i32 legalization patterns.
