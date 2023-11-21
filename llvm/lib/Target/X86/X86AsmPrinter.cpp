@@ -65,7 +65,21 @@ void clearRhs(Register Reg, std::map<Register, int64_t> &SpillMap) {
   auto I = SpillMap.begin();
   while (I != SpillMap.end()) {
     if (I->second == Reg) {
-      I = SpillMap.erase(I);
+      // If there's a mapping A => B, where B has been reassigned and has a
+      // mapping B => C, then transitively apply the mapping so that A => C.
+      // This makes sure we don't remove mappings (especially to stack slots)
+      // when a register is reassigned. Example:
+      //   store $r13 in [$rbp - 8]
+      //   $rcx = $r13
+      //   $r13 = $rbx
+      // Upon assigning `$r13 = $rbx`, we apply `$r13`'s previous mapping to
+      // `$rcx` so that `SpillMap[$rcx] = -8`.
+      if(SpillMap.count(Reg) > 0) {
+        SpillMap[I->first] = SpillMap[Reg];
+        ++I;
+      } else {
+        I = SpillMap.erase(I);
+      }
     } else {
       ++I;
     }
@@ -99,13 +113,14 @@ void processInstructions(
       const MachineOperand Rhs = Instr.getOperand(1);
       assert(Lhs.isReg() && "Is register.");
       assert(Rhs.isReg() && "Is register.");
+      // Reassigning a new value to LHS means any mappings to Lhs are now void
+      // and need to be removed. We need to do this before updating the
+      // mapping, so the transitive property of the SpillMap isn't violated
+      // (see `clearRhs` for more info).
+      clearRhs(Lhs.getReg(), SpillMap);
       SpillMap[Lhs.getReg()] = Rhs.getReg();
       // YKFIXME: If the `mov` instruction has a killed-flag, remove the
       // register from the map.
-
-      // Reassigning a new value to Lhs means any mappings to Lhs are now void
-      // and need to be removed.
-      clearRhs(Lhs.getReg(), SpillMap);
       continue;
     }
 
