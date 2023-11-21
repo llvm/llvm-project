@@ -972,7 +972,8 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<IntegerType>([](IntegerType intTy) {
         return llvm::TypeSize::getFixed(intTy.getWidth());
       })
-      .Case<LLVMPPCFP128Type>([](Type) { return llvm::TypeSize::getFixed(128); })
+      .Case<LLVMPPCFP128Type>(
+          [](Type) { return llvm::TypeSize::getFixed(128); })
       .Case<LLVMFixedVectorType>([](LLVMFixedVectorType t) {
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());
