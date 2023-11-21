@@ -40,6 +40,9 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
+option(LIBCXXABI_ENABLE_DEMANGLER
+  "Provide support for demangling in the runtime.
+   When disabled, libc++abi does not support the name demangler API." ON)
 option(LIBCXXABI_ENABLE_EXCEPTIONS
   "Provide support for exceptions in the runtime.
   When disabled, libc++abi does not support stack unwinding and other exceptions-related features." ON)
@@ -385,7 +388,7 @@ if (LIBCXXABI_SILENT_TERMINATE)
   add_definitions(-DLIBCXXABI_SILENT_TERMINATE)
 endif()
 
-if (LIBCXXABI_NON_DEMANGLING_TERMINATE)
+if (LIBCXXABI_NON_DEMANGLING_TERMINATE OR NOT LIBCXXABI_ENABLE_DEMANGLER)
   add_definitions(-DLIBCXXABI_NON_DEMANGLING_TERMINATE)
 endif()
 
