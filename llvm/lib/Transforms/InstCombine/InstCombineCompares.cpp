@@ -541,8 +541,8 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
   // 3. Add the edges for the PHI nodes.
   // 4. Emit GEPs to get the original pointers.
   // 5. Remove the original instructions.
-  uint64_t IndexSize = DL.getIndexTypeSizeInBits(Start->getType());
-  Type *IndexType = IntegerType::get(Base->getContext(), IndexSize);
+  Type *IndexType = IntegerType::get(
+      Base->getContext(), DL.getIndexTypeSizeInBits(Start->getType()));
 
   DenseMap<Value *, Value *> NewInsts;
   NewInsts[Base] = ConstantInt::getNullValue(IndexType);
@@ -565,10 +565,6 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
       continue;
 
     if (auto *GEP = dyn_cast<GEPOperator>(Val)) {
-      APInt Offset(IndexSize, 0);
-      MapVector<Value *, APInt> VarOffsets;
-      GEP->collectOffset(DL, IndexSize, VarOffsets, Offset);
-
       setInsertionPoint(Builder, GEP);
       Value *Op = NewInsts[GEP->getOperand(0)];
       Value *OffsetV = emitGEPOffset(&Builder, DL, GEP);
