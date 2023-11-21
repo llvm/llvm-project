@@ -181,7 +181,9 @@ MDNode *MachineLoop::getLoopID() const {
           }
         }
         assert(MD && "Dropped inconsistent MD_loop (nullptr).");
-        LoopID = MD;
+        if (!LoopID)
+          LoopID = MD;
+        assert(MD == LoopID && "Dropped inconsistent MD_loop (mismatch).");
       }
     }
   }
