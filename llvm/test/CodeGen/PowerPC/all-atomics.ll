@@ -5694,9 +5694,9 @@ define dso_local i64 @atommax8(ptr nocapture noundef %ptr, i64 noundef %val) loc
 ; AIX32-NEXT:    crand 28, 2, 25
 ; AIX32-NEXT:    li 8, 5
 ; AIX32-NEXT:    stw 4, 60(1)
-; AIX32-NEXT:    cror 0, 28, 20
-; AIX32-NEXT:    isellt 5, 5, 30
-; AIX32-NEXT:    isellt 6, 4, 31
+; AIX32-NEXT:    cror 4, 28, 20
+; AIX32-NEXT:    isel 5, 5, 30, 4
+; AIX32-NEXT:    isel 6, 4, 31, 4
 ; AIX32-NEXT:    mr 4, 28
 ; AIX32-NEXT:    bl .__atomic_compare_exchange_8[PR]
 ; AIX32-NEXT:    nop
@@ -5716,8 +5716,8 @@ define dso_local i64 @atommax8(ptr nocapture noundef %ptr, i64 noundef %val) loc
 ; AIX32-NEXT:    crandc 20, 5, 2
 ; AIX32-NEXT:    crand 28, 2, 25
 ; AIX32-NEXT:    li 4, 66
-; AIX32-NEXT:    cror 0, 28, 20
-; AIX32-NEXT:    isellt 4, 4, 3
+; AIX32-NEXT:    cror 4, 28, 20
+; AIX32-NEXT:    isel 4, 4, 3, 4
 ; AIX32-NEXT:    li 3, 0
 ; AIX32-NEXT:    addi 1, 1, 80
 ; AIX32-NEXT:    lwz 0, 8(1)

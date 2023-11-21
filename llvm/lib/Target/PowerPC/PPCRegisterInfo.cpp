@@ -79,7 +79,7 @@ MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
 static cl::opt<unsigned> CRWAWWindowSize(
     "ppc-cr-waw-window",
     cl::desc("Maximum search distance for definition of CR fields on ppc"),
-    cl::Hidden, cl::init(4));
+    cl::Hidden, cl::init(3));
 
 // Copies/moves of physical accumulators are expensive operations
 // that should be avoided whenever possible. MMA instructions are

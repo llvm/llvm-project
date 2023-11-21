@@ -74,11 +74,11 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK-NEXT:    addze r3, r3
 ; CHECK-NEXT:    addic r11, r11, 1
 ; CHECK-NEXT:    addze r10, r10
-; CHECK-NEXT:    cmplw cr1, r11, r7
 ; CHECK-NEXT:    cmplw r10, r6
-; CHECK-NEXT:    cmpw cr5, r10, r6
-; CHECK-NEXT:    crandc 4*cr6+lt, 4*cr5+lt, eq
-; CHECK-NEXT:    bc 12, 4*cr6+lt, L..BB0_3
+; CHECK-NEXT:    cmpw cr1, r10, r6
+; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr1+lt, eq
+; CHECK-NEXT:    cmplw cr1, r11, r7
+; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_3
 ; CHECK-NEXT:  # %bb.4: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt

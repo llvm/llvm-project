@@ -245,12 +245,12 @@ define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
 ; CHECK-NEXT:    cmpld 4, 3
 ; CHECK-NEXT:    xxswapd 0, 36
 ; CHECK-NEXT:    xxswapd 1, 34
-; CHECK-NEXT:    cmpd 5, 4, 3
+; CHECK-NEXT:    cmpd 1, 4, 3
 ; CHECK-NEXT:    mffprd 3, 0
 ; CHECK-NEXT:    mffprd 4, 1
+; CHECK-NEXT:    crandc 20, 4, 2
 ; CHECK-NEXT:    cmpld 1, 4, 3
-; CHECK-NEXT:    crandc 24, 20, 2
-; CHECK-NEXT:    bc 12, 24, .LBB12_3
+; CHECK-NEXT:    bc 12, 20, .LBB12_3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    crand 20, 2, 4
 ; CHECK-NEXT:    bc 12, 20, .LBB12_3
@@ -269,9 +269,9 @@ define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
 ; NOP8VEC-NEXT:    crandc 20, 4, 2
 ; NOP8VEC-NEXT:    cmpld 6, 3, 7
 ; NOP8VEC-NEXT:    crand 28, 2, 24
-; NOP8VEC-NEXT:    cror 0, 28, 20
-; NOP8VEC-NEXT:    isellt 3, 3, 7
-; NOP8VEC-NEXT:    isellt 4, 4, 8
+; NOP8VEC-NEXT:    cror 4, 28, 20
+; NOP8VEC-NEXT:    isel 3, 3, 7, 4
+; NOP8VEC-NEXT:    isel 4, 4, 8, 4
 ; NOP8VEC-NEXT:    std 3, -32(1)
 ; NOP8VEC-NEXT:    addi 3, 1, -32
 ; NOP8VEC-NEXT:    std 4, -24(1)

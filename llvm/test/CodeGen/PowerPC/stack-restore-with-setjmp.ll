@@ -76,12 +76,12 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; BE-NEXT:    addi 3, 31, 128
 ; BE-NEXT:    bl _setjmp
 ; BE-NEXT:    nop
+; BE-NEXT:    crmove 20, 10
 ; BE-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; BE-NEXT:    cmpwi 3, 0
-; BE-NEXT:    crorc 28, 10, 2
-; BE-NEXT:    crmove 20, 10
+; BE-NEXT:    crorc 20, 10, 2
 ; BE-NEXT:    crmove 24, 2
-; BE-NEXT:    bc 4, 28, .LBB0_4
+; BE-NEXT:    bc 4, 20, .LBB0_4
 ; BE-NEXT:  # %bb.2: # %if.end5
 ; BE-NEXT:    addis 3, 2, .L.str@toc@ha
 ; BE-NEXT:    addi 3, 3, .L.str@toc@l
