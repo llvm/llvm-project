@@ -34,13 +34,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createCostModelAnalysisPass - This creates an instance of the
-  // CostModelAnalysis pass.
-  //
-  FunctionPass *createCostModelAnalysisPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   // createDelinearizationPass - This pass implements attempts to restore
   // multidimensional array indices from linearized expressions.
   //
