@@ -3994,10 +3994,10 @@ defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv">;
 defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv">;
 
 defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
-def EXTQ_ZZI : sve2p1_extq<"extq">;
+defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq_lane>;
 
-defm PMOV_PZI : sve2p1_vector_to_pred<"pmov">;
-defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov">;
+defm PMOV_PZI : sve2p1_vector_to_pred<"pmov", int_aarch64_sve_pmov_to_pred_lane, int_aarch64_sve_pmov_to_pred_lane_zero>;
+defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov", int_aarch64_sve_pmov_to_vector_lane_merging, int_aarch64_sve_pmov_to_vector_lane_zeroing>;
 
 defm ORQV_VPZ   : sve2p1_int_reduce_q<0b1100, "orqv">;
 defm EORQV_VPZ  : sve2p1_int_reduce_q<0b1101, "eorqv">;
@@ -4008,12 +4008,12 @@ defm UMAXQV_VPZ : sve2p1_int_reduce_q<0b0101, "umaxqv">;
 defm SMINQV_VPZ : sve2p1_int_reduce_q<0b0110, "sminqv">;
 defm UMINQV_VPZ : sve2p1_int_reduce_q<0b0111, "uminqv">;
 
-defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, null_frag>;
-defm ZIPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b000, "zipq1">;
-defm ZIPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b001, "zipq2">;
-defm UZPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b010, "uzpq1">;
-defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2">;
-defm TBLQ_ZZZ  : sve2p1_tblq<"tblq">;
+defm ZIPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b000, "zipq1", int_aarch64_sve_zipq1>;
+defm ZIPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b001, "zipq2", int_aarch64_sve_zipq2>;
+defm UZPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b010, "uzpq1", int_aarch64_sve_uzpq1>;
+defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2", int_aarch64_sve_uzpq2>;
+defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, int_aarch64_sve_tbxq>;
+defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 } // End HasSVE2p1_or_HasSME2p1
 
 //===----------------------------------------------------------------------===//

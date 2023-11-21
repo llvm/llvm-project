@@ -696,16 +696,15 @@ void mlir::scf::yieldReplacementForFusedProducer(
         rewriter.updateRootInPlace(tiledDestStyleOp, [&]() {
           tiledDestStyleOp.getDpsInitsMutable()[resultNumber].set(destSlice);
         });
-
-        Block *block = rewriter.getInsertionPoint()->getBlock();
-        rewriter.setInsertionPoint(block->getTerminator());
-        Value replacement = rewriter.create<tensor::InsertSliceOp>(
-            fusedProducerInfo.origProducer.getLoc(),
-            fusedProducerInfo.tiledAndFusedProducer,
-            loops.back().getRegionIterArgs().back(), sliceOp.getMixedOffsets(),
-            sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
-        return {replacement};
       }
+      Block *block = rewriter.getInsertionPoint()->getBlock();
+      rewriter.setInsertionPoint(block->getTerminator());
+      Value replacement = rewriter.create<tensor::InsertSliceOp>(
+          fusedProducerInfo.origProducer.getLoc(),
+          fusedProducerInfo.tiledAndFusedProducer,
+          loops.back().getRegionIterArgs().back(), sliceOp.getMixedOffsets(),
+          sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
+      return {replacement};
     };
 
     addInitOperandsToLoopNest(rewriter, loops,
