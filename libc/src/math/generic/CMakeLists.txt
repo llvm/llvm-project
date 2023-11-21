@@ -1475,6 +1475,42 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nexttoward
+  SRCS
+    nexttoward.cpp
+  HDRS
+    ../nexttoward.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nexttowardf
+  SRCS
+    nexttowardf.cpp
+  HDRS
+    ../nexttowardf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nexttowardl
+  SRCS
+    nexttowardl.cpp
+  HDRS
+    ../nexttowardl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmod
   SRCS
     fmod.cpp

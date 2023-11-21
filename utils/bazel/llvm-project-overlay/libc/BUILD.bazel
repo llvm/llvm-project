@@ -1872,6 +1872,12 @@ libc_math_function(name = "nextafterf")
 
 libc_math_function(name = "nextafterl")
 
+libc_math_function(name = "nexttoward")
+
+libc_math_function(name = "nexttowardf")
+
+libc_math_function(name = "nexttowardl")
+
 libc_math_function(name = "scalbn")
 
 libc_math_function(name = "scalbnf")

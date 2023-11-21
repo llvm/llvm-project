@@ -96,6 +96,7 @@ add_header_library(
   HDRS
     ManipulationFunctions.h
   DEPENDS
+    .fenv_impl
     .fp_bits
     .nearest_integer_operations
     .normal_float
