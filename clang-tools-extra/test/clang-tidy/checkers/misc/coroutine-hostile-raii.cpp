@@ -62,12 +62,6 @@ struct suspend_always {
 };
 } // namespace std
 
-struct [[clang::annotate("coro_raii_safe_suspend")]] raii_safe_suspend {
-  bool await_ready() noexcept { return false; }
-  void await_suspend(std::coroutine_handle<>) noexcept {}
-  void await_resume() noexcept {}
-};
-
 struct ReturnObject {
     struct promise_type {
         ReturnObject get_return_object() { return {}; }
@@ -141,6 +135,11 @@ ReturnObject scopedLockableTest() {
   absl::Mutex no_warning_5;
 }
 
+struct [[clang::annotate("coro_raii_safe_suspend")]] raii_safe_suspend {
+  bool await_ready() noexcept { return false; }
+  void await_suspend(std::coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
+};
 ReturnObject RAIISafeSuspendTest() {
   absl::Mutex a;
   co_await raii_safe_suspend{};

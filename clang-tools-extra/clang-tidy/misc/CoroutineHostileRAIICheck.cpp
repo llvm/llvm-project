@@ -59,7 +59,7 @@ AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
          InnerMatcher.matches(*Node.getCommonExpr(), Finder, Builder);
 }
 
-AST_MATCHER(Decl, isRAIISafeAwaitable) {
+AST_MATCHER(Decl, isRAIISafe) {
   for (const auto &Attr : Node.specific_attrs<clang::AnnotateAttr>())
     if (Attr->getAnnotation() == "coro_raii_safe_suspend")
       return true;
@@ -81,8 +81,8 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
                                namedDecl(hasAnyName(RAIITypesList))))))
                        .bind("raii");
-  auto SafeSuspend = awaiatable(
-      hasType(hasCanonicalType(hasDeclaration(isRAIISafeAwaitable()))));
+  auto SafeSuspend =
+      awaiatable(hasType(hasCanonicalType(hasDeclaration(isRAIISafe()))));
   Finder->addMatcher(
       expr(anyOf(coawaitExpr(unless(SafeSuspend)), coyieldExpr()),
            forEachPrevStmt(
