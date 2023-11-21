@@ -62,7 +62,7 @@ Options
 
     .. code-block:: c++
 
-      // Cosnider option SafeAwaitablesList = "safe_awaitable"
+      // Consider option SafeAwaitablesList = "safe_awaitable"
       struct safe_awaitable {
         bool await_ready() noexcept { return false; }
         void await_suspend(std::coroutine_handle<>) noexcept {}
