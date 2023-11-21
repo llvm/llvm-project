@@ -52,9 +52,12 @@ public:
 
   XCOFF::VisibilityType getVisibilityType() const { return VisibilityType; }
 
-  bool hasRename() const { return !SymbolTableName.empty(); }
+  bool hasRename() const { return HasRename; }
 
-  void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
+  void setSymbolTableName(StringRef STN) {
+    SymbolTableName = STN;
+    HasRename = true;
+  }
 
   StringRef getSymbolTableName() const {
     if (hasRename())
@@ -67,6 +70,7 @@ private:
   MCSectionXCOFF *RepresentedCsect = nullptr;
   XCOFF::VisibilityType VisibilityType = XCOFF::SYM_V_UNSPECIFIED;
   StringRef SymbolTableName;
+  bool HasRename = false;
 };
 
 } // end namespace llvm
