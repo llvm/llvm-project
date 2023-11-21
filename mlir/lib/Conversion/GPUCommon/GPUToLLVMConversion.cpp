@@ -121,26 +121,6 @@ protected:
           llvmPointerType, /* void **extra */
           llvmInt64Type    /* size_t paramsCount */
       }};
-  FunctionCallBuilder launchClusterKernelCallBuilder = {
-      "mgpuLaunchClusterKernel",
-      llvmVoidType,
-      {
-          llvmPointerType, /* void* f */
-          llvmIntPtrType,  /* intptr_t clusterXDim */
-          llvmIntPtrType,  /* intptr_t clusteryDim */
-          llvmIntPtrType,  /* intptr_t clusterZDim */
-          llvmIntPtrType,  /* intptr_t gridXDim */
-          llvmIntPtrType,  /* intptr_t gridyDim */
-          llvmIntPtrType,  /* intptr_t gridZDim */
-          llvmIntPtrType,  /* intptr_t blockXDim */
-          llvmIntPtrType,  /* intptr_t blockYDim */
-          llvmIntPtrType,  /* intptr_t blockZDim */
-          llvmInt32Type,   /* unsigned int sharedMemBytes */
-          llvmPointerType, /* void *hstream */
-          llvmPointerType, /* void **kernelParams */
-          llvmPointerType, /* void **extra */
-          llvmInt64Type    /* size_t paramsCount */
-      }};
   FunctionCallBuilder streamCreateCallBuilder = {
       "mgpuStreamCreate", llvmPointerType /* void *stream */, {}};
   FunctionCallBuilder streamDestroyCallBuilder = {
