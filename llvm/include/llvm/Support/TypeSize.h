@@ -97,17 +97,29 @@ protected:
 
   constexpr FixedOrScalableQuantity() = default;
   constexpr FixedOrScalableQuantity(ScalarTy Quantity, bool Scalable)
-      : Quantity(Quantity), Scalable(Scalable) {}
+      : Quantity(Quantity), Scalable(Quantity ? Scalable : false) {}
 
   friend constexpr LeafTy &operator+=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity += RHS.Quantity;
+    if (!LHS.Quantity)
+      LHS.Scalable = false;
+    else if (RHS.Quantity)
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
   friend constexpr LeafTy &operator-=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity -= RHS.Quantity;
+    if (!LHS.Quantity)
+      LHS.Scalable = false;
+    else if (RHS.Quantity)
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
@@ -315,6 +327,8 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
+  constexpr TypeSize() : FixedOrScalableQuantity(0, false) {}
+
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
