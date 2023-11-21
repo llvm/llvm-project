@@ -314,8 +314,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 
   /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
-  void handleTerminator(Operation *op,
-                        ArrayRef<Value> valuesToRepl) const final {
+  void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
     auto returnOp = dyn_cast<TestReturnOp>(op);
     if (!returnOp)
