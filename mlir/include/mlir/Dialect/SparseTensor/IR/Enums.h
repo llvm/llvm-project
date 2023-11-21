@@ -311,10 +311,8 @@ constexpr std::optional<LevelFormat> getLevelFormat(DimLevelType dlt) {
 }
 
 /// Convert a LevelFormat to its corresponding DimLevelType with the given
-/// properties. Returns std::nullopt when the properties are not applicable for
-/// the input level format.
-/// TODO: factor out a new LevelProperties type so we can add new properties
-/// without changing this function's signature
+/// properties. Returns std::nullopt when the properties are not applicable
+/// for the input level format.
 constexpr std::optional<DimLevelType>
 buildLevelType(LevelFormat lf, bool ordered, bool unique) {
   auto dlt = static_cast<DimLevelType>(static_cast<uint8_t>(lf) |
