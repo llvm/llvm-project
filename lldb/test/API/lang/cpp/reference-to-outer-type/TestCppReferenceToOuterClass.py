@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @expectedFailure("The fix for this was reverted due to llvm.org/PR52257")
+    @expectedFailure  # The fix for this was reverted due to llvm.org/PR52257
     def test(self):
         self.build()
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

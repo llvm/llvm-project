@@ -27,7 +27,7 @@ class SharedLibStrippedTestCase(TestBase):
         )
 
     @expectedFailureAll(oslist=["windows"])
-    @expectedFailure("llvm.org/PR36712")
+    @expectedFailure  # llvm.org/PR36712
     def test_frame_variable(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         self.build()
