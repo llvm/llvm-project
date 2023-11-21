@@ -1138,7 +1138,7 @@ bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
   const Module *M = FDecl.getParent();
   assert(M && "Expecting FDecl to be connected to a Module.");
 
-  if (FDecl.LibFuncCache == LibFunc(-1))
+  if (FDecl.LibFuncCache == Function::UnknownLibFunc)
     if (!getLibFunc(FDecl.getName(), FDecl.LibFuncCache))
       FDecl.LibFuncCache = NotLibFunc;
 

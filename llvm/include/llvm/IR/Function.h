@@ -124,10 +124,12 @@ public:
 private:
   friend class TargetLibraryInfoImpl;
 
+  static constexpr LibFunc UnknownLibFunc = LibFunc(-1);
+
   /// Cache for TLI::getLibFunc() result without prototype validation.
-  /// -1 if uninitialized. NotLibFunc if definitely not lib func.
+  /// UnknownLibFunc if uninitialized. NotLibFunc if definitely not lib func.
   /// Otherwise may be libfunc if prototype validation passes.
-  mutable LibFunc LibFuncCache = LibFunc(-1);
+  mutable LibFunc LibFuncCache = UnknownLibFunc;
 
   void CheckLazyArguments() const {
     if (hasLazyArguments())

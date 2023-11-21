@@ -913,7 +913,7 @@ Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
 }
 
 void Function::recalculateIntrinsicID() {
-  LibFuncCache = LibFunc(-1);
+  LibFuncCache = UnknownLibFunc;
   StringRef Name = getName();
   if (!Name.startswith("llvm.")) {
     HasLLVMReservedName = false;
