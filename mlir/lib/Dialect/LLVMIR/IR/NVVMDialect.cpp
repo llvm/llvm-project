@@ -77,7 +77,17 @@ void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
   if (getCoordinates().size() > 5)
-    return emitError("Maximum 5 coordinates and dimension is supported.");
+    return emitError("Maximum 5 coordinates and dimension is supported");
+
+  // Check for im2col mode
+  if (!getIm2colOffsets().empty()) {
+    if (getCoordinates().size() < 3)
+      return emitError(
+          "to use im2col mode, the tensor has to be at least 3-dimensional");
+    if (getCoordinates().size() != (getIm2colOffsets().size() + 2))
+      return emitError(
+          "im2col offsets must be 2 less than number of coordinates");
+  }
   return success();
 }
 
