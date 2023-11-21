@@ -157,7 +157,8 @@ MDNode *MachineLoop::getLoopID() const {
     // If there is a single latch block, then the metadata
     // node is attached to its terminating instruction.
     const auto *BB = MBB->getBasicBlock();
-    assert(BB && "MBB->BB mapping is invalid.");
+    if (!BB)
+      return nullptr;
     if (const auto *TI = BB->getTerminator())
       LoopID = TI->getMetadata(LLVMContext::MD_loop);
   } else if (const auto *MBB = getHeader()) {
@@ -168,9 +169,11 @@ MDNode *MachineLoop::getLoopID() const {
       // Walk over all blocks in the loop.
       for (const auto *MBB : this->blocks()) {
         const auto *BB = MBB->getBasicBlock();
-        assert(BB && "MBB->BB mapping is invalid.");
+        if (!BB)
+          return nullptr;
         const auto *TI = BB->getTerminator();
-        assert(TI && "Invalid (nullptr) terminating instruction.");
+        if (!TI)
+          return nullptr;
         MDNode *MD = nullptr;
         // Check if this terminating instruction jumps to the loop header.
         for (const auto *Succ : successors(TI)) {
@@ -180,16 +183,18 @@ MDNode *MachineLoop::getLoopID() const {
             break;
           }
         }
-        assert(MD && "Dropped inconsistent MD_loop (nullptr).");
+        if (!MD)
+          return nullptr;
         if (!LoopID)
           LoopID = MD;
-        assert(MD == LoopID && "Dropped inconsistent MD_loop (mismatch).");
+        else if (MD != LoopID)
+          return nullptr;
       }
     }
   }
-  assert((LoopID && LoopID->getNumOperands() != 0 &&
-          LoopID->getOperand(0) == LoopID) &&
-         "Dropped inconsistent MD_loop (self-ref).");
+  if (LoopID &&
+      (LoopID->getNumOperands() == 0 || LoopID->getOperand(0) != LoopID)) {
+    LoopID = nullptr;
   return LoopID;
 }
 

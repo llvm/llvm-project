@@ -67,7 +67,7 @@ public:
   /// it returns an unknown location.
   DebugLoc getStartLoc() const;
 
-  /// \brief Find the llvm.loop metadata for this loop.
+  /// Find the llvm.loop metadata for this loop.
   /// If each branch to the header of this loop contains the same llvm.loop
   /// metadata, then this metadata node is returned. Otherwise, if any
   /// latch instruction does not contain the llvm.loop metadata or
