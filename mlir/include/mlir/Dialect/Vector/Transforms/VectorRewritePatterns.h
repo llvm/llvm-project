@@ -153,12 +153,12 @@ void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
 ///
 /// Example:
 /// ```
-/// %a = vector.reduction <add> %a, %acc
-/// %b = vector.reduction <add> %b, %a
+/// %a = vector.reduction <add> %x, %acc
+/// %b = vector.reduction <add> %y, %a
 /// ```
 /// is transformed into:
 /// ```
-/// %a = arith.addf %a, %b
+/// %a = arith.addf %x, %y
 /// %b = vector.reduction <add> %a, %acc
 /// ```
 void populateChainedVectorReductionFoldingPatterns(RewritePatternSet &patterns,
