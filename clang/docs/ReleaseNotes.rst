@@ -317,7 +317,6 @@ Attribute Changes in Clang
   should be a coroutine. A non-coroutine function marked with ``[[clang::coro_wrapper]]``
   is still allowed to return the such a type. This is helpful for analyzers to recognize coroutines from the function signatures.
 
-<<<<<<< HEAD
 - Clang now supports ``[[clang::code_align(N)]]`` as an attribute which can be
   applied to a loop and specifies the byte alignment for a loop. This attribute
   accepts a positive integer constant initialization expression indicating the
@@ -334,11 +333,10 @@ Attribute Changes in Clang
       void func() {
         [[clang::code_align(A)]] for(;;) { }
       }
-=======
+
 - Clang now introduced ``[[clang::coro_lifetimebound]]`` attribute.
   All arguments to a function are considered to be lifetime bound if the function 
   returns a type annotated with ``[[clang::coro_lifetimebound]]`` and ``[[clang::coro_return_type]]``.
->>>>>>> 3f5f1a370300 (add Release notes)
 
 Improvements to Clang's diagnostics
 -----------------------------------
