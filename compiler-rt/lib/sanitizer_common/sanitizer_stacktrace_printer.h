@@ -48,7 +48,7 @@ class StackTracePrinter {
 
  private:
   // To be called from StackTracePrinter::GetOrInit
-  static StackTracePrinter *PlatformInit();
+  static StackTracePrinter *NewStackTracePrinter();
 
  protected:
   ~StackTracePrinter() {}

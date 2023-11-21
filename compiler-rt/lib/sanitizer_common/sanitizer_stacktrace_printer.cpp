@@ -26,7 +26,7 @@ StackTracePrinter *StackTracePrinter::GetOrInit() {
   if (stacktrace_printer)
     return stacktrace_printer;
 
-  stacktrace_printer = StackTracePrinter::PlatformInit();
+  stacktrace_printer = StackTracePrinter::NewStackTracePrinter();
 
   CHECK(stacktrace_printer);
   return stacktrace_printer;
@@ -61,7 +61,7 @@ const char *StackTracePrinter::StripFunctionName(const char *function) {
 // sanitizer_symbolizer_markup.cpp implements these differently.
 #if !SANITIZER_SYMBOLIZER_MARKUP
 
-StackTracePrinter *StackTracePrinter::PlatformInit() {
+StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
   return new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
 }
 

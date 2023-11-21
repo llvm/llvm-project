@@ -97,7 +97,7 @@ class MarkupStackTracePrinter : public StackTracePrinter {
   ~MarkupStackTracePrinter();
 };
 
-StackTracePrinter *StackTracePrinter::PlatformInit() {
+StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
   return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
 }
 
