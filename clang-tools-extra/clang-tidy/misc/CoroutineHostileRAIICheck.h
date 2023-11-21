@@ -43,7 +43,8 @@ private:
   // List of fully qualified types which should not persist across a suspension
   // point in a coroutine.
   std::vector<StringRef> RAIITypesList;
-  // List of fully qualified awaitable types which are considered safe to co_await.
+  // List of fully qualified awaitable types which are considered safe to
+  // co_await.
   std::vector<StringRef> SafeAwaitablesList;
 };
 
