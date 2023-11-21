@@ -690,25 +690,25 @@ TEST_P(InstrProfReaderWriterTest, icall_data_read_write) {
   Reader->setValueProfDataEndianness(getEndianness());
 
   Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
-  EXPECT_THAT_ERROR(R.takeError(), Succeeded());
+  ASSERT_THAT_ERROR(R.takeError(), Succeeded());
   ASSERT_EQ(4U, R->getNumValueSites(IPVK_IndirectCallTarget));
-  ASSERT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
-  ASSERT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
-  ASSERT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
-  ASSERT_EQ(1U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
+  EXPECT_EQ(3U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 0));
+  EXPECT_EQ(0U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 1));
+  EXPECT_EQ(2U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 2));
+  EXPECT_EQ(1U, R->getNumValueDataForSite(IPVK_IndirectCallTarget, 3));
 
   uint64_t TotalC;
   std::unique_ptr<InstrProfValueData[]> VD =
       R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
 
-  ASSERT_EQ(3U * getProfWeight(), VD[0].Count);
-  ASSERT_EQ(2U * getProfWeight(), VD[1].Count);
-  ASSERT_EQ(1U * getProfWeight(), VD[2].Count);
-  ASSERT_EQ(6U * getProfWeight(), TotalC);
+  EXPECT_EQ(3U * getProfWeight(), VD[0].Count);
+  EXPECT_EQ(2U * getProfWeight(), VD[1].Count);
+  EXPECT_EQ(1U * getProfWeight(), VD[2].Count);
+  EXPECT_EQ(6U * getProfWeight(), TotalC);
 
-  ASSERT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
-  ASSERT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
-  ASSERT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
+  EXPECT_EQ(StringRef((const char *)VD[0].Value, 7), StringRef("callee3"));
+  EXPECT_EQ(StringRef((const char *)VD[1].Value, 7), StringRef("callee2"));
+  EXPECT_EQ(StringRef((const char *)VD[2].Value, 7), StringRef("callee1"));
 }
 
 INSTANTIATE_TEST_SUITE_P(
