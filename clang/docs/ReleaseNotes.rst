@@ -317,6 +317,23 @@ Attribute Changes in Clang
   should be a coroutine. A non-coroutine function marked with ``[[clang::coro_wrapper]]``
   is still allowed to return the such a type. This is helpful for analyzers to recognize coroutines from the function signatures.
 
+- Clang now supports ``[[clang::code_align(N)]]`` as an attribute which can be
+  applied to a loop and specifies the byte alignment for a loop. This attribute
+  accepts a positive integer constant initialization expression indicating the
+  number of bytes for the minimum alignment boundary. Its value must be a power
+  of 2, between 1 and 4096(inclusive).
+
+  .. code-block:: c++
+
+      void Array(int *array, size_t n) {
+        [[clang::code_align(64)]] for (int i = 0; i < n; ++i) array[i] = 0;
+      }
+
+      template<int A>
+      void func() {
+        [[clang::code_align(A)]] for(;;) { }
+      }
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
@@ -591,6 +608,8 @@ Bug Fixes in This Version
 
 - Fixed an issue that a benign assertion might hit when instantiating a pack expansion
   inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
+- Fix crash during instantiation of some class template specializations within class
+  templates. Fixes (`#70375 <https://github.com/llvm/llvm-project/issues/70375>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
