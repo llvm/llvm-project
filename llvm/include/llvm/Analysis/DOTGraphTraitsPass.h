@@ -89,20 +89,16 @@ private:
 static void shortenFileName(std::string &FN, unsigned char len = 250) {
 
   FN = FN.substr(0, len);
-  if (nameObj.empty())
-    nameObj.insert(FN);
 
-  else {
-    auto strLen = FN.length();
-    while (strLen > 0) {
-      if (auto it = nameObj.find(FN); it != nameObj.end()) {
-        FN = FN.substr(0, --len);
-      } else {
-        nameObj.insert(FN);
-        break;
-      }
-      strLen--;
+  auto strLen = FN.length();
+  while (strLen > 0) {
+    if (auto it = nameObj.find(FN); it != nameObj.end()) {
+      FN = FN.substr(0, --len);
+    } else {
+      nameObj.insert(FN);
+      break;
     }
+    strLen--;
   }
 }
 
