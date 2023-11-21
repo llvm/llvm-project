@@ -983,7 +983,7 @@
 // CHECK-UBSAN-FUNCTION-DAG: error: invalid argument '-fsanitize=function' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
 // CHECK-UBSAN-UNDEFINED-VPTR: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound|vptr),?){18}"}}
 
-// * BareMetal *
+// * Test BareMetal toolchain sanitizer support *
 
 // RUN: %clang --target=arm-arm-non-eabi -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=ADDRESS-BAREMETAL
 // RUN: %clang --target=aarch64-none-elf -fsanitize=address %s -### 2>&1 | FileCheck %s -check-prefix=ADDRESS-BAREMETAL

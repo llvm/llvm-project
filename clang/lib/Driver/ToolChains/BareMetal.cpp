@@ -492,6 +492,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString(TC.GetLinkerPath()), CmdArgs, Inputs, Output));
 }
 
+// BareMetal toolchain allows all sanitizers where the compiler generates valid
+// code, ignoring all runtime library support issues on the assumption that
+// baremetal targets typically implement their own runtime support.
 SanitizerMask BareMetal::getSupportedSanitizers() const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
