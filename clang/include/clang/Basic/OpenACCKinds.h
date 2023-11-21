@@ -24,9 +24,12 @@ enum class OpenACCDirectiveKind {
   Serial,
   Kernels,
 
-  // Data Environment.
+  // Data Environment. "enter data" and "exit data" are also referred to in the
+  // Executable Directives section, but just as a back reference to the Data
+  // Environment.
   Data,
-  // FIXME: 'enter data', 'exit data'.
+  EnterData,
+  ExitData,
   HostData,
 
   // Misc.

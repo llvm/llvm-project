@@ -21,24 +21,45 @@ using namespace clang;
 using namespace llvm;
 
 namespace {
+// An enum that contains the extended 'partial' parsed variants. This type
+// should never escape the initial parse functionality, but is useful for
+// simplifying the implementation.
+enum class OpenACCDirectiveKindEx {
+  Invalid = static_cast<int>(OpenACCDirectiveKind::Invalid),
+  // 'enter data' and 'exit data'
+  Enter,
+  Exit,
+  // FIXME: Atomic Variants
+};
 
-/// This doesn't completely comprehend 'Compound Constructs' (as it just
-/// identifies the first token) just the first token of each.  So
-/// this should only be used by `ParseOpenACCDirectiveKind`.
-OpenACCDirectiveKind getOpenACCDirectiveKind(StringRef Name) {
-  return llvm::StringSwitch<OpenACCDirectiveKind>(Name)
-      .Case("parallel", OpenACCDirectiveKind::Parallel)
-      .Case("serial", OpenACCDirectiveKind::Serial)
-      .Case("kernels", OpenACCDirectiveKind::Kernels)
-      .Case("data", OpenACCDirectiveKind::Data)
-      .Case("host_data", OpenACCDirectiveKind::HostData)
-      .Case("loop", OpenACCDirectiveKind::Loop)
-      .Case("declare", OpenACCDirectiveKind::Declare)
-      .Case("init", OpenACCDirectiveKind::Init)
-      .Case("shutdown", OpenACCDirectiveKind::Shutdown)
-      .Case("set", OpenACCDirectiveKind::Shutdown)
-      .Case("update", OpenACCDirectiveKind::Update)
-      .Default(OpenACCDirectiveKind::Invalid);
+// Translate single-token string representations to the OpenACC Directive Kind.
+// This doesn't completely comprehend 'Compound Constructs' (as it just
+// identifies the first token), and doesn't fully handle 'enter data', 'exit
+// data', nor any of the 'atomic' variants, just the first token of each.  So
+// this should only be used by `ParseOpenACCDirectiveKind`.
+OpenACCDirectiveKindEx getOpenACCDirectiveKind(StringRef Name) {
+  OpenACCDirectiveKind DirKind =
+      llvm::StringSwitch<OpenACCDirectiveKind>(Name)
+          .Case("parallel", OpenACCDirectiveKind::Parallel)
+          .Case("serial", OpenACCDirectiveKind::Serial)
+          .Case("kernels", OpenACCDirectiveKind::Kernels)
+          .Case("data", OpenACCDirectiveKind::Data)
+          .Case("host_data", OpenACCDirectiveKind::HostData)
+          .Case("loop", OpenACCDirectiveKind::Loop)
+          .Case("declare", OpenACCDirectiveKind::Declare)
+          .Case("init", OpenACCDirectiveKind::Init)
+          .Case("shutdown", OpenACCDirectiveKind::Shutdown)
+          .Case("set", OpenACCDirectiveKind::Shutdown)
+          .Case("update", OpenACCDirectiveKind::Update)
+          .Default(OpenACCDirectiveKind::Invalid);
+
+  if (DirKind != OpenACCDirectiveKind::Invalid)
+    return static_cast<OpenACCDirectiveKindEx>(DirKind);
+
+  return llvm::StringSwitch<OpenACCDirectiveKindEx>(Name)
+      .Case("enter", OpenACCDirectiveKindEx::Enter)
+      .Case("exit", OpenACCDirectiveKindEx::Exit)
+      .Default(OpenACCDirectiveKindEx::Invalid);
 }
 
 bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
@@ -59,6 +80,8 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
   case OpenACCDirectiveKind::ParallelLoop:
   case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::KernelsLoop:
+  case OpenACCDirectiveKind::EnterData:
+  case OpenACCDirectiveKind::ExitData:
     return false;
 
   case OpenACCDirectiveKind::Declare:
@@ -77,6 +100,32 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
   llvm_unreachable("Unknown 'Kind' Passed");
 }
 
+OpenACCDirectiveKind
+ParseOpenACCEnterExitDataDirective(Parser &P, Token FirstTok,
+                                   StringRef FirstTokSpelling,
+                                   OpenACCDirectiveKindEx ExtDirKind) {
+  Token SecondTok = P.getCurToken();
+
+  if (SecondTok.isAnnotation()) {
+    P.Diag(FirstTok, diag::err_acc_invalid_directive) << 0 << FirstTokSpelling;
+    return OpenACCDirectiveKind::Invalid;
+  }
+
+  std::string SecondTokSpelling = P.getPreprocessor().getSpelling(SecondTok);
+
+  if (!isOpenACCDirectiveKind(OpenACCDirectiveKind::Data, SecondTokSpelling)) {
+    P.Diag(FirstTok, diag::err_acc_invalid_directive)
+        << 1 << FirstTokSpelling << SecondTokSpelling;
+    return OpenACCDirectiveKind::Invalid;
+  }
+
+  P.ConsumeToken();
+
+  return ExtDirKind == OpenACCDirectiveKindEx::Enter
+             ? OpenACCDirectiveKind::EnterData
+             : OpenACCDirectiveKind::ExitData;
+}
+
 // Parse and consume the tokens for OpenACC Directive/Construct kinds.
 OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   Token FirstTok = P.getCurToken();
@@ -91,10 +140,28 @@ OpenACCDirectiveKind ParseOpenACCDirectiveKind(Parser &P) {
   P.ConsumeToken();
   std::string FirstTokSpelling = P.getPreprocessor().getSpelling(FirstTok);
 
-  OpenACCDirectiveKind DirKind = getOpenACCDirectiveKind(FirstTokSpelling);
+  OpenACCDirectiveKindEx ExDirKind = getOpenACCDirectiveKind(FirstTokSpelling);
 
-  if (DirKind == OpenACCDirectiveKind::Invalid)
-    P.Diag(FirstTok, diag::err_acc_invalid_directive) << FirstTokSpelling;
+  // OpenACCDirectiveKindEx is meant to be an extended list
+  // over OpenACCDirectiveKind, so any value below Invalid is one of the
+  // OpenACCDirectiveKind values.  This switch takes care of all of the extra
+  // parsing required for the Extended values.  At the end of this block,
+  // ExDirKind can be assumed to be a valid OpenACCDirectiveKind, so we can
+  // immediately cast it and use it as that.
+  if (ExDirKind >= OpenACCDirectiveKindEx::Invalid) {
+    switch (ExDirKind) {
+    case OpenACCDirectiveKindEx::Invalid:
+      P.Diag(FirstTok, diag::err_acc_invalid_directive)
+          << 0 << FirstTokSpelling;
+      return OpenACCDirectiveKind::Invalid;
+    case OpenACCDirectiveKindEx::Enter:
+    case OpenACCDirectiveKindEx::Exit:
+      return ParseOpenACCEnterExitDataDirective(P, FirstTok, FirstTokSpelling,
+                                                ExDirKind);
+    }
+  }
+
+  OpenACCDirectiveKind DirKind = static_cast<OpenACCDirectiveKind>(ExDirKind);
 
   // Combined Constructs allows parallel loop, serial loop, or kernels loop. Any
   // other attempt at a combined construct will be diagnosed as an invalid
