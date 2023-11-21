@@ -336,6 +336,9 @@ public:
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
 
+    if (inputType.isScalable())
+      return failure();
+
     // Handle a true 2-D matrix transpose differently when requested.
     if (vectorTransformOptions.vectorTransposeLowering ==
             vector::VectorTransposeLowering::Flat &&

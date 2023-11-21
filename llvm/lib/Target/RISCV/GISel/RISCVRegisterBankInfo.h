@@ -40,6 +40,10 @@ public:
   getInstrMapping(const MachineInstr &MI) const override;
 
 private:
+  /// \returns true if \p MI only uses and defines FPRs.
+  bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                        const TargetRegisterInfo &TRI) const;
+
   /// \returns true if \p MI only uses FPRs.
   bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                   const TargetRegisterInfo &TRI) const;

@@ -57,6 +57,8 @@
 // CHECK-NEXT: ConsumableSetOnRead (SubjectMatchRule_record)
 // CHECK-NEXT: Convergent (SubjectMatchRule_function)
 // CHECK-NEXT: CoroOnlyDestroyWhenComplete (SubjectMatchRule_record)
+// CHECK-NEXT: CoroReturnType (SubjectMatchRule_record)
+// CHECK-NEXT: CoroWrapper
 // CHECK-NEXT: CountedBy (SubjectMatchRule_field)
 // CHECK-NEXT: DLLExport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: DLLImport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)

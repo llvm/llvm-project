@@ -2213,7 +2213,7 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   case CallingConv::AMDGPU_Gfx:
     return true;
   default:
-    return isEntryFunctionCC(CC);
+    return isEntryFunctionCC(CC) || isChainCC(CC);
   }
 }
 

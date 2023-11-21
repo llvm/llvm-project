@@ -191,9 +191,9 @@ bool mlir::vector::isDisjointTransferIndices(
   if (transferA.getVectorType() != transferB.getVectorType())
     return false;
   unsigned rankOffset = transferA.getLeadingShapedRank();
-  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    Value indexA = transferA.indices()[i];
-    Value indexB = transferB.indices()[i];
+  for (unsigned i = 0, e = transferA.getIndices().size(); i < e; i++) {
+    Value indexA = transferA.getIndices()[i];
+    Value indexB = transferB.getIndices()[i];
     std::optional<int64_t> cstIndexA = getConstantIntValue(indexA);
     std::optional<int64_t> cstIndexB = getConstantIntValue(indexB);
 
@@ -251,7 +251,7 @@ bool mlir::vector::isDisjointTransferIndices(
 bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
                                          VectorTransferOpInterface transferB,
                                          bool testDynamicValueUsingBounds) {
-  if (transferA.source() != transferB.source())
+  if (transferA.getSource() != transferB.getSource())
     return false;
   return isDisjointTransferIndices(transferA, transferB,
                                    testDynamicValueUsingBounds);
@@ -3740,10 +3740,10 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 3> elidedAttrs;
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.getPermutationMap().isMinorIdentity())
-    elidedAttrs.push_back(op.getPermutationMapAttrStrName());
+    elidedAttrs.push_back(op.getPermutationMapAttrName());
   // Elide in_bounds attribute if all dims are out-of-bounds.
   if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    elidedAttrs.push_back(op.getInBoundsAttrStrName());
+    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -3802,7 +3802,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   VectorType vectorType = llvm::dyn_cast<VectorType>(types[1]);
   if (!vectorType)
     return parser.emitError(typesLoc, "requires vector type");
-  auto permMapAttrName = TransferReadOp::getPermutationMapAttrStrName();
+  auto permMapAttrName = TransferReadOp::getPermutationMapAttrName(result.name);
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
@@ -3888,7 +3888,7 @@ Type TransferReadOp::getExpectedMaskType() {
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
-  // `op.indices()[indicesIdx] + vectorType < dim(op.source(), indicesIdx)`
+  // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
   Value index = op.getIndices()[indicesIdx];
@@ -3932,8 +3932,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op->setAttr(TransferOp::getInBoundsAttrStrName(),
-              b.getBoolArrayAttr(newInBounds));
+  op.setInBoundsAttr(b.getBoolArrayAttr(newInBounds));
   return success();
 }
 
@@ -4169,7 +4168,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   ShapedType shapedType = llvm::dyn_cast<ShapedType>(types[1]);
   if (!shapedType || !llvm::isa<MemRefType, RankedTensorType>(shapedType))
     return parser.emitError(typesLoc, "requires memref or ranked tensor type");
-  auto permMapAttrName = TransferWriteOp::getPermutationMapAttrStrName();
+  auto permMapAttrName =
+      TransferWriteOp::getPermutationMapAttrName(result.name);
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
@@ -5564,12 +5564,51 @@ public:
   }
 };
 
+/// Folds transpose with non-scalable unit dims into a shape_cast.
+///
+/// Replace:
+///   vector.transpose %0, [1, 0] : vector<nx1x<eltty>> to
+///                                 vector<1xnxelty>
+/// with:
+///   vector.shape_cast %0 : vector<nx1x<eltty>> to vector<1xnxelty>
+///
+/// Source with leading unit dim (inverse) is also replaced. Unit dim must
+/// be fixed. Non-unit dims can be scalable.
+class FoldTransposeWithNonScalableUnitDimsToShapeCast final
+    : public OpRewritePattern<TransposeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransposeOp transpOp,
+                                PatternRewriter &rewriter) const override {
+    Value input = transpOp.getVector();
+    VectorType resType = transpOp.getResultVectorType();
+
+    SmallVector<int64_t> permutation;
+    transpOp.getTransp(permutation);
+
+    if (resType.getRank() == 2 &&
+        ((resType.getShape().front() == 1 &&
+          !resType.getScalableDims().front()) ||
+         (resType.getShape().back() == 1 &&
+          !resType.getScalableDims().back())) &&
+        permutation == ArrayRef<int64_t>({1, 0})) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transpOp, resType,
+                                                       input);
+      return success();
+    }
+
+    return failure();
+  }
+};
+
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
-              TransposeFolder, FoldTransposeSplat>(context);
+              TransposeFolder, FoldTransposeSplat,
+              FoldTransposeWithNonScalableUnitDimsToShapeCast>(context);
 }
 
 void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {

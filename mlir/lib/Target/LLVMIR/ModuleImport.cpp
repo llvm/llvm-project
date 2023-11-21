@@ -1819,9 +1819,9 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
       emitWarning(loc) << "dropped intrinsic: " << diag(*dbgIntr);
     return success();
   };
-  // Drop debug intrinsics with a non-empty debug expression.
-  // TODO: Support debug intrinsics that evaluate a debug expression.
-  if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
+  // Drop debug intrinsics with arg lists.
+  // TODO: Support debug intrinsics that have arg lists.
+  if (dbgIntr->hasArgList())
     return emitUnsupportedWarning();
   // Kill locations can have metadata nodes as location operand. This
   // cannot be converted to poison as the type cannot be reconstructed.
@@ -1855,15 +1855,17 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   }
   DILocalVariableAttr localVariableAttr =
       matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  auto locationExprAttr =
+      DIExpressionAttr::get(context, dbgIntr->getExpression()->getElements());
   Operation *op =
       llvm::TypeSwitch<llvm::DbgVariableIntrinsic *, Operation *>(dbgIntr)
           .Case([&](llvm::DbgDeclareInst *) {
-            return builder.create<LLVM::DbgDeclareOp>(loc, *argOperand,
-                                                      localVariableAttr);
+            return builder.create<LLVM::DbgDeclareOp>(
+                loc, *argOperand, localVariableAttr, locationExprAttr);
           })
           .Case([&](llvm::DbgValueInst *) {
-            return builder.create<LLVM::DbgValueOp>(loc, *argOperand,
-                                                    localVariableAttr);
+            return builder.create<LLVM::DbgValueOp>(
+                loc, *argOperand, localVariableAttr, locationExprAttr);
           });
   mapNoResultOp(dbgIntr, op);
   setNonDebugMetadataAttrs(dbgIntr, op);
