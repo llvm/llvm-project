@@ -2477,7 +2477,7 @@ void transform::TileUsingForOp::build(
         /*target=*/target,
         /*dynamic_sizes=*/dynamicTileSizes,
         /*static_sizes=*/staticTileSizesAttr,
-        /*interchange=*/builder.getDenseI64ArrayAttr(interchange),
+        /*interchange=*/builder.getI64ArrayAttr(interchange),
         /*scalable_sizes=*/expandedScalableSizes);
 }
 
@@ -2611,7 +2611,8 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
       });
     }
 
-    tilingOptions.setInterchange(getInterchange());
+    tilingOptions.setInterchange(
+        extractFromIntegerArrayAttr<int64_t>(getInterchange()));
     FailureOr<scf::SCFTilingResult> maybeTilingResult =
         tileUsingSCFForOp(rewriter, tilingInterface, tilingOptions);
     if (failed(maybeTilingResult))
@@ -2648,27 +2649,6 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
   return results;
 }
 
-// We want to parse `DenseI64ArrayAttr` using the short form without the
-// `array` prefix to be consistent in the IR with `parseDynamicIndexList`.
-ParseResult parseOptionalInterchange(OpAsmParser &parser,
-                                     OperationState &result) {
-  if (succeeded(parser.parseOptionalKeyword("interchange")))
-    result.addAttribute(
-        transform::TileUsingForOp::getInterchangeAttrName(result.name),
-        DenseI64ArrayAttr::parse(parser, Type{}));
-  return success();
-}
-
-void printOptionalInterchange(OpAsmPrinter &p,
-                              ArrayRef<int64_t> interchangeVals) {
-  if (!interchangeVals.empty()) {
-    p << " interchange [";
-    llvm::interleaveComma(interchangeVals, p,
-                          [&](int64_t integer) { p << integer; });
-    p << "]";
-  }
-}
-
 ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
                                              OperationState &result) {
   OpAsmParser::UnresolvedOperand target;
@@ -2680,7 +2660,6 @@ ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
 
   if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
       parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals) ||
-      parseOptionalInterchange(parser, result) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(functionalType))
     return ParseResult::failure();
@@ -2715,11 +2694,9 @@ void TileUsingForOp::print(OpAsmPrinter &p) {
   printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
                         /*valueTypes=*/{}, getScalableSizesAttr(),
                         OpAsmParser::Delimiter::Square);
-  printOptionalInterchange(p, getInterchange());
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
-      /*elidedAttrs=*/{getInterchangeAttrName(getOperation()->getName()),
-                       getScalableSizesAttrName(getOperation()->getName()),
+      /*elidedAttrs=*/{getScalableSizesAttrName(getOperation()->getName()),
                        getStaticSizesAttrName(getOperation()->getName())});
   p << " : ";
   p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
