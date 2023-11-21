@@ -14,6 +14,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -508,6 +509,43 @@ void AllToAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 //===----------------------------------------------------------------------===//
+// mesh.broadcast op
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BroadcastOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.gather op
+//===----------------------------------------------------------------------===//
+
+LogicalResult GatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.receive op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReceiveOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.reduce op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // mesh.reduce_scatter op
 //===----------------------------------------------------------------------===//
 
@@ -526,6 +564,33 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
   patterns.add<EmptyMeshAxesCanonicalizationPattern<ReduceScatterOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.scatter op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.send op
+//===----------------------------------------------------------------------===//
+
+LogicalResult SendOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// mesh.shift op
+//===----------------------------------------------------------------------===//
+
+LogicalResult ShiftOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // TODO
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//

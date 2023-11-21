@@ -339,6 +339,182 @@ def Mesh_AllToAllOp : Mesh_CollectiveCommunicationOpBase<"all_to_all", [
   let hasCanonicalizer = 1;
 }
 
+def Mesh_BroadcastOp : Mesh_CollectiveCommunicationOpBase<"broadcast", [
+    SameOperandsAndResultShape
+  ]> {
+  let summary = "Broadcast over a device mesh.";
+  let description = [{
+    Broadcast the tensor on `root` to all devices in each respective group.
+    The operation broadcasts along mesh axes `mesh_axes`.
+    The `root` device specifies the in-group multi-index that is broadcast to
+    all other devices in the group.
+    
+    Example:
+    ```
+    mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 2])
+
+    %1 = mesh.broadcast %0 on @mesh0
+      mesh_axes = [0]
+      root = [0]
+      : tensor <2xi8> -> tensor <2xi8>
+    ```
+    
+    Input:
+    ```
+                     +-------+-------+                   | broadcast
+    device (0, 0) -> |  1  2 |  3  4 | <- device (0, 1)  | along axis 0
+                     +-------+-------+                   ↓
+    device (1, 0) -> |       |       | <- device (1, 1) 
+                     +-------+-------+
+    ```
+
+    Output:
+    ```
+                     +-------+-------+
+    device (0, 0) -> |  1  2 |  3  4 | <- device (0, 1)
+                     +-------+-------+
+    device (1, 0) -> |  1  2 |  3  4 | <- device (1, 1)
+                     +-------+-------+
+    ```
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyRankedTensor:$input,
+    DenseI64ArrayAttr:$root,
+    Variadic<Index>:$root_dynamic
+  ));
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
+    attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
+def Mesh_GatherOp : Mesh_CollectiveCommunicationOpBase<"gather", [
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank
+  ]> {
+  let summary = "Gather over a device mesh.";
+  let description = [{
+    Gathers on device `root` along the `gather_axis` tensor axis.
+    `root` specifies the coordinates of a device along `mesh_axes`.
+    It uniquely identifies the root device for each device group.
+    The result tensor on non-root devices is undefined.
+    Using it will result in undefined behavior.
+
+    Example:
+    ```mlir
+    mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 2])
+    ...
+    %1 = mesh.gather %0 on @mesh0 mesh_axes = [1]
+      gather_axis = 1 root = [1]
+      : tensor<2x2xi8> -> tensor<2x4xi8>
+    ```
+    Input:
+    ```
+                      gather tensor
+                      axis 1
+                      ------------>
+                     +-------+-------+
+    device (0, 0) -> |  1  2 |  5  6 | <- device (0, 1)
+                     |  3  4 |  7  8 |
+                     +-------+-------+
+    device (1, 0) -> |  9 10 | 13 14 | <- device (1, 1)
+                     | 11 12 | 15 16 |
+                     +-------+-------+
+    ```
+    Result:
+    ```
+    +-------------+
+    |  1  2  5  6 | <- devices (0, 1)
+    |  3  4  7  8 |
+    +-------------+
+    |  9 10 13 14 | <- devices (1, 1)
+    | 11 12 15 16 |
+    +-------------+
+    ```
+    Devices `(0, 0)` and `(1, 0)` have undefined result.
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyNon0RankedTensor:$input,
+    IndexAttr:$gather_axis,
+    DenseI64ArrayAttr:$root,
+    Variadic<Index>:$root_dynamic
+  ));
+  let results = (outs
+    AnyNon0RankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    `gather_axis` `=` $gather_axis
+    `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
+    attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
+def Mesh_ReceiveOp : Mesh_CollectiveCommunicationOpBase<"receive", [
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultShape]> {
+  let summary = "Send over a device mesh.";
+  let description = [{
+    Receive from a device within a device group.
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyNon0RankedTensor:$input,
+    OptionalAttr<DenseI64ArrayAttr>:$source,
+    Variadic<Index>:$source_dynamic
+  ));
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    (`source` `=` custom<DynamicIndexList>($source_dynamic, $source)^)?
+    attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
+def Mesh_ReduceOp : Mesh_CollectiveCommunicationOpBase<"reduce", [
+    SameOperandsAndResultShape]> {
+  let summary = "Reduce over a device mesh.";
+  let description = [{
+    Reduces on device `root` within each device group.
+    `root` specifies the coordinates of a device along `mesh_axes`.
+    It uniquely identifies the root device within its device group.
+    The accumulation element type is specified by the result type and
+    it does not need to match the input element type.
+    The input element is converted to the result element type before
+    performing the reduction.
+
+    Attributes:
+    `reduction`: Indicates the reduction method.
+
+    Example:
+    ```
+    %1 = mesh.reduce %0 on @mesh0 mesh_axes = [1, 0]
+      reduction = <max> root = [2, 3]
+      : tensor<3x4xf32> -> tensor<3x4xf64>
+    ```
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyRankedTensor:$input,
+    DefaultValuedAttr<Mesh_PartialAttr, "::mlir::mesh::Partial::Sum">:$reduction,
+    DenseI64ArrayAttr:$root,
+    Variadic<Index>:$root_dynamic
+  ));
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    (`reduction` `=` $reduction^)?
+    `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
+    attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
 def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", [
     SameOperandsAndResultRank]> {
   let summary = "Reduce-scatter over a device mesh.";
@@ -398,6 +574,154 @@ def Mesh_ReduceScatterOp : Mesh_CollectiveCommunicationOpBase<"reduce_scatter", 
     attr-dict `:` type($input) `->` type($result)
   }];
   let hasCanonicalizer = 1;
+}
+
+def Mesh_ScatterOp : Mesh_CollectiveCommunicationOpBase<"scatter", [
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultRank]> {
+  let summary = "Scatter over a device mesh.";
+  let description = [{
+    For each device group split the input tensor on the `root` device along
+    axis `scatter_axis` and scatter the parts across the group devices.
+
+    Example:
+    ```
+    mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 2])
+    %1 = mesh.scatter %0 on @mesh0 mesh_axes = [0]
+      scatter_axis = 0
+      root = [1]
+      : tensor<2x2xi8> -> tensor<1x2xi8>
+    ```
+
+    Input:
+    ```
+                              device
+                              (0, 1)
+                                 ↓
+                     +-------+-------+  | scatter tensor
+    device (0, 0) -> |       |       |  | axis 0
+                     |       |       |  ↓
+                     +-------+-------+
+    device (1, 0) -> |  1  2 |  5  6 |
+                     |  3  4 |  7  8 |
+                     +-------+-------+
+                                ↑
+                              device
+                              (1, 1)
+    ```
+    
+    Result:
+    ```
+                              device
+                              (0, 1)
+                                 ↓
+                     +-------+-------+
+    device (0, 0) -> |  1  2 |  5  6 |
+                     +-------+-------+ 
+    device (1, 0) -> |  3  4 |  7  8 |
+                     +-------+-------+
+                                ↑
+                              device
+                              (1, 1)
+    ```
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyNon0RankedTensor:$input,
+    IndexAttr:$scatter_axis,
+    DenseI64ArrayAttr:$root,
+    Variadic<Index>:$root_dynamic
+  ));
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    `scatter_axis` `=` $scatter_axis
+    `root` `=` custom<DynamicIndexList>($root_dynamic, $root)
+    attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
+def Mesh_SendOp : Mesh_CollectiveCommunicationOpBase<"send", [
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultShape]> {
+  let summary = "Send over a device mesh.";
+  let description = [{
+    Send from one device to another within a device group.
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyNon0RankedTensor:$input,
+    DenseI64ArrayAttr:$destination,
+    Variadic<Index>:$destination_dynamic
+  ));
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    `destination` `=` custom<DynamicIndexList>($destination_dynamic, $destination)
+    attr-dict `:` type($input) `->` type($result)
+  }];
+}
+
+def Mesh_ShiftOp : Mesh_CollectiveCommunicationOpBase<"shift", [
+    SameOperandsAndResultElementType,
+    SameOperandsAndResultShape]> {
+  let summary = "Sift over a device mesh.";
+  let description = [{
+    Within each device group shift along mesh axis `shift_axis` by an offset
+    `offset`.
+    The result on devices that do not have a corresponding source is undefined.
+    `shift_axis` must be one of `mesh_axes`.
+    If the `rotate` attribute is present,
+    instead of a shift a rotation is done.
+
+    Example:
+    ```
+    mesh.cluster @mesh0(rank = 2, dim_sizes = [2, 4])
+    %1 = mesh.shift on @mesh0 mesh_axes = [1]
+      shift_axis = 1
+      offset = 2
+      rotate
+    ```
+
+    Input:
+    ```
+    mesh axis 1
+    ----------->
+
+    +----+----+----+----+
+    |  1 |  2 |  3 |  4 |
+    +----+----+----+----+
+    |  5 |  6 |  7 |  8 |
+    +----+----+----+----+
+    ```
+
+    Result:
+    ```
+    +----+----+----+----+
+    |  3 |  4 |  1 |  2 |
+    +----+----+----+----+
+    |  7 |  8 |  5 |  6 |
+    +----+----+----+----+
+    ```
+  }];
+  let arguments = !con(commonArgs, (ins
+    AnyNon0RankedTensor:$input,
+    IndexAttr:$shift_axis,
+    IndexAttr:$offset,
+    UnitAttr:$rotate
+  ));
+  let results = (outs
+    AnyRankedTensor:$result
+  );
+  let assemblyFormat = [{
+    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    `shift_axis` `=` $shift_axis
+    `offset` `=` $offset
+    (`rotate` $rotate^)?
+    attr-dict `:` type($input) `->` type($result)
+  }];
 }
 
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD
