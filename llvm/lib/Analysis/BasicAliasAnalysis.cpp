@@ -194,13 +194,21 @@ static bool isObjectSize(const Value *V, TypeSize Size, const DataLayout &DL,
 
 CaptureInfo::~CaptureInfo() = default;
 
-bool SimpleCaptureInfo::isNotCapturedBeforeOrAt(const Value *Object,
-                                                const Instruction *I) {
+bool SimpleCaptureInfo::isNotCapturedBefore(const Value *Object,
+                                            const Instruction *I, bool OrAt) {
   return isNonEscapingLocalObject(Object, &IsCapturedCache);
 }
 
-bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
-                                                 const Instruction *I) {
+static bool isNotInCycle(const Instruction *I, const DominatorTree &DT,
+                         const LoopInfo *LI) {
+  BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
+  SmallVector<BasicBlock *> Succs(successors(BB));
+  return Succs.empty() ||
+         !isPotentiallyReachableFromMany(Succs, BB, nullptr, &DT, LI);
+}
+
+bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
+                                             const Instruction *I, bool OrAt) {
   if (!isIdentifiedFunctionLocal(Object))
     return false;
 
@@ -220,8 +228,13 @@ bool EarliestEscapeInfo::isNotCapturedBeforeOrAt(const Value *Object,
   if (!Iter.first->second)
     return true;
 
-  return I != Iter.first->second &&
-         !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
+  if (I == Iter.first->second) {
+    if (OrAt)
+      return false;
+    return isNotInCycle(I, DT, LI);
+  }
+
+  return !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
 }
 
 void EarliestEscapeInfo::removeInstruction(Instruction *I) {
@@ -887,7 +900,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   // Make sure the object has not escaped here, and then check that none of the
   // call arguments alias the object below.
   if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CI->isNotCapturedBeforeOrAt(Object, Call)) {
+      AAQI.CI->isNotCapturedBefore(Object, Call, /*OrAt*/ false)) {
 
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
@@ -1512,10 +1525,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
     if (isEscapeSource(O1) &&
-        AAQI.CI->isNotCapturedBeforeOrAt(O2, cast<Instruction>(O1)))
+        AAQI.CI->isNotCapturedBefore(O2, cast<Instruction>(O1), /*OrAt*/ true))
       return AliasResult::NoAlias;
     if (isEscapeSource(O2) &&
-        AAQI.CI->isNotCapturedBeforeOrAt(O1, cast<Instruction>(O2)))
+        AAQI.CI->isNotCapturedBefore(O1, cast<Instruction>(O2), /*OrAt*/ true))
       return AliasResult::NoAlias;
   }
 
@@ -1708,12 +1721,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  // Check whether the instruction is part of a cycle, by checking whether the
-  // block can (non-trivially) reach itself.
-  BasicBlock *BB = const_cast<BasicBlock *>(Inst->getParent());
-  SmallVector<BasicBlock *> Succs(successors(BB));
-  return !Succs.empty() &&
-         !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT);
+  return isNotInCycle(Inst, *DT, /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.
