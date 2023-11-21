@@ -76,6 +76,11 @@ MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
                            "spill on ppc"),
                   cl::Hidden, cl::init(100));
 
+static cl::opt<unsigned> CRWAWWindowSize(
+    "ppc-cr-waw-window",
+    cl::desc("Maximum search distance for definition of CR fields on ppc"),
+    cl::Hidden, cl::init(4));
+
 // Copies/moves of physical accumulators are expensive operations
 // that should be avoided whenever possible. MMA instructions are
 // meant to be used in performance-sensitive computational kernels.
@@ -584,13 +589,15 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   if (MF.getSubtarget<PPCSubtarget>().isISAFuture())
     return BaseImplRetVal;
 
-  MachineBasicBlock *LastUseMBB = nullptr;
-  bool UseInOneMBB = true;
+  MachineInstr *LastDefMI = nullptr;
+  bool DefInOneMI = true;
   const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
-    if (LastUseMBB && Use.getParent() != LastUseMBB)
-      UseInOneMBB = false;
-    LastUseMBB = Use.getParent();
+    if (Use.modifiesRegister(VirtReg, TRI)) {
+      if (LastDefMI)
+        DefInOneMI = false;
+      LastDefMI = &Use;
+    }
     const MachineOperand *ResultOp = nullptr;
     Register ResultReg;
     // We are interested in instructions that copy values to ACC/UACC.
@@ -638,50 +645,48 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   // In single MBB, allocate different CRs for adjacent definitions can improve
   // performance.
-  if (UseInOneMBB && LastUseMBB &&
+  if (DefInOneMI && LastDefMI &&
       (RegClass->hasSuperClassEq(&PPC::CRRCRegClass) ||
        RegClass->hasSuperClassEq(&PPC::CRBITRCRegClass))) {
     std::set<MCRegister> AdjacentAllocatedCRs;
-    auto CheckMI = [&](MachineInstr &MI) {
+    auto FindAllocatedCR = [&](MachineInstr &MI) {
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||
             !MO.isDef())
           continue;
         const TargetRegisterClass *RC = MRI->getRegClass(MO.getReg());
-        if (RC->hasSuperClassEq(&PPC::CRRCRegClass) ||
-            RC->hasSuperClassEq(&PPC::CRBITRCRegClass)) {
-          if (VRM->hasPhys(MO.getReg())) {
-            // FIXME: If PhysReg interferes with VirtReg, we should avoid using
-            // PhysReg as hint to avoid potential split. Current
-            // getRegAllocationHints doesn't interface LiveInterval, so the
-            // interference check is not viable. In the other side, CRs don't
-            // live cross multiple BBs in common cases, so checking interference
-            // might help rare seen cases.
-            MCPhysReg PhysReg = VRM->getPhys(MO.getReg());
-            llvm::copy_if(
-                TRI->superregs_inclusive(PhysReg),
-                std::inserter(AdjacentAllocatedCRs,
-                              AdjacentAllocatedCRs.begin()),
-                [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
-          }
-        }
+        if (!RC->hasSuperClassEq(&PPC::CRRCRegClass) &&
+            !RC->hasSuperClassEq(&PPC::CRBITRCRegClass))
+          continue;
+        // PhysReg as hint to avoid potential split. Current
+        // getRegAllocationHints doesn't interface LiveInterval, so the
+        // interference check is not viable. In the other side, CRs don't
+        // live cross multiple BBs in common cases, so checking
+        // interference
+        // might help rare seen cases.
+        if (VRM->hasPhys(MO.getReg()))
+          llvm::copy_if(
+              TRI->superregs_inclusive(VRM->getPhys(MO.getReg())),
+              std::inserter(AdjacentAllocatedCRs, AdjacentAllocatedCRs.begin()),
+              [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
+        return;
       }
     };
-    // FIXME: We might have multiple MIs modifies VirtReg.
-    for (MachineInstr &MI : *LastUseMBB) {
-      if (MI.isDebugInstr())
-        continue;
-      if (MI.modifiesRegister(VirtReg, TRI))
-        break;
-      CheckMI(MI);
+    // Search backward.
+    unsigned ScanDistance = 0;
+    for (auto I = ++LastDefMI->getReverseIterator();
+         I != LastDefMI->getParent()->rend() && ScanDistance < CRWAWWindowSize;
+         ++I) {
+      ++ScanDistance;
+      FindAllocatedCR(*I);
     }
-    for (MachineInstr &MI :
-         llvm::make_range(LastUseMBB->rbegin(), LastUseMBB->rend())) {
-      if (MI.isDebugInstr())
-        continue;
-      if (MI.modifiesRegister(VirtReg, TRI))
-        break;
-      CheckMI(MI);
+    // Search forward.
+    ScanDistance = 0;
+    for (auto I = ++LastDefMI->getIterator();
+         I != LastDefMI->getParent()->end() && ScanDistance < CRWAWWindowSize;
+         ++I) {
+      ++ScanDistance;
+      FindAllocatedCR(*I);
     }
     llvm::copy_if(llvm::make_range(Order.begin(), Order.end()),
                   std::back_inserter(Hints), [&](MCPhysReg Reg) {

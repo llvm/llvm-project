@@ -27,8 +27,8 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P9-NEXT:    slwi r4, r4, 4
 ; CHECK-P9-NEXT:    addze r5, r5
 ; CHECK-P9-NEXT:    sub r4, r4, r10
-; CHECK-P9-NEXT:    cmpw cr1, r3, r4
-; CHECK-P9-NEXT:    bgtlr cr1
+; CHECK-P9-NEXT:    cmpw r3, r4
+; CHECK-P9-NEXT:    bgtlr cr0
 ; CHECK-P9-NEXT:  # %bb.1: # %_loop_2_do_.lr.ph
 ; CHECK-P9-NEXT:    extswsli r5, r5, 3
 ; CHECK-P9-NEXT:    add r5, r8, r5
@@ -79,8 +79,8 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P10-NEXT:    slwi r4, r4, 4
 ; CHECK-P10-NEXT:    addze r5, r5
 ; CHECK-P10-NEXT:    sub r4, r4, r10
-; CHECK-P10-NEXT:    cmpw cr1, r3, r4
-; CHECK-P10-NEXT:    bgtlr cr1
+; CHECK-P10-NEXT:    cmpw r3, r4
+; CHECK-P10-NEXT:    bgtlr cr0
 ; CHECK-P10-NEXT:  # %bb.1: # %_loop_2_do_.lr.ph
 ; CHECK-P10-NEXT:    extswsli r5, r5, 3
 ; CHECK-P10-NEXT:    add r5, r8, r5

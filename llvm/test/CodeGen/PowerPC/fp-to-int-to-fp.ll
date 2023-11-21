@@ -70,7 +70,7 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    lfs 0, .LCPI2_0@toc@l(3)
 ; PPC64-NEXT:    rldic 4, 4, 63, 0
 ; PPC64-NEXT:    fsubs 2, 1, 0
-; PPC64-NEXT:    fcmpu 1, 1, 0
+; PPC64-NEXT:    fcmpu 0, 1, 0
 ; PPC64-NEXT:    fctidz 2, 2
 ; PPC64-NEXT:    stfd 2, -8(1)
 ; PPC64-NEXT:    fctidz 2, 1
@@ -78,7 +78,7 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    ld 3, -8(1)
 ; PPC64-NEXT:    ld 5, -16(1)
 ; PPC64-NEXT:    xor 3, 3, 4
-; PPC64-NEXT:    bc 12, 4, .LBB2_1
+; PPC64-NEXT:    bc 12, 0, .LBB2_1
 ; PPC64-NEXT:    b .LBB2_2
 ; PPC64-NEXT:  .LBB2_1: # %entry
 ; PPC64-NEXT:    addi 3, 5, 0
@@ -106,15 +106,15 @@ define float @fooul(float %X) #0 {
 ; PPC64-NEXT:    rldicl 5, 5, 53, 11
 ; PPC64-NEXT:    std 4, -32(1)
 ; PPC64-NEXT:    rldicl 4, 5, 11, 1
-; PPC64-NEXT:    cmpldi 5, 7, 1
-; PPC64-NEXT:    bc 12, 21, .LBB2_6
+; PPC64-NEXT:    cmpldi 7, 1
+; PPC64-NEXT:    bc 12, 1, .LBB2_6
 ; PPC64-NEXT:  # %bb.5: # %entry
 ; PPC64-NEXT:    ori 4, 6, 0
 ; PPC64-NEXT:    b .LBB2_6
 ; PPC64-NEXT:  .LBB2_6: # %entry
-; PPC64-NEXT:    cmpdi 6, 3, 0
+; PPC64-NEXT:    cmpdi 1, 3, 0
 ; PPC64-NEXT:    std 4, -24(1)
-; PPC64-NEXT:    bc 12, 24, .LBB2_8
+; PPC64-NEXT:    bc 12, 4, .LBB2_8
 ; PPC64-NEXT:  # %bb.7: # %entry
 ; PPC64-NEXT:    lfd 0, -32(1)
 ; PPC64-NEXT:    fcfid 0, 0

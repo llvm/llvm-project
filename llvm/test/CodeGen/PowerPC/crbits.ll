@@ -126,8 +126,8 @@ define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ; CHECK-NEXT:    cmpwi 5, -2
 ; CHECK-NEXT:    crnor 28, 27, 5
 ; CHECK-NEXT:    crandc 21, 28, 2
-; CHECK-NEXT:    creqv 20, 20, 21
-; CHECK-NEXT:    isel 3, 0, 3, 20
+; CHECK-NEXT:    creqv 4, 20, 21
+; CHECK-NEXT:    isel 3, 0, 3, 4
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: test3:
@@ -141,8 +141,8 @@ define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ; CHECK-NO-ISEL-NEXT:    cmpwi 5, -2
 ; CHECK-NO-ISEL-NEXT:    crnor 28, 27, 5
 ; CHECK-NO-ISEL-NEXT:    crandc 21, 28, 2
-; CHECK-NO-ISEL-NEXT:    creqv 20, 20, 21
-; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB2_1
+; CHECK-NO-ISEL-NEXT:    creqv 4, 20, 21
+; CHECK-NO-ISEL-NEXT:    bc 12, 4, .LBB2_1
 ; CHECK-NO-ISEL-NEXT:    blr
 ; CHECK-NO-ISEL-NEXT:  .LBB2_1: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 3, 0
@@ -158,8 +158,8 @@ define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ; CHECK-P10-NEXT:    cmpwi r5, -2
 ; CHECK-P10-NEXT:    crnor 4*cr7+lt, 4*cr6+un, 4*cr1+gt
 ; CHECK-P10-NEXT:    crandc 4*cr5+gt, 4*cr7+lt, eq
-; CHECK-P10-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
-; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
+; CHECK-P10-NEXT:    crxor 4*cr1+lt, 4*cr5+lt, 4*cr5+gt
+; CHECK-P10-NEXT:    setbc r3, 4*cr1+lt
 ; CHECK-P10-NEXT:    blr
 entry:
   %cmp = fcmp oge float %v1, %v2
@@ -276,8 +276,8 @@ define zeroext i1 @test6(i1 zeroext %v1, i1 zeroext %v2, i32 signext %v3) #0 {
 ; CHECK-P10-NEXT:    crmove 4*cr5+lt, gt
 ; CHECK-P10-NEXT:    andi. r3, r4, 1
 ; CHECK-P10-NEXT:    crorc 4*cr6+lt, gt, 4*cr1+eq
-; CHECK-P10-NEXT:    crand 4*cr7+lt, 4*cr6+lt, 4*cr5+lt
-; CHECK-P10-NEXT:    setbc r3, 4*cr7+lt
+; CHECK-P10-NEXT:    crand 4*cr5+lt, 4*cr6+lt, 4*cr5+lt
+; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
 ; CHECK-P10-NEXT:    blr
 entry:
   %cmp = icmp ne i32 %v3, -2

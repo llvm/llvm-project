@@ -2036,8 +2036,8 @@ define <2 x i64> @absd_int64_ugt(<2 x i64>, <2 x i64>) {
 ; CHECK-PWR7-NEXT:    iselgt r7, r6, r5
 ; CHECK-PWR7-NEXT:    std r7, -8(r1)
 ; CHECK-PWR7-NEXT:    ld r7, -64(r1)
-; CHECK-PWR7-NEXT:    cmpld cr1, r8, r7
-; CHECK-PWR7-NEXT:    isel r5, r6, r5, 4*cr1+gt
+; CHECK-PWR7-NEXT:    cmpld r8, r7
+; CHECK-PWR7-NEXT:    iselgt r5, r6, r5
 ; CHECK-PWR7-NEXT:    std r5, -16(r1)
 ; CHECK-PWR7-NEXT:    sub r5, r4, r3
 ; CHECK-PWR7-NEXT:    sub r3, r3, r4

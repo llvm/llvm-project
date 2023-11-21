@@ -26,7 +26,6 @@ define i32 @func2(i32 %x, i32 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mulhw. 6, 3, 4
 ; CHECK-NEXT:    lis 5, 32767
-; CHECK-NEXT:    cmpwi 1, 6, -1
 ; CHECK-NEXT:    mullw 3, 3, 4
 ; CHECK-NEXT:    rotlwi 3, 3, 31
 ; CHECK-NEXT:    ori 4, 5, 65535
@@ -36,8 +35,9 @@ define i32 @func2(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    addi 3, 4, 0
 ; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    cmpwi 6, -1
 ; CHECK-NEXT:    lis 4, -32768
-; CHECK-NEXT:    bc 12, 4, .LBB1_3
+; CHECK-NEXT:    bc 12, 0, .LBB1_3
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    addi 3, 4, 0
