@@ -1297,8 +1297,6 @@ void SelectionDAGBuilder::addDanglingDebugInfo(SmallVectorImpl<Value *> &Values,
   // which we should ideally fill with an extra Undef DBG_VALUE.
   assert(Values.size() == 1);
   DanglingDebugInfoMap[Values[0]].emplace_back(Var, Expr, DL, Order);
-  // FIXME: In the variadic case, the variable location information is
-  // dropped.
 }
 
 void SelectionDAGBuilder::dropDanglingDebugInfo(const DILocalVariable *Variable,

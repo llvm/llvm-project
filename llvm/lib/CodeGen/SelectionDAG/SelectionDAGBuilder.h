@@ -128,7 +128,7 @@ class SelectionDAGBuilder {
     unsigned getSDNodeOrder() const { return SDNodeOrder; }
 
     /// Helper for printing DanglingDebugInfo. This hoop-jumping is to
-    /// accommodate the fact that an argument is required for getVariable.
+    /// store a Value pointer, so that we can print a whole DDI as one object.
     /// Call SelectionDAGBuilder::printDDI instead of using directly.
     struct Print {
       Print(const Value *V, const DanglingDebugInfo &DDI)
