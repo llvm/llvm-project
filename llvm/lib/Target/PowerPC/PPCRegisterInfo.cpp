@@ -667,6 +667,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         }
       }
     };
+    // FIXME: We might have multiple MIs modifies VirtReg.
     for (MachineInstr &MI : *LastUseMBB) {
       if (MI.isDebugInstr())
         continue;
