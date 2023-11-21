@@ -579,6 +579,29 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// rotateleft(value, amount)
+static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call,
+                                   bool Right) {
+  PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
+  assert(ArgT == *S.getContext().classify(Call->getArg(1)->getType()));
+
+  APSInt Amount = peekToAPSInt(S.Stk, ArgT);
+  APSInt Value = peekToAPSInt(S.Stk, ArgT, align(primSize(ArgT)) * 2);
+
+  APSInt Result;
+  if (Right)
+    Result = APSInt(Value.rotr(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+  else // Left.
+    Result = APSInt(Value.rotl(Amount.urem(Value.getBitWidth())),
+                    /*IsUnsigned=*/true);
+
+  pushAPSInt(S, Result);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
@@ -751,6 +774,32 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:
     if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/false))
+      return false;
+    break;
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
+    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
       return false;
     break;
 
