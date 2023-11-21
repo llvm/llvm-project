@@ -103,7 +103,7 @@ Co<int> value_coro(int b) { co_return co_await foo_coro(b); }
 // Lifetime bound but not a Coroutine Return Type: No analysis.
 // =============================================================================
 namespace not_a_crt {
-template <typename T> struct [[clang::coro_lifetimebound]] Co {
+template <typename T> struct [[clang::coro_lifetimebound]] CoNoCRT {
   struct promise_type {
     Co<T> get_return_object() {
       return {};
@@ -115,6 +115,9 @@ template <typename T> struct [[clang::coro_lifetimebound]] Co {
   };
 };
 
-Co<int> foo_coro(const int& a) { co_return a; }
-Co<int> bar(int a) { return foo_coro(a); }
+CoNoCRT<int> foo_coro(const int& a) { co_return a; }
+CoNoCRT<int> bar(int a) { 
+  auto x = foo_coro(a);
+  co_return co_await x;
+}
 } // namespace not_a_crt

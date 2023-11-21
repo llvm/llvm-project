@@ -7631,8 +7631,8 @@ Both coroutines and coroutine wrappers are part of this analysis.
 
     co_return co_await coro(1); // fine.
   }
-  Task<int> stack_reference(int a) {
-    return coro(a); // returning address of stack variable `a`.
+  [[clang::coro_wrapper]] Task<int> stack_reference(int a) {
+    return coro(a); // warning: returning address of stack variable `a`.
   }
 }];
 }
