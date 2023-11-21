@@ -94,6 +94,35 @@ void func() {
 #pragma acc kernels loop
   for(;;){}
 
+  int i = 0, j = 0, k = 0;
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic
+  i = j;
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic garbage
+  i = j;
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic garbage clause list
+  i = j;
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic read
+  i = j;
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic write clause list
+  i = i + j;
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic update clause list
+  i++;
+  // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
+  // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
+#pragma acc atomic capture clause list
+  i = j++;
+
+
   // expected-warning@+2{{OpenACC clause parsing not yet implemented}}
   // expected-warning@+1{{OpenACC directives not yet implemented, pragma ignored}}
 #pragma acc declare clause list
