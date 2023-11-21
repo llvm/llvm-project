@@ -166,11 +166,11 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 // RUN: %clang -c %s -target armv7-linux-musleabihf -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
-// RUN: %clang %s -target x86_64-linux-musl -nopie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
-// RUN: %clang %s -target x86_64-linux-musl -pie -nopie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -pie -no-pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-PIE
-// RUN: %clang %s -target x86_64-linux-musl -nopie -pie -### 2>&1 \
+// RUN: %clang %s --target=x86_64-linux-musl -no-pie -pie -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE2
 //
 // Darwin is a beautiful and unique snowflake when it comes to these flags.
