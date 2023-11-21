@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -300,6 +301,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
       .libcallFor({s32, s64});
 
+  getActionDefinitionsBuilder(G_VASTART).customFor({p0});
+
   getLegacyLegalizerInfo().computeTables();
 }
 
@@ -324,6 +327,25 @@ bool RISCVLegalizerInfo::legalizeShlAshrLshr(
   Observer.changingInstr(MI);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
   Observer.changedInstr(MI);
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
+                                         MachineIRBuilder &MIRBuilder,
+                                         GISelChangeObserver &Observer) const {
+  // Stores the address of the VarArgsFrameIndex slot into the memory location
+  assert(MI.getOpcode() == TargetOpcode::G_VASTART);
+  MachineFunction *MF = MI.getParent()->getParent();
+  RISCVMachineFunctionInfo *FuncInfo = MF->getInfo<RISCVMachineFunctionInfo>();
+  int FI = FuncInfo->getVarArgsFrameIndex();
+  LLT AddrTy = MIRBuilder.getMRI()->getType(MI.getOperand(0).getReg());
+  auto FINAddr = MIRBuilder.buildFrameIndex(AddrTy, FI);
+  assert(MI.hasOneMemOperand());
+  MachineInstr *LoweredMI = MIRBuilder.buildStore(
+      MI.getOperand(0).getReg(), FINAddr, *MI.memoperands()[0]);
+  Observer.createdInstr(*LoweredMI);
+  Observer.erasingInstr(MI);
+  MI.eraseFromParent();
   return true;
 }
 
@@ -367,6 +389,8 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_VASTART:
+    return legalizeVAStart(MI, MIRBuilder, Observer);
   }
 
   llvm_unreachable("expected switch to return");
