@@ -220,6 +220,7 @@ Changes to the CodeGen infrastructure
 
 Changes to the Metadata Info
 ---------------------------------
+* Added a new loop metadata `!{!"llvm.loop.align", i32 64}`
 
 Changes to the Debug Info
 ---------------------------------
