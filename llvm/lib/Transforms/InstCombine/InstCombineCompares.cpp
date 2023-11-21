@@ -419,7 +419,6 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
                                   SetVector<Value *> &Explored) {
   SmallVector<Value *, 16> WorkList(1, Start);
   Explored.insert(Base);
-  uint64_t IndexSize = DL.getIndexTypeSizeInBits(Start->getType());
 
   // The following traversal gives us an order which can be used
   // when doing the final transformation. Since in the final
@@ -450,10 +449,8 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
 
       if (auto *GEP = dyn_cast<GEPOperator>(V)) {
         // Only allow GEPs with at most one variable offset.
-        APInt Offset(IndexSize, 0);
-        MapVector<Value *, APInt> VarOffsets;
-        if (!GEP->collectOffset(DL, IndexSize, VarOffsets, Offset) ||
-            VarOffsets.size() > 1)
+        auto IsNonConst = [](Value *V) { return !isa<ConstantInt>(V); };
+        if (count_if(GEP->indices(), IsNonConst) > 1)
           return false;
 
         if (!Explored.contains(GEP->getOperand(0)))
