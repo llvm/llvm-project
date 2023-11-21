@@ -55,11 +55,9 @@ define void @iv_known_non_negative_iv_variable_trip_count_uge(i8 %N) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
@@ -147,11 +145,9 @@ define void @iv_known_non_negative_iv_variable_trip_count_ugt(i8 %N) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[T_2:%.*]] = icmp sgt i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i8 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
