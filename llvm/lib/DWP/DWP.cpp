@@ -240,7 +240,8 @@ static Error addAllTypesFromDWP(
               sectionOverflowErrorOrWarning(OldOffset, TypesOffset, "Types",
                                             OverflowOptValue, SeeOverflowFlag))
         return Err;
-      return Error::success();
+      if (SeeOverflowFlag)
+        return Error::success();
     }
   }
   return Error::success();
@@ -283,7 +284,8 @@ static Error addAllTypesFromTypesSection(
                                                       "Types", OverflowOptValue,
                                                       SeeOverflowFlag))
           return Err;
-        return Error::success();
+        if (SeeOverflowFlag)
+          return Error::success();
       }
     }
   }
