@@ -38,6 +38,22 @@ Following types are considered as hostile:
     co_await Bar();
   }
 
+Exclusions
+-------
+It is possible to make the check treat certain suspensions as safe.
+``co_await``-ing an expression of ``awaitable`` type is considered
+safe if the ``awaitable`` type is annotated with 
+``[[clang::annotate("coro_raii_safe_suspend")]]``.
+RAII objects persisting across such a ``co_await`` expression are
+considered safe and hence are not flagged.
+
+This annotation can be used to mark ``awaitable`` types which can be safely
+awaited while having hostile RAII objects in scope. For example, such safe
+``awaitable`` could ensure resumption on the same thread or even unlock the mutex
+on suspension and reacquire on resumption.
+
+Example usage:
+
 .. code-block:: c++
 
   struct [[clang::annotate("coro_raii_safe_suspend")]] safe_awaitable {
@@ -51,6 +67,13 @@ Following types are considered as hostile:
     co_await safe_awaitable{};
   }
 
+  auto wait() { return safe_awaitable{}; }
+
+  task coro() {
+    const std::lock_guard l(&mu_); // No warning.
+    co_await safe_awaitable{};
+    co_await wait();
+  }
 
 Options
 -------
