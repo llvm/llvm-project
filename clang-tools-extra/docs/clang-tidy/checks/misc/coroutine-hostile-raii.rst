@@ -38,43 +38,6 @@ Following types are considered as hostile:
     co_await Bar();
   }
 
-Exclusions
--------
-It is possible to make the check treat certain suspensions as safe.
-``co_await``-ing an expression of ``awaitable`` type is considered
-safe if the ``awaitable`` type is annotated with 
-``[[clang::annotate("coro_raii_safe_suspend")]]``.
-RAII objects persisting across such a ``co_await`` expression are
-considered safe and hence are not flagged.
-
-This annotation can be used to mark ``awaitable`` types which can be safely
-awaited while having hostile RAII objects in scope. For example, such safe
-``awaitable`` could ensure resumption on the same thread or even unlock the mutex
-on suspension and reacquire on resumption.
-
-Example usage:
-
-.. code-block:: c++
-
-  struct [[clang::annotate("coro_raii_safe_suspend")]] safe_awaitable {
-    bool await_ready() noexcept { return false; }
-    void await_suspend(std::coroutine_handle<>) noexcept {}
-    void await_resume() noexcept {}
-  };
-
-  task coro() {
-    const std::lock_guard l(&mu_);
-    co_await safe_awaitable{};
-  }
-
-  auto wait() { return safe_awaitable{}; }
-
-  task coro() {
-    const std::lock_guard l(&mu_); // No warning.
-    co_await safe_awaitable{};
-    co_await wait();
-  }
-
 Options
 -------
 
@@ -84,3 +47,37 @@ Options
     persist across suspension points.
     Eg: ``my::lockable; a::b;::my::other::lockable;``
     The default value of this option is `"std::lock_guard;std::scoped_lock"`.
+
+.. option:: SafeAwaitablesList
+
+    A semicolon-separated list of qualified types of awaitables types which can
+    be safely awaited while having hostile RAII objects in scope.
+
+    ``co_await``-ing an expression of ``awaitable`` type is considered
+    safe if the ``awaitable`` type is part of this list.
+    RAII objects persisting across such a ``co_await`` expression are
+    considered safe and hence are not flagged.
+
+    Example usage:
+
+    .. code-block:: c++
+
+      // Cosnider option SafeAwaitablesList = "safe_awaitable"
+      struct safe_awaitable {
+        bool await_ready() noexcept { return false; }
+        void await_suspend(std::coroutine_handle<>) noexcept {}
+        void await_resume() noexcept {}
+      };
+      auto wait() { return safe_awaitable{}; }
+
+      task coro() {
+        // This persists across both the co_await's but is not flagged
+        // because the awaitable is considered safe to await on.
+        const std::lock_guard l(&mu_);
+        co_await safe_awaitable{};
+        co_await wait();
+      }
+
+    Eg: ``my::safe::awaitable;other::awaitable``
+    The default value of this option is empty string `""`.
+

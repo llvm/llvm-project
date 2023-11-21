@@ -59,22 +59,15 @@ AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
   return Node.getCommonExpr() &&
          InnerMatcher.matches(*Node.getCommonExpr(), Finder, Builder);
 }
-
-// Matches a declaration annotated with
-// [[clang::annotate("coro_raii_safe_suspend")]].
-AST_MATCHER(Decl, isRAIISafe) {
-  for (const auto &Attr : Node.specific_attrs<clang::AnnotateAttr>())
-    if (Attr->getAnnotation() == "coro_raii_safe_suspend")
-      return true;
-  return false;
-}
 } // namespace
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RAIITypesList(utils::options::parseStringList(
-          Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))) {}
+          Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))),
+      SafeAwaitablesList(utils::options::parseStringList(
+          Options.get("SafeAwaitablesList", ""))) {}
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.
@@ -84,8 +77,8 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
                                namedDecl(hasAnyName(RAIITypesList))))))
                        .bind("raii");
-  auto SafeSuspend =
-      awaiatable(hasType(hasCanonicalType(hasDeclaration(isRAIISafe()))));
+  auto SafeSuspend = awaiatable(hasType(hasCanonicalType(
+      hasDeclaration(namedDecl(hasAnyName(SafeAwaitablesList))))));
   Finder->addMatcher(
       expr(anyOf(coawaitExpr(unless(SafeSuspend)), coyieldExpr()),
            forEachPrevStmt(
@@ -113,5 +106,7 @@ void CoroutineHostileRAIICheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "RAIITypesList",
                 utils::options::serializeStringList(RAIITypesList));
+  Options.store(Opts, "SafeAwaitableList",
+                utils::options::serializeStringList(SafeAwaitablesList));
 }
 } // namespace clang::tidy::misc
