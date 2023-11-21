@@ -547,6 +547,7 @@ bool llvm::stripDebugInfo(Function &F) {
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
       }
+      I.dropDbgValues();
     }
   }
   return Changed;
