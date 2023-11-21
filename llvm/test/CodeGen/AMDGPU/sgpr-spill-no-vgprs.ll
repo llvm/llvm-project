@@ -123,9 +123,6 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[24:25]
-; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[24:25]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -145,6 +142,9 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    v_readlane_b32 s17, v1, 13
 ; GCN-NEXT:    v_readlane_b32 s18, v1, 14
 ; GCN-NEXT:    v_readlane_b32 s19, v1, 15
+; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[24:25]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[4:19]
 ; GCN-NEXT:    ;;#ASMEND
@@ -202,6 +202,7 @@ define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %ou
 ; GCN-NEXT:    v_readlane_b32 s21, v1, 61
 ; GCN-NEXT:    v_readlane_b32 s22, v1, 62
 ; GCN-NEXT:    v_readlane_b32 s23, v1, 63
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s4, v0, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v0, 1
 ; GCN-NEXT:    ;;#ASMSTART

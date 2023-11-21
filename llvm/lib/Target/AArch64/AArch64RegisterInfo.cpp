@@ -440,13 +440,14 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
       Reserved.set(SubReg);
   }
 
-  if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
-    for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
-         SubReg.isValid(); ++SubReg)
-      Reserved.set(*SubReg);
-  }
-
   markSuperRegs(Reserved, AArch64::FPCR);
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    markSuperRegs(Reserved, AArch64::X27);
+    markSuperRegs(Reserved, AArch64::X28);
+    markSuperRegs(Reserved, AArch64::W27);
+    markSuperRegs(Reserved, AArch64::W28);
+  }
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;

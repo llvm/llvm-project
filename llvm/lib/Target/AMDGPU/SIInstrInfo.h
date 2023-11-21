@@ -705,6 +705,11 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SGPRSpill;
   }
 
+  bool isSpillOpcode(uint16_t Opcode) const {
+    return get(Opcode).TSFlags &
+           (SIInstrFlags::SGPRSpill | SIInstrFlags::VGPRSpill);
+  }
+
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
            Opcode == AMDGPU::SI_SPILL_WWM_AV32_SAVE ||
@@ -1212,7 +1217,8 @@ public:
   unsigned getLiveRangeSplitOpcode(Register Reg,
                                    const MachineFunction &MF) const override;
 
-  bool isBasicBlockPrologue(const MachineInstr &MI) const override;
+  bool isBasicBlockPrologue(const MachineInstr &MI,
+                            Register Reg = Register()) const override;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,

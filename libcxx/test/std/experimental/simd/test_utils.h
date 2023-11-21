@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_UTIL_H
-#define TEST_UTIL_H
+#ifndef LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H
+#define LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H
 
 #include <algorithm>
 #include <array>
@@ -78,4 +78,4 @@ void assert_simd_mask_values_equal(const ex::simd_mask<T, SimdAbi>& origin_mask,
     assert(origin_mask[i] == expected_value[i]);
 }
 
-#endif // TEST_UTIL_H
+#endif // LIBCXX_TEST_STD_EXPERIMENTAL_SIMD_TEST_UTILS_H

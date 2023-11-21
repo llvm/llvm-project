@@ -538,7 +538,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
         llvm::MetadataAsValue::get(ctx,
             llvm::ValueAsMetadata::get(moduleTranslation.lookupValue(opInst.getOperand(0)))),
         llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($varInfo)),
-        llvm::MetadataAsValue::get(ctx, llvm::DIExpression::get(ctx, std::nullopt)),
+        llvm::MetadataAsValue::get(ctx, llvm::DIExpression::get(ctx, $locationExpr)),
       });
   }];
   let mlirBuilder = [{
@@ -548,7 +548,7 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     return success();
   }];
   let assemblyFormat = [{
-    qualified($varInfo) `=` $}] # argName #
+    qualified($varInfo) (qualified($locationExpr)^)? `=` $}] # argName #
       [{ `:` qualified(type($}] # argName # [{)) attr-dict
   }];
 }
@@ -556,13 +556,21 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
 def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
     [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
   let summary = "Describes how the address relates to a source language variable.";
-  let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
+  let arguments = (ins
+    LLVM_AnyPointer:$addr,
+    LLVM_DILocalVariableAttr:$varInfo,
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
+  );
 }
 
 def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
   let summary = "Describes how the value relates to a source language variable.";
-  let arguments = (ins LLVM_Type:$value, LLVM_DILocalVariableAttr:$varInfo);
+  let arguments = (ins
+    LLVM_Type:$value,
+    LLVM_DILocalVariableAttr:$varInfo,
+    DefaultValuedAttr<LLVM_DIExpressionAttr, "std::nullopt">:$locationExpr
+  );
 }
 
 def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
@@ -660,8 +668,8 @@ class LLVM_VecReductionI<string mnem>
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VecReductionAccBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp</*mnem=*/"vector.reduce." # mnem, 
-                           /*overloadedResults=*/[], 
+    : LLVM_OneResultIntrOp</*mnem=*/"vector.reduce." # mnem,
+                           /*overloadedResults=*/[],
                            /*overloadedOperands=*/[1],
                            /*traits=*/[Pure, SameOperandsAndResultElementType],
                            /*equiresFastmath=*/1>,

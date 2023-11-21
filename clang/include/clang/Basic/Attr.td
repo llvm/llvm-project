@@ -1094,6 +1094,22 @@ def CoroOnlyDestroyWhenComplete : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def CoroReturnType : InheritableAttr {
+  let Spellings = [Clang<"coro_return_type">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroReturnTypeAndWrapperDoc];
+  let SimpleHandler = 1;
+}
+
+def CoroWrapper : InheritableAttr {
+  let Spellings = [Clang<"coro_wrapper">];
+  let Subjects = SubjectList<[Function]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroReturnTypeAndWrapperDoc];
+  let SimpleHandler = 1;
+}
+
 // OSObject-based attributes.
 def OSConsumed : InheritableParamAttr {
   let Spellings = [Clang<"os_consumed">];

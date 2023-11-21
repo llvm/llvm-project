@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-compiler="enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: mlir-opt %s --sparsifier="enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 
 #MAT_D_C = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)

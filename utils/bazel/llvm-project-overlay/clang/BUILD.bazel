@@ -2412,6 +2412,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IRReader",
         "//llvm:LTO",
         "//llvm:MC",

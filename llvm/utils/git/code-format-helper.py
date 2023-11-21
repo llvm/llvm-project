@@ -156,6 +156,8 @@ class ClangFormatHelper(FormatHelper):
         if proc.returncode != 0:
             # formatting needed, or the command otherwise failed
             print(f"error: {self.name} exited with code {proc.returncode}")
+            # Print the diff in the log so that it is viewable there
+            print(proc.stdout.decode("utf-8"))
             return proc.stdout.decode("utf-8")
         else:
             sys.stdout.write(proc.stdout.decode("utf-8"))
@@ -200,6 +202,8 @@ class DarkerFormatHelper(FormatHelper):
         if proc.returncode != 0:
             # formatting needed, or the command otherwise failed
             print(f"error: {self.name} exited with code {proc.returncode}")
+            # Print the diff in the log so that it is viewable there
+            print(proc.stdout.decode("utf-8"))
             return proc.stdout.decode("utf-8")
         else:
             sys.stdout.write(proc.stdout.decode("utf-8"))
