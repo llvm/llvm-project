@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRLLVMIRTransforms
+  AddComdats.cpp
   DIScopeForLLVMFuncOp.cpp
   LegalizeForExport.cpp
   OptimizeForNVVM.cpp

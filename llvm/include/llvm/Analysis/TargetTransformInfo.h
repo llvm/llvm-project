@@ -348,6 +348,9 @@ public:
   /// individual classes of instructions would be better.
   unsigned getInliningThresholdMultiplier() const;
 
+  unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const;
+  unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const;
+
   /// \returns A value to be added to the inlining threshold.
   unsigned adjustInliningThreshold(const CallBase *CB) const;
 
@@ -904,6 +907,17 @@ public:
     // be done with two 4-byte compares instead of 4+2+1-byte compares. This
     // requires all loads in LoadSizes to be doable in an unaligned way.
     bool AllowOverlappingLoads = false;
+
+    // Sometimes, the amount of data that needs to be compared is smaller than
+    // the standard register size, but it cannot be loaded with just one load
+    // instruction. For example, if the size of the memory comparison is 6
+    // bytes, we can handle it more efficiently by loading all 6 bytes in a
+    // single block and generating an 8-byte number, instead of generating two
+    // separate blocks with conditional jumps for 4 and 2 byte loads. This
+    // approach simplifies the process and produces the comparison result as
+    // normal. This array lists the allowed sizes of memcmp tails that can be
+    // merged into one block
+    SmallVector<unsigned, 4> AllowedTailExpansions;
   };
   MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                bool IsZeroCmp) const;
@@ -1503,6 +1517,15 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
+  /// Returns a penalty for invoking call \p Call in \p F.
+  /// For example, if a function F calls a function G, which in turn calls
+  /// function H, then getInlineCallPenalty(F, H()) would return the
+  /// penalty of calling H from F, e.g. after inlining G into F.
+  /// \p DefaultCallPenalty is passed to give a default penalty that
+  /// the target can amend or override.
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const;
+
   /// \returns True if the caller and callee agree on how \p Types will be
   /// passed to or returned from the callee.
   /// to the callee.
@@ -1696,6 +1719,9 @@ public:
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
                        TTI::TargetCostKind CostKind) = 0;
   virtual unsigned getInliningThresholdMultiplier() const = 0;
+  virtual unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const = 0;
+  virtual unsigned
+  getInliningCostBenefitAnalysisProfitableMultiplier() const = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() const = 0;
   virtual unsigned getCallerAllocaCost(const CallBase *CB,
@@ -1995,6 +2021,8 @@ public:
       std::optional<uint32_t> AtomicCpySize) const = 0;
   virtual bool areInlineCompatible(const Function *Caller,
                                    const Function *Callee) const = 0;
+  virtual unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                        unsigned DefaultCallPenalty) const = 0;
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
                                      const ArrayRef<Type *> &Types) const = 0;
@@ -2067,6 +2095,12 @@ public:
   }
   unsigned adjustInliningThreshold(const CallBase *CB) override {
     return Impl.adjustInliningThreshold(CB);
+  }
+  unsigned getInliningCostBenefitAnalysisSavingsMultiplier() const override {
+    return Impl.getInliningCostBenefitAnalysisSavingsMultiplier();
+  }
+  unsigned getInliningCostBenefitAnalysisProfitableMultiplier() const override {
+    return Impl.getInliningCostBenefitAnalysisProfitableMultiplier();
   }
   int getInlinerVectorBonusPercent() const override {
     return Impl.getInlinerVectorBonusPercent();
@@ -2649,6 +2683,10 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override {
     return Impl.areInlineCompatible(Caller, Callee);
+  }
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const override {
+    return Impl.getInlineCallPenalty(F, Call, DefaultCallPenalty);
   }
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              const ArrayRef<Type *> &Types) const override {

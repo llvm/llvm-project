@@ -83,7 +83,6 @@ class TestRunLocker(TestBase):
         val = target.EvaluateExpression("SomethingToCall()")
         error = val.GetError()
         self.assertTrue(error.Fail(), "Failed to run expression")
-        print(f"Got Error: {error.GetCString()}")
         self.assertIn(
             "can't evaluate expressions when the process is running",
             error.GetCString(),

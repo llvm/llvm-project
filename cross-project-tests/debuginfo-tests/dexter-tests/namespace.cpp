@@ -4,7 +4,6 @@
 
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// XFAIL: system-darwin
 
 // RUN: %clang -g -O0 %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \

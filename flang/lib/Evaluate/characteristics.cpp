@@ -300,7 +300,15 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
-  if (!type.type().IsTkLenCompatibleWith(actual.type.type())) {
+  // Treat deduced dummy character type as if it were assumed-length character
+  // to avoid useless "implicit interfaces have distinct type" warnings from
+  // CALL FOO('abc'); CALL FOO('abcd').
+  bool deducedAssumedLength{type.type().category() == TypeCategory::Character &&
+      attrs.test(Attr::DeducedFromActual)};
+  bool compatibleTypes{deducedAssumedLength
+          ? type.type().IsTkCompatibleWith(actual.type.type())
+          : type.type().IsTkLenCompatibleWith(actual.type.type())};
+  if (!compatibleTypes) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object types: "s +
           type.type().AsFortran() + " vs " + actual.type.type().AsFortran();
@@ -314,7 +322,8 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
-  if (type.type().category() == TypeCategory::Character) {
+  if (type.type().category() == TypeCategory::Character &&
+      !deducedAssumedLength) {
     if (actual.type.type().IsAssumedLengthCharacter() !=
         type.type().IsAssumedLengthCharacter()) {
       if (whyNot) {
@@ -681,9 +690,12 @@ static std::optional<Procedure> CharacterizeProcedure(
       },
       symbol.details())};
   if (result && !symbol.has<semantics::ProcBindingDetails>()) {
-    CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
+    CopyAttrs<Procedure, Procedure::Attr>(symbol, *result,
         {
             {semantics::Attr::BIND_C, Procedure::Attr::BindC},
+        });
+    CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
+        {
             {semantics::Attr::ELEMENTAL, Procedure::Attr::Elemental},
         });
     if (IsPureProcedure(symbol) || // works for ENTRY too
@@ -780,8 +792,9 @@ static std::optional<DummyArgument> CharacterizeDummyArgument(
   return std::nullopt;
 }
 
-std::optional<DummyArgument> DummyArgument::FromActual(
-    std::string &&name, const Expr<SomeType> &expr, FoldingContext &context) {
+std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
+    const Expr<SomeType> &expr, FoldingContext &context,
+    bool forImplicitInterface) {
   return common::visit(
       common::visitors{
           [&](const BOZLiteralConstant &) {
@@ -816,6 +829,13 @@ std::optional<DummyArgument> DummyArgument::FromActual(
           },
           [&](const auto &) {
             if (auto type{TypeAndShape::Characterize(expr, context)}) {
+              if (forImplicitInterface &&
+                  !type->type().IsUnlimitedPolymorphic() &&
+                  type->type().IsPolymorphic()) {
+                // Pass the monomorphic declared type to an implicit interface
+                type->set_type(DynamicType{
+                    type->type().GetDerivedTypeSpec(), /*poly=*/false});
+              }
               DummyDataObject obj{std::move(*type)};
               obj.attrs.set(DummyDataObject::Attr::DeducedFromActual);
               return std::make_optional<DummyArgument>(
@@ -828,10 +848,11 @@ std::optional<DummyArgument> DummyArgument::FromActual(
       expr.u);
 }
 
-std::optional<DummyArgument> DummyArgument::FromActual(
-    std::string &&name, const ActualArgument &arg, FoldingContext &context) {
+std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
+    const ActualArgument &arg, FoldingContext &context,
+    bool forImplicitInterface) {
   if (const auto *expr{arg.UnwrapExpr()}) {
-    return FromActual(std::move(name), *expr, context);
+    return FromActual(std::move(name), *expr, context, forImplicitInterface);
   } else if (arg.GetAssumedTypeDummy()) {
     return std::nullopt;
   } else {
@@ -1057,13 +1078,32 @@ bool FunctionResult::IsCompatibleWith(
                 actual.IsAssumedLengthCharacter()) {
               return true;
             } else {
-              const auto *ifaceLenParam{
-                  ifaceTypeShape->type().charLengthParamValue()};
-              const auto *actualLenParam{
-                  actualTypeShape->type().charLengthParamValue()};
-              if (ifaceLenParam && actualLenParam &&
-                  *ifaceLenParam == *actualLenParam) {
-                return true;
+              auto len{ToInt64(ifaceTypeShape->LEN())};
+              auto actualLen{ToInt64(actualTypeShape->LEN())};
+              if (len.has_value() != actualLen.has_value()) {
+                if (whyNot) {
+                  *whyNot = "constant-length vs non-constant-length character "
+                            "results";
+                }
+              } else if (len && *len != *actualLen) {
+                if (whyNot) {
+                  *whyNot = "character results with distinct lengths";
+                }
+              } else {
+                const auto *ifaceLenParam{
+                    ifaceTypeShape->type().charLengthParamValue()};
+                const auto *actualLenParam{
+                    actualTypeShape->type().charLengthParamValue()};
+                if (ifaceLenParam && actualLenParam &&
+                    ifaceLenParam->isExplicit() !=
+                        actualLenParam->isExplicit()) {
+                  if (whyNot) {
+                    *whyNot =
+                        "explicit-length vs deferred-length character results";
+                  }
+                } else {
+                  return true;
+                }
               }
             }
           }
@@ -1268,6 +1308,22 @@ std::optional<Procedure> Procedure::Characterize(
   return std::nullopt;
 }
 
+std::optional<Procedure> Procedure::Characterize(
+    const Expr<SomeType> &expr, FoldingContext &context) {
+  if (const auto *procRef{UnwrapProcedureRef(expr)}) {
+    return Characterize(*procRef, context);
+  } else if (const auto *procDesignator{
+                 std::get_if<ProcedureDesignator>(&expr.u)}) {
+    return Characterize(*procDesignator, context);
+  } else if (const Symbol * symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
+    return Characterize(*symbol, context);
+  } else {
+    context.messages().Say(
+        "Expression '%s' is not a procedure"_err_en_US, expr.AsFortran());
+    return std::nullopt;
+  }
+}
+
 std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
     const ActualArguments &args, FoldingContext &context) {
   auto callee{Characterize(proc, context)};
@@ -1278,8 +1334,9 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
       for (const auto &arg : args) {
         ++j;
         if (arg) {
-          if (auto dummy{DummyArgument::FromActual(
-                  "x"s + std::to_string(j), *arg, context)}) {
+          if (auto dummy{DummyArgument::FromActual("x"s + std::to_string(j),
+                  *arg, context,
+                  /*forImplicitInterface=*/true)}) {
             callee->dummyArguments.emplace_back(std::move(*dummy));
             continue;
           }

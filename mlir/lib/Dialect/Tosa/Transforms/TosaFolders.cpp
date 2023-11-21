@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <functional>
+#include <numeric>
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
@@ -289,7 +290,142 @@ struct TosaFoldConstantReciprocal : public OpRewritePattern<ReciprocalOp> {
   }
 };
 
+/// Getting the axes position of the element which is located
+/// in the tensor at the counter index
+
+llvm::SmallVector<int64_t>
+getPositionFromIndex(int64_t index, llvm::ArrayRef<int64_t> tensorShape) {
+  int64_t remaining = index;
+  llvm::SmallVector<int64_t> position(tensorShape.size(), 0);
+  for (int64_t i = tensorShape.size() - 1; i >= 0; --i) {
+    position[i] = remaining % tensorShape[i];
+    remaining /= tensorShape[i];
+  }
+  return position;
+}
+
+/// Getting the index of the element which is located at the
+/// axes position in the tensor
+
+int64_t getIndexFromPosition(llvm::ArrayRef<int64_t> position,
+                             llvm::ArrayRef<int64_t> tensorShape) {
+  int64_t index = 0;
+  int64_t multiplierTmp = 1;
+  for (int64_t i = position.size() - 1; i >= 0; --i) {
+    index += position[i] * multiplierTmp;
+    multiplierTmp *= tensorShape[i];
+  }
+  return index;
+}
+
+template <typename OperationType>
+llvm::APInt calculateReducedValue(const mlir::ElementsAttr &oldTensorAttr,
+                                  llvm::ArrayRef<int64_t> oldShape,
+                                  int64_t reductionAxis,
+                                  int64_t reductionIndex) {
+
+  llvm::SmallVector<int64_t> newShape(oldShape);
+  newShape[reductionAxis] = 1;
+  /// Let's calculate the position of the index
+  llvm::SmallVector<int64_t> position =
+      getPositionFromIndex(reductionIndex, newShape);
+  auto oldTensor = oldTensorAttr.getValues<llvm::APInt>();
+  /// Starting from the first positon along the reduction axis
+  position[reductionAxis] = 0;
+  int64_t indexAtOldTensor = getIndexFromPosition(position, oldShape);
+  llvm::APInt reducedValue = oldTensor[indexAtOldTensor];
+
+  for (int64_t reductionAxisVal = 1; reductionAxisVal < oldShape[reductionAxis];
+       ++reductionAxisVal) {
+
+    int64_t stride = std::accumulate(oldShape.begin() + reductionAxis + 1,
+                                     oldShape.end(), 1, std::multiplies<int>());
+    int64_t index = indexAtOldTensor + stride * reductionAxisVal;
+    reducedValue =
+        OperationType::calcOneElement(reducedValue, oldTensor[index]);
+  }
+  return reducedValue;
+}
+
+template <typename OperationType>
+struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
+
+  ReduceConstantOptimization(MLIRContext *context,
+                             bool aggressiveReduceConstant)
+      : OpRewritePattern<OperationType>(context),
+        aggressiveReduceConstant(aggressiveReduceConstant) {}
+
+  using OpRewritePattern<OperationType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OperationType op,
+                                PatternRewriter &rewriter) const override {
+    Value inputOp = op.getInput();
+    auto constOp = inputOp.getDefiningOp<tosa::ConstOp>();
+
+    if (!constOp)
+      return rewriter.notifyMatchFailure(
+          op, "reduce input must be const operation");
+
+    if (!inputOp.hasOneUse() && !this->aggressiveReduceConstant)
+      return rewriter.notifyMatchFailure(
+          op, "input operation has more than one user");
+
+    auto resultType = cast<ShapedType>(op.getOutput().getType());
+
+    if (!resultType.hasStaticShape())
+      return rewriter.notifyMatchFailure(op, "result type shape is not static");
+
+    auto reductionAxis = op.getAxis();
+    const auto denseElementsAttr = constOp.getValue();
+    const auto shapedOldElementsValues =
+        denseElementsAttr.getType().cast<ShapedType>();
+
+    if (!llvm::isa<IntegerType>(shapedOldElementsValues.getElementType()))
+      return rewriter.notifyMatchFailure(
+          op, "reduce input currently supported with integer type");
+
+    auto oldShape = shapedOldElementsValues.getShape();
+    auto newShape = resultType.getShape();
+
+    auto newNumOfElements = std::accumulate(newShape.begin(), newShape.end(), 1,
+                                            std::multiplies<int>());
+    llvm::SmallVector<APInt> newReducedTensor(newNumOfElements);
+
+    for (int64_t reductionIndex = 0; reductionIndex < newNumOfElements;
+         ++reductionIndex) {
+
+      /// Let's reduce all the elements along this reduction axis
+      newReducedTensor[reductionIndex] = calculateReducedValue<OperationType>(
+          denseElementsAttr, oldShape, reductionAxis, reductionIndex);
+    }
+
+    auto rankedTensorType = cast<RankedTensorType>(resultType);
+    auto denseAttr =
+        mlir::DenseElementsAttr::get(rankedTensorType, newReducedTensor);
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, rankedTensorType, denseAttr);
+    return success();
+  }
+  const bool aggressiveReduceConstant;
+};
+
 } // namespace
+
+void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
+                                               RewritePatternSet &patterns,
+                                               bool aggressiveReduceConstant) {
+  patterns.add<ReduceConstantOptimization<ReduceAllOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceAnyOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceMaxOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+      ctx, aggressiveReduceConstant);
+  patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
+      ctx, aggressiveReduceConstant);
+}
 
 void mlir::tosa::populateTosaFoldConstantTransposePatterns(
     MLIRContext *ctx, RewritePatternSet &patterns) {

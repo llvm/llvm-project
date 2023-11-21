@@ -329,8 +329,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.
-  setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR, ISD::FRINT,
-                      ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
+  setOperationAction({ISD::FCEIL, ISD::FPOW, ISD::FABS, ISD::FFLOOR,
+                      ISD::FROUNDEVEN, ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM},
                      MVT::f32, Legal);
 
   setOperationAction(ISD::FLOG2, MVT::f32, Custom);
@@ -341,7 +341,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FNEARBYINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
-  setOperationAction(ISD::FROUNDEVEN, {MVT::f16, MVT::f32, MVT::f64}, Custom);
+  setOperationAction(ISD::FRINT, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Custom);
 
@@ -384,7 +384,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v12f32, MVT::v16f16, MVT::v16i16, MVT::v16f32, MVT::v16i32,
        MVT::v32f32, MVT::v32i32, MVT::v2f64,  MVT::v2i64,  MVT::v3f64,
        MVT::v3i64,  MVT::v4f64,  MVT::v4i64,  MVT::v8f64,  MVT::v8i64,
-       MVT::v16f64, MVT::v16i64},
+       MVT::v16f64, MVT::v16i64, MVT::v32i16, MVT::v32f16},
       Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
@@ -457,14 +457,14 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   for (MVT VT : FloatVectorTypes) {
     setOperationAction(
-        {ISD::FABS,    ISD::FMINNUM,      ISD::FMAXNUM,   ISD::FADD,
-         ISD::FCEIL,   ISD::FCOS,         ISD::FDIV,      ISD::FEXP2,
-         ISD::FEXP,    ISD::FLOG2,        ISD::FREM,      ISD::FLOG,
-         ISD::FLOG10,  ISD::FPOW,         ISD::FFLOOR,    ISD::FTRUNC,
-         ISD::FMUL,    ISD::FMA,          ISD::FRINT,     ISD::FNEARBYINT,
-         ISD::FSQRT,   ISD::FSIN,         ISD::FSUB,      ISD::FNEG,
-         ISD::VSELECT, ISD::SELECT_CC,    ISD::FCOPYSIGN, ISD::VECTOR_SHUFFLE,
-         ISD::SETCC,   ISD::FCANONICALIZE},
+        {ISD::FABS,    ISD::FMINNUM,       ISD::FMAXNUM,   ISD::FADD,
+         ISD::FCEIL,   ISD::FCOS,          ISD::FDIV,      ISD::FEXP2,
+         ISD::FEXP,    ISD::FLOG2,         ISD::FREM,      ISD::FLOG,
+         ISD::FLOG10,  ISD::FPOW,          ISD::FFLOOR,    ISD::FTRUNC,
+         ISD::FMUL,    ISD::FMA,           ISD::FRINT,     ISD::FNEARBYINT,
+         ISD::FSQRT,   ISD::FSIN,          ISD::FSUB,      ISD::FNEG,
+         ISD::VSELECT, ISD::SELECT_CC,     ISD::FCOPYSIGN, ISD::VECTOR_SHUFFLE,
+         ISD::SETCC,   ISD::FCANONICALIZE, ISD::FROUNDEVEN},
         VT, Expand);
   }
 
@@ -585,6 +585,7 @@ static bool fnegFoldsIntoOpcode(unsigned Opc) {
   case ISD::FTRUNC:
   case ISD::FRINT:
   case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN:
   case ISD::FCANONICALIZE:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RCP_LEGACY:
@@ -2368,7 +2369,8 @@ SDValue AMDGPUTargetLowering::LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::BITCAST, SL, MVT::f64, Tmp2);
 }
 
-SDValue AMDGPUTargetLowering::LowerFRINT(SDValue Op, SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFROUNDEVEN(SDValue Op,
+                                              SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
@@ -2395,18 +2397,19 @@ SDValue AMDGPUTargetLowering::LowerFRINT(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getSelect(SL, MVT::f64, Cond, Src, Tmp2);
 }
 
-SDValue AMDGPUTargetLowering::LowerFNEARBYINT(SDValue Op, SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFNEARBYINT(SDValue Op,
+                                              SelectionDAG &DAG) const {
   // FNEARBYINT and FRINT are the same, except in their handling of FP
   // exceptions. Those aren't really meaningful for us, and OpenCL only has
   // rint, so just treat them as equivalent.
-  return DAG.getNode(ISD::FRINT, SDLoc(Op), Op.getValueType(), Op.getOperand(0));
+  return DAG.getNode(ISD::FROUNDEVEN, SDLoc(Op), Op.getValueType(),
+                     Op.getOperand(0));
 }
 
-SDValue AMDGPUTargetLowering::LowerFROUNDEVEN(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue AMDGPUTargetLowering::LowerFRINT(SDValue Op, SelectionDAG &DAG) const {
   auto VT = Op.getValueType();
   auto Arg = Op.getOperand(0u);
-  return DAG.getNode(ISD::FRINT, SDLoc(Op), VT, Arg);
+  return DAG.getNode(ISD::FROUNDEVEN, SDLoc(Op), VT, Arg);
 }
 
 // XXX - May require not supporting f32 denormals?
@@ -2429,18 +2432,16 @@ SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
 
   const SDValue Zero = DAG.getConstantFP(0.0, SL, VT);
   const SDValue One = DAG.getConstantFP(1.0, SL, VT);
-  const SDValue Half = DAG.getConstantFP(0.5, SL, VT);
-
-  SDValue SignOne = DAG.getNode(ISD::FCOPYSIGN, SL, VT, One, X);
 
   EVT SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
 
+  const SDValue Half = DAG.getConstantFP(0.5, SL, VT);
   SDValue Cmp = DAG.getSetCC(SL, SetCCVT, AbsDiff, Half, ISD::SETOGE);
+  SDValue OneOrZeroFP = DAG.getNode(ISD::SELECT, SL, VT, Cmp, One, Zero);
 
-  SDValue Sel = DAG.getNode(ISD::SELECT, SL, VT, Cmp, SignOne, Zero);
-
-  return DAG.getNode(ISD::FADD, SL, VT, T, Sel);
+  SDValue SignedOffset = DAG.getNode(ISD::FCOPYSIGN, SL, VT, OneOrZeroFP, X);
+  return DAG.getNode(ISD::FADD, SL, VT, T, SignedOffset);
 }
 
 SDValue AMDGPUTargetLowering::LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const {
@@ -2474,7 +2475,18 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
   case ISD::FP_EXTEND:
     return Src.getOperand(0).getValueType() == MVT::f16;
   case ISD::FP16_TO_FP:
+  case ISD::FFREXP:
     return true;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrinsicID =
+        cast<ConstantSDNode>(Src.getOperand(0))->getZExtValue();
+    switch (IntrinsicID) {
+    case Intrinsic::amdgcn_frexp_mant:
+      return true;
+    default:
+      return false;
+    }
+  }
   default:
     return false;
   }
@@ -2482,15 +2494,17 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
   llvm_unreachable("covered opcode switch");
 }
 
-static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags) {
+bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
+                                           SDNodeFlags Flags) {
   if (Flags.hasApproximateFuncs())
     return true;
   auto &Options = DAG.getTarget().Options;
   return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
 }
 
-static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
-                                   SDNodeFlags Flags) {
+bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
+                                                  SDValue Src,
+                                                  SDNodeFlags Flags) {
   return !valueIsKnownNeverF32Denorm(Src) &&
          DAG.getMachineFunction()
                  .getDenormalMode(APFloat::IEEEsingle())
@@ -2925,7 +2939,7 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
     PL = getMad(DAG, SL, VT, XH, CL, Mad0, Flags);
   }
 
-  SDValue E = DAG.getNode(ISD::FRINT, SL, VT, PH, Flags);
+  SDValue E = DAG.getNode(ISD::FROUNDEVEN, SL, VT, PH, Flags);
 
   // It is unsafe to contract this fsub into the PH multiply.
   SDValue PHSubE = DAG.getNode(ISD::FSUB, SL, VT, PH, E, FlagsNoContract);
@@ -3732,8 +3746,7 @@ SDValue AMDGPUTargetLowering::performIntrinsicWOChainCombine(
   case Intrinsic::amdgcn_rsq:
   case Intrinsic::amdgcn_rcp_legacy:
   case Intrinsic::amdgcn_rsq_legacy:
-  case Intrinsic::amdgcn_rsq_clamp:
-  case Intrinsic::amdgcn_ldexp: {
+  case Intrinsic::amdgcn_rsq_clamp: {
     // FIXME: This is probably wrong. If src is an sNaN, it won't be quieted
     SDValue Src = N->getOperand(1);
     return Src.isUndef() ? Src : SDValue();
@@ -4670,6 +4683,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FTRUNC:
   case ISD::FRINT:
   case ISD::FNEARBYINT: // XXX - Should fround be handled?
+  case ISD::FROUNDEVEN:
   case ISD::FSIN:
   case ISD::FCANONICALIZE:
   case AMDGPUISD::RCP:
@@ -5031,6 +5045,36 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     return performAssertSZExtCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performIntrinsicWOChainCombine(N, DCI);
+  case AMDGPUISD::FMAD_FTZ: {
+    SDValue N0 = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    SDValue N2 = N->getOperand(2);
+    EVT VT = N->getValueType(0);
+
+    // FMAD_FTZ is a FMAD + flush denormals to zero.
+    // We flush the inputs, the intermediate step, and the output.
+    ConstantFPSDNode *N0CFP = dyn_cast<ConstantFPSDNode>(N0);
+    ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
+    ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
+    if (N0CFP && N1CFP && N2CFP) {
+      const auto FTZ = [](const APFloat &V) {
+        if (V.isDenormal()) {
+          APFloat Zero(V.getSemantics(), 0);
+          return V.isNegative() ? -Zero : Zero;
+        }
+        return V;
+      };
+
+      APFloat V0 = FTZ(N0CFP->getValueAPF());
+      APFloat V1 = FTZ(N1CFP->getValueAPF());
+      APFloat V2 = FTZ(N2CFP->getValueAPF());
+      V0.multiply(V1, APFloat::rmNearestTiesToEven);
+      V0 = FTZ(V0);
+      V0.add(V2, APFloat::rmNearestTiesToEven);
+      return DAG.getConstantFP(FTZ(V0), DL, VT);
+    }
+    break;
+  }
   }
   return SDValue();
 }
@@ -5172,6 +5216,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CALL)
   NODE_NAME_CASE(TC_RETURN)
   NODE_NAME_CASE(TC_RETURN_GFX)
+  NODE_NAME_CASE(TC_RETURN_CHAIN)
   NODE_NAME_CASE(TRAP)
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(WAVE_ADDRESS)
@@ -5765,12 +5810,6 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
     return AtomicExpansionKind::CmpXChg;
   }
   }
-}
-
-bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtractLegal(
-    unsigned Opc, LLT Ty1, LLT Ty2) const {
-  return (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64)) &&
-         Ty2 == LLT::scalar(32);
 }
 
 /// Whether it is profitable to sink the operands of an

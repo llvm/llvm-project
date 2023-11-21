@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // make_signed
 template <typename T> struct make_signed;
@@ -32,6 +32,6 @@ template <> struct make_signed<__uint128_t> : type_identity<__int128_t> {};
 #endif
 template <typename T> using make_signed_t = typename make_signed<T>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H

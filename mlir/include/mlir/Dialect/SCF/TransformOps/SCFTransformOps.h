@@ -20,6 +20,7 @@ namespace func {
 class FuncOp;
 } // namespace func
 namespace scf {
+class ForallOp;
 class ForOp;
 class IfOp;
 } // namespace scf

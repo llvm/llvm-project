@@ -6,15 +6,8 @@ foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
   add_custom_command(OUTPUT ${RTSanitizerCommonSymbolizerInternalDir}
                      COMMAND ${CMAKE_COMMAND} -E make_directory ${RTSanitizerCommonSymbolizerInternalDir})
 
-  foreach(dep clang lld llvm-tblgen opt llvm-ar llvm-link llvm-ranlib llvm-symbolizer)
-    if (TARGET ${dep})
-      list(APPEND SYMBOLIZER_DEPS ${dep})
-    endif()
-  endforeach()
-
   add_custom_command(OUTPUT RTSanitizerCommonSymbolizerInternal.${arch}.o
                      DEPENDS ${RTSanitizerCommonSymbolizerInternalDir} 
-                             ${SYMBOLIZER_DEPS}
                              sanitizer_wrappers.cpp
                              sanitizer_symbolize.cpp
                              scripts/build_symbolizer.sh

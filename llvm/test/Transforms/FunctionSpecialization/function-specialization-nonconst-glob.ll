@@ -7,8 +7,8 @@
 ; Global B is not constant. We do not specialise on addresses unless we
 ; enable that:
 
-; ON-ADDRESS: call i32 @foo.1(i32 %x, ptr @A)
-; ON-ADDRESS: call i32 @foo.2(i32 %y, ptr @B)
+; ON-ADDRESS: call i32 @foo.specialized.1(i32 %x, ptr @A)
+; ON-ADDRESS: call i32 @foo.specialized.2(i32 %y, ptr @B)
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -21,7 +21,7 @@ define dso_local i32 @bar(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo.1(i32 [[X]], ptr @A)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo.specialized.1(i32 [[X]], ptr @A)
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @foo(i32 [[Y:%.*]], ptr @B)
@@ -60,11 +60,11 @@ entry:
   ret i32 %add
 }
 
-; CHECK-LABEL: define internal i32 @foo.1(i32 %x, ptr %b) {
+; CHECK-LABEL: define internal i32 @foo.specialized.1(i32 %x, ptr %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    %0 = load i32, ptr @A, align 4
 ; CHECK-NEXT:    %add = add nsw i32 %x, %0
 ; CHECK-NEXT:    ret i32 %add
 ; CHECK-NEXT:  }
 
-; CHECK-NOT: define internal i32 @foo.2(
+; CHECK-NOT: define internal i32 @foo.specialized.2(

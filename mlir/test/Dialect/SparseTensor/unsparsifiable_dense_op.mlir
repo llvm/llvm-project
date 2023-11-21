@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 #trait = {
   indexing_maps = [
@@ -14,9 +14,9 @@
   iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 }
 
-#VEC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ], posWidth = 32, crdWidth = 32 }>
-#COO = #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
-#CCC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ], posWidth = 32, crdWidth = 32 }>
+#VEC = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), posWidth = 32, crdWidth = 32 }>
+#COO = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth = 32, crdWidth = 32 }>
+#CCC = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed), posWidth = 32, crdWidth = 32 }>
 
 //
 // This kernel can be sparsified as all unsparsifiable operations'

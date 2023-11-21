@@ -33,7 +33,7 @@ public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, TargetOptions Options,
                     std::optional<Reloc::Model> RM,
-                    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                     bool JIT);
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

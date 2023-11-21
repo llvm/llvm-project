@@ -53,6 +53,16 @@ void populateSCFStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 
+/// Similar to `populateSCFStructuralTypeConversionsAndLegality` but does not
+/// populate the conversion target.
+void populateSCFStructuralTypeConversions(TypeConverter &typeConverter,
+                                          RewritePatternSet &patterns);
+
+/// Updates the ConversionTarget with dynamic legality of SCF operations based
+/// on the provided type converter.
+void populateSCFStructuralTypeConversionTarget(
+    const TypeConverter &typeConverter, ConversionTarget &target);
+
 /// Populates the provided pattern set with patterns that do 1:N type
 /// conversions on (some) SCF ops. This is intended to be used with
 /// applyPartialOneToNConversion.

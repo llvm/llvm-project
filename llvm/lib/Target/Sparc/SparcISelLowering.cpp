@@ -1748,6 +1748,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (!Subtarget->is64Bit()) {
     // These libcalls are not available in 32-bit.
     setLibcallName(RTLIB::MULO_I64, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
     setLibcallName(RTLIB::SHL_I128, nullptr);
     setLibcallName(RTLIB::SRL_I128, nullptr);
     setLibcallName(RTLIB::SRA_I128, nullptr);
@@ -2603,9 +2604,8 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG,
   if (LHS.getValueType().isInteger()) {
     // On V9 processors running in 64-bit mode, if CC compares two `i64`s
     // and the RHS is zero we might be able to use a specialized branch.
-    const ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
-    if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 && RHSC &&
-        RHSC->isZero() && !ISD::isUnsignedIntSetCC(CC))
+    if (is64Bit && isV9 && LHS.getValueType() == MVT::i64 &&
+        isNullConstant(RHS) && !ISD::isUnsignedIntSetCC(CC))
       return DAG.getNode(SPISD::BR_REG, dl, MVT::Other, Chain, Dest,
                          DAG.getConstant(intCondCCodeToRcond(CC), dl, MVT::i32),
                          LHS);
@@ -3427,15 +3427,13 @@ getSingleConstraintMatchWeight(AsmOperandInfo &info,
 
 /// LowerAsmOperandForConstraint - Lower the specified operand into the Ops
 /// vector.  If it is invalid, don't add anything to Ops.
-void SparcTargetLowering::
-LowerAsmOperandForConstraint(SDValue Op,
-                             std::string &Constraint,
-                             std::vector<SDValue> &Ops,
-                             SelectionDAG &DAG) const {
+void SparcTargetLowering::LowerAsmOperandForConstraint(
+    SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
+    SelectionDAG &DAG) const {
   SDValue Result;
 
   // Only support length 1 constraints for now.
-  if (Constraint.length() > 1)
+  if (Constraint.size() > 1)
     return;
 
   char ConstraintLetter = Constraint[0];
@@ -3642,4 +3640,12 @@ bool SparcTargetLowering::useLoadStackGuardNode() const {
 void SparcTargetLowering::insertSSPDeclarations(Module &M) const {
   if (!Subtarget->isTargetLinux())
     return TargetLowering::insertSSPDeclarations(M);
+}
+
+void SparcTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                        SDNode *Node) const {
+  assert(MI.getOpcode() == SP::SUBCCrr || MI.getOpcode() == SP::SUBCCri);
+  // If the result is dead, replace it with %g0.
+  if (!Node->hasAnyUseOfValue(0))
+    MI.getOperand(0).setReg(SP::G0);
 }

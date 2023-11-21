@@ -83,3 +83,25 @@ TEST(Pointer, AllocateFromScalarSource) {
   EXPECT_EQ(*p->OffsetElement<float>(), 3.4F);
   p->Destroy();
 }
+
+TEST(Pointer, AllocateSourceZeroSize) {
+  using Fortran::common::TypeCategory;
+  // REAL(4), POINTER :: p(:)
+  auto p{Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 4}, 4,
+      nullptr, 1, nullptr, CFI_attribute_pointer)};
+  // REAL(4) :: s(-1:-2) = 0.
+  float sourecStorage{0.F};
+  const SubscriptValue extents[1]{0};
+  auto s{Descriptor::Create(TypeCategory::Real, 4,
+      reinterpret_cast<void *>(&sourecStorage), 1, extents,
+      CFI_attribute_other)};
+  // ALLOCATE(p, SOURCE=s)
+  RTNAME(PointerSetBounds)(*p, 0, -1, -2);
+  RTNAME(PointerAllocateSource)
+  (*p, *s, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(RTNAME(PointerIsAssociated)(*p));
+  EXPECT_EQ(p->Elements(), 0u);
+  EXPECT_EQ(p->GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(p->GetDimension(0).UpperBound(), 0);
+  p->Destroy();
+}

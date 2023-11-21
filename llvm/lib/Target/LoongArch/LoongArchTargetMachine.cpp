@@ -78,7 +78,7 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
 LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
-    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveLoongArchCodeModel(TT, CM), OL),
@@ -159,7 +159,7 @@ void LoongArchPassConfig::addIRPasses() {
   //
   // Run this before LSR to remove the multiplies involved in computing the
   // pointer values N iterations ahead.
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableLoopDataPrefetch)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableLoopDataPrefetch)
     addPass(createLoopDataPrefetchPass());
   addPass(createAtomicExpandPass());
 
@@ -180,6 +180,7 @@ LoongArchTargetMachine::getTargetTransformInfo(const Function &F) const {
 void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
 
 void LoongArchPassConfig::addPreEmitPass2() {
+  addPass(createLoongArchExpandPseudoPass());
   // Schedule the expansion of AtomicPseudos at the last possible moment,
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.

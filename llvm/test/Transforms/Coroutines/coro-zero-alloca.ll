@@ -9,7 +9,7 @@ declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare i64 @llvm.coro.size.i64()
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare token @llvm.coro.save(ptr)
 
@@ -42,7 +42,7 @@ wakeup:                                           ; preds = %entry
   br label %cleanup
 
 suspend:                                          ; preds = %cleanup, %entry
-  %unused = call i1 @llvm.coro.end(ptr %coro.state, i1 false)
+  %unused = call i1 @llvm.coro.end(ptr %coro.state, i1 false, token none)
   ret void
 
 cleanup:                                          ; preds = %wakeup, %entry

@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -21,25 +21,27 @@
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | env %{env} %{run_sve} | FileCheck %s %}
 
-!Filename = !llvm.ptr<i8>
+!Filename = !llvm.ptr
 
 #SparseTensor = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed", "compressed",
-                   "compressed", "compressed", "compressed", "compressed" ],
   // Note that any dimToLvl permutation should give the same results
   // since, even though it impacts the sparse storage scheme layout,
   // it should not change the semantics.
-  dimToLvl = affine_map<(i,j,k,l,m,n,o,p) -> (p,o,j,k,i,l,m,n)>
+  map = (d0, d1, d2, d3,
+         d4, d5, d6, d7) -> (d7 : compressed, d6 : compressed,
+                             d1 : compressed, d2 : compressed,
+                             d0 : compressed, d3 : compressed,
+                             d4 : compressed, d5 : compressed)
 }>
 
 #trait_flatten = {

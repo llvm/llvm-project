@@ -31,6 +31,11 @@ void genDerivedTypeInitialize(fir::FirOpBuilder &builder, mlir::Location loc,
 void genDerivedTypeDestroy(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value box);
 
+/// Generate call to derived type finalization runtime routine
+/// to finalize \p box.
+void genDerivedTypeFinalize(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value box);
+
 /// Generate call to derived type destruction runtime routine to
 /// destroy \p box without finalization
 void genDerivedTypeDestroyWithoutFinalization(fir::FirOpBuilder &builder,

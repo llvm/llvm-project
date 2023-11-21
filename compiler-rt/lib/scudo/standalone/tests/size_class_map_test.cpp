@@ -20,10 +20,6 @@ TEST(ScudoSizeClassMapTest, DefaultSizeClassMap) {
   testSizeClassMap<scudo::DefaultSizeClassMap>();
 }
 
-TEST(ScudoSizeClassMapTest, SvelteSizeClassMap) {
-  testSizeClassMap<scudo::SvelteSizeClassMap>();
-}
-
 TEST(ScudoSizeClassMapTest, AndroidSizeClassMap) {
   testSizeClassMap<scudo::AndroidSizeClassMap>();
 }

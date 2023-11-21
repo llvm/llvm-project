@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(canonicalize,cse),one-shot-bufferize{bufferize-function-boundaries})" |\
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(buffer-deallocation,convert-vector-to-scf,lower-affine,convert-linalg-to-loops))" |\
+// RUN: mlir-opt -pass-pipeline="builtin.module(buffer-deallocation-pipeline,convert-bufferization-to-memref,func.func(convert-vector-to-scf,lower-affine,convert-linalg-to-loops))" |\
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(canonicalize,convert-scf-to-cf),convert-vector-to-llvm,expand-strided-metadata,lower-affine,convert-arith-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
 
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \

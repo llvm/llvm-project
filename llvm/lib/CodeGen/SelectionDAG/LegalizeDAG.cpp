@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -324,7 +325,8 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
           TLI.isLoadExtLegal(ISD::EXTLOAD, OrigVT, SVT) &&
           TLI.ShouldShrinkFPConstant(OrigVT)) {
         Type *SType = SVT.getTypeForEVT(*DAG.getContext());
-        LLVMC = cast<ConstantFP>(ConstantExpr::getFPTrunc(LLVMC, SType));
+        LLVMC = cast<ConstantFP>(ConstantFoldCastOperand(
+            Instruction::FPTrunc, LLVMC, SType, DAG.getDataLayout()));
         VT = SVT;
         Extend = true;
       }
@@ -2251,7 +2253,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   // Also pass the return address of the remainder.
   SDValue FIPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = FIPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = isSigned;
   Entry.IsZExt = !isSigned;
   Args.push_back(Entry);
@@ -2342,7 +2344,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   // Pass the return address of sin.
   SDValue SinPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = SinPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = false;
   Entry.IsZExt = false;
   Args.push_back(Entry);
@@ -2350,7 +2352,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   // Also pass the return address of the cos.
   SDValue CosPtr = DAG.CreateStackTemporary(RetVT);
   Entry.Node = CosPtr;
-  Entry.Ty = RetTy->getPointerTo();
+  Entry.Ty = PointerType::getUnqual(RetTy->getContext());
   Entry.IsSExt = false;
   Entry.IsZExt = false;
   Args.push_back(Entry);
@@ -3130,6 +3132,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     Results.push_back(ExtRes.getValue(0));
     Results.push_back(Success);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD_SUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    SDValue RHS = Node->getOperand(2);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    if (RHS->getOpcode() == ISD::SIGN_EXTEND_INREG &&
+        cast<VTSDNode>(RHS->getOperand(1))->getVT() == AN->getMemoryVT())
+      RHS = RHS->getOperand(0);
+    SDValue NewRHS =
+        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
     Results.push_back(Res.getValue(1));
     break;
   }
@@ -5006,6 +5025,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::SREM:
   case ISD::UDIV:
   case ISD::UREM:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
@@ -5022,11 +5045,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         break;
       case ISD::SDIV:
       case ISD::SREM:
+      case ISD::SMIN:
+      case ISD::SMAX:
         ExtOp = ISD::SIGN_EXTEND;
         break;
       case ISD::UDIV:
       case ISD::UREM:
         ExtOp = ISD::ZERO_EXTEND;
+        break;
+      case ISD::UMIN:
+      case ISD::UMAX:
+        if (TLI.isSExtCheaperThanZExt(OVT, NVT))
+          ExtOp = ISD::SIGN_EXTEND;
+        else
+          ExtOp = ISD::ZERO_EXTEND;
         break;
       }
       TruncOp = ISD::TRUNCATE;
@@ -5149,7 +5181,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     unsigned ExtOp = ISD::FP_EXTEND;
     if (NVT.isInteger()) {
       ISD::CondCode CCCode = cast<CondCodeSDNode>(Node->getOperand(2))->get();
-      ExtOp = isSignedIntSetCC(CCCode) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      if (isSignedIntSetCC(CCCode) ||
+          TLI.isSExtCheaperThanZExt(Node->getOperand(0).getValueType(), NVT))
+        ExtOp = ISD::SIGN_EXTEND;
+      else
+        ExtOp = ISD::ZERO_EXTEND;
     }
     if (Node->isStrictFPOpcode()) {
       SDValue InChain = Node->getOperand(0);

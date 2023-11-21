@@ -24,7 +24,6 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -46,8 +45,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2127,9 +2124,10 @@ static void unswitchNontrivialInvariants(
     Loop &L, Instruction &TI, ArrayRef<Value *> Invariants,
     IVConditionInfo &PartialIVInfo, DominatorTree &DT, LoopInfo &LI,
     AssumptionCache &AC,
-    function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
+    function_ref<void(bool, bool, bool, ArrayRef<Loop *>)> UnswitchCB,
     ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
-    function_ref<void(Loop &, StringRef)> DestroyLoopCB, bool InsertFreeze) {
+    function_ref<void(Loop &, StringRef)> DestroyLoopCB, bool InsertFreeze,
+    bool InjectedCondition) {
   auto *ParentBB = TI.getParent();
   BranchInst *BI = dyn_cast<BranchInst>(&TI);
   SwitchInst *SI = BI ? nullptr : cast<SwitchInst>(&TI);
@@ -2582,7 +2580,7 @@ static void unswitchNontrivialInvariants(
   for (Loop *UpdatedL : llvm::concat<Loop *>(NonChildClonedLoops, HoistedLoops))
     if (UpdatedL->getParentLoop() == ParentL)
       SibLoops.push_back(UpdatedL);
-  UnswitchCB(IsStillLoop, PartiallyInvariant, SibLoops);
+  UnswitchCB(IsStillLoop, PartiallyInvariant, InjectedCondition, SibLoops);
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -2980,13 +2978,6 @@ static bool shouldTryInjectInvariantCondition(
 /// the metadata.
 bool shouldTryInjectBasingOnMetadata(const BranchInst *BI,
                                      const BasicBlock *TakenSucc) {
-  // Skip branches that have already been unswithed this way. After successful
-  // unswitching of injected condition, we will still have a copy of this loop
-  // which looks exactly the same as original one. To prevent the 2nd attempt
-  // of unswitching it in the same pass, mark this branch as "nothing to do
-  // here".
-  if (BI->hasMetadata("llvm.invariant.condition.injection.disabled"))
-    return false;
   SmallVector<uint32_t> Weights;
   if (!extractBranchWeights(*BI, Weights))
     return false;
@@ -3061,7 +3052,6 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   auto *InjectedCond =
       ICmpInst::Create(Instruction::ICmp, Pred, LHS, RHS, "injected.cond",
                        Preheader->getTerminator());
-  auto *OldCond = TI->getCondition();
 
   BasicBlock *CheckBlock = BasicBlock::Create(Ctx, BB->getName() + ".check",
                                               BB->getParent(), InLoopSucc);
@@ -3070,12 +3060,9 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
       Builder.CreateCondBr(InjectedCond, InLoopSucc, CheckBlock);
 
   Builder.SetInsertPoint(CheckBlock);
-  auto *NewTerm = Builder.CreateCondBr(OldCond, InLoopSucc, OutOfLoopSucc);
-
+  Builder.CreateCondBr(TI->getCondition(), TI->getSuccessor(0),
+                       TI->getSuccessor(1));
   TI->eraseFromParent();
-  // Prevent infinite unswitching.
-  NewTerm->setMetadata("llvm.invariant.condition.injection.disabled",
-                       MDNode::get(BB->getContext(), {}));
 
   // Fixup phis.
   for (auto &I : *InLoopSucc) {
@@ -3443,7 +3430,7 @@ static bool shouldInsertFreeze(Loop &L, Instruction &TI, DominatorTree &DT,
 static bool unswitchBestCondition(
     Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
     AAResults &AA, TargetTransformInfo &TTI,
-    function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
+    function_ref<void(bool, bool, bool, ArrayRef<Loop *>)> UnswitchCB,
     ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
     function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
   // Collect all invariant conditions within this loop (as opposed to an inner
@@ -3453,9 +3440,10 @@ static bool unswitchBestCondition(
   Instruction *PartialIVCondBranch = nullptr;
   collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
                             PartialIVCondBranch, L, LI, AA, MSSAU);
-  collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
-                                          PartialIVCondBranch, L, DT, LI, AA,
-                                          MSSAU);
+  if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.injection.disable"))
+    collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
+                                            PartialIVCondBranch, L, DT, LI, AA,
+                                            MSSAU);
   // If we didn't find any candidates, we're done.
   if (UnswitchCandidates.empty())
     return false;
@@ -3476,8 +3464,11 @@ static bool unswitchBestCondition(
     return false;
   }
 
-  if (Best.hasPendingInjection())
+  bool InjectedCondition = false;
+  if (Best.hasPendingInjection()) {
     Best = injectPendingInvariantConditions(Best, L, DT, LI, AC, MSSAU);
+    InjectedCondition = true;
+  }
   assert(!Best.hasPendingInjection() &&
          "All injections should have been done by now!");
 
@@ -3505,7 +3496,7 @@ static bool unswitchBestCondition(
                     << ") terminator: " << *Best.TI << "\n");
   unswitchNontrivialInvariants(L, *Best.TI, Best.Invariants, PartialIVInfo, DT,
                                LI, AC, UnswitchCB, SE, MSSAU, DestroyLoopCB,
-                               InsertFreeze);
+                               InsertFreeze, InjectedCondition);
   return true;
 }
 
@@ -3534,7 +3525,7 @@ static bool
 unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
              AAResults &AA, TargetTransformInfo &TTI, bool Trivial,
              bool NonTrivial,
-             function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
+             function_ref<void(bool, bool, bool, ArrayRef<Loop *>)> UnswitchCB,
              ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
              ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
              function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
@@ -3549,7 +3540,8 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   if (Trivial && unswitchAllTrivialConditions(L, DT, LI, SE, MSSAU)) {
     // If we unswitched successfully we will want to clean up the loop before
     // processing it further so just mark it as unswitched and return.
-    UnswitchCB(/*CurrentLoopValid*/ true, false, {});
+    UnswitchCB(/*CurrentLoopValid*/ true, /*PartiallyInvariant*/ false,
+               /*InjectedCondition*/ false, {});
     return true;
   }
 
@@ -3645,6 +3637,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
 
   auto UnswitchCB = [&L, &U, &LoopName](bool CurrentLoopValid,
                                         bool PartiallyInvariant,
+                                        bool InjectedCondition,
                                         ArrayRef<Loop *> NewLoops) {
     // If we did a non-trivial unswitch, we have added new (cloned) loops.
     if (!NewLoops.empty())
@@ -3662,6 +3655,16 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
             MDString::get(Context, "llvm.loop.unswitch.partial.disable"));
         MDNode *NewLoopID = makePostTransformationMetadata(
             Context, L.getLoopID(), {"llvm.loop.unswitch.partial"},
+            {DisableUnswitchMD});
+        L.setLoopID(NewLoopID);
+      } else if (InjectedCondition) {
+        // Do the same for injection of invariant conditions.
+        auto &Context = L.getHeader()->getContext();
+        MDNode *DisableUnswitchMD = MDNode::get(
+            Context,
+            MDString::get(Context, "llvm.loop.unswitch.injection.disable"));
+        MDNode *NewLoopID = makePostTransformationMetadata(
+            Context, L.getLoopID(), {"llvm.loop.unswitch.injection"},
             {DisableUnswitchMD});
         L.setLoopID(NewLoopID);
       } else
@@ -3707,105 +3710,4 @@ void SimpleLoopUnswitchPass::printPipeline(
   OS << (NonTrivial ? "" : "no-") << "nontrivial;";
   OS << (Trivial ? "" : "no-") << "trivial";
   OS << '>';
-}
-
-namespace {
-
-class SimpleLoopUnswitchLegacyPass : public LoopPass {
-  bool NonTrivial;
-
-public:
-  static char ID; // Pass ID, replacement for typeid
-
-  explicit SimpleLoopUnswitchLegacyPass(bool NonTrivial = false)
-      : LoopPass(ID), NonTrivial(NonTrivial) {
-    initializeSimpleLoopUnswitchLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-    getLoopAnalysisUsage(AU);
-  }
-};
-
-} // end anonymous namespace
-
-bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-
-  Function &F = *L->getHeader()->getParent();
-
-  LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << *L
-                    << "\n");
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-  MemorySSAUpdater MSSAU(MSSA);
-
-  auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
-  auto *SE = SEWP ? &SEWP->getSE() : nullptr;
-
-  auto UnswitchCB = [&L, &LPM](bool CurrentLoopValid, bool PartiallyInvariant,
-                               ArrayRef<Loop *> NewLoops) {
-    // If we did a non-trivial unswitch, we have added new (cloned) loops.
-    for (auto *NewL : NewLoops)
-      LPM.addLoop(*NewL);
-
-    // If the current loop remains valid, re-add it to the queue. This is
-    // a little wasteful as we'll finish processing the current loop as well,
-    // but it is the best we can do in the old PM.
-    if (CurrentLoopValid) {
-      // If the current loop has been unswitched using a partially invariant
-      // condition, we should not re-add the current loop to avoid unswitching
-      // on the same condition again.
-      if (!PartiallyInvariant)
-        LPM.addLoop(*L);
-    } else
-      LPM.markLoopAsDeleted(*L);
-  };
-
-  auto DestroyLoopCB = [&LPM](Loop &L, StringRef /* Name */) {
-    LPM.markLoopAsDeleted(L);
-  };
-
-  if (VerifyMemorySSA)
-    MSSA->verifyMemorySSA();
-  bool Changed =
-      unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial, UnswitchCB, SE,
-                   &MSSAU, nullptr, nullptr, DestroyLoopCB);
-
-  if (VerifyMemorySSA)
-    MSSA->verifyMemorySSA();
-
-  // Historically this pass has had issues with the dominator tree so verify it
-  // in asserts builds.
-  assert(DT.verify(DominatorTree::VerificationLevel::Fast));
-
-  return Changed;
-}
-
-char SimpleLoopUnswitchLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(SimpleLoopUnswitchLegacyPass, "simple-loop-unswitch",
-                      "Simple unswitch loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(SimpleLoopUnswitchLegacyPass, "simple-loop-unswitch",
-                    "Simple unswitch loops", false, false)
-
-Pass *llvm::createSimpleLoopUnswitchLegacyPass(bool NonTrivial) {
-  return new SimpleLoopUnswitchLegacyPass(NonTrivial);
 }

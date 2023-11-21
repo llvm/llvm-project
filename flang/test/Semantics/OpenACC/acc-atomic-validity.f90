@@ -11,6 +11,7 @@ program openacc_atomic_validity
   integer, parameter :: N = 256
   integer, dimension(N) :: c
 
+
   !$acc parallel
   !$acc atomic update
   c(i) = c(i) + 1
@@ -37,6 +38,12 @@ program openacc_atomic_validity
   c(i) = i
   i = i + 1
   !$acc end atomic
+
+  !$acc atomic update
+  !ERROR: RHS of atomic update statement must be scalar
+  !ERROR: LHS of atomic update statement must be scalar
+  c = c + 1
+
   !$acc end parallel
 
 end program openacc_atomic_validity

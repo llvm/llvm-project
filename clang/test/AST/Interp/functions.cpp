@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify %s
 // RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -std=c++14 -verify=ref %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
 constexpr void doNothing() {}
 constexpr int gimme5() {
@@ -306,4 +310,71 @@ namespace VoidReturn {
     return bar();
   }
   static_assert((foo(),1) == 1, "");
+}
+
+namespace InvalidReclRefs {
+  void param(bool b) { // ref-note {{declared here}} \
+                       // expected-note {{declared here}}
+    static_assert(b, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{function parameter 'b' with unknown value}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{function parameter 'b' with unknown value}}
+    static_assert(true ? true : b, "");
+  }
+
+#if __cplusplus >= 202002L
+  consteval void param2(bool b) { // ref-note {{declared here}} \
+                                 // expected-note {{declared here}}
+    static_assert(b, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{function parameter 'b' with unknown value}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{function parameter 'b' with unknown value}}
+  }
+#endif
+}
+
+namespace TemplateUndefined {
+  template<typename T> constexpr int consume(T);
+  // ok, not a constant expression.
+  const int k = consume(0);
+
+  template<typename T> constexpr int consume(T) { return 0; }
+  // ok, constant expression.
+  constexpr int l = consume(0);
+  static_assert(l == 0, "");
+}
+
+namespace PtrReturn {
+  constexpr void *a() {
+    return nullptr;
+  }
+  static_assert(a() == nullptr, "");
+}
+
+namespace Variadic {
+  struct S { int a; bool b; };
+
+  constexpr void variadic_function(int a, ...) {}
+  constexpr int f1() {
+    variadic_function(1, S{'a', false});
+    return 1;
+  }
+  static_assert(f1() == 1, "");
+
+  constexpr int variadic_function2(...) {
+    return 12;
+  }
+  static_assert(variadic_function2() == 12, "");
+  static_assert(variadic_function2(1, 2, 3, 4, 5) == 12, "");
+  static_assert(variadic_function2(1, variadic_function2()) == 12, "");
+
+  constexpr int (*VFP)(...) = variadic_function2;
+  static_assert(VFP() == 12, "");
+}
+
+namespace Packs {
+  template<typename...T>
+  constexpr int foo() { return sizeof...(T); }
+  static_assert(foo<int, char>() == 2, "");
+  static_assert(foo<>() == 0, "");
 }

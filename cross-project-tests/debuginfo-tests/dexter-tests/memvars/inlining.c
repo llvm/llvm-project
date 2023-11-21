@@ -1,6 +1,5 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// XFAIL: system-darwin
 // RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w --debugger lldb --binary %t -- %s
 //

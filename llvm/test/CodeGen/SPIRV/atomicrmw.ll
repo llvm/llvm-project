@@ -1,10 +1,10 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK:     %[[#Int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1 {{$}}
+; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1{{$}}
 ; CHECK-DAG: %[[#MemSem_Relaxed:]] = OpConstant %[[#Int]] 0
 ; CHECK-DAG: %[[#MemSem_Acquire:]] = OpConstant %[[#Int]] 2
-; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4 {{$}}
+; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4{{$}}
 ; CHECK-DAG: %[[#MemSem_AcquireRelease:]] = OpConstant %[[#Int]] 8
 ; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 16
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
@@ -13,7 +13,7 @@
 ; CHECK-DAG: %[[#FPPointerType:]] = OpTypePointer CrossWorkgroup %[[#Float]]
 ; CHECK-DAG: %[[#Pointer:]] = OpVariable %[[#PointerType]] CrossWorkgroup
 ; CHECK-DAG: %[[#FPPointer:]] = OpVariable %[[#FPPointerType]] CrossWorkgroup
-; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 1109917696
+; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42
 
 @ui = common dso_local addrspace(1) global i32 0, align 4
 @f = common dso_local local_unnamed_addr addrspace(1) global float 0.000000e+00, align 4

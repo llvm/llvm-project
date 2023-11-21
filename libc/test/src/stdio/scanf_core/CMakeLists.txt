@@ -13,23 +13,22 @@ add_libc_unittest(
     libc.src.__support.arg_list
 )
 
+add_libc_unittest(
+  reader_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    reader_test.cpp
+  DEPENDS
+    libc.src.stdio.scanf_core.reader
+    libc.src.__support.CPP.string_view
+)
+
 if(NOT (TARGET libc.src.__support.File.file))
   # Not all platforms have a file implementation. If file is unvailable,
   # then we must skip all the parts that need file.
   return()
 endif()
-
-add_libc_unittest(
-  string_reader_test
-  SUITE
-    libc_stdio_unittests
-  SRCS
-    string_reader_test.cpp
-  DEPENDS
-    libc.src.stdio.scanf_core.reader
-    libc.src.stdio.scanf_core.string_reader
-    libc.src.__support.CPP.string_view
-)
 
 add_libc_unittest(
   converter_test

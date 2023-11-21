@@ -324,6 +324,9 @@ __sanitizer_symbolize_code(const char *ModuleName, u64 ModuleOffset,
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
 __sanitizer_symbolize_data(const char *ModuleName, u64 ModuleOffset,
                            char *Buffer, int MaxLength);
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
+__sanitizer_symbolize_frame(const char *ModuleName, u64 ModuleOffset,
+                            char *Buffer, int MaxLength);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_symbolize_flush();
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE bool
@@ -337,12 +340,13 @@ __sanitizer_symbolize_set_inline_frames(bool InlineFrames);
 class InternalSymbolizer final : public SymbolizerTool {
  public:
   static InternalSymbolizer *get(LowLevelAllocator *alloc) {
-    if (__sanitizer_symbolize_set_demangle)
+    if (&__sanitizer_symbolize_set_demangle)
       CHECK(__sanitizer_symbolize_set_demangle(common_flags()->demangle));
-    if (__sanitizer_symbolize_set_inline_frames)
+    if (&__sanitizer_symbolize_set_inline_frames)
       CHECK(__sanitizer_symbolize_set_inline_frames(
           common_flags()->symbolize_inline_frames));
-    if (__sanitizer_symbolize_code && __sanitizer_symbolize_data)
+    // These are essential, we don't have InternalSymbolizer without them.
+    if (&__sanitizer_symbolize_code && &__sanitizer_symbolize_data)
       return new (*alloc) InternalSymbolizer();
     return 0;
   }
@@ -365,8 +369,18 @@ class InternalSymbolizer final : public SymbolizerTool {
     return result;
   }
 
+  bool SymbolizeFrame(uptr addr, FrameInfo *info) override {
+    if (&__sanitizer_symbolize_frame == nullptr)
+      return false;
+    bool result = __sanitizer_symbolize_frame(info->module, info->module_offset,
+                                              buffer_, sizeof(buffer_));
+    if (result)
+      ParseSymbolizeFrameOutput(buffer_, &info->locals);
+    return result;
+  }
+
   void Flush() override {
-    if (__sanitizer_symbolize_flush)
+    if (&__sanitizer_symbolize_flush)
       __sanitizer_symbolize_flush();
   }
 

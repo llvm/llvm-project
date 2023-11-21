@@ -57,19 +57,18 @@ constexpr void test_truncating(std::size_t o, size_t N) {
   assert(s.c_str()[N] == '\0');
 }
 
-template <class CharT>
+template <class String>
 constexpr bool test() {
-  using S = std::basic_string<CharT>;
-  test_appending<S>(10, 15, 15);
-  test_appending<S>(10, 15, 20);
-  test_appending<S>(10, 40, 40);
-  test_appending<S>(10, 40, 50);
-  test_appending<S>(30, 35, 35);
-  test_appending<S>(30, 35, 45);
-  test_appending<S>(10, 15, 30);
-  test_truncating<S>(15, 10);
-  test_truncating<S>(40, 35);
-  test_truncating<S>(40, 10);
+  test_appending<String>(10, 15, 15);
+  test_appending<String>(10, 15, 20);
+  test_appending<String>(10, 40, 40);
+  test_appending<String>(10, 40, 50);
+  test_appending<String>(30, 35, 35);
+  test_appending<String>(30, 35, 45);
+  test_appending<String>(10, 15, 30);
+  test_truncating<String>(15, 10);
+  test_truncating<String>(40, 35);
+  test_truncating<String>(40, 10);
 
   return true;
 }
@@ -85,19 +84,19 @@ void test_value_categories() {
 }
 
 int main(int, char**) {
-  test<char>();
-  test<char8_t>();
-  test<char16_t>();
-  test<char32_t>();
+  test<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>();
+  test<std::basic_string<char8_t, std::char_traits<char8_t>, std::allocator<char8_t>>>();
+  test<std::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>();
+  test<std::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>();
 
-  static_assert(test<char>());
-  static_assert(test<char8_t>());
-  static_assert(test<char16_t>());
-  static_assert(test<char32_t>());
+  static_assert(test<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>());
+  static_assert(test<std::basic_string<char8_t, std::char_traits<char8_t>, std::allocator<char8_t>>>());
+  static_assert(test<std::basic_string<char16_t, std::char_traits<char16_t>, std::allocator<char16_t>>>());
+  static_assert(test<std::basic_string<char32_t, std::char_traits<char32_t>, std::allocator<char32_t>>>());
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
-  static_assert(test<wchar_t>());
+  test<std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>();
+  static_assert(test<std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>>());
 #endif
   return 0;
 }

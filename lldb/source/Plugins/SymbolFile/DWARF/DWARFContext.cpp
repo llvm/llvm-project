@@ -13,6 +13,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 static DWARFDataExtractor LoadSection(SectionList *section_list,
                                       SectionType section_type) {

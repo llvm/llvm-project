@@ -108,8 +108,30 @@ public:
   bool HasUnsafeFPMath = false;
   bool HasFP32DenormalFlush = false;
   bool FlowChanged = false;
+  mutable Function *SqrtF32 = nullptr;
+  mutable Function *LdexpF32 = nullptr;
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
+
+  Function *getSqrtF32() const {
+    if (SqrtF32)
+      return SqrtF32;
+
+    LLVMContext &Ctx = Mod->getContext();
+    SqrtF32 = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_sqrt,
+                                        {Type::getFloatTy(Ctx)});
+    return SqrtF32;
+  }
+
+  Function *getLdexpF32() const {
+    if (LdexpF32)
+      return LdexpF32;
+
+    LLVMContext &Ctx = Mod->getContext();
+    LdexpF32 = Intrinsic::getDeclaration(
+        Mod, Intrinsic::ldexp, {Type::getFloatTy(Ctx), Type::getInt32Ty(Ctx)});
+    return LdexpF32;
+  }
 
   bool canBreakPHINode(const PHINode &I);
 
@@ -276,6 +298,8 @@ public:
                          bool IsNegative) const;
   Value *emitFrexpDiv(IRBuilder<> &Builder, Value *LHS, Value *RHS,
                       FastMathFlags FMF) const;
+  Value *emitSqrtIEEE2ULP(IRBuilder<> &Builder, Value *Src,
+                          FastMathFlags FMF) const;
 
 public:
   bool visitFDiv(BinaryOperator &I);
@@ -290,6 +314,7 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
   bool visitMinNum(IntrinsicInst &I);
+  bool visitSqrt(IntrinsicInst &I);
   bool run(Function &F);
 };
 
@@ -810,14 +835,10 @@ Value *AMDGPUCodeGenPrepareImpl::emitRcpIEEE1ULP(IRBuilder<> &Builder,
   // range won't underflow to denormal. The hard part is knowing the
   // result. We need a range check, the result could be denormal for
   // 0x1p+126 < den <= 0x1p+127.
-
-  Type *Ty = Src->getType();
-
   auto [FrexpMant, FrexpExp] = getFrexpResults(Builder, Src);
   Value *ScaleFactor = Builder.CreateNeg(FrexpExp);
   Value *Rcp = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, FrexpMant);
-  return Builder.CreateIntrinsic(Intrinsic::ldexp, {Ty, Builder.getInt32Ty()},
-                                 {Rcp, ScaleFactor});
+  return Builder.CreateCall(getLdexpF32(), {Rcp, ScaleFactor});
 }
 
 /// Emit a 2ulp expansion for fdiv by using frexp for input scaling.
@@ -833,8 +854,6 @@ Value *AMDGPUCodeGenPrepareImpl::emitFrexpDiv(IRBuilder<> &Builder, Value *LHS,
 
   // We're scaling the LHS to avoid a denormal input, and scale the denominator
   // to avoid large values underflowing the result.
-  Type *Ty = LHS->getType();
-
   auto [FrexpMantRHS, FrexpExpRHS] = getFrexpResults(Builder, RHS);
 
   Value *Rcp =
@@ -846,8 +865,30 @@ Value *AMDGPUCodeGenPrepareImpl::emitFrexpDiv(IRBuilder<> &Builder, Value *LHS,
   // We multiplied by 2^N/2^M, so we need to multiply by 2^(N-M) to scale the
   // result.
   Value *ExpDiff = Builder.CreateSub(FrexpExpLHS, FrexpExpRHS);
-  return Builder.CreateIntrinsic(Intrinsic::ldexp, {Ty, Builder.getInt32Ty()},
-                                 {Mul, ExpDiff});
+  return Builder.CreateCall(getLdexpF32(), {Mul, ExpDiff});
+}
+
+/// Emit a sqrt that handles denormals and is accurate to 2ulp.
+Value *AMDGPUCodeGenPrepareImpl::emitSqrtIEEE2ULP(IRBuilder<> &Builder,
+                                                  Value *Src,
+                                                  FastMathFlags FMF) const {
+  Type *Ty = Src->getType();
+  APFloat SmallestNormal =
+      APFloat::getSmallestNormalized(Ty->getFltSemantics());
+  Value *NeedScale =
+      Builder.CreateFCmpOLT(Src, ConstantFP::get(Ty, SmallestNormal));
+
+  ConstantInt *Zero = Builder.getInt32(0);
+  Value *InputScaleFactor =
+      Builder.CreateSelect(NeedScale, Builder.getInt32(32), Zero);
+
+  Value *Scaled = Builder.CreateCall(getLdexpF32(), {Src, InputScaleFactor});
+
+  Value *Sqrt = Builder.CreateCall(getSqrtF32(), Scaled);
+
+  Value *OutputScaleFactor =
+      Builder.CreateSelect(NeedScale, Builder.getInt32(-16), Zero);
+  return Builder.CreateCall(getLdexpF32(), {Sqrt, OutputScaleFactor});
 }
 
 /// Emit an expansion of 1.0 / sqrt(Src) good for 1ulp that supports denormals.
@@ -2009,6 +2050,8 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitBitreverseIntrinsicInst(I);
   case Intrinsic::minnum:
     return visitMinNum(I);
+  case Intrinsic::sqrt:
+    return visitSqrt(I);
   default:
     return false;
   }
@@ -2102,9 +2145,75 @@ bool AMDGPUCodeGenPrepareImpl::visitMinNum(IntrinsicInst &I) {
   return true;
 }
 
+static bool isOneOrNegOne(const Value *Val) {
+  const APFloat *C;
+  return match(Val, m_APFloat(C)) && C->getExactLog2Abs() == 0;
+}
+
+// Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
+bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
+  Type *Ty = Sqrt.getType()->getScalarType();
+  if (!Ty->isFloatTy() && (!Ty->isHalfTy() || ST->has16BitInsts()))
+    return false;
+
+  const FPMathOperator *FPOp = cast<const FPMathOperator>(&Sqrt);
+  FastMathFlags SqrtFMF = FPOp->getFastMathFlags();
+
+  // We're trying to handle the fast-but-not-that-fast case only. The lowering
+  // of fast llvm.sqrt will give the raw instruction anyway.
+  if (SqrtFMF.approxFunc() || HasUnsafeFPMath)
+    return false;
+
+  const float ReqdAccuracy = FPOp->getFPAccuracy();
+
+  // Defer correctly rounded expansion to codegen.
+  if (ReqdAccuracy < 1.0f)
+    return false;
+
+  // FIXME: This is an ugly hack for this pass using forward iteration instead
+  // of reverse. If it worked like a normal combiner, the rsq would form before
+  // we saw a sqrt call.
+  auto *FDiv =
+      dyn_cast_or_null<FPMathOperator>(Sqrt.getUniqueUndroppableUser());
+  if (FDiv && FDiv->getOpcode() == Instruction::FDiv &&
+      FDiv->getFPAccuracy() >= 1.0f &&
+      canOptimizeWithRsq(FPOp, FDiv->getFastMathFlags(), SqrtFMF) &&
+      // TODO: We should also handle the arcp case for the fdiv with non-1 value
+      isOneOrNegOne(FDiv->getOperand(0)))
+    return false;
+
+  Value *SrcVal = Sqrt.getOperand(0);
+  bool CanTreatAsDAZ = canIgnoreDenormalInput(SrcVal, &Sqrt);
+
+  // The raw instruction is 1 ulp, but the correction for denormal handling
+  // brings it to 2.
+  if (!CanTreatAsDAZ && ReqdAccuracy < 2.0f)
+    return false;
+
+  IRBuilder<> Builder(&Sqrt);
+  SmallVector<Value *, 4> SrcVals;
+  extractValues(Builder, SrcVals, SrcVal);
+
+  SmallVector<Value *, 4> ResultVals(SrcVals.size());
+  for (int I = 0, E = SrcVals.size(); I != E; ++I) {
+    if (CanTreatAsDAZ)
+      ResultVals[I] = Builder.CreateCall(getSqrtF32(), SrcVals[I]);
+    else
+      ResultVals[I] = emitSqrtIEEE2ULP(Builder, SrcVals[I], SqrtFMF);
+  }
+
+  Value *NewSqrt = insertValues(Builder, Sqrt.getType(), ResultVals);
+  NewSqrt->takeName(&Sqrt);
+  Sqrt.replaceAllUsesWith(NewSqrt);
+  Sqrt.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUCodeGenPrepare::doInitialization(Module &M) {
   Impl.Mod = &M;
   Impl.DL = &Impl.Mod->getDataLayout();
+  Impl.SqrtF32 = nullptr;
+  Impl.LdexpF32 = nullptr;
   return false;
 }
 

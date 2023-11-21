@@ -95,6 +95,27 @@ TEST(AllocatableTest, AllocateFromScalarSource) {
   a->Destroy();
 }
 
+TEST(AllocatableTest, AllocateSourceZeroSize) {
+  using Fortran::common::TypeCategory;
+  // REAL(4), ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  // REAL(4) :: s(-1:-2) = 0.
+  float sourecStorage{0.F};
+  const SubscriptValue extents[1]{0};
+  auto s{Descriptor::Create(TypeCategory::Real, 4,
+      reinterpret_cast<void *>(&sourecStorage), 1, extents,
+      CFI_attribute_other)};
+  // ALLOCATE(a, SOURCE=s)
+  RTNAME(AllocatableSetBounds)(*a, 0, -1, -2);
+  RTNAME(AllocatableAllocateSource)
+  (*a, *s, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  EXPECT_EQ(a->Elements(), 0u);
+  EXPECT_EQ(a->GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(a->GetDimension(0).UpperBound(), 0);
+  a->Destroy();
+}
+
 TEST(AllocatableTest, DoubleAllocation) {
   // CLASS(*), ALLOCATABLE :: r
   // ALLOCATE(REAL::r)

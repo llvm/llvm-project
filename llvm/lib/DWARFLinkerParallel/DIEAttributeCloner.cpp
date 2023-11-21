@@ -226,7 +226,7 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
     return 0;
 
   std::optional<std::pair<CompileUnit *, uint32_t>> RefDiePair =
-      CU.resolveDIEReference(Val);
+      CU.resolveDIEReference(Val, ResolveInterCUReferencesMode::Resolve);
   if (!RefDiePair) {
     // If the referenced DIE is not found,  drop the attribute.
     CU.warn("cann't find referenced DIE.", InputDieEntry);
@@ -314,6 +314,11 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   }
 
   uint64_t Value;
+  if (AttrSpec.Attr == dwarf::DW_AT_const_value &&
+      (InputDieEntry->getTag() == dwarf::DW_TAG_variable ||
+       InputDieEntry->getTag() == dwarf::DW_TAG_constant))
+    AttrInfo.HasLiveAddress = true;
+
   if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly) {
     if (auto OptionalValue = Val.getAsUnsignedConstant())
       Value = *OptionalValue;
@@ -483,6 +488,11 @@ size_t DIEAttributeCloner::cloneBlockAttr(
         (AttrOutOffset + (FinalAttributeSize - Bytes.size()));
   }
 
+  if (HasLocationExpressionAddress)
+    AttrInfo.HasLiveAddress =
+        VarAddressAdjustment.has_value() ||
+        CU.getGlobalData().getOptions().UpdateIndexTablesOnly;
+
   return FinalAttributeSize;
 }
 
@@ -490,7 +500,7 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc)
-    AttrInfo.HasLowPc = true;
+    AttrInfo.HasLiveAddress = true;
 
   if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
     return Generator

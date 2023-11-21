@@ -81,6 +81,27 @@ static cl::opt<unsigned> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 
+void Function::convertToNewDbgValues() {
+  IsNewDbgInfoFormat = true;
+  for (auto &BB : *this) {
+    BB.convertToNewDbgValues();
+  }
+}
+
+void Function::convertFromNewDbgValues() {
+  IsNewDbgInfoFormat = false;
+  for (auto &BB : *this) {
+    BB.convertFromNewDbgValues();
+  }
+}
+
+void Function::setIsNewDbgInfoFormat(bool NewFlag) {
+  if (NewFlag && !IsNewDbgInfoFormat)
+    convertToNewDbgValues();
+  else if (!NewFlag && IsNewDbgInfoFormat)
+    convertFromNewDbgValues();
+}
+
 //===----------------------------------------------------------------------===//
 // Argument Implementation
 //===----------------------------------------------------------------------===//
@@ -402,7 +423,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     : GlobalObject(Ty, Value::FunctionVal,
                    OperandTraits<Function>::op_begin(this), 0, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
-      NumArgs(Ty->getNumParams()) {
+      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(false) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -518,15 +539,7 @@ void Function::stealArgumentListFrom(Function &Src) {
   Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
 }
 
-// dropAllReferences() - This function causes all the subinstructions to "let
-// go" of all references that they are maintaining.  This allows one to
-// 'delete' a whole class at a time, even though there may be circular
-// references... first all references are dropped, and all use counts go to
-// zero.  Then everything is deleted for real.  Note that no operations are
-// valid on an object that has "dropped all references", except operator
-// delete.
-//
-void Function::dropAllReferences() {
+void Function::deleteBodyImpl(bool ShouldDrop) {
   setIsMaterializable(false);
 
   for (BasicBlock &BB : *this)
@@ -537,10 +550,18 @@ void Function::dropAllReferences() {
   while (!BasicBlocks.empty())
     BasicBlocks.begin()->eraseFromParent();
 
-  // Drop uses of any optional data (real or placeholder).
   if (getNumOperands()) {
-    User::dropAllReferences();
-    setNumHungOffUseOperands(0);
+    if (ShouldDrop) {
+      // Drop uses of any optional data (real or placeholder).
+      User::dropAllReferences();
+      setNumHungOffUseOperands(0);
+    } else {
+      // The code needs to match Function::allocHungoffUselist().
+      auto *CPN = ConstantPointerNull::get(PointerType::get(getContext(), 0));
+      Op<0>().set(CPN);
+      Op<1>().set(CPN);
+      Op<2>().set(CPN);
+    }
     setValueSubclassData(getSubclassDataFromValue() & ~0xe);
   }
 

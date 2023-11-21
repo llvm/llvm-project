@@ -72,6 +72,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_PreserveAll: return llvm::CallingConv::PreserveAll;
   case CC_Swift: return llvm::CallingConv::Swift;
   case CC_SwiftAsync: return llvm::CallingConv::SwiftTail;
+  case CC_M68kRTD: return llvm::CallingConv::M68k_RTD;
   }
 }
 
@@ -252,6 +253,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
   if (D->hasAttr<PreserveAllAttr>())
     return CC_PreserveAll;
 
+  if (D->hasAttr<M68kRTDAttr>())
+    return CC_M68kRTD;
+
   return CC_C;
 }
 
@@ -298,7 +302,7 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   setCUDAKernelCallingConvention(FT, CGM, MD);
   auto prototype = FT.getAs<FunctionProtoType>();
 
-  if (MD->isInstance()) {
+  if (MD->isImplicitObjectMemberFunction()) {
     // The abstract case is perfectly fine.
     const CXXRecordDecl *ThisType = TheCXXABI.getThisArgumentTypeForMethod(MD);
     return arrangeCXXMethodType(ThisType, prototype.getTypePtr(), MD);
@@ -448,7 +452,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 const CGFunctionInfo &
 CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
-    if (MD->isInstance())
+    if (MD->isImplicitObjectMemberFunction())
       return arrangeCXXMethodDeclaration(MD);
 
   CanQualType FTy = FD->getType()->getCanonicalTypeUnqualified();
@@ -1376,7 +1380,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   llvm::PointerType *DstPtrTy = llvm::dyn_cast<llvm::PointerType>(DstTy);
   if (SrcPtrTy && DstPtrTy &&
       SrcPtrTy->getAddressSpace() != DstPtrTy->getAddressSpace()) {
-    Src = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Src, DstTy);
+    Src = CGF.Builder.CreateAddrSpaceCast(Src, DstTy);
     CGF.Builder.CreateStore(Src, Dst, DstIsVolatile);
     return;
   }
@@ -2001,52 +2005,41 @@ static void getTrivialDefaultFunctionAttributes(
   }
 }
 
+/// Merges `target-features` from \TargetOpts and \F, and sets the result in
+/// \FuncAttr
+/// * features from \F are always kept
+/// * a feature from \TargetOpts is kept if itself and its opposite are absent
+/// from \F
 static void
 overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
                                            const llvm::Function &F,
                                            const TargetOptions &TargetOpts) {
   auto FFeatures = F.getFnAttribute("target-features");
 
-  llvm::StringSet<> IncompatibleFeatureNames;
+  llvm::StringSet<> MergedNames;
   SmallVector<StringRef> MergedFeatures;
   MergedFeatures.reserve(TargetOpts.Features.size());
 
-  if (FFeatures.isValid()) {
-    const auto &TFeatures = TargetOpts.FeatureMap;
-    for (StringRef Feature : llvm::split(FFeatures.getValueAsString(), ',')) {
+  auto AddUnmergedFeatures = [&](auto &&FeatureRange) {
+    for (StringRef Feature : FeatureRange) {
       if (Feature.empty())
         continue;
-
-      bool EnabledForFunc = Feature.starts_with("+");
-      assert(EnabledForFunc || Feature.starts_with("-"));
-
+      assert(Feature[0] == '+' || Feature[0] == '-');
       StringRef Name = Feature.drop_front(1);
-      auto TEntry = TFeatures.find(Name);
-
-      // Preserves features that are incompatible (either set to something
-      // different or missing) from the target features
-      bool MissingFromTarget = TEntry == TFeatures.end();
-      bool EnabledForTarget = !MissingFromTarget && TEntry->second;
-      bool Incompatible = EnabledForTarget != EnabledForFunc;
-      if (MissingFromTarget || Incompatible) {
+      bool Merged = !MergedNames.insert(Name).second;
+      if (!Merged)
         MergedFeatures.push_back(Feature);
-        if (Incompatible)
-          IncompatibleFeatureNames.insert(Name);
-      }
     }
-  }
+  };
 
-  for (StringRef Feature : TargetOpts.Features) {
-    if (Feature.empty())
-      continue;
-    StringRef Name = Feature.drop_front(1);
-    if (IncompatibleFeatureNames.contains(Name))
-      continue;
-    MergedFeatures.push_back(Feature);
-  }
+  if (FFeatures.isValid())
+    AddUnmergedFeatures(llvm::split(FFeatures.getValueAsString(), ','));
+  AddUnmergedFeatures(TargetOpts.Features);
 
-  if (!MergedFeatures.empty())
+  if (!MergedFeatures.empty()) {
+    llvm::sort(MergedFeatures);
     FuncAttr.addAttribute("target-features", llvm::join(MergedFeatures, ","));
+  }
 }
 
 void CodeGen::mergeDefaultFunctionDefinitionAttributes(
@@ -2726,7 +2719,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
-          Decl->getArgPassingRestrictions() == RecordDecl::APK_CanPassInRegs)
+          Decl->getArgPassingRestrictions() ==
+              RecordArgPassingKind::CanPassInRegs)
         // When calling the function, the pointer passed in will be the only
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);
@@ -3069,7 +3063,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // indicates dereferenceability, and if the size is constant we can
             // use the dereferenceable attribute (which requires the size in
             // bytes).
-            if (ArrTy->getSizeModifier() == ArrayType::Static) {
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3093,7 +3087,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // For C99 VLAs with the static keyword, we don't know the size so
             // we can't use the dereferenceable attribute, but in addrspace(0)
             // we know that it must be nonnull.
-            if (ArrTy->getSizeModifier() == VariableArrayType::Static) {
+            if (ArrTy->getSizeModifier() == ArraySizeModifier::Static) {
               QualType ETy = ArrTy->getElementType();
               llvm::Align Alignment =
                   CGM.getNaturalTypeAlignment(ETy).getAsAlign();
@@ -3513,7 +3507,9 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
       return nullptr;
     // These aren't actually possible for non-coerced returns, and we
     // only care about non-coerced returns on this code path.
-    assert(!SI->isAtomic() && !SI->isVolatile());
+    // All memory instructions inside __try block are volatile.
+    assert(!SI->isAtomic() &&
+           (!SI->isVolatile() || CGF.currentFunctionUsesSEHTry()));
     return SI;
   };
   // If there are multiple uses of the return-value slot, just check

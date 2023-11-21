@@ -196,14 +196,14 @@ void MachineIRBuilder::validateShiftOp(const LLT Res, const LLT Op0,
   assert((Res == Op0) && "type mismatch");
 }
 
-MachineInstrBuilder MachineIRBuilder::buildPtrAdd(const DstOp &Res,
-                                                  const SrcOp &Op0,
-                                                  const SrcOp &Op1) {
+MachineInstrBuilder
+MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
+                              const SrcOp &Op1, std::optional<unsigned> Flags) {
   assert(Res.getLLTTy(*getMRI()).getScalarType().isPointer() &&
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
   assert(Op1.getLLTTy(*getMRI()).getScalarType().isScalar() && "invalid offset type");
 
-  return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1});
+  return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1}, Flags);
 }
 
 std::optional<MachineInstrBuilder>
@@ -1065,16 +1065,16 @@ void MachineIRBuilder::validateTruncExt(const LLT DstTy, const LLT SrcTy,
 #ifndef NDEBUG
   if (DstTy.isVector()) {
     assert(SrcTy.isVector() && "mismatched cast between vector and non-vector");
-    assert(SrcTy.getNumElements() == DstTy.getNumElements() &&
+    assert(SrcTy.getElementCount() == DstTy.getElementCount() &&
            "different number of elements in a trunc/ext");
   } else
     assert(DstTy.isScalar() && SrcTy.isScalar() && "invalid extend/trunc");
 
   if (IsExtend)
-    assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownGT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid narrowing extend");
   else
-    assert(DstTy.getSizeInBits() < SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownLT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid widening trunc");
 #endif
 }

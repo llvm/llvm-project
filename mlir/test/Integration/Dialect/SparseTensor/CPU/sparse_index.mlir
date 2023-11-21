@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -32,11 +32,11 @@
 
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed", "compressed"]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait_1d = {
@@ -68,7 +68,7 @@ module {
   //
   func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>)
                                  -> tensor<8xi64, #SparseVector> {
-    %init = bufferization.alloc_tensor() : tensor<8xi64, #SparseVector>
+    %init = tensor.empty() : tensor<8xi64, #SparseVector>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
        outs(%init: tensor<8xi64, #SparseVector>) {
@@ -86,7 +86,7 @@ module {
   //
   func.func @sparse_index_1d_disj(%arga: tensor<8xi64, #SparseVector>)
                                  -> tensor<8xi64, #SparseVector> {
-    %init = bufferization.alloc_tensor() : tensor<8xi64, #SparseVector>
+    %init = tensor.empty() : tensor<8xi64, #SparseVector>
     %r = linalg.generic #trait_1d
         ins(%arga: tensor<8xi64, #SparseVector>)
        outs(%init: tensor<8xi64, #SparseVector>) {
@@ -104,7 +104,7 @@ module {
   //
   func.func @sparse_index_2d_conj(%arga: tensor<3x4xi64, #SparseMatrix>)
                                  -> tensor<3x4xi64, #SparseMatrix> {
-    %init = bufferization.alloc_tensor() : tensor<3x4xi64, #SparseMatrix>
+    %init = tensor.empty() : tensor<3x4xi64, #SparseMatrix>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
        outs(%init: tensor<3x4xi64, #SparseMatrix>) {
@@ -125,7 +125,7 @@ module {
   //
   func.func @sparse_index_2d_disj(%arga: tensor<3x4xi64, #SparseMatrix>)
                                  -> tensor<3x4xi64, #SparseMatrix> {
-    %init = bufferization.alloc_tensor() : tensor<3x4xi64, #SparseMatrix>
+    %init = tensor.empty() : tensor<3x4xi64, #SparseMatrix>
     %r = linalg.generic #trait_2d
         ins(%arga: tensor<3x4xi64, #SparseMatrix>)
        outs(%init: tensor<3x4xi64, #SparseMatrix>) {
@@ -143,7 +143,7 @@ module {
 
   func.func @add_outer_2d(%arg0: tensor<2x3xf32, #SparseMatrix>)
                          -> tensor<2x3xf32, #SparseMatrix> {
-    %0 = bufferization.alloc_tensor() : tensor<2x3xf32, #SparseMatrix>
+    %0 = tensor.empty() : tensor<2x3xf32, #SparseMatrix>
     %1 = linalg.generic #trait_2d
       ins(%arg0 : tensor<2x3xf32, #SparseMatrix>)
       outs(%0 : tensor<2x3xf32, #SparseMatrix>) {

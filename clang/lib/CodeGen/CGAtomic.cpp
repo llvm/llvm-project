@@ -87,8 +87,7 @@ namespace {
         llvm::Value *StoragePtr = CGF.Builder.CreateConstGEP1_64(
             CGF.Int8Ty, BitFieldPtr, OffsetInChars.getQuantity());
         StoragePtr = CGF.Builder.CreateAddrSpaceCast(
-            StoragePtr, llvm::PointerType::getUnqual(CGF.getLLVMContext()),
-            "atomic_bitfield_base");
+            StoragePtr, CGF.UnqualPtrTy, "atomic_bitfield_base");
         BFI = OrigBFI;
         BFI.Offset = Offset;
         BFI.StorageSize = AtomicSizeInBits;
@@ -102,9 +101,9 @@ namespace {
           llvm::APInt Size(
               /*numBits=*/32,
               C.toCharUnitsFromBits(AtomicSizeInBits).getQuantity());
-          AtomicTy =
-              C.getConstantArrayType(C.CharTy, Size, nullptr, ArrayType::Normal,
-                                     /*IndexTypeQuals=*/0);
+          AtomicTy = C.getConstantArrayType(C.CharTy, Size, nullptr,
+                                            ArraySizeModifier::Normal,
+                                            /*IndexTypeQuals=*/0);
         }
         AtomicAlign = ValueAlign = lvalue.getAlignment();
       } else if (lvalue.isVectorElt()) {

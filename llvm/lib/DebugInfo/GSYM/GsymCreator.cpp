@@ -61,9 +61,7 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
   return insertFileEntry(DstFE);
 }
 
-
-llvm::Error GsymCreator::save(StringRef Path,
-                              llvm::support::endianness ByteOrder,
+llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
                               std::optional<uint64_t> SegmentSize) const {
   if (SegmentSize)
     return saveSegments(Path, ByteOrder, *SegmentSize);
@@ -478,7 +476,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
-                                      llvm::support::endianness ByteOrder,
+                                      llvm::endianness ByteOrder,
                                       uint64_t SegmentSize) const {
   if (SegmentSize == 0)
     return createStringError(std::errc::invalid_argument,

@@ -14,11 +14,11 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <set>
 
 using namespace llvm;
 using namespace X86Disassembler;
@@ -397,12 +397,12 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Record *RegRec = RegInstr->TheDef;
   Record *MemRec = MemInstr->TheDef;
 
+  Result.NoReverse = S & TB_NO_REVERSE;
+  Result.NoForward = S & TB_NO_FORWARD;
+  Result.FoldLoad = S & TB_FOLDED_LOAD;
+  Result.FoldStore = S & TB_FOLDED_STORE;
+  Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
   if (isManual) {
-    Result.NoReverse = S & TB_NO_REVERSE;
-    Result.NoForward = S & TB_NO_FORWARD;
-    Result.FoldLoad = S & TB_FOLDED_LOAD;
-    Result.FoldStore = S & TB_FOLDED_STORE;
-    Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
     Table[RegInstr] = Result;
     return;
   }
@@ -439,7 +439,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   // Check no-kz version's isMoveReg
   StringRef RegInstName = RegRec->getName();
   unsigned DropLen =
-      RegInstName.endswith("rkz") ? 2 : (RegInstName.endswith("rk") ? 1 : 0);
+      RegInstName.ends_with("rkz") ? 2 : (RegInstName.ends_with("rk") ? 1 : 0);
   Record *BaseDef =
       DropLen ? Records.getDef(RegInstName.drop_back(DropLen)) : nullptr;
   bool IsMoveReg =
@@ -483,7 +483,9 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
 
   // Instructions which Read-Modify-Write should be added to Table2Addr.
   if (!MemOutSize && RegOutSize == 1 && MemInSize == RegInSize) {
-    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S, 0, IsManual);
+    // X86 would not unfold Read-Modify-Write instructions so add TB_NO_REVERSE.
+    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S | TB_NO_REVERSE, 0,
+                      IsManual);
     return;
   }
 
@@ -596,7 +598,7 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
     if (Match != OpcRegInsts.end()) {
       const CodeGenInstruction *RegInst = *Match;
       StringRef RegInstName = RegInst->TheDef->getName();
-      if (RegInstName.endswith("_REV") || RegInstName.endswith("_alt")) {
+      if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt")) {
         if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4))) {
           RegInst = &Target.getInstruction(RegAltRec);
         }

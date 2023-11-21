@@ -28,20 +28,20 @@ define signext i32 @StoreArrays1() {
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, mySmallLocalExecTLSv1[TL]@le(r13)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r4, 1
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r5, 4
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r6, mySmallLocalExecTLS2[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r7, 2
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r4, mySmallLocalExecTLSv1[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS2[TL]@le(r13)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r5, 24(r3)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 3
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r7, 320(r6)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r3, 324(r4)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS4[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r6, mySmallLocalExecTLS5[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r7, 88
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 2
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r3, 320(r4)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r4, 3
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r4, 324(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, mySmallLocalExecTLS4[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r4, 88
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r5, 328(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, mySmallLocalExecTLS5[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r4, 332(r3)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 102
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r5, 328(r4)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r7, 332(r6)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
 ;
 ; SMALL-LOCAL-EXEC-LARGECM64-LABEL: StoreArrays1:
@@ -49,20 +49,20 @@ define signext i32 @StoreArrays1() {
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLSv1[TL]@le(r13)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r4, 1
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r5, 4
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r6, mySmallLocalExecTLS2[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r7, 2
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r4, mySmallLocalExecTLSv1[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, mySmallLocalExecTLS2[TL]@le(r13)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 24(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 3
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r7, 320(r6)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r3, 324(r4)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, mySmallLocalExecTLS4[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r6, mySmallLocalExecTLS5[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r7, 88
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 2
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r3, 320(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r4, 3
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r4, 324(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLS4[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r4, 88
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 328(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLS5[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r4, 332(r3)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 102
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 328(r4)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r7, 332(r6)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalExecTLSv1)
@@ -101,44 +101,44 @@ define signext i32 @StoreArrays2() {
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tprel) @mySmallLocalExecTLSv2
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r4, 1
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r5, 4
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r6, mySmallLocalExecTLS2[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r7, 2
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    add r3, r13, r3
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r4, 0(r3)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS2[TL]@le(r13)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r5, 24(r3)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 3
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r7, 320(r6)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r3, 324(r4)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS4[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r6, mySmallLocalExecTLS5[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r7, 88
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 2
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r3, 320(r4)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r4, 3
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r4, 324(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r3, mySmallLocalExecTLS4[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    la r4, mySmallLocalExecTLS5[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r5, 328(r3)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 88
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r3, 332(r4)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    li r3, 102
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r5, 328(r4)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    stw r7, 332(r6)
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
 ;
 ; SMALL-LOCAL-EXEC-LARGECM64-LABEL: StoreArrays2:
 ; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r4, 1
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addis r4, L..C0@u(r2)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 1
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r5, 4
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r6, mySmallLocalExecTLS2[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r7, 2
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    add r3, r13, r3
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r4, 0(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, mySmallLocalExecTLS3[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 24(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 3
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r7, 320(r6)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r3, 324(r4)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, mySmallLocalExecTLS4[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r6, mySmallLocalExecTLS5[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r7, 88
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, L..C0@l(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    add r4, r13, r4
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r3, 0(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLS2[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 24(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r4, 2
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r4, 320(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLS3[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r4, 3
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r4, 324(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r3, mySmallLocalExecTLS4[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    la r4, mySmallLocalExecTLS5[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 328(r3)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 88
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r3, 332(r4)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    li r3, 102
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r5, 328(r4)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    stw r7, 332(r6)
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @mySmallLocalExecTLSv2)
@@ -177,53 +177,53 @@ entry:
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 15) mySmallLocalExecTLSv1[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 5, 4
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 6, 13, 32748
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 17) mySmallLocalExecTLS2[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 7, 2
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 0(13)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 15) mySmallLocalExecTLSv1[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 4, 13, -16788
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 19) mySmallLocalExecTLS3[TL]
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 4, 13, 32748
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 17) mySmallLocalExecTLS2[TL]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 24(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 7, 320(6)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 324(4)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 4, 13, -788
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 2
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 320(4)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 13, -16788
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 19) mySmallLocalExecTLS3[TL]
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 324(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 13, -788
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 21) mySmallLocalExecTLS4[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 6, 13, 15212
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 88
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 328(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 13, 15212
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 23) mySmallLocalExecTLS5[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 7, 88
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 332(3)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 102
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 328(4)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 7, 332(6)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                blr
 
 ; DIS:      0000000000000050 (idx: 5) .StoreArrays2:
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 4, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU	(idx: 13) mySmallLocalExecTLSv2[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 1
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 5, 4
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 6, 13, 32748
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 17) mySmallLocalExecTLS2[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 7, 2
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 3, 0(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                ld 4, 0(4)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCL	(idx: 13) mySmallLocalExecTLSv2[TE]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 3, 13, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 0(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 4, 13, -16788
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 4, 13, 4
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 0(4)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 13, 32748
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 17) mySmallLocalExecTLS2[TL]
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 24(4)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 2
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 320(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 13, -16788
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 19) mySmallLocalExecTLS3[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 24(3)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 3
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 7, 320(6)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 324(4)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 4, 13, -788
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 4, 3
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 4, 324(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 3, 13, -788
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 21) mySmallLocalExecTLS4[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 6, 13, 15212
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addi 4, 13, 15212
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TLS_LE	(idx: 23) mySmallLocalExecTLS5[TL]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 7, 88
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 328(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 88
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 3, 332(4)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                li 3, 102
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 328(4)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 7, 332(6)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                blr
 
 ; DIS:      Disassembly of section .data:

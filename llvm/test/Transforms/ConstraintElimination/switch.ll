@@ -3,43 +3,182 @@
 
 declare void @may_unwind()
 
-define i1 @test_switch_in_block_with_assume(i32 %x) {
+define i1 @test_switch_in_block_with_assume(i8 %x) {
 ; CHECK-LABEL: @test_switch_in_block_with_assume(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @may_unwind()
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[X:%.*]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    switch i32 0, label [[EXIT_1:%.*]] [
-; CHECK-NEXT:    i32 1, label [[EXIT_2:%.*]]
+; CHECK-NEXT:    switch i8 0, label [[EXIT_1:%.*]] [
+; CHECK-NEXT:    i8 1, label [[EXIT_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[X]], 9
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[X]], 9
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[X]], 9
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[X]], 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, [[C_3]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:
   call void @may_unwind()
-  %c.1 = icmp ult i32 %x, 10
+  %c.1 = icmp ult i8 %x, 10
   call void @llvm.assume(i1 %c.1)
-  switch i32 0, label %exit.1 [
-  i32 1, label %exit.2
+  switch i8 0, label %exit.1 [
+  i8 1, label %exit.2
   ]
 
 exit.1:
-  %t.1 = icmp ult i32 %x, 10
-  %c.2 = icmp ult i32 %x, 9
+  %t.1 = icmp ult i8 %x, 10
+  %c.2 = icmp ult i8 %x, 9
   %res.1 = xor i1 %t.1, %c.2
   ret i1 %res.1
 
 exit.2:
-  %t.2 = icmp ult i32 %x, 10
-  %c.3 = icmp ult i32 %x, 9
+  %t.2 = icmp ult i8 %x, 10
+  %c.3 = icmp ult i8 %x, 9
   %res.2 = xor i1 %t.2, %c.3
   ret i1 %res.2
 }
 
 declare void @llvm.assume(i1)
+
+define i1 @simplify_based_on_switch(i8 %x) {
+; CHECK-LABEL: @simplify_based_on_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[EXIT_1:%.*]] [
+; CHECK-NEXT:    i8 6, label [[EXIT_2:%.*]]
+; CHECK-NEXT:    i8 10, label [[EXIT_3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[X]], 7
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[X]], 6
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, false
+; CHECK-NEXT:    ret i1 [[RES_2]]
+; CHECK:       exit.3:
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 true, false
+; CHECK-NEXT:    ret i1 [[RES_3]]
+;
+entry:
+  switch i8 %x, label %exit.1 [
+  i8 6, label %exit.2
+  i8 10, label %exit.3
+  ]
+
+exit.1:
+  %c.1 = icmp ult i8 %x, 7
+  %c.2 = icmp ult i8 %x, 6
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %t.1 = icmp ult i8 %x, 7
+  %f.1 = icmp ult i8 %x, 6
+  %res.2 = xor i1 %t.1, %f.1
+  ret i1 %res.2
+
+exit.3:
+  %t.2 = icmp ult i8 %x, 11
+  %f.2 = icmp ult i8 %x, 10
+  %res.3 = xor i1 %t.2, %f.2
+  ret i1 %res.3
+}
+
+define i1 @simplify_based_on_switch_successor_branches(i8 %x) {
+; CHECK-LABEL: @simplify_based_on_switch_successor_branches(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[EXIT_1:%.*]] [
+; CHECK-NEXT:    i8 6, label [[EXIT_2:%.*]]
+; CHECK-NEXT:    i8 10, label [[EXIT_3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[X]], 7
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[X]], 6
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, false
+; CHECK-NEXT:    call void @use(i1 [[RES_2]])
+; CHECK-NEXT:    br label [[EXIT_3]]
+; CHECK:       exit.3:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[X]], 11
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[X]], 10
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[RES_3]]
+;
+entry:
+  switch i8 %x, label %exit.1 [
+  i8 6, label %exit.2
+  i8 10, label %exit.3
+  ]
+
+exit.1:
+  %c.1 = icmp ult i8 %x, 7
+  %c.2 = icmp ult i8 %x, 6
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %t.1 = icmp ult i8 %x, 7
+  %f.1 = icmp ult i8 %x, 6
+  %res.2 = xor i1 %t.1, %f.1
+  call void @use(i1 %res.2)
+  br label %exit.3
+
+exit.3:
+  %c.3 = icmp ult i8 %x, 11
+  %c.4 = icmp ult i8 %x, 10
+  %res.3 = xor i1 %c.3, %c.4
+  ret i1 %res.3
+}
+
+define i1 @switch_same_destination_for_different_cases(i8 %x) {
+; CHECK-LABEL: @switch_same_destination_for_different_cases(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[X:%.*]], label [[EXIT_1:%.*]] [
+; CHECK-NEXT:    i8 6, label [[EXIT_2:%.*]]
+; CHECK-NEXT:    i8 10, label [[EXIT_2]]
+; CHECK-NEXT:    ]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[X]], 7
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[X]], 6
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[X]], 7
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[X]], 6
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ult i8 [[X]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ult i8 [[X]], 10
+; CHECK-NEXT:    ret i1 [[C_6]]
+;
+entry:
+  switch i8 %x, label %exit.1 [
+  i8 6, label %exit.2
+  i8 10, label %exit.2
+  ]
+
+exit.1:
+  %c.1 = icmp ult i8 %x, 7
+  %c.2 = icmp ult i8 %x, 6
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %c.3 = icmp ult i8 %x, 7
+  call void @use(i1 %c.3)
+  %c.4 = icmp ult i8 %x, 6
+  call void @use(i1 %c.4)
+  %c.5 = icmp ult i8 %x, 11
+  call void @use(i1 %c.5)
+  %c.6 = icmp ult i8 %x, 10
+  ret i1 %c.6
+}
+
+declare void @use(i1)

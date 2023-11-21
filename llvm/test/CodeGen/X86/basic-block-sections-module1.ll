@@ -14,6 +14,30 @@
 ; RUN: echo '!test M=./path/to/dir/test_filename' > %t4
 ; RUN: echo '!!0' >> %t4
 ; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t4  | FileCheck %s -check-prefix=WRONG-MODULE
+;; Version 1 profile.
+;; Specify the right filename.
+; RUN: echo 'v1' > %t5
+; RUN: echo 'm /path/to/dir/test_filename' >> %t5
+; RUN: echo 'f test' >> %t5
+; RUN: echo 'c 0' >> %t5
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t5 | FileCheck %s -check-prefix=RIGHT-MODULE
+;; Specify no filename and verify that the profile is ingested.
+; RUN: echo 'v1' > %t6
+; RUN: echo 'f test' >> %t6
+; RUN: echo 'c 0' >> %t6
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t6  | FileCheck %s -check-prefix=NO-MODULE
+;; Specify wrong filenames and verify that the profile is not ingested.
+; RUN: echo 'v1' > %t7
+; RUN: echo 'm test_filename' >> %t7
+; RUN: echo 'f test' >> %t7
+; RUN: echo 'c 0' >> %t7
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t7  | FileCheck %s -check-prefix=WRONG-MODULE
+; RUN: echo 'v1' > %t8
+; RUN: echo 'm ./path/to/dir/test_filename' >> %t8
+; RUN: echo 'f test' >> %t8
+; RUN: echo 'c 0' >> %t8
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t8  | FileCheck %s -check-prefix=WRONG-MODULE
+
 
 define dso_local i32 @test(i32 noundef %0) #0 !dbg !10 {
   %2 = alloca i32, align 4

@@ -1,5 +1,6 @@
 ; Tests that coro-split won't fall in infinite loop when simplify the terminators leading to ret.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 declare void @fakeresume1(ptr)
 declare void @may_throw(ptr)
@@ -38,7 +39,7 @@ lpad:
   %lpval = landingpad { ptr, i32 }
      cleanup
 
-  %need.resume = call i1 @llvm.coro.end(ptr null, i1 true)
+  %need.resume = call i1 @llvm.coro.end(ptr null, i1 true, token none)
   resume { ptr, i32 } %lpval
 
 coro.free:
@@ -46,7 +47,7 @@ coro.free:
   br label %coro.end
 
 coro.end:
-  call i1 @llvm.coro.end(ptr null, i1 false)
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -63,7 +64,7 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1) #2
+declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 declare void @delete(ptr nonnull) #2

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -22,8 +21,6 @@
 using namespace llvm;
 using namespace mlir;
 
-using testing::ElementsAre;
-
 StringLiteral IRWithResources = R"(
 module @TestDialectResources attributes {
   bytecode.test = dense_resource<resource> : tensor<4xi32>
@@ -31,7 +28,8 @@ module @TestDialectResources attributes {
 {-#
   dialect_resources: {
     builtin: {
-      resource: "0x1000000001000000020000000300000004000000"
+      resource: "0x2000000001000000020000000300000004000000",
+      resource_2: "0x2000000001000000020000000300000004000000"
     }
   }
 #-}
@@ -49,16 +47,24 @@ TEST(Bytecode, MultiModuleWithResource) {
   std::string buffer;
   llvm::raw_string_ostream ostream(buffer);
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
+  ostream.flush();
+
+  // Create copy of buffer which is aligned to requested resource alignment.
+  constexpr size_t kAlignment = 0x20;
+  size_t buffer_size = buffer.size();
+  buffer.reserve(buffer_size + kAlignment - 1);
+  size_t pad = ~(uintptr_t)buffer.data() + 1 & kAlignment - 1;
+  buffer.insert(0, pad, ' ');
+  StringRef aligned_buffer(buffer.data() + pad, buffer_size);
 
   // Parse it back
   OwningOpRef<Operation *> roundTripModule =
-      parseSourceString<Operation *>(ostream.str(), parseConfig);
+      parseSourceString<Operation *>(aligned_buffer, parseConfig);
   ASSERT_TRUE(roundTripModule);
 
   // FIXME: Parsing external resources does not work on big-endian
   // platforms currently.
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big)
+  if (llvm::endianness::native == llvm::endianness::big)
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.

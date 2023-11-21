@@ -245,12 +245,13 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             BasicBlock *AllocationBlock, std::string Suffix)
+                             BasicBlock *AllocationBlock, std::string Suffix,
+                             bool ArgsInZeroAddressSpace)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
       AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
-      Suffix(Suffix) {}
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
@@ -567,7 +568,7 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
     for (Instruction *I : LifetimeBitcastUsers) {
       Module *M = AIFunc->getParent();
       LLVMContext &Ctx = M->getContext();
-      auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+      auto *Int8PtrTy = PointerType::getUnqual(Ctx);
       CastInst *CastI =
           CastInst::CreatePointerCast(AI, Int8PtrTy, "lt.cast", I);
       I->replaceUsesOfWith(I->getOperand(1), CastI);
@@ -866,7 +867,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   StructType *StructTy = nullptr;
   if (AggregateArgs && !AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
-    ParamTy.push_back(PointerType::get(StructTy, DL.getAllocaAddrSpace()));
+    ParamTy.push_back(PointerType::get(
+        StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
   LLVM_DEBUG({
@@ -920,6 +922,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::PresplitCoroutine:
       case Attribute::Memory:
       case Attribute::NoFPClass:
+      case Attribute::CoroDestroyOnlyWhenComplete:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -941,6 +944,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NoSanitizeBounds:
       case Attribute::NoSanitizeCoverage:
       case Attribute::NullPointerIsValid:
+      case Attribute::OptimizeForDebugging:
       case Attribute::OptForFuzzing:
       case Attribute::OptimizeNone:
       case Attribute::OptimizeForSize:
@@ -991,6 +995,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::ImmArg:
       case Attribute::ByRef:
       case Attribute::WriteOnly:
+      case Attribute::Writable:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1186,8 +1191,15 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
         StructArgTy, DL.getAllocaAddrSpace(), nullptr, "structArg",
         AllocationBlock ? &*AllocationBlock->getFirstInsertionPt()
                         : &codeReplacer->getParent()->front().front());
-    params.push_back(Struct);
 
+    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+      auto *StructSpaceCast = new AddrSpaceCastInst(
+          Struct, PointerType ::get(Context, 0), "structArg.ascast");
+      StructSpaceCast->insertAfter(Struct);
+      params.push_back(StructSpaceCast);
+    } else {
+      params.push_back(Struct);
+    }
     // Store aggregated inputs in the struct.
     for (unsigned i = 0, e = StructValues.size(); i != e; ++i) {
       if (inputs.contains(StructValues[i])) {
@@ -1579,6 +1591,12 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       DebugIntrinsicsToDelete.push_back(DVI);
       continue;
     }
+    // DbgAssign intrinsics have an extra Value argument:
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
+        DAI && IsInvalidLocation(DAI->getAddress())) {
+      DebugIntrinsicsToDelete.push_back(DVI);
+      continue;
+    }
     // If the variable was in the scope of the old function, i.e. it was not
     // inlined, point the intrinsic to a fresh variable within the new function.
     if (!DVI->getDebugLoc().getInlinedAt()) {
@@ -1773,11 +1791,11 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
 
   // Update the entry count of the function.
   if (BFI) {
-    auto Count = BFI->getProfileCountFromFreq(EntryFreq.getFrequency());
+    auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count)
       newFunction->setEntryCount(
           ProfileCount(*Count, Function::PCT_Real)); // FIXME
-    BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
+    BFI->setBlockFreq(codeReplacer, EntryFreq);
   }
 
   CallInst *TheCall =

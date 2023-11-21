@@ -1964,6 +1964,11 @@ let Predicates = [HasSVEorSME] in {
   defm CNTW_XPiI : sve_int_count<0b100, "cntw", int_aarch64_sve_cntw>;
   defm CNTD_XPiI : sve_int_count<0b110, "cntd", int_aarch64_sve_cntd>;
   defm CNTP_XPP : sve_int_pcount_pred<0b0000, "cntp", int_aarch64_sve_cntp>;
+
+  def : Pat<(i64 (AArch64CttzElts nxv16i1:$Op1)),
+                 (i64 (!cast<Instruction>(CNTP_XPP_B)
+                        (nxv16i1 (!cast<Instruction>(BRKB_PPzP) (PTRUE_B 31), nxv16i1:$Op1)),
+                        (nxv16i1 (!cast<Instruction>(BRKB_PPzP) (PTRUE_B 31), nxv16i1:$Op1))))>;
 }
 
   defm INCB_XPiI : sve_int_pred_pattern_a<0b000, "incb", add, int_aarch64_sve_cntb>;
@@ -2048,6 +2053,17 @@ let Predicates = [HasSVEorSME] in {
   defm UQDECP_ZP   : sve_int_count_v<0b01100, "uqdecp", int_aarch64_sve_uqdecp>;
   defm INCP_ZP     : sve_int_count_v<0b10000, "incp">;
   defm DECP_ZP     : sve_int_count_v<0b10100, "decp">;
+
+  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv16i1:$Op2)))),
+                 (i64 (!cast<Instruction>(INCP_XP_B)
+                        (nxv16i1 (!cast<Instruction>(BRKB_PPzP) (PTRUE_B 31), nxv16i1:$Op2)),
+                        GPR64:$Op1))>;
+
+  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv16i1:$Op2))))),
+                 (i32 (EXTRACT_SUBREG (i64 (!cast<Instruction>(INCP_XP_B)
+                        (nxv16i1 (!cast<Instruction>(BRKB_PPzP) (PTRUE_B 31), nxv16i1:$Op2)),
+                        (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Op1, sub_32))),
+                      sub_32))>;
 
   defm INDEX_RR : sve_int_index_rr<"index", AArch64mul_p_oneuse>;
   defm INDEX_IR : sve_int_index_ir<"index", AArch64mul_p, AArch64mul_p_oneuse>;
@@ -2204,8 +2220,8 @@ let Predicates = [HasSVEorSME] in {
 } // End HasSVEorSME
 
 let Predicates = [HasBF16, HasSVEorSME] in {
-  defm BFDOT_ZZZ    : sve_float_dot<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
-  defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
+  defm BFDOT_ZZZ    : sve_float_dot<0b1, 0b0, ZPR32, ZPR16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
+  defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, 0b00, ZPR16, ZPR3b16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasBF16, HasSVE] in {
@@ -2407,14 +2423,6 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let AddedComplexity = 5 in {
-    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-              (ADDVL_XXI GPR64:$op, $imm)>;
-
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
-              (i32 (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
-                                             GPR32:$op, sub_32), $imm),
-                                   sub_32))>;
-
     def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
               (INCH_ZPiI ZPR:$op, 31, $imm)>;
     def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm i32:$imm)))))))),
@@ -2431,6 +2439,14 @@ let Predicates = [HasSVEorSME] in {
   }
 
   let Predicates = [HasSVEorSME, UseScalarIncVL], AddedComplexity = 5 in {
+    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
+              (ADDVL_XXI GPR64:$op, $imm)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
+              (i32 (EXTRACT_SUBREG (ADDVL_XXI (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+                                             GPR32:$op, sub_32), $imm),
+                                   sub_32))>;
+
     def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm i32:$imm))),
               (INCH_XPiI GPR64:$op, 31, $imm)>;
     def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm i32:$imm))),
@@ -2471,9 +2487,6 @@ let Predicates = [HasSVEorSME] in {
                                                GPR32:$op, sub_32), 31, $imm),
                                     sub_32))>;
   }
-
-  def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-            (ADDVL_XXI GPR64:$op, $imm)>;
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
@@ -2544,8 +2557,8 @@ let Predicates = [HasSVEorSME] in {
     def : Pat<(nxv4f32 (bitconvert (nxv8bf16 ZPR:$src))), (nxv4f32 ZPR:$src)>;
     def : Pat<(nxv2f64 (bitconvert (nxv8bf16 ZPR:$src))), (nxv2f64 ZPR:$src)>;
 
-    def : Pat<(nxv16i1 (bitconvert (aarch64svcount PPR:$src))), (nxv16i1 PPR:$src)>;
-    def : Pat<(aarch64svcount (bitconvert (nxv16i1 PPR:$src))), (aarch64svcount PPR:$src)>;
+    def : Pat<(nxv16i1 (bitconvert (aarch64svcount PNR:$src))), (nxv16i1 PPR:$src)>;
+    def : Pat<(aarch64svcount (bitconvert (nxv16i1 PPR:$src))), (aarch64svcount PNR:$src)>;
   }
 
   // These allow casting from/to unpacked predicate types.
@@ -3753,12 +3766,14 @@ defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 
 let Predicates = [HasSVE2p1_or_HasSME2] in {
 defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp", int_aarch64_sve_fclamp>;
-defm FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot", nxv8f16, int_aarch64_sve_fdot_x2>;
-defm FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot", nxv8f16, int_aarch64_sve_fdot_lane_x2>;
-def BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb">;
-def BFMLSLT_ZZZ_S : sve2_fp_mla_long<0b111, "bfmlslt">;
-def BFMLSLB_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b110, "bfmlslb">;
-def BFMLSLT_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b111, "bfmlslt">;
+
+defm FDOT_ZZZ_S  : sve_float_dot<0b0, 0b0, ZPR32, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fdot_x2>;
+defm FDOT_ZZZI_S : sve_float_dot_indexed<0b0, 0b00, ZPR16, ZPR3b16, "fdot", nxv8f16, int_aarch64_sve_fdot_lane_x2>;
+
+defm BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslb>;
+defm BFMLSLT_ZZZ_S : sve2_fp_mla_long<0b111, "bfmlslt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslt>;
+defm BFMLSLB_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b110, "bfmlslb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslb_lane>;
+defm BFMLSLT_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b111, "bfmlslt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslt_lane>;
 
 defm SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2>;
 defm UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1, int_aarch64_sve_udot_x2>;
@@ -3852,9 +3867,9 @@ defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
 multiclass store_pn_x2<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
   def : Pat<(Store (Ty ZPR:$vec0), (Ty ZPR:$vec1),
-                   (aarch64svcount PPR:$PNg), GPR64:$base),
+                   (aarch64svcount PNR:$PNg), GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR2Mul2, Ty:$vec0, zsub0, Ty:$vec1, zsub1),
-                         PPR:$PNg, GPR64:$base, (i64 0))>;
+                         PNR:$PNg, GPR64:$base, (i64 0))>;
 }
 
 // Stores of 2 consecutive vectors
@@ -3878,10 +3893,10 @@ defm : store_pn_x2<nxv2f64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM>;
 multiclass store_pn_x4<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
   def : Pat<(Store (Ty ZPR:$vec0), (Ty ZPR:$vec1), (Ty ZPR:$vec2), (Ty ZPR:$vec3),
-                   (aarch64svcount PPR:$PNg), GPR64:$base),
+                   (aarch64svcount PNR:$PNg), GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR4Mul4, Ty:$vec0, zsub0, Ty:$vec1, zsub1,
                                                 Ty:$vec2, zsub2, Ty:$vec3, zsub3),
-                        PPR:$PNg, GPR64:$base, (i64 0))>;
+                        PNR:$PNg, GPR64:$base, (i64 0))>;
 }
 
 // Stores of 4 consecutive vectors
@@ -3923,19 +3938,19 @@ defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
 // Aliases for existing SVE instructions for which predicate-as-counter are
 // accepted as an operand to the instruction
 def : InstAlias<"ldr $Pt, [$Rn, $imm9, mul vl]",
-               (LDR_PXI PNRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
+               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
 def : InstAlias<"ldr $Pt, [$Rn]",
-               (LDR_PXI PNRAny:$Pt, GPR64sp:$Rn, 0), 0>;
+               (LDR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
 
 def : InstAlias<"str $Pt, [$Rn, $imm9, mul vl]",
-               (STR_PXI PNRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
+               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, simm9:$imm9), 0>;
 def : InstAlias<"str $Pt, [$Rn]",
-               (STR_PXI PNRAny:$Pt, GPR64sp:$Rn, 0), 0>;
+               (STR_PXI PNRasPPRAny:$Pt, GPR64sp:$Rn, 0), 0>;
 
 def : InstAlias<"mov $Pd, $Pn",
-               (ORR_PPzPP PNR8:$Pd, PNR8:$Pn, PNR8:$Pn, PNR8:$Pn), 0>;
+               (ORR_PPzPP PNRasPPR8:$Pd, PNRasPPR8:$Pn, PNRasPPR8:$Pn, PNRasPPR8:$Pn), 0>;
 
-def : InstAlias<"pfalse\t$Pd", (PFALSE PNR8:$Pd), 0>;
+def : InstAlias<"pfalse\t$Pd", (PFALSE PNRasPPR8:$Pd), 0>;
 
 } // End HasSVE2p1_or_HasSME2
 
@@ -3979,10 +3994,10 @@ defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv">;
 defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv">;
 
 defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
-def EXTQ_ZZI : sve2p1_extq<"extq">;
+defm EXTQ_ZZI : sve2p1_extq<"extq", int_aarch64_sve_extq_lane>;
 
-defm PMOV_PZI : sve2p1_vector_to_pred<"pmov">;
-defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov">;
+defm PMOV_PZI : sve2p1_vector_to_pred<"pmov", int_aarch64_sve_pmov_to_pred_lane, int_aarch64_sve_pmov_to_pred_lane_zero>;
+defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov", int_aarch64_sve_pmov_to_vector_lane_merging, int_aarch64_sve_pmov_to_vector_lane_zeroing>;
 
 defm ORQV_VPZ   : sve2p1_int_reduce_q<0b1100, "orqv">;
 defm EORQV_VPZ  : sve2p1_int_reduce_q<0b1101, "eorqv">;
@@ -3993,10 +4008,82 @@ defm UMAXQV_VPZ : sve2p1_int_reduce_q<0b0101, "umaxqv">;
 defm SMINQV_VPZ : sve2p1_int_reduce_q<0b0110, "sminqv">;
 defm UMINQV_VPZ : sve2p1_int_reduce_q<0b0111, "uminqv">;
 
-defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, null_frag>;
-defm ZIPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b000, "zipq1">;
-defm ZIPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b001, "zipq2">;
-defm UZPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b010, "uzpq1">;
-defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2">;
-defm TBLQ_ZZZ  : sve2p1_tblq<"tblq">;
+defm ZIPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b000, "zipq1", int_aarch64_sve_zipq1>;
+defm ZIPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b001, "zipq2", int_aarch64_sve_zipq2>;
+defm UZPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b010, "uzpq1", int_aarch64_sve_uzpq1>;
+defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2", int_aarch64_sve_uzpq2>;
+defm TBXQ_ZZZ : sve2_int_perm_tbx<"tbxq", 0b10, int_aarch64_sve_tbxq>;
+defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 } // End HasSVE2p1_or_HasSME2p1
+
+//===----------------------------------------------------------------------===//
+// SVE2 FP8 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2orSME2, HasFP8] in {
+// FP8 upconvert
+defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt">;
+defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt">;
+defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt">;
+defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt">;
+defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt">;
+defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt">;
+defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt">;
+defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt">;
+
+// FP8 downconvert
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+} // End HasSVE2orSME2, HasFP8
+
+let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
+// FP8 Arithmetic - Predicated Group
+defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
+defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
+} // End HasSVE2orSME2, HasFAMINMAX
+
+let Predicates = [HasSSVE_FP8FMA] in {
+// FP8 Widening Multiply-Add Long - Indexed Group
+def FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb">;
+def FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt">;
+// FP8 Widening Multiply-Add Long Group
+def FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb">;
+def FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt">;
+// FP8 Widening Multiply-Add Long Long - Indexed Group
+def FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb">;
+def FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt">;
+def FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb">;
+def FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt">;
+// FP8 Widening Multiply-Add Long Long Group
+def FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb">;
+def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
+def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
+def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
+} // End HasSSVE_FP8FMA
+
+let Predicates = [HasSSVE_FP8DOT2] in {
+// FP8 Widening Dot-Product - Indexed Group
+defm FDOT_ZZZI_BtoH : sve2_fp8_dot_indexed<"fdot">;
+// FP8 Widening Dot-Product - Group
+// TODO: Replace nxv16i8 by nxv16f8
+defm FDOT_ZZZ_BtoH : sve_float_dot<0b0, 0b1, ZPR16, ZPR8, "fdot", nxv16i8, null_frag>;
+}
+
+// TODO: Replace nxv16i8 by nxv16f8
+let Predicates = [HasSSVE_FP8DOT4] in {
+// FP8 Widening Dot-Product - Indexed Group
+defm FDOT_ZZZI_BtoS : sve_float_dot_indexed<0b1, 0b01, ZPR8, ZPR3b8, "fdot",
+                                            nxv16i8, null_frag>;
+// FP8 Widening Dot-Product - Group
+defm FDOT_ZZZ_BtoS : sve_float_dot<0b1, 0b1, ZPR32, ZPR8, "fdot", nxv16i8, null_frag>;
+}
+
+let Predicates = [HasSVE2orSME2, HasLUT] in {
+// LUTI2
+  defm LUTI2_ZZZI : sve2_luti2_vector_index<"luti2">;
+// LUTI4
+  defm LUTI4_ZZZI   : sve2_luti4_vector_index<"luti4">;
+// LUTI4 (two contiguous registers)
+  defm LUTI4_Z2ZZI  : sve2_luti4_vector_vg2_index<"luti4">;
+} // End HasSVE2orSME2, HasLUT

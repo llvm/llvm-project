@@ -6,16 +6,28 @@ program openacc_combined_loop
 
   i = 1
 
+  !ERROR: A DO loop must follow the PARALLEL LOOP directive
   !$acc parallel loop
-  !ERROR: A DO loop must follow the combined construct
   i = 1
+
+  !ERROR: A DO loop must follow the KERNELS LOOP directive
+  !$acc kernels loop
+  i = 1
+
+  !ERROR: A DO loop must follow the SERIAL LOOP directive
+  !$acc serial loop
+  i = 1
+
+  !$acc parallel loop
+  do 10 i=0, n
+  10 continue
 
   !$acc kernels loop
-  !ERROR: A DO loop must follow the combined construct
-  i = 1
+  do 20 i=0, n
+  20 continue
 
   !$acc serial loop
-  !ERROR: A DO loop must follow the combined construct
-  i = 1
+  do 30 i=0, n
+  30 continue
 
 end

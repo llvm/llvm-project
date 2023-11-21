@@ -410,3 +410,22 @@ transform.sequence failures(propagate) {
     transform.yield
   }
 }
+
+// -----
+
+module @named_inclusion_and_consumption attributes { transform.with_named_sequence } {
+
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.consumed}) -> () {
+    // Consuming this handle removes the mapping from the current stack frame
+    // mapping and from the caller's stack frame mapping. (If this were not
+    // be the case, the "expensive checks" caching mechanism for op names
+    // would throw an error saying that an op is mapped but not in the cache.)
+    transform.test_consume_operand %arg0 : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
+  }
+}

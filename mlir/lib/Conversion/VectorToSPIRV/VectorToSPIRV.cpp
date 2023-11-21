@@ -35,10 +35,24 @@
 
 using namespace mlir;
 
-/// Gets the first integer value from `attr`, assuming it is an integer array
-/// attribute.
+/// Returns the integer value from the first valid input element, assuming Value
+/// inputs are defined by a constant index ops and Attribute inputs are integer
+/// attributes.
+static uint64_t getFirstIntValue(ValueRange values) {
+  return values[0].getDefiningOp<arith::ConstantIndexOp>().value();
+}
+static uint64_t getFirstIntValue(ArrayRef<Attribute> attr) {
+  return cast<IntegerAttr>(attr[0]).getInt();
+}
 static uint64_t getFirstIntValue(ArrayAttr attr) {
   return (*attr.getAsValueRange<IntegerAttr>().begin()).getZExtValue();
+}
+static uint64_t getFirstIntValue(ArrayRef<OpFoldResult> foldResults) {
+  auto attr = foldResults[0].dyn_cast<Attribute>();
+  if (attr)
+    return getFirstIntValue(attr);
+
+  return getFirstIntValue(ValueRange{foldResults[0].get<Value>()});
 }
 
 /// Returns the number of bits for the given scalar/vector type.
@@ -141,9 +155,7 @@ struct VectorExtractOpConvert final
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Only support extracting a scalar value now.
-    VectorType resultVectorType = dyn_cast<VectorType>(extractOp.getType());
-    if (resultVectorType && resultVectorType.getNumElements() > 1)
+    if (extractOp.hasDynamicPosition())
       return failure();
 
     Type dstType = getTypeConverter()->convertType(extractOp.getType());
@@ -155,7 +167,7 @@ struct VectorExtractOpConvert final
       return success();
     }
 
-    int32_t id = extractOp.getPosition()[0];
+    int32_t id = getFirstIntValue(extractOp.getMixedPosition());
     rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
         extractOp, adaptor.getVector(), id);
     return success();
@@ -235,7 +247,7 @@ struct VectorInsertOpConvert final
       return success();
     }
 
-    int32_t id = insertOp.getPosition()[0];
+    int32_t id = getFirstIntValue(insertOp.getMixedPosition());
     rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
         insertOp, adaptor.getSource(), adaptor.getDest(), id);
     return success();
@@ -391,7 +403,8 @@ struct VectorReductionPattern final
 
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
-
+        INT_OR_FLOAT_CASE(MAXIMUMF, SPIRVFMaxOp);
+        INT_OR_FLOAT_CASE(MINIMUMF, SPIRVFMinOp);
         INT_OR_FLOAT_CASE(MAXF, SPIRVFMaxOp);
         INT_OR_FLOAT_CASE(MINF, SPIRVFMinOp);
         INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);

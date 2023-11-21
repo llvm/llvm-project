@@ -46,6 +46,11 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+static cl::opt<std::string>
+    ITraceAggregation("itrace",
+                      cl::desc("Generate LBR info with perf itrace argument"),
+                      cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 FilterMemProfile("filter-mem-profile",
   cl::desc("if processing a memory profile, filter out stack or heap accesses "
@@ -163,16 +168,23 @@ void DataAggregator::start() {
 
   findPerfExecutable();
 
-  if (opts::BasicAggregation)
+  if (opts::BasicAggregation) {
     launchPerfProcess("events without LBR",
                       MainEventsPPI,
                       "script -F pid,event,ip",
                       /*Wait = */false);
-  else
+  } else if (!opts::ITraceAggregation.empty()) {
+    std::string ItracePerfScriptArgs = llvm::formatv(
+        "script -F pid,ip,brstack --itrace={0}", opts::ITraceAggregation);
+    launchPerfProcess("branch events with itrace", MainEventsPPI,
+                      ItracePerfScriptArgs.c_str(),
+                      /*Wait = */ false);
+  } else {
     launchPerfProcess("branch events",
                       MainEventsPPI,
                       "script -F pid,ip,brstack",
                       /*Wait = */false);
+  }
 
   // Note: we launch script for mem events regardless of the option, as the
   //       command fails fairly fast if mem events were not collected.
@@ -181,15 +193,13 @@ void DataAggregator::start() {
                     "script -F pid,event,addr,ip",
                     /*Wait = */false);
 
-  launchPerfProcess("process events",
-                    MMapEventsPPI,
-                    "script --show-mmap-events",
-                    /*Wait = */false);
+  launchPerfProcess("process events", MMapEventsPPI,
+                    "script --show-mmap-events --no-itrace",
+                    /*Wait = */ false);
 
-  launchPerfProcess("task events",
-                    TaskEventsPPI,
-                    "script --show-task-events",
-                    /*Wait = */false);
+  launchPerfProcess("task events", TaskEventsPPI,
+                    "script --show-task-events --no-itrace",
+                    /*Wait = */ false);
 }
 
 void DataAggregator::abort() {
@@ -398,18 +408,18 @@ std::error_code DataAggregator::writeAutoFDOData(StringRef OutputFilename) {
 
   OutFile << FallthroughLBRs.size() << "\n";
   for (const auto &[Trace, Info] : FallthroughLBRs) {
-    OutFile << formatv("{0:x}-{1:x}:{2}\n", filterAddress(Trace.From),
+    OutFile << formatv("{0:x-}-{1:x-}:{2}\n", filterAddress(Trace.From),
                        filterAddress(Trace.To),
                        Info.InternCount + Info.ExternCount);
   }
 
   OutFile << BasicSamples.size() << "\n";
   for (const auto [PC, HitCount] : BasicSamples)
-    OutFile << formatv("{0:x}:{1}\n", filterAddress(PC), HitCount);
+    OutFile << formatv("{0:x-}:{1}\n", filterAddress(PC), HitCount);
 
   OutFile << BranchLBRs.size() << "\n";
   for (const auto &[Trace, Info] : BranchLBRs) {
-    OutFile << formatv("{0:x}->{1:x}:{2}\n", filterAddress(Trace.From),
+    OutFile << formatv("{0:x-}->{1:x-}:{2}\n", filterAddress(Trace.From),
                        filterAddress(Trace.To), Info.TakenCount);
   }
 

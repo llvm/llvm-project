@@ -225,7 +225,12 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
       CodeModel, Conf.CGOptLevel));
+
   assert(TM && "Failed to create target machine");
+
+  if (std::optional<uint64_t> LargeDataThreshold = M.getLargeDataThreshold())
+    TM->setLargeDataThreshold(*LargeDataThreshold);
+
   return TM;
 }
 

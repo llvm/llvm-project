@@ -162,8 +162,18 @@ void StructuredData::String::Serialize(json::OStream &s) const {
 
 void StructuredData::Dictionary::Serialize(json::OStream &s) const {
   s.objectBegin();
-  for (const auto &pair : m_dict) {
-    s.attributeBegin(pair.first.GetStringRef());
+
+  // To ensure the output format is always stable, we sort the dictionary by key
+  // first.
+  using Entry = std::pair<llvm::StringRef, ObjectSP>;
+  std::vector<Entry> sorted_entries;
+  for (const auto &pair : m_dict)
+    sorted_entries.push_back({pair.first(), pair.second});
+
+  llvm::sort(sorted_entries);
+
+  for (const auto &pair : sorted_entries) {
+    s.attributeBegin(pair.first);
     pair.second->Serialize(s);
     s.attributeEnd();
   }
@@ -228,9 +238,20 @@ void StructuredData::Array::GetDescription(lldb_private::Stream &s) const {
 
 void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
   size_t indentation_level = s.GetIndentLevel();
-  for (auto iter = m_dict.begin(); iter != m_dict.end(); iter++) {
+
+  // To ensure the output format is always stable, we sort the dictionary by key
+  // first.
+  using Entry = std::pair<llvm::StringRef, ObjectSP>;
+  std::vector<Entry> sorted_entries;
+  for (const auto &pair : m_dict)
+    sorted_entries.push_back({pair.first(), pair.second});
+
+  llvm::sort(sorted_entries);
+
+  for (auto iter = sorted_entries.begin(); iter != sorted_entries.end();
+       iter++) {
     // Sanitize.
-    if (iter->first.IsNull() || iter->first.IsEmpty() || !iter->second)
+    if (iter->first.empty() || !iter->second)
       continue;
 
     // Reset original indentation level.
@@ -238,7 +259,7 @@ void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
     s.Indent();
 
     // Print key.
-    s.Printf("%s:", iter->first.AsCString());
+    s.Format("{0}:", iter->first);
 
     // Return to new line and increase indentation if value is record type.
     // Otherwise add spacing.
@@ -252,7 +273,7 @@ void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
 
     // Print value and new line if now last pair.
     iter->second->GetDescription(s);
-    if (std::next(iter) != m_dict.end())
+    if (std::next(iter) != sorted_entries.end())
       s.EOL();
 
     // Reset indentation level if it was incremented previously.

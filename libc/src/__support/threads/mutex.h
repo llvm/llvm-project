@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
-#define LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H
 
 #include "src/__support/macros/properties/architectures.h"
 
@@ -43,7 +43,7 @@
 #include "gpu/mutex.h"
 #endif // __linux__
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // An RAII class for easy locking and unlocking of mutexes.
 class MutexLock {
@@ -55,6 +55,6 @@ public:
   ~MutexLock() { mutex->unlock(); }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_MUTEX_H

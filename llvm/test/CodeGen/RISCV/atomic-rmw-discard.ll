@@ -7,12 +7,12 @@
 define void @amoswap_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amoswap_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amoswap.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amoswap.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amoswap_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoswap.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoswap.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i32 %b seq_cst
   ret void
@@ -31,7 +31,7 @@ define void @amoswap_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amoswap_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoswap.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoswap.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b seq_cst
   ret void
@@ -40,12 +40,12 @@ define void @amoswap_d_discard(ptr %a, i64 %b) nounwind {
 define void @amoadd_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amoadd_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amoadd.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amoadd_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoadd.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoadd.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw add ptr %a, i32 %b seq_cst
   ret void
@@ -64,7 +64,7 @@ define void @amoadd_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amoadd_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoadd.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b seq_cst
   ret void
@@ -73,12 +73,12 @@ define void @amoadd_d_discard(ptr %a, i64 %b) nounwind {
 define void @amoand_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amoand_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amoand.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amoand.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amoand_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoand.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoand.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw and ptr %a, i32 %b seq_cst
   ret void
@@ -97,7 +97,7 @@ define void @amoand_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amoand_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoand.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoand.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b seq_cst
   ret void
@@ -106,12 +106,12 @@ define void @amoand_d_discard(ptr %a, i64 %b) nounwind {
 define void @amoor_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amoor_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amoor.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amoor_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoor.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b seq_cst
   ret void
@@ -130,7 +130,7 @@ define void @amoor_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amoor_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoor.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoor.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b seq_cst
   ret void
@@ -139,12 +139,12 @@ define void @amoor_d_discard(ptr %a, i64 %b) nounwind {
 define void @amoxor_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amoxor_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amoor.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amoxor_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoor.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoor.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i32 %b seq_cst
   ret void
@@ -163,7 +163,7 @@ define void @amoxor_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amoxor_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amoor.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amoor.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b seq_cst
   ret void
@@ -172,12 +172,12 @@ define void @amoxor_d_discard(ptr %a, i64 %b) nounwind {
 define void @amomax_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amomax_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amomax.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amomax.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amomax_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amomax.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amomax.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw max ptr %a, i32 %b seq_cst
   ret void
@@ -239,7 +239,7 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amomax_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amomax.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amomax.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b seq_cst
   ret void
@@ -248,12 +248,12 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 define void @amomaxu_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amomaxu_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amomaxu.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amomaxu_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amomaxu.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amomaxu.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i32 %b seq_cst
   ret void
@@ -315,7 +315,7 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amomaxu_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amomaxu.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b seq_cst
   ret void
@@ -324,12 +324,12 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 define void @amomin_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amomin_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amomin.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amomin.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amomin_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amomin.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amomin.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw min ptr %a, i32 %b seq_cst
   ret void
@@ -391,7 +391,7 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amomin_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amomin.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amomin.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b seq_cst
   ret void
@@ -400,12 +400,12 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 define void @amominu_w_discard(ptr %a, i32 %b) nounwind {
 ; RV32-LABEL: amominu_w_discard:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    amominu.w.aqrl a0, a1, (a0)
+; RV32-NEXT:    amominu.w.aqrl zero, a1, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: amominu_w_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amominu.w.aqrl a0, a1, (a0)
+; RV64-NEXT:    amominu.w.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i32 %b seq_cst
   ret void
@@ -467,7 +467,7 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ;
 ; RV64-LABEL: amominu_d_discard:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    amominu.d.aqrl a0, a1, (a0)
+; RV64-NEXT:    amominu.d.aqrl zero, a1, (a0)
 ; RV64-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b seq_cst
   ret void

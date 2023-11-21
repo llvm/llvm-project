@@ -7,9 +7,9 @@ void basic(int * x) {
   int *p1 = new int[10];  // no fix
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int *p2 = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p2"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p2"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
 #pragma clang unsafe_buffer_usage begin
   tmp = p1[5];
 #pragma clang unsafe_buffer_usage end
@@ -21,9 +21,9 @@ void withDiagnosticWarning() {
   int *p1 = new int[10]; // no fix
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int *p2 = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p2"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p2"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
 
   // diagnostics in opt-out region
 #pragma clang unsafe_buffer_usage begin
@@ -57,13 +57,13 @@ void withDiagnosticIgnore() {
   int *p1 = new int[10];
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int *p2 = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p2"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p2"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
   int *p3 = new int[10];
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p3"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"std::span<int> p3"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:13-[[@LINE-2]]:13}:"{"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:24}:", 10}"
 
 #pragma clang unsafe_buffer_usage begin
   tmp = p1[5];  // not to warn
@@ -174,7 +174,7 @@ void suppressedVarInGroup3() {
   int * b;
   // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
   int * c;
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:10}:"std::span<int> c"
+  // CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-1]]:
 
   c[5] = 5;
 #pragma clang unsafe_buffer_usage begin
@@ -182,6 +182,7 @@ void suppressedVarInGroup3() {
 #pragma clang unsafe_buffer_usage end
   a = b;
   b = c;
+// FIXME: we do not fix `a = b` and `b = c` because the `.data()`  fix-it is not generally correct.
 }
 
 // The implication edges are: `a` -> `b` -> `c` -> `a`.

@@ -278,9 +278,16 @@ RelType PPC::getDynRel(RelType type) const {
 int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_PPC_NONE:
+  case R_PPC_GLOB_DAT:
+  case R_PPC_JMP_SLOT:
     return 0;
   case R_PPC_ADDR32:
   case R_PPC_REL32:
+  case R_PPC_RELATIVE:
+  case R_PPC_IRELATIVE:
+  case R_PPC_DTPMOD32:
+  case R_PPC_DTPREL32:
+  case R_PPC_TPREL32:
     return SignExtend64<32>(read32(buf));
   default:
     internalLinkerError(getErrorLocation(buf),

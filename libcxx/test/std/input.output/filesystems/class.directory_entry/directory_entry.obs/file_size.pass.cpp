@@ -12,6 +12,10 @@
 // against already-released libc++'s.
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.15|11.0}}
 
+// Starting in Android N (API 24), SELinux policy prevents the shell user from
+// creating a FIFO file.
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22|23}}
+
 // <filesystem>
 
 // class directory_entry

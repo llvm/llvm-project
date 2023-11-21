@@ -358,7 +358,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   if (PartLLT.isVector() == LLTy.isVector() &&
       PartLLT.getScalarSizeInBits() > LLTy.getScalarSizeInBits() &&
       (!PartLLT.isVector() ||
-       PartLLT.getNumElements() == LLTy.getNumElements()) &&
+       PartLLT.getElementCount() == LLTy.getElementCount()) &&
       OrigRegs.size() == 1 && Regs.size() == 1) {
     Register SrcReg = Regs[0];
 
@@ -406,6 +406,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     // If PartLLT is a mismatched vector in both number of elements and element
     // size, e.g. PartLLT == v2s64 and LLTy is v3s32, then first coerce it to
     // have the same elt type, i.e. v4s32.
+    // TODO: Extend this coersion to element multiples other than just 2.
     if (PartLLT.getSizeInBits() > LLTy.getSizeInBits() &&
         PartLLT.getScalarSizeInBits() == LLTy.getScalarSizeInBits() * 2 &&
         Regs.size() == 1) {
@@ -847,7 +848,8 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
 
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
-  Type *RetPtrTy = RetTy->getPointerTo(DL.getAllocaAddrSpace());
+  Type *RetPtrTy =
+      PointerType::get(RetTy->getContext(), DL.getAllocaAddrSpace());
   LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetPtrTy), DL);
 
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -1134,7 +1136,7 @@ void CallLowering::ValueHandler::copyArgumentMemory(
 }
 
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
-                                                    CCValAssign &VA,
+                                                    const CCValAssign &VA,
                                                     unsigned MaxSizeBits) {
   LLT LocTy{VA.getLocVT()};
   LLT ValTy{VA.getValVT()};
@@ -1183,9 +1185,8 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
 
 void CallLowering::ValueAssigner::anchor() {}
 
-Register CallLowering::IncomingValueHandler::buildExtensionHint(CCValAssign &VA,
-                                                                Register SrcReg,
-                                                                LLT NarrowTy) {
+Register CallLowering::IncomingValueHandler::buildExtensionHint(
+    const CCValAssign &VA, Register SrcReg, LLT NarrowTy) {
   switch (VA.getLocInfo()) {
   case CCValAssign::LocInfo::ZExt: {
     return MIRBuilder
@@ -1225,9 +1226,8 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
          (DstTy.isPointer() && SrcTy.isScalar());
 }
 
-void CallLowering::IncomingValueHandler::assignValueToReg(Register ValVReg,
-                                                          Register PhysReg,
-                                                          CCValAssign VA) {
+void CallLowering::IncomingValueHandler::assignValueToReg(
+    Register ValVReg, Register PhysReg, const CCValAssign &VA) {
   const MVT LocVT = VA.getLocVT();
   const LLT LocTy(LocVT);
   const LLT RegTy = MRI.getType(ValVReg);

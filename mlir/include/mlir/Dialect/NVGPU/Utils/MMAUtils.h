@@ -93,6 +93,18 @@ FailureOr<AffineMap>
 getLaneIdToLdMatrixMatrixCoord(OpBuilder &builder, Location loc,
                                const LdMatrixParams &params);
 
+/// Returns whether the `vector.transfer_read` instruction can be interpreted
+/// as a warp-level cooperative matrix load operation. This function is meant to
+/// be used to establish whether `op` is part of a chain of such warp-level
+/// operations.
+bool canLowerToWarpMatrixOperation(vector::TransferReadOp op);
+
+/// Returns whether the `vector.transfer_write` instruction can be interpreted
+/// as a warp-level cooperative matrix store operation. This function is meant
+/// to be used to establish whether `op` is part of a chain of such warp-level
+/// operations.
+bool canLowerToWarpMatrixOperation(vector::TransferWriteOp op);
+
 } // namespace nvgpu
 } // namespace mlir
 

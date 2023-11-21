@@ -97,7 +97,8 @@ endsubroutine
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_HEAP:.*]] = fir.convert %[[TRANSPOSE_RES_REF]] : (!fir.ref<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
 ! CHECK-BUFFERING-NEXT: fir.freemem %[[TRANSPOSE_RES_HEAP]]
 ! CHECK-BUFFERING-NEXT: hlfir.assign %[[MUL_RES_VAR]]#0 to %[[RES_DECL]]#0 : !fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<1x2xf32>>
-! CHECK-BUFFERING-NEXT: fir.freemem %[[MUL_RES_VAR]]#1
+! CHECK-BUFFERING-NEXT: %[[MUL_RES_HEAP:.*]] = fir.box_addr %[[MUL_RES_VAR]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.heap<!fir.array<?x?xf32>>
+! CHECK-BUFFERING-NEXT: fir.freemem %[[MUL_RES_HEAP]]
 
 ! CHECK-ALL-NEXT:       return
 ! CHECK-ALL-NEXT:     }

@@ -221,3 +221,90 @@ func.func @async_cp_size_invalid_f64(
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf64> to memref<3x16x128xf64, 3>
   return
 }
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x121xf16, 3>>
+
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 2nd dim matrix-B ( 121 ) != 2nd dim matrix-C ( 128 )}}  
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op has matrices A, B, C and D, they must be 2 dimensional}}  
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf32, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 'f32' += 'f16' * 'f32', it is not supported.}}  
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x512xf16, 3>>
+func.func @warpgroup_mma_wrong_input(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'nvgpu.warpgroup.mma' op 2nd dim matrix-B ( 512 ) != 2nd dim matrix-C ( 128 )}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_load_1(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // Pass fine
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x32xf32,3>
+  // expected-error @+1 {{Maximum 5 coordinates are supported.}}
+  nvgpu.tma.async.load %desc[%c0, %c0, %c0, %c0, %c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x32xf32,3>
+  return
+}
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_load_2(%desc: !desc,  %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{the tensor map descriptor has incorrect address space, it must be shared memory address space.}}
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer2 : !desc, !mbarrier -> memref<32x32xf32,3>
+  return
+}
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_load_3(%desc: !desc, %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{the destination memref has incorrect address space, it must be shared memory address space}}
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer3 : !desc, !mbarrier -> memref<32x32xf32>
+  return
+}
+// -----
+
+!desc = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>, swizzle=swizzle_32b, l2promo = none, oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
+func.func @tma_load_4(%desc: !desc,  %buffer1: memref<128xf32,3>, %buffer2: memref<32x32xf32,3>, %buffer3: memref<32x32xf32>, %mbarrier: !mbarrier) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{the shape of tensor map descriptor and memref must have same rank}}
+  nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer1 : !desc, !mbarrier -> memref<128xf32,3>
+  return
+}

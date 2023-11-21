@@ -62,7 +62,7 @@ static std::optional<int64_t> unpackedDim(OpTy xferOp) {
   // TODO: support 0-d corner case.
   assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.getPermutationMap();
-  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+  if (auto expr = dyn_cast<AffineDimExpr>(map.getResult(0))) {
     return expr.getPosition();
   }
   assert(xferOp.isBroadcastDim(0) &&
@@ -1063,10 +1063,11 @@ struct UnrollTransferReadConversion
   /// If the result of the TransferReadOp has exactly one user, which is a
   /// vector::InsertOp, return that operation's indices.
   void getInsertionIndices(TransferReadOp xferOp,
-                           SmallVector<int64_t, 8> &indices) const {
-    if (auto insertOp = getInsertOp(xferOp))
-      indices.assign(insertOp.getPosition().begin(),
-                     insertOp.getPosition().end());
+                           SmallVectorImpl<OpFoldResult> &indices) const {
+    if (auto insertOp = getInsertOp(xferOp)) {
+      auto pos = insertOp.getMixedPosition();
+      indices.append(pos.begin(), pos.end());
+    }
   }
 
   /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds
@@ -1110,9 +1111,9 @@ struct UnrollTransferReadConversion
             getXferIndices(b, xferOp, iv, xferIndices);
 
             // Indices for the new vector.insert op.
-            SmallVector<int64_t, 8> insertionIndices;
+            SmallVector<OpFoldResult, 8> insertionIndices;
             getInsertionIndices(xferOp, insertionIndices);
-            insertionIndices.push_back(i);
+            insertionIndices.push_back(rewriter.getIndexAttr(i));
 
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
             auto newXferOp = b.create<vector::TransferReadOp>(
@@ -1154,12 +1155,12 @@ struct UnrollTransferReadConversion
 /// ```
 /// is rewritten to IR such as (simplified):
 /// ```
-/// %v0 = vector.extract %vec[0] : vector<5x4xf32>
+/// %v0 = vector.extract %vec[0] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v0, %A[%a, %b, %c] : vector<4xf32>, memref<...>
-/// %v1 = vector.extract %vec[1] : vector<5x4xf32>
+/// %v1 = vector.extract %vec[1] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v1, %A[%a, %b + 1, %c] : vector<4xf32>, memref<...>
 /// ...
-/// %v4 = vector.extract %vec[4] : vector<5x4xf32>
+/// %v4 = vector.extract %vec[4] : vector<4xf32> from vector<5x4xf32>
 /// vector.transfer_write %v4, %A[%a, %b + 4, %c] : vector<4xf32>, memref<...>
 /// ```
 ///
@@ -1195,10 +1196,11 @@ struct UnrollTransferWriteConversion
   /// If the input of the given TransferWriteOp is an ExtractOp, return its
   /// indices.
   void getExtractionIndices(TransferWriteOp xferOp,
-                            SmallVector<int64_t, 8> &indices) const {
-    if (auto extractOp = getExtractOp(xferOp))
-      indices.assign(extractOp.getPosition().begin(),
-                     extractOp.getPosition().end());
+                            SmallVectorImpl<OpFoldResult> &indices) const {
+    if (auto extractOp = getExtractOp(xferOp)) {
+      auto pos = extractOp.getMixedPosition();
+      indices.append(pos.begin(), pos.end());
+    }
   }
 
   /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds
@@ -1216,6 +1218,11 @@ struct UnrollTransferWriteConversion
 
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
+    if (xferVecType.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
+      return failure();
+    }
+
     int64_t dimSize = xferVecType.getShape()[0];
     Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
@@ -1235,9 +1242,9 @@ struct UnrollTransferWriteConversion
             getXferIndices(b, xferOp, iv, xferIndices);
 
             // Indices for the new vector.extract op.
-            SmallVector<int64_t, 8> extractionIndices;
+            SmallVector<OpFoldResult, 8> extractionIndices;
             getExtractionIndices(xferOp, extractionIndices);
-            extractionIndices.push_back(i);
+            extractionIndices.push_back(b.getI64IntegerAttr(i));
 
             auto extracted =
                 b.create<vector::ExtractOp>(loc, vec, extractionIndices);
@@ -1288,7 +1295,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
   memrefIndices.append(indices.begin(), indices.end());
   assert(map.getNumResults() == 1 &&
          "Expected 1 permutation map result for 1D transfer");
-  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+  if (auto expr = dyn_cast<AffineDimExpr>(map.getResult(0))) {
     Location loc = xferOp.getLoc();
     auto dim = expr.getPosition();
     AffineExpr d0, d1;

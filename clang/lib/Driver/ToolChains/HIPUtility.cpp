@@ -84,6 +84,12 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
       Args.MakeArgString(std::string("-output=").append(Output));
   BundlerArgs.push_back(BundlerOutputArg);
 
+  if (Args.hasFlag(options::OPT_offload_compress,
+                   options::OPT_no_offload_compress, false))
+    BundlerArgs.push_back("-compress");
+  if (Args.hasArg(options::OPT_v))
+    BundlerArgs.push_back("-verbose");
+
   const char *Bundler = Args.MakeArgString(
       T.getToolChain().GetProgramPath("clang-offload-bundler"));
   C.addCommand(std::make_unique<Command>(

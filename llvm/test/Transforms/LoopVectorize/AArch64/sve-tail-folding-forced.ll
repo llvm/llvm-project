@@ -17,8 +17,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: No successors
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
-; VPLANS-NEXT:   EMIT vp<[[VF:%[0-9]+]]> = VF * Part + ir<0>
 ; VPLANS-NEXT:   EMIT vp<[[NEWTC:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[VF:%[0-9]+]]> = VF * Part + ir<0>
 ; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%[0-9]+]]> = active lane mask vp<[[VF]]>, vp<[[TC]]>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
@@ -29,9 +29,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
 ; VPLANS-NEXT:     WIDEN store ir<%gep>, ir<%val>, vp<[[LANEMASK_PHI]]>
+; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%[0-9]+]]> = VF * UF + vp<[[INDV]]>
 ; VPLANS-NEXT:     EMIT vp<[[INC:%[0-9]+]]> = VF * Part + vp<[[INDV]]>
 ; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = active lane mask vp<[[INC]]>, vp<[[NEWTC]]>
-; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%[0-9]+]]> = VF * UF + vp<[[INDV]]>
 ; VPLANS-NEXT:     EMIT vp<[[NOT:%[0-9]+]]> = not vp<[[LANEMASK_LOOP]]>
 ; VPLANS-NEXT:     EMIT branch-on-cond vp<[[NOT]]>
 ; VPLANS-NEXT:   No successors
@@ -67,10 +67,10 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP12]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 4
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP14]]
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = xor <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

@@ -1309,44 +1309,27 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return nullptr;
 
   // InstSimplify already performed this fold if it was possible subject to
-  // current poison-generating flags. Try the transform again with
-  // poison-generating flags temporarily dropped.
-  bool WasNUW = false, WasNSW = false, WasExact = false, WasInBounds = false;
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(FalseVal)) {
-    WasNUW = OBO->hasNoUnsignedWrap();
-    WasNSW = OBO->hasNoSignedWrap();
-    FalseInst->setHasNoUnsignedWrap(false);
-    FalseInst->setHasNoSignedWrap(false);
-  }
-  if (auto *PEO = dyn_cast<PossiblyExactOperator>(FalseVal)) {
-    WasExact = PEO->isExact();
-    FalseInst->setIsExact(false);
-  }
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(FalseVal)) {
-    WasInBounds = GEP->isInBounds();
-    GEP->setIsInBounds(false);
-  }
+  // current poison-generating flags. Check whether dropping poison-generating
+  // flags enables the transform.
 
   // Try each equivalence substitution possibility.
   // We have an 'EQ' comparison, so the select's false value will propagate.
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
+  SmallVector<Instruction *> DropFlags;
   if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
-                             /* AllowRefinement */ false) == TrueVal ||
+                             /* AllowRefinement */ false,
+                             &DropFlags) == TrueVal ||
       simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
-                             /* AllowRefinement */ false) == TrueVal) {
+                             /* AllowRefinement */ false,
+                             &DropFlags) == TrueVal) {
+    for (Instruction *I : DropFlags) {
+      I->dropPoisonGeneratingFlagsAndMetadata();
+      Worklist.add(I);
+    }
+
     return replaceInstUsesWith(Sel, FalseVal);
   }
-
-  // Restore poison-generating flags if the transform did not apply.
-  if (WasNUW)
-    FalseInst->setHasNoUnsignedWrap();
-  if (WasNSW)
-    FalseInst->setHasNoSignedWrap();
-  if (WasExact)
-    FalseInst->setIsExact();
-  if (WasInBounds)
-    cast<GetElementPtrInst>(FalseInst)->setIsInBounds();
 
   return nullptr;
 }
@@ -1512,8 +1495,13 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     if (!match(ReplacementLow, m_ImmConstant(LowC)) ||
         !match(ReplacementHigh, m_ImmConstant(HighC)))
       return nullptr;
-    ReplacementLow = ConstantExpr::getSExt(LowC, X->getType());
-    ReplacementHigh = ConstantExpr::getSExt(HighC, X->getType());
+    const DataLayout &DL = Sel0.getModule()->getDataLayout();
+    ReplacementLow =
+        ConstantFoldCastOperand(Instruction::SExt, LowC, X->getType(), DL);
+    ReplacementHigh =
+        ConstantFoldCastOperand(Instruction::SExt, HighC, X->getType(), DL);
+    assert(ReplacementLow && ReplacementHigh &&
+           "Constant folding of ImmConstant cannot fail");
   }
 
   // All good, finally emit the new pattern.
@@ -2100,9 +2088,8 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
   // If the constant is the same after truncation to the smaller type and
   // extension to the original type, we can narrow the select.
   Type *SelType = Sel.getType();
-  Constant *TruncC = ConstantExpr::getTrunc(C, SmallType);
-  Constant *ExtC = ConstantExpr::getCast(ExtOpcode, TruncC, SelType);
-  if (ExtC == C && ExtInst->hasOneUse()) {
+  Constant *TruncC = getLosslessTrunc(C, SmallType, ExtOpcode);
+  if (TruncC && ExtInst->hasOneUse()) {
     Value *TruncCVal = cast<Value>(TruncC);
     if (ExtInst == Sel.getFalseValue())
       std::swap(X, TruncCVal);
@@ -2111,23 +2098,6 @@ Instruction *InstCombinerImpl::foldSelectExtConst(SelectInst &Sel) {
     // select Cond, C, (ext X) --> ext(select Cond, C', X)
     Value *NewSel = Builder.CreateSelect(Cond, X, TruncCVal, "narrow", &Sel);
     return CastInst::Create(Instruction::CastOps(ExtOpcode), NewSel, SelType);
-  }
-
-  // If one arm of the select is the extend of the condition, replace that arm
-  // with the extension of the appropriate known bool value.
-  if (Cond == X) {
-    if (ExtInst == Sel.getTrueValue()) {
-      // select X, (sext X), C --> select X, -1, C
-      // select X, (zext X), C --> select X,  1, C
-      Constant *One = ConstantInt::getTrue(SmallType);
-      Constant *AllOnesOrOne = ConstantExpr::getCast(ExtOpcode, One, SelType);
-      return SelectInst::Create(Cond, AllOnesOrOne, C, "", nullptr, &Sel);
-    } else {
-      // select X, C, (sext X) --> select X, C, 0
-      // select X, C, (zext X) --> select X, C, 0
-      Constant *Zero = ConstantInt::getNullValue(SelType);
-      return SelectInst::Create(Cond, C, Zero, "", nullptr, &Sel);
-    }
   }
 
   return nullptr;
@@ -2616,20 +2586,33 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   if (!TrueIfSigned)
     std::swap(TrueVal, FalseVal);
 
-  // We are matching a quite specific pattern here:
+  auto FoldToBitwiseAnd = [&](Value *Remainder) -> Instruction * {
+    Value *Add = Builder.CreateAdd(
+        Remainder, Constant::getAllOnesValue(RemRes->getType()));
+    return BinaryOperator::CreateAnd(Op, Add);
+  };
+
+  // Match the general case:
   // %rem = srem i32 %x, %n
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (!(match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
-        match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
-        IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
-        FalseVal == RemRes))
-    return nullptr;
+  if (match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
+      match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
+      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(Remainder);
 
-  Value *Add = Builder.CreateAdd(Remainder,
-                                 Constant::getAllOnesValue(RemRes->getType()));
-  return BinaryOperator::CreateAnd(Op, Add);
+  // Match the case where the one arm has been replaced by constant 1:
+  // %rem = srem i32 %n, 2
+  // %cnd = icmp slt i32 %rem, 0
+  // %sel = select i1 %cnd, i32 1, i32 %rem
+  if (match(TrueVal, m_One()) &&
+      match(RemRes, m_SRem(m_Value(Op), m_SpecificInt(2))) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(ConstantInt::get(RemRes->getType(), 2));
+
+  return nullptr;
 }
 
 static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
@@ -2908,8 +2891,15 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
 
   Value *AltCond = nullptr;
-  auto matchOuterCond = [OuterSel, &AltCond](auto m_InnerCond) {
-    return match(OuterSel.Cond, m_c_LogicalOp(m_InnerCond, m_Value(AltCond)));
+  auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
+    // An unsimplified select condition can match both LogicalAnd and LogicalOr
+    // (select true, true, false). Since below we assume that LogicalAnd implies
+    // InnerSel match the FVal and vice versa for LogicalOr, we can't match the
+    // alternative pattern here.
+    return IsAndVariant ? match(OuterSel.Cond,
+                                m_c_LogicalAnd(m_InnerCond, m_Value(AltCond)))
+                        : match(OuterSel.Cond,
+                                m_c_LogicalOr(m_InnerCond, m_Value(AltCond)));
   };
 
   // Finally, match the condition that was driving the outermost `select`,
@@ -3072,42 +3062,35 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
       match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
     return replaceOperand(SI, 0, A);
-  // select a, (select ~a, true, b), false -> select a, b, false
-  if (match(TrueVal, m_c_LogicalOr(m_Not(m_Specific(CondVal)), m_Value(B))) &&
-      match(FalseVal, m_Zero()))
-    return replaceOperand(SI, 1, B);
-  // select a, true, (select ~a, b, false) -> select a, true, b
-  if (match(FalseVal, m_c_LogicalAnd(m_Not(m_Specific(CondVal)), m_Value(B))) &&
-      match(TrueVal, m_One()))
-    return replaceOperand(SI, 2, B);
 
   // ~(A & B) & (A | B) --> A ^ B
   if (match(&SI, m_c_LogicalAnd(m_Not(m_LogicalAnd(m_Value(A), m_Value(B))),
                                 m_c_LogicalOr(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
-  // select (~a | c), a, b -> and a, (or c, freeze(b))
-  if (match(CondVal, m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))) &&
-      CondVal->hasOneUse()) {
-    FalseVal = Builder.CreateFreeze(FalseVal);
-    return BinaryOperator::CreateAnd(TrueVal, Builder.CreateOr(C, FalseVal));
+  // select (~a | c), a, b -> select a, (select c, true, b), false
+  if (match(CondVal,
+            m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
+    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
+    return SelectInst::Create(TrueVal, OrV, Zero);
   }
-  // select (~c & b), a, b -> and b, (or freeze(a), c)
-  if (match(CondVal, m_c_And(m_Not(m_Value(C)), m_Specific(FalseVal))) &&
-      CondVal->hasOneUse()) {
-    TrueVal = Builder.CreateFreeze(TrueVal);
-    return BinaryOperator::CreateAnd(FalseVal, Builder.CreateOr(C, TrueVal));
+  // select (c & b), a, b -> select b, (select ~c, true, a), false
+  if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal))))) {
+    if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
+      Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
+      return SelectInst::Create(FalseVal, OrV, Zero);
+    }
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
-  if (match(CondVal, m_c_Or(m_Specific(TrueVal), m_Value(C))) &&
-      CondVal->hasOneUse() && isFreeToInvert(C, C->hasOneUse())) {
-    Value *NotC = Builder.CreateNot(C);
-    Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
-    return SelectInst::Create(TrueVal, One, AndV);
+  if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C))))) {
+    if (Value *NotC = getFreelyInverted(C, C->hasOneUse(), &Builder)) {
+      Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
+      return SelectInst::Create(TrueVal, One, AndV);
+    }
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
-  if (match(CondVal, m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))) &&
-      CondVal->hasOneUse()) {
+  if (match(CondVal,
+            m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
     Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
     return SelectInst::Create(FalseVal, One, AndV);
   }
@@ -3389,28 +3372,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                                           ConstantInt::getFalse(CondType), SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(SI, 2, S);
-
-    // Handle patterns involving sext/zext + not explicitly,
-    // as simplifyWithOpReplaced() only looks past one instruction.
-    Value *NotCond;
-
-    // select a, sext(!a), b -> select !a, b, 0
-    // select a, zext(!a), b -> select !a, b, 0
-    if (match(TrueVal, m_ZExtOrSExt(m_CombineAnd(m_Value(NotCond),
-                                                 m_Not(m_Specific(CondVal))))))
-      return SelectInst::Create(NotCond, FalseVal,
-                                Constant::getNullValue(SelType));
-
-    // select a, b, zext(!a) -> select !a, 1, b
-    if (match(FalseVal, m_ZExt(m_CombineAnd(m_Value(NotCond),
-                                            m_Not(m_Specific(CondVal))))))
-      return SelectInst::Create(NotCond, ConstantInt::get(SelType, 1), TrueVal);
-
-    // select a, b, sext(!a) -> select !a, -1, b
-    if (match(FalseVal, m_SExt(m_CombineAnd(m_Value(NotCond),
-                                            m_Not(m_Specific(CondVal))))))
-      return SelectInst::Create(NotCond, Constant::getAllOnesValue(SelType),
-                                TrueVal);
   }
 
   if (Instruction *R = foldSelectOfBools(SI))

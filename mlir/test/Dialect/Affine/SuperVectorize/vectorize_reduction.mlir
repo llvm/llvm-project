@@ -50,7 +50,7 @@ func.func @vecdim_reduction_minf(%in: memref<256x512xf32>, %out: memref<256xf32>
 // CHECK:           %[[min:.*]] = arith.minimumf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[min]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_min:.*]] = vector.reduction <minf>, %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_min:.*]] = vector.reduction <minimumf>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_min]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 
@@ -77,7 +77,7 @@ func.func @vecdim_reduction_maxf(%in: memref<256x512xf32>, %out: memref<256xf32>
 // CHECK:           %[[max:.*]] = arith.maximumf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[max]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         %[[final_max:.*]] = vector.reduction <maxf>, %[[vred:.*]] : vector<128xf32> into f32
+// CHECK:         %[[final_max:.*]] = vector.reduction <maximumf>, %[[vred:.*]] : vector<128xf32> into f32
 // CHECK:         affine.store %[[final_max]], %{{.*}} : memref<256xf32>
 // CHECK:       }
 

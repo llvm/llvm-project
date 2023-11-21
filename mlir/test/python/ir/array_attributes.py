@@ -5,6 +5,7 @@
 import gc
 from mlir.ir import *
 import numpy as np
+import weakref
 
 
 def run(f):
@@ -162,7 +163,7 @@ def testGetDenseElementsBF16():
 @run
 def testGetDenseElementsInteger4():
     with Context():
-        array = np.array([[2, 4, 7], [-2, -4, -8]], dtype=np.uint8)
+        array = np.array([[2, 4, 7], [-2, -4, -8]], dtype=np.int8)
         attr = DenseElementsAttr.get(array, type=IntegerType.get_signless(4))
         # Note: These values don't mean much since just bit-casting. But they
         # shouldn't change.
@@ -417,3 +418,44 @@ def testGetDenseElementsIndex():
         print(arr)
         # CHECK: True
         print(arr.dtype == np.int64)
+
+
+# CHECK-LABEL: TEST: testGetDenseResourceElementsAttr
+@run
+def testGetDenseResourceElementsAttr():
+    def on_delete(_):
+        print("BACKING MEMORY DELETED")
+
+    context = Context()
+    mview = memoryview(np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32))
+    ref = weakref.ref(mview, on_delete)
+
+    def test_attribute(context, mview):
+        with context, Location.unknown():
+            element_type = IntegerType.get_signless(32)
+            tensor_type = RankedTensorType.get((2, 3), element_type)
+            resource = DenseResourceElementsAttr.get_from_buffer(
+                mview, "from_py", tensor_type
+            )
+            module = Module.parse("module {}")
+            module.operation.attributes["test.resource"] = resource
+            # CHECK: test.resource = dense_resource<from_py> : tensor<2x3xi32>
+            # CHECK: from_py: "0x04000000010000000200000003000000040000000500000006000000"
+            print(module)
+
+            # Verifies type casting.
+            # CHECK: dense_resource<from_py> : tensor<2x3xi32>
+            print(
+                DenseResourceElementsAttr(module.operation.attributes["test.resource"])
+            )
+
+    test_attribute(context, mview)
+    mview = None
+    gc.collect()
+    # CHECK: FREEING CONTEXT
+    print("FREEING CONTEXT")
+    context = None
+    gc.collect()
+    # CHECK: BACKING MEMORY DELETED
+    # CHECK: EXIT FUNCTION
+    print("EXIT FUNCTION")

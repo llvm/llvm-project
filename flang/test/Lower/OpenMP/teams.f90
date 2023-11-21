@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPteams_simple
 subroutine teams_simple()

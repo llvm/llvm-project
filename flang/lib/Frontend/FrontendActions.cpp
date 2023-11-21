@@ -70,6 +70,8 @@
 #include <memory>
 #include <system_error>
 
+#include "flang/Tools/CLOptions.inc"
+
 using namespace Fortran::frontend;
 
 // Declare plugin extension function declarations.
@@ -173,6 +175,45 @@ getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
   return llvm::join(featuresVec, ",");
 }
 
+// Get feature string which represents combined explicit target features
+// for NVPTX and the target features specified by the user/
+// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
+static std::string
+getExplicitAndImplicitNVPTXTargetFeatures(CompilerInstance &ci,
+                                          const TargetOptions &targetOpts,
+                                          const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  std::string errorMsg;
+  bool ptxVer = false;
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
+    // Check if the user provided a PTX version
+    if (userKeyString.startswith("ptx"))
+      ptxVer = true;
+  }
+
+  // Set the default PTX version to `ptx61` if none was provided.
+  // TODO: set the default PTX version based on the chip.
+  if (!ptxVer)
+    implicitFeaturesMap["ptx61"] = true;
+
+  // Set the compute capability.
+  implicitFeaturesMap[cpu.str()] = true;
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
 // Produces the string which represents target feature
 static std::string getTargetFeatures(CompilerInstance &ci) {
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
@@ -186,6 +227,8 @@ static std::string getTargetFeatures(CompilerInstance &ci) {
   // them to the target features specified by the user
   if (triple.isAMDGPU()) {
     return getExplicitAndImplicitAMDGPUTargetFeatures(ci, targetOpts, triple);
+  } else if (triple.isNVPTX()) {
+    return getExplicitAndImplicitNVPTXTargetFeatures(ci, targetOpts, triple);
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
@@ -199,6 +242,26 @@ static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
       mlir::StringAttr::get(context, dl.getStringRepresentation()));
   mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
   mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+}
+
+static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
+                              CompilerInstance &ci) {
+  const std::vector<std::string> &libs =
+      ci.getInvocation().getCodeGenOpts().DependentLibs;
+  if (libs.empty()) {
+    return;
+  }
+  // dependent-lib is currently only supported on Windows, so the list should be
+  // empty on non-Windows platforms
+  assert(
+      llvm::Triple(ci.getInvocation().getTargetOpts().triple).isOSWindows() &&
+      "--dependent-lib is only supported on Windows");
+  // Add linker options specified by --dependent-lib
+  auto builder = mlir::OpBuilder(mlirModule.getRegion());
+  for (const std::string &lib : libs) {
+    builder.create<mlir::LLVM::LinkerOptionsOp>(
+        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
+  }
 }
 
 bool CodeGenAction::beginSourceFileAction() {
@@ -276,7 +339,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
-      ci.getInvocation().getFrontendOpts().envDefaults);
+      ci.getInvocation().getFrontendOpts().envDefaults,
+      ci.getInvocation().getFrontendOpts().features);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());
@@ -301,6 +365,9 @@ bool CodeGenAction::beginSourceFileAction() {
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
 
+  // Add dependent libraries
+  addDepdendentLibs(*mlirModule, ci);
+
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
@@ -313,12 +380,10 @@ bool CodeGenAction::beginSourceFileAction() {
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
       isDevice = offloadMod.getIsTargetDevice();
-
-    pm.addPass(fir::createOMPMarkDeclareTargetPass());
-    if (isDevice) {
-      pm.addPass(fir::createOMPEarlyOutliningPass());
-      pm.addPass(fir::createOMPFunctionFilteringPass());
-    }
+    // WARNING: This pipeline must be run immediately after the lowering to
+    // ensure that the FIR is correct with respect to OpenMP operations/
+    // attributes.
+    fir::createOpenMPFIRPassPipeline(pm, isDevice);
   }
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -651,8 +716,6 @@ void GetSymbolsSourcesAction::executeAction() {
 
 CodeGenAction::~CodeGenAction() = default;
 
-#include "flang/Tools/CLOptions.inc"
-
 static llvm::OptimizationLevel
 mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
   switch (opts.OptimizationLevel) {
@@ -697,6 +760,22 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
+// TODO: We should get this from TargetInfo. However, that depends on
+// too much of clang, so for now, replicate the functionality.
+static std::optional<std::pair<unsigned, unsigned>>
+getVScaleRange(CompilerInstance &ci,
+               const Fortran::frontend::LangOptions &langOpts) {
+  if (langOpts.VScaleMin || langOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(
+        langOpts.VScaleMin ? langOpts.VScaleMin : 1, langOpts.VScaleMax);
+
+  std::string featuresStr = getTargetFeatures(ci);
+  if (featuresStr.find("+sve") != std::string::npos)
+    return std::pair<unsigned, unsigned>(1, 16);
+
+  return std::nullopt;
+}
+
 // Lower the previously generated MLIR module into an LLVM IR module
 void CodeGenAction::generateLLVMIR() {
   assert(mlirModule && "The MLIR module has not been generated yet.");
@@ -715,10 +794,22 @@ void CodeGenAction::generateLLVMIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
+  MLIRToLLVMPassPipelineConfig config(level, opts);
+
+  const auto targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+
+  // Only get the vscale range if AArch64.
+  if (triple.isAArch64()) {
+    auto langOpts = ci.getInvocation().getLangOpts();
+    if (auto vsr = getVScaleRange(ci, langOpts)) {
+      config.VScaleMin = vsr->first;
+      config.VScaleMax = vsr->second;
+    }
+  }
+
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, level, opts.StackArrays,
-                                    opts.Underscoring, opts.LoopVersioning,
-                                    opts.getDebugInfo());
+  fir::createMLIRToLLVMPassPipeline(pm, config);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
@@ -777,10 +868,10 @@ bool CodeGenAction::setUpTargetMachine() {
 
   // Create `TargetMachine`
   const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
-  std::optional<llvm::CodeGenOpt::Level> OptLevelOrNone =
+  std::optional<llvm::CodeGenOptLevel> OptLevelOrNone =
       llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
   assert(OptLevelOrNone && "Invalid optimization level!");
-  llvm::CodeGenOpt::Level OptLevel = *OptLevelOrNone;
+  llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
   std::string featuresStr = getTargetFeatures(ci);
   tm.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/targetOpts.cpu,
@@ -824,11 +915,13 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
 /// \param [in] tm Target machine to aid the code-gen pipeline set-up
 /// \param [in] act Backend act to run (assembly vs machine-code generation)
 /// \param [in] llvmModule LLVM module to lower to assembly/machine-code
+/// \param [in] codeGenOpts options configuring codegen pipeline
 /// \param [out] os Output stream to emit the generated code to
 static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
                                               llvm::TargetMachine &tm,
                                               BackendActionTy act,
                                               llvm::Module &llvmModule,
+                                              const CodeGenOptions &codeGenOpts,
                                               llvm::raw_pwrite_stream &os) {
   assert(((act == BackendActionTy::Backend_EmitObj) ||
           (act == BackendActionTy::Backend_EmitAssembly)) &&
@@ -842,14 +935,13 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
       createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
 
   llvm::Triple triple(llvmModule.getTargetTriple());
-  std::unique_ptr<llvm::TargetLibraryInfoImpl> tlii =
-      std::make_unique<llvm::TargetLibraryInfoImpl>(triple);
-  assert(tlii && "Failed to create TargetLibraryInfo");
+  llvm::TargetLibraryInfoImpl *tlii =
+      llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
 
   llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
-                                   ? llvm::CodeGenFileType::CGFT_AssemblyFile
-                                   : llvm::CodeGenFileType::CGFT_ObjectFile;
+                                   ? llvm::CodeGenFileType::AssemblyFile
+                                   : llvm::CodeGenFileType::ObjectFile;
   if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -896,6 +988,13 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(pb);
 #include "llvm/Support/Extension.def"
+
+  // Register the target library analysis directly and give it a customized
+  // preset TLI depending on -fveclib
+  llvm::Triple triple(llvmModule->getTargetTriple());
+  llvm::TargetLibraryInfoImpl *tlii =
+      llvm::driver::createTLII(triple, opts.getVecLib());
+  fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
@@ -1201,7 +1300,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        diags, *tm, action, *llvmModule,
+        diags, *tm, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
   }

@@ -181,9 +181,9 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    lui a1, 209715
 ; RV64I-NEXT:    addiw s1, a1, 819
 ; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addiw s2, a1, -241
+; RV64I-NEXT:    addi s2, a1, -241
 ; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw s3, a1, 257
+; RV64I-NEXT:    addi s3, a1, 257
 ; RV64I-NEXT:  .LBB4_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call bar@plt
@@ -1349,7 +1349,7 @@ define signext i32 @sextw_sh2add(i1 zeroext %0, ptr %1, i32 signext %2, i32 sign
 ; NOREMOVAL-LABEL: sextw_sh2add:
 ; NOREMOVAL:       # %bb.0:
 ; NOREMOVAL-NEXT:    sh2add a2, a2, a3
-; NOREMOVAL-NEXT:    sext.w a2, a2
+; NOREMOVAL-NEXT:    mv a2, a2
 ; NOREMOVAL-NEXT:    beqz a0, .LBB22_2
 ; NOREMOVAL-NEXT:  # %bb.1:
 ; NOREMOVAL-NEXT:    sw a2, 0(a1)

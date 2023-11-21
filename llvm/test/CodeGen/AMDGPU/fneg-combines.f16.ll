@@ -3794,14 +3794,14 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SAFE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-SAFE-NEXT:    s_brev_b32 s4, -2
 ; SI-SAFE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-SAFE-NEXT:    v_trunc_f32_e32 v2, v0
-; SI-SAFE-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; SI-SAFE-NEXT:    v_sub_f32_e32 v0, v0, v2
-; SI-SAFE-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-SAFE-NEXT:    v_add_f32_e32 v0, v2, v0
+; SI-SAFE-NEXT:    v_trunc_f32_e32 v1, v0
+; SI-SAFE-NEXT:    v_sub_f32_e32 v2, v0, v1
+; SI-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; SI-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
+; SI-SAFE-NEXT:    s_brev_b32 s4, -2
+; SI-SAFE-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; SI-SAFE-NEXT:    v_add_f32_e32 v0, v1, v0
 ; SI-SAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; SI-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3809,56 +3809,55 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; SI-NSZ:       ; %bb.0:
 ; SI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NSZ-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NSZ-NEXT:    s_brev_b32 s4, -2
 ; SI-NSZ-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NSZ-NEXT:    v_trunc_f32_e32 v2, v0
-; SI-NSZ-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; SI-NSZ-NEXT:    v_sub_f32_e32 v0, v0, v2
-; SI-NSZ-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-NSZ-NEXT:    v_sub_f32_e64 v0, -v2, v0
+; SI-NSZ-NEXT:    v_trunc_f32_e32 v1, v0
+; SI-NSZ-NEXT:    v_sub_f32_e32 v2, v0, v1
+; SI-NSZ-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; SI-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
+; SI-NSZ-NEXT:    s_brev_b32 s4, -2
+; SI-NSZ-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; SI-NSZ-NEXT:    v_sub_f32_e64 v0, -v1, v0
 ; SI-NSZ-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SAFE-LABEL: v_fneg_round_f16:
 ; VI-SAFE:       ; %bb.0:
 ; VI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SAFE-NEXT:    v_trunc_f16_e32 v1, v0
+; VI-SAFE-NEXT:    v_sub_f16_e32 v2, v0, v1
+; VI-SAFE-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-SAFE-NEXT:    v_cmp_ge_f16_e64 vcc, |v2|, 0.5
+; VI-SAFE-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
 ; VI-SAFE-NEXT:    s_movk_i32 s4, 0x7fff
-; VI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x3c00
-; VI-SAFE-NEXT:    v_trunc_f16_e32 v2, v0
-; VI-SAFE-NEXT:    v_bfi_b32 v1, s4, v1, v0
-; VI-SAFE-NEXT:    v_sub_f16_e32 v0, v0, v2
-; VI-SAFE-NEXT:    v_cmp_ge_f16_e64 vcc, |v0|, 0.5
-; VI-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SAFE-NEXT:    v_add_f16_e32 v0, v2, v0
+; VI-SAFE-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; VI-SAFE-NEXT:    v_add_f16_e32 v0, v1, v0
 ; VI-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-NSZ-LABEL: v_fneg_round_f16:
 ; VI-NSZ:       ; %bb.0:
 ; VI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NSZ-NEXT:    v_trunc_f16_e32 v1, v0
+; VI-NSZ-NEXT:    v_sub_f16_e32 v2, v0, v1
+; VI-NSZ-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NSZ-NEXT:    v_cmp_ge_f16_e64 vcc, |v2|, 0.5
+; VI-NSZ-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
 ; VI-NSZ-NEXT:    s_movk_i32 s4, 0x7fff
-; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x3c00
-; VI-NSZ-NEXT:    v_trunc_f16_e32 v2, v0
-; VI-NSZ-NEXT:    v_bfi_b32 v1, s4, v1, v0
-; VI-NSZ-NEXT:    v_sub_f16_e32 v0, v0, v2
-; VI-NSZ-NEXT:    v_cmp_ge_f16_e64 vcc, |v0|, 0.5
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-NSZ-NEXT:    v_sub_f16_e64 v0, -v2, v0
+; VI-NSZ-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; VI-NSZ-NEXT:    v_sub_f16_e64 v0, -v1, v0
 ; VI-NSZ-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SAFE-LABEL: v_fneg_round_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SAFE-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX11-SAFE-NEXT:    s_movk_i32 s0, 0x3c00
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v2, v0, v1
-; GFX11-SAFE-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
-; GFX11-SAFE-NEXT:    v_cmp_ge_f16_e64 vcc_lo, |v2|, 0.5
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
+; GFX11-SAFE-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v0, v1, v0
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3866,13 +3865,13 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NSZ-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX11-NSZ-NEXT:    s_movk_i32 s0, 0x3c00
-; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v2, v0, v1
-; GFX11-NSZ-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
-; GFX11-NSZ-NEXT:    v_cmp_ge_f16_e64 vcc_lo, |v2|, 0.5
-; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX11-NSZ-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
+; GFX11-NSZ-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_sub_f16_e64 v0, -v1, v0
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %round = call half @llvm.round.f16(half %a)

@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_unittest(SerializationTests
+  ForceCheckFileInputTest.cpp
   InMemoryModuleCacheTest.cpp
   ModuleCacheTest.cpp
   NoCommentsTest.cpp

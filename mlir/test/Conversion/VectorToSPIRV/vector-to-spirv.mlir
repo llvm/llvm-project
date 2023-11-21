@@ -50,7 +50,7 @@ func.func @cl_fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<
   return %0 : vector<1xf32>
 }
 
-// CHECK-LABEL: func @cl_reduction_maxf
+// CHECK-LABEL: func @cl_reduction_maximumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -59,12 +59,12 @@ func.func @cl_fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<
 //       CHECK:   %[[MAX1:.+]] = spirv.CL.fmax %[[MAX0]], %[[S2]]
 //       CHECK:   %[[MAX2:.+]] = spirv.CL.fmax %[[MAX1]], %[[S]]
 //       CHECK:   return %[[MAX2]]
-func.func @cl_reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
+func.func @cl_reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maximumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
-// CHECK-LABEL: func @cl_reduction_minf
+// CHECK-LABEL: func @cl_reduction_minimumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -73,8 +73,8 @@ func.func @cl_reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[MIN1:.+]] = spirv.CL.fmin %[[MIN0]], %[[S2]]
 //       CHECK:   %[[MIN2:.+]] = spirv.CL.fmin %[[MIN1]], %[[S]]
 //       CHECK:   return %[[MIN2]]
-func.func @cl_reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
+func.func @cl_reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
@@ -155,8 +155,8 @@ func.func @broadcast(%arg0 : f32) -> (vector<4xf32>, vector<2xf32>) {
 //       CHECK:   spirv.CompositeExtract %[[ARG]][0 : i32] : vector<2xf32>
 //       CHECK:   spirv.CompositeExtract %[[ARG]][1 : i32] : vector<2xf32>
 func.func @extract(%arg0 : vector<2xf32>) -> (vector<1xf32>, f32) {
-  %0 = "vector.extract"(%arg0) <{position = array<i64: 0>}> : (vector<2xf32>) -> vector<1xf32>
-  %1 = "vector.extract"(%arg0) <{position = array<i64: 1>}> : (vector<2xf32>) -> f32
+  %0 = "vector.extract"(%arg0) <{static_position = array<i64: 0>}> : (vector<2xf32>) -> vector<1xf32>
+  %1 = "vector.extract"(%arg0) <{static_position = array<i64: 1>}> : (vector<2xf32>) -> f32
   return %0, %1: vector<1xf32>, f32
 }
 
@@ -167,7 +167,7 @@ func.func @extract(%arg0 : vector<2xf32>) -> (vector<1xf32>, f32) {
 //       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
 //       CHECK:   return %[[R]]
 func.func @extract_size1_vector(%arg0 : vector<1xf32>) -> f32 {
-  %0 = vector.extract %arg0[0] : vector<1xf32>
+  %0 = vector.extract %arg0[0] : f32 from vector<1xf32>
   return %0: f32
 }
 
@@ -266,7 +266,7 @@ func.func @extract_element_0d_vector(%arg0 : f32) -> f32 {
 
 // CHECK-LABEL: @extract_strided_slice
 //  CHECK-SAME: %[[ARG:.+]]: vector<4xf32>
-//       CHECK:   spirv.VectorShuffle [1 : i32, 2 : i32] %[[ARG]] : vector<4xf32>, %[[ARG]] : vector<4xf32> -> vector<2xf32>
+//       CHECK:   spirv.VectorShuffle [1 : i32, 2 : i32] %[[ARG]], %[[ARG]] : vector<4xf32>, vector<4xf32> -> vector<2xf32>
 //       CHECK:   spirv.CompositeExtract %[[ARG]][1 : i32] : vector<4xf32>
 func.func @extract_strided_slice(%arg0: vector<4xf32>) -> (vector<2xf32>, vector<1xf32>) {
   %0 = vector.extract_strided_slice %arg0 {offsets = [1], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
@@ -339,7 +339,7 @@ func.func @insert_element_0d_vector(%scalar: f32, %vector : vector<f32>) -> vect
 
 // CHECK-LABEL: @insert_strided_slice
 //  CHECK-SAME: %[[PART:.+]]: vector<2xf32>, %[[ALL:.+]]: vector<4xf32>
-//       CHECK:   spirv.VectorShuffle [0 : i32, 4 : i32, 5 : i32, 3 : i32] %[[ALL]] : vector<4xf32>, %[[PART]] : vector<2xf32> -> vector<4xf32>
+//       CHECK:   spirv.VectorShuffle [0 : i32, 4 : i32, 5 : i32, 3 : i32] %[[ALL]], %[[PART]] : vector<4xf32>, vector<2xf32> -> vector<4xf32>
 func.func @insert_strided_slice(%arg0: vector<2xf32>, %arg1: vector<4xf32>) -> vector<4xf32> {
   %0 = vector.insert_strided_slice %arg0, %arg1 {offsets = [1], strides = [1]} : vector<2xf32> into vector<4xf32>
   return %0 : vector<4xf32>
@@ -425,7 +425,7 @@ func.func @shuffle_index_vector(%v0 : vector<1xindex>, %v1: vector<1xindex>) -> 
 
 // CHECK-LABEL:  func @shuffle
 //  CHECK-SAME:  %[[V0:.+]]: vector<3xf32>, %[[V1:.+]]: vector<3xf32>
-//       CHECK:    spirv.VectorShuffle [3 : i32, 2 : i32, 5 : i32, 1 : i32] %[[V0]] : vector<3xf32>, %[[V1]] : vector<3xf32> -> vector<4xf32>
+//       CHECK:    spirv.VectorShuffle [3 : i32, 2 : i32, 5 : i32, 1 : i32] %[[V0]], %[[V1]] : vector<3xf32>, vector<3xf32> -> vector<4xf32>
 func.func @shuffle(%v0 : vector<3xf32>, %v1: vector<3xf32>) -> vector<4xf32> {
   %shuffle = vector.shuffle %v0, %v1 [3, 2, 5, 1] : vector<3xf32>, vector<3xf32>
   return %shuffle : vector<4xf32>
@@ -516,7 +516,7 @@ func.func @reduction_mul(%v : vector<3xf32>, %s: f32) -> f32 {
 
 // -----
 
-// CHECK-LABEL: func @reduction_maxf
+// CHECK-LABEL: func @reduction_maximumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -525,14 +525,14 @@ func.func @reduction_mul(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[MAX1:.+]] = spirv.GL.FMax %[[MAX0]], %[[S2]]
 //       CHECK:   %[[MAX2:.+]] = spirv.GL.FMax %[[MAX1]], %[[S]]
 //       CHECK:   return %[[MAX2]]
-func.func @reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <maxf>, %v, %s : vector<3xf32> into f32
+func.func @reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maximumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 
 // -----
 
-// CHECK-LABEL: func @reduction_minf
+// CHECK-LABEL: func @reduction_minimumf
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
 //       CHECK:   %[[S1:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
@@ -541,8 +541,8 @@ func.func @reduction_maxf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   %[[MIN1:.+]] = spirv.GL.FMin %[[MIN0]], %[[S2]]
 //       CHECK:   %[[MIN2:.+]] = spirv.GL.FMin %[[MIN1]], %[[S]]
 //       CHECK:   return %[[MIN2]]
-func.func @reduction_minf(%v : vector<3xf32>, %s: f32) -> f32 {
-  %reduce = vector.reduction <minf>, %v, %s : vector<3xf32> into f32
+func.func @reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 

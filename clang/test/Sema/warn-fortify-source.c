@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -Wno-fortify-source %s -verify=nofortify
-// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 -Wno-fortify-source %s -verify=nofortify
 
 typedef unsigned long size_t;
 
@@ -129,11 +127,9 @@ void call_vsnprintf(void) {
 void call_sprintf_chk(char *buf) {
   __builtin___sprintf_chk(buf, 1, 6, "hell\n");
   __builtin___sprintf_chk(buf, 1, 5, "hell\n");     // expected-warning {{'sprintf' will always overflow; destination buffer has size 5, but format string expands to at least 6}}
-  __builtin___sprintf_chk(buf, 1, 6, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}} \
-                                                    // nofortify-warning {{format string contains '\0' within the string body}}
+  __builtin___sprintf_chk(buf, 1, 6, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}}
   __builtin___sprintf_chk(buf, 1, 2, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}} \
-                                                    // nofortify-warning {{format string contains '\0' within the string body}}
-  // expected-warning@-2 {{'sprintf' will always overflow; destination buffer has size 2, but format string expands to at least 5}}
+                                                    // expected-warning {{'sprintf' will always overflow; destination buffer has size 2, but format string expands to at least 5}}
   __builtin___sprintf_chk(buf, 1, 6, "hello");
   __builtin___sprintf_chk(buf, 1, 5, "hello"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 5, but format string expands to at least 6}}
   __builtin___sprintf_chk(buf, 1, 2, "%c", '9');
@@ -182,11 +178,9 @@ void call_sprintf_chk(char *buf) {
 
 void call_sprintf(void) {
   char buf[6];
-  sprintf(buf, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}} \
-                              // nofortify-warning {{format string contains '\0' within the string body}}
+  sprintf(buf, "hell\0 boy"); // expected-warning {{format string contains '\0' within the string body}}
   sprintf(buf, "hello b\0y"); // expected-warning {{format string contains '\0' within the string body}} \
-                              // nofortify-warning {{format string contains '\0' within the string body}}
-  // expected-warning@-2 {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
+                              // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 8}}
   sprintf(buf, "hello");
   sprintf(buf, "hello!"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "1234%%");

@@ -24,7 +24,15 @@ class RegisterCommandsTestCase(TestBase):
             reg_value.GetByteSize(), expected, 'Verify "%s" == %i' % (name, expected)
         )
 
-    def check_sve_regs_read(self, z_reg_size):
+    def check_sve_regs_read(self, z_reg_size, expected_mode):
+        if self.isAArch64SME():
+            # This test uses SMSTART SM, which only enables streaming mode,
+            # leaving ZA disabled.
+            expected_value = "1" if expected_mode == Mode.SSVE else "0"
+            self.expect(
+                "register read svcr", substrs=["0x000000000000000" + expected_value]
+            )
+
         p_reg_size = int(z_reg_size / 8)
 
         for i in range(32):
@@ -77,8 +85,11 @@ class RegisterCommandsTestCase(TestBase):
         if (mode == Mode.SVE) and not self.isAArch64SVE():
             self.skipTest("SVE registers must be supported.")
 
-        if (mode == Mode.SSVE) and not self.isAArch64SME():
-            self.skipTest("SSVE registers must be supported.")
+        if (mode == Mode.SSVE) and not self.isAArch64SMEFA64():
+            self.skipTest(
+                "SSVE registers must be supported and the smefa64 "
+                "extension must be present."
+            )
 
     def sve_registers_configuration_impl(self, mode):
         self.skip_if_needed(mode)
@@ -168,7 +179,7 @@ class RegisterCommandsTestCase(TestBase):
 
         vg_reg_value = sve_registers.GetChildMemberWithName("vg").GetValueAsUnsigned()
         z_reg_size = vg_reg_value * 8
-        self.check_sve_regs_read(z_reg_size)
+        self.check_sve_regs_read(z_reg_size, start_mode)
 
         # Evaluate simple expression and print function expr_eval_func address.
         self.expect("expression expr_eval_func", substrs=["= 0x"])
@@ -184,7 +195,7 @@ class RegisterCommandsTestCase(TestBase):
 
         # We called a jitted function above which must not have changed SVE
         # vector length or register values.
-        self.check_sve_regs_read(z_reg_size)
+        self.check_sve_regs_read(z_reg_size, start_mode)
 
         self.check_sve_regs_read_after_write(z_reg_size)
 

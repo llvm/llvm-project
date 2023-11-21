@@ -14,8 +14,7 @@ f:
   .globl _start
   .p2align 1
 _start:
-// CHECK: auipc ra, f
-// CHECK-NEXT: jalr ra
+// CHECK: call f
   call f
   ret
   .size _start, .-_start

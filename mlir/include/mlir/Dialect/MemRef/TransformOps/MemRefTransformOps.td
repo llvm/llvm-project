@@ -30,8 +30,6 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       machine word.
     - `use_generic_functions`: Use generic allocation and deallocation functions
       instead of the classic "malloc", "aligned_alloc" and "free" functions.
-    - `use_opaque_pointers`: Generate LLVM IR using opaque pointers instead of
-      typed pointers.
     // TODO: the following two options don't really make sense for 
     // memref_to_llvm_type_converter specifically.
     // We should have a single to_llvm_type_converter.
@@ -45,7 +43,6 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_aligned_alloc,
       DefaultValuedOptionalAttr<I64Attr, "64">:$index_bitwidth,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$use_opaque_pointers,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
       OptionalAttr<StrAttr>:$data_layout);
   let assemblyFormat = "attr-dict";
@@ -144,6 +141,69 @@ def ApplyResolveRankedShapedTypeResultDimsPatternsOp : Op<Transform_Dialect,
 }
 
 def Transform_MemRefAllocOp : Transform_ConcreteOpType<"memref.alloc">;
+def Transform_MemRefAllocaOp : Transform_ConcreteOpType<"memref.alloca">;
+
+def MemRefAllocaToGlobalOp :
+  Op<Transform_Dialect, "memref.alloca_to_global",
+     [TransformOpInterface,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Inserts a new `memref.global` for each provided `memref.alloca` into the
+    nearest symbol table (e.g., a `builtin.module`) and replaces it with a
+    `memref.get_global`. This is useful, for example, for allocations that
+    should reside in the shared memory of a GPU, which have to be declared as
+    globals.
+
+    #### Example
+
+    Consider the following transform op:
+
+    ```mlir
+    %get_global, %global =
+        transform.memref.alloca_to_global %alloca
+          : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    ```
+
+    and the following input payload:
+
+    ```mlir
+    module {
+      func.func @func() {
+        %alloca = memref.alloca() : memref<2x32xf32>
+        // usages of %alloca...
+      }
+    }
+    ```
+
+    then applying the transform op to the payload would result in the following
+    output IR:
+
+    ```mlir
+    module {
+      memref.global "private" @alloc : memref<2x32xf32>
+      func.func @func() {
+        %alloca = memref.get_global @alloc : memref<2x32xf32>
+        // usages of %alloca...
+      }
+    }
+    ```
+
+    #### Return modes
+
+    Succeeds always. The returned handles refer to the `memref.get_global` and
+    `memref.global` ops that were inserted by the transformation.
+  }];
+
+  let arguments = (ins Transform_MemRefAllocaOp:$alloca);
+  let results = (outs TransformHandleTypeInterface:$getGlobal,
+                  TransformHandleTypeInterface:$global);
+
+  let assemblyFormat = [{
+    $alloca attr-dict `:` functional-type(operands, results)
+  }];
+}
 
 def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,

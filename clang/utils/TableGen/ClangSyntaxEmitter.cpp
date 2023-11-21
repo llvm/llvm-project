@@ -129,7 +129,7 @@ struct SyntaxConstraint {
 
 void clang::EmitClangSyntaxNodeList(llvm::RecordKeeper &Records,
                                     llvm::raw_ostream &OS) {
-  llvm::emitSourceFileHeader("Syntax tree node list", OS);
+  llvm::emitSourceFileHeader("Syntax tree node list", OS, Records);
   Hierarchy H(Records);
   OS << R"cpp(
 #ifndef NODE
@@ -188,7 +188,7 @@ static void printDoc(llvm::StringRef Doc, llvm::raw_ostream &OS) {
 
 void clang::EmitClangSyntaxNodeClasses(llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS) {
-  llvm::emitSourceFileHeader("Syntax tree node list", OS);
+  llvm::emitSourceFileHeader("Syntax tree node list", OS, Records);
   Hierarchy H(Records);
 
   OS << "\n// Forward-declare node types so we don't have to carefully "

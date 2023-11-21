@@ -6,7 +6,7 @@
 // Test 1: infer inherited default ctor to be host.
 
 struct A1_with_host_ctor {
-  A1_with_host_ctor() {}
+  A1_with_host_ctor() { static int nontrivial_ctor = 1; }
 };
 // expected-note@-3 {{candidate constructor (the implicit copy constructor) not viable}}
 // expected-note@-4 {{candidate constructor (the implicit move constructor) not viable}}
@@ -39,6 +39,7 @@ struct A2_with_device_ctor {
 };
 // expected-note@-3 {{candidate constructor (the implicit copy constructor) not viable}}
 // expected-note@-4 {{candidate constructor (the implicit move constructor) not viable}}
+// expected-note@-4 {{candidate inherited constructor not viable: call to __device__ function from __host__ function}}
 
 struct B2_with_implicit_default_ctor : A2_with_device_ctor {
   using A2_with_device_ctor::A2_with_device_ctor;
@@ -83,7 +84,7 @@ void hostfoo3() {
 // Test 4: infer inherited default ctor from a field, not a base
 
 struct A4_with_host_ctor {
-  A4_with_host_ctor() {}
+  A4_with_host_ctor() { static int nontrivial_ctor = 1; }
 };
 
 struct B4_with_inherited_host_ctor : A4_with_host_ctor{

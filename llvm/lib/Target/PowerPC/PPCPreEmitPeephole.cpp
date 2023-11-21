@@ -14,7 +14,6 @@
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCSubtarget.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -495,7 +494,8 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
             }
           }
           MachineInstr *DefMIToErase = nullptr;
-          if (TII->convertToImmediateForm(MI, &DefMIToErase)) {
+          SmallSet<Register, 4> UpdatedRegs;
+          if (TII->convertToImmediateForm(MI, UpdatedRegs, &DefMIToErase)) {
             Changed = true;
             NumRRConvertedInPreEmit++;
             LLVM_DEBUG(dbgs() << "Converted instruction to imm form: ");

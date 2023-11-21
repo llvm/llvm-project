@@ -101,6 +101,31 @@ Error DXContainer::parsePSVInfo(StringRef Part) {
   return Error::success();
 }
 
+Error DirectX::Signature::initialize(StringRef Part) {
+  dxbc::ProgramSignatureHeader SigHeader;
+  if (Error Err = readStruct(Part, Part.begin(), SigHeader))
+    return Err;
+  size_t Size = sizeof(dxbc::ProgramSignatureElement) * SigHeader.ParamCount;
+
+  if (Part.size() < Size + SigHeader.FirstParamOffset)
+    return parseFailed("Signature parameters extend beyond the part boundary");
+
+  Parameters.Data = Part.substr(SigHeader.FirstParamOffset, Size);
+
+  StringTableOffset = SigHeader.FirstParamOffset + static_cast<uint32_t>(Size);
+  StringTable = Part.substr(SigHeader.FirstParamOffset + Size);
+
+  for (const auto &Param : Parameters) {
+    if (Param.NameOffset < StringTableOffset)
+      return parseFailed("Invalid parameter name offset: name starts before "
+                         "the first name offset");
+    if (Param.NameOffset - StringTableOffset > StringTable.size())
+      return parseFailed("Invalid parameter name offset: name starts after the "
+                         "end of the part data");
+  }
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   uint32_t LastOffset =
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
@@ -152,6 +177,18 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::PSV0:
       if (Error Err = parsePSVInfo(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::ISG1:
+      if (Error Err = InputSignature.initialize(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::OSG1:
+      if (Error Err = OutputSignature.initialize(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::PSG1:
+      if (Error Err = PatchConstantSignature.initialize(PartData))
         return Err;
       break;
     case dxbc::PartType::Unknown:
@@ -319,6 +356,68 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
     size_t PSize = SigPatchOrPrimElements.Stride * PatchOrPrimCount;
     SigPatchOrPrimElements.Data = Data.substr(Current - Data.begin(), PSize);
     Current += PSize;
+  }
+
+  ArrayRef<uint8_t> OutputVectorCounts = getOutputVectorCounts();
+  uint8_t PatchConstOrPrimVectorCount = getPatchConstOrPrimVectorCount();
+  uint8_t InputVectorCount = getInputVectorCount();
+
+  auto maskDwordSize = [](uint8_t Vector) {
+    return (static_cast<uint32_t>(Vector) + 7) >> 3;
+  };
+
+  auto mapTableSize = [maskDwordSize](uint8_t X, uint8_t Y) {
+    return maskDwordSize(Y) * X * 4;
+  };
+
+  if (usesViewID()) {
+    for (uint32_t I = 0; I < OutputVectorCounts.size(); ++I) {
+      // The vector mask is one bit per component and 4 components per vector.
+      // We can compute the number of dwords required by rounding up to the next
+      // multiple of 8.
+      uint32_t NumDwords =
+          maskDwordSize(static_cast<uint32_t>(OutputVectorCounts[I]));
+      size_t NumBytes = NumDwords * sizeof(uint32_t);
+      OutputVectorMasks[I].Data = Data.substr(Current - Data.begin(), NumBytes);
+      Current += NumBytes;
+    }
+
+    if (ShaderStage == Triple::Hull && PatchConstOrPrimVectorCount > 0) {
+      uint32_t NumDwords = maskDwordSize(PatchConstOrPrimVectorCount);
+      size_t NumBytes = NumDwords * sizeof(uint32_t);
+      PatchOrPrimMasks.Data = Data.substr(Current - Data.begin(), NumBytes);
+      Current += NumBytes;
+    }
+  }
+
+  // Input/Output mapping table
+  for (uint32_t I = 0; I < OutputVectorCounts.size(); ++I) {
+    if (InputVectorCount == 0 || OutputVectorCounts[I] == 0)
+      continue;
+    uint32_t NumDwords = mapTableSize(InputVectorCount, OutputVectorCounts[I]);
+    size_t NumBytes = NumDwords * sizeof(uint32_t);
+    InputOutputMap[I].Data = Data.substr(Current - Data.begin(), NumBytes);
+    Current += NumBytes;
+  }
+
+  // Hull shader: Input/Patch mapping table
+  if (ShaderStage == Triple::Hull && PatchConstOrPrimVectorCount > 0 &&
+      InputVectorCount > 0) {
+    uint32_t NumDwords =
+        mapTableSize(InputVectorCount, PatchConstOrPrimVectorCount);
+    size_t NumBytes = NumDwords * sizeof(uint32_t);
+    InputPatchMap.Data = Data.substr(Current - Data.begin(), NumBytes);
+    Current += NumBytes;
+  }
+
+  // Domain Shader: Patch/Output mapping table
+  if (ShaderStage == Triple::Domain && PatchConstOrPrimVectorCount > 0 &&
+      OutputVectorCounts[0] > 0) {
+    uint32_t NumDwords =
+        mapTableSize(PatchConstOrPrimVectorCount, OutputVectorCounts[0]);
+    size_t NumBytes = NumDwords * sizeof(uint32_t);
+    PatchOutputMap.Data = Data.substr(Current - Data.begin(), NumBytes);
+    Current += NumBytes;
   }
 
   return Error::success();

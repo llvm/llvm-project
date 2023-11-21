@@ -7,75 +7,7 @@
 
 define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-LABEL: test_indirect_call_sgpr_ptr:
-; GCN:         .amd_kernel_code_t
-; GCN-NEXT:     amd_code_version_major = 1
-; GCN-NEXT:     amd_code_version_minor = 2
-; GCN-NEXT:     amd_machine_kind = 1
-; GCN-NEXT:     amd_machine_version_major = 7
-; GCN-NEXT:     amd_machine_version_minor = 0
-; GCN-NEXT:     amd_machine_version_stepping = 0
-; GCN-NEXT:     kernel_code_entry_byte_offset = 256
-; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 10
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 8
-; GCN-NEXT:     priority = 0
-; GCN-NEXT:     float_mode = 240
-; GCN-NEXT:     priv = 0
-; GCN-NEXT:     enable_dx10_clamp = 1
-; GCN-NEXT:     debug_mode = 0
-; GCN-NEXT:     enable_ieee_mode = 1
-; GCN-NEXT:     enable_wgp_mode = 0
-; GCN-NEXT:     enable_mem_ordered = 0
-; GCN-NEXT:     enable_fwd_progress = 0
-; GCN-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 1
-; GCN-NEXT:     user_sgpr_count = 14
-; GCN-NEXT:     enable_trap_handler = 0
-; GCN-NEXT:     enable_sgpr_workgroup_id_x = 1
-; GCN-NEXT:     enable_sgpr_workgroup_id_y = 1
-; GCN-NEXT:     enable_sgpr_workgroup_id_z = 1
-; GCN-NEXT:     enable_sgpr_workgroup_info = 0
-; GCN-NEXT:     enable_vgpr_workitem_id = 2
-; GCN-NEXT:     enable_exception_msb = 0
-; GCN-NEXT:     granulated_lds_size = 0
-; GCN-NEXT:     enable_exception = 0
-; GCN-NEXT:     enable_sgpr_private_segment_buffer = 1
-; GCN-NEXT:     enable_sgpr_dispatch_ptr = 1
-; GCN-NEXT:     enable_sgpr_queue_ptr = 1
-; GCN-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
-; GCN-NEXT:     enable_sgpr_dispatch_id = 1
-; GCN-NEXT:     enable_sgpr_flat_scratch_init = 1
-; GCN-NEXT:     enable_sgpr_private_segment_size = 0
-; GCN-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
-; GCN-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
-; GCN-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
-; GCN-NEXT:     enable_wavefront_size32 = 0
-; GCN-NEXT:     enable_ordered_append_gds = 0
-; GCN-NEXT:     private_element_size = 1
-; GCN-NEXT:     is_ptr64 = 1
-; GCN-NEXT:     is_dynamic_callstack = 1
-; GCN-NEXT:     is_debug_enabled = 0
-; GCN-NEXT:     is_xnack_enabled = 0
-; GCN-NEXT:     workitem_private_segment_byte_size = 16384
-; GCN-NEXT:     workgroup_group_segment_byte_size = 0
-; GCN-NEXT:     gds_segment_byte_size = 0
-; GCN-NEXT:     kernarg_segment_byte_size = 64
-; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 68
-; GCN-NEXT:     workitem_vgpr_count = 42
-; GCN-NEXT:     reserved_vgpr_first = 0
-; GCN-NEXT:     reserved_vgpr_count = 0
-; GCN-NEXT:     reserved_sgpr_first = 0
-; GCN-NEXT:     reserved_sgpr_count = 0
-; GCN-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
-; GCN-NEXT:     debug_private_segment_buffer_sgpr = 0
-; GCN-NEXT:     kernarg_segment_alignment = 4
-; GCN-NEXT:     group_segment_alignment = 4
-; GCN-NEXT:     private_segment_alignment = 4
-; GCN-NEXT:     wavefront_size = 6
-; GCN-NEXT:     call_convention = -1
-; GCN-NEXT:     runtime_loader_kernel_symbol = 0
-; GCN-NEXT:    .end_amd_kernel_code_t
-; GCN-NEXT:  ; %bb.0:
+; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
@@ -100,75 +32,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 ; GCN-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_indirect_call_sgpr_ptr:
-; GISEL:         .amd_kernel_code_t
-; GISEL-NEXT:     amd_code_version_major = 1
-; GISEL-NEXT:     amd_code_version_minor = 2
-; GISEL-NEXT:     amd_machine_kind = 1
-; GISEL-NEXT:     amd_machine_version_major = 7
-; GISEL-NEXT:     amd_machine_version_minor = 0
-; GISEL-NEXT:     amd_machine_version_stepping = 0
-; GISEL-NEXT:     kernel_code_entry_byte_offset = 256
-; GISEL-NEXT:     kernel_code_prefetch_byte_size = 0
-; GISEL-NEXT:     granulated_workitem_vgpr_count = 10
-; GISEL-NEXT:     granulated_wavefront_sgpr_count = 8
-; GISEL-NEXT:     priority = 0
-; GISEL-NEXT:     float_mode = 240
-; GISEL-NEXT:     priv = 0
-; GISEL-NEXT:     enable_dx10_clamp = 1
-; GISEL-NEXT:     debug_mode = 0
-; GISEL-NEXT:     enable_ieee_mode = 1
-; GISEL-NEXT:     enable_wgp_mode = 0
-; GISEL-NEXT:     enable_mem_ordered = 0
-; GISEL-NEXT:     enable_fwd_progress = 0
-; GISEL-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 1
-; GISEL-NEXT:     user_sgpr_count = 14
-; GISEL-NEXT:     enable_trap_handler = 0
-; GISEL-NEXT:     enable_sgpr_workgroup_id_x = 1
-; GISEL-NEXT:     enable_sgpr_workgroup_id_y = 1
-; GISEL-NEXT:     enable_sgpr_workgroup_id_z = 1
-; GISEL-NEXT:     enable_sgpr_workgroup_info = 0
-; GISEL-NEXT:     enable_vgpr_workitem_id = 2
-; GISEL-NEXT:     enable_exception_msb = 0
-; GISEL-NEXT:     granulated_lds_size = 0
-; GISEL-NEXT:     enable_exception = 0
-; GISEL-NEXT:     enable_sgpr_private_segment_buffer = 1
-; GISEL-NEXT:     enable_sgpr_dispatch_ptr = 1
-; GISEL-NEXT:     enable_sgpr_queue_ptr = 1
-; GISEL-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
-; GISEL-NEXT:     enable_sgpr_dispatch_id = 1
-; GISEL-NEXT:     enable_sgpr_flat_scratch_init = 1
-; GISEL-NEXT:     enable_sgpr_private_segment_size = 0
-; GISEL-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
-; GISEL-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
-; GISEL-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
-; GISEL-NEXT:     enable_wavefront_size32 = 0
-; GISEL-NEXT:     enable_ordered_append_gds = 0
-; GISEL-NEXT:     private_element_size = 1
-; GISEL-NEXT:     is_ptr64 = 1
-; GISEL-NEXT:     is_dynamic_callstack = 1
-; GISEL-NEXT:     is_debug_enabled = 0
-; GISEL-NEXT:     is_xnack_enabled = 0
-; GISEL-NEXT:     workitem_private_segment_byte_size = 16384
-; GISEL-NEXT:     workgroup_group_segment_byte_size = 0
-; GISEL-NEXT:     gds_segment_byte_size = 0
-; GISEL-NEXT:     kernarg_segment_byte_size = 64
-; GISEL-NEXT:     workgroup_fbarrier_count = 0
-; GISEL-NEXT:     wavefront_sgpr_count = 68
-; GISEL-NEXT:     workitem_vgpr_count = 42
-; GISEL-NEXT:     reserved_vgpr_first = 0
-; GISEL-NEXT:     reserved_vgpr_count = 0
-; GISEL-NEXT:     reserved_sgpr_first = 0
-; GISEL-NEXT:     reserved_sgpr_count = 0
-; GISEL-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
-; GISEL-NEXT:     debug_private_segment_buffer_sgpr = 0
-; GISEL-NEXT:     kernarg_segment_alignment = 4
-; GISEL-NEXT:     group_segment_alignment = 4
-; GISEL-NEXT:     private_segment_alignment = 4
-; GISEL-NEXT:     wavefront_size = 6
-; GISEL-NEXT:     call_convention = -1
-; GISEL-NEXT:     runtime_loader_kernel_symbol = 0
-; GISEL-NEXT:    .end_amd_kernel_code_t
-; GISEL-NEXT:  ; %bb.0:
+; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GISEL-NEXT:    s_add_i32 s12, s12, s17
@@ -198,75 +62,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(i8) {
 
 define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-LABEL: test_indirect_call_sgpr_ptr_arg:
-; GCN:         .amd_kernel_code_t
-; GCN-NEXT:     amd_code_version_major = 1
-; GCN-NEXT:     amd_code_version_minor = 2
-; GCN-NEXT:     amd_machine_kind = 1
-; GCN-NEXT:     amd_machine_version_major = 7
-; GCN-NEXT:     amd_machine_version_minor = 0
-; GCN-NEXT:     amd_machine_version_stepping = 0
-; GCN-NEXT:     kernel_code_entry_byte_offset = 256
-; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 10
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 8
-; GCN-NEXT:     priority = 0
-; GCN-NEXT:     float_mode = 240
-; GCN-NEXT:     priv = 0
-; GCN-NEXT:     enable_dx10_clamp = 1
-; GCN-NEXT:     debug_mode = 0
-; GCN-NEXT:     enable_ieee_mode = 1
-; GCN-NEXT:     enable_wgp_mode = 0
-; GCN-NEXT:     enable_mem_ordered = 0
-; GCN-NEXT:     enable_fwd_progress = 0
-; GCN-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 1
-; GCN-NEXT:     user_sgpr_count = 14
-; GCN-NEXT:     enable_trap_handler = 0
-; GCN-NEXT:     enable_sgpr_workgroup_id_x = 1
-; GCN-NEXT:     enable_sgpr_workgroup_id_y = 1
-; GCN-NEXT:     enable_sgpr_workgroup_id_z = 1
-; GCN-NEXT:     enable_sgpr_workgroup_info = 0
-; GCN-NEXT:     enable_vgpr_workitem_id = 2
-; GCN-NEXT:     enable_exception_msb = 0
-; GCN-NEXT:     granulated_lds_size = 0
-; GCN-NEXT:     enable_exception = 0
-; GCN-NEXT:     enable_sgpr_private_segment_buffer = 1
-; GCN-NEXT:     enable_sgpr_dispatch_ptr = 1
-; GCN-NEXT:     enable_sgpr_queue_ptr = 1
-; GCN-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
-; GCN-NEXT:     enable_sgpr_dispatch_id = 1
-; GCN-NEXT:     enable_sgpr_flat_scratch_init = 1
-; GCN-NEXT:     enable_sgpr_private_segment_size = 0
-; GCN-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
-; GCN-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
-; GCN-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
-; GCN-NEXT:     enable_wavefront_size32 = 0
-; GCN-NEXT:     enable_ordered_append_gds = 0
-; GCN-NEXT:     private_element_size = 1
-; GCN-NEXT:     is_ptr64 = 1
-; GCN-NEXT:     is_dynamic_callstack = 1
-; GCN-NEXT:     is_debug_enabled = 0
-; GCN-NEXT:     is_xnack_enabled = 0
-; GCN-NEXT:     workitem_private_segment_byte_size = 16384
-; GCN-NEXT:     workgroup_group_segment_byte_size = 0
-; GCN-NEXT:     gds_segment_byte_size = 0
-; GCN-NEXT:     kernarg_segment_byte_size = 64
-; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 68
-; GCN-NEXT:     workitem_vgpr_count = 42
-; GCN-NEXT:     reserved_vgpr_first = 0
-; GCN-NEXT:     reserved_vgpr_count = 0
-; GCN-NEXT:     reserved_sgpr_first = 0
-; GCN-NEXT:     reserved_sgpr_count = 0
-; GCN-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
-; GCN-NEXT:     debug_private_segment_buffer_sgpr = 0
-; GCN-NEXT:     kernarg_segment_alignment = 4
-; GCN-NEXT:     group_segment_alignment = 4
-; GCN-NEXT:     private_segment_alignment = 4
-; GCN-NEXT:     wavefront_size = 6
-; GCN-NEXT:     call_convention = -1
-; GCN-NEXT:     runtime_loader_kernel_symbol = 0
-; GCN-NEXT:    .end_amd_kernel_code_t
-; GCN-NEXT:  ; %bb.0:
+; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
@@ -292,75 +88,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg(i8) {
 ; GCN-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_indirect_call_sgpr_ptr_arg:
-; GISEL:         .amd_kernel_code_t
-; GISEL-NEXT:     amd_code_version_major = 1
-; GISEL-NEXT:     amd_code_version_minor = 2
-; GISEL-NEXT:     amd_machine_kind = 1
-; GISEL-NEXT:     amd_machine_version_major = 7
-; GISEL-NEXT:     amd_machine_version_minor = 0
-; GISEL-NEXT:     amd_machine_version_stepping = 0
-; GISEL-NEXT:     kernel_code_entry_byte_offset = 256
-; GISEL-NEXT:     kernel_code_prefetch_byte_size = 0
-; GISEL-NEXT:     granulated_workitem_vgpr_count = 10
-; GISEL-NEXT:     granulated_wavefront_sgpr_count = 8
-; GISEL-NEXT:     priority = 0
-; GISEL-NEXT:     float_mode = 240
-; GISEL-NEXT:     priv = 0
-; GISEL-NEXT:     enable_dx10_clamp = 1
-; GISEL-NEXT:     debug_mode = 0
-; GISEL-NEXT:     enable_ieee_mode = 1
-; GISEL-NEXT:     enable_wgp_mode = 0
-; GISEL-NEXT:     enable_mem_ordered = 0
-; GISEL-NEXT:     enable_fwd_progress = 0
-; GISEL-NEXT:     enable_sgpr_private_segment_wave_byte_offset = 1
-; GISEL-NEXT:     user_sgpr_count = 14
-; GISEL-NEXT:     enable_trap_handler = 0
-; GISEL-NEXT:     enable_sgpr_workgroup_id_x = 1
-; GISEL-NEXT:     enable_sgpr_workgroup_id_y = 1
-; GISEL-NEXT:     enable_sgpr_workgroup_id_z = 1
-; GISEL-NEXT:     enable_sgpr_workgroup_info = 0
-; GISEL-NEXT:     enable_vgpr_workitem_id = 2
-; GISEL-NEXT:     enable_exception_msb = 0
-; GISEL-NEXT:     granulated_lds_size = 0
-; GISEL-NEXT:     enable_exception = 0
-; GISEL-NEXT:     enable_sgpr_private_segment_buffer = 1
-; GISEL-NEXT:     enable_sgpr_dispatch_ptr = 1
-; GISEL-NEXT:     enable_sgpr_queue_ptr = 1
-; GISEL-NEXT:     enable_sgpr_kernarg_segment_ptr = 1
-; GISEL-NEXT:     enable_sgpr_dispatch_id = 1
-; GISEL-NEXT:     enable_sgpr_flat_scratch_init = 1
-; GISEL-NEXT:     enable_sgpr_private_segment_size = 0
-; GISEL-NEXT:     enable_sgpr_grid_workgroup_count_x = 0
-; GISEL-NEXT:     enable_sgpr_grid_workgroup_count_y = 0
-; GISEL-NEXT:     enable_sgpr_grid_workgroup_count_z = 0
-; GISEL-NEXT:     enable_wavefront_size32 = 0
-; GISEL-NEXT:     enable_ordered_append_gds = 0
-; GISEL-NEXT:     private_element_size = 1
-; GISEL-NEXT:     is_ptr64 = 1
-; GISEL-NEXT:     is_dynamic_callstack = 1
-; GISEL-NEXT:     is_debug_enabled = 0
-; GISEL-NEXT:     is_xnack_enabled = 0
-; GISEL-NEXT:     workitem_private_segment_byte_size = 16384
-; GISEL-NEXT:     workgroup_group_segment_byte_size = 0
-; GISEL-NEXT:     gds_segment_byte_size = 0
-; GISEL-NEXT:     kernarg_segment_byte_size = 64
-; GISEL-NEXT:     workgroup_fbarrier_count = 0
-; GISEL-NEXT:     wavefront_sgpr_count = 68
-; GISEL-NEXT:     workitem_vgpr_count = 42
-; GISEL-NEXT:     reserved_vgpr_first = 0
-; GISEL-NEXT:     reserved_vgpr_count = 0
-; GISEL-NEXT:     reserved_sgpr_first = 0
-; GISEL-NEXT:     reserved_sgpr_count = 0
-; GISEL-NEXT:     debug_wavefront_private_segment_offset_sgpr = 0
-; GISEL-NEXT:     debug_private_segment_buffer_sgpr = 0
-; GISEL-NEXT:     kernarg_segment_alignment = 4
-; GISEL-NEXT:     group_segment_alignment = 4
-; GISEL-NEXT:     private_segment_alignment = 4
-; GISEL-NEXT:     wavefront_size = 6
-; GISEL-NEXT:     call_convention = -1
-; GISEL-NEXT:     runtime_loader_kernel_symbol = 0
-; GISEL-NEXT:    .end_amd_kernel_code_t
-; GISEL-NEXT:  ; %bb.0:
+; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GISEL-NEXT:    s_add_i32 s12, s12, s17
@@ -1555,15 +1283,15 @@ define i32 @test_indirect_call_vgpr_ptr_arg_and_return(i32 %i, ptr %fptr) {
 ; GCN-NEXT:    v_writelane_b32 v40, s63, 31
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
 ; GCN-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    v_readfirstlane_b32 s6, v1
-; GCN-NEXT:    v_readfirstlane_b32 s7, v2
-; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[6:7], v[1:2]
-; GCN-NEXT:    s_and_saveexec_b64 s[8:9], vcc
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GCN-NEXT:    v_readfirstlane_b32 s8, v1
+; GCN-NEXT:    v_readfirstlane_b32 s9, v2
+; GCN-NEXT:    v_cmp_eq_u64_e32 vcc, s[8:9], v[1:2]
+; GCN-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    s_xor_b64 exec, exec, s[8:9]
+; GCN-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; GCN-NEXT:    s_cbranch_execnz .LBB8_1
 ; GCN-NEXT:  ; %bb.2:
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
@@ -1899,4 +1627,4 @@ define void @test_indirect_tail_call_vgpr_ptr(ptr %fptr) {
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

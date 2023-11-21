@@ -23,6 +23,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -164,17 +165,18 @@ MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
 // GPUDialect
 //===----------------------------------------------------------------------===//
 
-/// GPU memory space identifiers.
-enum GPUMemorySpace {
-  /// Generic memory space identifier.
-  kGenericMemorySpace = 0,
+bool GPUDialect::isWorkgroupMemoryAddressSpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuAttr.getValue() == getWorkgroupAddressSpace();
+  return false;
+}
 
-  /// Global memory space identifier.
-  kGlobalMemorySpace = 1,
-
-  /// Shared memory space identifier.
-  kSharedMemorySpace = 3
-};
+bool GPUDialect::hasWorkgroupMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isWorkgroupMemoryAddressSpace(memorySpace);
+}
 
 bool GPUDialect::isKernel(Operation *op) {
   UnitAttr isKernelAttr = op->getAttrOfType<UnitAttr>(getKernelFuncAttrName());
@@ -1140,6 +1142,29 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
 }
 
 //===----------------------------------------------------------------------===//
+// BarrierOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
+LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
+                                          PatternRewriter &rewriter) {
+  if (isa_and_nonnull<BarrierOp>(op->getNextNode())) {
+    rewriter.eraseOp(op);
+    return success();
+  }
+  return failure();
+}
+
+} // end anonymous namespace
+
+void BarrierOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add(eraseRedundantGpuBarrierOps);
+}
+
+//===----------------------------------------------------------------------===//
 // GPUFuncOp
 //===----------------------------------------------------------------------===//
 
@@ -1959,7 +1984,8 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 Attribute target, StringAttr object) {
+                                 Attribute target, CompilationTarget format,
+                                 StringAttr object, DictionaryAttr properties) {
   if (!target)
     return emitError() << "the target attribute cannot be null";
   if (target.hasPromiseOrImplementsInterface<TargetAttrInterface>())
@@ -1967,6 +1993,40 @@ LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return emitError() << "the target attribute must implement or promise the "
                         "`gpu::TargetAttrInterface`";
 }
+
+namespace {
+LogicalResult parseObject(AsmParser &odsParser, CompilationTarget &format,
+                          StringAttr &object) {
+  std::optional<CompilationTarget> formatResult;
+  StringRef enumKeyword;
+  auto loc = odsParser.getCurrentLocation();
+  if (failed(odsParser.parseOptionalKeyword(&enumKeyword)))
+    formatResult = CompilationTarget::Fatbin;
+  if (!formatResult &&
+      (formatResult =
+           gpu::symbolizeEnum<gpu::CompilationTarget>(enumKeyword)) &&
+      odsParser.parseEqual())
+    return odsParser.emitError(loc, "expected an equal sign");
+  if (!formatResult)
+    return odsParser.emitError(loc, "expected keyword for GPU object format");
+  FailureOr<StringAttr> objectResult =
+      FieldParser<StringAttr>::parse(odsParser);
+  if (failed(objectResult))
+    return odsParser.emitError(odsParser.getCurrentLocation(),
+                               "failed to parse GPU_ObjectAttr parameter "
+                               "'object' which is to be a `StringAttr`");
+  format = *formatResult;
+  object = *objectResult;
+  return success();
+}
+
+void printObject(AsmPrinter &odsParser, CompilationTarget format,
+                 StringAttr object) {
+  if (format != CompilationTarget::Fatbin)
+    odsParser << stringifyEnum(format) << " = ";
+  odsParser << object;
+}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // GPU select object attribute
@@ -1985,6 +2045,28 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
       return emitError()
              << "the target attribute must be a GPU Target attribute";
     }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DynamicSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult gpu::DynamicSharedMemoryOp::verify() {
+  if (!getOperation()->getParentWithTrait<OpTrait::SymbolTable>())
+    return emitOpError() << "must be inside an op with symbol table";
+
+  MemRefType memrefType = getResultMemref().getType();
+  // Check address space
+  if (!GPUDialect::hasWorkgroupMemoryAddressSpace(memrefType)) {
+    return emitOpError() << "address space must be "
+                         << gpu::AddressSpaceAttr::getMnemonic() << "<"
+                         << stringifyEnum(gpu::AddressSpace::Workgroup) << ">";
+  }
+  if (memrefType.hasStaticShape()) {
+    return emitOpError() << "result memref type must be memref<?xi8, "
+                            "#gpu.address_space<workgroup>>";
   }
   return success();
 }
@@ -2020,6 +2102,14 @@ SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
 }
 
+CompilationTarget TargetOptions::getCompilationTarget() const {
+  return compilationTarget;
+}
+
+CompilationTarget TargetOptions::getDefaultCompilationTarget() {
+  return CompilationTarget::Fatbin;
+}
+
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
 TargetOptions::tokenizeCmdOptions() const {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
@@ -2041,10 +2131,6 @@ TargetOptions::tokenizeCmdOptions() const {
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
-}
-
-TargetOptions::CompilationTarget TargetOptions::getCompilationTarget() const {
-  return compilationTarget;
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

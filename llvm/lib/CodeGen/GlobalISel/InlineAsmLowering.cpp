@@ -133,71 +133,6 @@ static void getRegistersForValue(MachineFunction &MF,
   }
 }
 
-/// Return an integer indicating how general CT is.
-static unsigned getConstraintGenerality(TargetLowering::ConstraintType CT) {
-  switch (CT) {
-  case TargetLowering::C_Immediate:
-  case TargetLowering::C_Other:
-  case TargetLowering::C_Unknown:
-    return 0;
-  case TargetLowering::C_Register:
-    return 1;
-  case TargetLowering::C_RegisterClass:
-    return 2;
-  case TargetLowering::C_Memory:
-  case TargetLowering::C_Address:
-    return 3;
-  }
-  llvm_unreachable("Invalid constraint type");
-}
-
-static void chooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
-                             const TargetLowering *TLI) {
-  assert(OpInfo.Codes.size() > 1 && "Doesn't have multiple constraint options");
-  unsigned BestIdx = 0;
-  TargetLowering::ConstraintType BestType = TargetLowering::C_Unknown;
-  int BestGenerality = -1;
-
-  // Loop over the options, keeping track of the most general one.
-  for (unsigned i = 0, e = OpInfo.Codes.size(); i != e; ++i) {
-    TargetLowering::ConstraintType CType =
-        TLI->getConstraintType(OpInfo.Codes[i]);
-
-    // Indirect 'other' or 'immediate' constraints are not allowed.
-    if (OpInfo.isIndirect && !(CType == TargetLowering::C_Memory ||
-                               CType == TargetLowering::C_Register ||
-                               CType == TargetLowering::C_RegisterClass))
-      continue;
-
-    // If this is an 'other' or 'immediate' constraint, see if the operand is
-    // valid for it. For example, on X86 we might have an 'rI' constraint. If
-    // the operand is an integer in the range [0..31] we want to use I (saving a
-    // load of a register), otherwise we must use 'r'.
-    if (CType == TargetLowering::C_Other ||
-        CType == TargetLowering::C_Immediate) {
-      assert(OpInfo.Codes[i].size() == 1 &&
-             "Unhandled multi-letter 'other' constraint");
-      // FIXME: prefer immediate constraints if the target allows it
-    }
-
-    // Things with matching constraints can only be registers, per gcc
-    // documentation.  This mainly affects "g" constraints.
-    if (CType == TargetLowering::C_Memory && OpInfo.hasMatchingInput())
-      continue;
-
-    // This constraint letter is more general than the previous one, use it.
-    int Generality = getConstraintGenerality(CType);
-    if (Generality > BestGenerality) {
-      BestType = CType;
-      BestIdx = i;
-      BestGenerality = Generality;
-    }
-  }
-
-  OpInfo.ConstraintCode = OpInfo.Codes[BestIdx];
-  OpInfo.ConstraintType = BestType;
-}
-
 static void computeConstraintToUse(const TargetLowering *TLI,
                                    TargetLowering::AsmOperandInfo &OpInfo) {
   assert(!OpInfo.Codes.empty() && "Must have at least one constraint");
@@ -207,7 +142,18 @@ static void computeConstraintToUse(const TargetLowering *TLI,
     OpInfo.ConstraintCode = OpInfo.Codes[0];
     OpInfo.ConstraintType = TLI->getConstraintType(OpInfo.ConstraintCode);
   } else {
-    chooseConstraint(OpInfo, TLI);
+    TargetLowering::ConstraintGroup G = TLI->getConstraintPreferences(OpInfo);
+    if (G.empty())
+      return;
+    // FIXME: prefer immediate constraints if the target allows it
+    unsigned BestIdx = 0;
+    for (const unsigned E = G.size();
+         BestIdx < E && (G[BestIdx].second == TargetLowering::C_Other ||
+                         G[BestIdx].second == TargetLowering::C_Immediate);
+         ++BestIdx)
+      ;
+    OpInfo.ConstraintCode = G[BestIdx].first;
+    OpInfo.ConstraintType = G[BestIdx].second;
   }
 
   // 'X' matches anything.
@@ -373,9 +319,9 @@ bool InlineAsmLowering::lowerInlineAsm(
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         // Add information to the INLINEASM instruction to know about this
@@ -517,7 +463,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
 
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI->getInlineAsmMemConstraint(OpInfo.ConstraintCode);
         InlineAsm::Flag OpFlags(InlineAsm::Kind::Mem, 1);
         OpFlags.setMemConstraint(ConstraintID);

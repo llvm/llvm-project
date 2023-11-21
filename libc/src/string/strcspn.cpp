@@ -11,10 +11,10 @@
 #include "src/__support/common.h"
 #include "src/string/string_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(size_t, strcspn, (const char *src, const char *segment)) {
   return internal::complementary_span(src, segment);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

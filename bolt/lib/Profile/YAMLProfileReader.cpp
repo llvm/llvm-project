@@ -294,9 +294,19 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
   buildNameMaps(BC);
 
   // Preliminary assign function execution count.
-  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
-    if (BF)
+  for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
+    if (!BF)
+      continue;
+    if (!BF->hasProfile()) {
       BF->setExecutionCount(YamlBF.ExecCount);
+    } else {
+      if (opts::Verbosity >= 1) {
+        errs() << "BOLT-WARNING: dropping duplicate profile for " << YamlBF.Name
+               << '\n';
+      }
+      BF = nullptr;
+    }
+  }
 
   return Error::success();
 }

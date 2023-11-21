@@ -15,3 +15,23 @@ void test_vsoxei64_v_i8m1(int8_t *base, vuint64m8_t bindex, vint8m1_t value, siz
 void test_xsfvcp_sf_vc_x_se_u64m1(uint64_t rs1, size_t vl) {
   __riscv_sf_vc_x_se_u64m1(1, 1, 1, rs1, vl); // expected-error {{call to undeclared function '__riscv_sf_vc_x_se_u64m1'}}
 }
+
+void test_xsfvqmaccdod() {
+  __riscv_sf_vqmacc_2x8x2(); // expected-error {{call to undeclared function '__riscv_sf_vqmacc_2x8x2'}}
+}
+
+void test_xsfvqmaccqoq() {
+  __riscv_sf_vqmacc_4x8x4(); // expected-error {{call to undeclared function '__riscv_sf_vqmacc_4x8x4'}}
+}
+
+void test_xsfvfwmaccqqq() {
+  __riscv_sf_vfwmacc_4x4x4(); // expected-error {{call to undeclared function '__riscv_sf_vfwmacc_4x4x4'}}
+}
+
+void test_xsfvfnrclipxfqf() {
+  __riscv_sf_vfnrclip_x_f_qf(); // expected-error {{call to undeclared function '__riscv_sf_vfnrclip_x_f_qf'}}
+}
+
+void test_xsfvfnrclipxufqf() {
+  __riscv_sf_vfnrclip_xu_f_qf(); // expected-error {{call to undeclared function '__riscv_sf_vfnrclip_xu_f_qf'}}
+}

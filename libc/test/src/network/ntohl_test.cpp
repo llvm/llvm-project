@@ -15,14 +15,14 @@ TEST(LlvmLibcNtohl, SmokeTest) {
   uint32_t original = 0x67452301;
   uint32_t swapped = 0x01234567;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  EXPECT_EQ(__llvm_libc::ntohl(original), swapped);
+  EXPECT_EQ(LIBC_NAMESPACE::ntohl(original), swapped);
 #endif
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  EXPECT_EQ(__llvm_libc::ntohl(original), original);
+  EXPECT_EQ(LIBC_NAMESPACE::ntohl(original), original);
 #endif
 }
 
 TEST(LlvmLibcNtohl, CompleteTest) {
   uint32_t original = 0x01234567;
-  EXPECT_EQ(__llvm_libc::ntohl(__llvm_libc::htonl(original)), original);
+  EXPECT_EQ(LIBC_NAMESPACE::ntohl(LIBC_NAMESPACE::htonl(original)), original);
 }

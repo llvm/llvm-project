@@ -311,6 +311,14 @@ protected:
   /// An OpenMP-IR-Builder instance.
   llvm::OpenMPIRBuilder OMPBuilder;
 
+  /// Helper to determine the min/max number of threads/teams for \p D.
+  void computeMinAndMaxThreadsAndTeams(const OMPExecutableDirective &D,
+                                       CodeGenFunction &CGF,
+                                       int32_t &MinThreadsVal,
+                                       int32_t &MaxThreadsVal,
+                                       int32_t &MinTeamsVal,
+                                       int32_t &MaxTeamsVal);
+
   /// Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
   /// \param ParentName Name of the function that encloses the target region.
@@ -637,7 +645,8 @@ public:
   /// Otherwise, return nullptr.
   const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
                                                 const OMPExecutableDirective &D,
-                                                int32_t &DefaultVal);
+                                                int32_t &MinTeamsVal,
+                                                int32_t &MaxTeamsVal);
   llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
                                               const OMPExecutableDirective &D);
 
@@ -648,7 +657,7 @@ public:
   /// UpperBoundOnly is true, no expression evaluation is perfomed.
   const Expr *getNumThreadsExprForTargetDirective(
       CodeGenFunction &CGF, const OMPExecutableDirective &D,
-      uint32_t &UpperBound, bool UpperBoundOnly,
+      int32_t &UpperBound, bool UpperBoundOnly,
       llvm::Value **CondExpr = nullptr, const Expr **ThreadLimitExpr = nullptr);
 
   /// Emit an expression that denotes the number of threads a target region
@@ -1079,14 +1088,6 @@ public:
   emitThreadPrivateVarDefinition(const VarDecl *VD, Address VDAddr,
                                  SourceLocation Loc, bool PerformInit,
                                  CodeGenFunction *CGF = nullptr);
-
-  /// Emit a code for initialization of declare target variable.
-  /// \param VD Declare target variable.
-  /// \param Addr Address of the global variable \a VD.
-  /// \param PerformInit true if initialization expression is not constant.
-  virtual bool emitDeclareTargetVarDefinition(const VarDecl *VD,
-                                              llvm::GlobalVariable *Addr,
-                                              bool PerformInit);
 
   /// Emit code for handling declare target functions in the runtime.
   /// \param FD Declare target function.

@@ -14,12 +14,9 @@
 ; CHECK-SPIRV: OpName %[[#foo:]] "_Z3foo14ocl_image2d_ro"
 ; CHECK-SPIRV: %[[#foo]] = OpFunction %[[#]]
 
-%opencl.image2d_ro_t = type opaque
-
-define spir_func void @bar(%opencl.image2d_ro_t addrspace(1)* %srcImage) local_unnamed_addr {
-entry:
-  tail call spir_func void @_Z3foo14ocl_image2d_ro(%opencl.image2d_ro_t addrspace(1)* %srcImage)
+define spir_func void @bar(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %srcImage) local_unnamed_addr {
+  tail call spir_func void @_Z3foo14ocl_image2d_ro(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %srcImage)
   ret void
 }
 
-declare spir_func void @_Z3foo14ocl_image2d_ro(%opencl.image2d_ro_t addrspace(1)*) local_unnamed_addr
+declare spir_func void @_Z3foo14ocl_image2d_ro(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0)) local_unnamed_addr

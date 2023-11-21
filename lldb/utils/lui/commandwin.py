@@ -13,21 +13,20 @@ from itertools import islice
 
 
 class History(object):
-
     def __init__(self):
         self.data = {}
         self.pos = 0
-        self.tempEntry = ''
+        self.tempEntry = ""
 
     def previous(self, curr):
         if self.pos == len(self.data):
             self.tempEntry = curr
 
         if self.pos < 0:
-            return ''
+            return ""
         if self.pos == 0:
             self.pos -= 1
-            return ''
+            return ""
         if self.pos > 0:
             self.pos -= 1
             return self.data[self.pos]
@@ -38,13 +37,13 @@ class History(object):
 
         if self.pos < len(self.data):
             return self.data[self.pos]
-        elif self.tempEntry != '':
+        elif self.tempEntry != "":
             return self.tempEntry
         else:
-            return ''
+            return ""
 
     def add(self, c):
-        self.tempEntry = ''
+        self.tempEntry = ""
         self.pos = len(self.data)
         if self.pos == 0 or self.data[self.pos - 1] != c:
             self.data[self.pos] = c
@@ -52,7 +51,6 @@ class History(object):
 
 
 class CommandWin(cui.TitledWin):
-
     def __init__(self, driver, x, y, w, h):
         super(CommandWin, self).__init__(x, y, w, h, "Commands")
         self.command = ""
@@ -72,7 +70,8 @@ class CommandWin(cui.TitledWin):
             matches = lldb.SBStringList()
             commandinterpreter = self.getCommandInterpreter()
             commandinterpreter.HandleCompletion(
-                self.data, self.el.index, 0, -1, matches)
+                self.data, self.el.index, 0, -1, matches
+            )
             if matches.GetSize() == 2:
                 self.el.content += matches.GetStringAtIndex(0)
                 self.el.index = len(self.el.content)
@@ -90,19 +89,17 @@ class CommandWin(cui.TitledWin):
         self.startline = self.win.getmaxyx()[0] - 2
 
         self.el = cui.CursesEditLine(
-            self.win,
-            self.history,
-            enterCallback,
-            tabCompleteCallback)
+            self.win, self.history, enterCallback, tabCompleteCallback
+        )
         self.el.prompt = self.driver.getPrompt()
         self.el.showPrompt(self.startline, 0)
 
     def handleCommand(self, cmd):
-       # enter!
+        # enter!
         self.win.scroll(1)  # TODO: scroll more for longer commands
-        if cmd == '':
-            cmd = self.history.previous('')
-        elif cmd in ('q', 'quit'):
+        if cmd == "":
+            cmd = self.history.previous("")
+        elif cmd in ("q", "quit"):
             self.driver.terminate()
             return
 
@@ -114,13 +111,13 @@ class CommandWin(cui.TitledWin):
         else:
             out = ret.GetError()
             attr = curses.color_pair(3)  # red on black
-        self.win.addstr(self.startline, 0, out + '\n', attr)
+        self.win.addstr(self.startline, 0, out + "\n", attr)
         self.win.scroll(1)
         self.el.showPrompt(self.startline, 0)
 
     def handleEvent(self, event):
         if isinstance(event, int):
-            if event == curses.ascii.EOT and self.el.content == '':
+            if event == curses.ascii.EOT and self.el.content == "":
                 # When the command is empty, treat CTRL-D as EOF.
                 self.driver.terminate()
                 return

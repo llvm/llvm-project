@@ -1248,16 +1248,20 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
   if (Filename.empty())
     return false;
 
+  // Passing this to LookupFile forces header search to check whether the found
+  // file belongs to a module. Skipping that check could incorrectly mark
+  // modular header as textual, causing issues down the line.
+  ModuleMap::KnownHeader KH;
+
   // Search include directories.
   OptionalFileEntryRef File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
-                    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+                    nullptr, nullptr, nullptr, &KH, nullptr, nullptr);
 
   if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;
     if (File)
-      FileType =
-          PP.getHeaderSearchInfo().getFileDirFlavor(&File->getFileEntry());
+      FileType = PP.getHeaderSearchInfo().getFileDirFlavor(*File);
     Callbacks->HasInclude(FilenameLoc, Filename, isAngled, File, FileType);
   }
 
@@ -1695,6 +1699,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Case("__array_rank", true)
               .Case("__array_extent", true)
               .Case("__reference_binds_to_temporary", true)
+              .Case("__reference_constructs_from_temporary", true)
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
 #include "clang/Basic/TransformTypeTraits.def"
               .Default(false);

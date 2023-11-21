@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlan.h"
+#include "VPlanAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -415,14 +416,15 @@ bool VPInstruction::isFPMathOp() const {
   return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-         Opcode == Instruction::FCmp;
+         Opcode == Instruction::FCmp || Opcode == Instruction::Select;
 }
 #endif
 
 void VPInstruction::execute(VPTransformState &State) {
   assert(!State.Instance && "VPInstruction executing an Instance");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  assert(hasFastMathFlags() == isFPMathOp() &&
+  assert((hasFastMathFlags() == isFPMathOp() ||
+          getOpcode() == Instruction::Select) &&
          "Recipe not a FPMathOp but has fast-math flags?");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
@@ -502,6 +504,9 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFrom(CI.getDebugLoc());
 
+  FunctionType *VFTy = nullptr;
+  if (Variant)
+    VFTy = Variant->getFunctionType();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     SmallVector<Type *, 2> TysForDecl;
     // Add return type if intrinsic is overloaded on it.
@@ -513,12 +518,15 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
+      // Some vectorized function variants may also take a scalar argument,
+      // e.g. linear parameters for pointers.
       Value *Arg;
-      if (VectorIntrinsicID == Intrinsic::not_intrinsic ||
-          !isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
-        Arg = State.get(I.value(), Part);
-      else
+      if ((VFTy && !VFTy->getParamType(I.index())->isVectorTy()) ||
+          (VectorIntrinsicID != Intrinsic::not_intrinsic &&
+           isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index())))
         Arg = State.get(I.value(), VPIteration(0, 0));
+      else
+        Arg = State.get(I.value(), Part);
       if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
         TysForDecl.push_back(Arg->getType());
       Args.push_back(Arg);
@@ -737,7 +745,18 @@ void VPWidenRecipe::execute(VPTransformState &State) {
                       << Instruction::getOpcodeName(Opcode));
     llvm_unreachable("Unhandled instruction!");
   } // end of switch.
+
+#if !defined(NDEBUG)
+  // Verify that VPlan type inference results agree with the type of the
+  // generated values.
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    assert(VectorType::get(State.TypeAnalysis.inferScalarType(this),
+                           State.VF) == State.get(this, Part)->getType() &&
+           "inferred type and type from generated instructions do not match");
+  }
+#endif
 }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
@@ -1089,7 +1108,7 @@ void VPScalarIVStepsRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << Indent << "= SCALAR-STEPS ";
+  O << " = SCALAR-STEPS ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -1417,7 +1436,8 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = CANONICAL-INDUCTION";
+  O << " = CANONICAL-INDUCTION ";
+  printOperands(O, SlotTracker);
 }
 #endif
 
@@ -1625,23 +1645,7 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
   assert(EnableVPlanNativePath &&
          "Non-native vplans are not expected to have VPWidenPHIRecipes.");
 
-  // Currently we enter here in the VPlan-native path for non-induction
-  // PHIs where all control flow is uniform. We simply widen these PHIs.
-  // Create a vector phi with no operands - the vector phi operands will be
-  // set at the end of vector code generation.
-  VPBasicBlock *Parent = getParent();
-  VPRegionBlock *LoopRegion = Parent->getEnclosingLoopRegion();
-  unsigned StartIdx = 0;
-  // For phis in header blocks of loop regions, use the index of the value
-  // coming from the preheader.
-  if (LoopRegion->getEntryBasicBlock() == Parent) {
-    for (unsigned I = 0; I < getNumOperands(); ++I) {
-      if (getIncomingBlock(I) ==
-          LoopRegion->getSinglePredecessor()->getExitingBasicBlock())
-        StartIdx = I;
-    }
-  }
-  Value *Op0 = State.get(getOperand(StartIdx), 0);
+  Value *Op0 = State.get(getOperand(0), 0);
   Type *VecTy = Op0->getType();
   Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, "vec.phi");
   State.set(this, VecPhi, 0);

@@ -70,8 +70,8 @@ void clang::EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records,
     NameToUTF8.push_back(Match);
   }
 
-  emitSourceFileHeader("HTML named character reference to UTF-8 "
-                       "translation", OS);
+  emitSourceFileHeader("HTML named character reference to UTF-8 translation",
+                       OS, Records);
 
   OS << "StringRef translateHTMLNamedCharacterReferenceToUTF8(\n"
         "                                             StringRef Name) {\n";

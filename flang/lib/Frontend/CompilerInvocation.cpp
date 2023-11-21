@@ -98,12 +98,12 @@ static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
 /// Extracts the optimisation level from \a args.
 static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
-  unsigned defaultOpt = llvm::CodeGenOpt::None;
+  unsigned defaultOpt = 0;
 
   if (llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_O_Group)) {
     if (a->getOption().matches(clang::driver::options::OPT_O0))
-      return llvm::CodeGenOpt::None;
+      return 0;
 
     assert(a->getOption().matches(clang::driver::options::OPT_O));
 
@@ -150,6 +150,34 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
       diags.Report(debugWarning) << arg->getValue();
     }
   }
+  return true;
+}
+
+static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
+                              llvm::opt::ArgList &args,
+                              clang::DiagnosticsEngine &diags) {
+  llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fveclib);
+  if (!arg)
+    return true;
+
+  using VectorLibrary = llvm::driver::VectorLibrary;
+  std::optional<VectorLibrary> val =
+      llvm::StringSwitch<std::optional<VectorLibrary>>(arg->getValue())
+          .Case("Accelerate", VectorLibrary::Accelerate)
+          .Case("LIBMVEC", VectorLibrary::LIBMVEC)
+          .Case("MASSV", VectorLibrary::MASSV)
+          .Case("SVML", VectorLibrary::SVML)
+          .Case("SLEEF", VectorLibrary::SLEEF)
+          .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
+          .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("NoLibrary", VectorLibrary::NoLibrary)
+          .Default(std::nullopt);
+  if (!val.has_value()) {
+    diags.Report(clang::diag::err_drv_invalid_value)
+        << arg->getAsString(args) << arg->getValue();
+    return false;
+  }
+  opts.setVecLib(val.value());
   return true;
 }
 
@@ -213,6 +241,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  opts.AliasAnalysis =
+      args.hasFlag(clang::driver::options::OPT_falias_analysis,
+                   clang::driver::options::OPT_fno_alias_analysis,
+                   /*default=*/false);
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
@@ -986,6 +1019,62 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// Parses vscale range options and populates the CompilerInvocation
+/// accordingly.
+/// Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
+                            clang::DiagnosticsEngine &diags) {
+  LangOptions &opts = invoc.getLangOpts();
+  if (const auto arg =
+          args.getLastArg(clang::driver::options::OPT_mvscale_min_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    unsigned VScaleMin;
+    if (argValue.getAsInteger(/*Radix=*/10, VScaleMin)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << arg->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMin = VScaleMin;
+  }
+  if (const auto arg =
+          args.getLastArg(clang::driver::options::OPT_mvscale_max_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    unsigned VScaleMax;
+    if (argValue.getAsInteger(/*Radix=w*/ 10, VScaleMax)) {
+      diags.Report(clang::diag::err_drv_unsupported_option_argument)
+          << arg->getSpelling() << argValue;
+      return false;
+    }
+    opts.VScaleMax = VScaleMax;
+  }
+  return true;
+}
+
+static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
+                                   llvm::opt::ArgList &args,
+                                   clang::DiagnosticsEngine &diags) {
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+
+  // TODO: support --dependent-lib on other platforms when MLIR supports
+  //       !llvm.dependent.lib
+  if (args.hasArg(clang::driver::options::OPT_dependent_lib) &&
+      !triple.isOSWindows()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "--dependent-lib is only supported on Windows");
+    diags.Report(diagID);
+    return false;
+  }
+
+  invoc.getCodeGenOpts().DependentLibs =
+      args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1033,6 +1122,19 @@ bool CompilerInvocation::createFromArgs(
     res.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
+  // -flang-deprecated-no-hlfir
+  if (args.hasArg(clang::driver::options::OPT_flang_deprecated_no_hlfir) &&
+      !args.hasArg(clang::driver::options::OPT_emit_hlfir)) {
+    if (args.hasArg(clang::driver::options::OPT_flang_experimental_hlfir)) {
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "Options '-flang-experimental-hlfir' and "
+          "'-flang-deprecated-no-hlfir' cannot be both specified");
+      diags.Report(diagID);
+    }
+    res.loweringOpts.setLowerToHighLevelFIR(false);
+  }
+
   if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
     res.loweringOpts.setPolymorphicTypeImpl(true);
   }
@@ -1063,6 +1165,7 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);
   parseCodeGenArgs(res.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(res.getCodeGenOpts(), args, diags);
+  success &= parseVectorLibArg(res.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);
@@ -1078,6 +1181,10 @@ bool CompilerInvocation::createFromArgs(
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
   success &= parseFloatingPointArgs(res, args, diags);
+
+  success &= parseVScaleArgs(res, args, diags);
+
+  success &= parseLinkerOptionsArgs(res, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent

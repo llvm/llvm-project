@@ -158,7 +158,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
 
     Features.push_back(ArchInfo->ArchFeature);
 
-    uint64_t Extension = CpuInfo->getImpliedExtensions();
+    auto Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
   }
@@ -411,6 +411,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     else if (*I == "+v9.2a") V9Version = 2;
     else if (*I == "+v9.3a") V9Version = 3;
     else if (*I == "+v9.4a") V9Version = 4;
+    else if (*I == "+v9.5a") V9Version = 5;
     else if (*I == "+sm4")  HasSM4 = true;
     else if (*I == "+sha3") HasSHA3 = true;
     else if (*I == "+sha2") HasSHA2 = true;

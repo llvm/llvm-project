@@ -18,7 +18,9 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -30,6 +32,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -140,6 +143,11 @@ static cl::opt<bool>
                     cl::desc("Enable debugger suppport (default = !-noexec)"),
                     cl::init(true), cl::Hidden, cl::cat(JITLinkCategory));
 
+static cl::opt<bool> PerfSupport("perf-support",
+                                 cl::desc("Enable perf profiling support"),
+                                 cl::init(false), cl::Hidden,
+                                 cl::cat(JITLinkCategory));
+
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -243,10 +251,14 @@ static cl::opt<bool> UseSharedMemory(
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+  errs() << "Linking in runtime functions\n"
+         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
 }
 
 static bool UseTestResultOverride = false;
@@ -501,7 +513,7 @@ public:
     auto FixedAI = std::move(AI);
     FixedAI.MappingBase -= DeltaAddr;
     for (auto &Seg : FixedAI.Segments)
-      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetimePolicy()};
+      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetime()};
     FixedAI.Actions.clear();
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](
@@ -978,6 +990,12 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   if (DebuggerSupport && TT.isOSBinFormatMachO())
     ObjLayer.addPlugin(ExitOnErr(
         GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
+
+  if (PerfSupport && TT.isOSBinFormatELF()) {
+    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
+        this->ES.getExecutorProcessControl(), *MainJD, true, true)));
+  }
 
   // Set up the platform.
   if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
@@ -1885,7 +1903,8 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      S.ES.getTargetTriple().isLittleEndian() ? support::little : support::big,
+      S.ES.getTargetTriple().isLittleEndian() ? llvm::endianness::little
+                                              : llvm::endianness::big,
       TT, StringRef(), Features, dbgs());
 
   std::string CheckLineStart = "# " + CheckName + ":";

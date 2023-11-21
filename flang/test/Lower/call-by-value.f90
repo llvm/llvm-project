@@ -1,5 +1,5 @@
 ! Test for PassBy::Value
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QQmain()
 !CHECK: %[[LOGICAL:.*]] = fir.alloca !fir.logical<1>
@@ -65,10 +65,9 @@ end
 ! CHECK-LABEL:   func.func @test_char_value(
 ! CHECK-SAME:                               %[[VAL_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x"}) attributes {fir.bindc_name = "test_char_value"} {
 ! CHECK:           %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
-! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:           %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:           %[[VAL_2:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.call @_QPinternal_call4(%[[VAL_5]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           return
 ! CHECK:         }

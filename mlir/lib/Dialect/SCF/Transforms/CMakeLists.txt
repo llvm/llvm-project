@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRSCFTransforms
+  BufferDeallocationOpInterfaceImpl.cpp
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
   ForToWhile.cpp

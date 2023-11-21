@@ -11,10 +11,10 @@
 
 #include <sys/stat.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int stat(const char *__restrict path, struct stat *__restrict statbuf);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_STAT_H

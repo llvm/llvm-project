@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 
@@ -28,15 +29,13 @@
 // the apple condition here should be removed.
 #elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP)
 #include "arm/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
-#include "riscv32/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-#include "riscv64/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "riscv/FEnvImpl.h"
 #else
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 // All dummy functions silently succeed.
 
@@ -64,10 +63,10 @@ LIBC_INLINE int get_env(fenv_t *) { return 0; }
 
 LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 
-} // namespace __llvm_libc::fputil
+} // namespace LIBC_NAMESPACE::fputil
 #endif
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 LIBC_INLINE int set_except_if_required(int excepts) {
   if (math_errhandling & MATH_ERREXCEPT)
@@ -86,6 +85,6 @@ LIBC_INLINE void set_errno_if_required(int err) {
     libc_errno = err;
 }
 
-} // namespace __llvm_libc::fputil
+} // namespace LIBC_NAMESPACE::fputil
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H

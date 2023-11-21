@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_ARMTARGETPARSER_H
 #define LLVM_TARGETPARSER_ARMTARGETPARSER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
@@ -142,6 +143,14 @@ enum class FPURestriction {
   SP_D16    ///< Only single-precision instructions, with 16 D registers
 };
 
+inline bool isDoublePrecision(const FPURestriction restriction) {
+  return restriction != FPURestriction::SP_D16;
+}
+
+inline bool has32Regs(const FPURestriction restriction) {
+  return restriction == FPURestriction::None;
+}
+
 // An FPU name implies one of three levels of Neon support:
 enum class NeonSupportLevel {
   None = 0, ///< No Neon
@@ -258,6 +267,8 @@ StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 /// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
 /// string then the triple's arch name is used.
 StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
+
+void PrintSupportedExtensions(StringMap<StringRef> DescMap);
 
 } // namespace ARM
 } // namespace llvm

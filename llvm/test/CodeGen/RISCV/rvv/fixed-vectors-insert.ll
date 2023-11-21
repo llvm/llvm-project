@@ -40,7 +40,7 @@ define <32 x i32> @insertelt_v32i32_0(<32 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v32i32_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <32 x i32> %a, i32 %y, i32 0
@@ -54,7 +54,7 @@ define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v16, a0
-; CHECK-NEXT:    vsetivli zero, 5, e32, m8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v16, 4
 ; CHECK-NEXT:    ret
   %b = insertelement <32 x i32> %a, i32 %y, i32 4
@@ -92,7 +92,7 @@ define <64 x i32> @insertelt_v64i32_0(<64 x i32> %a, i32 %y) {
 ; CHECK-LABEL: insertelt_v64i32_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <64 x i32> %a, i32 %y, i32 0
@@ -230,7 +230,7 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV32-NEXT:    vmv.x.s a4, v9
 ; RV32-NEXT:    vmv.x.s a5, v8
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vmv.v.x v8, a5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a4
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
@@ -246,7 +246,7 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV64-NEXT:    vmv.x.s a1, v9
 ; RV64-NEXT:    vmv.x.s a2, v8
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a2
+; RV64-NEXT:    vmv.v.x v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
@@ -390,7 +390,7 @@ define <8 x i64> @insertelt_v8i64_0(<8 x i64> %a, ptr %x) {
 ; CHECK-LABEL: insertelt_v8i64_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <8 x i64> %a, i64 -1, i32 0
@@ -468,7 +468,7 @@ define <8 x i64> @insertelt_c6_v8i64_0(<8 x i64> %a, ptr %x) {
 ; CHECK-LABEL: insertelt_c6_v8i64_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 6
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %b = insertelement <8 x i64> %a, i64 6, i32 0

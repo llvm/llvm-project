@@ -125,4 +125,130 @@ body:               |
   %2:sreg_32 = S_MOV_B32 1
   %3:sreg_32 = COPY %1:vgpr_32
   %4:sreg_32 = S_CSELECT_B32 killed %2:sreg_32, killed %3:sreg_32, implicit undef $scc
+...
+
 ---
+# Test that the VGPR immediate is replaced with an SGPR one.
+# GCN-LABEL: name: reg_sequence_vgpr_immediate
+# GCN: [[A_SGPR:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+# GCN-NEXT: [[VGPR_CONST:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 37
+# GCN-NEXT: [[SGPR_CONST:%[0-9]+]]:sgpr_32 = S_MOV_B32 37
+# GCN-NEXT: {{%[0-9]+}}:sreg_64 = REG_SEQUENCE [[SGPR_CONST]], %subreg.sub0, [[A_SGPR]], %subreg.sub1
+name: reg_sequence_vgpr_immediate
+body:             |
+  bb.0:
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_MOV_B32_e32 37, implicit $exec
+    %2:sreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %0:sreg_32, %subreg.sub1
+
+    %3:vgpr_32 = V_ADD_U32_e32 %1:vgpr_32, %1:vgpr_32, implicit $exec
+...
+
+---
+# GCN-LABEL: name: insert_subreg_vgpr_immediate
+# GCN: [[DST:%[0-9]+]]:sgpr_128 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
+# GCN-NEXT: [[SGPR_CONST:%[0-9]+]]:sgpr_32 = S_MOV_B32 43
+# GCN-NEXT: {{%[0-9]+}}:sgpr_128 = INSERT_SUBREG [[DST]], [[SGPR_CONST]], %subreg.sub3
+name: insert_subreg_vgpr_immediate
+body:             |
+  bb.0:
+    %0:sgpr_128 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr0, %subreg.sub2
+    %1:vgpr_32 = V_MOV_B32_e32 43, implicit $exec
+    %2:sgpr_128 = INSERT_SUBREG %0, %1, %subreg.sub3
+...
+
+---
+# GCN-LABEL: name: phi_vgpr_immediate
+# GCN: bb.1:
+# GCN: [[SGPR:%[0-9]+]]:sgpr_32 = S_MOV_B32 51
+# GCN: bb.2:
+# GCN: IMPLICIT_DEF
+# GCN: bb.3:
+# GCN: sreg_32 = PHI [[SGPR]], %bb.1
+name: phi_vgpr_immediate
+tracksRegLiveness: true
+body:               |
+  bb.0:
+    S_CBRANCH_SCC1 %bb.2, implicit undef $scc
+
+  bb.1:
+    %0:vgpr_32 = V_MOV_B32_e32 51, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    %1:sreg_32 = IMPLICIT_DEF
+    S_BRANCH %bb.3
+
+  bb.3:
+    %2:sreg_32 = PHI %0:vgpr_32, %bb.1, %1:sreg_32, %bb.2
+
+---
+name:            cmp_f32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: cmp_f32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: %6:sreg_64_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[V_CVT_F32_U32_e64_]], 0, [[DEF1]], 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %6, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_CVT_F32_U32_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %3:sreg_32 = COPY %2:vgpr_32
+    nofpexcept S_CMP_LT_F32 killed %3:sreg_32, %1:sreg_32, implicit-def $scc, implicit $mode
+    %4:sreg_64_xexec = COPY $scc
+    %5:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed %4, implicit $exec
+...
+
+# Test to ensure that src2 of fmac is moved to vgpr
+---
+name:            fmac_f32
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fmac_f32
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
+    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F32_e64 0, [[V_CVT_F32_U32_e64_]], 0, [[DEF1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = IMPLICIT_DEF
+    %2:sreg_32 = IMPLICIT_DEF
+    %3:vgpr_32 = V_CVT_F32_U32_e64 %0:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %4:sreg_32 = COPY %3:vgpr_32
+    %5:sreg_32 = nofpexcept S_FMAC_F32 killed %4:sreg_32, %1:sreg_32, %2:sreg_32, implicit $mode
+...
+
+---
+# GCN-LABEL: name: moveimm_subreg_input
+# GCN: %0:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+# GCN: :vgpr_32 = COPY %0.sub0
+name:            moveimm_subreg_input
+body:             |
+  bb.0:
+    %0:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+    %1:sreg_32 = COPY %0.sub0
+...
+
+---
+# GCN-LABEL: name: s_cselect_b64
+# GCN: %0:vgpr_32 = IMPLICIT_DEF
+# GCN: %1:vreg_64 = IMPLICIT_DEF
+# GCN: %2:sreg_32 = IMPLICIT_DEF
+# GCN: %3:sreg_64 = IMPLICIT_DEF
+# GCN: %7:sreg_64_xexec = V_CMP_EQ_U32_e64 %0, 0, implicit $exec
+# GCN: %6:vreg_64 = V_CNDMASK_B64_PSEUDO 0, %1, %7, implicit $exec
+name: s_cselect_b64
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %0
+    %3:sreg_64 = COPY %1
+    S_CMP_EQ_U32 %2, 0, implicit-def $scc
+    %4:sreg_64 = S_CSELECT_B64 %3, 0, implicit $scc
+...

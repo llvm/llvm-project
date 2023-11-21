@@ -83,8 +83,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-NEXT:  .LBB1_2: # %bb1
 ; RV32I-SMALL-NEXT:    li a0, 4
 ; RV32I-SMALL-NEXT:    j .LBB1_8
-; RV32I-SMALL-NEXT:  .LBB1_3: # %bb2
-; RV32I-SMALL-NEXT:    li a0, 3
+; RV32I-SMALL-NEXT:  .LBB1_3: # %bb5
+; RV32I-SMALL-NEXT:    li a0, 100
 ; RV32I-SMALL-NEXT:    j .LBB1_8
 ; RV32I-SMALL-NEXT:  .LBB1_4: # %bb3
 ; RV32I-SMALL-NEXT:    li a0, 2
@@ -92,8 +92,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-SMALL-NEXT:  .LBB1_5: # %bb4
 ; RV32I-SMALL-NEXT:    li a0, 1
 ; RV32I-SMALL-NEXT:    j .LBB1_8
-; RV32I-SMALL-NEXT:  .LBB1_6: # %bb5
-; RV32I-SMALL-NEXT:    li a0, 100
+; RV32I-SMALL-NEXT:  .LBB1_6: # %bb2
+; RV32I-SMALL-NEXT:    li a0, 3
 ; RV32I-SMALL-NEXT:    j .LBB1_8
 ; RV32I-SMALL-NEXT:  .LBB1_7: # %bb6
 ; RV32I-SMALL-NEXT:    li a0, 200
@@ -118,8 +118,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-MEDIUM-NEXT:  .LBB1_2: # %bb1
 ; RV32I-MEDIUM-NEXT:    li a0, 4
 ; RV32I-MEDIUM-NEXT:    j .LBB1_8
-; RV32I-MEDIUM-NEXT:  .LBB1_3: # %bb2
-; RV32I-MEDIUM-NEXT:    li a0, 3
+; RV32I-MEDIUM-NEXT:  .LBB1_3: # %bb5
+; RV32I-MEDIUM-NEXT:    li a0, 100
 ; RV32I-MEDIUM-NEXT:    j .LBB1_8
 ; RV32I-MEDIUM-NEXT:  .LBB1_4: # %bb3
 ; RV32I-MEDIUM-NEXT:    li a0, 2
@@ -127,8 +127,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-MEDIUM-NEXT:  .LBB1_5: # %bb4
 ; RV32I-MEDIUM-NEXT:    li a0, 1
 ; RV32I-MEDIUM-NEXT:    j .LBB1_8
-; RV32I-MEDIUM-NEXT:  .LBB1_6: # %bb5
-; RV32I-MEDIUM-NEXT:    li a0, 100
+; RV32I-MEDIUM-NEXT:  .LBB1_6: # %bb2
+; RV32I-MEDIUM-NEXT:    li a0, 3
 ; RV32I-MEDIUM-NEXT:    j .LBB1_8
 ; RV32I-MEDIUM-NEXT:  .LBB1_7: # %bb6
 ; RV32I-MEDIUM-NEXT:    li a0, 200
@@ -154,8 +154,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-PIC-NEXT:  .LBB1_2: # %bb1
 ; RV32I-PIC-NEXT:    li a0, 4
 ; RV32I-PIC-NEXT:    j .LBB1_8
-; RV32I-PIC-NEXT:  .LBB1_3: # %bb2
-; RV32I-PIC-NEXT:    li a0, 3
+; RV32I-PIC-NEXT:  .LBB1_3: # %bb5
+; RV32I-PIC-NEXT:    li a0, 100
 ; RV32I-PIC-NEXT:    j .LBB1_8
 ; RV32I-PIC-NEXT:  .LBB1_4: # %bb3
 ; RV32I-PIC-NEXT:    li a0, 2
@@ -163,8 +163,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV32I-PIC-NEXT:  .LBB1_5: # %bb4
 ; RV32I-PIC-NEXT:    li a0, 1
 ; RV32I-PIC-NEXT:    j .LBB1_8
-; RV32I-PIC-NEXT:  .LBB1_6: # %bb5
-; RV32I-PIC-NEXT:    li a0, 100
+; RV32I-PIC-NEXT:  .LBB1_6: # %bb2
+; RV32I-PIC-NEXT:    li a0, 3
 ; RV32I-PIC-NEXT:    j .LBB1_8
 ; RV32I-PIC-NEXT:  .LBB1_7: # %bb6
 ; RV32I-PIC-NEXT:    li a0, 200
@@ -188,8 +188,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-SMALL-NEXT:  .LBB1_2: # %bb1
 ; RV64I-SMALL-NEXT:    li a0, 4
 ; RV64I-SMALL-NEXT:    j .LBB1_8
-; RV64I-SMALL-NEXT:  .LBB1_3: # %bb2
-; RV64I-SMALL-NEXT:    li a0, 3
+; RV64I-SMALL-NEXT:  .LBB1_3: # %bb5
+; RV64I-SMALL-NEXT:    li a0, 100
 ; RV64I-SMALL-NEXT:    j .LBB1_8
 ; RV64I-SMALL-NEXT:  .LBB1_4: # %bb3
 ; RV64I-SMALL-NEXT:    li a0, 2
@@ -197,8 +197,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-SMALL-NEXT:  .LBB1_5: # %bb4
 ; RV64I-SMALL-NEXT:    li a0, 1
 ; RV64I-SMALL-NEXT:    j .LBB1_8
-; RV64I-SMALL-NEXT:  .LBB1_6: # %bb5
-; RV64I-SMALL-NEXT:    li a0, 100
+; RV64I-SMALL-NEXT:  .LBB1_6: # %bb2
+; RV64I-SMALL-NEXT:    li a0, 3
 ; RV64I-SMALL-NEXT:    j .LBB1_8
 ; RV64I-SMALL-NEXT:  .LBB1_7: # %bb6
 ; RV64I-SMALL-NEXT:    li a0, 200
@@ -223,8 +223,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-MEDIUM-NEXT:  .LBB1_2: # %bb1
 ; RV64I-MEDIUM-NEXT:    li a0, 4
 ; RV64I-MEDIUM-NEXT:    j .LBB1_8
-; RV64I-MEDIUM-NEXT:  .LBB1_3: # %bb2
-; RV64I-MEDIUM-NEXT:    li a0, 3
+; RV64I-MEDIUM-NEXT:  .LBB1_3: # %bb5
+; RV64I-MEDIUM-NEXT:    li a0, 100
 ; RV64I-MEDIUM-NEXT:    j .LBB1_8
 ; RV64I-MEDIUM-NEXT:  .LBB1_4: # %bb3
 ; RV64I-MEDIUM-NEXT:    li a0, 2
@@ -232,8 +232,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-MEDIUM-NEXT:  .LBB1_5: # %bb4
 ; RV64I-MEDIUM-NEXT:    li a0, 1
 ; RV64I-MEDIUM-NEXT:    j .LBB1_8
-; RV64I-MEDIUM-NEXT:  .LBB1_6: # %bb5
-; RV64I-MEDIUM-NEXT:    li a0, 100
+; RV64I-MEDIUM-NEXT:  .LBB1_6: # %bb2
+; RV64I-MEDIUM-NEXT:    li a0, 3
 ; RV64I-MEDIUM-NEXT:    j .LBB1_8
 ; RV64I-MEDIUM-NEXT:  .LBB1_7: # %bb6
 ; RV64I-MEDIUM-NEXT:    li a0, 200
@@ -259,8 +259,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-PIC-NEXT:  .LBB1_2: # %bb1
 ; RV64I-PIC-NEXT:    li a0, 4
 ; RV64I-PIC-NEXT:    j .LBB1_8
-; RV64I-PIC-NEXT:  .LBB1_3: # %bb2
-; RV64I-PIC-NEXT:    li a0, 3
+; RV64I-PIC-NEXT:  .LBB1_3: # %bb5
+; RV64I-PIC-NEXT:    li a0, 100
 ; RV64I-PIC-NEXT:    j .LBB1_8
 ; RV64I-PIC-NEXT:  .LBB1_4: # %bb3
 ; RV64I-PIC-NEXT:    li a0, 2
@@ -268,8 +268,8 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; RV64I-PIC-NEXT:  .LBB1_5: # %bb4
 ; RV64I-PIC-NEXT:    li a0, 1
 ; RV64I-PIC-NEXT:    j .LBB1_8
-; RV64I-PIC-NEXT:  .LBB1_6: # %bb5
-; RV64I-PIC-NEXT:    li a0, 100
+; RV64I-PIC-NEXT:  .LBB1_6: # %bb2
+; RV64I-PIC-NEXT:    li a0, 3
 ; RV64I-PIC-NEXT:    j .LBB1_8
 ; RV64I-PIC-NEXT:  .LBB1_7: # %bb6
 ; RV64I-PIC-NEXT:    li a0, 200

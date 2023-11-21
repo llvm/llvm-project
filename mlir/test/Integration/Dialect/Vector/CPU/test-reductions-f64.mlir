@@ -39,11 +39,17 @@ func.func @entry() {
   %1 = vector.reduction <mul>, %v9 : vector<10xf64> into f64
   vector.print %1 : f64
   // CHECK: -5760
-  %2 = vector.reduction <minf>, %v9 : vector<10xf64> into f64
+  %2 = vector.reduction <minimumf>, %v9 : vector<10xf64> into f64
   vector.print %2 : f64
   // CHECK: -16
-  %3 = vector.reduction <maxf>, %v9 : vector<10xf64> into f64
+  %3 = vector.reduction <maximumf>, %v9 : vector<10xf64> into f64
   vector.print %3 : f64
+  // CHECK: 5
+  %4 = vector.reduction <minf>, %v9 : vector<10xf64> into f64
+  vector.print %4 : f64
+  // CHECK: -16
+  %5 = vector.reduction <maxf>, %v9 : vector<10xf64> into f64
+  vector.print %5 : f64
   // CHECK: 5
 
   return

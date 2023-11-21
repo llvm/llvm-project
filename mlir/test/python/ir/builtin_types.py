@@ -300,10 +300,50 @@ def testVectorType():
 
         none = NoneType.get()
         try:
-            vector_invalid = VectorType.get(shape, none)
+            VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
             # CHECK: error: unknown: vector elements must be int/index/float type but got 'none'
+            print(e)
+        else:
+            print("Exception not produced")
+
+        scalable_1 = VectorType.get(shape, f32, scalable=[False, True])
+        scalable_2 = VectorType.get([2, 3, 4], f32, scalable=[True, False, True])
+        assert scalable_1.scalable
+        assert scalable_2.scalable
+        assert scalable_1.scalable_dims == [False, True]
+        assert scalable_2.scalable_dims == [True, False, True]
+        # CHECK: scalable 1: vector<2x[3]xf32>
+        print("scalable 1: ", scalable_1)
+        # CHECK: scalable 2: vector<[2]x3x[4]xf32>
+        print("scalable 2: ", scalable_2)
+
+        scalable_3 = VectorType.get(shape, f32, scalable_dims=[1])
+        scalable_4 = VectorType.get([2, 3, 4], f32, scalable_dims=[0, 2])
+        assert scalable_3 == scalable_1
+        assert scalable_4 == scalable_2
+
+        try:
+            VectorType.get(shape, f32, scalable=[False, True, True])
+        except ValueError as e:
+            # CHECK: Expected len(scalable) == len(shape).
+            print(e)
+        else:
+            print("Exception not produced")
+
+        try:
+            VectorType.get(shape, f32, scalable=[False, True], scalable_dims=[1])
+        except ValueError as e:
+            # CHECK: kwargs are mutually exclusive.
+            print(e)
+        else:
+            print("Exception not produced")
+
+        try:
+            VectorType.get(shape, f32, scalable_dims=[42])
+        except ValueError as e:
+            # CHECK: Scalable dimension index out of bounds.
             print(e)
         else:
             print("Exception not produced")
@@ -335,7 +375,6 @@ def testRankedTensorType():
 
         # Encoding should be None.
         assert RankedTensorType.get(shape, f32).encoding is None
-
 
 
 # CHECK-LABEL: TEST: testUnrankedTensorType

@@ -20,6 +20,17 @@
 // MCPU-SYNTACORE-SCR1-MAX: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xiangshan-nanhu | FileCheck -check-prefix=MCPU-XIANGSHAN-NANHU %s
+// MCPU-XIANGSHAN-NANHU: "-nostdsysteminc" "-target-cpu" "xiangshan-nanhu"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+c"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zicbom" "-target-feature" "+zicboz" "-target-feature" "+zicsr" "-target-feature" "+zifencei"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zba" "-target-feature" "+zbb" "-target-feature" "+zbc"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zbkb" "-target-feature" "+zbkc" "-target-feature" "+zbkx" "-target-feature" "+zbs"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zkn" "-target-feature" "+zknd" "-target-feature" "+zkne" "-target-feature" "+zknh"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zks" "-target-feature" "+zksed" "-target-feature" "+zksh" "-target-feature" "+svinval"
+// MCPU-XIANGSHAN-NANHU-SAME: "-target-abi" "lp64d"
+
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
 // RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
@@ -36,6 +47,34 @@
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-max | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-MAX %s
 // MTUNE-SYNTACORE-SCR1-MAX: "-tune-cpu" "syntacore-scr1-max"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=veyron-v1 | FileCheck -check-prefix=MCPU-VEYRON-V1 %s
+// MCPU-VEYRON-V1: "-target-cpu" "veyron-v1"
+// MCPU-VEYRON-V1: "-target-feature" "+m"
+// MCPU-VEYRON-V1: "-target-feature" "+a"
+// MCPU-VEYRON-V1: "-target-feature" "+f"
+// MCPU-VEYRON-V1: "-target-feature" "+d"
+// MCPU-VEYRON-V1: "-target-feature" "+c"
+// MCPU-VEYRON-V1: "-target-feature" "+zicbom"
+// MCPU-VEYRON-V1: "-target-feature" "+zicbop"
+// MCPU-VEYRON-V1: "-target-feature" "+zicboz"
+// MCPU-VEYRON-V1: "-target-feature" "+zicntr"
+// MCPU-VEYRON-V1: "-target-feature" "+zicsr"
+// MCPU-VEYRON-V1: "-target-feature" "+zifencei"
+// MCPU-VEYRON-V1: "-target-feature" "+zihintpause"
+// MCPU-VEYRON-V1: "-target-feature" "+zihpm"
+// MCPU-VEYRON-V1: "-target-feature" "+zba"
+// MCPU-VEYRON-V1: "-target-feature" "+zbb"
+// MCPU-VEYRON-V1: "-target-feature" "+zbc"
+// MCPU-VEYRON-V1: "-target-feature" "+zbs"
+// MCPU-VEYRON-V1: "-target-feature" "+xventanacondops"
+// MCPU-VEYRON-V1: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=veyron-v1 | FileCheck -check-prefix=MTUNE-VEYRON-V1 %s
+// MTUNE-VEYRON-V1: "-tune-cpu" "veyron-v1"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=xiangshan-nanhu | FileCheck -check-prefix=MTUNE-XIANGSHAN-NANHU %s
+// MTUNE-XIANGSHAN-NANHU: "-tune-cpu" "xiangshan-nanhu"
 
 // Check mtune alias CPU has resolved to the right CPU according XLEN.
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=generic | FileCheck -check-prefix=MTUNE-GENERIC-32 %s

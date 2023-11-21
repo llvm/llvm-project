@@ -103,7 +103,7 @@ static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
        ELF::SHF_MASKOS | ELF::SHF_MASKPROC | ELF::SHF_TLS |
        ELF::SHF_INFO_LINK) &
       ~ELF::SHF_EXCLUDE &
-      ~(EMachine == EM_X86_64 ? ELF::SHF_X86_64_LARGE : 0UL);
+      ~(EMachine == EM_X86_64 ? (uint64_t)ELF::SHF_X86_64_LARGE : 0UL);
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 

@@ -26,7 +26,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOpt::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default)));
 }
 
 std::unique_ptr<LoongArchInstrInfo> createInstrInfo(TargetMachine *TM) {
@@ -121,7 +121,7 @@ TEST(InstSizes, AtomicPseudo) {
       "    dead early-clobber renamable $r10, dead early-clobber renamable $r11 = PseudoAtomicLoadAdd32 renamable $r7, renamable $r6, renamable $r8\n"
       "    dead early-clobber renamable $r5, dead early-clobber renamable $r9, dead early-clobber renamable $r10 = PseudoMaskedAtomicLoadUMax32 renamable $r7, renamable $r6, renamable $r8, 4\n"
       "    early-clobber renamable $r9, dead early-clobber renamable $r10, dead early-clobber renamable $r11 = PseudoMaskedAtomicLoadMax32 killed renamable $r6, killed renamable $r5, killed renamable $r7, killed renamable $r8, 4\n"
-      "    dead early-clobber renamable $r5, dead early-clobber renamable $r9 = PseudoCmpXchg32 renamable $r7, renamable $r4, renamable $r6\n"
+      "    dead early-clobber renamable $r5, dead early-clobber renamable $r9 = PseudoCmpXchg32 renamable $r7, renamable $r4, renamable $r6, 4\n"
       "    dead early-clobber renamable $r5, dead early-clobber renamable $r9 = PseudoMaskedCmpXchg32 killed renamable $r7, killed renamable $r4, killed renamable $r6, killed renamable $r8, 4\n",
       // clang-format on
       [](LoongArchInstrInfo &II, MachineFunction &MF) {

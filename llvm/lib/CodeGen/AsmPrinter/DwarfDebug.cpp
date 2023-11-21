@@ -234,7 +234,15 @@ const DIType *DbgVariable::getType() const {
 /// Get .debug_loc entry for the instruction range starting at MI.
 static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
-  const bool IsVariadic = MI->isDebugValueList();
+  auto SingleLocExprOpt = DIExpression::convertToNonVariadicExpression(Expr);
+  const bool IsVariadic = !SingleLocExprOpt;
+  // If we have a variadic debug value instruction that is equivalent to a
+  // non-variadic instruction, then convert it to non-variadic form here.
+  if (!IsVariadic && !MI->isNonListDebugValue()) {
+    assert(MI->getNumDebugOperands() == 1 &&
+           "Mismatched DIExpression and debug operands for debug instruction.");
+    Expr = *SingleLocExprOpt;
+  }
   assert(MI->getNumOperands() >= 3);
   SmallVector<DbgValueLocEntry, 4> DbgValueLocEntries;
   for (const MachineOperand &Op : MI->debug_operands()) {
@@ -257,6 +265,20 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
+static uint64_t getFragmentOffsetInBits(const DIExpression &Expr) {
+  std::optional<DIExpression::FragmentInfo> Fragment = Expr.getFragmentInfo();
+  return Fragment ? Fragment->OffsetInBits : 0;
+}
+
+bool llvm::operator<(const FrameIndexExpr &LHS, const FrameIndexExpr &RHS) {
+  return getFragmentOffsetInBits(*LHS.Expr) <
+         getFragmentOffsetInBits(*RHS.Expr);
+}
+
+bool llvm::operator<(const EntryValueInfo &LHS, const EntryValueInfo &RHS) {
+  return getFragmentOffsetInBits(LHS.Expr) < getFragmentOffsetInBits(RHS.Expr);
+}
+
 Loc::Single::Single(DbgValueLoc ValueLoc)
     : ValueLoc(std::make_unique<DbgValueLoc>(ValueLoc)),
       Expr(ValueLoc.getExpression()) {
@@ -267,42 +289,15 @@ Loc::Single::Single(DbgValueLoc ValueLoc)
 Loc::Single::Single(const MachineInstr *DbgValue)
     : Single(getDebugLocValue(DbgValue)) {}
 
-ArrayRef<FrameIndexExpr> Loc::MMI::getFrameIndexExprs() const {
-  if (FrameIndexExprs.size() == 1)
-    return FrameIndexExprs;
-
-  assert(llvm::all_of(
-             FrameIndexExprs,
-             [](const FrameIndexExpr &A) { return A.Expr->isFragment(); }) &&
-         "multiple FI expressions without DW_OP_LLVM_fragment");
-  llvm::sort(FrameIndexExprs,
-             [](const FrameIndexExpr &A, const FrameIndexExpr &B) -> bool {
-               return A.Expr->getFragmentInfo()->OffsetInBits <
-                      B.Expr->getFragmentInfo()->OffsetInBits;
-             });
-
+const std::set<FrameIndexExpr> &Loc::MMI::getFrameIndexExprs() const {
   return FrameIndexExprs;
 }
 
 void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
-  // FIXME: This logic should not be necessary anymore, as we now have proper
-  // deduplication. However, without it, we currently run into the assertion
-  // below, which means that we are likely dealing with broken input, i.e. two
-  // non-fragment entries for the same variable at different frame indices.
-  if (FrameIndexExprs.size()) {
-    auto *Expr = FrameIndexExprs.back().Expr;
-    if (!Expr || !Expr->isFragment())
-      return;
-  }
-
-  if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
-        return FI == Other.FI && Expr == Other.Expr;
-      }))
-    FrameIndexExprs.push_back({FI, Expr});
-
+  FrameIndexExprs.insert({FI, Expr});
   assert((FrameIndexExprs.size() == 1 ||
           llvm::all_of(FrameIndexExprs,
-                       [](FrameIndexExpr &FIE) {
+                       [](const FrameIndexExpr &FIE) {
                          return FIE.Expr && FIE.Expr->isFragment();
                        })) &&
          "conflicting locations for variable");
@@ -310,14 +305,17 @@ void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
 
 static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
                                             bool GenerateTypeUnits,
+                                            bool HasSplitDwarf,
                                             DebuggerKind Tuning,
                                             const Triple &TT) {
   // Honor an explicit request.
   if (AccelTables != AccelTableKind::Default)
     return AccelTables;
 
-  // Accelerator tables with type units are currently not supported.
-  if (GenerateTypeUnits)
+  // Generating DWARF5 acceleration table.
+  // Currently Split dwarf and non ELF format is not supported.
+  if (GenerateTypeUnits &&
+      (DwarfVersion < 5 || HasSplitDwarf || !TT.isOSBinFormatELF()))
     return AccelTableKind::None;
 
   // Accelerator tables get emitted if targetting DWARF v5 or LLDB.  DWARF v5
@@ -405,8 +403,9 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
                        A->TM.getTargetTriple().isOSBinFormatWasm()) &&
                       GenerateDwarfTypeUnits;
 
-  TheAccelTableKind = computeAccelTableKind(
-      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
+  TheAccelTableKind =
+      computeAccelTableKind(DwarfVersion, GenerateTypeUnits, HasSplitDwarf,
+                            DebuggerTuning, A->TM.getTargetTriple());
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -450,7 +449,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
 DwarfDebug::~DwarfDebug() = default;
 
 static bool isObjCClass(StringRef Name) {
-  return Name.startswith("+") || Name.startswith("-");
+  return Name.starts_with("+") || Name.starts_with("-");
 }
 
 static bool hasObjCCategory(StringRef Name) {
@@ -477,36 +476,38 @@ static StringRef getObjCMethodName(StringRef In) {
 }
 
 // Add the various names to the Dwarf accelerator table names.
-void DwarfDebug::addSubprogramNames(const DICompileUnit &CU,
-                                    const DISubprogram *SP, DIE &Die) {
+void DwarfDebug::addSubprogramNames(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind,
+    const DISubprogram *SP, DIE &Die) {
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Apple &&
-      CU.getNameTableKind() == DICompileUnit::DebugNameTableKind::None)
+      NameTableKind != DICompileUnit::DebugNameTableKind::Apple &&
+      NameTableKind == DICompileUnit::DebugNameTableKind::None)
     return;
 
   if (!SP->isDefinition())
     return;
 
   if (SP->getName() != "")
-    addAccelName(CU, SP->getName(), Die);
+    addAccelName(Unit, NameTableKind, SP->getName(), Die);
 
   // If the linkage name is different than the name, go ahead and output that as
   // well into the name table. Only do that if we are going to actually emit
   // that name.
   if (SP->getLinkageName() != "" && SP->getName() != SP->getLinkageName() &&
       (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
-    addAccelName(CU, SP->getLinkageName(), Die);
+    addAccelName(Unit, NameTableKind, SP->getLinkageName(), Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
   // too.
   if (isObjCClass(SP->getName())) {
     StringRef Class, Category;
     getObjCClassCategory(SP->getName(), Class, Category);
-    addAccelObjC(CU, Class, Die);
+    addAccelObjC(Unit, NameTableKind, Class, Die);
     if (Category != "")
-      addAccelObjC(CU, Category, Die);
+      addAccelObjC(Unit, NameTableKind, Category, Die);
     // Also add the base method name to the name table.
-    addAccelName(CU, getObjCMethodName(SP->getName()), Die);
+    addAccelName(Unit, NameTableKind, getObjCMethodName(SP->getName()), Die);
   }
 }
 
@@ -588,7 +589,7 @@ static const DIExpression *combineDIExpressions(const DIExpression *Original,
   std::vector<uint64_t> Elts = Addition->getElements().vec();
   // Avoid multiple DW_OP_stack_values.
   if (Original->isImplicit() && Addition->isImplicit())
-    erase_value(Elts, dwarf::DW_OP_stack_value);
+    llvm::erase(Elts, dwarf::DW_OP_stack_value);
   const DIExpression *CombinedExpr =
       (Elts.size() > 0) ? DIExpression::append(Original, Elts) : Original;
   return CombinedExpr;
@@ -1394,6 +1395,10 @@ void DwarfDebug::finalizeModuleInfo() {
   InfoHolder.computeSizeAndOffsets();
   if (useSplitDwarf())
     SkeletonHolder.computeSizeAndOffsets();
+
+  // Now that offsets are computed, can replace DIEs in debug_names Entry with
+  // an actual offset.
+  AccelDebugNames.convertDieToOffset();
 }
 
 // Emit all Dwarf sections that should come after the content.
@@ -1546,12 +1551,27 @@ void DwarfDebug::collectVariableInfoFromMFTable(
 
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
 
-    if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
-      if (auto *MMI = std::get_if<Loc::MMI>(DbgVar))
-        MMI->addFrameIndexExpr(VI.Expr, VI.getStackSlot());
-      else
-        DbgVar->get<Loc::EntryValue>().addExpr(VI.getEntryValueRegister(),
-                                               *VI.Expr);
+    // If we have already seen information for this variable, add to what we
+    // already know.
+    if (DbgVariable *PreviousLoc = MFVars.lookup(Var)) {
+      auto *PreviousMMI = std::get_if<Loc::MMI>(PreviousLoc);
+      auto *PreviousEntryValue = std::get_if<Loc::EntryValue>(PreviousLoc);
+      // Previous and new locations are both stack slots (MMI).
+      if (PreviousMMI && VI.inStackSlot())
+        PreviousMMI->addFrameIndexExpr(VI.Expr, VI.getStackSlot());
+      // Previous and new locations are both entry values.
+      else if (PreviousEntryValue && VI.inEntryValueRegister())
+        PreviousEntryValue->addExpr(VI.getEntryValueRegister(), *VI.Expr);
+      else {
+        // Locations differ, this should (rarely) happen in optimized async
+        // coroutines.
+        // Prefer whichever location has an EntryValue.
+        if (PreviousLoc->holds<Loc::MMI>())
+          PreviousLoc->emplace<Loc::EntryValue>(VI.getEntryValueRegister(),
+                                                *VI.Expr);
+        LLVM_DEBUG(dbgs() << "Dropping debug info for " << VI.Var->getName()
+                          << ", conflicting fragment location types\n");
+      }
       continue;
     }
 
@@ -3431,6 +3451,7 @@ uint64_t DwarfDebug::makeTypeSignature(StringRef Identifier) {
 void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
                                       StringRef Identifier, DIE &RefDie,
                                       const DICompositeType *CTy) {
+  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::TU);
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
@@ -3446,8 +3467,8 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
 
-  auto OwnedUnit = std::make_unique<DwarfTypeUnit>(CU, Asm, this, &InfoHolder,
-                                                    getDwoLineTable(CU));
+  auto OwnedUnit = std::make_unique<DwarfTypeUnit>(
+      CU, Asm, this, &InfoHolder, NumTypeUnitsCreated++, getDwoLineTable(CU));
   DwarfTypeUnit &NewTU = *OwnedUnit;
   DIE &UnitDie = NewTU.getUnitDie();
   TypeUnitsUnderConstruction.emplace_back(std::move(OwnedUnit), CTy);
@@ -3489,7 +3510,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     // Types referencing entries in the address table cannot be placed in type
     // units.
     if (AddrPool.hasBeenUsed()) {
-
+      AccelTypeUnitsDebugNames.clear();
       // Remove all the types built while building this type.
       // This is pessimistic as some of these types might not be dependent on
       // the type that used an address.
@@ -3500,6 +3521,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
       // This is inefficient because all the dependent types will be rebuilt
       // from scratch, including building them in type units, discovering that
       // they depend on addresses, throwing them out and rebuilding them.
+      setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
       CU.constructTypeDIE(RefDie, cast<DICompositeType>(CTy));
       return;
     }
@@ -3509,9 +3531,16 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
     for (auto &TU : TypeUnitsToAdd) {
       InfoHolder.computeSizeAndOffsetsForUnit(TU.first.get());
       InfoHolder.emitUnit(TU.first.get(), useSplitDwarf());
+      if (getDwarfVersion() >= 5 &&
+          getAccelTableKind() == AccelTableKind::Dwarf)
+        AccelDebugNames.addTypeUnitSymbol(*TU.first);
     }
+    AccelTypeUnitsDebugNames.convertDieToOffset();
+    AccelDebugNames.addTypeEntries(AccelTypeUnitsDebugNames);
+    AccelTypeUnitsDebugNames.clear();
   }
   CU.addDIETypeSignature(RefDie, Signature);
+  setCurrentDWARF5AccelTable(DWARF5AccelTableKind::CU);
 }
 
 // Add the Name along with its companion DIE to the appropriate accelerator
@@ -3519,15 +3548,16 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 // AccelTableKind::Apple, we use the table we got as an argument). If
 // accelerator tables are disabled, this function does nothing.
 template <typename DataT>
-void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
-                                  AccelTable<DataT> &AppleAccel, StringRef Name,
-                                  const DIE &Die) {
+void DwarfDebug::addAccelNameImpl(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind,
+    AccelTable<DataT> &AppleAccel, StringRef Name, const DIE &Die) {
   if (getAccelTableKind() == AccelTableKind::None || Name.empty())
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&
-      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Apple &&
-      CU.getNameTableKind() != DICompileUnit::DebugNameTableKind::Default)
+      NameTableKind != DICompileUnit::DebugNameTableKind::Apple &&
+      NameTableKind != DICompileUnit::DebugNameTableKind::Default)
     return;
 
   DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
@@ -3537,9 +3567,13 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
   case AccelTableKind::Apple:
     AppleAccel.addName(Ref, Die);
     break;
-  case AccelTableKind::Dwarf:
-    AccelDebugNames.addName(Ref, Die);
+  case AccelTableKind::Dwarf: {
+    DWARF5AccelTable &Current = getCurrentDWARF5AccelTable();
+    // The type unit can be discarded, so need to add references to final
+    // acceleration table once we know it's complete and we emit it.
+    Current.addName(Ref, Die, Unit.getUniqueID());
     break;
+  }
   case AccelTableKind::Default:
     llvm_unreachable("Default should have already been resolved.");
   case AccelTableKind::None:
@@ -3547,26 +3581,34 @@ void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
   }
 }
 
-void DwarfDebug::addAccelName(const DICompileUnit &CU, StringRef Name,
-                              const DIE &Die) {
-  addAccelNameImpl(CU, AccelNames, Name, Die);
+void DwarfDebug::addAccelName(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die) {
+  addAccelNameImpl(Unit, NameTableKind, AccelNames, Name, Die);
 }
 
-void DwarfDebug::addAccelObjC(const DICompileUnit &CU, StringRef Name,
-                              const DIE &Die) {
+void DwarfDebug::addAccelObjC(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die) {
   // ObjC names go only into the Apple accelerator tables.
   if (getAccelTableKind() == AccelTableKind::Apple)
-    addAccelNameImpl(CU, AccelObjC, Name, Die);
+    addAccelNameImpl(Unit, NameTableKind, AccelObjC, Name, Die);
 }
 
-void DwarfDebug::addAccelNamespace(const DICompileUnit &CU, StringRef Name,
-                                   const DIE &Die) {
-  addAccelNameImpl(CU, AccelNamespace, Name, Die);
+void DwarfDebug::addAccelNamespace(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die) {
+  addAccelNameImpl(Unit, NameTableKind, AccelNamespace, Name, Die);
 }
 
-void DwarfDebug::addAccelType(const DICompileUnit &CU, StringRef Name,
-                              const DIE &Die, char Flags) {
-  addAccelNameImpl(CU, AccelTypes, Name, Die);
+void DwarfDebug::addAccelType(
+    const DwarfUnit &Unit,
+    const DICompileUnit::DebugNameTableKind NameTableKind, StringRef Name,
+    const DIE &Die, char Flags) {
+  addAccelNameImpl(Unit, NameTableKind, AccelTypes, Name, Die);
 }
 
 uint16_t DwarfDebug::getDwarfVersion() const {

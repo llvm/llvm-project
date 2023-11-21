@@ -52,7 +52,8 @@ void test_cos_f16(global half* out, half a)
 }
 
 // CHECK-LABEL: @test_ldexp_f16
-// CHECK: call half @llvm.ldexp.f16.i32
+// CHECK: [[TRUNC:%[0-9a-z]+]] = trunc i32
+// CHECK: call half @llvm.ldexp.f16.i16(half %a, i16 [[TRUNC]])
 void test_ldexp_f16(global half* out, half a, int b)
 {
   *out = __builtin_amdgcn_ldexph(a, b);

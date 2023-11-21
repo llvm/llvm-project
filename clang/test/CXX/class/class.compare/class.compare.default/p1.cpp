@@ -209,10 +209,10 @@ bool operator==(e *, int *) = default; // expected-error{{must have at least one
 
 namespace p2085_2 {
 template <class T> struct S6 {
-  // expected-error@+2{{found 'const int &'}}
-  // expected-error@+1{{found 'const float &'}}
   bool operator==(T const &) const;
 };
+// expected-error@+2{{found 'const int &'}}
+// expected-error@+1{{found 'const float &'}}
 template <class T> bool S6<T>::operator==(T const &) const = default;
 
 template struct S6<int>; // expected-note{{S6<int>::operator==' requested}}

@@ -113,6 +113,11 @@ li a0, CONST
 # CHECK-OBJ-NOALIAS: addi a0, zero, 8
 li a0, CONST
 
+# CHECK-ASM: addi a0, zero, .Lbuf_end-.Lbuf
+# CHECK-ASM-NOALIAS: addi a0, zero, .Lbuf_end-.Lbuf
+# CHECK-OBJ-NOALIAS: addi a0, zero, 8
+li a0, .Lbuf_end - .Lbuf
+
 # CHECK-INST: addi a0, zero, 0
 # CHECK-ALIAS: li a0, 0
 la x10, 0

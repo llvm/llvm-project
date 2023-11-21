@@ -14,7 +14,6 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -22,7 +21,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -719,6 +717,11 @@ public:
 
   MemAccessInfoList &getDependenciesToCheck() { return CheckDeps; }
 
+  const DenseMap<Value *, SmallVector<const Value *, 16>> &
+  getUnderlyingObjects() {
+    return UnderlyingObjects;
+  }
+
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
 
@@ -764,6 +767,8 @@ private:
 
   /// The SCEV predicate containing all the SCEV-related assumptions.
   PredicatedScalarEvolution &PSE;
+
+  DenseMap<Value *, SmallVector<const Value *, 16>> UnderlyingObjects;
 };
 
 } // end anonymous namespace
@@ -942,6 +947,22 @@ static void findForkedSCEVs(
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
+  case Instruction::PHI: {
+    SmallVector<PointerIntPair<const SCEV *, 1, bool>, 2> ChildScevs;
+    // A phi means we've found a forked pointer, but we currently only
+    // support a single phi per pointer so if there's another behind this
+    // then we just bail out and return the generic SCEV.
+    if (I->getNumOperands() == 2) {
+      findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
+      findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
+    }
+    if (ChildScevs.size() == 2) {
+      ScevList.push_back(ChildScevs[0]);
+      ScevList.push_back(ChildScevs[1]);
+    } else
+      ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
+    break;
+  }
   case Instruction::Add:
   case Instruction::Sub: {
     SmallVector<PointerIntPair<const SCEV *, 1, bool>> LScevs;
@@ -1102,7 +1123,6 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     for (const auto &A : AS) {
       Value *Ptr = A.getValue();
       bool IsWrite = Accesses.count(MemAccessInfo(Ptr, true));
-
       if (IsWrite)
         ++NumWritePtrChecks;
       else
@@ -1317,10 +1337,12 @@ void AccessAnalysis::processMemAccesses() {
           typedef SmallVector<const Value *, 16> ValueVector;
           ValueVector TempObjects;
 
-          getUnderlyingObjects(Ptr, TempObjects, LI);
+          UnderlyingObjects[Ptr] = {};
+          SmallVector<const Value *, 16> &UOs = UnderlyingObjects[Ptr];
+          ::getUnderlyingObjects(Ptr, UOs, LI);
           LLVM_DEBUG(dbgs()
                      << "Underlying objects for pointer " << *Ptr << "\n");
-          for (const Value *UnderlyingObj : TempObjects) {
+          for (const Value *UnderlyingObj : UOs) {
             // nullptr never alias, don't join sets for pointer that have "null"
             // in their UnderlyingObjects list.
             if (isa<ConstantPointerNull>(UnderlyingObj) &&
@@ -1648,6 +1670,7 @@ MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   case ForwardButPreventsForwarding:
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
+  case IndirectUnsafe:
     return VectorizationSafetyStatus::Unsafe;
   }
   llvm_unreachable("unexpected DepType!");
@@ -1659,6 +1682,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
   case Forward:
   case ForwardButPreventsForwarding:
   case Unknown:
+  case IndirectUnsafe:
     return false;
 
   case BackwardVectorizable:
@@ -1684,6 +1708,7 @@ bool MemoryDepChecker::Dependence::isForward() const {
   case BackwardVectorizable:
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
+  case IndirectUnsafe:
     return false;
   }
   llvm_unreachable("unexpected DepType!");
@@ -1841,10 +1866,21 @@ static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
   return ScaledDist % Stride;
 }
 
-MemoryDepChecker::Dependence::DepType
-MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
-                              const MemAccessInfo &B, unsigned BIdx,
-                              const DenseMap<Value *, const SCEV *> &Strides) {
+/// Returns true if any of the underlying objects has a loop varying address,
+/// i.e. may change in \p L.
+static bool
+isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
+                             ScalarEvolution &SE, const Loop *L) {
+  return any_of(UnderlyingObjects, [&SE, L](const Value *UO) {
+    return !SE.isLoopInvariant(SE.getSCEV(const_cast<Value *>(UO)), L);
+  });
+}
+
+MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
+    const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
+    unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
+    const DenseMap<Value *, SmallVector<const Value *, 16>>
+        &UnderlyingObjects) {
   assert (AIdx < BIdx && "Must pass arguments in program order");
 
   auto [APtr, AIsWrite] = A;
@@ -1887,6 +1923,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                     << "(Induction step: " << StrideAPtr << ")\n");
   LLVM_DEBUG(dbgs() << "LAA: Distance for " << *InstMap[AIdx] << " to "
                     << *InstMap[BIdx] << ": " << *Dist << "\n");
+
+  // Needs accesses where the addresses of the accessed underlying objects do
+  // not change within the loop.
+  if (isLoopVariantIndirectAddress(UnderlyingObjects.find(APtr)->second, SE,
+                                   InnermostLoop) ||
+      isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
+                                   InnermostLoop))
+    return Dependence::IndirectUnsafe;
 
   // Need accesses with constant stride. We don't want to vectorize
   // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap in
@@ -2050,9 +2094,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   return Dependence::BackwardVectorizable;
 }
 
-bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
-                                   MemAccessInfoList &CheckDeps,
-                                   const DenseMap<Value *, const SCEV *> &Strides) {
+bool MemoryDepChecker::areDepsSafe(
+    DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
+    const DenseMap<Value *, const SCEV *> &Strides,
+    const DenseMap<Value *, SmallVector<const Value *, 16>>
+        &UnderlyingObjects) {
 
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
@@ -2096,7 +2142,8 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
               std::swap(A, B);
 
             Dependence::DepType Type =
-                isDependent(*A.first, A.second, *B.first, B.second, Strides);
+                isDependent(*A.first, A.second, *B.first, B.second, Strides,
+                            UnderlyingObjects);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
@@ -2140,8 +2187,14 @@ MemoryDepChecker::getInstructionsForAccess(Value *Ptr, bool isWrite) const {
 }
 
 const char *MemoryDepChecker::Dependence::DepName[] = {
-    "NoDep", "Unknown", "Forward", "ForwardButPreventsForwarding", "Backward",
-    "BackwardVectorizable", "BackwardVectorizableButPreventsForwarding"};
+    "NoDep",
+    "Unknown",
+    "IndidrectUnsafe",
+    "Forward",
+    "ForwardButPreventsForwarding",
+    "Backward",
+    "BackwardVectorizable",
+    "BackwardVectorizableButPreventsForwarding"};
 
 void MemoryDepChecker::Dependence::print(
     raw_ostream &OS, unsigned Depth,
@@ -2442,7 +2495,8 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
     CanVecMem = DepChecker->areDepsSafe(
-        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides);
+        DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
+        Accesses.getUnderlyingObjects());
 
     if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
@@ -2505,12 +2559,24 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
+  bool HasForcedDistribution = false;
+  std::optional<const MDOperand *> Value =
+      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
+  if (Value) {
+    const MDOperand *Op = *Value;
+    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+  }
+
+  const std::string Info =
+      HasForcedDistribution
+          ? "unsafe dependent memory operations in loop."
+          : "unsafe dependent memory operations in loop. Use "
+            "#pragma clang loop distribute(enable) to allow loop distribution "
+            "to attempt to isolate the offending operations into a separate "
+            "loop";
   OptimizationRemarkAnalysis &R =
-      recordAnalysis("UnsafeDep", Dep.getDestination(*this))
-      << "unsafe dependent memory operations in loop. Use "
-         "#pragma loop distribute(enable) to allow loop distribution "
-         "to attempt to isolate the offending operations into a separate "
-         "loop";
+      recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:
@@ -2527,6 +2593,9 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   case MemoryDepChecker::Dependence::BackwardVectorizableButPreventsForwarding:
     R << "\nBackward loop carried data dependence that prevents "
          "store-to-load forwarding.";
+    break;
+  case MemoryDepChecker::Dependence::IndirectUnsafe:
+    R << "\nUnsafe indirect dependence.";
     break;
   case MemoryDepChecker::Dependence::Unknown:
     R << "\nUnknown data dependence.";

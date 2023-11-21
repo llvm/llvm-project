@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FUCHSIA_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FUCHSIA_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_FUCHSIA_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_FUCHSIA_IO_H
 
 #ifndef LIBC_COPT_TEST_USE_FUCHSIA
 #error this file should only be used by tests
@@ -17,12 +17,12 @@
 
 #include <zircon/sanitizer.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
   __sanitizer_log_write(msg.data(), msg.size());
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_FUCHSIA_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_FUCHSIA_IO_H

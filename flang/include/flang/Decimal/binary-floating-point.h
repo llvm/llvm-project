@@ -21,10 +21,19 @@
 
 namespace Fortran::decimal {
 
+enum FortranRounding {
+  RoundNearest, /* RN and RP */
+  RoundUp, /* RU */
+  RoundDown, /* RD */
+  RoundToZero, /* RZ - no rounding */
+  RoundCompatible, /* RC: like RN, but ties go away from 0 */
+};
+
 template <int BINARY_PRECISION>
 class BinaryFloatingPointNumber : public common::RealDetails<BINARY_PRECISION> {
 public:
   using Details = common::RealDetails<BINARY_PRECISION>;
+  using Details::binaryPrecision;
   using Details::bits;
   using Details::decimalPrecision;
   using Details::decimalRange;
@@ -33,6 +42,7 @@ public:
   using Details::isImplicitMSB;
   using Details::maxDecimalConversionDigits;
   using Details::maxExponent;
+  using Details::maxHexadecimalConversionDigits;
   using Details::significandBits;
 
   using RawType = common::HostUnsignedIntType<bits>;
@@ -118,6 +128,55 @@ public:
     RemoveExplicitMSB();
     ++raw_;
     InsertExplicitMSB();
+  }
+
+  static constexpr BinaryFloatingPointNumber Infinity(bool isNegative) {
+    RawType result{RawType{maxExponent} << significandBits};
+    if (isNegative) {
+      result |= RawType{1} << (bits - 1);
+    }
+    return BinaryFloatingPointNumber{result};
+  }
+
+  // Returns true when the result is exact
+  constexpr bool RoundToBits(int keepBits, enum FortranRounding mode) {
+    if (IsNaN() || IsInfinite() || keepBits >= binaryPrecision) {
+      return true;
+    }
+    int lostBits{binaryPrecision - keepBits};
+    RawType lostMask{static_cast<RawType>((RawType{1} << lostBits) - 1)};
+    if (RawType lost{static_cast<RawType>(raw_ & lostMask)}; lost != 0) {
+      bool increase{false};
+      switch (mode) {
+      case RoundNearest:
+        if (lost >> (lostBits - 1) != 0) { // >= tie
+          if ((lost & (lostMask >> 1)) != 0) {
+            increase = true; // > tie
+          } else {
+            increase = ((raw_ >> lostBits) & 1) != 0; // tie to even
+          }
+        }
+        break;
+      case RoundUp:
+        increase = !IsNegative();
+        break;
+      case RoundDown:
+        increase = IsNegative();
+        break;
+      case RoundToZero:
+        break;
+      case RoundCompatible:
+        increase = lost >> (lostBits - 1) != 0; // >= tie
+        break;
+      }
+      if (increase) {
+        raw_ |= lostMask;
+        Next();
+      }
+      return false; // inexact
+    } else {
+      return true; // exact
+    }
   }
 
 private:

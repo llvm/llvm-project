@@ -49,7 +49,7 @@ public:
   AArch64DAGToDAGISel() = delete;
 
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
-                               CodeGenOpt::Level OptLevel)
+                               CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -62,7 +62,7 @@ public:
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                    unsigned ConstraintID,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   template <signed Low, signed High, signed Scale>
@@ -533,13 +533,14 @@ static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
 #endif
 
 bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_o:
-  case InlineAsm::Constraint_Q:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
+  case InlineAsm::ConstraintCode::Q:
     // We need to make sure that this one operand does not end up in XZR, thus
     // require the address to be in a PointerRegClass register.
     const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -996,6 +997,15 @@ static bool isWorthFoldingADDlow(SDValue N) {
   return true;
 }
 
+/// Check if the immediate offset is valid as a scaled immediate.
+static bool isValidAsScaledImmediate(int64_t Offset, unsigned Range,
+                                     unsigned Size) {
+  if ((Offset & (Size - 1)) == 0 && Offset >= 0 &&
+      Offset < (Range << Log2_32(Size)))
+    return true;
+  return false;
+}
+
 /// SelectAddrModeIndexedBitWidth - Select a "register plus scaled (un)signed BW-bit
 /// immediate" address.  The "Size" argument is the size in bytes of the memory
 /// reference, which determines the scale.
@@ -1091,7 +1101,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexed(SDValue N, unsigned Size,
     if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
       int64_t RHSC = (int64_t)RHS->getZExtValue();
       unsigned Scale = Log2_32(Size);
-      if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Scale)) {
+      if (isValidAsScaledImmediate(RHSC, 0x1000, Size)) {
         Base = N.getOperand(0);
         if (Base.getOpcode() == ISD::FrameIndex) {
           int FI = cast<FrameIndexSDNode>(Base)->getIndex();
@@ -1129,10 +1139,6 @@ bool AArch64DAGToDAGISel::SelectAddrModeUnscaled(SDValue N, unsigned Size,
     return false;
   if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
     int64_t RHSC = RHS->getSExtValue();
-    // If the offset is valid as a scaled immediate, don't match here.
-    if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 &&
-        RHSC < (0x1000 << Log2_32(Size)))
-      return false;
     if (RHSC >= -256 && RHSC < 256) {
       Base = N.getOperand(0);
       if (Base.getOpcode() == ISD::FrameIndex) {
@@ -1311,11 +1317,10 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   //     LDR  X2, [BaseReg, X0]
   if (isa<ConstantSDNode>(RHS)) {
     int64_t ImmOff = (int64_t)cast<ConstantSDNode>(RHS)->getZExtValue();
-    unsigned Scale = Log2_32(Size);
     // Skip the immediate can be selected by load/store addressing mode.
     // Also skip the immediate can be encoded by a single ADD (SUB is also
     // checked by using -ImmOff).
-    if ((ImmOff % Size == 0 && ImmOff >= 0 && ImmOff < (0x1000 << Scale)) ||
+    if (isValidAsScaledImmediate(ImmOff, 0x1000, Size) ||
         isPreferredADD(ImmOff) || isPreferredADD(-ImmOff))
       return false;
 
@@ -6603,7 +6608,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 /// createAArch64ISelDag - This pass converts a legalized DAG into a
 /// AArch64-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
-                                         CodeGenOpt::Level OptLevel) {
+                                         CodeGenOptLevel OptLevel) {
   return new AArch64DAGToDAGISel(TM, OptLevel);
 }
 

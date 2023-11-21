@@ -12,9 +12,8 @@ import lldbutil
 
 
 class EventWin(cui.TitledWin):
-
     def __init__(self, x, y, w, h):
-        super(EventWin, self).__init__(x, y, w, h, 'LLDB Event Log')
+        super(EventWin, self).__init__(x, y, w, h, "LLDB Event Log")
         self.win.scrollok(1)
         super(EventWin, self).draw()
 

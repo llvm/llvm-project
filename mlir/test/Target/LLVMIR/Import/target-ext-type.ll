@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: llvm.mlir.global external @global() {addr_space = 0 : i32}
 ; CHECK-SAME:    !llvm.target<"spirv.DeviceEvent">
-; CHECK-NEXT:      %0 = llvm.mlir.constant(0 : i64) : !llvm.target<"spirv.DeviceEvent">
+; CHECK-NEXT:      %0 = llvm.mlir.zero : !llvm.target<"spirv.DeviceEvent">
 ; CHECK-NEXT:      llvm.return %0 : !llvm.target<"spirv.DeviceEvent">
 @global = global target("spirv.DeviceEvent") zeroinitializer
 
@@ -45,7 +45,7 @@ define target("spirv.Event") @func2() {
 
 ; CHECK-LABEL: llvm.func @func3()
 define void @func3() {
-  ; CHECK-NEXT:    %0 = llvm.mlir.constant(0 : i64) : !llvm.target<"spirv.DeviceEvent">
+  ; CHECK-NEXT:    %0 = llvm.mlir.zero : !llvm.target<"spirv.DeviceEvent">
   ; CHECK-NEXT:    %1 = llvm.freeze %0 : !llvm.target<"spirv.DeviceEvent">
   %val = freeze target("spirv.DeviceEvent") zeroinitializer
   ; CHECK-NEXT:    llvm.return

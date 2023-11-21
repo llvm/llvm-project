@@ -34,23 +34,27 @@ def main():
     # Compute an MD5 hash based on the input arguments and the current working
     # directory.
     h = hashlib.md5()
-    h.update(' '.join(sys.argv[2:]).encode('utf-8'))
-    h.update(os.getcwd().encode('utf-8'))
+    h.update(" ".join(sys.argv[2:]).encode("utf-8"))
+    h.update(os.getcwd().encode("utf-8"))
     input_hash = h.hexdigest()
 
     # Use the hash to "uniquely" identify a reproducer path.
     reproducer_path = os.path.join(tempfile.gettempdir(), input_hash)
 
     # Create a new lldb invocation with capture or replay enabled.
-    lldb = os.path.join(os.path.dirname(sys.argv[0]), 'lldb')
+    lldb = os.path.join(os.path.dirname(sys.argv[0]), "lldb")
     new_args = [lldb]
     if sys.argv[1] == "replay":
-        new_args.extend(['--replay', reproducer_path])
+        new_args.extend(["--replay", reproducer_path])
     elif sys.argv[1] == "capture":
-        new_args.extend([
-            '--capture', '--capture-path', reproducer_path,
-            '--reproducer-generate-on-exit'
-        ])
+        new_args.extend(
+            [
+                "--capture",
+                "--capture-path",
+                reproducer_path,
+                "--reproducer-generate-on-exit",
+            ]
+        )
         new_args.extend(sys.argv[2:])
     else:
         help()
@@ -60,10 +64,10 @@ def main():
 
     # The driver always exists with a zero exit code during replay. Store the
     # exit code and return that for tests that expect a non-zero exit code.
-    exit_code_path = os.path.join(reproducer_path, 'exit_code.txt')
+    exit_code_path = os.path.join(reproducer_path, "exit_code.txt")
     if sys.argv[1] == "replay":
         replay_exit_code = exit_code
-        with open(exit_code_path, 'r') as f:
+        with open(exit_code_path, "r") as f:
             exit_code = int(f.read())
         if replay_exit_code != 0:
             print("error: replay failed with exit code {}".format(replay_exit_code))
@@ -72,11 +76,11 @@ def main():
             return 1 if (exit_code == 0) else 0
         shutil.rmtree(reproducer_path, True)
     elif sys.argv[1] == "capture":
-        with open(exit_code_path, 'w') as f:
-            f.write('%d' % exit_code)
+        with open(exit_code_path, "w") as f:
+            f.write("%d" % exit_code)
 
     return exit_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     exit(main())

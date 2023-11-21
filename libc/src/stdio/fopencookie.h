@@ -11,11 +11,11 @@
 
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 ::FILE *fopencookie(void *cookie, const char *__restrict mode,
                     cookie_io_functions_t desc);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FOPENCOOKIE_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SystemZ_MCTARGETDESC_SystemZMCEXPR_H
-#define LLVM_LIB_TARGET_SystemZ_MCTARGETDESC_SystemZMCEXPR_H
+#ifndef LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZMCEXPR_H
+#define LLVM_LIB_TARGET_SYSTEMZ_MCTARGETDESC_SYSTEMZMCEXPR_H
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"

@@ -1,9 +1,6 @@
 // RUN: %clangxx -frtti -fsanitize=null,vptr -fno-sanitize-recover=vptr -g %s -O3 -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
-// FIXME: Investigate.
-// XFAIL: internal_symbolizer && (ubsan-tsan || ubsan-msan)
-
 // REQUIRES: shared_cxxabi
 // REQUIRES: cxxabi
 // UNSUPPORTED: target={{.*windows-msvc.*}}

@@ -13,7 +13,13 @@ typedef struct affinity_mask_t {
   cpu_set_t *set;
 } affinity_mask_t;
 
+#ifdef __ve__
+// VE's sched_getaffinity put garbage if the buffer is too big.  512 is
+// a good number to make all tests run correctly.
+#define AFFINITY_MAX_CPUS 512
+#else
 #define AFFINITY_MAX_CPUS (32 * 64)
+#endif
 
 // Operating system affinity mask API
 static void affinity_mask_zero(affinity_mask_t *mask) {

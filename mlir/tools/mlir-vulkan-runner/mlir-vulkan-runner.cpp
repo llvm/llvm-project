@@ -18,7 +18,7 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -70,25 +70,16 @@ static LogicalResult runMLIRPasses(Operation *op,
   if (options.spirvWebGPUPrepare)
     modulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 
-  auto enableOpaquePointers = [](auto passOption) {
-    passOption.useOpaquePointers = true;
-    return passOption;
-  };
-
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
-  passManager.addPass(createFinalizeMemRefToLLVMConversionPass(
-      enableOpaquePointers(FinalizeMemRefToLLVMConversionPassOptions{})));
-  passManager.addPass(createConvertVectorToLLVMPass(
-      enableOpaquePointers(ConvertVectorToLLVMPassOptions{})));
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
+  passManager.addPass(createConvertVectorToLLVMPass());
   passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
   ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
   funcToLLVMOptions.indexBitwidth =
       DataLayout(module).getTypeSizeInBits(IndexType::get(module.getContext()));
-  passManager.addPass(
-      createConvertFuncToLLVMPass(enableOpaquePointers(funcToLLVMOptions)));
+  passManager.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
   passManager.addPass(createReconcileUnrealizedCastsPass());
-  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass(
-      enableOpaquePointers(ConvertVulkanLaunchFuncToVulkanCallsPassOptions{})));
+  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
 
   return passManager.run(module);
 }

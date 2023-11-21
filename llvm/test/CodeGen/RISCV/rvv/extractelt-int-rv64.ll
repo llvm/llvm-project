@@ -769,7 +769,7 @@ define i32 @extractelt_sdiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV64NOM-LABEL: extractelt_sdiv_nxv4i32_splat:
 ; RV64NOM:       # %bb.0:
 ; RV64NOM-NEXT:    lui a0, 349525
-; RV64NOM-NEXT:    addiw a0, a0, 1366
+; RV64NOM-NEXT:    addi a0, a0, 1366
 ; RV64NOM-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; RV64NOM-NEXT:    vmulh.vx v8, v8, a0
 ; RV64NOM-NEXT:    vsrl.vi v10, v8, 31
@@ -799,7 +799,7 @@ define i32 @extractelt_udiv_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; RV64NOM-LABEL: extractelt_udiv_nxv4i32_splat:
 ; RV64NOM:       # %bb.0:
 ; RV64NOM-NEXT:    lui a0, 349525
-; RV64NOM-NEXT:    addiw a0, a0, 1366
+; RV64NOM-NEXT:    addi a0, a0, 1366
 ; RV64NOM-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; RV64NOM-NEXT:    vmulh.vx v8, v8, a0
 ; RV64NOM-NEXT:    vsrl.vi v10, v8, 31

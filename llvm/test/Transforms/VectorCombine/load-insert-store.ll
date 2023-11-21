@@ -60,7 +60,7 @@ entry:
   ret void
 }
 
-; To verify the case that index exceeds the minium number
+; To verify the case that index exceeds the minimum number
 ; of elements of a scalable vector type.
 define void @insert_store_vscale_exceeds(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_vscale_exceeds(
@@ -104,6 +104,19 @@ entry:
   %0 = load <4 x i27>, ptr %q
   %vecins = insertelement <4 x i27> %0, i27 %s, i32 3
   store <4 x i27> %vecins, ptr %q, align 1
+  ret void
+}
+
+define void @insert_store_v32i1(ptr %p) {
+; CHECK-LABEL: @insert_store_v32i1(
+; CHECK-NEXT:    [[VEC:%.*]] = load <32 x i1>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <32 x i1> [[VEC]], i1 true, i64 0
+; CHECK-NEXT:    store <32 x i1> [[INS]], ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %vec = load <32 x i1>, ptr %p
+  %ins = insertelement <32 x i1> %vec, i1 true, i64 0
+  store <32 x i1> %ins, ptr %p
   ret void
 }
 

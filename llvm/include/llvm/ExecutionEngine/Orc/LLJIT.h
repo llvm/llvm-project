@@ -319,9 +319,9 @@ public:
   ProcessSymbolsJITDylibSetupFunction SetupProcessSymbolsJITDylib;
   ObjectLinkingLayerCreator CreateObjectLinkingLayer;
   CompileFunctionCreator CreateCompileFunction;
+  unique_function<Error(LLJIT &)> PrePlatformSetup;
   PlatformSetupFunction SetUpPlatform;
   unsigned NumCompileThreads = 0;
-  bool EnableDebuggerSupport = false;
 
   /// Called prior to JIT class construcion to fix up defaults.
   Error prepareForConstruction();
@@ -418,6 +418,19 @@ public:
     return impl();
   }
 
+  /// Set a setup function to be run just before the PlatformSetupFunction is
+  /// run.
+  ///
+  /// This can be used to customize the LLJIT instance before the platform is
+  /// set up. E.g. By installing a debugger support plugin before the platform
+  /// is set up (when the ORC runtime is loaded) we enable debugging of the
+  /// runtime itself.
+  SetterImpl &
+  setPrePlatformSetup(unique_function<Error(LLJIT &)> PrePlatformSetup) {
+    impl().PrePlatformSetup = std::move(PrePlatformSetup);
+    return impl();
+  }
+
   /// Set up an PlatformSetupFunction.
   ///
   /// If this method is not called then setUpGenericLLVMIRPlatform
@@ -438,12 +451,6 @@ public:
   /// a zero argument.
   SetterImpl &setNumCompileThreads(unsigned NumCompileThreads) {
     impl().NumCompileThreads = NumCompileThreads;
-    return impl();
-  }
-
-  /// Enable / disable debugger support (off by default).
-  SetterImpl &setEnableDebuggerSupport(bool EnableDebuggerSupport) {
-    impl().EnableDebuggerSupport = EnableDebuggerSupport;
     return impl();
   }
 

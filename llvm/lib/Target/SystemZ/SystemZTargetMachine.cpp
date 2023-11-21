@@ -13,8 +13,6 @@
 #include "SystemZMachineScheduler.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -25,11 +23,13 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Scalar.h"
+#include <memory>
 #include <optional>
 #include <string>
 
 using namespace llvm;
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
@@ -143,7 +143,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOpt::Level OL, bool JIT)
+                                           CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(
           T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
@@ -169,12 +169,14 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   // FIXME: This is related to the code below to reset the target options,
-  // we need to know whether or not the soft float flag is set on the
-  // function, so we can enable it as a subtarget feature.
-  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
-
-  if (softFloat)
+  // we need to know whether the soft float and backchain flags are set on the
+  // function, so we can enable them as subtarget features.
+  bool SoftFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  if (SoftFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
+  bool BackChain = F.hasFnAttribute("backchain");
+  if (BackChain)
+    FS += FS.empty() ? "+backchain" : ",+backchain";
 
   auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I) {
@@ -221,10 +223,12 @@ public:
 } // end anonymous namespace
 
 void SystemZPassConfig::addIRPasses() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
+
+  addPass(createAtomicExpandPass());
 
   TargetPassConfig::addIRPasses();
 }
@@ -232,7 +236,7 @@ void SystemZPassConfig::addIRPasses() {
 bool SystemZPassConfig::addInstSelector() {
   addPass(createSystemZISelDag(getSystemZTargetMachine(), getOptLevel()));
 
- if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));
 
   return false;
@@ -254,12 +258,12 @@ void SystemZPassConfig::addPostRewrite() {
 void SystemZPassConfig::addPostRegAlloc() {
   // PostRewrite needs to be run at -O0 also (in which case addPostRewrite()
   // is not called).
-  if (getOptLevel() == CodeGenOpt::None)
+  if (getOptLevel() == CodeGenOptLevel::None)
     addPass(createSystemZPostRewritePass(getSystemZTargetMachine()));
 }
 
 void SystemZPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&IfConverterID);
 }
 
@@ -267,7 +271,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // Do instruction shortening before compare elimination because some
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZShortenInstPass(getSystemZTargetMachine()));
 
   // We eliminate comparisons here rather than earlier because some
@@ -293,14 +297,14 @@ void SystemZPassConfig::addPreEmitPass() {
   // Doing it so late makes it more likely that a register will be reused
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZElimComparePass(getSystemZTargetMachine()));
   addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
 
   // Do final scheduling after all other optimizations, to get an
   // optimal input for the decoder (branch relaxation must happen
   // after block placement).
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&PostMachineSchedulerID);
 }
 

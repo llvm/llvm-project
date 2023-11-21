@@ -17,6 +17,8 @@
 
 namespace llvm {
 
+class GISelChangeObserver;
+class MachineIRBuilder;
 class RISCVSubtarget;
 
 /// This class provides the information for the target register banks.
@@ -25,6 +27,10 @@ public:
   RISCVLegalizerInfo(const RISCVSubtarget &ST);
 
   bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+
+private:
+  bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                           GISelChangeObserver &Observer) const;
 };
 } // end namespace llvm
 #endif

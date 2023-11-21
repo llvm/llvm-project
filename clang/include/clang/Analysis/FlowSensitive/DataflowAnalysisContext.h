@@ -98,7 +98,7 @@ public:
   StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
-  StorageLocation &getStableStorageLocation(const VarDecl &D);
+  StorageLocation &getStableStorageLocation(const ValueDecl &D);
 
   /// Returns a stable storage location for `E`.
   StorageLocation &getStableStorageLocation(const Expr &E);
@@ -107,6 +107,15 @@ public:
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
+
+  /// Adds `Constraint` to current and future flow conditions in this context.
+  ///
+  /// Invariants must contain only flow-insensitive information, i.e. facts that
+  /// are true on all paths through the program.
+  /// Information can be added eagerly (when analysis begins), or lazily (e.g.
+  /// when values are first used). The analysis must be careful that the same
+  /// information is added regardless of which order blocks are analyzed in.
+  void addInvariant(const Formula &Constraint);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
@@ -120,13 +129,17 @@ public:
   /// token.
   Atom joinFlowConditions(Atom FirstToken, Atom SecondToken);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` imply that `Val` is true.
-  bool flowConditionImplies(Atom Token, const Formula &);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` imply that `F` is true.
+  /// Returns false if the flow condition does not imply `F` or if the solver
+  /// times out.
+  bool flowConditionImplies(Atom Token, const Formula &F);
 
-  /// Returns true if and only if the constraints of the flow condition
-  /// identified by `Token` are always true.
-  bool flowConditionIsTautology(Atom Token);
+  /// Returns true if the constraints of the flow condition identified by
+  /// `Token` still allow `F` to be true.
+  /// Returns false if the flow condition implies that `F` is false or if the
+  /// solver times out.
+  bool flowConditionAllows(Atom Token, const Formula &F);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and
@@ -174,12 +187,17 @@ private:
   void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
-  /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
-  /// to track tokens of flow conditions that were already visited by recursive
-  /// calls.
-  void addTransitiveFlowConditionConstraints(
-      Atom Token, llvm::SetVector<const Formula *> &Constraints,
-      llvm::DenseSet<Atom> &VisitedTokens);
+  /// of its transitive dependencies to `Constraints`.
+  void
+  addTransitiveFlowConditionConstraints(Atom Token,
+                                        llvm::SetVector<const Formula *> &Out);
+
+  /// Returns true if the solver is able to prove that there is a satisfying
+  /// assignment for `Constraints`.
+  bool isSatisfiable(llvm::SetVector<const Formula *> Constraints) {
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Satisfiable;
+  }
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
@@ -224,6 +242,7 @@ private:
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
+  const Formula *Invariant = nullptr;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 

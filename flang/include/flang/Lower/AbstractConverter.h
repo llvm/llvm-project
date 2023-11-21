@@ -60,6 +60,8 @@ using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
 class StatementContext;
 
+using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
+
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
 //===----------------------------------------------------------------------===//
@@ -90,6 +92,14 @@ public:
   /// added or replaced at the inner-most level of the local symbol map.
   virtual void bindSymbol(SymbolRef sym, const fir::ExtendedValue &exval) = 0;
 
+  /// Override lowering of expression with pre-lowered values.
+  /// Associate mlir::Value to evaluate::Expr. All subsequent call to
+  /// genExprXXX() will replace any occurrence of an overridden
+  /// expression in the expression tree by the pre-lowered values.
+  virtual void overrideExprValues(const ExprToValueMap *) = 0;
+  void resetExprOverrides() { overrideExprValues(nullptr); }
+  virtual const ExprToValueMap *getExprOverrides() = 0;
+
   /// Get the label set associated with a symbol.
   virtual bool lookupLabelSet(SymbolRef sym, pft::LabelSet &labelSet) = 0;
 
@@ -107,6 +117,10 @@ public:
   virtual void copyHostAssociateVar(
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
+
+  /// For a given symbol, check if it is present in the inner-most
+  /// level of the symbol map.
+  virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
   /// region if \p collectSymbols is true. Likewise, collect the
@@ -212,12 +226,10 @@ public:
 
   /// Register a runtime derived type information object symbol to ensure its
   /// object will be generated as a global.
-  virtual void registerRuntimeTypeInfo(mlir::Location loc,
-                                       SymbolRef typeInfoSym) = 0;
-
-  virtual void registerDispatchTableInfo(
-      mlir::Location loc,
-      const Fortran::semantics::DerivedTypeSpec *typeSpec) = 0;
+  virtual void
+  registerTypeInfo(mlir::Location loc, SymbolRef typeInfoSym,
+                   const Fortran::semantics::DerivedTypeSpec &typeSpec,
+                   fir::RecordType type) = 0;
 
   //===--------------------------------------------------------------------===//
   // Locations
@@ -250,6 +262,11 @@ public:
   mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Unique a compiler generated name (add a containing scope specific prefix)
   virtual std::string mangleName(std::string &) = 0;
+  /// Return the field name for a derived type component inside a fir.record
+  /// type.
+  virtual std::string
+  getRecordTypeFieldName(const Fortran::semantics::Symbol &component) = 0;
+
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 

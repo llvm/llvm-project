@@ -24,8 +24,7 @@
 
 using namespace clang;
 
-static const enum raw_ostream::Colors noteColor =
-  raw_ostream::BLACK;
+static const enum raw_ostream::Colors noteColor = raw_ostream::CYAN;
 static const enum raw_ostream::Colors remarkColor =
   raw_ostream::BLUE;
 static const enum raw_ostream::Colors fixitColor =
@@ -736,7 +735,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
   SmallString<4096> TmpFilename;
 #endif
   if (DiagOpts->AbsolutePath) {
-    auto File = SM.getFileManager().getFile(Filename);
+    auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
       //
@@ -753,7 +752,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on Windows we can just use llvm::sys::path::remove_dots(), because,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
-      TmpFilename = (*File)->getName();
+      TmpFilename = File->getName();
       llvm::sys::fs::make_absolute(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);

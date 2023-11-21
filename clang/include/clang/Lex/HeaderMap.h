@@ -88,8 +88,7 @@ class HeaderMap : private HeaderMapImpl {
 public:
   /// This attempts to load the specified file as a header map.  If it doesn't
   /// look like a HeaderMap, it gives up and returns null.
-  static std::unique_ptr<HeaderMap> Create(const FileEntry *FE,
-                                           FileManager &FM);
+  static std::unique_ptr<HeaderMap> Create(FileEntryRef FE, FileManager &FM);
 
   using HeaderMapImpl::dump;
   using HeaderMapImpl::forEachKey;

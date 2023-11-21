@@ -36,6 +36,13 @@ static cl::opt<unsigned> MaxCopiedFromConstantUsers(
     cl::desc("Maximum users to visit in copy from constant transform"),
     cl::Hidden);
 
+namespace llvm {
+cl::opt<bool> EnableInferAlignmentPass(
+    "enable-infer-alignment-pass", cl::init(true), cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Enable the InferAlignment pass, disabling alignment inference in "
+             "InstCombine"));
+}
+
 /// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
@@ -641,29 +648,6 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
   return NewStore;
 }
 
-/// Returns true if instruction represent minmax pattern like:
-///   select ((cmp load V1, load V2), V1, V2).
-static bool isMinMaxWithLoads(Value *V, Type *&LoadTy) {
-  assert(V->getType()->isPointerTy() && "Expected pointer type.");
-  // Ignore possible ty* to ixx* bitcast.
-  V = InstCombiner::peekThroughBitcast(V);
-  // Check that select is select ((cmp load V1, load V2), V1, V2) - minmax
-  // pattern.
-  CmpInst::Predicate Pred;
-  Instruction *L1;
-  Instruction *L2;
-  Value *LHS;
-  Value *RHS;
-  if (!match(V, m_Select(m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2)),
-                         m_Value(LHS), m_Value(RHS))))
-    return false;
-  LoadTy = L1->getType();
-  return (match(L1, m_Load(m_Specific(LHS))) &&
-          match(L2, m_Load(m_Specific(RHS)))) ||
-         (match(L1, m_Load(m_Specific(RHS))) &&
-          match(L2, m_Load(m_Specific(LHS))));
-}
-
 /// Combine loads to match the type of their uses' value after looking
 /// through intervening bitcasts.
 ///
@@ -804,7 +788,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       return nullptr;
 
     const DataLayout &DL = IC.getDataLayout();
-    auto EltSize = DL.getTypeAllocSize(ET);
+    TypeSize EltSize = DL.getTypeAllocSize(ET);
     const auto Align = LI.getAlign();
 
     auto *Addr = LI.getPointerOperand();
@@ -812,7 +796,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     auto *Zero = ConstantInt::get(IdxType, 0);
 
     Value *V = PoisonValue::get(T);
-    uint64_t Offset = 0;
+    TypeSize Offset = TypeSize::get(0, ET->isScalableTy());
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,
@@ -820,9 +804,9 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       };
       auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, ArrayRef(Indices),
                                                Name + ".elt");
+      auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       auto *L = IC.Builder.CreateAlignedLoad(AT->getElementType(), Ptr,
-                                             commonAlignment(Align, Offset),
-                                             Name + ".unpack");
+                                             EltAlign, Name + ".unpack");
       L->setAAMetadata(LI.getAAMetadata());
       V = IC.Builder.CreateInsertValue(V, L, i);
       Offset += EltSize;
@@ -957,7 +941,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   Type *SourceElementType = GEPI->getSourceElementType();
   // Size information about scalable vectors is not available, so we cannot
   // deduce whether indexing at n is undefined behaviour or not. Bail out.
-  if (isa<ScalableVectorType>(SourceElementType))
+  if (SourceElementType->isScalableTy())
     return false;
 
   Type *AllocTy = GetElementPtrInst::getIndexedType(SourceElementType, Ops);
@@ -1048,11 +1032,13 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   if (Instruction *Res = combineLoadToOperationType(*this, LI))
     return Res;
 
-  // Attempt to improve the alignment.
-  Align KnownAlign = getOrEnforceKnownAlignment(
-      Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
-  if (KnownAlign > LI.getAlign())
-    LI.setAlignment(KnownAlign);
+  if (!EnableInferAlignmentPass) {
+    // Attempt to improve the alignment.
+    Align KnownAlign = getOrEnforceKnownAlignment(
+        Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
+    if (KnownAlign > LI.getAlign())
+      LI.setAlignment(KnownAlign);
+  }
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI))
@@ -1323,7 +1309,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       return false;
 
     const DataLayout &DL = IC.getDataLayout();
-    auto EltSize = DL.getTypeAllocSize(AT->getElementType());
+    TypeSize EltSize = DL.getTypeAllocSize(AT->getElementType());
     const auto Align = SI.getAlign();
 
     SmallString<16> EltName = V->getName();
@@ -1335,7 +1321,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     auto *IdxType = Type::getInt64Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
 
-    uint64_t Offset = 0;
+    TypeSize Offset = TypeSize::get(0, AT->getElementType()->isScalableTy());
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,
@@ -1344,7 +1330,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       auto *Ptr =
           IC.Builder.CreateInBoundsGEP(AT, Addr, ArrayRef(Indices), AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = commonAlignment(Align, Offset);
+      auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       NS->setAAMetadata(SI.getAAMetadata());
       Offset += EltSize;
@@ -1385,58 +1371,6 @@ static bool equivalentAddressValues(Value *A, Value *B) {
   return false;
 }
 
-/// Converts store (bitcast (load (bitcast (select ...)))) to
-/// store (load (select ...)), where select is minmax:
-/// select ((cmp load V1, load V2), V1, V2).
-static bool removeBitcastsFromLoadStoreOnMinMax(InstCombinerImpl &IC,
-                                                StoreInst &SI) {
-  // bitcast?
-  if (!match(SI.getPointerOperand(), m_BitCast(m_Value())))
-    return false;
-  // load? integer?
-  Value *LoadAddr;
-  if (!match(SI.getValueOperand(), m_Load(m_BitCast(m_Value(LoadAddr)))))
-    return false;
-  auto *LI = cast<LoadInst>(SI.getValueOperand());
-  if (!LI->getType()->isIntegerTy())
-    return false;
-  Type *CmpLoadTy;
-  if (!isMinMaxWithLoads(LoadAddr, CmpLoadTy))
-    return false;
-
-  // Make sure the type would actually change.
-  // This condition can be hit with chains of bitcasts.
-  if (LI->getType() == CmpLoadTy)
-    return false;
-
-  // Make sure we're not changing the size of the load/store.
-  const auto &DL = IC.getDataLayout();
-  if (DL.getTypeStoreSizeInBits(LI->getType()) !=
-      DL.getTypeStoreSizeInBits(CmpLoadTy))
-    return false;
-
-  if (!all_of(LI->users(), [LI, LoadAddr](User *U) {
-        auto *SI = dyn_cast<StoreInst>(U);
-        return SI && SI->getPointerOperand() != LI &&
-               InstCombiner::peekThroughBitcast(SI->getPointerOperand()) !=
-                   LoadAddr &&
-               !SI->getPointerOperand()->isSwiftError();
-      }))
-    return false;
-
-  IC.Builder.SetInsertPoint(LI);
-  LoadInst *NewLI = IC.combineLoadToNewType(*LI, CmpLoadTy);
-  // Replace all the stores with stores of the newly loaded value.
-  for (auto *UI : LI->users()) {
-    auto *USI = cast<StoreInst>(UI);
-    IC.Builder.SetInsertPoint(USI);
-    combineStoreToNewValue(IC, *USI, NewLI);
-  }
-  IC.replaceInstUsesWith(*LI, PoisonValue::get(LI->getType()));
-  IC.eraseInstFromFunction(*LI);
-  return true;
-}
-
 Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   Value *Val = SI.getOperand(0);
   Value *Ptr = SI.getOperand(1);
@@ -1445,17 +1379,16 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   if (combineStoreToValueType(*this, SI))
     return eraseInstFromFunction(SI);
 
-  // Attempt to improve the alignment.
-  const Align KnownAlign = getOrEnforceKnownAlignment(
-      Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
-  if (KnownAlign > SI.getAlign())
-    SI.setAlignment(KnownAlign);
+  if (!EnableInferAlignmentPass) {
+    // Attempt to improve the alignment.
+    const Align KnownAlign = getOrEnforceKnownAlignment(
+        Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
+    if (KnownAlign > SI.getAlign())
+      SI.setAlignment(KnownAlign);
+  }
 
   // Try to canonicalize the stored type.
   if (unpackStoreToAggregate(*this, SI))
-    return eraseInstFromFunction(SI);
-
-  if (removeBitcastsFromLoadStoreOnMinMax(*this, SI))
     return eraseInstFromFunction(SI);
 
   // Replace GEP indices if possible.

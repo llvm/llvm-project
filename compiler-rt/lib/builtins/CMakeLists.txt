@@ -187,8 +187,6 @@ set(BF16_SOURCES
     truncsfbf2.c
 )
 
-# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
-# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
@@ -280,6 +278,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendxftf2.c
   fixxfdi.c
   fixxfti.c
   fixunsxfdi.c
@@ -291,6 +290,7 @@ set(x86_80_BIT_SOURCES
   floatuntixf.c
   mulxc3.c
   powixf2.c
+  trunctfxf2.c
 )
 
 if (NOT MSVC)
@@ -553,6 +553,13 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
+if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+  message(STATUS "AArch64 SME ABI routines enabled")
+else()
+  message(STATUS "AArch64 SME ABI routines disabled")
+endif()
+
 # Generate outline atomics helpers from lse.S base
 set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
 file(MAKE_DIRECTORY "${OA_HELPERS_DIR}")
@@ -567,9 +574,13 @@ foreach(pat cas swp ldadd ldclr ldeor ldset)
   foreach(size 1 2 4 8 16)
     foreach(model 1 2 3 4 5)
       if(pat STREQUAL "cas" OR NOT size STREQUAL "16")
+        set(source_asm "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S")
         set(helper_asm "${OA_HELPERS_DIR}/outline_atomic_${pat}${size}_${model}.S")
-        list(APPEND lse_builtins "${helper_asm}")
-        list(APPEND arm64_lse_commands COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${CMAKE_CURRENT_SOURCE_DIR}/aarch64/lse.S" "${helper_asm}")
+        add_custom_command(
+          OUTPUT "${helper_asm}"
+          COMMAND ${CMAKE_COMMAND} -E ${COMPILER_RT_LINK_OR_COPY} "${source_asm}" "${helper_asm}"
+          DEPENDS "${source_asm}"
+        )
         set_source_files_properties("${helper_asm}"
           PROPERTIES
           COMPILE_DEFINITIONS "L_${pat};SIZE=${size};MODEL=${model}"
@@ -749,6 +760,13 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
+
+  # Don't embed directives for picking any specific CRT
+  if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "")
+    append_list_if(COMPILER_RT_HAS_ZL_FLAG /Zl BUILTIN_CFLAGS)
+  endif()
 
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.
@@ -825,16 +843,6 @@ else ()
       # double routines.
       if(COMPILER_RT_ENABLE_SOFTWARE_INT128 OR "${arch}" STREQUAL "riscv32")
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
-      endif()
-
-      if(arch STREQUAL "aarch64")
-        add_custom_target(
-          lse_builtin_symlinks
-          BYPRODUCTS ${lse_builtins}
-          ${arm64_lse_commands}
-        )
-
-        set(deps_aarch64 lse_builtin_symlinks)
       endif()
 
       add_compiler_rt_runtime(clang_rt.builtins

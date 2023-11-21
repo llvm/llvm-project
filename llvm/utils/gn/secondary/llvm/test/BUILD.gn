@@ -176,12 +176,6 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "ENABLE_ASSERTIONS=0" ]  # Must be 0.
   }
 
-  if (llvm_enable_libxar) {
-    extra_values += [ "LLVM_HAVE_LIBXAR=1" ]
-  } else {
-    extra_values += [ "LLVM_HAVE_LIBXAR=0" ]  # Must be 0.
-  }
-
   if (llvm_enable_dia_sdk) {
     extra_values += [ "LLVM_ENABLE_DIA_SDK=1" ]
   } else {
@@ -228,7 +222,10 @@ write_lit_config("lit_site_cfg") {
 write_lit_config("lit_unit_site_cfg") {
   input = "//llvm/test/Unit/lit.site.cfg.py.in"
   output = llvm_lit_unit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "LLVM_GTEST_RUN_UNDER=",
+  ]
 }
 
 # This target should contain all dependencies of check-llvm.

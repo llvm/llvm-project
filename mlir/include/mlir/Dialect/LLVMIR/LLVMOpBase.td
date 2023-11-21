@@ -55,25 +55,17 @@ def LLVM_AnyFloat : Type<
 def LLVM_AnyPointer : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMPointerType>($_self)">,
                           "LLVM pointer type", "::mlir::LLVM::LLVMPointerType">;
 
-// Type constraint accepting LLVM pointer type with an additional constraint
-// on the element type.
-class LLVM_PointerTo<Type pointee> : Type<
+// Pointer in a given address space.
+class LLVM_PointerInAddressSpace<int addressSpace> : Type<
   And<[LLVM_AnyPointer.predicate,
-       Or<[CPred<"::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).isOpaque()">,
-           SubstLeaves<
-             "$_self",
-             "::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getElementType()",
-             pointee.predicate>]>]>,
-  "LLVM pointer to " # pointee.summary, "::mlir::LLVM::LLVMPointerType">;
-
-// Type constraints accepting LLVM pointer type to integer of a specific width.
-class LLVM_IntPtrBase<int width, int addressSpace = 0> : Type<
-  And<[LLVM_PointerTo<I<width>>.predicate,
-       CPred<"::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getAddressSpace()"
-             " == " # addressSpace>]>,
-  "LLVM pointer to " # I<width>.summary>;
-
-def LLVM_i8Ptr : LLVM_IntPtrBase<8>;
+      CPred<
+        "::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getAddressSpace() == "
+        # addressSpace>]>,
+  "LLVM pointer in address space " # addressSpace,
+  "::mlir::LLVM::LLVMPointerType"> {
+  let builderCall = "$_builder.getType<::mlir::LLVM::LLVMPointerType>("
+    # addressSpace # ")";
+}
 
 // Type constraint accepting any LLVM structure type.
 def LLVM_AnyStruct : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMStructType>($_self)">,

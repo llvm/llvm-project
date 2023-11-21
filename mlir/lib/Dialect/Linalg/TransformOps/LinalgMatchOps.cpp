@@ -728,7 +728,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredResultOp::matchOperation(
 
   Value result = linalgOp.getTiedOpResult(linalgOp.getDpsInitOperand(position));
   if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
-    results.setValues(cast<OpResult>(getResult()), result);
+    results.setValues(cast<OpResult>(getResult()), {result});
     return DiagnosedSilenceableFailure::success();
   }
 

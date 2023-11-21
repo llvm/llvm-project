@@ -70,10 +70,6 @@ foreach(variable ${_FUCHSIA_BOOTSTRAP_PASSTHROUGH})
   endif()
 endforeach()
 
-if(WIN32)
-  set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
-endif()
-
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
@@ -120,6 +116,7 @@ else()
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
+  set(LIBCXX_HARDENING_MODE "none" CACHE STRING "")
   set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
   set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
   set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
@@ -200,6 +197,9 @@ foreach(variableName ${variableNames})
     list(APPEND EXTRA_ARGS "-D${new_name}=${value}")
   endif()
 endforeach()
+
+# TODO: This is a temporary workaround until we figure out the right solution.
+set(BOOTSTRAP_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
 # Setup the bootstrap build.
 set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")

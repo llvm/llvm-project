@@ -400,7 +400,6 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         "Reserved registers on the clobber list may not be "
         "preserved across the asm statement, and clobbering them may "
         "lead to undefined behaviour.";
-    assert(MMI && "MMI can not be nullptr!");
     MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
         LocCookie, Msg, DiagnosticSeverity::DS_Warning));
     MMI->getModule()->getContext().diagnose(

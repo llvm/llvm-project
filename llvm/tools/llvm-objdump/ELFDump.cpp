@@ -283,6 +283,9 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
     case ELF::PT_OPENBSD_MUTABLE:
       outs() << "OPENBSD_MUTABLE ";
       break;
+    case ELF::PT_OPENBSD_NOBTCFI:
+      outs() << "OPENBSD_NOBTCFI ";
+      break;
     case ELF::PT_OPENBSD_RANDOMIZE:
       outs() << "OPENBSD_RANDOMIZE ";
       break;

@@ -164,8 +164,7 @@ SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
 llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
                                               const SourceManager &SM) {
   if (DiagOpts->AbsolutePath) {
-    llvm::ErrorOr<const FileEntry *> File =
-        SM.getFileManager().getFile(Filename);
+    auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
       //
@@ -182,7 +181,7 @@ llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
       // on Windows we can just use llvm::sys::path::remove_dots(), because,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
-      SmallString<256> TmpFilename = (*File)->getName();
+      SmallString<256> TmpFilename = File->getName();
       llvm::sys::fs::make_absolute(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);

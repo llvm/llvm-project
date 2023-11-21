@@ -95,11 +95,14 @@ if(FUCHSIA)
   set(LIBCXXABI_HAS_PTHREAD_LIB NO)
   check_library_exists(c __cxa_thread_atexit_impl ""
     LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
-  set(LIBCXXABI_HAS_SYSTEM_LIB NO)
+elseif(ANDROID)
+  set(LIBCXXABI_HAS_DL_LIB YES)
+  set(LIBCXXABI_HAS_PTHREAD_LIB NO)
+  check_library_exists(c __cxa_thread_atexit_impl ""
+    LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
 else()
   check_library_exists(dl dladdr "" LIBCXXABI_HAS_DL_LIB)
   check_library_exists(pthread pthread_once "" LIBCXXABI_HAS_PTHREAD_LIB)
   check_library_exists(c __cxa_thread_atexit_impl ""
     LIBCXXABI_HAS_CXA_THREAD_ATEXIT_IMPL)
-  check_library_exists(System write "" LIBCXXABI_HAS_SYSTEM_LIB)
 endif()

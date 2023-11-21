@@ -1319,10 +1319,8 @@ define <2 x half> @test_copysign_f64(<2 x half> %a, <2 x double> %b) #0 {
 ; CHECK-DAG:  and.b16         [[BX1:%rs[0-9]+]], [[B1]], -32768;
 ; CHECK-DAG:  or.b16          [[R0:%rs[0-9]+]], [[AX0]], [[BX0]];
 ; CHECK-DAG:  or.b16          [[R1:%rs[0-9]+]], [[AX1]], [[BX1]];
-; CHECK-DAG:  mov.b32         [[R:%r[0-9]+]], {[[R0]], [[R1]]}
-; CHECK:      mov.b32         {[[RX0:%rs[0-9]+]], [[RX1:%rs[0-9]+]]}, [[R]]
-; CHECK-DAG:  cvt.f32.f16     [[XR0:%f[0-9]+]], [[RX0]];
-; CHECK-DAG:  cvt.f32.f16     [[XR1:%f[0-9]+]], [[RX1]];
+; CHECK-DAG:  cvt.f32.f16     [[XR0:%f[0-9]+]], [[R0]];
+; CHECK-DAG:  cvt.f32.f16     [[XR1:%f[0-9]+]], [[R1]];
 ; CHECK:      st.param.v2.f32 [func_retval0+0], {[[XR0]], [[XR1]]};
 ; CHECK:      ret;
 define <2 x float> @test_copysign_extended(<2 x half> %a, <2 x half> %b) #0 {
@@ -1466,6 +1464,24 @@ define <2 x half> @test_shufflevector(<2 x half> %a) #0 {
 define <2 x half> @test_insertelement(<2 x half> %a, half %x) #0 {
   %i = insertelement <2 x half> %a, half %x, i64 1
   ret <2 x half> %i
+}
+
+; CHECK-LABEL: test_sitofp_2xi16_to_2xhalf(
+; CHECK:      cvt.rn.f16.s16
+; CHECK:      cvt.rn.f16.s16
+; CHECK:      ret;
+define <2 x half> @test_sitofp_2xi16_to_2xhalf(<2 x i16> %a) #0 {
+  %r = sitofp <2 x i16> %a to <2 x half>
+  ret <2 x half> %r
+}
+
+; CHECK-LABEL: test_uitofp_2xi16_to_2xhalf(
+; CHECK:      cvt.rn.f16.u16
+; CHECK:      cvt.rn.f16.u16
+; CHECK:      ret;
+define <2 x half> @test_uitofp_2xi16_to_2xhalf(<2 x i16> %a) #0 {
+  %r = uitofp <2 x i16> %a to <2 x half>
+  ret <2 x half> %r
 }
 
 attributes #0 = { nounwind }

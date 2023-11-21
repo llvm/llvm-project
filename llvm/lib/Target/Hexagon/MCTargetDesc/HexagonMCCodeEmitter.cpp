@@ -443,7 +443,7 @@ void HexagonMCCodeEmitter::encodeSingleInstruction(
 
     Binary |= SubBits0 | (SubBits1 << 16);
   }
-  support::endian::write<uint32_t>(CB, Binary, support::little);
+  support::endian::write<uint32_t>(CB, Binary, llvm::endianness::little);
   ++MCNumEmitted;
 }
 

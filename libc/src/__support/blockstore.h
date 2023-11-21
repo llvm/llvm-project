@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_BLOCKSTORE_H
-#define LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
+#define LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H
 
 #include <src/__support/CPP/new.h>
 #include <src/__support/libc_assert.h>
@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // The difference between BlockStore a traditional vector types is that,
@@ -204,6 +204,6 @@ template <typename T, size_t BLOCK_SIZE>
 using ReverseOrderBlockStore = BlockStore<T, BLOCK_SIZE, true>;
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BLOCKSTORE_H

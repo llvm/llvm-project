@@ -12,9 +12,9 @@
 
 #include <limits.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 static constexpr int NON_LEAP_YEAR_DAYS_IN_MONTH[] = {31, 28, 31, 30, 31, 30,
                                                       31, 31, 30, 31, 30, 31};
@@ -114,4 +114,4 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
   return static_cast<time_t>(seconds);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

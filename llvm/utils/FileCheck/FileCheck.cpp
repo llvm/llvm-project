@@ -390,7 +390,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   };
   // How many diagnostics does each pattern have?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
-  for (auto Diag : Diags)
+  for (const FileCheckDiag &Diag : Diags)
     ++DiagCountPerPattern[Diag.CheckLoc];
   // How many diagnostics have we seen so far per pattern?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
@@ -673,7 +673,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       for (unsigned Col = 1; InputFilePtr != InputFileEnd && !Newline; ++Col) {
         bool WasInMatch = InMatch;
         InMatch = false;
-        for (auto M : FoundAndExpectedMatches) {
+        for (const InputAnnotation &M : FoundAndExpectedMatches) {
           if (M.InputStartCol <= Col && Col < M.InputEndCol) {
             InMatch = true;
             break;
@@ -810,17 +810,6 @@ int main(int argc, char **argv) {
   if (!FC.ValidateCheckPrefixes())
     return 2;
 
-  Regex PrefixRE = FC.buildCheckPrefixRegex();
-  std::string REError;
-  if (!PrefixRE.isValid(REError)) {
-    errs() << "Unable to combine check-prefix strings into a prefix regular "
-              "expression! This is likely a bug in FileCheck's verification of "
-              "the check-prefix strings. Regular expression parsing failed "
-              "with the following error: "
-           << REError << "\n";
-    return 2;
-  }
-
   SourceMgr SM;
 
   // Read the expected strings from the check file.
@@ -842,7 +831,7 @@ int main(int argc, char **argv) {
                             SMLoc());
 
   std::pair<unsigned, unsigned> ImpPatBufferIDRange;
-  if (FC.readCheckFile(SM, CheckFileText, PrefixRE, &ImpPatBufferIDRange))
+  if (FC.readCheckFile(SM, CheckFileText, &ImpPatBufferIDRange))
     return 2;
 
   // Open the file to check and add it to SourceMgr.

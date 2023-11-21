@@ -29,7 +29,6 @@ public:
 
   DWARFFile(StringRef Name, std::unique_ptr<DWARFContext> Dwarf,
             std::unique_ptr<AddressesMap> Addresses,
-            const std::vector<std::string> &Warnings,
             UnloadCallbackTy UnloadFunc = nullptr);
 
   /// Object file name.
@@ -40,9 +39,6 @@ public:
 
   /// Helpful address information(list of valid address ranges, relocations).
   std::unique_ptr<AddressesMap> Addresses;
-
-  /// Warnings for object file.
-  const std::vector<std::string> &Warnings;
 
   /// Callback to the module keeping object file to unload.
   UnloadCallbackTy UnloadFunc;

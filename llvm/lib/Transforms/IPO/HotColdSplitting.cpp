@@ -44,6 +44,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
@@ -86,6 +87,11 @@ static cl::opt<int> MaxParametersForSplit(
     "hotcoldsplit-max-params", cl::init(4), cl::Hidden,
     cl::desc("Maximum number of parameters for a split function"));
 
+static cl::opt<int> ColdBranchProbDenom(
+    "hotcoldsplit-cold-probability-denom", cl::init(100), cl::Hidden,
+    cl::desc("Divisor of cold branch probability."
+             "BranchProbability = 1/ColdBranchProbDenom"));
+
 namespace {
 // Same as blockEndsInUnreachable in CodeGen/BranchFolding.cpp. Do not modify
 // this function unless you modify the MBB version as well.
@@ -100,6 +106,32 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
     return true;
   const Instruction *I = BB.getTerminator();
   return !(isa<ReturnInst>(I) || isa<IndirectBrInst>(I));
+}
+
+void analyzeProfMetadata(BasicBlock *BB,
+                         BranchProbability ColdProbThresh,
+                         SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks) {
+  // TODO: Handle branches with > 2 successors.
+  BranchInst *CondBr = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!CondBr)
+    return;
+
+  uint64_t TrueWt, FalseWt;
+  if (!extractBranchWeights(*CondBr, TrueWt, FalseWt))
+    return;
+
+  auto SumWt = TrueWt + FalseWt;
+  if (SumWt == 0)
+    return;
+
+  auto TrueProb = BranchProbability::getBranchProbability(TrueWt, SumWt);
+  auto FalseProb = BranchProbability::getBranchProbability(FalseWt, SumWt);
+
+  if (TrueProb <= ColdProbThresh)
+    AnnotatedColdBlocks.insert(CondBr->getSuccessor(0));
+
+  if (FalseProb <= ColdProbThresh)
+    AnnotatedColdBlocks.insert(CondBr->getSuccessor(1));
 }
 
 bool unlikelyExecuted(BasicBlock &BB) {
@@ -178,6 +210,34 @@ bool HotColdSplitting::isFunctionCold(const Function &F) const {
     return true;
 
   if (PSI->isFunctionEntryCold(&F))
+    return true;
+
+  return false;
+}
+
+bool HotColdSplitting::isBasicBlockCold(BasicBlock *BB,
+                          BranchProbability ColdProbThresh,
+                          SmallPtrSetImpl<BasicBlock *> &ColdBlocks,
+                          SmallPtrSetImpl<BasicBlock *> &AnnotatedColdBlocks,
+                          BlockFrequencyInfo *BFI) const {
+  // This block is already part of some outlining region.
+  if (ColdBlocks.count(BB))
+    return true;
+
+  if (BFI) {
+    if (PSI->isColdBlock(BB, BFI))
+      return true;
+  } else {
+    // Find cold blocks of successors of BB during a reverse postorder traversal.
+    analyzeProfMetadata(BB, ColdProbThresh, AnnotatedColdBlocks);
+
+    // A statically cold BB would be known before it is visited
+    // because the prof-data of incoming edges are 'analyzed' as part of RPOT.
+    if (AnnotatedColdBlocks.count(BB))
+      return true;
+  }
+
+  if (EnableStaticAnalysis && unlikelyExecuted(*BB))
     return true;
 
   return false;
@@ -565,6 +625,9 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   // The set of cold blocks.
   SmallPtrSet<BasicBlock *, 4> ColdBlocks;
 
+  // Set of cold blocks obtained with RPOT.
+  SmallPtrSet<BasicBlock *, 4> AnnotatedColdBlocks;
+
   // The worklist of non-intersecting regions left to outline.
   SmallVector<OutliningRegion, 2> OutliningWorklist;
 
@@ -587,16 +650,15 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
   TargetTransformInfo &TTI = GetTTI(F);
   OptimizationRemarkEmitter &ORE = (*GetORE)(F);
   AssumptionCache *AC = LookupAC(F);
+  auto ColdProbThresh = TTI.getPredictableBranchThreshold().getCompl();
+
+  if (ColdBranchProbDenom.getNumOccurrences())
+    ColdProbThresh = BranchProbability(1, ColdBranchProbDenom.getValue());
 
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
-    // This block is already part of some outlining region.
-    if (ColdBlocks.count(BB))
-      continue;
-
-    bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
-                (EnableStaticAnalysis && unlikelyExecuted(*BB));
-    if (!Cold)
+    if (!isBasicBlockCold(BB, ColdProbThresh, ColdBlocks, AnnotatedColdBlocks,
+                          BFI))
       continue;
 
     LLVM_DEBUG({

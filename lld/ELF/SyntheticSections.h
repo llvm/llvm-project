@@ -778,6 +778,16 @@ public:
   size_t getSize() const override;
 };
 
+// Used to align the end of the PT_GNU_RELRO segment and the associated PT_LOAD
+// segment to a common-page-size boundary. This padding section ensures that all
+// pages in the PT_LOAD segment is covered by at least one section.
+class RelroPaddingSection final : public SyntheticSection {
+public:
+  RelroPaddingSection();
+  size_t getSize() const override { return 0; }
+  void writeTo(uint8_t *buf) override {}
+};
+
 class GdbIndexSection final : public SyntheticSection {
 public:
   struct AddressEntry {
@@ -1333,6 +1343,7 @@ struct InStruct {
   std::unique_ptr<GotSection> got;
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<RelroPaddingSection> relroPadding;
   std::unique_ptr<SyntheticSection> armCmseSGSection;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;

@@ -294,16 +294,16 @@ entry:
 define amdgpu_kernel void @fp_to_sint_v2i64(ptr addrspace(1) %out, <2 x float> %x) {
 ; SI-LABEL: fp_to_sint_v2i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s8, 0x2f800000
 ; SI-NEXT:    s_mov_b32 s9, 0xcf800000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    v_trunc_f32_e32 v0, s3
-; SI-NEXT:    v_trunc_f32_e32 v1, s2
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    v_trunc_f32_e32 v0, s7
+; SI-NEXT:    v_trunc_f32_e32 v1, s6
 ; SI-NEXT:    v_mul_f32_e64 v2, |v0|, s8
 ; SI-NEXT:    v_ashrrev_i32_e32 v3, 31, v0
 ; SI-NEXT:    v_mul_f32_e64 v4, |v1|, s8
@@ -324,7 +324,7 @@ define amdgpu_kernel void @fp_to_sint_v2i64(ptr addrspace(1) %out, <2 x float> %
 ; SI-NEXT:    v_subb_u32_e32 v3, vcc, v4, v3, vcc
 ; SI-NEXT:    v_sub_i32_e32 v0, vcc, v1, v5
 ; SI-NEXT:    v_subb_u32_e32 v1, vcc, v6, v5, vcc
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: fp_to_sint_v2i64:

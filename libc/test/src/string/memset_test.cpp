@@ -10,11 +10,11 @@
 #include "src/string/memset.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Adapt CheckMemset signature to memset.
 static inline void Adaptor(cpp::span<char> p1, uint8_t value, size_t size) {
-  __llvm_libc::memset(p1.begin(), value, size);
+  LIBC_NAMESPACE::memset(p1.begin(), value, size);
 }
 
 TEST(LlvmLibcMemsetTest, SizeSweep) {
@@ -27,4 +27,4 @@ TEST(LlvmLibcMemsetTest, SizeSweep) {
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

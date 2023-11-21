@@ -230,8 +230,14 @@ public:
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
 
+  /// Return processor descriptions.
   ArrayRef<SubtargetSubTypeKV> getAllProcessorDescriptions() const {
     return ProcDesc;
+  }
+
+  /// Return processor features.
+  ArrayRef<SubtargetFeatureKV> getAllProcessorFeatures() const {
+    return ProcFeatures;
   }
 
   virtual unsigned getHwMode() const { return 0; }

@@ -146,6 +146,15 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
   let results = (outs
     SPIRV_AnyCooperativeMatrix:$result
   );
+
+  let builders = [
+    OpBuilder<(ins "Type":$result, "Value":$pointer,
+                   "spirv::ConstantOp":$stride,
+                   "spirv::CooperativeMatrixLayoutKHR":$layout), [{
+      build($_builder, $_state, result, pointer, layout, stride,
+            spirv::MemoryAccessAttr{});
+    }]>
+  ];
 }
 
 // -----
@@ -226,6 +235,15 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
   );
 
   let results = (outs);
+
+  let builders = [
+    OpBuilder<(ins "Value":$pointer, "Value":$object,
+                   "spirv::ConstantOp":$stride,
+                   "spirv::CooperativeMatrixLayoutKHR":$layout), [{
+      build($_builder, $_state, pointer, object, layout, stride,
+            spirv::MemoryAccessAttr{});
+    }]>
+  ];
 }
 
 // -----
@@ -332,6 +350,13 @@ def SPIRV_KHRCooperativeMatrixMulAddOp : SPIRV_KhrVendorOp<"CooperativeMatrixMul
   let results = (outs
     SPIRV_AnyCooperativeMatrix:$result
   );
+
+  let builders = [
+    OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c), [{
+      build($_builder, $_state, a, b, c,
+            spirv::CooperativeMatrixOperandsKHRAttr{});
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

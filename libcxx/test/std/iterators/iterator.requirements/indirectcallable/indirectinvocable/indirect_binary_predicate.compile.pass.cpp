@@ -11,10 +11,12 @@
 // template<class F, class I1, class I2>
 // concept indirect_binary_predicate;
 
+#include <functional>
 #include <iterator>
 #include <type_traits>
 
 #include "indirectly_readable.h"
+#include "test_macros.h"
 
 using It1 = IndirectlyReadable<struct Token1>;
 using It2 = IndirectlyReadable<struct Token2>;
@@ -80,3 +82,11 @@ struct BadPredicate6 {
     bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
 static_assert(!std::indirect_binary_predicate<BadPredicate6, It1, It2>);
+
+// Test ADL-proofing (P2538R1)
+#if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(std::indirect_binary_predicate<std::less<Holder<Incomplete>*>, Holder<Incomplete>**, Holder<Incomplete>**>);
+static_assert(!std::indirect_binary_predicate<Holder<Incomplete>*, Holder<Incomplete>**, Holder<Incomplete>**>);
+#endif

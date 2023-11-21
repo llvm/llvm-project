@@ -22,7 +22,7 @@ define void @general_permute_single_source() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f32 = shufflevector <4 x float> undef, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f32 = shufflevector <8 x float> undef, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v4f64 = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 0>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 2, i32 3, i32 1, i32 0>
   %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 7, i32 5, i32 5, i32 5, i32 3, i32 2, i32 1, i32 0>
@@ -80,7 +80,7 @@ define void @general_permute_two_source() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v4double = shufflevector <4 x double> undef, <4 x double> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %v8double = shufflevector <8 x double> undef, <8 x double> undef, <8 x i32> <i32 14, i32 6, i32 5, i32 4, i32 13, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 139 for instruction: %v16double = shufflevector <16 x double> undef, <16 x double> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 17, i32 11, i32 20, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v2i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <2 x i32> <i32 3, i32 0>
   %v4i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <4 x i32> <i32 5, i32 7, i32 1, i32 0>

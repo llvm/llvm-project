@@ -65,6 +65,7 @@ def : Pat<(i64 0), (COPY (i64 G0))>,
   Requires<[Is64Bit]>;
 
 // The ALU instructions want their simm13 operands as i32 immediates.
+// FIXME: This is no longer true, they are now pointer-sized.
 def as_i32imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
 }]>;
@@ -144,43 +145,29 @@ def : Pat<(i64 imm:$val),
 
 let Predicates = [Is64Bit] in {
 
-// Register-register instructions.
-let isCodeGenOnly = 1 in {
-defm ANDX    : F3_12<"and", 0b000001, and, I64Regs, i64, i64imm>;
-defm ORX     : F3_12<"or",  0b000010, or,  I64Regs, i64, i64imm>;
-defm XORX    : F3_12<"xor", 0b000011, xor, I64Regs, i64, i64imm>;
+def : Pat<(and i64:$lhs, i64:$rhs), (ANDrr $lhs, $rhs)>;
+def : Pat<(or  i64:$lhs, i64:$rhs), (ORrr  $lhs, $rhs)>;
+def : Pat<(xor i64:$lhs, i64:$rhs), (XORrr $lhs, $rhs)>;
 
-def ANDXNrr  : F3_1<2, 0b000101,
-                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                 "andn $rs1, $rs2, $rd",
-                 [(set i64:$rd, (and i64:$rs1, (not i64:$rs2)))]>;
-def ORXNrr   : F3_1<2, 0b000110,
-                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                 "orn $rs1, $rs2, $rd",
-                 [(set i64:$rd, (or i64:$rs1, (not i64:$rs2)))]>;
-def XNORXrr  : F3_1<2, 0b000111,
-                   (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                   "xnor $rs1, $rs2, $rd",
-                   [(set i64:$rd, (not (xor i64:$rs1, i64:$rs2)))]>;
+def : Pat<(and i64:$lhs, (i64 simm13:$rhs)), (ANDri $lhs, imm:$rhs)>;
+def : Pat<(or  i64:$lhs, (i64 simm13:$rhs)), (ORri  $lhs, imm:$rhs)>;
+def : Pat<(xor i64:$lhs, (i64 simm13:$rhs)), (XORri $lhs, imm:$rhs)>;
 
-defm ADDX    : F3_12<"add", 0b000000, add, I64Regs, i64, i64imm>;
-defm SUBX    : F3_12<"sub", 0b000100, sub, I64Regs, i64, i64imm>;
+def : Pat<(and i64:$lhs, (not i64:$rhs)), (ANDNrr $lhs, $rhs)>;
+def : Pat<(or  i64:$lhs, (not i64:$rhs)), (ORNrr  $lhs, $rhs)>;
+def : Pat<(not (xor i64:$lhs, i64:$rhs)), (XNORrr $lhs, $rhs)>;
 
-def TLS_ADDXrr : F3_1<2, 0b000000, (outs I64Regs:$rd),
-                   (ins I64Regs:$rs1, I64Regs:$rs2, TailRelocSymTLSAdd:$sym),
-                   "add $rs1, $rs2, $rd, $sym",
-                   [(set i64:$rd,
-                       (tlsadd i64:$rs1, i64:$rs2, tglobaltlsaddr:$sym))]>;
+def : Pat<(add i64:$lhs, i64:$rhs), (ADDrr $lhs, $rhs)>;
+def : Pat<(sub i64:$lhs, i64:$rhs), (SUBrr $lhs, $rhs)>;
 
-// "LEA" form of add
-def LEAX_ADDri : F3_2<2, 0b000000,
-                     (outs I64Regs:$rd), (ins (MEMri $rs1, $simm13):$addr),
-                     "add ${addr:arith}, $rd",
-                     [(set iPTR:$rd, ADDRri:$addr)]>;
-}
+def : Pat<(add i64:$lhs, (i64 simm13:$rhs)), (ADDri $lhs, imm:$rhs)>;
+def : Pat<(sub i64:$lhs, (i64 simm13:$rhs)), (SUBri $lhs, imm:$rhs)>;
 
-def : Pat<(SPcmpicc i64:$a, i64:$b), (CMPrr $a, $b)>;
-def : Pat<(SPcmpicc i64:$a, (i64 simm13:$b)), (CMPri $a, (as_i32imm $b))>;
+def : Pat<(tlsadd i64:$rs1, i64:$rs2, tglobaltlsaddr:$sym),
+          (TLS_ADDrr $rs1, $rs2, $sym)>;
+
+def : Pat<(SPcmpicc i64:$lhs, i64:$rhs), (SUBCCrr $lhs, $rhs)>;
+def : Pat<(SPcmpicc i64:$lhs, (i64 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
 def : Pat<(i64 (ctpop i64:$src)), (POPCrr $src)>;
 
 } // Predicates = [Is64Bit]
@@ -465,15 +452,6 @@ def : Pat<(SPselectreg (i64 simm10:$t), i64:$f, imm:$rcond, i64:$rs1),
 
 } // Predicates = [Is64Bit]
 
-
-// 64 bit SETHI
-let Predicates = [Is64Bit], isCodeGenOnly = 1 in {
-def SETHIXi : F2_1<0b100,
-                   (outs IntRegs:$rd), (ins i64imm:$imm22),
-                   "sethi $imm22, $rd",
-                   [(set i64:$rd, SETHIimm:$imm22)]>;
-}
-
 // ATOMICS.
 let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
   def CASXArr: F3_1_asi<3, 0b111110,
@@ -512,25 +490,25 @@ let Predicates = [Is64Bit], hasSideEffects = 1, Uses = [ICC], cc = 0b10 in
 let Predicates = [Is64Bit] in {
 
 def : Pat<(SPhi tglobaladdr:$in), (SETHIi tglobaladdr:$in)>;
-def : Pat<(SPlo tglobaladdr:$in), (ORXri (i64 G0), tglobaladdr:$in)>;
+def : Pat<(SPlo tglobaladdr:$in), (ORri (i64 G0), tglobaladdr:$in)>;
 def : Pat<(SPhi tconstpool:$in), (SETHIi tconstpool:$in)>;
-def : Pat<(SPlo tconstpool:$in), (ORXri (i64 G0), tconstpool:$in)>;
+def : Pat<(SPlo tconstpool:$in), (ORri (i64 G0), tconstpool:$in)>;
 
 // GlobalTLS addresses
 def : Pat<(SPhi tglobaltlsaddr:$in), (SETHIi tglobaltlsaddr:$in)>;
-def : Pat<(SPlo tglobaltlsaddr:$in), (ORXri (i64 G0), tglobaltlsaddr:$in)>;
+def : Pat<(SPlo tglobaltlsaddr:$in), (ORri (i64 G0), tglobaltlsaddr:$in)>;
 def : Pat<(add (SPhi tglobaltlsaddr:$in1), (SPlo tglobaltlsaddr:$in2)),
-          (ADDXri (SETHIXi tglobaltlsaddr:$in1), (tglobaltlsaddr:$in2))>;
+          (ADDri (SETHIi tglobaltlsaddr:$in1), (tglobaltlsaddr:$in2))>;
 def : Pat<(xor (SPhi tglobaltlsaddr:$in1), (SPlo tglobaltlsaddr:$in2)),
-          (XORXri  (SETHIXi tglobaltlsaddr:$in1), (tglobaltlsaddr:$in2))>;
+          (XORri  (SETHIi tglobaltlsaddr:$in1), (tglobaltlsaddr:$in2))>;
 
 // Blockaddress
 def : Pat<(SPhi tblockaddress:$in), (SETHIi tblockaddress:$in)>;
-def : Pat<(SPlo tblockaddress:$in), (ORXri (i64 G0), tblockaddress:$in)>;
+def : Pat<(SPlo tblockaddress:$in), (ORri (i64 G0), tblockaddress:$in)>;
 
 // Add reg, lo.  This is used when taking the addr of a global/constpool entry.
-def : Pat<(add iPTR:$r, (SPlo tglobaladdr:$in)), (ADDXri $r, tglobaladdr:$in)>;
-def : Pat<(add iPTR:$r, (SPlo tconstpool:$in)),  (ADDXri $r, tconstpool:$in)>;
+def : Pat<(add iPTR:$r, (SPlo tglobaladdr:$in)), (ADDri $r, tglobaladdr:$in)>;
+def : Pat<(add iPTR:$r, (SPlo tconstpool:$in)),  (ADDri $r, tconstpool:$in)>;
 def : Pat<(add iPTR:$r, (SPlo tblockaddress:$in)),
-                        (ADDXri $r, tblockaddress:$in)>;
+                        (ADDri $r, tblockaddress:$in)>;
 }

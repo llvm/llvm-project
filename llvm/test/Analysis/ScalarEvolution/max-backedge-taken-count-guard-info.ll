@@ -9,7 +9,7 @@ define void @test_guard_less_than_16(ptr nocapture %a, i64 %i) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 15 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 16 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_16
@@ -42,7 +42,7 @@ define void @test_guard_less_than_16_operands_swapped(ptr nocapture %a, i64 %i) 
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 15 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 16 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_16_operands_swapped
@@ -75,7 +75,7 @@ define void @test_guard_less_than_16_branches_flipped(ptr nocapture %a, i64 %i) 
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 15 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 16 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_less_than_16_branches_flipped
@@ -108,7 +108,7 @@ define void @test_guard_uge_16_branches_flipped(ptr nocapture %a, i64 %i) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 15 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<%loop> U: full-set S: full-set Exits: (60 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 16 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_uge_16_branches_flipped
@@ -1219,7 +1219,7 @@ define void @test_guard_slt_sgt_2(ptr nocapture %a, i64 %i) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 17 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (68 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<%loop> U: full-set S: full-set Exits: (68 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 18 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_slt_sgt_2
@@ -1293,7 +1293,7 @@ define void @test_guard_sle_sge_2(ptr nocapture %a, i64 %i) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
 ; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 17 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx = getelementptr inbounds i32, ptr %a, i64 %iv
-; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (68 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<%loop> U: full-set S: full-set Exits: (68 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 18 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_sle_sge_2

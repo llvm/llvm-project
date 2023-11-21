@@ -152,6 +152,8 @@ struct user_sve_header {
   uint16_t reserved;
 };
 
+using user_za_header = user_sve_header;
+
 /* Definitions for user_sve_header.flags: */
 const uint16_t ptrace_regs_mask = 1 << 0;
 const uint16_t ptrace_regs_fpsimd = 0;

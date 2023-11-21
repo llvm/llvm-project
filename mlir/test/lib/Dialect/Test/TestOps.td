@@ -2350,9 +2350,8 @@ def TestDestinationStyleOp :
   }];
 
   let extraClassDeclaration = [{
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t numOperands = this->getNumOperands();
-      return {numOperands - getOutputs().size(), numOperands};
+    mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
     }
   }];
 }
@@ -2412,9 +2411,8 @@ def TestLinalgConvOp :
       return "";
     }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
+    mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
     }
   }];
 }
@@ -2474,9 +2472,8 @@ def TestLinalgFillOp :
       return "";
     }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      int64_t getNumOperands = this->getNumOperands();
-      return {getNumOperands - 1, getNumOperands};
+    mlir::MutableOperandRange getDpsInitsMutable() {
+      return getOutputsMutable();
     }
   }];
 }
@@ -2497,6 +2494,29 @@ def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
           (TestDefaultStrAttrHasValueOp ConstantStrAttr<StrAttr, "foo">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Ops with variadics
+//===----------------------------------------------------------------------===//
+
+def TestVariadicRewriteSrcOp : TEST_Op<"variadic_rewrite_src_op", [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<AnyType>:$arg,
+    AnyType:$brg,
+    Variadic<AnyType>:$crg
+  );
+}
+
+def TestVariadicRewriteDstOp : TEST_Op<"variadic_rewrite_dst_op", [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    AnyType:$brg,
+    Variadic<AnyType>:$crg,
+    Variadic<AnyType>:$arg
+  );
+}
+
+def : Pat<(TestVariadicRewriteSrcOp $arg, $brg, $crg),
+          (TestVariadicRewriteDstOp $brg, $crg, $arg)>;
 
 //===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued Attributes and Differing Print Settings
@@ -2522,11 +2542,11 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
     Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
   );
 
-  let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource>]>);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource, 0>]>);
 }
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
-    [MemoryEffects<[MemWrite<TestResource>]>]>;
+    [MemoryEffects<[MemWrite<TestResource, 0>]>]>;
 
 def TestEffectsRead : TEST_Op<"op_with_memread",
     [MemoryEffects<[MemRead]>]> {
@@ -2570,7 +2590,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
   }];
 
   let extraClassDeclaration = [{
-    mlir::Region &getLoopBody() { return getBody(); }
+    llvm::SmallVector<mlir::Region *> getLoopRegions() { return {&getBody()}; }
   }];
 }
 
@@ -2942,6 +2962,18 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
 }
 
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+     SingleBlock]> {
+  let arguments = (ins
+    Arg<AnyMemRef, "", [MemWrite]>:$address,
+    BoolAttr:$store_before_region
+  );
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat =
+    "$address attr-dict-with-keyword regions `:` type($address)";
+}
+
+def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlock]> {
   let arguments = (ins

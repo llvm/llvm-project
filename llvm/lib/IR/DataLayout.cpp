@@ -171,7 +171,7 @@ const char *DataLayout::getManglingComponent(const Triple &T) {
     return "-m:l";
   if (T.isOSBinFormatMachO())
     return "-m:o";
-  if (T.isOSWindows() && T.isOSBinFormatCOFF())
+  if ((T.isOSWindows() || T.isUEFI()) && T.isOSBinFormatCOFF())
     return T.getArch() == Triple::x86 ? "-m:x" : "-m:w";
   if (T.isOSBinFormatXCOFF())
     return "-m:a";
@@ -649,6 +649,8 @@ Error DataLayout::setPointerAlignmentInBits(uint32_t AddrSpace, Align ABIAlign,
   if (PrefAlign < ABIAlign)
     return reportError(
         "Preferred alignment cannot be less than the ABI alignment");
+  if (IndexBitWidth > TypeBitWidth)
+    return reportError("Index width cannot be larger than pointer width");
 
   auto I = lower_bound(Pointers, AddrSpace,
                        [](const PointerAlignElem &A, uint32_t AddressSpace) {

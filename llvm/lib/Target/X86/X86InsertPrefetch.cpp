@@ -110,6 +110,11 @@ bool X86InsertPrefetch::findPrefetchInfo(const FunctionSamples *TopSamples,
                                          Prefetches &Prefetches) const {
   assert(Prefetches.empty() &&
          "Expected caller passed empty PrefetchInfo vector.");
+
+  // There is no point to match prefetch hints if the profile is using MD5.
+  if (FunctionSamples::UseMD5)
+    return false;
+
   static constexpr std::pair<StringLiteral, unsigned> HintTypes[] = {
       {"_nta_", X86::PREFETCHNTA},
       {"_t0_", X86::PREFETCHT0},
@@ -125,7 +130,7 @@ bool X86InsertPrefetch::findPrefetchInfo(const FunctionSamples *TopSamples,
   // Convert serialized prefetch hints into PrefetchInfo objects, and populate
   // the Prefetches vector.
   for (const auto &S_V : *T) {
-    StringRef Name = S_V.getKey();
+    StringRef Name = S_V.first.stringRef();
     if (Name.consume_front(SerializedPrefetchPrefix)) {
       int64_t D = static_cast<int64_t>(S_V.second);
       unsigned IID = 0;

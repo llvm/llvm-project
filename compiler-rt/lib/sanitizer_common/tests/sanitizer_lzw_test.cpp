@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_lzw.h"
 
+#include <algorithm>
 #include <iterator>
 
 #include "gtest/gtest.h"

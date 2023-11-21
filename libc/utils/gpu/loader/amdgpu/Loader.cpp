@@ -222,13 +222,13 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   // Set up the packet for exeuction on the device. We currently only launch
   // with one thread on the device, forcing the rest of the wavefront to be
   // masked off.
-  std::memset(packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
-  packet->setup = (1 + (params.num_blocks_y * params.num_threads_y != 1) +
-                   (params.num_blocks_z * params.num_threads_z != 1))
-                  << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+  uint16_t setup = (1 + (params.num_blocks_y * params.num_threads_y != 1) +
+                    (params.num_blocks_z * params.num_threads_z != 1))
+                   << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
   packet->workgroup_size_x = params.num_threads_x;
   packet->workgroup_size_y = params.num_threads_y;
   packet->workgroup_size_z = params.num_threads_z;
+  packet->reserved0 = 0;
   packet->grid_size_x = params.num_blocks_x * params.num_threads_x;
   packet->grid_size_y = params.num_blocks_y * params.num_threads_y;
   packet->grid_size_z = params.num_blocks_z * params.num_threads_z;
@@ -236,7 +236,7 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   packet->group_segment_size = group_size;
   packet->kernel_object = kernel;
   packet->kernarg_address = args;
-
+  packet->reserved2 = 0;
   // Create a signal to indicate when this packet has been completed.
   if (hsa_status_t err =
           hsa_signal_create(1, 0, nullptr, &packet->completion_signal))
@@ -244,12 +244,12 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
 
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
-  uint16_t setup = packet->setup;
   uint16_t header =
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
-  __atomic_store_n(&packet->header, header | (setup << 16), __ATOMIC_RELEASE);
+  uint32_t header_word = header | (setup << 16u);
+  __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
   // Wait until the kernel has completed execution on the device. Periodically
@@ -430,6 +430,49 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   else
     handle_error("Invalid wavefront size");
 
+  // Initialize the RPC client on the device by copying the local data to the
+  // device's internal pointer.
+  hsa_executable_symbol_t rpc_client_sym;
+  if (hsa_status_t err = hsa_executable_get_symbol_by_name(
+          executable, rpc_client_symbol_name, &dev_agent, &rpc_client_sym))
+    handle_error(err);
+
+  void *rpc_client_host;
+  if (hsa_status_t err =
+          hsa_amd_memory_pool_allocate(coarsegrained_pool, sizeof(void *),
+                                       /*flags=*/0, &rpc_client_host))
+    handle_error(err);
+
+  void *rpc_client_dev;
+  if (hsa_status_t err = hsa_executable_symbol_get_info(
+          rpc_client_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+          &rpc_client_dev))
+    handle_error(err);
+
+  // Copy the address of the client buffer from the device to the host.
+  if (hsa_status_t err = hsa_memcpy(rpc_client_host, host_agent, rpc_client_dev,
+                                    dev_agent, sizeof(void *)))
+    handle_error(err);
+
+  void *rpc_client_buffer;
+  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
+          coarsegrained_pool, rpc_get_client_size(),
+          /*flags=*/0, &rpc_client_buffer))
+    handle_error(err);
+  std::memcpy(rpc_client_buffer, rpc_get_client_buffer(device_id),
+              rpc_get_client_size());
+
+  // Copy the RPC client buffer to the address pointed to by the symbol.
+  if (hsa_status_t err =
+          hsa_memcpy(*reinterpret_cast<void **>(rpc_client_host), dev_agent,
+                     rpc_client_buffer, host_agent, rpc_get_client_size()))
+    handle_error(err);
+
+  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_buffer))
+    handle_error(err);
+  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_host))
+    handle_error(err);
+
   // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.
   // If the clock_freq symbol is missing, no work to do.
   hsa_executable_symbol_t freq_sym;
@@ -444,21 +487,22 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
       handle_error(err);
     hsa_amd_agents_allow_access(1, &dev_agent, nullptr, host_clock_freq);
 
-    if (hsa_status_t err =
-            hsa_agent_get_info(dev_agent,
-                               static_cast<hsa_agent_info_t>(
-                                   HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
-                               host_clock_freq))
-      handle_error(err);
+    if (HSA_STATUS_SUCCESS ==
+        hsa_agent_get_info(dev_agent,
+                           static_cast<hsa_agent_info_t>(
+                               HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
+                           host_clock_freq)) {
 
-    void *freq_addr;
-    if (hsa_status_t err = hsa_executable_symbol_get_info(
-            freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS, &freq_addr))
-      handle_error(err);
+      void *freq_addr;
+      if (hsa_status_t err = hsa_executable_symbol_get_info(
+              freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+              &freq_addr))
+        handle_error(err);
 
-    if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
-                                      host_agent, sizeof(uint64_t)))
-      handle_error(err);
+      if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
+                                        host_agent, sizeof(uint64_t)))
+        handle_error(err);
+    }
   }
 
   // Obtain a queue with the minimum (power of two) size, used to send commands
@@ -474,8 +518,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
-  begin_args_t init_args = {argc, dev_argv, dev_envp,
-                            rpc_get_buffer(device_id)};
+  begin_args_t init_args = {argc, dev_argv, dev_envp};
   if (hsa_status_t err = launch_kernel(
           dev_agent, executable, kernargs_pool, coarsegrained_pool, queue,
           single_threaded_params, "_begin.kd", init_args))

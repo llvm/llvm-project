@@ -638,7 +638,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // It seems that the 'e' option is completely ignored for dynamic executables
   // (the default), and with static executables, the last one wins, as expected.
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
                    options::OPT_Z_Flag, options::OPT_u_Group, options::OPT_r});
 
@@ -678,7 +678,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // to generate executables.
   if (getToolChain().getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-    addFortranRuntimeLibs(getToolChain(), CmdArgs);
+    addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
@@ -1400,7 +1400,7 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
     addExportedSymbol(CmdArgs, "_reset_fn_list");
   }
 
-  // Align __llvm_prf_{cnts,data} sections to the maximum expected page
+  // Align __llvm_prf_{cnts,bits,data} sections to the maximum expected page
   // alignment. This allows profile counters to be mmap()'d to disk. Note that
   // it's not enough to just page-align __llvm_prf_cnts: the following section
   // must also be page-aligned so that its data is not clobbered by mmap().
@@ -1410,7 +1410,7 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // extra alignment also allows the same binary to be used with/without sync
   // enabled.
   if (!ForGCOV) {
-    for (auto IPSK : {llvm::IPSK_cnts, llvm::IPSK_data}) {
+    for (auto IPSK : {llvm::IPSK_cnts, llvm::IPSK_bitmap, llvm::IPSK_data}) {
       addSectalignToPage(
           Args, CmdArgs, "__DATA",
           llvm::getInstrProfSectionName(IPSK, llvm::Triple::MachO,
@@ -2470,14 +2470,19 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
-    // On Darwin, libc++ can be installed in one of the following two places:
-    // 1. Alongside the compiler in         <install>/include/c++/v1
-    // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+    // On Darwin, libc++ can be installed in one of the following places:
+    // 1. Alongside the compiler in <install>/include/c++/v1
+    // 2. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
+    // 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
     //
-    // The precendence of paths is as listed above, i.e. we take the first path
-    // that exists. Also note that we never include libc++ twice -- we take the
-    // first path that exists and don't send the other paths to CC1 (otherwise
+    // The precedence of paths is as listed above, i.e. we take the first path
+    // that exists. Note that we never include libc++ twice -- we take the first
+    // path that exists and don't send the other paths to CC1 (otherwise
     // include_next could break).
+    //
+    // Also note that in most cases, (1) and (2) are exactly the same path.
+    // Those two paths will differ only when the `clang` program being run
+    // is actually a symlink to the real executable.
 
     // Check for (1)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
@@ -2494,7 +2499,20 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // Otherwise, check for (2)
+    // (2) Check for the folder where the executable is located, if different.
+    if (getDriver().getInstalledDir() != getDriver().Dir) {
+      InstallBin = llvm::StringRef(getDriver().Dir);
+      llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
+      if (getVFS().exists(InstallBin)) {
+        addSystemInclude(DriverArgs, CC1Args, InstallBin);
+        return;
+      } else if (DriverArgs.hasArg(options::OPT_v)) {
+        llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
+                     << "\"\n";
+      }
+    }
+
+    // Otherwise, check for (3)
     llvm::SmallString<128> SysrootUsr = Sysroot;
     llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
     if (getVFS().exists(SysrootUsr)) {
@@ -2843,6 +2861,25 @@ bool Darwin::isAlignedAllocationUnavailable() const {
   return TargetVersion < alignedAllocMinVersion(OS);
 }
 
+static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPlatform, const std::optional<DarwinSDKInfo> &SDKInfo) {
+  if (!SDKInfo)
+    return false;
+
+  VersionTuple SDKVersion = SDKInfo->getVersion();
+  switch (TargetPlatform) {
+  case Darwin::MacOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::IPhoneOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::TvOS:
+    return SDKVersion >= VersionTuple(99U);
+  case Darwin::WatchOS:
+    return SDKVersion >= VersionTuple(99U);
+  default:
+    return true;
+  }
+}
+
 void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args,
                                    Action::OffloadKind DeviceOffloadKind) const {
@@ -2865,6 +2902,20 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
           options::OPT_fvisibility_inlines_hidden_static_local_var,
           options::OPT_fno_visibility_inlines_hidden_static_local_var))
     CC1Args.push_back("-fvisibility-inlines-hidden-static-local-var");
+
+  // Earlier versions of the darwin SDK have the C standard library headers
+  // all together in the Darwin module. That leads to module cycles with
+  // the _Builtin_ modules. e.g. <inttypes.h> on darwin includes <stdint.h>.
+  // The builtin <stdint.h> include-nexts <stdint.h>. When both of those
+  // darwin headers are in the Darwin module, there's a module cycle Darwin ->
+  // _Builtin_stdint -> Darwin (i.e. inttypes.h (darwin) -> stdint.h (builtin) ->
+  // stdint.h (darwin)). This is fixed in later versions of the darwin SDK,
+  // but until then, the builtin headers need to join the system modules.
+  // i.e. when the builtin stdint.h is in the Darwin module too, the cycle
+  // goes away. Note that -fbuiltin-headers-in-system-modules does nothing
+  // to fix the same problem with C++ headers, and is generally fragile.
+  if (!sdkSupportsBuiltinModules(TargetPlatform, SDKInfo))
+    CC1Args.push_back("-fbuiltin-headers-in-system-modules");
 }
 
 void Darwin::addClangCC1ASTargetOptions(

@@ -11,10 +11,10 @@
 
 #include <wchar.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int wctob(wint_t c);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_WCHAR_WCTOB_H

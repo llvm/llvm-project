@@ -198,23 +198,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     errs() << *argv[0] << ": -mtriple must be specified\n";
     exit(1);
   }
-  Triple TargetTriple = Triple(Triple::normalize(TargetTripleStr));
-
-  std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(codegen::getMArch(), TargetTriple, Error);
-  if (!TheTarget) {
-    errs() << *argv[0] << ": " << Error;
-    exit(1);
-  }
-
-  TargetOptions Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple);
-  TM.reset(TheTarget->createTargetMachine(
-      TargetTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
-      Options, codegen::getExplicitRelocModel(),
-      codegen::getExplicitCodeModel(), CodeGenOpt::Default));
-  assert(TM && "Could not allocate target machine!");
+  ExitOnError ExitOnErr(std::string(*argv[0]) + ": error:");
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(
+      Triple::normalize(TargetTripleStr)));
 
   // Check that pass pipeline is specified and correct
   //

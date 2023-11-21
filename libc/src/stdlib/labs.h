@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_LABS_H
 #define LLVM_LIBC_SRC_STDLIB_LABS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 long labs(long n);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_LABS_H

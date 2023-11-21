@@ -35,10 +35,6 @@ static bool isLUIADDI(const MachineInstr *FirstMI,
   if (FirstMI->getOpcode() != RISCV::LUI)
     return false;
 
-  // The first operand of ADDI might be a frame index.
-  if (!SecondMI.getOperand(1).isReg())
-    return false;
-
   Register FirstDest = FirstMI->getOperand(0).getReg();
 
   // Destination of LUI should be the ADDI(W) source register.

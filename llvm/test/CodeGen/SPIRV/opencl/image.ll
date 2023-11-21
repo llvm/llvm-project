@@ -1,4 +1,4 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ;; FIXME: Write tests to ensure invalid usage of image are rejected, such as:
 ;;  - invalid AS (only global is allowed);
@@ -6,28 +6,24 @@
 ;;  - used with invalid CV-qualifiers (const or volatile in C99).
 ;; FIXME: Write further tests to cover _array, _buffer, _depth, ... types.
 
-%opencl.image1d_ro_t = type opaque ;; read_only image1d_t
-%opencl.image2d_wo_t = type opaque ;; write_only image2d_t
-%opencl.image3d_rw_t = type opaque ;; read_write image3d_t
-
 define void @foo(
-  %opencl.image1d_ro_t addrspace(1)* %a,
-  %opencl.image2d_wo_t addrspace(1)* %b,
-  %opencl.image3d_rw_t addrspace(1)* %c,
+  target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %a,
+  target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 1) %b,
+  target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 2) %c,
   i32 addrspace(1)* %d
 ) {
-  %pixel = call <4 x i32> @_Z11read_imagei14ocl_image1d_roi(%opencl.image1d_ro_t addrspace(1)* %a, i32 0)
-  call void @_Z12write_imagei14ocl_image2d_woDv2_iDv4_i(%opencl.image2d_wo_t addrspace(1)* %b, <2 x i32> zeroinitializer, <4 x i32> %pixel)
-  %size = call i32 @_Z15get_image_width14ocl_image3d_rw(%opencl.image3d_rw_t addrspace(1)* %c)
+  %pixel = call <4 x i32> @_Z11read_imagei14ocl_image1d_roi(target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %a, i32 0)
+  call void @_Z12write_imagei14ocl_image2d_woDv2_iDv4_i(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 1) %b, <2 x i32> zeroinitializer, <4 x i32> %pixel)
+  %size = call i32 @_Z15get_image_width14ocl_image3d_rw(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 2) %c)
   store i32 %size, i32 addrspace(1)* %d
   ret void
 }
 
-declare <4 x i32> @_Z11read_imagei14ocl_image1d_roi(%opencl.image1d_ro_t addrspace(1)*, i32)
+declare <4 x i32> @_Z11read_imagei14ocl_image1d_roi(target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0), i32)
 
-declare void @_Z12write_imagei14ocl_image2d_woDv2_iDv4_i(%opencl.image2d_wo_t addrspace(1)*, <2 x i32>, <4 x i32>)
+declare void @_Z12write_imagei14ocl_image2d_woDv2_iDv4_i(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 1), <2 x i32>, <4 x i32>)
 
-declare i32 @_Z15get_image_width14ocl_image3d_rw(%opencl.image3d_rw_t addrspace(1)*)
+declare i32 @_Z15get_image_width14ocl_image3d_rw(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 2))
 
 
 ;; Capabilities:

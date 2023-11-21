@@ -15,13 +15,13 @@ define dso_local void @test(ptr nocapture %fp, i32 signext %Arg, i32 signext %Le
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    cmpwi r5, 1
-; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    mr r29, r4
 ; CHECK-NEXT:    std r2, 24(r1)
 ; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    mr r29, r3
+; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    bc 12, lt, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    cmpwi r30, 11
+; CHECK-NEXT:    cmpwi r29, 11
 ; CHECK-NEXT:    bc 12, lt, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %for.body.us.preheader
 ; CHECK-NEXT:    addi r3, r5, -1
@@ -30,18 +30,18 @@ define dso_local void @test(ptr nocapture %fp, i32 signext %Arg, i32 signext %Le
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_3: # %for.body.us
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    mtctr r29
-; CHECK-NEXT:    mr r3, r30
-; CHECK-NEXT:    mr r12, r29
+; CHECK-NEXT:    mtctr r30
+; CHECK-NEXT:    mr r3, r29
+; CHECK-NEXT:    mr r12, r30
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    ld 2, 24(r1)
 ; CHECK-NEXT:    addi r28, r28, -1
 ; CHECK-NEXT:    cmpldi r28, 0
 ; CHECK-NEXT:    bc 12, gt, .LBB0_3
 ; CHECK-NEXT:  .LBB0_4: # %for.cond.cleanup
-; CHECK-NEXT:    mtctr r29
-; CHECK-NEXT:    mr r3, r30
-; CHECK-NEXT:    mr r12, r29
+; CHECK-NEXT:    mtctr r30
+; CHECK-NEXT:    mr r3, r29
+; CHECK-NEXT:    mr r12, r30
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    ld 2, 24(r1)
 ; CHECK-NEXT:    addi r1, r1, 64

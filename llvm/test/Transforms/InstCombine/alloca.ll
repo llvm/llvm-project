@@ -132,7 +132,7 @@ define void @test6() {
 ; NODL-NEXT:  entry:
 ; NODL-NEXT:    [[A:%.*]] = alloca { i32 }, align 8
 ; NODL-NEXT:    [[B:%.*]] = alloca i32, align 4
-; NODL-NEXT:    store volatile i32 123, ptr [[A]], align 8
+; NODL-NEXT:    store volatile i32 123, ptr [[A]], align 4
 ; NODL-NEXT:    tail call void @f(ptr nonnull [[B]])
 ; NODL-NEXT:    ret void
 ;
@@ -186,13 +186,29 @@ declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
 
 define void @test9(ptr %a) {
-; ALL-LABEL: @test9(
-; ALL-NEXT:  entry:
-; ALL-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 8
-; ALL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
-; ALL-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 8
-; ALL-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
-; ALL-NEXT:    ret void
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 4
+; CHECK-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
+; CHECK-NEXT:    ret void
+;
+; P32-LABEL: @test9(
+; P32-NEXT:  entry:
+; P32-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 1
+; P32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
+; P32-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 4
+; P32-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
+; P32-NEXT:    ret void
+;
+; NODL-LABEL: @test9(
+; NODL-NEXT:  entry:
+; NODL-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 8
+; NODL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
+; NODL-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 8
+; NODL-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
+; NODL-NEXT:    ret void
 ;
 entry:
   %inalloca.save = call ptr @llvm.stacksave()

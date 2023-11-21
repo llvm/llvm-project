@@ -1,26 +1,26 @@
 RUN: rm -rf %t && mkdir %t
 
-# Check --check-globals in normal mode and in --include-generated-funcs mode.
+# Check --check-globals all in normal mode and in --include-generated-funcs mode.
 
 RUN: cp %S/Inputs/check-globals.c %t/norm.c
-RUN: %update_cc_test_checks %t/norm.c --check-globals
+RUN: %update_cc_test_checks %t/norm.c --check-globals all
 RUN: FileCheck %s --input-file=%t/norm.c --match-full-lines -strict-whitespace \
 RUN:   -check-prefixes=BOTH,NRM
 
 RUN: cp %S/Inputs/check-globals.c %t/igf.c
-RUN: %update_cc_test_checks %t/igf.c --check-globals --include-generated-funcs
+RUN: %update_cc_test_checks %t/igf.c --check-globals all --include-generated-funcs
 RUN: FileCheck %s --input-file=%t/igf.c --match-full-lines -strict-whitespace \
 RUN:   -check-prefixes=BOTH,IGF
 
 # Check that repeating doesn't change it, such as duplicating '//.' occurrences.
 
 RUN: cp %t/norm.c %t/norm-again.c
-RUN: %update_cc_test_checks %t/norm-again.c --check-globals
+RUN: %update_cc_test_checks %t/norm-again.c --check-globals all
 RUN: diff -u %t/norm.c %t/norm-again.c
 RUN: rm %t/norm-again.c
 
 RUN: cp %t/igf.c %t/igf-again.c
-RUN: %update_cc_test_checks %t/igf-again.c --check-globals \
+RUN: %update_cc_test_checks %t/igf-again.c --check-globals all \
 RUN:     --include-generated-funcs
 RUN: diff -u %t/igf.c %t/igf-again.c
 RUN: rm %t/igf-again.c
@@ -74,8 +74,8 @@ BOTH-EMPTY:
  BOTH-NEXT://.
  BOTH-NEXT:// CHECK: attributes {{.*}}
  BOTH-NEXT://.
- BOTH-NEXT:// CHECK: !0 = {{.*}}
- BOTH-NEXT:// CHECK: !1 = {{.*}}
+ BOTH-NEXT:// CHECK: {{\[\[META0:!\[0-9\]\+\]\]}} = {{.*}}
+ BOTH-NEXT:// CHECK: {{\[\[META1:!\[0-9\]\+\]\]}} = {{.*}}
  BOTH-NEXT://.
   BOTH-NOT:{{.}}
 

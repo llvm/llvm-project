@@ -29,13 +29,17 @@ ELF Improvements
 * ``--fat-lto-objects`` option is added to support LLVM FatLTO.
   Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
   relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
-
+* common-page-size can now be larger than the system page-size.
+  (`#57618 <https://github.com/llvm/llvm-project/issues/57618>`_)
 
 Breaking changes
 ----------------
 
 COFF Improvements
 -----------------
+
+* Added support for ``--time-trace`` and associated ``--time-trace-granularity``.
+  This generates a .json profile trace of the linker execution.
 
 MinGW Improvements
 ------------------

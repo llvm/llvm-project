@@ -428,10 +428,10 @@ define <16 x half> @fdiv_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK-SD-NOFP16-NEXT:    mov h6, v2.h[2]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h4, s4
 ; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
-; CHECK-SD-NOFP16-NEXT:    fdiv s6, s7, s6
-; CHECK-SD-NOFP16-NEXT:    mov h7, v2.h[3]
-; CHECK-SD-NOFP16-NEXT:    fcvt s7, h7
-; CHECK-SD-NOFP16-NEXT:    fdiv s7, s16, s7
+; CHECK-SD-NOFP16-NEXT:    fdiv s7, s7, s6
+; CHECK-SD-NOFP16-NEXT:    mov h6, v2.h[3]
+; CHECK-SD-NOFP16-NEXT:    fcvt s6, h6
+; CHECK-SD-NOFP16-NEXT:    fdiv s6, s16, s6
 ; CHECK-SD-NOFP16-NEXT:    mov h16, v2.h[4]
 ; CHECK-SD-NOFP16-NEXT:    fcvt s16, h16
 ; CHECK-SD-NOFP16-NEXT:    fdiv s16, s17, s16
@@ -473,12 +473,12 @@ define <16 x half> @fdiv_v16f16(<16 x half> %a, <16 x half> %b) {
 ; CHECK-SD-NOFP16-NEXT:    fcvt h2, s20
 ; CHECK-SD-NOFP16-NEXT:    fcvt s3, h3
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[1], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s6
+; CHECK-SD-NOFP16-NEXT:    fcvt h4, s7
 ; CHECK-SD-NOFP16-NEXT:    mov v2.h[1], v5.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h5, s21
 ; CHECK-SD-NOFP16-NEXT:    fdiv s20, s25, s26
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[2], v4.h[0]
-; CHECK-SD-NOFP16-NEXT:    fcvt h4, s7
+; CHECK-SD-NOFP16-NEXT:    fcvt h4, s6
 ; CHECK-SD-NOFP16-NEXT:    mov v2.h[2], v5.h[0]
 ; CHECK-SD-NOFP16-NEXT:    fcvt h5, s22
 ; CHECK-SD-NOFP16-NEXT:    mov v0.h[3], v4.h[0]

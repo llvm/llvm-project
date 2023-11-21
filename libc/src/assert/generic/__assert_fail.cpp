@@ -11,13 +11,13 @@
 #include "src/__support/libc_assert.h"
 #include "src/stdlib/abort.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, __assert_fail,
                    (const char *assertion, const char *file, unsigned line,
                     const char *function)) {
-  __llvm_libc::report_assertion_failure(assertion, file, line, function);
-  __llvm_libc::abort();
+  LIBC_NAMESPACE::report_assertion_failure(assertion, file, line, function);
+  LIBC_NAMESPACE::abort();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

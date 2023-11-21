@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate
 
 
-func.func @test_argmax(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xf32> {
+func.func @test_argmax(%arg0: tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32> {
   // expected-error@+1 {{'tosa.argmax' op failed level check: operand rank(shape) <= MAX_RANK}}
-  %0 = "tosa.argmax"(%arg0) {axis = 4 : i32} : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xf32>
-  return %0 : tensor<1x1x1x1x29x4xf32>
+  %0 = "tosa.argmax"(%arg0) {axis = 4 : i32} : (tensor<1x1x1x1x29x29x4xf32>) -> tensor<1x1x1x1x29x4xi32>
+  return %0 : tensor<1x1x1x1x29x4xi32>
 }
 
 // -----
@@ -639,7 +639,7 @@ func.func @test_transpose_conv2d_stride_x(%arg0: tensor<1x32x32x8xf32>, %arg1: t
 
 func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
   // expected-error@+1 {{'tosa.resize' op failed level check: scale_y_n/scale_y_d <= MAX_SCALE}}
-  %1 = "tosa.resize"(%arg0) { scale = array<i64: 65, 1, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
+  %1 = "tosa.resize"(%arg0) { scale = array<i64: 257, 1, 4, 2>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
                 (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }
@@ -648,7 +648,7 @@ func.func @test_resize_scale_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8
 
 func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
   // expected-error@+1 {{'tosa.resize' op failed level check: scale_x_n/scale_x_d <= MAX_SCALE}}
-  %1 = "tosa.resize"(%arg0) { scale = array<i64: 4, 2, 65, 1>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
+  %1 = "tosa.resize"(%arg0) { scale = array<i64: 4, 2, 257, 1>, offset = array<i64: -1, -1>, border = array<i64: 1, 1>, mode = "BILINEAR"} :
                 (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }
@@ -690,9 +690,18 @@ func.func @test_while_loop(%arg0: tensor<1x1x1x1x1x1x1xf32>, %arg1: tensor<i32>)
 
 // CHECK-LABEL: @test_custom
 func.func @test_custom(%arg0: tensor<1x1x1x1x1x1x10xi32>) -> tensor<1x1x1x1x1x1x10xi32> {
-  %0 = "tosa.custom"(%arg0) {identifier="custom_test", config="tosa_mlir_test", implementation_attrs=""} :
+  %0 = "tosa.custom"(%arg0) {operator_name="custom_test", domain_name="tosa_mlir_test", implementation_attrs=""} :
            (tensor<1x1x1x1x1x1x10xi32>) -> (tensor<1x1x1x1x1x1x10xi32>)
   return %0 : tensor<1x1x1x1x1x1x10xi32>
 }
 
+// -----
+
+// CHECK-LABEL: unranked_tensor
+func.func @test_unranked_tensor(%arg0: tensor<*xf32>) {
+  // expected-error@+1 {{'tosa.slice' op failed level check: unranked tensor}}
+  %0 = "tosa.slice"(%arg0) {start = array<i64>, size = array<i64>} :
+          (tensor<*xf32>) -> tensor<*xf32>
+  return
+}
 

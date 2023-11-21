@@ -25,7 +25,7 @@ class UnalignedWatchpointTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # debugserver on AArch64 has this feature.
-    @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
+    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
     @skipUnlessDarwin
     # debugserver only started returning an exception address within
     # a range lldb expects in https://reviews.llvm.org/D147820 2023-04-12.
@@ -41,12 +41,16 @@ class UnalignedWatchpointTestCase(TestBase):
             self, "break here", self.main_source_file
         )
 
+        thread.StepOver()
+
         frame = thread.GetFrameAtIndex(0)
 
         a_bytebuf_6 = frame.GetValueForVariablePath("a.bytebuf[6]")
         a_bytebuf_6_addr = a_bytebuf_6.GetAddress().GetLoadAddress(target)
         err = lldb.SBError()
-        wp = target.WatchAddress(a_bytebuf_6_addr, 4, False, True, err)
+        wp_opts = lldb.SBWatchpointOptions()
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
+        wp = target.WatchpointCreateByAddress(a_bytebuf_6_addr, 4, wp_opts, err)
         self.assertTrue(err.Success())
         self.assertTrue(wp.IsEnabled())
         self.assertEqual(wp.GetWatchSize(), 4)

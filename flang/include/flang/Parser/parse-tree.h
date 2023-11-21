@@ -262,6 +262,7 @@ struct PauseStmt;
 struct OpenACCConstruct;
 struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
+struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
@@ -412,7 +413,8 @@ struct ImplicitPartStmt {
       Statement<common::Indirection<OldParameterStmt>>,
       Statement<common::Indirection<FormatStmt>>,
       Statement<common::Indirection<EntryStmt>>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>,
+      common::Indirection<OpenACCDeclarativeConstruct>>
       u;
 };
 
@@ -558,7 +560,8 @@ struct ProgramUnit {
       common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>, common::Indirection<Module>,
       common::Indirection<Submodule>, common::Indirection<BlockData>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>,
+      common::Indirection<OpenACCRoutineConstruct>>
       u;
 };
 
@@ -2259,15 +2262,18 @@ struct LoopControl {
 };
 
 // R1121 label-do-stmt -> [do-construct-name :] DO label [loop-control]
+// A label-do-stmt with a do-construct-name is parsed as a non-label-do-stmt.
 struct LabelDoStmt {
   TUPLE_CLASS_BOILERPLATE(LabelDoStmt);
-  std::tuple<std::optional<Name>, Label, std::optional<LoopControl>> t;
+  std::tuple<Label, std::optional<LoopControl>> t;
 };
 
 // R1122 nonlabel-do-stmt -> [do-construct-name :] DO [loop-control]
 struct NonLabelDoStmt {
   TUPLE_CLASS_BOILERPLATE(NonLabelDoStmt);
-  std::tuple<std::optional<Name>, std::optional<LoopControl>> t;
+  std::tuple<std::optional<Name>, std::optional<Label>,
+      std::optional<LoopControl>>
+      t;
 };
 
 // R1132 end-do-stmt -> END DO [do-construct-name]
@@ -4056,9 +4062,9 @@ struct AccWaitArgument {
 };
 
 struct AccDeviceTypeExpr {
-  TUPLE_CLASS_BOILERPLATE(AccDeviceTypeExpr);
+  ENUM_CLASS(Device, Star, Default, Nvidia, Radeon, Host, Multicore)
+  WRAPPER_CLASS_BOILERPLATE(AccDeviceTypeExpr, Device);
   CharBlock source;
-  std::tuple<std::optional<ScalarIntExpr>> t; // if null then *
 };
 
 struct AccDeviceTypeExprList {
@@ -4247,7 +4253,16 @@ struct OpenACCDeclarativeConstruct {
 EMPTY_CLASS(AccEndLoop);
 struct OpenACCLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCLoopConstruct);
-  std::tuple<AccBeginLoopDirective, DoConstruct, std::optional<AccEndLoop>> t;
+  OpenACCLoopConstruct(AccBeginLoopDirective &&a)
+      : t({std::move(a), std::nullopt, std::nullopt}) {}
+  std::tuple<AccBeginLoopDirective, std::optional<DoConstruct>,
+      std::optional<AccEndLoop>>
+      t;
+};
+
+struct OpenACCEndConstruct {
+  WRAPPER_CLASS_BOILERPLATE(OpenACCEndConstruct, llvm::acc::Directive);
+  CharBlock source;
 };
 
 struct OpenACCStandaloneConstruct {
@@ -4260,7 +4275,7 @@ struct OpenACCConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCConstruct);
   std::variant<OpenACCBlockConstruct, OpenACCCombinedConstruct,
       OpenACCLoopConstruct, OpenACCStandaloneConstruct, OpenACCCacheConstruct,
-      OpenACCWaitConstruct, OpenACCAtomicConstruct>
+      OpenACCWaitConstruct, OpenACCAtomicConstruct, OpenACCEndConstruct>
       u;
 };
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H
 
 #include "span.h"
 #include "string_view.h"
@@ -15,7 +15,7 @@
 
 #include "src/__support/integer_to_string.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // This class is to be used to write simple strings into a user provided buffer
@@ -90,6 +90,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H

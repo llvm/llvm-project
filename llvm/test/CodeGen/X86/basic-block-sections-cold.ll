@@ -1,9 +1,18 @@
-; Check if basic blocks that don't get unique sections are placed in cold sections.
-; Basic block with id 1 and 2 must be in the cold section.
-; RUN: echo '!_Z3bazb' > %t
-; RUN: echo '!!0' >> %t
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t -unique-basic-block-section-names -bbsections-cold-text-prefix=".text.unlikely." | FileCheck %s -check-prefix=LINUX-SPLIT
+;; Check if basic blocks that don't get unique sections are placed in cold sections.
+;; Basic block with id 1 and 2 must be in the cold section.
+;;
+;; Profile for version 0
+; RUN: echo '!_Z3bazb' > %t1
+; RUN: echo '!!0' >> %t1
+;;
+;; Profile for version 1
+; RUN: echo 'v1' > %t2
+; RUN: echo 'f _Z3bazb' >> %t2
+; RUN: echo 'c 0' >> %t2
+;;
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t2 -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc < %s -mtriple=x86_64 -function-sections -basic-block-sections=%t1 -unique-basic-block-section-names -bbsections-cold-text-prefix=".text.unlikely." | FileCheck %s -check-prefix=LINUX-SPLIT
 
 define void @_Z3bazb(i1 zeroext %0) nounwind {
   br i1 %0, label %2, label %4

@@ -38,11 +38,8 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
   if (result.first == fir::NameUniquer::NameKind::COMMON &&
       result.second.name.empty())
     return Fortran::common::blankCommonObjectName;
-
-  if (appendUnderscore)
-    return result.second.name + "_";
-
-  return result.second.name;
+  return Fortran::common::GetExternalAssemblyName(result.second.name,
+                                                  appendUnderscore);
 }
 
 /// Update the early outlining parent name

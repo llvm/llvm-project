@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: availability-aligned_allocation-missing
-
 // <experimental/memory_resource>
 
 // memory_resource * null_memory_resource()

@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -97,6 +98,7 @@ static bool Demangle;
 static bool DynamicSyms;
 static bool ExportSymbols;
 static bool ExternalOnly;
+static bool LineNumbers;
 static OutputFormatTy OutputFormat;
 static bool NoLLVMBitcode;
 static bool NoSort;
@@ -237,10 +239,8 @@ struct NMSymbol {
   std::string IndirectName;
 
   bool isDefined() const {
-    if (Sym.getRawDataRefImpl().p) {
-      uint32_t Flags = cantFail(Sym.getFlags());
-      return !(Flags & SymbolRef::SF_Undefined);
-    }
+    if (Sym.getRawDataRefImpl().p)
+      return !(SymFlags & SymbolRef::SF_Undefined);
     return TypeChar != 'U';
   }
 
@@ -553,8 +553,6 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
       }
     }
   }
-
-  outs() << "\n";
 }
 
 // Table that maps Darwin's Mach-O stab constants to strings to allow printing.
@@ -563,37 +561,22 @@ struct DarwinStabName {
   const char *Name;
 };
 const struct DarwinStabName DarwinStabNames[] = {
-    {MachO::N_GSYM, "GSYM"},
-    {MachO::N_FNAME, "FNAME"},
-    {MachO::N_FUN, "FUN"},
-    {MachO::N_STSYM, "STSYM"},
-    {MachO::N_LCSYM, "LCSYM"},
-    {MachO::N_BNSYM, "BNSYM"},
-    {MachO::N_PC, "PC"},
-    {MachO::N_AST, "AST"},
-    {MachO::N_OPT, "OPT"},
-    {MachO::N_RSYM, "RSYM"},
-    {MachO::N_SLINE, "SLINE"},
-    {MachO::N_ENSYM, "ENSYM"},
-    {MachO::N_SSYM, "SSYM"},
-    {MachO::N_SO, "SO"},
-    {MachO::N_OSO, "OSO"},
-    {MachO::N_LSYM, "LSYM"},
-    {MachO::N_BINCL, "BINCL"},
-    {MachO::N_SOL, "SOL"},
-    {MachO::N_PARAMS, "PARAM"},
-    {MachO::N_VERSION, "VERS"},
-    {MachO::N_OLEVEL, "OLEV"},
-    {MachO::N_PSYM, "PSYM"},
-    {MachO::N_EINCL, "EINCL"},
-    {MachO::N_ENTRY, "ENTRY"},
-    {MachO::N_LBRAC, "LBRAC"},
-    {MachO::N_EXCL, "EXCL"},
-    {MachO::N_RBRAC, "RBRAC"},
-    {MachO::N_BCOMM, "BCOMM"},
-    {MachO::N_ECOMM, "ECOMM"},
-    {MachO::N_ECOML, "ECOML"},
-    {MachO::N_LENG, "LENG"},
+    {MachO::N_GSYM, "GSYM"},    {MachO::N_FNAME, "FNAME"},
+    {MachO::N_FUN, "FUN"},      {MachO::N_STSYM, "STSYM"},
+    {MachO::N_LCSYM, "LCSYM"},  {MachO::N_BNSYM, "BNSYM"},
+    {MachO::N_PC, "PC"},        {MachO::N_AST, "AST"},
+    {MachO::N_OPT, "OPT"},      {MachO::N_RSYM, "RSYM"},
+    {MachO::N_SLINE, "SLINE"},  {MachO::N_ENSYM, "ENSYM"},
+    {MachO::N_SSYM, "SSYM"},    {MachO::N_SO, "SO"},
+    {MachO::N_OSO, "OSO"},      {MachO::N_LIB, "LIB"},
+    {MachO::N_LSYM, "LSYM"},    {MachO::N_BINCL, "BINCL"},
+    {MachO::N_SOL, "SOL"},      {MachO::N_PARAMS, "PARAM"},
+    {MachO::N_VERSION, "VERS"}, {MachO::N_OLEVEL, "OLEV"},
+    {MachO::N_PSYM, "PSYM"},    {MachO::N_EINCL, "EINCL"},
+    {MachO::N_ENTRY, "ENTRY"},  {MachO::N_LBRAC, "LBRAC"},
+    {MachO::N_EXCL, "EXCL"},    {MachO::N_RBRAC, "RBRAC"},
+    {MachO::N_BCOMM, "BCOMM"},  {MachO::N_ECOMM, "ECOMM"},
+    {MachO::N_ECOML, "ECOML"},  {MachO::N_LENG, "LENG"},
 };
 
 static const char *getDarwinStabString(uint8_t NType) {
@@ -629,30 +612,6 @@ static void darwinPrintStab(MachOObjectFile *MachO, const NMSymbol &S) {
     outs() << format("%5.5s", stabString);
   else
     outs() << format("   %02x", NType);
-}
-
-static std::optional<std::string> demangle(StringRef Name) {
-  std::string Demangled;
-  if (nonMicrosoftDemangle(Name, Demangled))
-    return Demangled;
-  return std::nullopt;
-}
-
-static std::optional<std::string> demangleXCOFF(StringRef Name) {
-  if (Name.empty() || Name[0] != '.')
-    return demangle(Name);
-
-  Name = Name.drop_front();
-  std::optional<std::string> DemangledName = demangle(Name);
-  if (DemangledName)
-    return "." + *DemangledName;
-  return std::nullopt;
-}
-
-static std::optional<std::string> demangleMachO(StringRef Name) {
-  if (!Name.empty() && Name[0] == '_')
-    Name = Name.drop_front();
-  return demangle(Name);
 }
 
 static bool symbolIsDefined(const NMSymbol &Sym) {
@@ -691,9 +650,88 @@ static void printExportSymbolList(const std::vector<NMSymbol> &SymbolList) {
   }
 }
 
+static void printLineNumbers(symbolize::LLVMSymbolizer &Symbolizer,
+                             const NMSymbol &S) {
+  const auto *Obj = dyn_cast<ObjectFile>(S.Sym.getObject());
+  if (!Obj)
+    return;
+  const SymbolRef Sym(S.Sym);
+  uint64_t SectionIndex = object::SectionedAddress::UndefSection;
+  section_iterator Sec = cantFail(Sym.getSection());
+  if (Sec != Obj->section_end())
+    SectionIndex = Sec->getIndex();
+  object::SectionedAddress Address = {cantFail(Sym.getAddress()), SectionIndex};
+
+  std::string FileName;
+  uint32_t Line;
+  switch (S.TypeChar) {
+  // For undefined symbols, find the first relocation for that symbol with a
+  // line number.
+  case 'U': {
+    for (const SectionRef RelocsSec : Obj->sections()) {
+      if (RelocsSec.relocations().empty())
+        continue;
+      SectionRef TextSec = *cantFail(RelocsSec.getRelocatedSection());
+      if (!TextSec.isText())
+        continue;
+      for (const RelocationRef R : RelocsSec.relocations()) {
+        if (R.getSymbol() != Sym)
+          continue;
+        Expected<DILineInfo> ResOrErr = Symbolizer.symbolizeCode(
+            *Obj, {TextSec.getAddress() + R.getOffset(), SectionIndex});
+        if (!ResOrErr) {
+          error(ResOrErr.takeError(), Obj->getFileName());
+          return;
+        }
+        if (ResOrErr->FileName == DILineInfo::BadString)
+          return;
+        FileName = std::move(ResOrErr->FileName);
+        Line = ResOrErr->Line;
+        break;
+      }
+      if (!FileName.empty())
+        break;
+    }
+    if (FileName.empty())
+      return;
+    break;
+  }
+  case 't':
+  case 'T': {
+    Expected<DILineInfo> ResOrErr = Symbolizer.symbolizeCode(*Obj, Address);
+    if (!ResOrErr) {
+      error(ResOrErr.takeError(), Obj->getFileName());
+      return;
+    }
+    if (ResOrErr->FileName == DILineInfo::BadString)
+      return;
+    FileName = std::move(ResOrErr->FileName);
+    Line = ResOrErr->Line;
+    break;
+  }
+  default: {
+    Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(*Obj, Address);
+    if (!ResOrErr) {
+      error(ResOrErr.takeError(), Obj->getFileName());
+      return;
+    }
+    if (ResOrErr->DeclFile.empty())
+      return;
+    FileName = std::move(ResOrErr->DeclFile);
+    Line = ResOrErr->DeclLine;
+    break;
+  }
+  }
+  outs() << '\t' << FileName << ':' << Line;
+}
+
 static void printSymbolList(SymbolicFile &Obj,
                             std::vector<NMSymbol> &SymbolList, bool printName,
                             StringRef ArchiveName, StringRef ArchitectureName) {
+  std::optional<symbolize::LLVMSymbolizer> Symbolizer;
+  if (LineNumbers)
+    Symbolizer.emplace();
+
   if (!PrintFileName) {
     if ((OutputFormat == bsd || OutputFormat == posix ||
          OutputFormat == just_symbols) &&
@@ -745,15 +783,8 @@ static void printSymbolList(SymbolicFile &Obj,
 
     std::string Name = S.Name;
     MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
-    if (Demangle) {
-      function_ref<std::optional<std::string>(StringRef)> Fn = ::demangle;
-      if (Obj.isXCOFF())
-        Fn = demangleXCOFF;
-      if (Obj.isMachO())
-        Fn = demangleMachO;
-      if (std::optional<std::string> Opt = Fn(S.Name))
-        Name = *Opt;
-    }
+    if (Demangle)
+      Name = demangle(Name);
 
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);
@@ -800,7 +831,7 @@ static void printSymbolList(SymbolicFile &Obj,
                         printFormat);
     } else if (OutputFormat == posix) {
       outs() << Name << " " << S.TypeChar << " " << SymbolAddrStr << " "
-             << (MachO ? "0" : SymbolSizeStr) << "\n";
+             << (MachO ? "0" : SymbolSizeStr);
     } else if (OutputFormat == bsd || (OutputFormat == darwin && !MachO)) {
       if (PrintAddress)
         outs() << SymbolAddrStr << ' ';
@@ -821,12 +852,14 @@ static void printSymbolList(SymbolicFile &Obj,
         } else
           outs() << S.IndirectName << ")";
       }
-      outs() << "\n";
     } else if (OutputFormat == sysv) {
       outs() << left_justify(Name, 20) << "|" << SymbolAddrStr << "|   "
              << S.TypeChar << "  |" << right_justify(S.TypeName, 18) << "|"
-             << SymbolSizeStr << "|     |" << S.SectionName << "\n";
+             << SymbolSizeStr << "|     |" << S.SectionName;
     }
+    if (LineNumbers)
+      printLineNumbers(*Symbolizer, S);
+    outs() << '\n';
   }
 
   SymbolList.clear();
@@ -1025,10 +1058,12 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 static char getSymbolNMTypeChar(TapiFile &Obj, basic_symbol_iterator I) {
   auto Type = cantFail(Obj.getSymbolType(I->getRawDataRefImpl()));
   switch (Type) {
-  case SymbolRef::ST_Data:
-    return 'd';
   case SymbolRef::ST_Function:
     return 't';
+  case SymbolRef::ST_Data:
+    if (Obj.hasSegmentInfo())
+      return 'd';
+    [[fallthrough]];
   default:
     return 's';
   }
@@ -2415,6 +2450,7 @@ int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
   else
     error("--format value should be one of: bsd, posix, sysv, darwin, "
           "just-symbols");
+  LineNumbers = Args.hasArg(OPT_line_numbers);
   NoLLVMBitcode = Args.hasArg(OPT_no_llvm_bc);
   NoSort = Args.hasArg(OPT_no_sort);
   NoWeakSymbols = Args.hasArg(OPT_no_weak);

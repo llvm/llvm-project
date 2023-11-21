@@ -986,10 +986,7 @@ define i128 @cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    mr r10, r6
 ; CHECK-NEXT:    stqcx. r10, 0, r3
 ; CHECK-NEXT:    bne cr0, .LBB7_1
-; CHECK-NEXT:    b .LBB7_4
 ; CHECK-NEXT:  .LBB7_3: # %entry
-; CHECK-NEXT:    stqcx. r8, 0, r3
-; CHECK-NEXT:  .LBB7_4: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    mr r4, r9
@@ -1033,10 +1030,7 @@ define i128 @cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; LE-PWR8-NEXT:    mr r10, r7
 ; LE-PWR8-NEXT:    stqcx. r10, 0, r3
 ; LE-PWR8-NEXT:    bne cr0, .LBB7_1
-; LE-PWR8-NEXT:    b .LBB7_4
 ; LE-PWR8-NEXT:  .LBB7_3: # %entry
-; LE-PWR8-NEXT:    stqcx. r8, 0, r3
-; LE-PWR8-NEXT:  .LBB7_4: # %entry
 ; LE-PWR8-NEXT:    lwsync
 ; LE-PWR8-NEXT:    mr r3, r9
 ; LE-PWR8-NEXT:    mr r4, r8
@@ -1057,10 +1051,7 @@ define i128 @cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; AIX64-PWR8-NEXT:    mr r10, r6
 ; AIX64-PWR8-NEXT:    stqcx. r10, 0, r3
 ; AIX64-PWR8-NEXT:    bne cr0, L..BB7_1
-; AIX64-PWR8-NEXT:    b L..BB7_4
 ; AIX64-PWR8-NEXT:  L..BB7_3: # %entry
-; AIX64-PWR8-NEXT:    stqcx. r8, 0, r3
-; AIX64-PWR8-NEXT:  L..BB7_4: # %entry
 ; AIX64-PWR8-NEXT:    lwsync
 ; AIX64-PWR8-NEXT:    mr r3, r8
 ; AIX64-PWR8-NEXT:    mr r4, r9
@@ -1121,10 +1112,7 @@ define i128 @cas_weak_release_monotonic(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    mr r10, r6
 ; CHECK-NEXT:    stqcx. r10, 0, r3
 ; CHECK-NEXT:    bne cr0, .LBB8_1
-; CHECK-NEXT:    b .LBB8_4
 ; CHECK-NEXT:  .LBB8_3: # %entry
-; CHECK-NEXT:    stqcx. r8, 0, r3
-; CHECK-NEXT:  .LBB8_4: # %entry
 ; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    mr r4, r9
 ; CHECK-NEXT:    blr
@@ -1168,10 +1156,7 @@ define i128 @cas_weak_release_monotonic(ptr %a, i128 %cmp, i128 %new) {
 ; LE-PWR8-NEXT:    mr r10, r7
 ; LE-PWR8-NEXT:    stqcx. r10, 0, r3
 ; LE-PWR8-NEXT:    bne cr0, .LBB8_1
-; LE-PWR8-NEXT:    b .LBB8_4
 ; LE-PWR8-NEXT:  .LBB8_3: # %entry
-; LE-PWR8-NEXT:    stqcx. r8, 0, r3
-; LE-PWR8-NEXT:  .LBB8_4: # %entry
 ; LE-PWR8-NEXT:    mr r3, r9
 ; LE-PWR8-NEXT:    mr r4, r8
 ; LE-PWR8-NEXT:    blr
@@ -1192,10 +1177,7 @@ define i128 @cas_weak_release_monotonic(ptr %a, i128 %cmp, i128 %new) {
 ; AIX64-PWR8-NEXT:    mr r10, r6
 ; AIX64-PWR8-NEXT:    stqcx. r10, 0, r3
 ; AIX64-PWR8-NEXT:    bne cr0, L..BB8_1
-; AIX64-PWR8-NEXT:    b L..BB8_4
 ; AIX64-PWR8-NEXT:  L..BB8_3: # %entry
-; AIX64-PWR8-NEXT:    stqcx. r8, 0, r3
-; AIX64-PWR8-NEXT:  L..BB8_4: # %entry
 ; AIX64-PWR8-NEXT:    mr r3, r8
 ; AIX64-PWR8-NEXT:    mr r4, r9
 ; AIX64-PWR8-NEXT:    blr
@@ -1255,10 +1237,7 @@ define i128 @cas_sc_sc(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    mr r10, r6
 ; CHECK-NEXT:    stqcx. r10, 0, r3
 ; CHECK-NEXT:    bne cr0, .LBB9_1
-; CHECK-NEXT:    b .LBB9_4
 ; CHECK-NEXT:  .LBB9_3: # %entry
-; CHECK-NEXT:    stqcx. r8, 0, r3
-; CHECK-NEXT:  .LBB9_4: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    mr r4, r9
@@ -1303,10 +1282,7 @@ define i128 @cas_sc_sc(ptr %a, i128 %cmp, i128 %new) {
 ; LE-PWR8-NEXT:    mr r10, r7
 ; LE-PWR8-NEXT:    stqcx. r10, 0, r3
 ; LE-PWR8-NEXT:    bne cr0, .LBB9_1
-; LE-PWR8-NEXT:    b .LBB9_4
 ; LE-PWR8-NEXT:  .LBB9_3: # %entry
-; LE-PWR8-NEXT:    stqcx. r8, 0, r3
-; LE-PWR8-NEXT:  .LBB9_4: # %entry
 ; LE-PWR8-NEXT:    lwsync
 ; LE-PWR8-NEXT:    mr r3, r9
 ; LE-PWR8-NEXT:    mr r4, r8
@@ -1328,10 +1304,7 @@ define i128 @cas_sc_sc(ptr %a, i128 %cmp, i128 %new) {
 ; AIX64-PWR8-NEXT:    mr r10, r6
 ; AIX64-PWR8-NEXT:    stqcx. r10, 0, r3
 ; AIX64-PWR8-NEXT:    bne cr0, L..BB9_1
-; AIX64-PWR8-NEXT:    b L..BB9_4
 ; AIX64-PWR8-NEXT:  L..BB9_3: # %entry
-; AIX64-PWR8-NEXT:    stqcx. r8, 0, r3
-; AIX64-PWR8-NEXT:  L..BB9_4: # %entry
 ; AIX64-PWR8-NEXT:    lwsync
 ; AIX64-PWR8-NEXT:    mr r3, r8
 ; AIX64-PWR8-NEXT:    mr r4, r9
@@ -1392,10 +1365,7 @@ define i128 @cas_acqrel_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    mr r10, r6
 ; CHECK-NEXT:    stqcx. r10, 0, r3
 ; CHECK-NEXT:    bne cr0, .LBB10_1
-; CHECK-NEXT:    b .LBB10_4
 ; CHECK-NEXT:  .LBB10_3: # %entry
-; CHECK-NEXT:    stqcx. r8, 0, r3
-; CHECK-NEXT:  .LBB10_4: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    mr r4, r9
@@ -1440,10 +1410,7 @@ define i128 @cas_acqrel_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; LE-PWR8-NEXT:    mr r10, r7
 ; LE-PWR8-NEXT:    stqcx. r10, 0, r3
 ; LE-PWR8-NEXT:    bne cr0, .LBB10_1
-; LE-PWR8-NEXT:    b .LBB10_4
 ; LE-PWR8-NEXT:  .LBB10_3: # %entry
-; LE-PWR8-NEXT:    stqcx. r8, 0, r3
-; LE-PWR8-NEXT:  .LBB10_4: # %entry
 ; LE-PWR8-NEXT:    lwsync
 ; LE-PWR8-NEXT:    mr r3, r9
 ; LE-PWR8-NEXT:    mr r4, r8
@@ -1465,10 +1432,7 @@ define i128 @cas_acqrel_acquire(ptr %a, i128 %cmp, i128 %new) {
 ; AIX64-PWR8-NEXT:    mr r10, r6
 ; AIX64-PWR8-NEXT:    stqcx. r10, 0, r3
 ; AIX64-PWR8-NEXT:    bne cr0, L..BB10_1
-; AIX64-PWR8-NEXT:    b L..BB10_4
 ; AIX64-PWR8-NEXT:  L..BB10_3: # %entry
-; AIX64-PWR8-NEXT:    stqcx. r8, 0, r3
-; AIX64-PWR8-NEXT:  L..BB10_4: # %entry
 ; AIX64-PWR8-NEXT:    lwsync
 ; AIX64-PWR8-NEXT:    mr r3, r8
 ; AIX64-PWR8-NEXT:    mr r4, r9
@@ -1529,10 +1493,7 @@ define i1 @cas_acqrel_acquire_check_succ(ptr %a, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    mr r10, r6
 ; CHECK-NEXT:    stqcx. r10, 0, r3
 ; CHECK-NEXT:    bne cr0, .LBB11_1
-; CHECK-NEXT:    b .LBB11_4
 ; CHECK-NEXT:  .LBB11_3: # %entry
-; CHECK-NEXT:    stqcx. r8, 0, r3
-; CHECK-NEXT:  .LBB11_4: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    xor r3, r4, r8
 ; CHECK-NEXT:    xor r4, r5, r9
@@ -1578,10 +1539,7 @@ define i1 @cas_acqrel_acquire_check_succ(ptr %a, i128 %cmp, i128 %new) {
 ; LE-PWR8-NEXT:    mr r10, r7
 ; LE-PWR8-NEXT:    stqcx. r10, 0, r3
 ; LE-PWR8-NEXT:    bne cr0, .LBB11_1
-; LE-PWR8-NEXT:    b .LBB11_4
 ; LE-PWR8-NEXT:  .LBB11_3: # %entry
-; LE-PWR8-NEXT:    stqcx. r8, 0, r3
-; LE-PWR8-NEXT:  .LBB11_4: # %entry
 ; LE-PWR8-NEXT:    lwsync
 ; LE-PWR8-NEXT:    xor r3, r5, r8
 ; LE-PWR8-NEXT:    xor r4, r4, r9
@@ -1606,10 +1564,7 @@ define i1 @cas_acqrel_acquire_check_succ(ptr %a, i128 %cmp, i128 %new) {
 ; AIX64-PWR8-NEXT:    mr r10, r6
 ; AIX64-PWR8-NEXT:    stqcx. r10, 0, r3
 ; AIX64-PWR8-NEXT:    bne cr0, L..BB11_1
-; AIX64-PWR8-NEXT:    b L..BB11_4
 ; AIX64-PWR8-NEXT:  L..BB11_3: # %entry
-; AIX64-PWR8-NEXT:    stqcx. r8, 0, r3
-; AIX64-PWR8-NEXT:  L..BB11_4: # %entry
 ; AIX64-PWR8-NEXT:    lwsync
 ; AIX64-PWR8-NEXT:    xor r3, r4, r8
 ; AIX64-PWR8-NEXT:    xor r4, r5, r9
@@ -1648,6 +1603,135 @@ define i1 @cas_acqrel_acquire_check_succ(ptr %a, i128 %cmp, i128 %new) {
 ; PPC-PWR8-NEXT:    blr
 entry:
   %0 = cmpxchg ptr %a, i128 %cmp, i128 %new acq_rel acquire
+  %1 = extractvalue { i128, i1 } %0, 1
+  ret i1 %1
+}
+
+;; TODO: Optimize CAS at exit block when bool value is returned.
+define i1 @bool_cas_weak_acquire_acquire(ptr %a, i128 %cmp, i128 %new) {
+; CHECK-LABEL: bool_cas_weak_acquire_acquire:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:  .LBB12_1: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    lqarx r8, 0, r3
+; CHECK-NEXT:    xor r11, r9, r5
+; CHECK-NEXT:    xor r10, r8, r4
+; CHECK-NEXT:    or. r11, r11, r10
+; CHECK-NEXT:    bne cr0, .LBB12_3
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    mr r11, r7
+; CHECK-NEXT:    mr r10, r6
+; CHECK-NEXT:    stqcx. r10, 0, r3
+; CHECK-NEXT:    bne cr0, .LBB12_1
+; CHECK-NEXT:  .LBB12_3: # %entry
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    xor r3, r4, r8
+; CHECK-NEXT:    xor r4, r5, r9
+; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    cntlzd r3, r3
+; CHECK-NEXT:    rldicl r3, r3, 58, 63
+; CHECK-NEXT:    blr
+;
+; PWR7-LABEL: bool_cas_weak_acquire_acquire:
+; PWR7:       # %bb.0: # %entry
+; PWR7-NEXT:    mflr r0
+; PWR7-NEXT:    stdu r1, -128(r1)
+; PWR7-NEXT:    std r0, 144(r1)
+; PWR7-NEXT:    .cfi_def_cfa_offset 128
+; PWR7-NEXT:    .cfi_offset lr, 16
+; PWR7-NEXT:    std r5, 120(r1)
+; PWR7-NEXT:    std r4, 112(r1)
+; PWR7-NEXT:    addi r4, r1, 112
+; PWR7-NEXT:    mr r5, r6
+; PWR7-NEXT:    mr r6, r7
+; PWR7-NEXT:    li r7, 2
+; PWR7-NEXT:    li r8, 2
+; PWR7-NEXT:    bl __atomic_compare_exchange_16
+; PWR7-NEXT:    nop
+; PWR7-NEXT:    addi r1, r1, 128
+; PWR7-NEXT:    ld r0, 16(r1)
+; PWR7-NEXT:    mtlr r0
+; PWR7-NEXT:    blr
+;
+; LE-PWR8-LABEL: bool_cas_weak_acquire_acquire:
+; LE-PWR8:       # %bb.0: # %entry
+; LE-PWR8-NEXT:  .LBB12_1: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    lqarx r8, 0, r3
+; LE-PWR8-NEXT:    xor r11, r9, r4
+; LE-PWR8-NEXT:    xor r10, r8, r5
+; LE-PWR8-NEXT:    or. r11, r11, r10
+; LE-PWR8-NEXT:    bne cr0, .LBB12_3
+; LE-PWR8-NEXT:  # %bb.2: # %entry
+; LE-PWR8-NEXT:    #
+; LE-PWR8-NEXT:    mr r11, r6
+; LE-PWR8-NEXT:    mr r10, r7
+; LE-PWR8-NEXT:    stqcx. r10, 0, r3
+; LE-PWR8-NEXT:    bne cr0, .LBB12_1
+; LE-PWR8-NEXT:  .LBB12_3: # %entry
+; LE-PWR8-NEXT:    lwsync
+; LE-PWR8-NEXT:    xor r3, r5, r8
+; LE-PWR8-NEXT:    xor r4, r4, r9
+; LE-PWR8-NEXT:    or r3, r4, r3
+; LE-PWR8-NEXT:    cntlzd r3, r3
+; LE-PWR8-NEXT:    rldicl r3, r3, 58, 63
+; LE-PWR8-NEXT:    blr
+;
+; AIX64-PWR8-LABEL: bool_cas_weak_acquire_acquire:
+; AIX64-PWR8:       # %bb.0: # %entry
+; AIX64-PWR8-NEXT:  L..BB12_1: # %entry
+; AIX64-PWR8-NEXT:    #
+; AIX64-PWR8-NEXT:    lqarx r8, 0, r3
+; AIX64-PWR8-NEXT:    xor r11, r9, r5
+; AIX64-PWR8-NEXT:    xor r10, r8, r4
+; AIX64-PWR8-NEXT:    or. r11, r11, r10
+; AIX64-PWR8-NEXT:    bne cr0, L..BB12_3
+; AIX64-PWR8-NEXT:  # %bb.2: # %entry
+; AIX64-PWR8-NEXT:    #
+; AIX64-PWR8-NEXT:    mr r11, r7
+; AIX64-PWR8-NEXT:    mr r10, r6
+; AIX64-PWR8-NEXT:    stqcx. r10, 0, r3
+; AIX64-PWR8-NEXT:    bne cr0, L..BB12_1
+; AIX64-PWR8-NEXT:  L..BB12_3: # %entry
+; AIX64-PWR8-NEXT:    lwsync
+; AIX64-PWR8-NEXT:    xor r3, r4, r8
+; AIX64-PWR8-NEXT:    xor r4, r5, r9
+; AIX64-PWR8-NEXT:    or r3, r4, r3
+; AIX64-PWR8-NEXT:    cntlzd r3, r3
+; AIX64-PWR8-NEXT:    rldicl r3, r3, 58, 63
+; AIX64-PWR8-NEXT:    blr
+;
+; PPC-PWR8-LABEL: bool_cas_weak_acquire_acquire:
+; PPC-PWR8:       # %bb.0: # %entry
+; PPC-PWR8-NEXT:    mflr r0
+; PPC-PWR8-NEXT:    stwu r1, -48(r1)
+; PPC-PWR8-NEXT:    stw r0, 52(r1)
+; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 48
+; PPC-PWR8-NEXT:    .cfi_offset lr, 4
+; PPC-PWR8-NEXT:    mr r4, r3
+; PPC-PWR8-NEXT:    lwz r3, 60(r1)
+; PPC-PWR8-NEXT:    stw r8, 44(r1)
+; PPC-PWR8-NEXT:    stw r7, 40(r1)
+; PPC-PWR8-NEXT:    stw r6, 36(r1)
+; PPC-PWR8-NEXT:    stw r5, 32(r1)
+; PPC-PWR8-NEXT:    addi r5, r1, 32
+; PPC-PWR8-NEXT:    addi r6, r1, 16
+; PPC-PWR8-NEXT:    li r7, 2
+; PPC-PWR8-NEXT:    li r8, 2
+; PPC-PWR8-NEXT:    stw r10, 20(r1)
+; PPC-PWR8-NEXT:    stw r9, 16(r1)
+; PPC-PWR8-NEXT:    stw r3, 28(r1)
+; PPC-PWR8-NEXT:    lwz r3, 56(r1)
+; PPC-PWR8-NEXT:    stw r3, 24(r1)
+; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    bl __atomic_compare_exchange
+; PPC-PWR8-NEXT:    lwz r0, 52(r1)
+; PPC-PWR8-NEXT:    addi r1, r1, 48
+; PPC-PWR8-NEXT:    mtlr r0
+; PPC-PWR8-NEXT:    blr
+entry:
+  %0 = cmpxchg weak ptr %a, i128 %cmp, i128 %new acquire acquire
   %1 = extractvalue { i128, i1 } %0, 1
   ret i1 %1
 }

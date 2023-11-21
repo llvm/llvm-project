@@ -48,7 +48,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -145,6 +144,7 @@ CompilerInvocationBase::CompilerInvocationBase()
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(llvm::makeIntrusiveRefCnt<AnalyzerOptions>()),
       MigratorOpts(std::make_shared<MigratorOptions>()),
+      APINotesOpts(std::make_shared<APINotesOptions>()),
       CodeGenOpts(std::make_shared<CodeGenOptions>()),
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
@@ -161,6 +161,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = makeIntrusiveRefCntCopy(X.getAnalyzerOpts());
     MigratorOpts = make_shared_copy(X.getMigratorOpts());
+    APINotesOpts = make_shared_copy(X.getAPINotesOpts());
     CodeGenOpts = make_shared_copy(X.getCodeGenOpts());
     FSOpts = make_shared_copy(X.getFileSystemOpts());
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
@@ -180,6 +181,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = X.PPOpts;
     AnalyzerOpts = X.AnalyzerOpts;
     MigratorOpts = X.MigratorOpts;
+    APINotesOpts = X.APINotesOpts;
     CodeGenOpts = X.CodeGenOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
@@ -231,6 +233,10 @@ AnalyzerOptions &CowCompilerInvocation::getMutAnalyzerOpts() {
 
 MigratorOptions &CowCompilerInvocation::getMutMigratorOpts() {
   return ensureOwned(MigratorOpts);
+}
+
+APINotesOptions &CowCompilerInvocation::getMutAPINotesOpts() {
+  return ensureOwned(APINotesOpts);
 }
 
 CodeGenOptions &CowCompilerInvocation::getMutCodeGenOpts() {
@@ -574,6 +580,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   llvm::Triple::ArchType Arch = T.getArch();
 
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
+  CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
   if (LangOpts.getExceptionHandling() !=
           LangOptions::ExceptionHandlingKind::None &&
@@ -647,6 +654,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
                   DefaultCC == LangOptions::DCC_RegCall) &&
                  !T.isX86();
+    emitError |= DefaultCC == LangOptions::DCC_RtdCall && Arch != llvm::Triple::m68k;
     if (emitError)
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();
@@ -661,27 +669,27 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 
 static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
-  unsigned DefaultOpt = llvm::CodeGenOpt::None;
+  unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
        IK.getLanguage() == Language::OpenCLCXX) &&
       !Args.hasArg(OPT_cl_opt_disable))
-    DefaultOpt = llvm::CodeGenOpt::Default;
+    DefaultOpt = 2;
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O0))
-      return llvm::CodeGenOpt::None;
+      return 0;
 
     if (A->getOption().matches(options::OPT_Ofast))
-      return llvm::CodeGenOpt::Aggressive;
+      return 3;
 
     assert(A->getOption().matches(options::OPT_O));
 
     StringRef S(A->getValue());
     if (S == "s" || S == "z")
-      return llvm::CodeGenOpt::Default;
+      return 2;
 
     if (S == "g")
-      return llvm::CodeGenOpt::Less;
+      return 1;
 
     return getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
   }
@@ -3161,8 +3169,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     StringRef Val = A->getValue();
     if (Val.contains('=')) {
       auto Split = Val.split('=');
-      Opts.PrebuiltModuleFiles.insert(
-          {std::string(Split.first), std::string(Split.second)});
+      Opts.PrebuiltModuleFiles.insert_or_assign(
+          std::string(Split.first), std::string(Split.second));
     }
   }
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
@@ -3257,6 +3265,17 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.AddVFSOverlayFile(A->getValue());
 
   return Diags.getNumErrors() == NumErrorsBefore;
+}
+
+static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
+                              DiagnosticsEngine &diags) {
+  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
+    if (Opts.SwiftVersion.tryParse(A->getValue()))
+      diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+  }
+  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
+    Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -3530,6 +3549,13 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
+  if (Opts.OpenACC) {
+    GenerateArg(Consumer, OPT_fopenacc);
+    if (!Opts.OpenACCMacroOverride.empty())
+      GenerateArg(Consumer, OPT_openacc_macro_override,
+                  Opts.OpenACCMacroOverride);
+  }
+
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
 
@@ -3549,24 +3575,40 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   for (const std::string &F : Opts.NoSanitizeFiles)
     GenerateArg(Consumer, OPT_fsanitize_ignorelist_EQ, F);
 
-  if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver3_8)
+  switch (Opts.getClangABICompat()) {
+  case LangOptions::ClangABI::Ver3_8:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "3.8");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver4)
+    break;
+  case LangOptions::ClangABI::Ver4:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "4.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver6)
+    break;
+  case LangOptions::ClangABI::Ver6:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "6.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver7)
+    break;
+  case LangOptions::ClangABI::Ver7:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "7.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver9)
+    break;
+  case LangOptions::ClangABI::Ver9:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "9.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver11)
+    break;
+  case LangOptions::ClangABI::Ver11:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "11.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver12)
+    break;
+  case LangOptions::ClangABI::Ver12:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "12.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver14)
+    break;
+  case LangOptions::ClangABI::Ver14:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "14.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver15)
+    break;
+  case LangOptions::ClangABI::Ver15:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "15.0");
+    break;
+  case LangOptions::ClangABI::Ver17:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
+    break;
+  case LangOptions::ClangABI::Latest:
+    break;
+  }
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
@@ -3848,11 +3890,17 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << "-fdefault-calling-conv";
     else {
-      if (T.getArch() != llvm::Triple::x86)
+      switch (T.getArch()) {
+      case llvm::Triple::x86:
+        Opts.setDefaultCallingConv(LangOptions::DCC_StdCall);
+        break;
+      case llvm::Triple::m68k:
+        Opts.setDefaultCallingConv(LangOptions::DCC_RtdCall);
+        break;
+      default:
         Diags.Report(diag::err_drv_argument_not_allowed_with)
             << A->getSpelling() << T.getTriple();
-      else
-        Opts.setDefaultCallingConv(LangOptions::DCC_StdCall);
+      }
     }
   }
 
@@ -3977,6 +4025,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                         (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
+  // OpenACC Configuration.
+  if (Args.hasArg(options::OPT_fopenacc)) {
+    Opts.OpenACC = true;
+
+    if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override))
+      Opts.OpenACCMacroOverride = A->getValue();
+  }
+
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
        OptSize = getOptimizationLevelSize(Args);
@@ -4052,6 +4108,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver14);
       else if (Major <= 15)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
+      else if (Major <= 17)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4109,6 +4167,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                    options::OPT_fno_experimental_relative_cxx_abi_vtables,
                    TargetCXXABI::usesRelativeVTables(T));
 
+  // RTTI is on by default.
+  bool HasRTTI = Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, true);
+  Opts.OmitVTableRTTI =
+      Args.hasFlag(options::OPT_fexperimental_omit_vtable_rtti,
+                   options::OPT_fno_experimental_omit_vtable_rtti, false);
+  if (Opts.OmitVTableRTTI && HasRTTI)
+    Diags.Report(diag::err_drv_using_omit_rtti_component_without_no_rtti);
+
   for (const auto &A : Args.getAllArgValues(OPT_fmacro_prefix_map_EQ)) {
     auto Split = StringRef(A).split('=');
     Opts.MacroPrefixMap.insert(
@@ -4143,10 +4209,24 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Validate options for HLSL
   if (Opts.HLSL) {
-    bool SupportedTarget = (T.getArch() == llvm::Triple::dxil ||
-                            T.getArch() == llvm::Triple::spirv) &&
-                           T.getOS() == llvm::Triple::ShaderModel;
-    if (!SupportedTarget)
+    // TODO: Revisit restricting SPIR-V to logical once we've figured out how to
+    // handle PhysicalStorageBuffer64 memory model
+    if (T.isDXIL() || T.isSPIRVLogical()) {
+      enum { ShaderModel, ShaderStage };
+      if (T.getOSName().empty()) {
+        Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
+            << ShaderModel << T.str();
+      } else if (!T.isShaderModelOS() || T.getOSVersion() == VersionTuple(0)) {
+        Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+            << ShaderModel << T.getOSName() << T.str();
+      } else if (T.getEnvironmentName().empty()) {
+        Diags.Report(diag::err_drv_hlsl_bad_shader_required_in_target)
+            << ShaderStage << T.str();
+      } else if (!T.isShaderStageEnvironment()) {
+        Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
+            << ShaderStage << T.getEnvironmentName() << T.str();
+      }
+    } else
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
   }
 
@@ -4490,6 +4570,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);
@@ -4589,7 +4670,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
 
 std::string CompilerInvocation::getModuleHash() const {
   // FIXME: Consider using SHA1 instead of MD5.
-  llvm::HashBuilder<llvm::MD5, llvm::support::endianness::native> HBuilder;
+  llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 
   // Note: For QoI reasons, the things we use as a hash here should all be
   // dumped via the -module-info flag.

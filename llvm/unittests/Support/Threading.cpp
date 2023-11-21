@@ -29,7 +29,7 @@ static bool isThreadingSupportedArchAndOS() {
   return (Host.isOSWindows() && llvm_is_multithreaded()) || Host.isOSDarwin() ||
          (Host.isX86() && Host.isOSLinux()) ||
          (Host.isOSLinux() && !Host.isAndroid()) ||
-         (Host.isSystemZ() && Host.isOSzOS());
+         (Host.isSystemZ() && Host.isOSzOS()) || Host.isOSAIX();
 #else
   return false;
 #endif

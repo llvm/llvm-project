@@ -51,14 +51,11 @@ struct CodeGenTypeCache {
     llvm::IntegerType *PtrDiffTy;
   };
 
-  /// void* in address space 0
+  /// void*, void** in address space 0
   union {
+    llvm::PointerType *UnqualPtrTy;
     llvm::PointerType *VoidPtrTy;
     llvm::PointerType *Int8PtrTy;
-  };
-
-  /// void** in address space 0
-  union {
     llvm::PointerType *VoidPtrPtrTy;
     llvm::PointerType *Int8PtrPtrTy;
   };

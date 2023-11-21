@@ -296,7 +296,7 @@ std::optional<MDNode *> llvm::makeFollowupLoopID(
         StringRef AttrName = cast<MDString>(NameMD)->getString();
 
         // Do not inherit excluded attributes.
-        return !AttrName.startswith(InheritOptionsExceptPrefix);
+        return !AttrName.starts_with(InheritOptionsExceptPrefix);
       };
 
       if (InheritThisAttribute(Op))
@@ -1690,7 +1690,7 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
     End = Builder.CreateFreeze(End, End->getName() + ".fr");
   }
   Value *StrideVal =
-      Stride ? Exp.expandCodeFor(Stride, Type::getInt64Ty(Ctx), Loc) : nullptr;
+      Stride ? Exp.expandCodeFor(Stride, Stride->getType(), Loc) : nullptr;
   LLVM_DEBUG(dbgs() << "Start: " << *Low << " End: " << *High << "\n");
   return {Start, End, StrideVal};
 }
@@ -1795,15 +1795,12 @@ Value *llvm::addDiffRuntimeChecks(
                              ConstantInt::get(Ty, IC * C.AccessSize));
     Value *Sink = Expander.expandCodeFor(C.SinkStart, Ty, Loc);
     Value *Src = Expander.expandCodeFor(C.SrcStart, Ty, Loc);
-    if (C.NeedsFreeze) {
-      IRBuilder<> Builder(Loc);
-      Sink = Builder.CreateFreeze(Sink, Sink->getName() + ".fr");
-      Src = Builder.CreateFreeze(Src, Src->getName() + ".fr");
-    }
     Value *Diff = ChkBuilder.CreateSub(Sink, Src);
     Value *IsConflict =
         ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
-
+    if (C.NeedsFreeze)
+      IsConflict =
+          ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
     if (MemoryRuntimeCheck) {
       IsConflict =
           ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");

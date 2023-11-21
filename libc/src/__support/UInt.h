@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_UINT_H
-#define LLVM_LIBC_SRC_SUPPORT_UINT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_UINT_H
+#define LLVM_LIBC_SRC___SUPPORT_UINT_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/limits.h"
@@ -21,7 +21,7 @@
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 template <size_t Bits, bool Signed> struct BigInt {
 
@@ -927,6 +927,6 @@ struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
                 "Number of bits in Int should be a multiple of 64.");
 };
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_UINT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

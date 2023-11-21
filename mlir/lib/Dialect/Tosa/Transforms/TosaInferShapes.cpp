@@ -41,8 +41,7 @@ namespace {
 
 void propagateShapesInRegion(Region &region);
 
-void propagateShapesToTosaIf(
-    Operation &op, DenseMap<Value, ShapedTypeComponents> &shapesStorage) {
+void propagateShapesToTosaIf(Operation &op) {
   IfOp ifOp = dyn_cast<IfOp>(op);
   if (!ifOp)
     return;
@@ -53,12 +52,12 @@ void propagateShapesToTosaIf(
       return;
 
     for (unsigned int i = 1, s = op.getNumOperands(); i < s; i++) {
-      auto inferredTy = shapesStorage[op.getOperand(i)];
+      auto inferredTy = cast<ShapedType>(op.getOperand(i).getType());
       auto blockArg = frontBlock.getArgument(i - 1);
       auto oldType = cast<ShapedType>(blockArg.getType());
 
       if (inferredTy.hasRank()) {
-        Type newType = oldType.clone(inferredTy.getDims());
+        Type newType = oldType.clone(inferredTy.getShape());
         blockArg.setType(newType);
       }
     }
@@ -79,8 +78,7 @@ void propagateShapesToTosaIf(
   }
 }
 
-void propagateShapesToTosaWhile(
-    Operation &op, DenseMap<Value, ShapedTypeComponents> &shapesStorage) {
+void propagateShapesToTosaWhile(Operation &op) {
   WhileOp whileOp = dyn_cast<WhileOp>(op);
   if (!whileOp)
     return;
@@ -91,9 +89,8 @@ void propagateShapesToTosaWhile(
   llvm::SmallVector<Type> argTypes;
   for (auto operand : op.getOperands()) {
     auto operandTy = cast<ShapedType>(operand.getType());
-    auto shapedTypeComponent = shapesStorage[operand];
-    if (shapedTypeComponent.hasRank()) {
-      auto newTy = operandTy.clone(shapedTypeComponent.getDims());
+    if (operandTy.hasRank()) {
+      auto newTy = operandTy.clone(operandTy.getShape());
       argTypes.push_back(newTy);
     } else {
       argTypes.push_back(operand.getType());
@@ -187,21 +184,6 @@ void propagateShapesToTosaWhile(
 }
 
 void propagateShapesInRegion(Region &region) {
-  DenseMap<Value, ShapedTypeComponents> shapesStorage;
-  auto setShapes = [&](Value val, Type t) {
-    if (auto st = dyn_cast<ShapedType>(t))
-      shapesStorage[val] = st;
-    else
-      shapesStorage[val] = t;
-  };
-  auto operandShape = [&](Value val) -> ShapeAdaptor {
-    // Query the WIP mapping rather than the type if set.
-    auto it = shapesStorage.find(val);
-    if (it == shapesStorage.end())
-      return nullptr;
-    return it->second;
-  };
-
   // Check whether this use case is replaceable. We define an op as
   // being replaceable if it is used by a ReturnOp, a TosaOp, or an op with a
   // type-inference related interface.
@@ -217,8 +199,8 @@ void propagateShapesInRegion(Region &region) {
       if (op.getDialect()->getNamespace() != TosaDialect::getDialectNamespace())
         continue;
 
-      propagateShapesToTosaIf(op, shapesStorage);
-      propagateShapesToTosaWhile(op, shapesStorage);
+      propagateShapesToTosaIf(op);
+      propagateShapesToTosaWhile(op);
 
       InferShapedTypeOpInterface shapeInterface =
           dyn_cast<InferShapedTypeOpInterface>(op);
@@ -227,12 +209,11 @@ void propagateShapesInRegion(Region &region) {
 
       SmallVector<ShapedTypeComponents> returnedShapes;
 
-      ValueShapeRange range(op.getOperands(), operandShape);
       if (shapeInterface
-              .inferReturnTypeComponents(op.getContext(), op.getLoc(), range,
-                                         op.getDiscardableAttrDictionary(),
-                                         op.getPropertiesStorage(),
-                                         op.getRegions(), returnedShapes)
+              .inferReturnTypeComponents(
+                  op.getContext(), op.getLoc(), op.getOperands(),
+                  op.getDiscardableAttrDictionary(), op.getPropertiesStorage(),
+                  op.getRegions(), returnedShapes)
               .succeeded()) {
         for (auto it : llvm::zip(op.getResults(), returnedShapes)) {
           Value result = std::get<0>(it);
@@ -262,18 +243,11 @@ void propagateShapesInRegion(Region &region) {
               ValueKnowledge::join(currentKnowledge, inferredKnowledge);
           if (!newKnowledge)
             continue;
-          setShapes(result, newKnowledge.getType());
+
+          // Set new type
+          result.setType(newKnowledge.getType());
         }
       }
-    }
-  }
-
-  // Actually update types with updated shape knowledge.
-  for (auto it : shapesStorage) {
-    auto result = it.second;
-    if (result.hasRank()) {
-      Type t = cast<ShapedType>(it.first.getType()).clone(result.getDims());
-      it.first.setType(t);
     }
   }
 }

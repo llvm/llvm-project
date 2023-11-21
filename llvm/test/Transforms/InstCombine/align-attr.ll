@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @foo1(ptr align 32 %a) #0 {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A:%.*]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -20,7 +20,7 @@ define i32 @foo2(ptr align 32 %a) #0 {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = call ptr @func1(ptr [[A:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

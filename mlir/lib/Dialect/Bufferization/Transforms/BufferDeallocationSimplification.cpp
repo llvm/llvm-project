@@ -49,19 +49,49 @@ static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
   return success();
 }
 
-/// Checks if 'memref' may or must alias a MemRef in 'memrefList'. It is often a
+/// Given a memref value, return the "base" value by skipping over all
+/// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
+static Value getViewBase(Value value) {
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+    value = viewLikeOp.getViewSource();
+  return value;
+}
+
+/// Return "true" if the given values are guaranteed to be different (and
+/// non-aliasing) allocations based on the fact that one value is the result
+/// of an allocation and the other value is a block argument of a parent block.
+/// Note: This is a best-effort analysis that will eventually be replaced by a
+/// proper "is same allocation" analysis. This function may return "false" even
+/// though the two values are distinct allocations.
+static bool distinctAllocAndBlockArgument(Value v1, Value v2) {
+  Value v1Base = getViewBase(v1);
+  Value v2Base = getViewBase(v2);
+  auto areDistinct = [](Value v1, Value v2) {
+    if (Operation *op = v1.getDefiningOp())
+      if (hasEffect<MemoryEffects::Allocate>(op, v1))
+        if (auto bbArg = dyn_cast<BlockArgument>(v2))
+          if (bbArg.getOwner()->findAncestorOpInBlock(*op))
+            return true;
+    return false;
+  };
+  return areDistinct(v1Base, v2Base) || areDistinct(v2Base, v1Base);
+}
+
+/// Checks if `memref` may or must alias a MemRef in `otherList`. It is often a
 /// requirement of optimization patterns that there cannot be any aliasing
-/// memref in order to perform the desired simplification. The 'allowSelfAlias'
-/// argument indicates whether 'memref' may be present in 'memrefList' which
+/// memref in order to perform the desired simplification. The `allowSelfAlias`
+/// argument indicates whether `memref` may be present in `otherList` which
 /// makes this helper function applicable to situations where we already know
-/// that 'memref' is in the list but also when we don't want it in the list.
+/// that `memref` is in the list but also when we don't want it in the list.
 static bool potentiallyAliasesMemref(AliasAnalysis &analysis,
-                                     ValueRange memrefList, Value memref,
+                                     ValueRange otherList, Value memref,
                                      bool allowSelfAlias) {
-  for (auto mr : memrefList) {
-    if (allowSelfAlias && mr == memref)
+  for (auto other : otherList) {
+    if (allowSelfAlias && other == memref)
       continue;
-    if (!analysis.alias(mr, memref).isNo())
+    if (distinctAllocAndBlockArgument(other, memref))
+      continue;
+    if (!analysis.alias(other, memref).isNo())
       return true;
   }
   return false;

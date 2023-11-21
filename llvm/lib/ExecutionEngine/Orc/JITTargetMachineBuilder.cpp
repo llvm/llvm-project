@@ -126,16 +126,16 @@ void JITTargetMachineBuilderPrinter::print(raw_ostream &OS) const {
   OS << "\n"
      << Indent << "  Optimization Level = ";
   switch (JTMB.OptLevel) {
-  case CodeGenOpt::None:
+  case CodeGenOptLevel::None:
     OS << "None";
     break;
-  case CodeGenOpt::Less:
+  case CodeGenOptLevel::Less:
     OS << "Less";
     break;
-  case CodeGenOpt::Default:
+  case CodeGenOptLevel::Default:
     OS << "Default";
     break;
-  case CodeGenOpt::Aggressive:
+  case CodeGenOptLevel::Aggressive:
     OS << "Aggressive";
     break;
   }

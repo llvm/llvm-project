@@ -47,5 +47,5 @@ declare i32 @qq(i32 noundef)
 ; `f` to be chosen, whereas the old algorithm would choose
 ; one specialsation of `f` and one of `g`.
 
-; CHECK-DAG: define internal i32 @f.1
-; CHECK-DAG: define internal i32 @f.2
+; CHECK-DAG: define internal i32 @f.specialized.1
+; CHECK-DAG: define internal i32 @f.specialized.2

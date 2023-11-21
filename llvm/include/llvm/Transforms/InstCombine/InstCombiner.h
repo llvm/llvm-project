@@ -86,6 +86,9 @@ protected:
   /// Edges that are known to never be taken.
   SmallDenseSet<std::pair<BasicBlock *, BasicBlock *>, 8> DeadEdges;
 
+  /// Order of predecessors to canonicalize phi nodes towards.
+  SmallDenseMap<BasicBlock *, SmallVector<BasicBlock *>, 8> PredOrder;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
@@ -230,49 +233,45 @@ public:
                                                 PatternMatch::m_Value()));
   }
 
+  /// Return nonnull value if V is free to invert under the condition of
+  /// WillInvertAllUses.
+  /// If Builder is nonnull, it will return a simplified ~V.
+  /// If Builder is null, it will return an arbitrary nonnull value (not
+  /// dereferenceable).
+  /// If the inversion will consume instructions, `DoesConsume` will be set to
+  /// true. Otherwise it will be false.
+  static Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                      BuilderTy *Builder, bool &DoesConsume,
+                                      unsigned Depth);
+
+  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder, bool &DoesConsume) {
+    DoesConsume = false;
+    return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
+                                 /*Depth*/ 0);
+  }
+
+  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder) {
+    bool Unused;
+    return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
+  }
+
   /// Return true if the specified value is free to invert (apply ~ to).
   /// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
   /// is true, work under the assumption that the caller intends to remove all
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
+  static bool isFreeToInvert(Value *V, bool WillInvertAllUses,
+                             bool &DoesConsume) {
+    return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
+                             DoesConsume) != nullptr;
+  }
+
   static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
-    // ~(~(X)) -> X.
-    if (match(V, m_Not(PatternMatch::m_Value())))
-      return true;
-
-    // Constants can be considered to be not'ed values.
-    if (match(V, PatternMatch::m_AnyIntegralConstant()))
-      return true;
-
-    // Compares can be inverted if all of their uses are being modified to use
-    // the ~V.
-    if (isa<CmpInst>(V))
-      return WillInvertAllUses;
-
-    // If `V` is of the form `A + Constant` then `-1 - V` can be folded into
-    // `(-1 - Constant) - A` if we are willing to invert all of the uses.
-    if (match(V, m_Add(PatternMatch::m_Value(), PatternMatch::m_ImmConstant())))
-      return WillInvertAllUses;
-
-    // If `V` is of the form `Constant - A` then `-1 - V` can be folded into
-    // `A + (-1 - Constant)` if we are willing to invert all of the uses.
-    if (match(V, m_Sub(PatternMatch::m_ImmConstant(), PatternMatch::m_Value())))
-      return WillInvertAllUses;
-
-    // Selects with invertible operands are freely invertible
-    if (match(V,
-              m_Select(PatternMatch::m_Value(), m_Not(PatternMatch::m_Value()),
-                       m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    // Min/max may be in the form of intrinsics, so handle those identically
-    // to select patterns.
-    if (match(V, m_MaxOrMin(m_Not(PatternMatch::m_Value()),
-                            m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    return false;
+    bool Unused;
+    return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
 
   /// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
@@ -497,34 +496,43 @@ public:
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedMul(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedMul(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
-  OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
-                                               const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+  OverflowResult
+  computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
+                                const Instruction *CxtI) const {
+    return llvm::computeOverflowForUnsignedAdd(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
-  OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+  OverflowResult
+  computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
+                              const WithCache<const Value *> &RHS,
+                              const Instruction *CxtI) const {
+    return llvm::computeOverflowForSignedAdd(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedSub(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedSub(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,

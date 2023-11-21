@@ -29,12 +29,12 @@ define void @example1() optsize {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2048 x i32], ptr @c, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 16
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP4]], align 16
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -90,7 +90,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[INDEX]]
-; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[TMP5]], align 16
+; CHECK-NEXT:    store i32 [[X:%.*]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
@@ -106,7 +106,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP10]]
-; CHECK-NEXT:    store i32 [[X]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store i32 [[X]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3

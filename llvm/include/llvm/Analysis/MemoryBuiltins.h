@@ -198,7 +198,8 @@ class ObjectSizeOffsetVisitor
   ObjectSizeOpts Options;
   unsigned IntTyBits;
   APInt Zero;
-  SmallPtrSet<Instruction *, 8> SeenInsts;
+  SmallDenseMap<Instruction *, SizeOffsetType, 8> SeenInsts;
+  unsigned InstructionsVisited;
 
   APInt align(APInt Size, MaybeAlign Align);
 
@@ -248,6 +249,7 @@ private:
       unsigned &ScannedInstCount);
   SizeOffsetType combineSizeOffset(SizeOffsetType LHS, SizeOffsetType RHS);
   SizeOffsetType computeImpl(Value *V);
+  SizeOffsetType computeValue(Value *V);
   bool CheckedZextOrTrunc(APInt &I);
 };
 

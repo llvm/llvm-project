@@ -43,20 +43,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
-  if (!(State)) {
-    LLVM_DEBUG({
-      // State can be null when this block is unreachable from the block that
-      // called this method.
-      bool hasUnreachableEdgeFromPred = false;
-      for (auto B : BlockIt->getSecond()->preds())
-        if (!B) {
-          hasUnreachableEdgeFromPred = true;
-          break;
-        }
-      assert(hasUnreachableEdgeFromPred);
-    });
+  if (!(State))
     return nullptr;
-  }
   return &State->Env;
 }
 
@@ -526,15 +514,31 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *LocSrc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      RecordStorageLocation *LocSrc = nullptr;
+      if (Arg1->isPRValue()) {
+        if (auto *Val = cast_or_null<RecordValue>(Env.getValue(*Arg1)))
+          LocSrc = &Val->getLoc();
+      } else {
+        LocSrc =
+            cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      }
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
-      if (LocSrc != nullptr && LocDst != nullptr) {
-        copyRecord(*LocSrc, *LocDst, Env);
-        Env.setStorageLocation(*S, *LocDst);
-      }
+      if (LocSrc == nullptr || LocDst == nullptr)
+        return;
+
+      // The assignment operators are different from the type of the destination
+      // in this model (i.e. in one of their base classes). This must be very
+      // rare and we just bail.
+      if (Method->getFunctionObjectParameterType()
+              .getCanonicalType()
+              .getUnqualifiedType() !=
+          LocDst->getType().getCanonicalType().getUnqualifiedType())
+        return;
+
+      copyRecord(*LocSrc, *LocDst, Env);
+      Env.setStorageLocation(*S, *LocDst);
     }
   }
 
@@ -679,28 +683,32 @@ public:
       assert(
           // The types are same, or
           Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType() ||
+              Init->getType().getCanonicalType().getUnqualifiedType() ||
           // The field's type is T&, and initializer is T
           (Field->getType()->isReferenceType() &&
-              Field->getType().getCanonicalType()->getPointeeType() ==
-              Init->getType().getCanonicalType()));
+           Field->getType().getCanonicalType()->getPointeeType() ==
+               Init->getType().getCanonicalType()));
       auto& Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
     }
 
-    LLVM_DEBUG({
-      // Check that we satisfy the invariant that a `RecordStorageLoation`
-      // contains exactly the set of modeled fields for that type.
-      // `ModeledFields` includes fields from all the bases, but only the
-      // modeled ones. However, if a class type is initialized with an
-      // `InitListExpr`, all fields in the class, including those from base
-      // classes, are included in the set of modeled fields. The code above
-      // should therefore populate exactly the modeled fields.
-      auto ModeledFields = Env.getDataflowAnalysisContext().getModeledFields(Type);
-      assert(ModeledFields.size() == FieldLocs.size());
+    // Check that we satisfy the invariant that a `RecordStorageLoation`
+    // contains exactly the set of modeled fields for that type.
+    // `ModeledFields` includes fields from all the bases, but only the
+    // modeled ones. However, if a class type is initialized with an
+    // `InitListExpr`, all fields in the class, including those from base
+    // classes, are included in the set of modeled fields. The code above
+    // should therefore populate exactly the modeled fields.
+    assert([&]() {
+      auto ModeledFields =
+          Env.getDataflowAnalysisContext().getModeledFields(Type);
+      if (ModeledFields.size() != FieldLocs.size())
+        return false;
       for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
-        assert(ModeledFields.contains(cast_or_null<FieldDecl>(Field)));
-    });
+        if (!ModeledFields.contains(cast_or_null<FieldDecl>(Field)))
+          return false;
+      return true;
+    }());
 
     auto &Loc =
         Env.getDataflowAnalysisContext().arena().create<RecordStorageLocation>(

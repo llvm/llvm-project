@@ -26,7 +26,7 @@ namespace mlir {
 namespace scf {
 
 using SCFTileSizeComputationFunction =
-    std::function<SmallVector<Value>(OpBuilder &, Operation *)>;
+    std::function<SmallVector<OpFoldResult>(OpBuilder &, Operation *)>;
 
 /// Options to use to control tiling.
 struct SCFTilingOptions {
@@ -40,22 +40,26 @@ struct SCFTilingOptions {
     tileSizeComputationFunction = std::move(fun);
     return *this;
   }
-  /// Set the `tileSizeComputationFunction` to return the values `ts`. The
-  /// values must not fold away when tiling. Otherwise, use a more robust
-  /// `tileSizeComputationFunction`.
-  SCFTilingOptions &setTileSizes(const SmallVector<Value, 4> &ts) {
-    tileSizeComputationFunction = [=](OpBuilder &, Operation *) { return ts; };
-    return *this;
-  }
   /// Convenience function to set the `tileSizeComputationFunction` to a
   /// function that computes tile sizes at the point they are needed. Allows
   /// proper interaction with folding.
-  SCFTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
+  SCFTilingOptions &setTileSizes(ArrayRef<OpFoldResult> ts);
 
   /// The interchange vector to reorder the tiled loops.
   SmallVector<int64_t> interchangeVector = {};
   SCFTilingOptions &setInterchange(ArrayRef<int64_t> interchange) {
     interchangeVector = llvm::to_vector(interchange);
+    return *this;
+  }
+
+  /// Specify mapping of loops to devices. This is only respected when the loop
+  /// constructs support such a mapping (like `scf.forall`). Will be ignored
+  /// when using loop constructs that dont support such a mapping (like
+  /// `scf.for`)
+  SmallVector<Attribute> mappingVector = {};
+  SCFTilingOptions &setMapping(ArrayRef<DeviceMappingAttrInterface> mapping) {
+    mappingVector = llvm::map_to_vector(
+        mapping, [](auto attr) -> Attribute { return attr; });
     return *this;
   }
 };
@@ -67,7 +71,7 @@ struct SCFTilingResult {
   /// of the last op.
   SmallVector<Operation *> tiledOps;
   /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<Operation *> loops;
   /// Values to use as replacements for the untiled op. Is the same size as the
   /// number of results of the untiled op.
   SmallVector<Value> replacements;
@@ -78,6 +82,12 @@ struct SCFTilingResult {
 FailureOr<SCFTilingResult> tileUsingSCFForOp(RewriterBase &rewriter,
                                              TilingInterface op,
                                              const SCFTilingOptions &options);
+
+/// Method to tile an op that implements the `TilingInterface` using
+/// `scf.forall`.
+FailureOr<SCFTilingResult>
+tileUsingSCFForallOp(RewriterBase &rewriter, TilingInterface op,
+                     const SCFTilingOptions &options);
 
 /// Options used to control tile + fuse.
 struct SCFTileAndFuseOptions {
@@ -167,7 +177,7 @@ struct SCFTileAndFuseResult {
   /// generated operation.
   llvm::SetVector<Operation *> tiledAndFusedOps;
   /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<Operation *> loops;
   /// The replacement values to use for the tiled and fused operations.
   llvm::DenseMap<Value, Value> replacements;
 };

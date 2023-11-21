@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,11 +20,11 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
@@ -32,11 +32,10 @@
 
 // Reduction in this file _are_ supported by the AArch64 SVE backend
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 //
@@ -60,7 +59,7 @@ module {
     %maxf = arith.constant 1.0e999 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSR>
     %d1 = tensor.dim %argb, %c1 : tensor<?x?xf64, #CSR>
-    %xm = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #CSR>
+    %xm = tensor.empty(%d0, %d1) : tensor<?x?xf64, #CSR>
     %0 = linalg.generic #trait_matmul
        ins(%arga, %argb: tensor<?x?xf64, #CSR>, tensor<?x?xf64, #CSR>)
         outs(%xm: tensor<?x?xf64, #CSR>) {
@@ -91,7 +90,7 @@ module {
     %maxf = arith.constant 1.0e999 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSR>
     %d1 = tensor.dim %argb, %c1 : tensor<?x?xf64, #CSC>
-    %xm = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #CSR>
+    %xm = tensor.empty(%d0, %d1) : tensor<?x?xf64, #CSR>
     %0 = linalg.generic #trait_matmul
        ins(%arga, %argb: tensor<?x?xf64, #CSR>, tensor<?x?xf64, #CSC>)
         outs(%xm: tensor<?x?xf64, #CSR>) {

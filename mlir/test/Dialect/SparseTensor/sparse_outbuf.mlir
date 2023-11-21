@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait = {
   indexing_maps = [
@@ -49,7 +49,7 @@ func.func @allout_inplace(%arga: tensor<10xi32, #SV>,
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_4:.*]] = bufferization.alloc_tensor() : tensor<10xf32>
+// CHECK:           %[[VAL_4:.*]] = tensor.empty() : tensor<10xf32>
 // CHECK:           %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #{{.*}}> to memref<?xindex>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<10xi32, #{{.*}}> to memref<?xindex>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10xi32, #{{.*}}> to memref<?xi32>
@@ -67,7 +67,7 @@ func.func @allout_inplace(%arga: tensor<10xi32, #SV>,
 // CHECK:           return %[[VAL_15]] : tensor<10xf32>
 // CHECK:         }
 func.func @allout_materialize(%arga: tensor<10xi32, #SV>) -> tensor<10xf32> {
-  %m = bufferization.alloc_tensor() : tensor<10xf32>
+  %m = tensor.empty() : tensor<10xf32>
   %0 = linalg.generic #trait
   ins(%arga: tensor<10xi32, #SV>)
   outs(%m: tensor<10xf32>) {
@@ -110,4 +110,3 @@ func.func @update_inplace(%arga: tensor<10xf32, #SV>,
   } -> tensor<10xf32>
   return %0 : tensor<10xf32>
 }
-

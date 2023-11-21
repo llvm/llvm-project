@@ -499,9 +499,9 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; AVX512-NEXT:    vrsqrtps %ymm0, %ymm1
 ; AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vfmadd231ps {{.*#+}} ymm2 = (ymm1 * ymm0) + ymm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vmulps %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vmulps %ymm3, %ymm1, %ymm0
 ; AVX512-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)

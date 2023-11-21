@@ -45,4 +45,4 @@
 ; CHECK: mbb_frequencies:
 ; Make sure that we have the mbb_mapping feature, and that the first couple
 ; of values are correct.
-; CHECK: mbb_mapping: 0,0,0,0,0,1,1
+; CHECK: mbb_mapping: 0,0,0,0,1,1,1

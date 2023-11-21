@@ -11,12 +11,20 @@ define void @sve_ext() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zext_nxv8_i16_to_i32 = zext <vscale x 8 x i16> undef to <vscale x 8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %zext_nxv8_i16_to_i64 = zext <vscale x 8 x i16> undef to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zext_nxv4_i32_to_i64 = zext <vscale x 4 x i32> undef to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %zext_nxv4_i8_to_i64 = zext <vscale x 4 x i8> undef to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %zext_nxv8_i8_to_i32 = zext <vscale x 8 x i8> undef to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %zext_nxv4_i16_to_i64 = zext <vscale x 4 x i16> undef to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %zext_nxv8_i8_to_i64 = zext <vscale x 8 x i8> undef to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext_nxv16_i8_to_i16 = sext <vscale x 16 x i8> undef to <vscale x 16 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sext_nxv16_i8_to_i32 = sext <vscale x 16 x i8> undef to <vscale x 16 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %sext_nxv16_i8_to_i64 = sext <vscale x 16 x i8> undef to <vscale x 16 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext_nxv8_i16_to_i32 = sext <vscale x 8 x i16> undef to <vscale x 8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %sext_nxv8_i16_to_i64 = sext <vscale x 8 x i16> undef to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext_nxv4_i32_to_i64 = sext <vscale x 4 x i32> undef to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sext_nxv4_i8_to_i64 = sext <vscale x 4 x i8> undef to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sext_nxv8_i8_to_i32 = sext <vscale x 8 x i8> undef to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sext_nxv4_i16_to_i64 = sext <vscale x 4 x i16> undef to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %sext_nxv8_i8_to_i64 = sext <vscale x 8 x i8> undef to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %zext_nxv16_i8_to_i16 = zext <vscale x 16 x i8> undef to <vscale x 16 x i16>
@@ -25,6 +33,10 @@ define void @sve_ext() {
   %zext_nxv8_i16_to_i32 = zext <vscale x 8 x i16> undef to <vscale x 8 x i32>
   %zext_nxv8_i16_to_i64 = zext <vscale x 8 x i16> undef to <vscale x 8 x i64>
   %zext_nxv4_i32_to_i64 = zext <vscale x 4 x i32> undef to <vscale x 4 x i64>
+  %zext_nxv4_i8_to_i64  = zext <vscale x 4 x i8>  undef to <vscale x 4 x i64>
+  %zext_nxv8_i8_to_i32  = zext <vscale x 8 x i8>  undef to <vscale x 8 x i32>
+  %zext_nxv4_i16_to_i64 = zext <vscale x 4 x i16> undef to <vscale x 4 x i64>
+  %zext_nxv8_i8_to_i64  = zext <vscale x 8 x i8>  undef to <vscale x 8 x i64>
 
   %sext_nxv16_i8_to_i16 = sext <vscale x 16 x i8> undef to <vscale x 16 x i16>
   %sext_nxv16_i8_to_i32 = sext <vscale x 16 x i8> undef to <vscale x 16 x i32>
@@ -32,6 +44,10 @@ define void @sve_ext() {
   %sext_nxv8_i16_to_i32 = sext <vscale x 8 x i16> undef to <vscale x 8 x i32>
   %sext_nxv8_i16_to_i64 = sext <vscale x 8 x i16> undef to <vscale x 8 x i64>
   %sext_nxv4_i32_to_i64 = sext <vscale x 4 x i32> undef to <vscale x 4 x i64>
+  %sext_nxv4_i8_to_i64  = sext <vscale x 4 x i8>  undef to <vscale x 4 x i64>
+  %sext_nxv8_i8_to_i32  = sext <vscale x 8 x i8>  undef to <vscale x 8 x i32>
+  %sext_nxv4_i16_to_i64 = sext <vscale x 4 x i16> undef to <vscale x 4 x i64>
+  %sext_nxv8_i8_to_i64  = sext <vscale x 8 x i8>  undef to <vscale x 8 x i64>
 
   ret void
 }

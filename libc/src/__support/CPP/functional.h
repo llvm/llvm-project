@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H
 
 #include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/is_convertible.h"
@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 /// A function type adapted from LLVM's function_ref.
@@ -65,6 +65,6 @@ public:
 };
 
 } // namespace cpp
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_FUNCTIONAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_FUNCTIONAL_H

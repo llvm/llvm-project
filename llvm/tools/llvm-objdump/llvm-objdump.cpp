@@ -27,10 +27,10 @@
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DebugInfo/BTF/BTFParser.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -86,6 +86,7 @@
 #include <cctype>
 #include <cstring>
 #include <optional>
+#include <set>
 #include <system_error>
 #include <unordered_map>
 #include <utility>
@@ -535,6 +536,22 @@ static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
   OS << Name << "\t" << Val;
 }
 
+static void printBTFRelocation(formatted_raw_ostream &FOS, llvm::BTFParser &BTF,
+                               object::SectionedAddress Address,
+                               LiveVariablePrinter &LVP) {
+  const llvm::BTF::BPFFieldReloc *Reloc = BTF.findFieldReloc(Address);
+  if (!Reloc)
+    return;
+
+  SmallString<64> Val;
+  BTF.symbolize(Reloc, Val);
+  FOS << "\t\t";
+  if (LeadingAddr)
+    FOS << format("%016" PRIx64 ":  ", Address.Address + AdjustVMA);
+  FOS << "CO-RE " << Val;
+  LVP.printAfterOtherLine(FOS, true);
+}
+
 class PrettyPrinter {
 public:
   virtual ~PrettyPrinter() = default;
@@ -668,8 +685,9 @@ public:
       // using the .long directive, or .byte directive if fewer than 4 bytes
       // remaining
       if (Bytes.size() >= 4) {
-        OS << format("\t.long 0x%08" PRIx32 " ",
-                     support::endian::read32<support::little>(Bytes.data()));
+        OS << format(
+            "\t.long 0x%08" PRIx32 " ",
+            support::endian::read32<llvm::endianness::little>(Bytes.data()));
         OS.indent(42);
       } else {
           OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
@@ -766,12 +784,12 @@ public:
       OS << "\t<unknown>";
   }
 
-  void setInstructionEndianness(llvm::support::endianness Endianness) {
+  void setInstructionEndianness(llvm::endianness Endianness) {
     InstructionEndianness = Endianness;
   }
 
 private:
-  llvm::support::endianness InstructionEndianness = llvm::support::little;
+  llvm::endianness InstructionEndianness = llvm::endianness::little;
 };
 ARMPrettyPrinter ARMPrettyPrinterInst;
 
@@ -794,8 +812,8 @@ public:
       for (; Pos + 4 <= End; Pos += 4)
         OS << ' '
            << format_hex_no_prefix(
-                  llvm::support::endian::read<uint32_t>(Bytes.data() + Pos,
-                                                        llvm::support::little),
+                  llvm::support::endian::read<uint32_t>(
+                      Bytes.data() + Pos, llvm::endianness::little),
                   8);
       if (Pos < End) {
         OS << ' ';
@@ -842,7 +860,7 @@ public:
   std::unique_ptr<const MCSubtargetInfo> SubtargetInfo;
   std::shared_ptr<MCContext> Context;
   std::unique_ptr<MCDisassembler> DisAsm;
-  std::shared_ptr<const MCInstrAnalysis> InstrAnalysis;
+  std::shared_ptr<MCInstrAnalysis> InstrAnalysis;
   std::shared_ptr<MCInstPrinter> InstPrinter;
   PrettyPrinter *Printer;
 
@@ -1150,8 +1168,8 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
                                const MCSubtargetInfo &STI, raw_ostream &OS) {
-  support::endianness Endian =
-      Obj.isLittleEndian() ? support::little : support::big;
+  llvm::endianness Endian =
+      Obj.isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
   size_t Start = OS.tell();
   OS << format("%8" PRIx64 ": ", SectionAddr + Index);
   if (Index + 4 <= End) {
@@ -1257,21 +1275,26 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   auto Iter = AddrToBBAddrMap.find(StartAddress);
   if (Iter == AddrToBBAddrMap.end())
     return;
-  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.BBEntries) {
-    uint64_t BBAddress = BBEntry.Offset + Iter->second.Addr;
+  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.getBBEntries()) {
+    uint64_t BBAddress = BBEntry.Offset + Iter->second.getFunctionAddress();
     if (BBAddress >= EndAddress)
       continue;
     Labels[BBAddress].push_back(("BB" + Twine(BBEntry.ID)).str());
   }
 }
 
-static void collectLocalBranchTargets(
-    ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
-    MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
-    uint64_t Start, uint64_t End, std::unordered_map<uint64_t, std::string> &Labels) {
+static void
+collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
+                          MCDisassembler *DisAsm, MCInstPrinter *IP,
+                          const MCSubtargetInfo *STI, uint64_t SectionAddr,
+                          uint64_t Start, uint64_t End,
+                          std::unordered_map<uint64_t, std::string> &Labels) {
   // So far only supports PowerPC and X86.
   if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
     return;
+
+  if (MIA)
+    MIA->resetState();
 
   Labels.clear();
   unsigned LabelCount = 0;
@@ -1298,6 +1321,9 @@ static void collectLocalBranchTargets(
           !Labels.count(Target) &&
           !(STI->getTargetTriple().isPPC() && Target == Index))
         Labels[Target] = ("L" + Twine(LabelCount++)).str();
+      MIA->updateState(Inst, Index);
+    } else if (!Disassembled && MIA) {
+      MIA->resetState();
     }
     Index += Size;
   }
@@ -1626,6 +1652,16 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   if (SymbolizeOperands && !Obj.isRelocatableObject())
     ReadBBAddrMap();
 
+  std::optional<llvm::BTFParser> BTF;
+  if (InlineRelocs && BTFParser::hasBTFSections(Obj)) {
+    BTF.emplace();
+    BTFParser::ParseOptions Opts = {};
+    Opts.LoadTypes = true;
+    Opts.LoadRelocs = true;
+    if (Error E = BTF->parse(Obj, Opts))
+      WithColor::defaultErrorHandler(std::move(E));
+  }
+
   for (const SectionRef &Section : ToolSectionFilter(Obj)) {
     if (FilterSections.empty() && !DisassembleAll &&
         (!Section.isText() || Section.isVirtual()))
@@ -1744,19 +1780,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // inside functions, for which STT_FUNC would be inaccurate.
       //
       // So here, we spot whether there's any non-data symbol present at all,
-      // and only set the DisassembleAsData flag if there isn't. Also, we use
+      // and only set the DisassembleAsELFData flag if there isn't. Also, we use
       // this distinction to inform the decision of which symbol to print at
       // the head of the section, so that if we're printing code, we print a
       // code-related symbol name to go with it.
-      bool DisassembleAsData = false;
+      bool DisassembleAsELFData = false;
       size_t DisplaySymIndex = SymbolsHere.size() - 1;
       if (Obj.isELF() && !DisassembleAll && Section.isText()) {
-        DisassembleAsData = true; // unless we find a code symbol below
+        DisassembleAsELFData = true; // unless we find a code symbol below
 
         for (size_t i = 0; i < SymbolsHere.size(); ++i) {
           uint8_t SymTy = SymbolsHere[i].Type;
           if (SymTy != ELF::STT_OBJECT && SymTy != ELF::STT_COMMON) {
-            DisassembleAsData = false;
+            DisassembleAsELFData = false;
             DisplaySymIndex = i;
           }
         }
@@ -1907,7 +1943,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (SectionAddr < StartAddress)
         Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
-      if (DisassembleAsData) {
+      if (DisassembleAsELFData) {
         dumpELFData(SectionAddr, Index, End, Bytes);
         Index = End;
         continue;
@@ -1938,6 +1974,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         collectBBAddrMapLabels(AddrToBBAddrMap, SectionAddr, Index, End,
                                BBAddrMapLabels);
       }
+
+      if (DT->InstrAnalysis)
+        DT->InstrAnalysis->resetState();
 
       while (Index < End) {
         // ARM and AArch64 ELF binaries can interleave data and text in the
@@ -2155,6 +2194,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               if (TargetOS == &CommentStream)
                 *TargetOS << "\n";
             }
+
+            DT->InstrAnalysis->updateState(Inst, SectionAddr + Index);
+          } else if (!Disassembled && DT->InstrAnalysis) {
+            DT->InstrAnalysis->resetState();
           }
         }
 
@@ -2162,6 +2205,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
                                 *DT->SubtargetInfo, CommentStream.str(), LVP);
         Comments.clear();
+
+        if (BTF)
+          printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
 
         // Hexagon does this in pretty printer
         if (Obj.getArch() != Triple::hexagon) {
@@ -2259,9 +2305,9 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
     if (Elf32BE && (Elf32BE->isRelocatableObject() ||
                     !(Elf32BE->getPlatformFlags() & ELF::EF_ARM_BE8))) {
       Features.AddFeature("+big-endian-instructions");
-      ARMPrettyPrinterInst.setInstructionEndianness(llvm::support::big);
+      ARMPrettyPrinterInst.setInstructionEndianness(llvm::endianness::big);
     } else {
-      ARMPrettyPrinterInst.setInstructionEndianness(llvm::support::little);
+      ARMPrettyPrinterInst.setInstructionEndianness(llvm::endianness::little);
     }
   }
 

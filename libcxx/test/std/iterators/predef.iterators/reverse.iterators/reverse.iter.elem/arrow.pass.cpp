@@ -29,6 +29,8 @@ class A
     int data_;
 public:
     A() : data_(1) {}
+    A(const A&) = default;
+    A& operator=(const A&) = default;
     ~A() {data_ = -1;}
 
     int get() const {return data_;}
@@ -50,6 +52,8 @@ class B
     int data_;
 public:
     B(int d=1) : data_(d) {}
+    B(const B&) = default;
+    B& operator=(const B&) = default;
     ~B() {data_ = -1;}
 
     int get() const {return data_;}

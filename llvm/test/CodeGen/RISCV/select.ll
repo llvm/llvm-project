@@ -147,7 +147,7 @@ define i16 @select_xor_3(i16 %A, i8 %cond) {
 ; RV64IM-LABEL: select_xor_3:
 ; RV64IM:       # %bb.0: # %entry
 ; RV64IM-NEXT:    andi a1, a1, 1
-; RV64IM-NEXT:    addiw a1, a1, -1
+; RV64IM-NEXT:    addi a1, a1, -1
 ; RV64IM-NEXT:    andi a1, a1, 43
 ; RV64IM-NEXT:    xor a0, a0, a1
 ; RV64IM-NEXT:    ret
@@ -189,7 +189,7 @@ define i16 @select_xor_3b(i16 %A, i8 %cond) {
 ; RV64IM-LABEL: select_xor_3b:
 ; RV64IM:       # %bb.0: # %entry
 ; RV64IM-NEXT:    andi a1, a1, 1
-; RV64IM-NEXT:    addiw a1, a1, -1
+; RV64IM-NEXT:    addi a1, a1, -1
 ; RV64IM-NEXT:    andi a1, a1, 43
 ; RV64IM-NEXT:    xor a0, a0, a1
 ; RV64IM-NEXT:    ret
@@ -627,7 +627,7 @@ define i32 @select_add_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: select_add_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    addw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -665,7 +665,7 @@ define i32 @select_add_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV64IM-LABEL: select_add_3:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    andi a0, a0, 42
 ; RV64IM-NEXT:    addw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -754,7 +754,7 @@ define i32 @select_sub_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: select_sub_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    subw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -792,7 +792,7 @@ define i32 @select_sub_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV64IM-LABEL: select_sub_3:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    andi a0, a0, 42
 ; RV64IM-NEXT:    subw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -1159,7 +1159,7 @@ define i32 @select_shl_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: select_shl_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    sllw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -1256,7 +1256,7 @@ define i32 @select_ashr_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: select_ashr_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    sraw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -1353,7 +1353,7 @@ define i32 @select_lshr_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: select_lshr_2:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addiw a0, a0, -1
+; RV64IM-NEXT:    addi a0, a0, -1
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    srlw a0, a1, a0
 ; RV64IM-NEXT:    ret

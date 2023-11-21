@@ -12,31 +12,31 @@
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
 
-using __llvm_libc::time_utils::TimeConstants;
+using LIBC_NAMESPACE::time_utils::TimeConstants;
 
 static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
                                    int mday, int hour, int min, int sec,
                                    int wday, int yday, char *buffer) {
-  __llvm_libc::tmhelper::testing::initialize_tm_data(
+  LIBC_NAMESPACE::tmhelper::testing::initialize_tm_data(
       tm_data, year, month, mday, hour, min, sec, wday, yday);
-  return __llvm_libc::asctime_r(tm_data, buffer);
+  return LIBC_NAMESPACE::asctime_r(tm_data, buffer);
 }
 
 // asctime and asctime_r share the same code and thus didn't repeat all the
 // tests from asctime. Added couple of validation tests.
 TEST(LlvmLibcAsctimeR, Nullptr) {
   char *result;
-  result = __llvm_libc::asctime_r(nullptr, nullptr);
+  result = LIBC_NAMESPACE::asctime_r(nullptr, nullptr);
   ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 
   char buffer[TimeConstants::ASCTIME_BUFFER_SIZE];
-  result = __llvm_libc::asctime_r(nullptr, buffer);
+  result = LIBC_NAMESPACE::asctime_r(nullptr, buffer);
   ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 
   struct tm tm_data;
-  result = __llvm_libc::asctime_r(&tm_data, nullptr);
+  result = LIBC_NAMESPACE::asctime_r(&tm_data, nullptr);
   ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 }

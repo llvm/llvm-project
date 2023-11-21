@@ -72,7 +72,7 @@ define i32 @masked_scatter() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> undef, <4 x ptr> undef, i32 1, <4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: call void @llvm.masked.scatter.v2i16.v2p0(<2 x i16> undef, <2 x ptr> undef, i32 1, <2 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: call void @llvm.masked.scatter.v1i16.v1p0(<1 x i16> undef, <1 x ptr> undef, i32 1, <1 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
   call void @llvm.masked.scatter.v8f64.v8p0(<8 x double> undef, <8 x ptr> undef, i32 8, <8 x i1> undef)
   call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> undef, <4 x ptr> undef, i32 8, <4 x i1> undef)

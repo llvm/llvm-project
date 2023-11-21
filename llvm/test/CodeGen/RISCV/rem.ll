@@ -578,7 +578,7 @@ define i16 @urem16(i16 %a, i16 %b) nounwind {
 ; RV64IM-LABEL: urem16:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    lui a2, 16
-; RV64IM-NEXT:    addiw a2, a2, -1
+; RV64IM-NEXT:    addi a2, a2, -1
 ; RV64IM-NEXT:    and a1, a1, a2
 ; RV64IM-NEXT:    and a0, a0, a2
 ; RV64IM-NEXT:    remuw a0, a0, a1

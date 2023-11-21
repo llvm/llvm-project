@@ -5,11 +5,13 @@ add_mlir_dialect_library(MLIRArmSMEDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/ArmSME
 
   DEPENDS
-  MLIRArmSMEIncGen
+  MLIRArmSMEOpsIncGen
+  MLIRArmSMEIntrinsicOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRMemRefDialect
   MLIRSCFDialect
   MLIRSideEffectInterfaces
   MLIRVectorDialect

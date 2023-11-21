@@ -304,6 +304,16 @@ def CPolBit {
 
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
 
+def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
+  let EncoderMethod = "getMachineOpValueT16";
+  let DecoderMethod = "DecodeVGPR_16RegisterClass";
+}
+
+def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+  let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+}
+
 class VINTRPe <bits<2> op> : Enc32 {
   bits<8> vdst;
   bits<8> vsrc;

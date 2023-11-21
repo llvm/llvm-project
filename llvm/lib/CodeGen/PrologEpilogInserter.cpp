@@ -337,7 +337,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "StackSize",
                                              MF.getFunction().getSubprogram(),
                                              &MF.front())
-           << ore::NV("NumStackBytes", StackSize) << " stack bytes in function";
+           << ore::NV("NumStackBytes", StackSize)
+           << " stack bytes in function '"
+           << ore::NV("Function", MF.getFunction().getName()) << "'";
   });
 
   delete RS;
@@ -1083,7 +1085,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
                       MaxAlign);
 
   // Give the targets a chance to order the objects the way they like it.
-  if (MF.getTarget().getOptLevel() != CodeGenOpt::None &&
+  if (MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
       MF.getTarget().Options.StackSymbolOrdering)
     TFI.orderFrameObjects(MF, ObjectsToAllocate);
 
@@ -1093,7 +1095,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // optimizing.
   BitVector StackBytesFree;
   if (!ObjectsToAllocate.empty() &&
-      MF.getTarget().getOptLevel() != CodeGenOpt::None &&
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None &&
       MFI.getStackProtectorIndex() < 0 && TFI.enableStackSlotScavenging(MF))
     computeFreeStackSlots(MFI, StackGrowsDown, MinCSFrameIndex, MaxCSFrameIndex,
                           FixedCSEnd, StackBytesFree);
@@ -1497,7 +1499,7 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
 
     // Step backwards to get the liveness state at (immedately after) MI.
     if (LocalRS)
-      LocalRS->backward(MI);
+      LocalRS->backward(I);
 
     bool RemovedMI = false;
     for (const auto &[Idx, Op] : enumerate(MI.operands())) {
@@ -1512,11 +1514,6 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
       if (RemovedMI)
         break;
     }
-
-    // Refresh the scavenger's internal iterator in case MI was removed or more
-    // instructions were inserted after it.
-    if (LocalRS)
-      LocalRS->skipTo(std::prev(I));
 
     if (!RemovedMI)
       --I;

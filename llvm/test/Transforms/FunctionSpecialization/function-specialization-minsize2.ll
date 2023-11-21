@@ -3,8 +3,8 @@
 ; Checks for callsites that have been annotated with MinSize. No specialisation
 ; expected here:
 ;
-; CHECK-NOT: @compute.1
-; CHECK-NOT: @compute.2
+; CHECK-NOT: @compute.specialized.1
+; CHECK-NOT: @compute.specialized.2
 
 define i64 @main(i64 %x, i1 %flag) {
 entry:

@@ -1,13 +1,20 @@
-//
 // NOTE: this test requires gpu-sm80 and cusparselt
 //
-// RUN: mlir-opt --sparse-compiler="enable-runtime-library=false enable-gpu-libgen=true gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71" \
-// RUN:          %s \
-// RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_cuda_runtime \
-// RUN:   --shared-libs=%mlir_c_runner_utils \
-// RUN:   --e main --entry-point-result=void \
-// RUN: | FileCheck %s
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:   --shared-libs=%mlir_cuda_runtime \
+// DEFINE:   --shared-libs=%mlir_c_runner_utils \
+// DEFINE:   --e main --entry-point-result=void \
+// DEFINE: | FileCheck %s
+//
+// with RT lib:
+//
+// RUN: %{compile} enable-runtime-library=true"  | %{run}
+//
+// without RT lib:
+//
+// RUN: %{compile} enable-runtime-library=false" | %{run}
 
 #map0 = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>

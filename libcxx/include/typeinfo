@@ -92,7 +92,6 @@ class _LIBCPP_EXPORTED_FROM_ABI type_info
     int __compare(const type_info &__rhs) const _NOEXCEPT;
 
 public:
-    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
     virtual ~type_info();
 
     const char *name() const _NOEXCEPT;
@@ -314,7 +313,6 @@ class _LIBCPP_EXPORTED_FROM_ABI type_info
       : __type_name(__impl::__string_to_type_name(__n)) {}
 
 public:
-    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
     virtual ~type_info();
 
     _LIBCPP_INLINE_VISIBILITY
@@ -360,6 +358,7 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_cast
  public:
   bad_cast() _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI bad_cast(const bad_cast&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_cast& operator=(const bad_cast&) _NOEXCEPT = default;
   ~bad_cast() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
 };
@@ -369,6 +368,8 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_typeid
 {
  public:
   bad_typeid() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI bad_typeid(const bad_typeid&) _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI bad_typeid& operator=(const bad_typeid&) _NOEXCEPT = default;
   ~bad_typeid() _NOEXCEPT override;
   const char* what() const _NOEXCEPT override;
 };

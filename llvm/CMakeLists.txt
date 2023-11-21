@@ -6,7 +6,14 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
-set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+# Builds with custom install names and installation rpath setups may not work
+# in the build tree. Allow these cases to use CMake's default build tree
+# behavior by setting `LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE` to do this.
+option(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE "If set, use CMake's default build tree install name directory logic (Darwin only)" OFF)
+mark_as_advanced(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
+if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
+  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 18)
@@ -325,6 +332,12 @@ include(VersionFromVCS)
 option(LLVM_APPEND_VC_REV
   "Embed the version control system revision in LLVM" ON)
 
+set(LLVM_FORCE_VC_REVISION
+  "" CACHE STRING "Force custom VC revision for LLVM_APPEND_VC_REV")
+
+set(LLVM_FORCE_VC_REPOSITORY
+  "" CACHE STRING "Force custom VC repository for LLVM_APPEND_VC_REV")
+
 option(LLVM_TOOL_LLVM_DRIVER_BUILD "Enables building the llvm multicall tool" OFF)
 
 set(PACKAGE_NAME LLVM)
@@ -379,9 +392,15 @@ endif()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
+option(LLVM_ADDITIONAL_BUILD_TYPES "Additional build types that are allowed to be passed into CMAKE_BUILD_TYPE" "")
+
+set(ALLOWED_BUILD_TYPES DEBUG RELEASE RELWITHDEBINFO MINSIZEREL ${LLVM_ADDITIONAL_BUILD_TYPES})
+string (REPLACE ";" "|" ALLOWED_BUILD_TYPES_STRING "${ALLOWED_BUILD_TYPES}")
+string (TOUPPER "${ALLOWED_BUILD_TYPES_STRING}" uppercase_ALLOWED_BUILD_TYPES)
+
 if (CMAKE_BUILD_TYPE AND
-    NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$")
-  message(WARNING "Unknown value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+    NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(${uppercase_ALLOWED_BUILD_TYPES})$")
+  message(FATAL_ERROR "Unknown value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif()
 
 # LLVM_INSTALL_PACKAGE_DIR needs to be declared prior to adding the tools
@@ -630,6 +649,9 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
+option(LLVM_EXPERIMENTAL_DEBUGINFO_ITERATORS
+  "Add extra Booleans to ilist_iterators to communicate facts for debug-info" OFF)
+
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
 
@@ -875,16 +897,19 @@ include(config-ix)
 # invocation time. Except on 64-bit AIX, where the system toolchain
 # expect 32-bit objects by default.
 if("${LLVM_HOST_TRIPLE}" MATCHES "^powerpc64-ibm-aix")
-  string(REGEX REPLACE "^powerpc64" "powerpc" LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
+  string(REGEX REPLACE "^powerpc64" "powerpc" LLVM_DEFAULT_TARGET_TRIPLE_DEFAULT "${LLVM_HOST_TRIPLE}")
 else()
   # Only set default triple when native target is enabled.
   if (LLVM_NATIVE_TARGET)
-    set(LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
+    set(LLVM_DEFAULT_TARGET_TRIPLE_DEFAULT "${LLVM_HOST_TRIPLE}")
   endif()
 endif()
 
-include(SetTargetTriple)
-set_llvm_target_triple()
+set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE_DEFAULT}" CACHE STRING
+    "Default target for which LLVM will generate code." )
+message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
+
+set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 if(WIN32 OR CYGWIN)
   if(BUILD_SHARED_LIBS OR LLVM_BUILD_LLVM_DYLIB)
@@ -923,8 +948,8 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
   # LLVM_EXPERIMENTAL_TARGETS_TO_BUILD, not LLVM_TARGETS_TO_BUILD.
   # We allow experimental targets that are not in LLVM_ALL_EXPERIMENTAL_TARGETS,
   # as long as they are passed via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.
-  if ( NOT ${t} IN_LIST LLVM_ALL_TARGETS AND NOT ${t} IN_LIST LLVM_EXPERIMENTAL_TARGETS_TO_BUILD )
-    if( ${t} IN_LIST LLVM_ALL_EXPERIMENTAL_TARGETS )
+  if ( NOT "${t}" IN_LIST LLVM_ALL_TARGETS AND NOT "${t}" IN_LIST LLVM_EXPERIMENTAL_TARGETS_TO_BUILD )
+    if( "${t}" IN_LIST LLVM_ALL_EXPERIMENTAL_TARGETS )
       message(FATAL_ERROR "The target `${t}' is experimental and must be passed "
         "via LLVM_EXPERIMENTAL_TARGETS_TO_BUILD.")
     else()
@@ -936,6 +961,8 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     endif()
   else()
     set(LLVM_ENUM_TARGETS "${LLVM_ENUM_TARGETS}LLVM_TARGET(${t})\n")
+    string(TOUPPER ${t} T_UPPER)
+    set(LLVM_HAS_${T_UPPER}_TARGET 1)
   endif()
 
   file(GLOB asmp_file "${td}/*AsmPrinter.cpp")
@@ -1200,6 +1227,9 @@ if( LLVM_INCLUDE_EXAMPLES )
 endif()
 
 if( LLVM_INCLUDE_TESTS )
+  set(LLVM_GTEST_RUN_UNDER
+    "" CACHE STRING
+    "Define the wrapper program that LLVM unit tests should be run under.")
   if(EXISTS ${LLVM_MAIN_SRC_DIR}/projects/test-suite AND TARGET clang)
     include(LLVMExternalProjectUtils)
     llvm_ExternalProject_Add(test-suite ${LLVM_MAIN_SRC_DIR}/projects/test-suite

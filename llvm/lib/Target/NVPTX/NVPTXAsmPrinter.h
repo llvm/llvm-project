@@ -169,7 +169,7 @@ private:
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   unsigned encodeVirtualRegister(unsigned Reg);
 
-  void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
+  void printMemOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O,
                        const char *Modifier = nullptr);
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
                           bool processDemoted, const NVPTXSubtarget &STI);
@@ -184,7 +184,7 @@ private:
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
-  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
+  void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &) override;
 

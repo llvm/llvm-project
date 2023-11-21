@@ -21,16 +21,16 @@
 # CHECK-NEXT: AddressAlignment:
 # CHECK-NEXT: EntrySize:
 # CHECK-NEXT: SectionData (
-# CHECK-NEXT:   0000: 08232000 00000000 08232000 00000000
+# CHECK-NEXT:   0000: 00302000 00000000 00302000 00000000
 # CHECK-NEXT: )
 
 # CHECK:      Symbol {
 # CHECK:        Name: _end
-# CHECK-NEXT:   Value: 0x202308
+# CHECK-NEXT:   Value: 0x203000
 
 # CHECK:      Symbol {
 # CHECK:        Name: end
-# CHECK-NEXT:   Value: 0x202308
+# CHECK-NEXT:   Value: 0x203000
 
 .global _start
 _start:

@@ -131,14 +131,8 @@ public:
   using Result = std::optional<Shape>;
   using Base = AnyTraverse<GetShapeHelper, Result>;
   using Base::operator();
-  explicit GetShapeHelper(bool invariantOnly)
-      : Base{*this}, invariantOnly_{invariantOnly} {}
-  explicit GetShapeHelper(FoldingContext &c, bool invariantOnly)
-      : Base{*this}, context_{&c}, invariantOnly_{invariantOnly} {}
-  explicit GetShapeHelper(
-      FoldingContext &c, bool useResultSymbolShape, bool invariantOnly)
-      : Base{*this}, context_{&c}, useResultSymbolShape_{useResultSymbolShape},
-        invariantOnly_{invariantOnly} {}
+  GetShapeHelper(FoldingContext *context, bool invariantOnly)
+      : Base{*this}, context_{context}, invariantOnly_{invariantOnly} {}
 
   Result operator()(const ImpliedDoIndex &) const { return ScalarShape(); }
   Result operator()(const DescriptorInquiry &) const { return ScalarShape(); }
@@ -187,9 +181,7 @@ private:
     return common::visit(
         common::visitors{
             [&](const Expr<T> &x) -> MaybeExtentExpr {
-              if (auto xShape{!useResultSymbolShape_ ? (*this)(x)
-                          : context_                 ? GetShape(*context_, x)
-                                                     : GetShape(x)}) {
+              if (auto xShape{(*this)(x)}) {
                 // Array values in array constructors get linearized.
                 return GetSize(std::move(*xShape));
               } else {
@@ -233,7 +225,7 @@ private:
   void AccumulateExtent(ExtentExpr &, ExtentExpr &&) const;
 
   FoldingContext *context_{nullptr};
-  bool useResultSymbolShape_{true};
+  mutable bool useResultSymbolShape_{true};
   // When invariantOnly=false, the returned shape need not be invariant
   // in its scope; in particular, it may contain references to dummy arguments.
   bool invariantOnly_{true};
@@ -242,7 +234,7 @@ private:
 template <typename A>
 std::optional<Shape> GetShape(
     FoldingContext &context, const A &x, bool invariantOnly) {
-  if (auto shape{GetShapeHelper{context, invariantOnly}(x)}) {
+  if (auto shape{GetShapeHelper{&context, invariantOnly}(x)}) {
     return Fold(context, std::move(shape));
   } else {
     return std::nullopt;
@@ -251,17 +243,13 @@ std::optional<Shape> GetShape(
 
 template <typename A>
 std::optional<Shape> GetShape(const A &x, bool invariantOnly) {
-  return GetShapeHelper{invariantOnly}(x);
+  return GetShapeHelper{/*context=*/nullptr, invariantOnly}(x);
 }
 
 template <typename A>
 std::optional<Shape> GetShape(
     FoldingContext *context, const A &x, bool invariantOnly = true) {
-  if (context) {
-    return GetShape(*context, x, invariantOnly);
-  } else {
-    return GetShapeHelper{invariantOnly}(x);
-  }
+  return GetShapeHelper{context, invariantOnly}(x);
 }
 
 template <typename A>
@@ -286,12 +274,11 @@ std::optional<ConstantSubscripts> GetConstantExtents(
 
 // Get shape that does not depends on callee scope symbols if the expression
 // contains calls. Return std::nullopt if it is not possible to build such shape
-// (e.g. for calls to array functions whose result shape depends on the
+// (e.g. for calls to array-valued functions whose result shape depends on the
 // arguments).
 template <typename A>
 std::optional<Shape> GetContextFreeShape(FoldingContext &context, const A &x) {
-  return GetShapeHelper{
-      context, /*useResultSymbolShape=*/false, /*invariantOnly=*/true}(x);
+  return GetShapeHelper{&context, /*invariantOnly=*/true}(x);
 }
 
 // Compilation-time shape conformance checking, when corresponding extents

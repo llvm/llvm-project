@@ -10,7 +10,7 @@
 # RUN: ld.lld --shuffle-sections='*=1' %t.o -o %t1.out
 # RUN: llvm-readelf -x .text %t1.out | FileCheck %s --check-prefix=SHUFFLE1
 # SHUFFLE1: Hex dump of section '.text':
-# SHUFFLE1-NEXT: 01020403
+# SHUFFLE1-NEXT: 030402cc 01
 
 ## Test that --shuffle-sections= can be used with --symbol-ordering-file
 # RUN: echo "foo" > %t_order.txt
@@ -21,7 +21,7 @@
 # SHUFFLE2: Hex dump of section '.text':
 # SHUFFLE2-NEXT: 02cccccc 010304
 
-# RUN: ld.lld --symbol-ordering-file %t_order.txt --shuffle-sections='*=3' %t.o -o %t3.out
+# RUN: ld.lld -z norelro --symbol-ordering-file %t_order.txt --shuffle-sections='*=3' %t.o -o %t3.out
 # RUN: llvm-readelf -x .text %t3.out | FileCheck %s --check-prefix=SHUFFLE3
 # SHUFFLE3: Hex dump of section '.text':
 # SHUFFLE3-NEXT: 02cccccc 010403

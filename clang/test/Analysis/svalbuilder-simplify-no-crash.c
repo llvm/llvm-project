@@ -6,8 +6,10 @@
 // Here, we test that svalbuilder simplification does not produce any
 // assertion failure.
 
+// expected-no-diagnostics
+
 void crashing(long a, _Bool b) {
   (void)(a & 1 && 0);
   b = a & 1;
-  (void)(b << 1); // expected-warning{{core.UndefinedBinaryOperatorResult}}
+  (void)(b << 1);
 }

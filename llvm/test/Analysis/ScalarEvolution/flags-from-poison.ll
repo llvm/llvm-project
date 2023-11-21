@@ -937,9 +937,9 @@ define void @test-mul-propagates-poison(ptr %input, i32 %offset, i32 %numIterati
 ; CHECK-NEXT:    %index32 = add nsw i32 %i, %offset
 ; CHECK-NEXT:    --> {%offset,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %offset + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %indexmul = mul nsw i32 %index32, %offset
-; CHECK-NEXT:    --> {(%offset * %offset),+,%offset}<nsw><%loop> U: full-set S: full-set Exits: ((-1 + %offset + %numIterations) * %offset) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%offset * %offset),+,%offset}<%loop> U: full-set S: full-set Exits: ((-1 + %offset + %numIterations) * %offset) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i32 %indexmul
-; CHECK-NEXT:    --> {((4 * (sext i32 (%offset * %offset) to i64))<nsw> + %input),+,(4 * (sext i32 %offset to i64))<nsw>}<nw><%loop> U: full-set S: full-set Exits: ((4 * (sext i32 (%offset * %offset) to i64))<nsw> + (4 * (zext i32 (-1 + %numIterations) to i64) * (sext i32 %offset to i64)) + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {(%offset * %offset),+,%offset}<%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 ((-1 + %offset + %numIterations) * %offset) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-mul-propagates-poison
@@ -1245,11 +1245,11 @@ define void @test-shl-nsw(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 ; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index32 = shl nsw i32 %i, 8
-; CHECK-NEXT:    --> {(256 * %start),+,256}<nsw><%loop> U: [0,-255) S: [-2147483648,2147483393) Exits: (-256 + (256 * %numIterations)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(256 * %start),+,256}<%loop> U: [0,-255) S: [-2147483648,2147483393) Exits: (-256 + (256 * %numIterations)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {(sext i32 (256 * %start) to i64),+,256}<nsw><%loop> U: [0,-255) S: [-2147483648,1101659110913) Exits: ((sext i32 (256 * %start) to i64) + (256 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (sext i32 {(256 * %start),+,256}<%loop> to i64) U: [0,-255) S: [-2147483648,2147483393) Exits: (sext i32 (-256 + (256 * %numIterations)) to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i64 %index64
-; CHECK-NEXT:    --> {((4 * (sext i32 (256 * %start) to i64))<nsw> + %input),+,1024}<nw><%loop> U: full-set S: full-set Exits: ((4 * (sext i32 (256 * %start) to i64))<nsw> + (1024 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nuw><nsw> + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {(256 * %start),+,256}<%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 (-256 + (256 * %numIterations)) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nsw
@@ -1325,11 +1325,11 @@ define void @test-shl-nuw-nsw(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 ; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index32 = shl nuw nsw i32 %i, 31
-; CHECK-NEXT:    --> {(-2147483648 * %start),+,-2147483648}<nsw><%loop> U: [0,-2147483647) S: [-2147483648,1) Exits: (-2147483648 + (-2147483648 * %numIterations)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-2147483648 * %start),+,-2147483648}<%loop> U: [0,-2147483647) S: [-2147483648,1) Exits: (-2147483648 + (-2147483648 * %numIterations)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {(sext i32 (-2147483648 * %start) to i64),+,-2147483648}<nsw><%loop> U: [0,-2147483647) S: [-9223372036854775808,1) Exits: ((sext i32 (-2147483648 * %start) to i64) + (-2147483648 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (sext i32 {(-2147483648 * %start),+,-2147483648}<%loop> to i64) U: [0,-2147483647) S: [-2147483648,1) Exits: (sext i32 (-2147483648 + (-2147483648 * %numIterations)) to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i64 %index64
-; CHECK-NEXT:    --> {((4 * (sext i32 (-2147483648 * %start) to i64))<nsw> + %input),+,-8589934592}<nw><%loop> U: full-set S: full-set Exits: ((4 * (sext i32 (-2147483648 * %start) to i64))<nsw> + (-8589934592 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64)) + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {(-2147483648 * %start),+,-2147483648}<%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 (-2147483648 + (-2147483648 * %numIterations)) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nuw-nsw
@@ -1405,11 +1405,11 @@ define void @test-shl-nsw-edgecase(ptr %input, i32 %start, i32 %numIterations) {
 ; CHECK-NEXT:    %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 ; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index32 = shl nsw i32 %i, 30
-; CHECK-NEXT:    --> {(1073741824 * %start),+,1073741824}<nsw><%loop> U: [0,-1073741823) S: [-2147483648,1073741825) Exits: (-1073741824 + (1073741824 * %numIterations)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1073741824 * %start),+,1073741824}<%loop> U: [0,-1073741823) S: [-2147483648,1073741825) Exits: (-1073741824 + (1073741824 * %numIterations)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {(sext i32 (1073741824 * %start) to i64),+,1073741824}<nsw><%loop> U: [0,-1073741823) S: [-2147483648,4611686018427387905) Exits: ((sext i32 (1073741824 * %start) to i64) + (1073741824 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nuw><nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (sext i32 {(1073741824 * %start),+,1073741824}<%loop> to i64) U: [0,-1073741823) S: [-2147483648,1073741825) Exits: (sext i32 (-1073741824 + (1073741824 * %numIterations)) to i64) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i64 %index64
-; CHECK-NEXT:    --> {((4 * (sext i32 (1073741824 * %start) to i64))<nsw> + %input),+,4294967296}<nw><%loop> U: full-set S: full-set Exits: ((4 * (sext i32 (1073741824 * %start) to i64))<nsw> + (4294967296 * (zext i32 (-1 + (-1 * %start) + %numIterations) to i64))<nuw> + %input) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ((4 * (sext i32 {(1073741824 * %start),+,1073741824}<%loop> to i64))<nsw> + %input) U: full-set S: full-set Exits: ((4 * (sext i32 (-1073741824 + (1073741824 * %numIterations)) to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
 ; CHECK-NEXT:    --> {(1 + %start)<nsw>,+,1}<nsw><%loop> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-shl-nsw-edgecase

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
@@ -18,7 +18,7 @@
 
 #include <math.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -286,6 +286,6 @@ LIBC_INLINE I round_to_signed_integer_using_current_rounding_mode(F x) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H

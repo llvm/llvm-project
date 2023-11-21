@@ -57,6 +57,16 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``lshr``
+  * ``ashr``
+  * ``zext``
+  * ``sext``
+  * ``fptrunc``
+  * ``fpext``
+  * ``fptoui``
+  * ``fptosi``
+  * ``uitofp``
+  * ``sitofp``
 
 * Added `llvm.exp10` intrinsic.
 
@@ -69,6 +79,13 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* Added constructs for debugging TableGen files:
+
+  * `dump` keyword to dump messages to standard error, see
+     https://github.com/llvm/llvm-project/pull/68793.
+  * `!repr` bang operator to inspect the content of values, see
+     https://github.com/llvm/llvm-project/pull/68716.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
@@ -78,12 +95,14 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
+* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
   for raw instruction access.
 
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
+
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
 
 Changes to the ARM Backend
 --------------------------
@@ -109,6 +128,7 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
 
 Changes to the WebAssembly Backend
@@ -117,8 +137,24 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* The LLVM filesystem class ``UniqueID`` and function ``equivalent()``
+  no longer determine that distinct different path names for the same
+  hard linked file actually are equal. This is an intentional tradeoff in a
+  bug fix, where the bug used to cause distinct files to be considered
+  equivalent on some file systems. This change fixed the issues
+  https://github.com/llvm/llvm-project/issues/61401 and
+  https://github.com/llvm/llvm-project/issues/22079.
+
 Changes to the X86 Backend
 --------------------------
+
+* The ``i128`` type now matches GCC and clang's ``__int128`` type. This mainly
+  benefits external projects such as Rust which aim to be binary compatible
+  with C, but also fixes code generation where LLVM already assumed that the
+  type matched and called into libgcc helper functions.
+* Support ISA of ``USER_MSR``.
+* Support ISA of ``AVX10.1-256`` and ``AVX10.1-512``.
+* ``-mcpu=pantherlake`` and ``-mcpu=clearwaterforest`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -142,9 +178,36 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstLShr``
+  * ``LLVMConstAShr``
+  * ``LLVMConstZExt``
+  * ``LLVMConstSExt``
+  * ``LLVMConstZExtOrBitCast``
+  * ``LLVMConstSExtOrBitCast``
+  * ``LLVMConstIntCast``
+  * ``LLVMConstFPTrunc``
+  * ``LLVMConstFPExt``
+  * ``LLVMConstFPToUI``
+  * ``LLVMConstFPToSI``
+  * ``LLVMConstUIToFP``
+  * ``LLVMConstSIToFP``
+  * ``LLVMConstFPCast``
+
+* Added ``LLVMCreateTargetMachineWithOptions``, along with helper functions for
+  an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
+  The option structure exposes an additional setting (i.e., the target ABI) and
+  provides default values for unspecified settings.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
+
+* A new debug type ``isel-dump`` is added to show only the SelectionDAG dumps
+  after each ISel phase (i.e. ``-debug-only=isel-dump``). This new debug type
+  can be filtered by function names using ``-filter-print-funcs=<function names>``,
+  the same flag used to filter IR dumps after each Pass. Note that the existing
+  ``-debug-only=isel`` will take precedence over the new behavior and
+  print SelectionDAG dumps of every single function regardless of
+  ``-filter-print-funcs``'s values.
 
 * ``PrologEpilogInserter`` no longer supports register scavenging
   during forwards frame index elimination. Targets should use
@@ -157,6 +220,7 @@ Changes to the CodeGen infrastructure
 
 Changes to the Metadata Info
 ---------------------------------
+* Added a new loop metadata `!{!"llvm.loop.align", i32 64}`
 
 Changes to the Debug Info
 ---------------------------------
@@ -169,11 +233,43 @@ Changes to the LLVM tools
 * llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
   information (section name) when showing symbols.
 
+* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
+  debugging information to print symbols' filenames and line numbers.
+
+* llvm-symbolizer and llvm-addr2line now support addresses specified as symbol names.
+
 Changes to LLDB
 ---------------------------------
 
+* ``SBWatchpoint::GetHardwareIndex`` is deprecated and now returns -1
+  to indicate the index is unavailable.
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
+* ``SBType::FindDirectNestedType`` function is added. It's useful
+  for formatters to quickly find directly nested type when it's known
+  where to search for it, avoiding more expensive global search via
+  ``SBTarget::FindFirstType``.
+* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
+  instructions have been updated to reflect this. The underlying functionality
+  remains unchanged.
+* The ``mte_ctrl`` register can now be read from AArch64 Linux core files.
+* LLDB on AArch64 Linux now supports debugging the Scalable Matrix Extension
+  (SME) and Scalable Matrix Extension 2 (SME2) for both live processes and core
+  files. For details refer to the
+  `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
+
+* When running on AArch64 Linux, ``lldb-server`` now provides register
+  field information for the following registers: ``cpsr``, ``fpcr``,
+  ``fpsr``, ``svcr`` and ``mte_ctrl``. ::
+
+    (lldb) register read cpsr
+          cpsr = 0x80001000
+               = (N = 1, Z = 0, C = 0, V = 0, SS = 0, IL = 0, <...>
+
+  This is only available when ``lldb`` is built with XML support.
+  Where possible the CPU's capabilities are used to decide which
+  fields are present, however this is not always possible or entirely
+  accurate. If in doubt, refer to the numerical value.
 
 Changes to Sanitizers
 ---------------------

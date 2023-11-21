@@ -10,11 +10,9 @@
 ...
 ---
 name:            test
-alignment:       16
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
 body:             |
   bb.1:
-    dead %0(s32) = G_CONSTANT i32 0
-
+    dead %0:gr32(s32) = G_CONSTANT i32 0
+    dead undef %1.sub_32bit:gr64(s32) = G_CONSTANT i32 1
+    undef %2.sub_32bit:gr64(s32) = G_CONSTANT i32 2
 ...

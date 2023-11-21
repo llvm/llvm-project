@@ -250,8 +250,8 @@ define amdgpu_kernel void @commute_ule_63_i64(ptr addrspace(1) %out, ptr addrspa
 ; FIXME: Undo canonicalization to gt (x + 1) since it doesn't use the inline imm
 
 ; GCN-LABEL: {{^}}commute_ule_64_i64:
-; GCN-DAG: s_movk_i32 s[[KLO:[0-9]+]], 0x41{{$}}
-; GCN: v_cmp_gt_u64_e32 vcc, s[[[KLO]]:{{[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
+; GCN: s_mov_b64 [[K:s\[[0-9:]+\]]], 0x41
+; GCN: v_cmp_gt_u64_e32 vcc, [[K]], v{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @commute_ule_64_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid

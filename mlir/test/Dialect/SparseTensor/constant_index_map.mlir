@@ -1,11 +1,11 @@
 // Reported by https://github.com/llvm/llvm-project/issues/61530
 
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 #map1 = affine_map<(d0) -> (0, d0)>
 #map2 = affine_map<(d0) -> (d0)>
 
-#SpVec = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SpVec = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 // CHECK-LABEL:   func.func @main(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<1x77xi1>,
@@ -13,7 +13,7 @@
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 77 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = bufferization.alloc_tensor() : tensor<77xi1, #{{.*}}>
+// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty() : tensor<77xi1, #{{.*}}>
 // CHECK-DAG:       %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<1x77xi1>
 // CHECK-DAG:       %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_1]] : memref<1x77xi1>
 // CHECK:           %[[VAL_8:.*]] = scf.for %[[VAL_9:.*]] = %[[VAL_3]] to %[[VAL_2]] step %[[VAL_4]] iter_args(%[[VAL_10:.*]] = %[[VAL_5]]) -> (tensor<77xi1, #{{.*}}>) {
@@ -27,7 +27,7 @@
 // CHECK:           return %[[VAL_15]] : tensor<77xi1, #{{.*}}>
 // CHECK:         }
 func.func @main(%arg0: tensor<1x77xi1>, %arg1: tensor<1x77xi1>) -> tensor<77xi1, #SpVec> {
-  %0 = bufferization.alloc_tensor() : tensor<77xi1, #SpVec>
+  %0 = tensor.empty() : tensor<77xi1, #SpVec>
   %1 = linalg.generic {
     indexing_maps = [#map1, #map1, #map2],
     iterator_types = ["parallel"]}

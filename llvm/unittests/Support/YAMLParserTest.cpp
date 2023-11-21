@@ -47,6 +47,10 @@ TEST(YAMLParser, ParsesEmptyArray) {
   ExpectParseSuccess("Empty array", "[]");
 }
 
+TEST(YAMLParser, ParsesComplexMap) {
+  ExpectParseSuccess("Complex block map", "? a\n: b");
+}
+
 TEST(YAMLParser, FailsIfNotClosingArray) {
   ExpectParseError("Not closing array", "[");
   ExpectParseError("Not closing array", "  [  ");
@@ -82,7 +86,10 @@ TEST(YAMLParser, FailsIfMissingColon) {
 }
 
 TEST(YAMLParser, FailsOnMissingQuote) {
-  ExpectParseError("Missing open quote", "[{a\":\"b\"}]");
+  // Missing open quote counts as a plain scalar per YAML spec
+  // (Following is equivalent to JSON [{"a\":\"b\"": null}])
+  ExpectParseSuccess("Missing open quote", "[{a\":\"b\"}]");
+  // Closing quote is more strict -- plain scalars cannot start with a quote
   ExpectParseError("Missing closing quote", "[{\"a\":\"b}]");
 }
 
@@ -126,6 +133,48 @@ TEST(YAMLParser, ParsesSpacesInBetweenTokens) {
 
 TEST(YAMLParser, ParsesArrayOfArrays) {
   ExpectParseSuccess("Array of arrays", "[[]]");
+}
+
+TEST(YAMLParser, ParsesPlainScalars) {
+  ExpectParseSuccess("Plain scalar", "hello");
+  ExpectParseSuccess("Plain scalar beginning with a question mark", "?hello");
+  ExpectParseSuccess("Plain scalar beginning with a colon", ":hello");
+  ExpectParseSuccess("Plain scalar beginning with two colons", "::hello");
+  ExpectParseSuccess("Plain scalar beginning with a hyphen", "-hello");
+  ExpectParseSuccess("Multi-line plain scalar", "Hello\nworld");
+  ExpectParseSuccess("Plain scalar with indicator characters",
+                     "He-!l*lo, []world{}");
+  ExpectParseSuccess("Plain scalar with indicator characters used as block key",
+                     "He-!l*lo, []world{}: value");
+  ExpectParseSuccess("Plain scalar in flow sequence", "hello");
+  ExpectParseSuccess(
+      "Plain scalar beginning with a question mark in flow sequence",
+      "[ ?hello ]");
+  ExpectParseSuccess("Plain scalar beginning with a colon in flow sequence",
+                     "[ :hello ]");
+  ExpectParseSuccess("Plain scalar beginning with two colons in flow sequence",
+                     "[ ::hello ]");
+  ExpectParseSuccess("Plain scalar beginning with a hyphen in flow sequence",
+                     "[ -hello ]");
+  ExpectParseSuccess("Multi-line plain scalar in flow sequence",
+                     "[ Hello\nworld ]");
+  ExpectParseSuccess(
+      "Plain scalar with non-flow indicator characters in flow sequence",
+      "[ He-!l*lo, world ]");
+  ExpectParseSuccess(
+      "Plain scalar with non-flow indicator characters used as flow key",
+      "{ He-!l*lo, world: value } ");
+  ExpectParseError(
+      "Plain scalar with flow indicator characters inside flow sequence",
+      "[ Hello[world ]");
+  ExpectParseError(
+      "Plain scalar with flow indicator characters inside flow key",
+      "{ Hello[world: value }");
+  // Multi-line plain scalar in keys is strictly invalid per the spec, but many
+  // implementations accept it in flow keys nonetheless.  Block keys are not
+  // accepted by any other implementation I can find.
+  ExpectParseSuccess("Multi-line plain scalar in block key", "a\nb: c");
+  ExpectParseSuccess("Multi-line plain scalar in flow key", "{\na\nb: c\n}");
 }
 
 TEST(YAMLParser, ParsesBlockLiteralScalars) {
@@ -176,11 +225,21 @@ TEST(YAMLParser, HandlesEndOfFileGracefully) {
   ExpectParseError("In array hitting EOF", "[[] ");
   ExpectParseError("In array hitting EOF", "[[]");
   ExpectParseError("In object hitting EOF", "{\"\"");
+  // This one is valid, equivalent to the JSON {"": null}
+  ExpectParseSuccess("In complex block map hitting EOF", "?");
+  // Equivalent to JSON [null]
+  ExpectParseSuccess("In block sequence hitting EOF", "-");
 }
 
 TEST(YAMLParser, HandlesNullValuesInKeyValueNodesGracefully) {
   ExpectParseError("KeyValueNode with null key", "? \"\n:");
   ExpectParseError("KeyValueNode with null value", "test: '");
+}
+
+TEST(YAMLParser, BlockSequenceEOF) {
+  SourceMgr SM;
+  yaml::Stream Stream("-", SM);
+  EXPECT_TRUE(isa_and_present<yaml::SequenceNode>(Stream.begin()->getRoot()));
 }
 
 // Checks that the given string can be parsed into an identical string inside
@@ -380,6 +439,108 @@ TEST(YAMLParser, ParsesBools) {
   expectCanParseBool("Off", false);
   expectCanParseBool("off", false);
   expectCannotParseBool("0");
+}
+
+// Checks that the given string can be parsed into an expected scalar value.
+static void expectCanParseScalar(StringRef Input, StringRef Expected) {
+  SourceMgr SM;
+  yaml::Stream Stream(Input, SM);
+  yaml::Node *Root = Stream.begin()->getRoot();
+  ASSERT_NE(Root, nullptr);
+  auto *ScalarNode = dyn_cast<yaml::ScalarNode>(Root);
+  ASSERT_NE(ScalarNode, nullptr);
+  SmallVector<char> Storage;
+  StringRef Result = ScalarNode->getValue(Storage);
+  EXPECT_EQ(Result, Expected);
+}
+
+TEST(YAMLParser, UnfoldsScalarValue) {
+  // Double-quoted values
+  expectCanParseScalar("\"\"", "");
+  expectCanParseScalar("\"  \t\t  \t\t  \"", "  \t\t  \t\t  ");
+  expectCanParseScalar("\"\n\"", " ");
+  expectCanParseScalar("\"\r\"", " ");
+  expectCanParseScalar("\"\r\n\"", " ");
+  expectCanParseScalar("\"\n\n\"", "\n");
+  expectCanParseScalar("\"\r\r\"", "\n");
+  expectCanParseScalar("\"\n\r\"", "\n");
+  expectCanParseScalar("\"\r\n\r\n\"", "\n");
+  expectCanParseScalar("\"\n\n\n\"", "\n\n");
+  expectCanParseScalar("\"\r\r\r\"", "\n\n");
+  expectCanParseScalar("\"\r\n\r\n\r\n\"", "\n\n");
+  expectCanParseScalar("\" \t \t \n\t \t \t\r \t \t \"", "\n");
+  expectCanParseScalar("\" \t A \t \n \t B \t \"", " \t A B \t ");
+  expectCanParseScalar("\" \t \\ \r\r\t \\  \t \"", " \t  \n  \t ");
+  expectCanParseScalar("\"A\nB\"", "A B");
+  expectCanParseScalar("\"A\rB\"", "A B");
+  expectCanParseScalar("\"A\r\nB\"", "A B");
+  expectCanParseScalar("\"A\n\nB\"", "A\nB");
+  expectCanParseScalar("\"A\r\rB\"", "A\nB");
+  expectCanParseScalar("\"A\n\rB\"", "A\nB");
+  expectCanParseScalar("\"A\r\n\r\nB\"", "A\nB");
+  expectCanParseScalar("\"A\n\n\nB\"", "A\n\nB");
+  expectCanParseScalar("\"A\r\r\rB\"", "A\n\nB");
+  expectCanParseScalar("\"A\r\n\r\n\r\nB\"", "A\n\nB");
+  expectCanParseScalar("\"A \t \t \n\t \t \t B\"", "A B");
+  expectCanParseScalar("\"A \t \t \n\t \t \t\r \t \t B\"", "A\nB");
+  expectCanParseScalar("\"A \t \t \n\t \t \t\r\n \t \r  \t B\"", "A\n\nB");
+  expectCanParseScalar("\"A\\\rB\"", "AB");
+  expectCanParseScalar("\"A\\\nB\"", "AB");
+  expectCanParseScalar("\"A\\\r\nB\"", "AB");
+  expectCanParseScalar("\"A \t \\\rB\"", "A \t B");
+  expectCanParseScalar("\"A  \t\\\nB\"", "A  \tB");
+  expectCanParseScalar("\"A\t  \\\r\nB\"", "A\t  B");
+  expectCanParseScalar("\"A\\\r\rB\"", "A B");
+  expectCanParseScalar("\"A\\\n\nB\"", "A B");
+  expectCanParseScalar("\"A\\\r\n\r\nB\"", "A B");
+  expectCanParseScalar("\"A\\\r\r\rB\"", "A\nB");
+  expectCanParseScalar("\"A\\\n\n\nB\"", "A\nB");
+  expectCanParseScalar("\"A\\\r\n\r\n\r\nB\"", "A\nB");
+  expectCanParseScalar("\"A\r\\ \rB\"", "A   B");
+  // Single-quoted values
+  expectCanParseScalar("''", "");
+  expectCanParseScalar("'  \t\t  \t\t  '", "  \t\t  \t\t  ");
+  expectCanParseScalar("'\n'", " ");
+  expectCanParseScalar("'\r'", " ");
+  expectCanParseScalar("'\r\n'", " ");
+  expectCanParseScalar("'\n\n'", "\n");
+  expectCanParseScalar("'\r\r'", "\n");
+  expectCanParseScalar("'\n\r'", "\n");
+  expectCanParseScalar("'\r\n\r\n'", "\n");
+  expectCanParseScalar("'\n\n\n'", "\n\n");
+  expectCanParseScalar("'\r\r\r'", "\n\n");
+  expectCanParseScalar("'\r\n\r\n\r\n'", "\n\n");
+  expectCanParseScalar("' \t \t \n\t \t \t\r \t \t '", "\n");
+  expectCanParseScalar("' \t A \t \n \t B \t '", " \t A B \t ");
+  expectCanParseScalar("'A\nB'", "A B");
+  expectCanParseScalar("'A\rB'", "A B");
+  expectCanParseScalar("'A\r\nB'", "A B");
+  expectCanParseScalar("'A\n\nB'", "A\nB");
+  expectCanParseScalar("'A\r\rB'", "A\nB");
+  expectCanParseScalar("'A\n\rB'", "A\nB");
+  expectCanParseScalar("'A\r\n\r\nB'", "A\nB");
+  expectCanParseScalar("'A\n\n\nB'", "A\n\nB");
+  expectCanParseScalar("'A\r\r\rB'", "A\n\nB");
+  expectCanParseScalar("'A\r\n\r\n\r\nB'", "A\n\nB");
+  expectCanParseScalar("'A \t \t \n\t \t \t B'", "A B");
+  expectCanParseScalar("'A \t \t \n\t \t \t\r \t \t B'", "A\nB");
+  expectCanParseScalar("'A \t \t \n\t \t \t\r\n \t \r  \t B'", "A\n\nB");
+  // Plain values
+  expectCanParseScalar("A  \t \r \n \t \r\n \t\r\r\t  ", "A");
+  expectCanParseScalar("A \t \n \t B", "A B");
+  expectCanParseScalar("A\nB", "A B");
+  expectCanParseScalar("A\rB", "A B");
+  expectCanParseScalar("A\r\nB", "A B");
+  expectCanParseScalar("A\n\nB", "A\nB");
+  expectCanParseScalar("A\r\rB", "A\nB");
+  expectCanParseScalar("A\n\rB", "A\nB");
+  expectCanParseScalar("A\r\n\r\nB", "A\nB");
+  expectCanParseScalar("A\n\n\nB", "A\n\nB");
+  expectCanParseScalar("A\r\r\rB", "A\n\nB");
+  expectCanParseScalar("A\r\n\r\n\r\nB", "A\n\nB");
+  expectCanParseScalar("A \t \t \n\t \t \t B", "A B");
+  expectCanParseScalar("A \t \t \n\t \t \t\r \t \t B", "A\nB");
+  expectCanParseScalar("A \t \t \n\t \t \t\r\n \t \r  \t B", "A\n\nB");
 }
 
 } // end namespace llvm

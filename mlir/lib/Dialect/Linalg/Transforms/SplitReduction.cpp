@@ -192,8 +192,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
 
   auto reduction = b.create<GenericOp>(
       loc, op->getResultTypes(), ValueRange({genericOp.getResult(0)}),
-      SmallVector<Value>{op.getDpsInitOperands()}, reductionMaps,
-      reductionIteratorTypes,
+      op.getDpsInits(), reductionMaps, reductionIteratorTypes,
       [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
         Operation *clonedReductionOp = b.clone(*reductionOp);
         clonedReductionOp->setOperand(0, inputs[0]);
@@ -308,8 +307,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   SmallVector<Operation *> emptyOrAllocTensorOps;
   SmallVector<linalg::FillOp> fillOps;
   fillOps.reserve(op.getNumDpsInits());
-  for (auto it : llvm::zip(op.getDpsInitOperands(), neutralElements)) {
-    Value rankedTensor = std::get<0>(it)->get();
+  for (auto it : llvm::zip(op.getDpsInitsMutable(), neutralElements)) {
+    Value rankedTensor = std::get<0>(it).get();
     auto t = cast<RankedTensorType>(rankedTensor.getType());
     RankedTensorType newT = RankedTensorType::Builder(t).insertDim(
         reductionDimSize / splitFactor, insertSplitDimension);
@@ -345,13 +344,13 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // TODO: a subset of these may not reduce along reducePos and should be
   // reindexed: k -> k * splitFactor + k', when multi-reduction support is
   // available.
-  for (OpOperand *o : op.getDpsInitOperands())
-    newMaps.push_back(insertParallelDim(op, *o, reductionDimPos,
+  for (OpOperand &o : op.getDpsInitsMutable())
+    newMaps.push_back(insertParallelDim(op, o, reductionDimPos,
                                         reductionDimSize / splitFactor));
 
   // Step 3. Handle operands.
   // Compute the new input tensors.
-  SmallVector<Value> newInputs(op.getDpsInputOperands());
+  SmallVector<Value> newInputs = op.getDpsInputs();
   // Add a single shape-only tensor to carry the dimensions without resorting to
   // more complex inversions.
   newInputs.push_back(b.create<tensor::EmptyOp>(
@@ -380,10 +379,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // TODO: all results can be handled in a single GenericOp, when
   // multi-reduction support is available.
   SmallVector<LinalgOp> results;
-  for (auto it : llvm::zip(genericOp->getResults(), op.getDpsInitOperands(),
-                           combinerOps)) {
+  for (auto it :
+       llvm::zip(genericOp->getResults(), op.getDpsInits(), combinerOps)) {
     Value reindexedOutput = std::get<0>(it);
-    Value originalOutput = std::get<1>(it)->get();
+    Value originalOutput = std::get<1>(it);
     auto originalOutputType = cast<RankedTensorType>(originalOutput.getType());
     Operation *combinerOp = std::get<2>(it);
 

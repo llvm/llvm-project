@@ -469,19 +469,18 @@ entry:
 define void @test_none_v2i64(ptr nocapture readonly %ptr1, ptr nocapture readonly %ptr2) {
 ; CHECK-LE-P8-LABEL: test_none_v2i64:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    addis r4, r2, .LCPI4_0@toc@ha
-; CHECK-LE-P8-NEXT:    lxsdx v4, 0, r3
+; CHECK-LE-P8-NEXT:    addis r5, r2, .LCPI4_0@toc@ha
+; CHECK-LE-P8-NEXT:    lxsdx v3, 0, r3
 ; CHECK-LE-P8-NEXT:    addis r3, r2, .LCPI4_1@toc@ha
-; CHECK-LE-P8-NEXT:    addi r4, r4, .LCPI4_0@toc@l
+; CHECK-LE-P8-NEXT:    lxvd2x v4, 0, r4
+; CHECK-LE-P8-NEXT:    addi r5, r5, .LCPI4_0@toc@l
 ; CHECK-LE-P8-NEXT:    addi r3, r3, .LCPI4_1@toc@l
-; CHECK-LE-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r5
 ; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-LE-P8-NEXT:    xxswapd v3, vs1
-; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
-; CHECK-LE-P8-NEXT:    xxswapd v3, vs0
+; CHECK-LE-P8-NEXT:    vperm v2, v3, v4, v2
 ; CHECK-LE-P8-NEXT:    xxlxor v4, v4, v4
+; CHECK-LE-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-P8-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-LE-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-P8-NEXT:    stxvd2x vs0, 0, r3

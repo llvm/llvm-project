@@ -13,7 +13,7 @@
 #include "src/__support/libc_assert.h"
 #include "src/stdlib/abort.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // A single-use lock to allow only a single thread to print the assertion.
 static cpp::Atomic<uint32_t> lock = 0;
@@ -27,19 +27,14 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
   uint32_t claimed = gpu::is_first_lane(mask)
                          ? !lock.fetch_or(1, cpp::MemoryOrder::ACQUIRE)
                          : 0;
-  if (!gpu::broadcast_value(mask, claimed)) {
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
-    LIBC_INLINE_ASM("exit;" ::: "memory");
-#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
-    __builtin_amdgcn_endpgm();
-#endif
-    __builtin_unreachable();
-  }
+  if (!gpu::broadcast_value(mask, claimed))
+    gpu::end_program();
 
   // Only a single line should be printed if an assertion is hit.
   if (gpu::is_first_lane(mask))
-    __llvm_libc::report_assertion_failure(assertion, file, line, function);
-  __llvm_libc::abort();
+    LIBC_NAMESPACE::report_assertion_failure(assertion, file, line, function);
+  gpu::sync_lane(mask);
+  LIBC_NAMESPACE::abort();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

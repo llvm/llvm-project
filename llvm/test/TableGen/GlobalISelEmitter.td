@@ -216,11 +216,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
 // CHECK-NEXT: const PredicateBitset AvailableFeatures = getAvailableFeatures();
-// CHECK-NEXT: NewMIVector OutMIs;
+// CHECK-NEXT: MachineIRBuilder B(I);
 // CHECK-NEXT: State.MIs.clear();
 // CHECK-NEXT: State.MIs.push_back(&I);
 
-// CHECK:      if (executeMatchTable(*this, OutMIs, State, ExecInfo, getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures, &CoverageInfo)) {
+// CHECK:      if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures, &CoverageInfo)) {
 // CHECK-NEXT:   return true;
 // CHECK-NEXT: }
 

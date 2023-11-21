@@ -29,7 +29,7 @@
 #include "test_macros.h"
 
 #include "../MinimalElementType.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 #include "CustomTestAccessors.h"
 
 template <bool hc, bool mc, bool ac, class H, class M, class A>

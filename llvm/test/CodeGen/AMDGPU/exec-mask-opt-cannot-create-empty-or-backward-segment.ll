@@ -22,16 +22,16 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; CHECK-NEXT:    s_xor_b64 s[4:5], s[8:9], -1
 ; CHECK-NEXT:    s_bitcmp1_b32 s1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
 ; CHECK-NEXT:    s_cselect_b64 s[12:13], -1, 0
 ; CHECK-NEXT:    s_bitcmp1_b32 s6, 8
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[16:17]
-; CHECK-NEXT:    s_cselect_b64 s[14:15], -1, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, v0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[16:17]
+; CHECK-NEXT:    s_cselect_b64 s[14:15], -1, 0
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[10:11]
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[18:19], 0

@@ -17,7 +17,6 @@
 #include "DebugLocEntry.h"
 #include "DebugLocStream.h"
 #include "DwarfFile.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -103,10 +102,18 @@ public:
 
 class DbgVariable;
 
+bool operator<(const struct FrameIndexExpr &LHS,
+               const struct FrameIndexExpr &RHS);
+bool operator<(const struct EntryValueInfo &LHS,
+               const struct EntryValueInfo &RHS);
+
 /// Proxy for one MMI entry.
 struct FrameIndexExpr {
   int FI;
   const DIExpression *Expr;
+
+  /// Operator enabling sorting based on fragment offset.
+  friend bool operator<(const FrameIndexExpr &LHS, const FrameIndexExpr &RHS);
 };
 
 /// Represents an entry-value location, or a fragment of one.
@@ -115,15 +122,7 @@ struct EntryValueInfo {
   const DIExpression &Expr;
 
   /// Operator enabling sorting based on fragment offset.
-  bool operator<(const EntryValueInfo &Other) const {
-    return getFragmentOffsetInBits() < Other.getFragmentOffsetInBits();
-  }
-
-private:
-  uint64_t getFragmentOffsetInBits() const {
-    std::optional<DIExpression::FragmentInfo> Fragment = Expr.getFragmentInfo();
-    return Fragment ? Fragment->OffsetInBits : 0;
-  }
+  friend bool operator<(const EntryValueInfo &LHS, const EntryValueInfo &RHS);
 };
 
 // Namespace for alternatives of a DbgVariable.
@@ -158,7 +157,7 @@ public:
 };
 /// Single location defined by (potentially multiple) MMI entries.
 struct MMI {
-  mutable SmallVector<FrameIndexExpr, 1> FrameIndexExprs;
+  std::set<FrameIndexExpr> FrameIndexExprs;
 
 public:
   explicit MMI(const DIExpression *E, int FI) : FrameIndexExprs({{FI, E}}) {
@@ -167,7 +166,7 @@ public:
   }
   void addFrameIndexExpr(const DIExpression *Expr, int FI);
   /// Get the FI entries, sorted by fragment offset.
-  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
+  const std::set<FrameIndexExpr> &getFrameIndexExprs() const;
 };
 /// Single location defined by (potentially multiple) EntryValueInfo.
 struct EntryValue {
@@ -409,6 +408,11 @@ class DwarfDebug : public DebugHandlerBase {
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
 
+  /// Used to set a uniqe ID for a Type Unit.
+  /// This counter represents number of DwarfTypeUnits created, not necessarily
+  /// number of type units that will be emitted.
+  unsigned NumTypeUnitsCreated = 0;
+
   /// Whether to use the GNU TLS opcode (instead of the standard opcode).
   bool UseGNUTLSOpcode;
 
@@ -447,6 +451,11 @@ public:
     Ranges,
     Expressions,
     Form,
+  };
+
+  enum class DWARF5AccelTableKind {
+    CU = 0,
+    TU = 1,
   };
 
 private:
@@ -496,7 +505,10 @@ private:
   AddressPool AddrPool;
 
   /// Accelerator tables.
-  AccelTable<DWARF5AccelTableData> AccelDebugNames;
+  DWARF5AccelTable AccelDebugNames;
+  DWARF5AccelTable AccelTypeUnitsDebugNames;
+  /// Used to hide which DWARF5AccelTable we are using now.
+  DWARF5AccelTable *CurrentDebugNames = &AccelDebugNames;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;
@@ -535,8 +547,10 @@ private:
                                   DIE &ScopeDIE, const MachineFunction &MF);
 
   template <typename DataT>
-  void addAccelNameImpl(const DICompileUnit &CU, AccelTable<DataT> &AppleAccel,
-                        StringRef Name, const DIE &Die);
+  void addAccelNameImpl(const DwarfUnit &Unit,
+                        const DICompileUnit::DebugNameTableKind NameTableKind,
+                        AccelTable<DataT> &AppleAccel, StringRef Name,
+                        const DIE &Die);
 
   void finishEntityDefinitions();
 
@@ -780,6 +794,9 @@ public:
   /// Returns what kind (if any) of accelerator tables to emit.
   AccelTableKind getAccelTableKind() const { return TheAccelTableKind; }
 
+  /// Seet TheAccelTableKind
+  void setTheAccelTableKind(AccelTableKind K) { TheAccelTableKind = K; };
+
   bool useAppleExtensionAttributes() const {
     return HasAppleExtensionAttributes;
   }
@@ -837,20 +854,27 @@ public:
   void emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
                                  const DwarfCompileUnit *CU);
 
-  void addSubprogramNames(const DICompileUnit &CU, const DISubprogram *SP,
-                          DIE &Die);
+  void addSubprogramNames(const DwarfUnit &Unit,
+                          const DICompileUnit::DebugNameTableKind NameTableKind,
+                          const DISubprogram *SP, DIE &Die);
 
   AddressPool &getAddressPool() { return AddrPool; }
 
-  void addAccelName(const DICompileUnit &CU, StringRef Name, const DIE &Die);
+  void addAccelName(const DwarfUnit &Unit,
+                    const DICompileUnit::DebugNameTableKind NameTableKind,
+                    StringRef Name, const DIE &Die);
 
-  void addAccelObjC(const DICompileUnit &CU, StringRef Name, const DIE &Die);
+  void addAccelObjC(const DwarfUnit &Unit,
+                    const DICompileUnit::DebugNameTableKind NameTableKind,
+                    StringRef Name, const DIE &Die);
 
-  void addAccelNamespace(const DICompileUnit &CU, StringRef Name,
-                         const DIE &Die);
+  void addAccelNamespace(const DwarfUnit &Unit,
+                         const DICompileUnit::DebugNameTableKind NameTableKind,
+                         StringRef Name, const DIE &Die);
 
-  void addAccelType(const DICompileUnit &CU, StringRef Name, const DIE &Die,
-                    char Flags);
+  void addAccelType(const DwarfUnit &Unit,
+                    const DICompileUnit::DebugNameTableKind NameTableKind,
+                    StringRef Name, const DIE &Die, char Flags);
 
   const MachineFunction *getCurrentFunction() const { return CurFn; }
 
@@ -898,6 +922,19 @@ public:
   MDNodeSet &getLocalDeclsForScope(const DILocalScope *S) {
     return LocalDeclsPerLS[S];
   }
+
+  /// Sets the current DWARF5AccelTable to use.
+  void setCurrentDWARF5AccelTable(const DWARF5AccelTableKind Kind) {
+    switch (Kind) {
+    case DWARF5AccelTableKind::CU:
+      CurrentDebugNames = &AccelDebugNames;
+      break;
+    case DWARF5AccelTableKind::TU:
+      CurrentDebugNames = &AccelTypeUnitsDebugNames;
+    }
+  }
+  /// Returns either CU or TU DWARF5AccelTable.
+  DWARF5AccelTable &getCurrentDWARF5AccelTable() { return *CurrentDebugNames; }
 };
 
 } // end namespace llvm

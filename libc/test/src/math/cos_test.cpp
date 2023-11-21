@@ -13,11 +13,11 @@
 
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+using LlvmLibcCosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
-DECLARE_SPECIAL_CONSTANTS(double)
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST(LlvmLibccosTest, Range) {
+TEST_F(LlvmLibcCosTest, Range) {
   static constexpr double _2pi = 6.283185307179586;
   constexpr UIntType COUNT = 100'000;
   constexpr UIntType STEP = UIntType(-1) / COUNT;
@@ -27,6 +27,6 @@ TEST(LlvmLibccosTest, Range) {
     if (isnan(x) || isinf(x) || x > _2pi || x < -_2pi)
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cos(x), 1.0);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, LIBC_NAMESPACE::cos(x), 1.0);
   }
 }

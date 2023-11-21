@@ -37,6 +37,10 @@ spirv.module Logical GLSL450 requires
     // CHECK-SAME:   : !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>, i32
     spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <RowMajor> :
       !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>, i32
+
+    // CHECK-NEXT:  spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, <RowMajor>, <Volatile|Nontemporal>
+    spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <RowMajor>, <Volatile|Nontemporal> :
+      !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<16x8xi32, Workgroup, MatrixA>, i32
     spirv.Return
   }
 
@@ -62,16 +66,29 @@ spirv.module Logical GLSL450 requires
                                                         !spirv.coopmatrix<16x8xi16, Subgroup, MatrixB>
                                                         -> !spirv.coopmatrix<8x8xi32, Subgroup, MatrixAcc>
 
-    // CHECK-NEXT: {{%.+}} = spirv.KHR.CooperativeMatrixMulAdd {{%.*}}, {{%.*}}, {{%.*}}, <BSigned> :
+    // CHECK-NEXT: {{%.+}} = spirv.KHR.CooperativeMatrixMulAdd {{%.*}}, {{%.*}}, {{%.*}}, <ASigned> :
     // CHECK-SAME:   !spirv.coopmatrix<8x16xi8, Subgroup, MatrixA>,
     // CHECK-SAME:   !spirv.coopmatrix<16x8xi16, Subgroup, MatrixB>
     // CHECK-SAME:   -> !spirv.coopmatrix<8x8xi32, Subgroup, MatrixAcc>
     %q = spirv.KHR.CooperativeMatrixMulAdd %a, %b, %c,
+                                           <ASigned> : !spirv.coopmatrix<8x16xi8, Subgroup, MatrixA>,
+                                                       !spirv.coopmatrix<16x8xi16, Subgroup, MatrixB>
+                                                       -> !spirv.coopmatrix<8x8xi32, Subgroup, MatrixAcc>
+
+    // CHECK-NEXT: {{%.+}} = spirv.KHR.CooperativeMatrixMulAdd {{%.*}}, {{%.*}}, {{%.*}}, <BSigned> :
+    %r = spirv.KHR.CooperativeMatrixMulAdd %a, %b, %c,
                                            <BSigned> : !spirv.coopmatrix<8x16xi8, Subgroup, MatrixA>,
                                                        !spirv.coopmatrix<16x8xi16, Subgroup, MatrixB>
                                                        -> !spirv.coopmatrix<8x8xi32, Subgroup, MatrixAcc>
 
-    // TODO: Handle multiple matrix operands and add relevant testcases here.
+    // CHECK-NEXT: {{%.+}} = spirv.KHR.CooperativeMatrixMulAdd
+    // CHECK-SAME:           <ASigned|BSigned|ResultSigned|AccSat> :
+    %s = spirv.KHR.CooperativeMatrixMulAdd %a, %b, %c,
+                                           <ASigned|BSigned|ResultSigned|AccSat> :
+                                           !spirv.coopmatrix<8x16xi8, Subgroup, MatrixA>,
+                                           !spirv.coopmatrix<16x8xi16, Subgroup, MatrixB>
+                                           -> !spirv.coopmatrix<8x8xi32, Subgroup, MatrixAcc>
+
     spirv.Return
   }
 

@@ -15,6 +15,7 @@ body: |
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; GFX8-NEXT: [[SMULH:%[0-9]+]]:_(s32) = G_SMULH [[COPY]], [[COPY1]]
     ; GFX8-NEXT: $vgpr0 = COPY [[SMULH]](s32)
+    ;
     ; GFX9-LABEL: name: test_smulh_s32
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -45,6 +46,7 @@ body: |
     ; GFX8-NEXT: [[SMULH1:%[0-9]+]]:_(s32) = G_SMULH [[UV1]], [[UV3]]
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SMULH]](s32), [[SMULH1]](s32)
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ;
     ; GFX9-LABEL: name: test_smulh_v2s32
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -80,6 +82,7 @@ body: |
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[MUL]], [[C]](s32)
     ; GFX8-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ASHR]], 16
     ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG2]](s32)
+    ;
     ; GFX9-LABEL: name: test_smulh_s16
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -124,6 +127,7 @@ body: |
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASHR2]](s16)
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ANYEXT]], 8
     ; GFX8-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ;
     ; GFX9-LABEL: name: test_smulh_s8
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -181,6 +185,7 @@ body: |
     ; GFX8-NEXT: [[SEXT_INREG5:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG4]](s32), [[SEXT_INREG5]](s32)
     ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ;
     ; GFX9-LABEL: name: test_smulh_v2s16
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -246,6 +251,7 @@ body: |
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL4]]
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX9-LABEL: name: test_smulh_v2s8
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -349,8 +355,8 @@ body: |
     ; GFX8-NEXT: [[ASHR10:%[0-9]+]]:_(s16) = G_ASHR [[SHL7]], [[C3]](s16)
     ; GFX8-NEXT: [[MUL3:%[0-9]+]]:_(s16) = G_MUL [[ASHR9]], [[ASHR10]]
     ; GFX8-NEXT: [[ASHR11:%[0-9]+]]:_(s16) = G_ASHR [[MUL3]], [[C3]](s16)
-    ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ASHR2]](s16)
+    ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C4]]
     ; GFX8-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ASHR5]](s16)
     ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C4]]
@@ -365,6 +371,7 @@ body: |
     ; GFX8-NEXT: [[SHL10:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[C2]](s32)
     ; GFX8-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[OR1]], [[SHL10]]
     ; GFX8-NEXT: $vgpr0 = COPY [[OR2]](s32)
+    ;
     ; GFX9-LABEL: name: test_smulh_v4s8
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}

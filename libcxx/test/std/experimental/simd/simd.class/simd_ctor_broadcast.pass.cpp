@@ -13,10 +13,6 @@
 // [simd.class]
 // template<class U> simd(U&& value) noexcept;
 
-// GCC returns __int128 unsigned with garbled data in higher 64 bits.
-// This is likely a bug in GCC implementation. Investigation needed.
-// XFAIL: gcc-13
-
 #include "../test_utils.h"
 
 namespace ex = std::experimental::parallelism_v2;

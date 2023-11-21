@@ -16,7 +16,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 // These length modifiers match the length modifiers in the format string, which
@@ -87,6 +87,6 @@ enum ErrorCodes : int {
   ALLOCATION_FAILURE = -4,
 };
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_CORE_STRUCTS_H

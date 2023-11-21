@@ -11,7 +11,7 @@
 // https://buildkite.com/llvm-project/libcxx-ci/builds/15823#0184fc0b-d56b-4774-9e1d-35fe24e09e37
 // It seems like the CI gcc version is buggy. I can't reproduce the failure on my system or on
 // godbolt (https://godbolt.org/z/rsPv8e8fn).
-// UNSUPPORTED: gcc-12, gcc-13
+// UNSUPPORTED: gcc-13
 
 #include <algorithm>
 #include <cstddef>

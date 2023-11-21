@@ -12,7 +12,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
-// UNSUPPORTED: libcpp-hardening-mode=unchecked
+// UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
 
 #include <string>
@@ -20,17 +20,15 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
-  {
-    std::string s;
-    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
-  }
+template <class S>
+void test() {
+  S s;
+  TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
+}
 
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-    S s;
-    TEST_LIBCPP_ASSERT_FAILURE(s.back(), "string::back(): string is empty");
-  }
+int main(int, char**) {
+  test<std::string>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 
   return 0;
 }

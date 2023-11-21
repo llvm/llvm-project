@@ -109,21 +109,37 @@ private:
 
   void RewriteOpenACCLoopConstruct(parser::OpenACCLoopConstruct &x,
       parser::Block &block, parser::Block::iterator it) {
+    parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
     auto &dir{std::get<parser::AccLoopDirective>(beginDir.t)};
-    const auto &doCons{std::get<parser::DoConstruct>(x.t)};
+    auto &nestedDo{std::get<std::optional<parser::DoConstruct>>(x.t)};
 
-    if (!doCons.GetLoopControl()) {
-      messages_.Say(dir.source,
-          "DO loop after the %s directive must have loop control"_err_en_US,
-          parser::ToUpperCaseLetters(dir.source.ToString()));
-      return;
+    if (!nestedDo) {
+      nextIt = it;
+      if (++nextIt != block.end()) {
+        if (auto *doCons{parser::Unwrap<parser::DoConstruct>(*nextIt)}) {
+          nestedDo = std::move(*doCons);
+          nextIt = block.erase(nextIt);
+        }
+      }
     }
 
-    CheckDoConcurrentClauseRestriction<parser::OpenACCLoopConstruct,
-        parser::AccBeginLoopDirective>(x, doCons);
-    CheckTileClauseRestriction<parser::OpenACCLoopConstruct,
-        parser::AccBeginLoopDirective>(x, doCons);
+    if (nestedDo) {
+      if (!nestedDo->GetLoopControl()) {
+        messages_.Say(dir.source,
+            "DO loop after the %s directive must have loop control"_err_en_US,
+            parser::ToUpperCaseLetters(dir.source.ToString()));
+        return;
+      }
+      CheckDoConcurrentClauseRestriction<parser::OpenACCLoopConstruct,
+          parser::AccBeginLoopDirective>(x, *nestedDo);
+      CheckTileClauseRestriction<parser::OpenACCLoopConstruct,
+          parser::AccBeginLoopDirective>(x, *nestedDo);
+      return;
+    }
+    messages_.Say(dir.source,
+        "A DO loop must follow the %s directive"_err_en_US,
+        parser::ToUpperCaseLetters(dir.source.ToString()));
   }
 
   void RewriteOpenACCCombinedConstruct(parser::OpenACCCombinedConstruct &x,
@@ -132,14 +148,24 @@ private:
     parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::AccBeginCombinedDirective>(x.t)};
     auto &dir{std::get<parser::AccCombinedDirective>(beginDir.t)};
-    const auto &doConstruct{std::get<std::optional<parser::DoConstruct>>(x.t)};
+    auto &nestedDo{std::get<std::optional<parser::DoConstruct>>(x.t)};
 
-    if (doConstruct) {
+    if (!nestedDo) {
+      nextIt = it;
+      if (++nextIt != block.end()) {
+        if (auto *doCons{parser::Unwrap<parser::DoConstruct>(*nextIt)}) {
+          nestedDo = std::move(*doCons);
+          nextIt = block.erase(nextIt);
+        }
+      }
+    }
+
+    if (nestedDo) {
       CheckDoConcurrentClauseRestriction<parser::OpenACCCombinedConstruct,
-          parser::AccBeginCombinedDirective>(x, *doConstruct);
+          parser::AccBeginCombinedDirective>(x, *nestedDo);
       CheckTileClauseRestriction<parser::OpenACCCombinedConstruct,
-          parser::AccBeginCombinedDirective>(x, *doConstruct);
-      if (!doConstruct->GetLoopControl()) {
+          parser::AccBeginCombinedDirective>(x, *nestedDo);
+      if (!nestedDo->GetLoopControl()) {
         messages_.Say(dir.source,
             "DO loop after the %s directive must have loop control"_err_en_US,
             parser::ToUpperCaseLetters(dir.source.ToString()));

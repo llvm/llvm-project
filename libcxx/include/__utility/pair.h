@@ -274,9 +274,9 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
 #  if _LIBCPP_STD_VER >= 23
     // This is a workaround for http://llvm.org/PR60710. We should be able to remove it once Clang is fixed.
-    template <class _PairLike, bool _Enable = tuple_size<remove_cvref_t<_PairLike>>::value == 2>
+    template <class _PairLike>
     _LIBCPP_HIDE_FROM_ABI static constexpr bool __pair_like_explicit_wknd() {
-        if constexpr (tuple_size<remove_cvref_t<_PairLike>>::value == 2) {
+        if constexpr (__pair_like<_PairLike>) {
             return !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
                    !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>;
         }
@@ -284,7 +284,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
     }
 
     template <__pair_like _PairLike>
-      requires(is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike&&>()))> &&
+      requires(!__is_specialization_of_subrange<remove_cvref_t<_PairLike>>::value &&
+               is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike&&>()))> &&
                is_constructible_v<second_type, decltype(std::get<1>(std::declval<_PairLike&&>()))>)
     _LIBCPP_HIDE_FROM_ABI constexpr explicit(__pair_like_explicit_wknd<_PairLike>())
         pair(_PairLike&& __p)

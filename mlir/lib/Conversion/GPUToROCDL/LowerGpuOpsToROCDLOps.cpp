@@ -229,7 +229,6 @@ struct LowerGpuOpsToROCDLOpsPass
         ctx, DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.useOpaquePointers = useOpaquePointers;
 
     if (useBarePtrCallConv) {
       options.useBarePtrCallConv = true;

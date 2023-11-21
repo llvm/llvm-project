@@ -48,14 +48,14 @@ define <4 x double> @mul_add_mull(<4 x double> %a, <4 x double> %b, <4 x double>
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v2.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v3.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v2.2d, #90
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v3.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #90
-; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #90
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #90
 ; CHECK-NEXT:    fadd v1.2d, v18.2d, v17.2d
 ; CHECK-NEXT:    fadd v0.2d, v16.2d, v19.2d
 ; CHECK-NEXT:    ret
@@ -94,14 +94,14 @@ define <4 x double> @mul_sub_mull(<4 x double> %a, <4 x double> %b, <4 x double>
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v2.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v3.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v2.2d, #90
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v3.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #90
-; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #90
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #90
+; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #90
 ; CHECK-NEXT:    fsub v1.2d, v18.2d, v17.2d
 ; CHECK-NEXT:    fsub v0.2d, v16.2d, v19.2d
 ; CHECK-NEXT:    ret
@@ -140,14 +140,14 @@ define <4 x double> @mul_conj_mull(<4 x double> %a, <4 x double> %b, <4 x double
 ; CHECK-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-NEXT:    movi v18.2d, #0000000000000000
 ; CHECK-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v2.2d, #0
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v3.2d, #0
-; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #0
-; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #0
-; CHECK-NEXT:    fcmla v16.2d, v0.2d, v2.2d, #90
-; CHECK-NEXT:    fcmla v18.2d, v1.2d, v3.2d, #90
-; CHECK-NEXT:    fcmla v17.2d, v7.2d, v5.2d, #270
-; CHECK-NEXT:    fcmla v19.2d, v6.2d, v4.2d, #270
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #0
+; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #0
+; CHECK-NEXT:    fcmla v16.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v18.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v17.2d, v5.2d, v7.2d, #270
+; CHECK-NEXT:    fcmla v19.2d, v4.2d, v6.2d, #270
 ; CHECK-NEXT:    fadd v1.2d, v18.2d, v17.2d
 ; CHECK-NEXT:    fadd v0.2d, v16.2d, v19.2d
 ; CHECK-NEXT:    ret

@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -992,7 +993,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         NewState.meet(OpState);
       });
 
-      BDVState OldState = States[BDV];
+      BDVState OldState = Pair.second;
       if (OldState != NewState) {
         Progress = true;
         States[BDV] = NewState;
@@ -1011,8 +1012,44 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   }
 #endif
 
-  // Handle all instructions that have a vector BDV, but the instruction itself
-  // is of scalar type.
+  // Even though we have identified a concrete base (or a conflict) for all live
+  // pointers at this point, there are cases where the base is of an
+  // incompatible type compared to the original instruction. We conservatively
+  // mark those as conflicts to ensure that corresponding BDVs will be generated
+  // in the next steps.
+
+  // this is a rather explicit check for all cases where we should mark the
+  // state as a conflict to force the latter stages of the algorithm to emit
+  // the BDVs.
+  // TODO: in many cases the instructions emited for the conflicting states
+  // will be identical to the I itself (if the I's operate on their BDVs
+  // themselves). We should expoit this, but can't do it here since it would
+  // break the invariant about the BDVs not being known to be a base.
+  // TODO: the code also does not handle constants at all - the algorithm relies
+  // on all constants having the same BDV and therefore constant-only insns
+  // will never be in conflict, but this check is ignored here. If the
+  // constant conflicts will be to BDVs themselves, they will be identical
+  // instructions and will get optimized away (as in the above TODO)
+  auto MarkConflict = [&](Instruction *I, Value *BaseValue) {
+    // II and EE mixes vector & scalar so is always a conflict
+    if (isa<InsertElementInst>(I) || isa<ExtractElementInst>(I))
+      return true;
+    // Shuffle vector is always a conflict as it creates new vector from
+    // existing ones.
+    if (isa<ShuffleVectorInst>(I))
+      return true;
+    // Any  instructions where the computed base type differs from the
+    // instruction type. An example is where an extract instruction is used by a
+    // select. Here the select's BDV is a vector (because of extract's BDV),
+    // while the select itself is a scalar type. Note that the IE and EE
+    // instruction check is not fully subsumed by the vector<->scalar check at
+    // the end, this is due to the BDV algorithm being ignorant of BDV types at
+    // this junction.
+    if (!areBothVectorOrScalar(BaseValue, I))
+      return true;
+    return false;
+  };
+
   for (auto Pair : States) {
     Instruction *I = cast<Instruction>(Pair.first);
     BDVState State = Pair.second;
@@ -1025,30 +1062,13 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
         "why did it get added?");
     assert(!State.isUnknown() && "Optimistic algorithm didn't complete!");
 
-    if (!State.isBase() || !isa<VectorType>(BaseValue->getType()))
+    // since we only mark vec-scalar insns as conflicts in the pass, our work is
+    // done if the instruction already conflicts
+    if (State.isConflict())
       continue;
-    // extractelement instructions are a bit special in that we may need to
-    // insert an extract even when we know an exact base for the instruction.
-    // The problem is that we need to convert from a vector base to a scalar
-    // base for the particular indice we're interested in.
-    if (isa<ExtractElementInst>(I)) {
-      auto *EE = cast<ExtractElementInst>(I);
-      // TODO: In many cases, the new instruction is just EE itself.  We should
-      // exploit this, but can't do it here since it would break the invariant
-      // about the BDV not being known to be a base.
-      auto *BaseInst = ExtractElementInst::Create(
-          State.getBaseValue(), EE->getIndexOperand(), "base_ee", EE);
-      BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
-      States[I] = BDVState(I, BDVState::Base, BaseInst);
-      setKnownBase(BaseInst, /* IsKnownBase */true, KnownBases);
-    } else if (!isa<VectorType>(I->getType())) {
-      // We need to handle cases that have a vector base but the instruction is
-      // a scalar type (these could be phis or selects or any instruction that
-      // are of scalar type, but the base can be a vector type).  We
-      // conservatively set this as conflict.  Setting the base value for these
-      // conflicts is handled in the next loop which traverses States.
+
+    if (MarkConflict(I, BaseValue))
       States[I] = BDVState(I, BDVState::Conflict);
-    }
   }
 
 #ifndef NDEBUG
@@ -1422,14 +1442,15 @@ static constexpr Attribute::AttrKind FnAttrsToStrip[] =
   {Attribute::Memory, Attribute::NoSync, Attribute::NoFree};
 
 // Create new attribute set containing only attributes which can be transferred
-// from original call to the safepoint.
-static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
-                                            AttributeList OrigAL,
+// from the original call to the safepoint.
+static AttributeList legalizeCallAttributes(CallBase *Call, bool IsMemIntrinsic,
                                             AttributeList StatepointAL) {
+  AttributeList OrigAL = Call->getAttributes();
   if (OrigAL.isEmpty())
     return StatepointAL;
 
   // Remove the readonly, readnone, and statepoint function attributes.
+  LLVMContext &Ctx = Call->getContext();
   AttrBuilder FnAttrs(Ctx, OrigAL.getFnAttrs());
   for (auto Attr : FnAttrsToStrip)
     FnAttrs.removeAttribute(Attr);
@@ -1439,8 +1460,24 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
       FnAttrs.removeAttribute(A);
   }
 
-  // Just skip parameter and return attributes for now
-  return StatepointAL.addFnAttributes(Ctx, FnAttrs);
+  StatepointAL = StatepointAL.addFnAttributes(Ctx, FnAttrs);
+
+  // The memory intrinsics do not have a 1:1 correspondence of the original
+  // call arguments to the produced statepoint. Do not transfer the argument
+  // attributes to avoid putting them on incorrect arguments.
+  if (IsMemIntrinsic)
+    return StatepointAL;
+
+  // Attach the argument attributes from the original call at the corresponding
+  // arguments in the statepoint. Note that any argument attributes that are
+  // invalid after lowering are stripped in stripNonValidDataFromBody.
+  for (unsigned I : llvm::seq(Call->arg_size()))
+    StatepointAL = StatepointAL.addParamAttributes(
+        Ctx, GCStatepointInst::CallArgsBeginPos + I,
+        AttrBuilder(Ctx, OrigAL.getParamAttrs(I)));
+
+  // Return attributes are later attached to the gc.result intrinsic.
+  return StatepointAL;
 }
 
 /// Helper function to place all gc relocates necessary for the given
@@ -1477,7 +1514,7 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
   auto getGCRelocateDecl = [&](Type *Ty) {
     assert(isHandledGCPointerType(Ty, GC));
     auto AS = Ty->getScalarType()->getPointerAddressSpace();
-    Type *NewTy = Type::getInt8PtrTy(M->getContext(), AS);
+    Type *NewTy = PointerType::get(M->getContext(), AS);
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
@@ -1630,6 +1667,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   // with a return value, we lower then as never returning calls to
   // __llvm_deoptimize that are followed by unreachable to get better codegen.
   bool IsDeoptimize = false;
+  bool IsMemIntrinsic = false;
 
   StatepointDirectives SD =
       parseStatepointDirectivesFromAttrs(Call->getAttributes());
@@ -1670,6 +1708,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       IsDeoptimize = true;
     } else if (IID == Intrinsic::memcpy_element_unordered_atomic ||
                IID == Intrinsic::memmove_element_unordered_atomic) {
+      IsMemIntrinsic = true;
+
       // Unordered atomic memcpy and memmove intrinsics which are not explicitly
       // marked as "gc-leaf-function" should be lowered in a GC parseable way.
       // Specifically, these calls should be lowered to the
@@ -1785,12 +1825,10 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     SPCall->setTailCallKind(CI->getTailCallKind());
     SPCall->setCallingConv(CI->getCallingConv());
 
-    // Currently we will fail on parameter attributes and on certain
-    // function attributes.  In case if we can handle this set of attributes -
-    // set up function attrs directly on statepoint and return attrs later for
+    // Set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPCall->setAttributes(legalizeCallAttributes(
-        CI->getContext(), CI->getAttributes(), SPCall->getAttributes()));
+    SPCall->setAttributes(
+        legalizeCallAttributes(CI, IsMemIntrinsic, SPCall->getAttributes()));
 
     Token = cast<GCStatepointInst>(SPCall);
 
@@ -1812,12 +1850,10 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
     SPInvoke->setCallingConv(II->getCallingConv());
 
-    // Currently we will fail on parameter attributes and on certain
-    // function attributes.  In case if we can handle this set of attributes -
-    // set up function attrs directly on statepoint and return attrs later for
+    // Set up function attrs directly on statepoint and return attrs later for
     // gc_result intrinsic.
-    SPInvoke->setAttributes(legalizeCallAttributes(
-        II->getContext(), II->getAttributes(), SPInvoke->getAttributes()));
+    SPInvoke->setAttributes(
+        legalizeCallAttributes(II, IsMemIntrinsic, SPInvoke->getAttributes()));
 
     Token = cast<GCStatepointInst>(SPInvoke);
 

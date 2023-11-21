@@ -16,7 +16,7 @@ define void @test_lla(i32 signext %n) {
 ; RV32I-NEXT:    auipc a2, %pcrel_hi(l)
 ; RV32I-NEXT:  .LBB0_1: # %loop
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    lw a3, %pcrel_lo(.Lpcrel_hi0)(a2)
+; RV32I-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi0)(a2)
 ; RV32I-NEXT:    addi a1, a1, 1
 ; RV32I-NEXT:    blt a1, a0, .LBB0_1
 ; RV32I-NEXT:  # %bb.2: # %ret
@@ -29,7 +29,7 @@ define void @test_lla(i32 signext %n) {
 ; RV64I-NEXT:    auipc a2, %pcrel_hi(l)
 ; RV64I-NEXT:  .LBB0_1: # %loop
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    lw a3, %pcrel_lo(.Lpcrel_hi0)(a2)
+; RV64I-NEXT:    lw zero, %pcrel_lo(.Lpcrel_hi0)(a2)
 ; RV64I-NEXT:    addiw a1, a1, 1
 ; RV64I-NEXT:    blt a1, a0, .LBB0_1
 ; RV64I-NEXT:  # %bb.2: # %ret
@@ -59,7 +59,7 @@ define void @test_la(i32 signext %n) {
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:  .LBB1_1: # %loop
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    lw a3, 0(a1)
+; RV32I-NEXT:    lw zero, 0(a1)
 ; RV32I-NEXT:    addi a2, a2, 1
 ; RV32I-NEXT:    blt a2, a0, .LBB1_1
 ; RV32I-NEXT:  # %bb.2: # %ret
@@ -73,7 +73,7 @@ define void @test_la(i32 signext %n) {
 ; RV64I-NEXT:    li a2, 0
 ; RV64I-NEXT:  .LBB1_1: # %loop
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    lw a3, 0(a1)
+; RV64I-NEXT:    lw zero, 0(a1)
 ; RV64I-NEXT:    addiw a2, a2, 1
 ; RV64I-NEXT:    blt a2, a0, .LBB1_1
 ; RV64I-NEXT:  # %bb.2: # %ret
@@ -104,7 +104,7 @@ define void @test_la_tls_ie(i32 signext %n) {
 ; RV32I-NEXT:    add a2, a2, tp
 ; RV32I-NEXT:  .LBB2_1: # %loop
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    lw a3, 0(a2)
+; RV32I-NEXT:    lw zero, 0(a2)
 ; RV32I-NEXT:    addi a1, a1, 1
 ; RV32I-NEXT:    blt a1, a0, .LBB2_1
 ; RV32I-NEXT:  # %bb.2: # %ret
@@ -119,7 +119,7 @@ define void @test_la_tls_ie(i32 signext %n) {
 ; RV64I-NEXT:    add a2, a2, tp
 ; RV64I-NEXT:  .LBB2_1: # %loop
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    lw a3, 0(a2)
+; RV64I-NEXT:    lw zero, 0(a2)
 ; RV64I-NEXT:    addiw a1, a1, 1
 ; RV64I-NEXT:    blt a1, a0, .LBB2_1
 ; RV64I-NEXT:  # %bb.2: # %ret
@@ -157,7 +157,7 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    call __tls_get_addr@plt
-; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    lw zero, 0(a0)
 ; RV32I-NEXT:    addi s2, s2, 1
 ; RV32I-NEXT:    blt s2, s0, .LBB3_1
 ; RV32I-NEXT:  # %bb.2: # %ret
@@ -184,7 +184,7 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __tls_get_addr@plt
-; RV64I-NEXT:    lw a0, 0(a0)
+; RV64I-NEXT:    lw zero, 0(a0)
 ; RV64I-NEXT:    addiw s2, s2, 1
 ; RV64I-NEXT:    blt s2, s0, .LBB3_1
 ; RV64I-NEXT:  # %bb.2: # %ret

@@ -242,7 +242,7 @@ public:
   ///
   /// This is useful when you just want to print 'int %reg126', not the
   /// instruction that generated it. If you specify a Module for context, then
-  /// even constanst get pretty-printed; for example, the type of a null
+  /// even constants get pretty-printed; for example, the type of a null
   /// pointer is printed symbolically.
   /// @{
   void printAsOperand(raw_ostream &O, bool PrintType = true,
@@ -562,7 +562,11 @@ protected:
   /// These functions require that the value have at most a single attachment
   /// of the given kind, and return \c nullptr if such an attachment is missing.
   /// @{
-  MDNode *getMetadata(unsigned KindID) const;
+  MDNode *getMetadata(unsigned KindID) const {
+    if (!HasMetadata)
+      return nullptr;
+    return getMetadataImpl(KindID);
+  }
   MDNode *getMetadata(StringRef Kind) const;
   /// @}
 
@@ -616,6 +620,11 @@ protected:
 
   /// Erase all metadata attached to this Value.
   void clearMetadata();
+
+  /// Get metadata for the given kind, if any.
+  /// This is an internal function that must only be called after
+  /// checking that `hasMetadata()` returns true.
+  MDNode *getMetadataImpl(unsigned KindID) const;
 
 public:
   /// Return true if this value is a swifterror value.

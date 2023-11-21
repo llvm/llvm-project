@@ -758,22 +758,24 @@ define float @testfloateq(float %c1, float %c2, float %c3, float %c4, float %a1,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NEXT:    fcmpu 1, 1, 2
-; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    creqv 20, 6, 2
-; CHECK-NEXT:    bclr 12, 20, 0
+; CHECK-NEXT:    bc 12, 20, .LBB24_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    fmr 1, 6
+; CHECK-NEXT:    fmr 5, 6
+; CHECK-NEXT:  .LBB24_2: # %entry
+; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: testfloateq:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NO-ISEL-NEXT:    fcmpu 1, 1, 2
-; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bclr 12, 20, 0
+; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB24_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    fmr 1, 6
+; CHECK-NO-ISEL-NEXT:    fmr 5, 6
+; CHECK-NO-ISEL-NEXT:  .LBB24_2: # %entry
+; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = fcmp oeq float %c3, %c4
@@ -933,22 +935,24 @@ define float @testfloatne(float %c1, float %c2, float %c3, float %c4, float %a1,
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NEXT:    fcmpu 1, 1, 2
-; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    crxor 20, 6, 2
-; CHECK-NEXT:    bclr 12, 20, 0
+; CHECK-NEXT:    bc 12, 20, .LBB29_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    fmr 1, 6
+; CHECK-NEXT:    fmr 5, 6
+; CHECK-NEXT:  .LBB29_2: # %entry
+; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: testfloatne:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NO-ISEL-NEXT:    fcmpu 1, 1, 2
-; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    crxor 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bclr 12, 20, 0
+; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB29_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    fmr 1, 6
+; CHECK-NO-ISEL-NEXT:    fmr 5, 6
+; CHECK-NO-ISEL-NEXT:  .LBB29_2: # %entry
+; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = fcmp oeq float %c3, %c4
@@ -1108,22 +1112,24 @@ define double @testdoubleeq(double %c1, double %c2, double %c3, double %c4, doub
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NEXT:    fcmpu 1, 1, 2
-; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    creqv 20, 6, 2
-; CHECK-NEXT:    bclr 12, 20, 0
+; CHECK-NEXT:    bc 12, 20, .LBB34_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    fmr 1, 6
+; CHECK-NEXT:    fmr 5, 6
+; CHECK-NEXT:  .LBB34_2: # %entry
+; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: testdoubleeq:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NO-ISEL-NEXT:    fcmpu 1, 1, 2
-; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bclr 12, 20, 0
+; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB34_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    fmr 1, 6
+; CHECK-NO-ISEL-NEXT:    fmr 5, 6
+; CHECK-NO-ISEL-NEXT:  .LBB34_2: # %entry
+; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = fcmp oeq double %c3, %c4
@@ -1283,22 +1289,24 @@ define double @testdoublene(double %c1, double %c2, double %c3, double %c4, doub
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NEXT:    fcmpu 1, 1, 2
-; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    crxor 20, 6, 2
-; CHECK-NEXT:    bclr 12, 20, 0
+; CHECK-NEXT:    bc 12, 20, .LBB39_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    fmr 1, 6
+; CHECK-NEXT:    fmr 5, 6
+; CHECK-NEXT:  .LBB39_2: # %entry
+; CHECK-NEXT:    fmr 1, 5
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: testdoublene:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 3, 4
 ; CHECK-NO-ISEL-NEXT:    fcmpu 1, 1, 2
-; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    crxor 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    bclr 12, 20, 0
+; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB39_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    fmr 1, 6
+; CHECK-NO-ISEL-NEXT:    fmr 5, 6
+; CHECK-NO-ISEL-NEXT:  .LBB39_2: # %entry
+; CHECK-NO-ISEL-NEXT:    fmr 1, 5
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %cmp1 = fcmp oeq double %c3, %c4
@@ -1620,10 +1628,10 @@ define ppc_fp128 @testppc_fp128eq(ppc_fp128 %c1, ppc_fp128 %c2, ppc_fp128 %c3, p
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 6, 8
 ; CHECK-NEXT:    fcmpu 1, 5, 7
-; CHECK-NEXT:    fcmpu 5, 2, 4
-; CHECK-NEXT:    fcmpu 6, 1, 3
 ; CHECK-NEXT:    crand 20, 6, 2
-; CHECK-NEXT:    crand 21, 26, 22
+; CHECK-NEXT:    fcmpu 0, 2, 4
+; CHECK-NEXT:    fcmpu 1, 1, 3
+; CHECK-NEXT:    crand 21, 6, 2
 ; CHECK-NEXT:    crxor 20, 21, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB50_2
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -1641,10 +1649,10 @@ define ppc_fp128 @testppc_fp128eq(ppc_fp128 %c1, ppc_fp128 %c2, ppc_fp128 %c3, p
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 6, 8
 ; CHECK-NO-ISEL-NEXT:    fcmpu 1, 5, 7
-; CHECK-NO-ISEL-NEXT:    fcmpu 5, 2, 4
-; CHECK-NO-ISEL-NEXT:    fcmpu 6, 1, 3
 ; CHECK-NO-ISEL-NEXT:    crand 20, 6, 2
-; CHECK-NO-ISEL-NEXT:    crand 21, 26, 22
+; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 4
+; CHECK-NO-ISEL-NEXT:    fcmpu 1, 1, 3
+; CHECK-NO-ISEL-NEXT:    crand 21, 6, 2
 ; CHECK-NO-ISEL-NEXT:    crxor 20, 21, 20
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB50_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry

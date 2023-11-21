@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
@@ -17,7 +17,7 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/math_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace generic {
 
@@ -230,7 +230,7 @@ private:
     if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
         return sx;        // |x|<|y| return x
-      return FPB::zero(); // |x|=|y| return 0.0
+      return FPB(FPB::zero()); // |x|=|y| return 0.0
     }
 
     int e_x = sx.get_unbiased_exponent();
@@ -243,7 +243,7 @@ private:
       intU_t m_y = sy.get_explicit_mantissa();
       intU_t d = (e_x == e_y) ? (m_x - m_y) : (m_x << (e_x - e_y)) % m_y;
       if (d == 0)
-        return FPB::zero();
+        return FPB(FPB::zero());
       // iy - 1 because of "zero power" for number with power 1
       return FPB::make_value(d, e_y - 1);
     }
@@ -291,7 +291,7 @@ private:
 
     m_x %= m_y;
     if (LIBC_UNLIKELY(m_x == 0))
-      return FPB::zero();
+      return FPB(FPB::zero());
 
     if (exp_diff == 0)
       return FPB::make_value(m_x, e_y);
@@ -317,6 +317,6 @@ public:
 
 } // namespace generic
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H

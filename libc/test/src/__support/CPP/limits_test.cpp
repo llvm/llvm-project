@@ -10,7 +10,7 @@
 #include "src/__support/UInt.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This just checks against the C spec, almost all implementations will surpass
 // this.
@@ -32,14 +32,14 @@ TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
 }
 
 TEST(LlvmLibcLimitsTest, UInt128Limits) {
-  auto umax128 = cpp::numeric_limits<__llvm_libc::cpp::UInt<128>>::max();
+  auto umax128 = cpp::numeric_limits<LIBC_NAMESPACE::cpp::UInt<128>>::max();
   auto umax64 =
-      __llvm_libc::cpp::UInt<128>(cpp::numeric_limits<uint64_t>::max());
+      LIBC_NAMESPACE::cpp::UInt<128>(cpp::numeric_limits<uint64_t>::max());
   EXPECT_GT(umax128, umax64);
-  ASSERT_EQ(~__llvm_libc::cpp::UInt<128>(0), umax128);
+  ASSERT_EQ(~LIBC_NAMESPACE::cpp::UInt<128>(0), umax128);
 #ifdef __SIZEOF_INT128__
   ASSERT_EQ(~__uint128_t(0), cpp::numeric_limits<__uint128_t>::max());
 #endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

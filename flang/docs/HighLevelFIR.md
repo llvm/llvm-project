@@ -41,7 +41,7 @@ The core impact on lowering will be:
     relevant.
 
 
-## Variable and Expression value concepts in HLFIR
+# Variable and Expression value concepts in HLFIR
 
 ## Strengthening the variable concept
 
@@ -119,7 +119,7 @@ its first operand to return an HLFIR variable compatible type.
 The fir.declare op is the only operation described by this change that will be
 added to FIR. The rational for this is that it is intended to survive until
 LLVM dialect codegeneration so that debug info generation can use them and
-alias information can take advantage of them even on FIR. 
+alias information can take advantage of them even on FIR.
 
 Note that Fortran variables are not necessarily named objects, they can also be
 the result of function references returning POINTERs. hlfir.declare will also
@@ -1021,7 +1021,7 @@ end subroutine
 
 Lowering output:
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1035,7 +1035,7 @@ HLFIR array assignment lowering pass:
     associated variables that are neither target nor pointers.
 -   Lower to assignment to loop:
 
-```HFLIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1107,7 +1107,7 @@ end subroutine
 
 Lowering output:
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1145,7 +1145,7 @@ Step 1: hlfir.elemental inlining: inline the first hlfir.elemental into the
 second one at the hlfir.apply.
 
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1190,7 +1190,7 @@ Note that the alias analysis could have already occurred without inlining the
 %add hlfir.elemental.
 
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1229,7 +1229,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array
 Step 4: Lower assignments to regular loops since they have the no_overlap
 attribute, and inline the hlfir.elemental into the first loop nest.
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1275,7 +1275,7 @@ Step 5 (may also occur earlier or several times): shape propagation.
     conformance checks can be added for %a, %b and %p.
 -   %temp is small, and its fir.allocmem can be promoted to a stack allocation
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   // .....
   %cshape = fir.shape %c100
@@ -1320,7 +1320,7 @@ Lowering of vector subscripted entities would happen as follow:
   input IO) by inlining the elemental body into the created loops, and
   identifying the hlfir.designate producing the result.
 
-```HFLFIR
+```
 func.func @_QPfoo(%arg0: !fir.ref<!fir.array<?xf32>>, %arg1: !fir.ref<!fir.array<?xf32>>, %arg2: !fir.box<<!fir.array<?xi32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>
@@ -1366,7 +1366,7 @@ the MLIR infrastructure experience that was gained.
 
 ## Using symbols for HLFIR variables
 
-### Using attributes as pseudo variable symbols 
+### Using attributes as pseudo variable symbols
 
 Instead of restricting the memory types an HLFIR variable can have, it was
 force the defining operation of HLFIR variable SSA values to always be

@@ -67,7 +67,7 @@ protected:
     VFS->addFile(Filename, 0, std::move(Buf), /*User=*/std::nullopt,
                  /*Group=*/std::nullopt,
                  llvm::sys::fs::file_type::regular_file);
-    auto FE = FileMgr.getFile(Filename, true);
+    auto FE = FileMgr.getOptionalFileRef(Filename, true);
     assert(FE);
 
     // Test class supports only one HMap at a time.

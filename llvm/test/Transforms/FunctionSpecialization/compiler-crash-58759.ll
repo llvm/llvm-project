@@ -23,5 +23,5 @@ declare i32 @p0(i32 noundef)
 declare i32 @p1(i32 noundef)
 
 ;; Tests that `f` has been fully specialize and it didn't cause compiler crash.
-;; CHECK-DAG: f.1
-;; CHECK-DAG: f.2
+;; CHECK-DAG: f.specialized.1
+;; CHECK-DAG: f.specialized.2

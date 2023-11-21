@@ -60,12 +60,9 @@ using testing::AllOf;
 using testing::ElementsAre;
 using testing::ElementsAreArray;
 using testing::Eq;
-using testing::Gt;
 using testing::IsEmpty;
 using testing::Matcher;
-using testing::NotNull;
 using testing::Property;
-using testing::SizeIs;
 
 Matcher<MCOperand> IsImm(int64_t Value) {
   return AllOf(Property(&MCOperand::isImm, Eq(true)),

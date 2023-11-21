@@ -40,13 +40,13 @@ enum class OrderingKind { EQ, NE, LT, LE, GT, GE };
 /// value of the function at a specified point.
 class MultiAffineFunction {
 public:
-  MultiAffineFunction(const PresburgerSpace &space, const Matrix &output)
+  MultiAffineFunction(const PresburgerSpace &space, const IntMatrix &output)
       : space(space), output(output),
         divs(space.getNumVars() - space.getNumRangeVars()) {
     assertIsConsistent();
   }
 
-  MultiAffineFunction(const PresburgerSpace &space, const Matrix &output,
+  MultiAffineFunction(const PresburgerSpace &space, const IntMatrix &output,
                       const DivisionRepr &divs)
       : space(space), output(output), divs(divs) {
     assertIsConsistent();
@@ -65,7 +65,7 @@ public:
   PresburgerSpace getOutputSpace() const { return space.getRangeSpace(); }
 
   /// Get a matrix with each row representing row^th output expression.
-  const Matrix &getOutputMatrix() const { return output; }
+  const IntMatrix &getOutputMatrix() const { return output; }
   /// Get the `i^th` output expression.
   ArrayRef<MPInt> getOutputExpr(unsigned i) const { return output.getRow(i); }
 
@@ -124,7 +124,7 @@ private:
   /// The function's output is a tuple of integers, with the ith element of the
   /// tuple defined by the affine expression given by the ith row of this output
   /// matrix.
-  Matrix output;
+  IntMatrix output;
 
   /// Storage for division representation for each local variable in space.
   DivisionRepr divs;

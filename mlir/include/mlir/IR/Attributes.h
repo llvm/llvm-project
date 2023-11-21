@@ -291,7 +291,7 @@ public:
                                           Attribute, AttributeTrait::TraitBase>;
   using InterfaceBase::InterfaceBase;
 
-private:
+protected:
   /// Returns the impl interface instance for the given type.
   static typename InterfaceBase::Concept *getInterfaceFor(Attribute attr) {
 #ifndef NDEBUG
@@ -409,7 +409,6 @@ struct CastInfo<To, From,
     /// Return a constant true instead of a dynamic true when casting to self or
     /// up the hierarchy.
     if constexpr (std::is_base_of_v<To, From>) {
-      (void)ty;
       return true;
     } else {
       return To::classof(ty);

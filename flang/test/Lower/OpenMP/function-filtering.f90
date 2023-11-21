@@ -1,7 +1,9 @@
-! RUN: %flang_fc1 -fopenmp -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-HOST,LLVM-ALL %s
-! RUN: %flang_fc1 -fopenmp -emit-mlir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
-! RUN: %flang_fc1 -fopenmp -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-DEVICE,LLVM-ALL %s
-! RUN: %flang_fc1 -fopenmp -fopenmp-is-target-device -emit-mlir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s
+! RUN: %flang_fc1 -fopenmp -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-HOST,LLVM-ALL %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
+! RUN: %flang_fc1 -fopenmp -fopenmp-is-target-device -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-DEVICE,LLVM-ALL %s
+! RUN: %flang_fc1 -fopenmp -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
+! RUN: bbc -fopenmp -fopenmp-is-target-device -emit-hlfir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s
 
 ! Check that the correct LLVM IR functions are kept for the host and device
 ! after running the whole set of translation and transformation passes from
@@ -19,8 +21,7 @@ end function device_fn
 
 ! MLIR-HOST: func.func @{{.*}}host_fn(
 ! MLIR-HOST: return
-! MLIR-DEVICE: func.func private @{{.*}}host_fn(
-! MLIR-DEVICE-NOT: return
+! MLIR-DEVICE-NOT: func.func {{.*}}host_fn(
 
 ! LLVM-HOST: define {{.*}} @{{.*}}host_fn{{.*}}(
 ! LLVM-DEVICE-NOT: {{.*}} @{{.*}}host_fn{{.*}}(
@@ -30,16 +31,10 @@ function host_fn() result(x)
   x = 10
 end function host_fn
 
-! MLIR-HOST: func.func @{{.*}}target_subr(
-! MLIR-HOST: return
-! MLIR-HOST-NOT: func.func @{{.*}}target_subr_omp_outline_0(
-! MLIR-DEVICE-NOT: func.func @{{.*}}target_subr(
-! MLIR-DEVICE: func.func @{{.*}}target_subr_omp_outline_0(
-! MLIR-DEVICE: return
+! MLIR-ALL: func.func @{{.*}}target_subr(
+! MLIR-ALL: return
 
-! LLVM-ALL-NOT: define {{.*}} @{{.*}}target_subr_omp_outline_0{{.*}}(
 ! LLVM-HOST: define {{.*}} @{{.*}}target_subr{{.*}}(
-! LLVM-DEVICE-NOT: {{.*}} @{{.*}}target_subr{{.*}}(
 ! LLVM-ALL: define {{.*}} @__omp_offloading_{{.*}}_{{.*}}_target_subr__{{.*}}(
 subroutine target_subr(x)
   integer, intent(out) :: x

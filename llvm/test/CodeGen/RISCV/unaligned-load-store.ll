@@ -415,3 +415,44 @@ define void @merge_stores_i32_i64(ptr %p) {
   store i32 0, ptr %p2
   ret void
 }
+
+define void @store_large_constant(ptr %x) {
+; SLOW-LABEL: store_large_constant:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    li a1, 254
+; SLOW-NEXT:    sb a1, 7(a0)
+; SLOW-NEXT:    li a1, 220
+; SLOW-NEXT:    sb a1, 6(a0)
+; SLOW-NEXT:    li a1, 186
+; SLOW-NEXT:    sb a1, 5(a0)
+; SLOW-NEXT:    li a1, 152
+; SLOW-NEXT:    sb a1, 4(a0)
+; SLOW-NEXT:    li a1, 118
+; SLOW-NEXT:    sb a1, 3(a0)
+; SLOW-NEXT:    li a1, 84
+; SLOW-NEXT:    sb a1, 2(a0)
+; SLOW-NEXT:    li a1, 50
+; SLOW-NEXT:    sb a1, 1(a0)
+; SLOW-NEXT:    li a1, 16
+; SLOW-NEXT:    sb a1, 0(a0)
+; SLOW-NEXT:    ret
+;
+; RV32I-FAST-LABEL: store_large_constant:
+; RV32I-FAST:       # %bb.0:
+; RV32I-FAST-NEXT:    lui a1, 1043916
+; RV32I-FAST-NEXT:    addi a1, a1, -1384
+; RV32I-FAST-NEXT:    sw a1, 4(a0)
+; RV32I-FAST-NEXT:    lui a1, 484675
+; RV32I-FAST-NEXT:    addi a1, a1, 528
+; RV32I-FAST-NEXT:    sw a1, 0(a0)
+; RV32I-FAST-NEXT:    ret
+;
+; RV64I-FAST-LABEL: store_large_constant:
+; RV64I-FAST:       # %bb.0:
+; RV64I-FAST-NEXT:    lui a1, %hi(.LCPI16_0)
+; RV64I-FAST-NEXT:    ld a1, %lo(.LCPI16_0)(a1)
+; RV64I-FAST-NEXT:    sd a1, 0(a0)
+; RV64I-FAST-NEXT:    ret
+  store i64 18364758544493064720, ptr %x, align 1
+  ret void
+}

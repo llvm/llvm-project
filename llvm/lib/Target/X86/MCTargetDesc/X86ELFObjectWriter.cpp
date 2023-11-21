@@ -140,8 +140,9 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
     }
     llvm_unreachable("unexpected relocation type!");
   case MCSymbolRefExpr::VK_GOTOFF:
-    assert(Type == RT64_64);
     assert(!IsPCRel);
+    if (Type != RT64_64)
+      Ctx.reportError(Loc, "unsupported relocation type");
     return ELF::R_X86_64_GOTOFF64;
   case MCSymbolRefExpr::VK_TPOFF:
     assert(!IsPCRel);
@@ -229,7 +230,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
 
 enum X86_32RelType { RT32_NONE, RT32_32, RT32_16, RT32_8 };
 
-static unsigned getRelocType32(MCContext &Ctx,
+static unsigned getRelocType32(MCContext &Ctx, SMLoc Loc,
                                MCSymbolRefExpr::VariantKind Modifier,
                                X86_32RelType Type, bool IsPCRel,
                                MCFixupKind Kind) {
@@ -252,7 +253,8 @@ static unsigned getRelocType32(MCContext &Ctx,
     }
     llvm_unreachable("unexpected relocation type!");
   case MCSymbolRefExpr::VK_GOT:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     if (IsPCRel)
       return ELF::R_386_GOTPC;
     // Older versions of ld.bfd/ld.gold/lld do not support R_386_GOT32X and we
@@ -264,49 +266,61 @@ static unsigned getRelocType32(MCContext &Ctx,
                ? ELF::R_386_GOT32X
                : ELF::R_386_GOT32;
   case MCSymbolRefExpr::VK_GOTOFF:
-    assert(Type == RT32_32);
     assert(!IsPCRel);
+    if (Type != RT32_32)
+      break;
     return ELF::R_386_GOTOFF;
   case MCSymbolRefExpr::VK_TLSCALL:
     return ELF::R_386_TLS_DESC_CALL;
   case MCSymbolRefExpr::VK_TLSDESC:
     return ELF::R_386_TLS_GOTDESC;
   case MCSymbolRefExpr::VK_TPOFF:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LE_32;
   case MCSymbolRefExpr::VK_DTPOFF:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LDO_32;
   case MCSymbolRefExpr::VK_TLSGD:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_GD;
   case MCSymbolRefExpr::VK_GOTTPOFF:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_IE_32;
   case MCSymbolRefExpr::VK_PLT:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     return ELF::R_386_PLT32;
   case MCSymbolRefExpr::VK_INDNTPOFF:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_IE;
   case MCSymbolRefExpr::VK_NTPOFF:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LE;
   case MCSymbolRefExpr::VK_GOTNTPOFF:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_GOTIE;
   case MCSymbolRefExpr::VK_TLSLDM:
-    assert(Type == RT32_32);
+    if (Type != RT32_32)
+      break;
     assert(!IsPCRel);
     return ELF::R_386_TLS_LDM;
   }
+  Ctx.reportError(Loc, "unsupported relocation type");
+  return ELF::R_386_NONE;
 }
 
 unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -329,7 +343,7 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     break;
   case RT64_64:
     Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
-    break;
+    return ELF::R_386_NONE;
   case RT64_32:
   case RT64_32S:
     RelType = RT32_32;
@@ -341,7 +355,7 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     RelType = RT32_8;
     break;
   }
-  return getRelocType32(Ctx, Modifier, RelType, IsPCRel, Kind);
+  return getRelocType32(Ctx, Fixup.getLoc(), Modifier, RelType, IsPCRel, Kind);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

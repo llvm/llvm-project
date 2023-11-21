@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,23 +20,22 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #DCSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed)
 }>
 
 #transpose_trait = {
@@ -61,7 +60,7 @@ module {
     %t = sparse_tensor.convert %arga
       : tensor<3x4xf64, #DCSR> to tensor<3x4xf64, #DCSC>
 
-    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %i = tensor.empty() : tensor<4x3xf64, #DCSR>
     %0 = linalg.generic #transpose_trait
        ins(%t: tensor<3x4xf64, #DCSC>)
        outs(%i: tensor<4x3xf64, #DCSR>) {
@@ -75,12 +74,12 @@ module {
   }
 
   //
-  // However, even better, the sparse compiler is able to insert such a
+  // However, even better, the sparsifier is able to insert such a
   // conversion automatically to resolve a cycle in the iteration graph!
   //
   func.func @sparse_transpose_auto(%arga: tensor<3x4xf64, #DCSR>)
                                        -> tensor<4x3xf64, #DCSR> {
-    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %i = tensor.empty() : tensor<4x3xf64, #DCSR>
     %0 = linalg.generic #transpose_trait
        ins(%arga: tensor<3x4xf64, #DCSR>)
        outs(%i: tensor<4x3xf64, #DCSR>) {

@@ -18,7 +18,7 @@
 
 ; NOOPT: .amdhsa_user_sgpr_private_segment_buffer 1
 ; NOOPT: .amdhsa_user_sgpr_dispatch_ptr 1
-; NOOPT: .amdhsa_user_sgpr_queue_ptr 0
+; NOOPT: .amdhsa_user_sgpr_queue_ptr 1
 ; NOOPT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; NOOPT: .amdhsa_user_sgpr_dispatch_id 1
 ; NOOPT: .amdhsa_user_sgpr_flat_scratch_init 0

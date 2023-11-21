@@ -18,6 +18,7 @@
 #include <optional>
 
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 std::optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
@@ -35,7 +36,7 @@ dw_tag_t DWARFBaseDIE::Tag() const {
 }
 
 const char *DWARFBaseDIE::GetTagAsCString() const {
-  return lldb_private::DW_TAG_value_to_name(Tag());
+  return DW_TAG_value_to_name(Tag());
 }
 
 const char *DWARFBaseDIE::GetAttributeValueAsString(const dw_attr_t attr,
@@ -120,6 +121,8 @@ DWARFAttributes DWARFBaseDIE::GetAttributes(Recurse recurse) const {
   return DWARFAttributes();
 }
 
+namespace lldb_private::plugin {
+namespace dwarf {
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
   return lhs.GetDIE() == rhs.GetDIE() && lhs.GetCU() == rhs.GetCU();
 }
@@ -127,6 +130,8 @@ bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
   return !(lhs == rhs);
 }
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 const DWARFDataExtractor &DWARFBaseDIE::GetData() const {
   // Clients must check if this DIE is valid before calling this function.

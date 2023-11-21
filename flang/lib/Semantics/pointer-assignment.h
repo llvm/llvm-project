@@ -26,11 +26,12 @@ class Symbol;
 bool CheckPointerAssignment(
     SemanticsContext &, const evaluate::Assignment &, const Scope &);
 bool CheckPointerAssignment(SemanticsContext &, const SomeExpr &lhs,
-    const SomeExpr &rhs, const Scope &, bool isBoundsRemapping = false);
+    const SomeExpr &rhs, const Scope &, bool isBoundsRemapping,
+    bool isAssumedRank);
 bool CheckPointerAssignment(SemanticsContext &, parser::CharBlock source,
     const std::string &description,
     const evaluate::characteristics::DummyDataObject &, const SomeExpr &rhs,
-    const Scope &);
+    const Scope &, bool isAssumedRank);
 
 bool CheckStructConstructorPointerComponent(
     SemanticsContext &, const Symbol &lhs, const SomeExpr &rhs, const Scope &);

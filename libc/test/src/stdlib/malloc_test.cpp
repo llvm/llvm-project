@@ -11,9 +11,9 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcMallocTest, Allocate) {
-  int *ptr = reinterpret_cast<int *>(__llvm_libc::malloc(sizeof(int)));
+  int *ptr = reinterpret_cast<int *>(LIBC_NAMESPACE::malloc(sizeof(int)));
   EXPECT_NE(reinterpret_cast<void *>(ptr), static_cast<void *>(nullptr));
   *ptr = 1;
   EXPECT_EQ(*ptr, 1);
-  __llvm_libc::free(ptr);
+  LIBC_NAMESPACE::free(ptr);
 }

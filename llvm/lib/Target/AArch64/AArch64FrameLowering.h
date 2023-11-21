@@ -30,13 +30,6 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
 
-  static void signLR(MachineFunction &MF, MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator MBBI, bool NeedsWinCFI,
-                     bool *HasWinCFI);
-
-  static void authenticateLR(MachineFunction &MF, MachineBasicBlock &MBB,
-                             bool NeedsWinCFI, bool *HasWinCFI);
-
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -157,6 +150,11 @@ private:
                                   MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVERestores(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MBBI) const;
+  void allocateStackSpace(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          bool NeedsRealignment, StackOffset AllocSize,
+                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
+                          StackOffset InitialOffset) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,

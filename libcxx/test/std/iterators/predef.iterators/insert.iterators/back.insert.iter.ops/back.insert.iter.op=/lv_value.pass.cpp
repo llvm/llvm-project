@@ -37,6 +37,8 @@ class Copyable
     int data_;
 public:
     Copyable() : data_(0) {}
+    Copyable(const Copyable&) = default;
+    Copyable& operator=(const Copyable&) = default;
     ~Copyable() {data_ = -1;}
 
     friend bool operator==(const Copyable& x, const Copyable& y)

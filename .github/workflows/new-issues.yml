@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
-      - uses: github/issue-labeler@v3.2
+      - uses: llvm/actions/issue-labeler@main
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           configuration-path: .github/new-issues-labeler.yml

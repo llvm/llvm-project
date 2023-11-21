@@ -1147,11 +1147,11 @@ void MachineCopyPropagation::EliminateSpillageCopies(MachineBasicBlock &MBB) {
           return;
 
         // If violate property#2, we don't fold the chain.
-        for (const MachineInstr *Spill : make_range(SC.begin() + 1, SC.end()))
+        for (const MachineInstr *Spill : drop_begin(SC))
           if (CopySourceInvalid.count(Spill))
             return;
 
-        for (const MachineInstr *Reload : make_range(RC.begin(), RC.end() - 1))
+        for (const MachineInstr *Reload : drop_end(RC))
           if (CopySourceInvalid.count(Reload))
             return;
 

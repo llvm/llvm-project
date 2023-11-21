@@ -212,8 +212,7 @@ struct CombineContractABTranspose final
       if (!transposeOp)
         continue;
       AffineMap permutationMap = AffineMap::getPermutationMap(
-          extractVector<unsigned>(transposeOp.getTransp()),
-          contractOp.getContext());
+          transposeOp.getPermutation(), contractOp.getContext());
       map = inversePermutation(permutationMap).compose(map);
       *operand = transposeOp.getVector();
       changed = true;
@@ -279,13 +278,13 @@ struct CombineContractResultTranspose final
 
     // Accumulator transpose performs f(A) -> B. Contract performs g(C) -> B.
     // To index into A in contract, we need revert(f)(g(C)) -> A.
-    auto accTMap = AffineMap::getPermutationMap(
-        extractVector<unsigned>(accTOp.getTransp()), context);
+    auto accTMap =
+        AffineMap::getPermutationMap(accTOp.getPermutation(), context);
 
     // Contract performs g(C) -> D. Result transpose performs h(D) -> E.
     // To index into E in contract, we need h(g(C)) -> E.
-    auto resTMap = AffineMap::getPermutationMap(
-        extractVector<unsigned>(resTOp.getTransp()), context);
+    auto resTMap =
+        AffineMap::getPermutationMap(resTOp.getPermutation(), context);
     auto combinedResMap = resTMap.compose(contractMap);
 
     // The accumulator and result share the same indexing map. So they should be
@@ -490,7 +489,7 @@ struct ReorderElementwiseOpsOnTranspose final
 
     // Make sure all operands are transpose/constant ops and collect their
     // transposition maps.
-    SmallVector<ArrayAttr> transposeMaps;
+    SmallVector<ArrayRef<int64_t>> transposeMaps;
     transposeMaps.reserve(op->getNumOperands());
     // Record the initial type before transposition. We'll use its shape later.
     // Any type will do here as we will check all transpose maps are the same.
@@ -498,7 +497,7 @@ struct ReorderElementwiseOpsOnTranspose final
     for (Value operand : op->getOperands()) {
       auto transposeOp = operand.getDefiningOp<vector::TransposeOp>();
       if (transposeOp) {
-        transposeMaps.push_back(transposeOp.getTransp());
+        transposeMaps.push_back(transposeOp.getPermutation());
         srcType = transposeOp.getSourceVectorType();
       } else if (!matchPattern(operand, m_Constant())) {
         return failure();
@@ -517,7 +516,7 @@ struct ReorderElementwiseOpsOnTranspose final
 
     // If there are constant operands, we need to insert inverse transposes for
     // them. Calculate the inverse order first.
-    auto order = extractVector<unsigned>(transposeMaps.front());
+    auto order = transposeMaps.front();
     SmallVector<int64_t> invOrder(order.size());
     for (int i = 0, e = order.size(); i < e; ++i)
       invOrder[order[i]] = i;
@@ -532,8 +531,7 @@ struct ReorderElementwiseOpsOnTranspose final
             srcType.getShape(),
             cast<VectorType>(operand.getType()).getElementType());
         srcValues.push_back(rewriter.create<vector::TransposeOp>(
-            operand.getLoc(), vectorType, operand,
-            rewriter.getI64ArrayAttr(invOrder)));
+            operand.getLoc(), vectorType, operand, invOrder));
       }
     }
 
@@ -561,11 +559,11 @@ static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
 //
 // This transforms IR like:
 //   %0 = vector.bitcast %src : vector<4xf32> to vector<8xf16>
-//   %1 = vector.extract %0[3] : vector<8xf16>
+//   %1 = vector.extract %0[3] : f16 from vector<8xf16>
 // Into:
-//   %0 = vector.extract %src[1] : vector<4xf32>
+//   %0 = vector.extract %src[1] : f32 from vector<4xf32>
 //   %1 = vector.bitcast %0: vector<1xf32> to vector<2xf16>
-//   %2 = vector.extract %1[1] : vector<2xf16>
+//   %2 = vector.extract %1[1] : f16 from vector<2xf16>
 struct BubbleDownVectorBitCastForExtract
     : public OpRewritePattern<vector::ExtractOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -598,27 +596,34 @@ struct BubbleDownVectorBitCastForExtract
     unsigned expandRatio =
         castDstType.getNumElements() / castSrcType.getNumElements();
 
-    uint64_t index = extractOp.getPosition()[0];
+    auto getFirstIntValue = [](ArrayRef<OpFoldResult> values) -> uint64_t {
+      assert(values[0].is<Attribute>() && "Unexpected non-constant index");
+      return cast<IntegerAttr>(values[0].get<Attribute>()).getInt();
+    };
+
+    uint64_t index = getFirstIntValue(extractOp.getMixedPosition());
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
-    VectorType oneScalarType =
-        VectorType::get({1}, castSrcType.getElementType());
+    Location loc = extractOp.getLoc();
     Value packedValue = rewriter.create<vector::ExtractOp>(
-        extractOp.getLoc(), oneScalarType, castOp.getSource(),
-        index / expandRatio);
+        loc, castOp.getSource(), index / expandRatio);
+    Type packedVecType = VectorType::get(/*shape=*/{1}, packedValue.getType());
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, packedVecType, rewriter.getZeroAttr(packedVecType));
+    packedValue = rewriter.create<vector::InsertOp>(loc, packedValue, zero,
+                                                    /*position=*/0);
 
     // Cast it to a vector with the desired scalar's type.
     // E.g. f32 -> vector<2xf16>
     VectorType packedType =
         VectorType::get({expandRatio}, castDstType.getElementType());
-    Value castedValue = rewriter.create<vector::BitCastOp>(
-        extractOp.getLoc(), packedType, packedValue);
+    Value castedValue =
+        rewriter.create<vector::BitCastOp>(loc, packedType, packedValue);
 
     // Finally extract the desired scalar.
-    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, extractOp.getType(), castedValue, index % expandRatio);
-
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, castedValue,
+                                                   index % expandRatio);
     return success();
   }
 };
@@ -880,7 +885,7 @@ private:
   std::function<bool(BitCastOp)> controlFn;
 };
 
-/// Reorders elementwise(broadcast) to broadcast(elementwise). Ex:
+/// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
 /// ```
 /// %a = vector.broadcast %arg1 : index to vector<1x4xindex>
 /// %b = vector.broadcast %arg2 : index to vector<1x4xindex>
@@ -891,6 +896,9 @@ private:
 /// %r = arith.addi %arg0, %arg1 : index
 /// %b = vector.broadcast %r : index to vector<1x4xindex>
 /// ```
+///
+/// Both `vector.broadcast` and `vector.splat` are supported as broadcasting
+/// ops.
 struct ReorderElementwiseOpsOnBroadcast final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
   using OpTraitRewritePattern::OpTraitRewritePattern;
@@ -902,36 +910,52 @@ struct ReorderElementwiseOpsOnBroadcast final
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return failure();
-
-    // Get the type of the first operand
-    auto firstBcast = op->getOperand(0).getDefiningOp<vector::BroadcastOp>();
-    if (!firstBcast)
+    if (op->getNumOperands() == 0 ||
+        op->getResults()[0].getType() != op->getOperand(0).getType()) {
       return failure();
-    auto firstOpType = firstBcast.getOperand().getType();
+    }
+    // Avoid operations that only accept vector types, since broadcast
+    // source might be scalar types.
+    if (isa<vector::FMAOp>(op)) {
+      return failure();
+    }
 
-    // Make sure that operands are "broadcast"ed from identical (scalar or
-    // vector) types. That indicates that it's safe to skip the broadcasting of
-    // operands.
-    if (!llvm::all_of(op->getOperands(), [&firstOpType](Value val) {
+    // Get the type of the lhs operand
+    auto *lhsBcastOrSplat = op->getOperand(0).getDefiningOp();
+    if (!lhsBcastOrSplat ||
+        !isa<vector::BroadcastOp, vector::SplatOp>(*lhsBcastOrSplat))
+      return failure();
+    auto lhsBcastOrSplatType = lhsBcastOrSplat->getOperand(0).getType();
+
+    // Make sure that all operands are broadcast from identical types:
+    //  * scalar (`vector.broadcast` + `vector.splat`), or
+    //  * vector (`vector.broadcast`).
+    // Otherwise the re-ordering wouldn't be safe.
+    if (!llvm::all_of(op->getOperands(), [&lhsBcastOrSplatType](Value val) {
           auto bcast = val.getDefiningOp<vector::BroadcastOp>();
-          return (bcast && (bcast.getOperand().getType() == firstOpType));
+          if (bcast)
+            return (bcast.getOperand().getType() == lhsBcastOrSplatType);
+          auto splat = val.getDefiningOp<vector::SplatOp>();
+          if (splat)
+            return (splat.getOperand().getType() == lhsBcastOrSplatType);
+          return false;
         })) {
       return failure();
     }
 
-    // Collect the source values
+    // Collect the source values before broadcasting
     SmallVector<Value> srcValues;
     srcValues.reserve(op->getNumOperands());
-
     for (Value operand : op->getOperands()) {
-      srcValues.push_back(
-          operand.getDefiningOp<vector::BroadcastOp>().getOperand());
+      srcValues.push_back(operand.getDefiningOp()->getOperand(0));
     }
 
+    // Create the "elementwise" Op
     Operation *elementwiseOp =
         rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        firstOpType, op->getAttrs());
+                        lhsBcastOrSplatType, op->getAttrs());
 
+    // Replace the original Op with the elementwise Op
     auto vectorType = op->getResultTypes()[0];
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         op, vectorType, elementwiseOp->getResults());
@@ -1158,10 +1182,19 @@ class DropInnerMostUnitDims : public OpRewritePattern<vector::TransferReadOp> {
     if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
       return failure();
 
+    // According to vector.transfer_read semantics, the result can be a slice.
+    // It pads the indices with `1` starting from beginning. Thus, we have to
+    // offset the check index with `rankDiff` in `srcStrides` and source dim
+    // sizes.
     size_t dimsToDrop = 0;
-    for (size_t i = 1; i < srcStrides.size(); ++i) {
-      int dim = srcType.getRank() - i - 1;
-      if (srcStrides[dim] == 1) {
+    int rankDiff = srcType.getRank() - targetType.getRank();
+    for (int64_t i = 0, e = targetType.getRank(); i < e; ++i) {
+      // Check that the inner dim size is 1 for both memref/tensor type and
+      // vector slice. It can be folded only if they are 1 and the stride is 1.
+      int dim = targetType.getRank() - i - 1;
+      if (srcStrides[dim + rankDiff] == 1 &&
+          srcType.getDimSize(dim + rankDiff) == 1 &&
+          targetType.getDimSize(dim) == 1) {
         dimsToDrop++;
       } else {
         break;
@@ -1430,8 +1463,8 @@ void mlir::vector::
 
 void mlir::vector::populateSinkVectorBroadcastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ReorderElementwiseOpsOnBroadcast>(patterns.getContext(),
-                                                 benefit);
+  patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
+      patterns.getContext(), benefit);
 }
 
 //===----------------------------------------------------------------------===//

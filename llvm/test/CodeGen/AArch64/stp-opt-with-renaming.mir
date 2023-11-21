@@ -361,7 +361,7 @@ body:             |
 # ($x14 in this example)
 # CHECK-LABEL: name: test11
 # CHECK: bb.0:
-# CHECK-NEXT: liveins: $x0, $x1, $x11, $x12, $x13
+# CHECK-NEXT: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x11, $x12, $x13
 
 # CHECK:         renamable $w10 = LDRWui renamable $x0, 0 :: (load (s64))
 # CHECK-NEXT:    renamable $x9, renamable $x8 = LDPXi renamable $x0, 1 :: (load (s64))
@@ -387,7 +387,7 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    liveins: $x0, $x1, $x11, $x12, $x13
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x11, $x12, $x13
     renamable $w10 = LDRWui renamable $x0, 0 :: (load (s64))
     renamable $x9, renamable $x8 = LDPXi renamable $x0, 1 :: (load (s64))
     STRXui renamable killed $x9, renamable $x0, 11 :: (store (s64), align 4)
@@ -445,7 +445,7 @@ body:             |
 # paired store. ($x14 in this example)
 # CHECK-LABEL: name: test13
 # CHECK: bb.0:
-# CHECK-NEXT: liveins: $x0, $x1, $x10, $x11, $x12, $x13
+# CHECK-NEXT: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x10, $x11, $x12, $x13
 # CHECK:    renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
 # CHECK-NEXT:    renamable $x14 = LDRXui renamable $x0, 4 :: (load (s64))
 # CHECK-NEXT:    STRXui killed renamable $x14, renamable $x0, 100 :: (store (s64), align 4)
@@ -467,7 +467,7 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    liveins: $x0, $x1, $x10, $x11, $x12, $x13
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x10, $x11, $x12, $x13
     renamable $x9, renamable $x8 = LDPXi renamable $x0, 0 :: (load (s64))
     renamable $x14 = LDRXui renamable $x0, 4 :: (load (s64))
     STRXui renamable killed $x14, renamable $x0, 100 :: (store (s64), align 4)

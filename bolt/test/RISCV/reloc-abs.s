@@ -17,8 +17,7 @@ _start:
   .option push
   .option norelax
 1:
-// CHECK: .Ltmp0
-// CHECK: auipc gp, %pcrel_hi(__global_pointer$)
+// CHECK: auipc gp, %pcrel_hi(__global_pointer$) # Label: .Ltmp0
 // CHECK-NEXT: addi gp, gp, %pcrel_lo(.Ltmp0)
   auipc gp, %pcrel_hi(__global_pointer$)
   addi  gp, gp, %pcrel_lo(1b)

@@ -52,14 +52,17 @@ define void @test(ptr %r, ptr %p, ptr %q) #0 {
 
 define void @test2(i64* %a, i64* %b) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> poison, ptr [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[B:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x ptr> [[TMP2]], <2 x i64> <i64 1, i64 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr> [[TMP3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 2
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[A1]] to i64
+; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 3
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoint ptr [[B3]] to i64
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[A1]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[A2]], align 8
+; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[I1]], [[V1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[I2]], [[V2]]
+; CHECK-NEXT:    store i64 [[ADD1]], ptr [[A1]], align 8
+; CHECK-NEXT:    store i64 [[ADD2]], ptr [[A2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a1 = getelementptr inbounds i64, i64* %a, i64 1

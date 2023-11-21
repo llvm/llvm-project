@@ -23,15 +23,15 @@ class Pass;
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace nvgpu {
-class MBarrierType;
+class MBarrierGroupType;
 
 /// Returns the memory space attribute of the mbarrier object.
 Attribute getMbarrierMemorySpace(MLIRContext *context,
-                                 MBarrierType barrierType);
+                                 MBarrierGroupType barrierType);
 
 /// Return the memref type that can be used to represent an mbarrier object.
 MemRefType getMBarrierMemrefType(MLIRContext *context,
-                                 MBarrierType barrierType);
+                                 MBarrierGroupType barrierType);
 } // namespace nvgpu
 
 void populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,

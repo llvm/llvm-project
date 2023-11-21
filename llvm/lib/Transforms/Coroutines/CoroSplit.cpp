@@ -234,6 +234,8 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
   switch (Shape.ABI) {
   // The cloned functions in switch-lowering always return void.
   case coro::ABI::Switch:
+    assert(!cast<CoroEndInst>(End)->hasResults() &&
+           "switch coroutine should not return any values");
     // coro.end doesn't immediately end the coroutine in the main function
     // in this lowering, because we need to deallocate the coroutine.
     if (!InResume)
@@ -251,14 +253,45 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
 
   // In unique continuation lowering, the continuations always return void.
   // But we may have implicitly allocated storage.
-  case coro::ABI::RetconOnce:
+  case coro::ABI::RetconOnce: {
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
-    Builder.CreateRetVoid();
+    auto *CoroEnd = cast<CoroEndInst>(End);
+    auto *RetTy = Shape.getResumeFunctionType()->getReturnType();
+
+    if (!CoroEnd->hasResults()) {
+      assert(RetTy->isVoidTy());
+      Builder.CreateRetVoid();
+      break;
+    }
+
+    auto *CoroResults = CoroEnd->getResults();
+    unsigned NumReturns = CoroResults->numReturns();
+
+    if (auto *RetStructTy = dyn_cast<StructType>(RetTy)) {
+      assert(RetStructTy->getNumElements() == NumReturns &&
+           "numbers of returns should match resume function singature");
+      Value *ReturnValue = UndefValue::get(RetStructTy);
+      unsigned Idx = 0;
+      for (Value *RetValEl : CoroResults->return_values())
+        ReturnValue = Builder.CreateInsertValue(ReturnValue, RetValEl, Idx++);
+      Builder.CreateRet(ReturnValue);
+    } else if (NumReturns == 0) {
+      assert(RetTy->isVoidTy());
+      Builder.CreateRetVoid();
+    } else {
+      assert(NumReturns == 1);
+      Builder.CreateRet(*CoroResults->retval_begin());
+    }
+    CoroResults->replaceAllUsesWith(ConstantTokenNone::get(CoroResults->getContext()));
+    CoroResults->eraseFromParent();
     break;
+  }
 
   // In non-unique continuation lowering, we signal completion by returning
   // a null continuation.
   case coro::ABI::Retcon: {
+    assert(!cast<CoroEndInst>(End)->hasResults() &&
+           "retcon coroutine should not return any values");
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     auto RetTy = Shape.getResumeFunctionType()->getReturnType();
     auto RetStructTy = dyn_cast<StructType>(RetTy);
@@ -496,13 +529,20 @@ void CoroCloner::handleFinalSuspend() {
     BasicBlock *OldSwitchBB = Switch->getParent();
     auto *NewSwitchBB = OldSwitchBB->splitBasicBlock(Switch, "Switch");
     Builder.SetInsertPoint(OldSwitchBB->getTerminator());
-    auto *GepIndex = Builder.CreateStructGEP(Shape.FrameTy, NewFramePtr,
-                                       coro::Shape::SwitchFieldIndex::Resume,
-                                             "ResumeFn.addr");
-    auto *Load = Builder.CreateLoad(Shape.getSwitchResumePointerType(),
-                                    GepIndex);
-    auto *Cond = Builder.CreateIsNull(Load);
-    Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+
+    if (NewF->isCoroOnlyDestroyWhenComplete()) {
+      // When the coroutine can only be destroyed when complete, we don't need
+      // to generate code for other cases.
+      Builder.CreateBr(ResumeBB);
+    } else {
+      auto *GepIndex = Builder.CreateStructGEP(
+          Shape.FrameTy, NewFramePtr, coro::Shape::SwitchFieldIndex::Resume,
+          "ResumeFn.addr");
+      auto *Load =
+          Builder.CreateLoad(Shape.getSwitchResumePointerType(), GepIndex);
+      auto *Cond = Builder.CreateIsNull(Load);
+      Builder.CreateCondBr(Cond, ResumeBB, NewSwitchBB);
+    }
     OldSwitchBB->getTerminator()->eraseFromParent();
   }
 }
@@ -842,7 +882,7 @@ Value *CoroCloner::deriveNewFramePointer() {
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     Argument *NewStorage = &*NewF->arg_begin();
-    auto FramePtrTy = Shape.FrameTy->getPointerTo();
+    auto FramePtrTy = PointerType::getUnqual(Shape.FrameTy->getContext());
 
     // If the storage is inline, just bitcast to the storage to the frame type.
     if (Shape.RetconLowering.IsFrameInlineInStorage)
@@ -1063,7 +1103,7 @@ void CoroCloner::create() {
 
   // Remap vFrame pointer.
   auto *NewVFrame = Builder.CreateBitCast(
-      NewFramePtr, Type::getInt8PtrTy(Builder.getContext()), "vFrame");
+      NewFramePtr, PointerType::getUnqual(Builder.getContext()), "vFrame");
   Value *OldVFrame = cast<Value>(VMap[Shape.CoroBegin]);
   if (OldVFrame != NewVFrame)
     OldVFrame->replaceAllUsesWith(NewVFrame);
@@ -1194,7 +1234,7 @@ static void setCoroInfo(Function &F, coro::Shape &Shape,
 
   // Update coro.begin instruction to refer to this constant.
   LLVMContext &C = F.getContext();
-  auto *BC = ConstantExpr::getPointerCast(GV, Type::getInt8PtrTy(C));
+  auto *BC = ConstantExpr::getPointerCast(GV, PointerType::getUnqual(C));
   Shape.getSwitchCoroId()->setInfo(BC);
 }
 
@@ -1674,7 +1714,7 @@ static void replaceAsyncResumeFunction(CoroSuspendAsyncInst *Suspend,
                                        Value *Continuation) {
   auto *ResumeIntrinsic = Suspend->getResumeFunction();
   auto &Context = Suspend->getParent()->getParent()->getContext();
-  auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+  auto *Int8PtrTy = PointerType::getUnqual(Context);
 
   IRBuilder<> Builder(ResumeIntrinsic);
   auto *Val = Builder.CreateBitOrPointerCast(Continuation, Int8PtrTy);
@@ -1727,7 +1767,7 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
   F.removeRetAttr(Attribute::NonNull);
 
   auto &Context = F.getContext();
-  auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+  auto *Int8PtrTy = PointerType::getUnqual(Context);
 
   auto *Id = cast<CoroIdAsyncInst>(Shape.CoroBegin->getId());
   IRBuilder<> Builder(Id);

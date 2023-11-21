@@ -445,6 +445,7 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
                         .Case("arg6", LLDB_REGNUM_GENERIC_ARG6)
                         .Case("arg7", LLDB_REGNUM_GENERIC_ARG7)
                         .Case("arg8", LLDB_REGNUM_GENERIC_ARG8)
+                        .Case("tp", LLDB_REGNUM_GENERIC_TP)
                         .Default(LLDB_INVALID_REGNUM);
   return result;
 }

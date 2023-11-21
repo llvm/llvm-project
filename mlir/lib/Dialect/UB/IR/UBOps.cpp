@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -16,6 +17,19 @@
 
 using namespace mlir;
 using namespace mlir::ub;
+
+namespace {
+/// This class defines the interface for handling inlining with UB
+/// operations.
+struct UBInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  /// All UB ops can be inlined.
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // UBDialect
@@ -30,6 +44,7 @@ void UBDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/UB/IR/UBOpsAttributes.cpp.inc"
       >();
+  addInterfaces<UBInlinerInterface>();
 }
 
 Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,

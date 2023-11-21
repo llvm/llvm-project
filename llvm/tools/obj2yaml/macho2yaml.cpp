@@ -139,10 +139,8 @@ MachODumper::constructSection(MachO::section_64 Sec, size_t SecIndex) {
 
 static Error dumpDebugSection(StringRef SecName, DWARFContext &DCtx,
                               DWARFYAML::Data &DWARF) {
-  if (SecName == "__debug_abbrev") {
-    dumpDebugAbbrev(DCtx, DWARF);
-    return Error::success();
-  }
+  if (SecName == "__debug_abbrev")
+    return dumpDebugAbbrev(DCtx, DWARF);
   if (SecName == "__debug_aranges")
     return dumpDebugARanges(DCtx, DWARF);
   if (SecName == "__debug_info") {

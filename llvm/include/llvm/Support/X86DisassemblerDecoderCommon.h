@@ -33,6 +33,7 @@ namespace X86Disassembler {
 #define THREEDNOW_MAP_SYM x86Disassembler3DNowOpcodes
 #define MAP5_SYM          x86DisassemblerMap5Opcodes
 #define MAP6_SYM          x86DisassemblerMap6Opcodes
+#define MAP7_SYM          x86DisassemblerMap7Opcodes
 
 #define INSTRUCTIONS_STR  "x86DisassemblerInstrSpecifiers"
 #define CONTEXTS_STR      "x86DisassemblerContexts"
@@ -46,6 +47,7 @@ namespace X86Disassembler {
 #define THREEDNOW_MAP_STR "x86Disassembler3DNowOpcodes"
 #define MAP5_STR          "x86DisassemblerMap5Opcodes"
 #define MAP6_STR          "x86DisassemblerMap6Opcodes"
+#define MAP7_STR          "x86DisassemblerMap7Opcodes"
 
 // Attributes of an instruction that must be known before the opcode can be
 // processed correctly.  Most of these indicate the presence of particular
@@ -296,7 +298,8 @@ enum OpcodeType {
   XOPA_MAP      = 6,
   THREEDNOW_MAP = 7,
   MAP5          = 8,
-  MAP6          = 9
+  MAP6          = 9,
+  MAP7          = 10
 };
 
 // The following structs are used for the hierarchical decode table.  After

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETpshared_H
-#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETpshared_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETPSHARED_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETPSHARED_H
 
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int pthread_mutexattr_setpshared(pthread_mutexattr_t *__restrict attr,
                                  int pshared);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETpshared_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_SETPSHARED_H

@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,31 +20,31 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true enable-index-reduction=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true enable-index-reduction=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #CCCC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ]
+  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : compressed)
 }>
 
 #CDCD = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense", "compressed", "dense" ]
+  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : dense, d2 : compressed, d3 : dense)
 }>
 
 #DCCD = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed", "compressed", "dense" ]
+  map = (d0, d1, d2, d3) -> (d0 : dense, d1 : compressed, d2 : compressed, d3 : dense)
 }>
 
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f
 func.func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f : f32) -> tensor<?x?x?x?xf32> {
-  %buf = bufferization.alloc_tensor(%s1, %s2, %s3, %s4) : tensor<?x?x?x?xf32>
+  %buf = tensor.empty(%s1, %s2, %s3, %s4) : tensor<?x?x?x?xf32>
   %ret = linalg.fill ins(%f : f32) outs(%buf : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %ret : tensor<?x?x?x?xf32>
 }
@@ -61,7 +61,7 @@ func.func @conv_2d_nhwc_hwcf_CCCC(%arg0: tensor<?x?x?x?xf32, #CCCC>, %arg1: tens
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #CCCC>
+  %s = tensor.empty(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #CCCC>
   %ret = linalg.conv_2d_nhwc_hwcf {dilations = dense<1> : tensor<2xi64>,
                                      strides = dense<1> : tensor<2xi64>}
      ins (%arg0, %arg1: tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32>)
@@ -73,7 +73,7 @@ func.func @conv_2d_nhwc_hwcf_CDCD(%arg0: tensor<?x?x?x?xf32, #CDCD>, %arg1: tens
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #CDCD>
+  %s = tensor.empty(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #CDCD>
   %ret = linalg.conv_2d_nhwc_hwcf {dilations = dense<1> : tensor<2xi64>,
                                      strides = dense<1> : tensor<2xi64>}
      ins (%arg0, %arg1: tensor<?x?x?x?xf32, #CDCD>, tensor<?x?x?x?xf32>)
@@ -85,7 +85,7 @@ func.func @conv_2d_nhwc_hwcf_DCCD(%arg0: tensor<?x?x?x?xf32, #DCCD>, %arg1: tens
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #DCCD>
+  %s = tensor.empty(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #DCCD>
   %ret = linalg.conv_2d_nhwc_hwcf {dilations = dense<1> : tensor<2xi64>,
                                      strides = dense<1> : tensor<2xi64>}
      ins (%arg0, %arg1: tensor<?x?x?x?xf32, #DCCD>, tensor<?x?x?x?xf32>)

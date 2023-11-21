@@ -160,13 +160,6 @@ function(create_header_library fq_target_name)
     message(FATAL_ERROR "'add_header_library' target requires a HDRS list of .h files.")
   endif()
 
-  set(FULL_HDR_PATHS "")
-  # TODO: Remove this foreach block when we can switch to the new
-  # version of the CMake policy CMP0076.
-  foreach(hdr IN LISTS ADD_HEADER_HDRS)
-    list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
-  endforeach()
-
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding header library ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
@@ -177,9 +170,10 @@ function(create_header_library fq_target_name)
   endif()
 
   add_library(${fq_target_name} INTERFACE)
-  target_sources(${fq_target_name} INTERFACE ${FULL_HDR_PATHS})
+  target_sources(${fq_target_name} INTERFACE ${ADD_HEADER_HDRS})
   if(ADD_HEADER_DEPENDS)
     add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
+    target_link_libraries(${fq_target_name} INTERFACE ${ADD_HEADER_DEPENDS})
   endif()
   if(ADD_HEADER_COMPILE_OPTIONS)
     target_compile_options(${fq_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})

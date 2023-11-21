@@ -29,7 +29,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -321,8 +320,8 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          FileSpec &sym_file) {
   sym_file = sym_spec.GetSymbolFileSpec();
   if (FileSystem::Instance().IsDirectory(sym_file)) {
-    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
-                                               sym_spec.GetArchitecturePtr());
+    sym_file = PluginManager::FindSymbolFileInBundle(
+        sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
   }
   return {};
 }
@@ -989,7 +988,7 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
   StructuredData::DictionarySP dict_sp =
       std::make_shared<StructuredData::Dictionary>();
 
-  auto flatten_asi_dict = [&dict_sp](ConstString key,
+  auto flatten_asi_dict = [&dict_sp](llvm::StringRef key,
                                      StructuredData::Object *val) -> bool {
     if (!val)
       return false;
@@ -998,7 +997,7 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
     if (!arr || !arr->GetSize())
       return false;
 
-    dict_sp->AddItem(key.AsCString(), arr->GetItemAtIndex(0));
+    dict_sp->AddItem(key, arr->GetItemAtIndex(0));
     return true;
   };
 

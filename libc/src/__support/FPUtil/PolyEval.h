@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H
 
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
@@ -20,7 +20,7 @@
 // Example: to evaluate x^3 + 2*x^2 + 3*x + 4, call
 //   polyeval( x, 4.0, 3.0, 2.0, 1.0 )
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T>
@@ -48,6 +48,6 @@ polyeval(T x, T a0, Ts... a) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_POLYEVAL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_POLYEVAL_H

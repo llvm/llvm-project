@@ -17,7 +17,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/XML.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
@@ -130,7 +129,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
       module_spec.GetUUID() = module_sp->GetUUID();
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
       dsym_fspec =
-          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);
@@ -149,7 +148,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                  FileSystem::Instance().GetByteSize(dsym_fspec),
                                  dsym_file_data_sp, dsym_file_data_offset);
       // Important to save the dSYM FileSpec so we don't call
-      // Symbols::LocateExecutableSymbolFile a second time while trying to
+      // PluginManager::LocateExecutableSymbolFile a second time while trying to
       // add the symbol ObjectFile to this Module.
       if (dsym_objfile_sp && !module_sp->GetSymbolFileFileSpec()) {
         module_sp->SetSymbolFileFileSpec(dsym_fspec);
@@ -224,7 +223,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                           [&module_sp, new_style_source_remapping_dictionary,
                            original_DBGSourcePath_value,
                            do_truncate_remapping_names](
-                              ConstString key,
+                              llvm::StringRef key,
                               StructuredData::Object *object) -> bool {
                             if (object && object->GetAsString()) {
 
@@ -237,7 +236,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 DBGSourcePath = original_DBGSourcePath_value;
                               }
                               module_sp->GetSourceMappingList().Append(
-                                  key.GetStringRef(), DBGSourcePath, true);
+                                  key, DBGSourcePath, true);
                               // With version 2 of DBGSourcePathRemapping, we
                               // can chop off the last two filename parts
                               // from the source remapping and get a more
@@ -245,7 +244,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                               // Add this as another option in addition to
                               // the full source path remap.
                               if (do_truncate_remapping_names) {
-                                FileSpec build_path(key.AsCString());
+                                FileSpec build_path(key);
                                 FileSpec source_path(DBGSourcePath.c_str());
                                 build_path.RemoveLastPathComponent();
                                 build_path.RemoveLastPathComponent();

@@ -18,38 +18,39 @@ TEST(LlvmLibcAtExit, Basic) {
   a = 0;
 
   auto test = [] {
-    int status = __llvm_libc::atexit(+[] {
+    int status = LIBC_NAMESPACE::atexit(+[] {
       if (a != 1)
         __builtin_trap();
     });
-    status |= __llvm_libc::atexit(+[] { a++; });
+    status |= LIBC_NAMESPACE::atexit(+[] { a++; });
     if (status)
       __builtin_trap();
 
-    __llvm_libc::exit(0);
+    LIBC_NAMESPACE::exit(0);
   };
   EXPECT_EXITS(test, 0);
 }
 
 TEST(LlvmLibcAtExit, AtExitCallsSysExit) {
   auto test = [] {
-    __llvm_libc::atexit(+[] { _Exit(1); });
-    __llvm_libc::exit(0);
+    LIBC_NAMESPACE::atexit(+[] { _Exit(1); });
+    LIBC_NAMESPACE::exit(0);
   };
   EXPECT_EXITS(test, 1);
 }
 
 static int size;
-static __llvm_libc::cpp::array<int, 256> arr;
+static LIBC_NAMESPACE::cpp::array<int, 256> arr;
 
 template <int... Ts>
-void register_atexit_handlers(__llvm_libc::cpp::integer_sequence<int, Ts...>) {
-  (__llvm_libc::atexit(+[] { arr[size++] = Ts; }), ...);
+void register_atexit_handlers(
+    LIBC_NAMESPACE::cpp::integer_sequence<int, Ts...>) {
+  (LIBC_NAMESPACE::atexit(+[] { arr[size++] = Ts; }), ...);
 }
 
 template <int count> constexpr auto getTest() {
   return [] {
-    __llvm_libc::atexit(+[] {
+    LIBC_NAMESPACE::atexit(+[] {
       if (size != count)
         __builtin_trap();
       for (int i = 0; i < count; i++)
@@ -57,8 +58,8 @@ template <int count> constexpr auto getTest() {
           __builtin_trap();
     });
     register_atexit_handlers(
-        __llvm_libc::cpp::make_integer_sequence<int, count>{});
-    __llvm_libc::exit(0);
+        LIBC_NAMESPACE::cpp::make_integer_sequence<int, count>{});
+    LIBC_NAMESPACE::exit(0);
   };
 }
 
@@ -80,9 +81,9 @@ TEST(LlvmLibcAtExit, Many) {
 
 TEST(LlvmLibcAtExit, HandlerCallsAtExit) {
   auto test = [] {
-    __llvm_libc::atexit(
-        +[] { __llvm_libc::atexit(+[] { __llvm_libc::exit(1); }); });
-    __llvm_libc::exit(0);
+    LIBC_NAMESPACE::atexit(
+        +[] { LIBC_NAMESPACE::atexit(+[] { LIBC_NAMESPACE::exit(1); }); });
+    LIBC_NAMESPACE::exit(0);
   };
   EXPECT_EXITS(test, 1);
 }

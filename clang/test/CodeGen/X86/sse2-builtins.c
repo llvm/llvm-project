@@ -1488,8 +1488,20 @@ void test_mm_stream_pd(double *A, __m128d B) {
   _mm_stream_pd(A, B);
 }
 
+void test_mm_stream_pd_void(void *A, __m128d B) {
+  // CHECK-LABEL: test_mm_stream_pd_void
+  // CHECK: store <2 x double> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
+  _mm_stream_pd(A, B);
+}
+
 void test_mm_stream_si32(int *A, int B) {
   // CHECK-LABEL: test_mm_stream_si32
+  // CHECK: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  _mm_stream_si32(A, B);
+}
+
+void test_mm_stream_si32_void(void *A, int B) {
+  // CHECK-LABEL: test_mm_stream_si32_void
   // CHECK: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
   _mm_stream_si32(A, B);
 }
@@ -1500,10 +1512,22 @@ void test_mm_stream_si64(long long *A, long long B) {
   // X64: store i64 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
   _mm_stream_si64(A, B);
 }
+
+void test_mm_stream_si64_void(void *A, long long B) {
+  // X64-LABEL: test_mm_stream_si64_void
+  // X64: store i64 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  _mm_stream_si64(A, B);
+}
 #endif
 
 void test_mm_stream_si128(__m128i *A, __m128i B) {
   // CHECK-LABEL: test_mm_stream_si128
+  // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
+  _mm_stream_si128(A, B);
+}
+
+void test_mm_stream_si128_void(void *A, __m128i B) {
+  // CHECK-LABEL: test_mm_stream_si128_void
   // CHECK: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
   _mm_stream_si128(A, B);
 }

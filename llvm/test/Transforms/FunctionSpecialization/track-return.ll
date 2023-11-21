@@ -3,8 +3,8 @@
 define i64 @main() {
 ; CHECK:       define i64 @main
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C1:%.*]] = call i64 @foo.1(i1 true, i64 3, i64 1)
-; CHECK-NEXT:    [[C2:%.*]] = call i64 @foo.2(i1 false, i64 4, i64 -1)
+; CHECK-NEXT:    [[C1:%.*]] = call i64 @foo.specialized.1(i1 true, i64 3, i64 1)
+; CHECK-NEXT:    [[C2:%.*]] = call i64 @foo.specialized.2(i1 false, i64 4, i64 -1)
 ; CHECK-NEXT:    ret i64 8
 ;
 entry:
@@ -16,22 +16,22 @@ entry:
 
 define internal i64 @foo(i1 %flag, i64 %m, i64 %n) {
 ;
-; CHECK:       define internal i64 @foo.1
+; CHECK:       define internal i64 @foo.specialized.1
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %plus
 ; CHECK:       plus:
-; CHECK-NEXT:    [[N0:%.*]] = call i64 @binop.4(i64 3, i64 1)
-; CHECK-NEXT:    [[RES0:%.*]] = call i64 @bar.6(i64 4)
+; CHECK-NEXT:    [[N0:%.*]] = call i64 @binop.specialized.4(i64 3, i64 1)
+; CHECK-NEXT:    [[RES0:%.*]] = call i64 @bar.specialized.6(i64 4)
 ; CHECK-NEXT:    br label %merge
 ; CHECK:       merge:
 ; CHECK-NEXT:    ret i64 undef
 ;
-; CHECK:       define internal i64 @foo.2
+; CHECK:       define internal i64 @foo.specialized.2
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %minus
 ; CHECK:       minus:
-; CHECK-NEXT:    [[N1:%.*]] = call i64 @binop.3(i64 4, i64 -1)
-; CHECK-NEXT:    [[RES1:%.*]] = call i64 @bar.5(i64 3)
+; CHECK-NEXT:    [[N1:%.*]] = call i64 @binop.specialized.3(i64 4, i64 -1)
+; CHECK-NEXT:    [[RES1:%.*]] = call i64 @bar.specialized.5(i64 3)
 ; CHECK-NEXT:    br label %merge
 ; CHECK:       merge:
 ; CHECK-NEXT:    ret i64 undef
@@ -56,11 +56,11 @@ merge:
 
 define internal i64 @binop(i64 %x, i64 %y) {
 ;
-; CHECK:       define internal i64 @binop.3
+; CHECK:       define internal i64 @binop.specialized.3
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i64 undef
 ;
-; CHECK:       define internal i64 @binop.4
+; CHECK:       define internal i64 @binop.specialized.4
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i64 undef
 ;
@@ -71,7 +71,7 @@ entry:
 
 define internal i64 @bar(i64 %n) {
 ;
-; CHECK:       define internal i64 @bar.5
+; CHECK:       define internal i64 @bar.specialized.5
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %if.else
 ; CHECK:       if.else:
@@ -79,7 +79,7 @@ define internal i64 @bar(i64 %n) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i64 undef
 ;
-; CHECK:       define internal i64 @bar.6
+; CHECK:       define internal i64 @bar.specialized.6
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label %if.then
 ; CHECK:       if.then:

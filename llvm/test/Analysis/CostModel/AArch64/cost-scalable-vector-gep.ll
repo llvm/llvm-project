@@ -7,13 +7,19 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define ptr @gep_scalable_vector(ptr %ptr) {
-; CHECK-LABEL: 'gep_scalable_vector'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %retval = getelementptr <vscale x 16 x i8>, ptr %ptr, i32 2
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret ptr %retval
+define void @gep_scalable_types(ptr %ptr) {
+; CHECK-LABEL: 'gep_scalable_types'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep1 = getelementptr <vscale x 16 x i8>, ptr %ptr, i32 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep2 = getelementptr [2 x <vscale x 16 x i8>], ptr %ptr, i32 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep3 = getelementptr target("aarch64.svcount"), ptr %ptr, i32 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep4 = getelementptr [2 x target("aarch64.svcount")], ptr %ptr, i32 2
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  %retval = getelementptr <vscale x 16 x i8>, ptr %ptr, i32 2
-  ret ptr %retval
+  %gep1 = getelementptr <vscale x 16 x i8>, ptr %ptr, i32 2
+  %gep2 = getelementptr [2 x <vscale x 16 x i8>], ptr %ptr, i32 2
+  %gep3 = getelementptr target("aarch64.svcount"), ptr %ptr, i32 2
+  %gep4 = getelementptr [2 x target("aarch64.svcount")], ptr %ptr, i32 2
+  ret void
 }
 
 define ptr @sext_gep(ptr %p, i32 %a) {

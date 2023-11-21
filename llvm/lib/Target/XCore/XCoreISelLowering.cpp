@@ -292,12 +292,10 @@ LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const
     return GA;
   } else {
     // Ideally we would not fold in offset with an index <= 11.
-    Type *Ty = Type::getInt8PtrTy(*DAG.getContext());
-    Constant *GA = ConstantExpr::getBitCast(const_cast<GlobalValue*>(GV), Ty);
-    Ty = Type::getInt32Ty(*DAG.getContext());
+    Type *Ty = Type::getInt32Ty(*DAG.getContext());
     Constant *Idx = ConstantInt::get(Ty, Offset);
     Constant *GAI = ConstantExpr::getGetElementPtr(
-        Type::getInt8Ty(*DAG.getContext()), GA, Idx);
+        Type::getInt8Ty(*DAG.getContext()), const_cast<GlobalValue *>(GV), Idx);
     SDValue CP = DAG.getConstantPool(GAI, MVT::i32);
     return DAG.getLoad(getPointerTy(DAG.getDataLayout()), DL,
                        DAG.getEntryNode(), CP, MachinePointerInfo());
@@ -936,7 +934,7 @@ LowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const {
   assert(N->getOpcode() == ISD::ATOMIC_LOAD && "Bad Atomic OP");
   assert((N->getSuccessOrdering() == AtomicOrdering::Unordered ||
           N->getSuccessOrdering() == AtomicOrdering::Monotonic) &&
-         "setInsertFencesForAtomic(true) expects unordered / monotonic");
+         "shouldInsertFencesForAtomic(true) expects unordered / monotonic");
   if (N->getMemoryVT() == MVT::i32) {
     if (N->getAlign() < Align(4))
       report_fatal_error("atomic load must be aligned");
@@ -967,7 +965,7 @@ LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const {
   assert(N->getOpcode() == ISD::ATOMIC_STORE && "Bad Atomic OP");
   assert((N->getSuccessOrdering() == AtomicOrdering::Unordered ||
           N->getSuccessOrdering() == AtomicOrdering::Monotonic) &&
-         "setInsertFencesForAtomic(true) expects unordered / monotonic");
+         "shouldInsertFencesForAtomic(true) expects unordered / monotonic");
   if (N->getMemoryVT() == MVT::i32) {
     if (N->getAlign() < Align(4))
       report_fatal_error("atomic store must be aligned");

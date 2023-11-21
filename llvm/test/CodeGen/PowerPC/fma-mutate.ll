@@ -15,17 +15,17 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-NEXT:    vspltisw 2, -3
 ; CHECK-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    lfs 4, .LCPI0_0@toc@l(3)
-; CHECK-NEXT:    xvcvsxwdp 2, 34
-; CHECK-NEXT:    xsmuldp 3, 1, 0
-; CHECK-NEXT:    fmr 5, 2
-; CHECK-NEXT:    xsmaddadp 5, 3, 0
+; CHECK-NEXT:    xvcvsxwdp 3, 34
+; CHECK-NEXT:    xsmuldp 2, 1, 0
+; CHECK-NEXT:    fmr 4, 3
+; CHECK-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-NEXT:    lfs 2, .LCPI0_0@toc@l(3)
+; CHECK-NEXT:    xsmuldp 0, 0, 2
 ; CHECK-NEXT:    xsmuldp 0, 0, 4
-; CHECK-NEXT:    xsmuldp 0, 0, 5
 ; CHECK-NEXT:    xsmuldp 1, 1, 0
-; CHECK-NEXT:    xsmaddadp 2, 1, 0
-; CHECK-NEXT:    xsmuldp 0, 1, 4
-; CHECK-NEXT:    xsmuldp 1, 0, 2
+; CHECK-NEXT:    xsmaddadp 3, 1, 0
+; CHECK-NEXT:    xsmuldp 0, 1, 2
+; CHECK-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    xssqrtdp 1, 1

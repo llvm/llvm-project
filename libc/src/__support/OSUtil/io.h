@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H
 
 #include "src/__support/macros/properties/architectures.h"
 
@@ -21,4 +21,4 @@
 #include "fuchsia/io.h"
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_IO_H

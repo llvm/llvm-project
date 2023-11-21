@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
-#define LLVM_LIBC_SUPPORT_CPP_BIT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
+#include "src/__support/macros/sanitizer.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 #if LIBC_HAS_BUILTIN(__builtin_bit_cast)
 #define LLVM_LIBC_HAS_BUILTIN_BIT_CAST
@@ -31,6 +32,7 @@ LIBC_INLINE constexpr To bit_cast(const From &from) {
   static_assert(cpp::is_trivially_copyable<To>::value &&
                     cpp::is_trivially_copyable<From>::value,
                 "Cannot bit-cast instances of non-trivially copyable classes.");
+  MSAN_UNPOISON(&from, sizeof(From));
 #if defined(LLVM_LIBC_HAS_BUILTIN_BIT_CAST)
   return __builtin_bit_cast(To, from);
 #else
@@ -59,6 +61,6 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
   }
 }
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif // LLVM_LIBC_SUPPORT_CPP_BIT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

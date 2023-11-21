@@ -48,7 +48,8 @@
 #ifndef LLVM_LIB_TARGET_BPF_BTF_H
 #define LLVM_LIB_TARGET_BPF_BTF_H
 
-#include <cstdint>
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/TrailingObjects.h"
 
 namespace llvm {
 namespace BTF {
@@ -97,6 +98,10 @@ enum TypeKinds : uint8_t {
 #include "BTF.def"
 };
 
+// Constants for CommonType::Info field.
+constexpr uint32_t FWD_UNION_FLAG = 1u << 31;
+constexpr uint32_t ENUM_SIGNED_FLAG = 1u << 31;
+
 /// The BTF common type definition. Different kinds may have
 /// additional information after this structure data.
 struct CommonType {
@@ -106,8 +111,8 @@ struct CommonType {
   /// "Info" bits arrangement:
   /// Bits  0-15: vlen (e.g. # of struct's members)
   /// Bits 16-23: unused
-  /// Bits 24-27: kind (e.g. int, ptr, array...etc)
-  /// Bits 28-30: unused
+  /// Bits 24-28: kind (e.g. int, ptr, array...etc)
+  /// Bits 29-30: unused
   /// Bit     31: kind_flag, currently used by
   ///             struct, union and fwd
   uint32_t Info;
@@ -122,6 +127,9 @@ struct CommonType {
     uint32_t Size;
     uint32_t Type;
   };
+
+  uint32_t getKind() const { return Info >> 24 & 0x1f; }
+  uint32_t getVlen() const { return Info & 0xffff; }
 };
 
 // For some specific BTF_KIND, "struct CommonType" is immediately
@@ -268,6 +276,84 @@ struct SecFieldReloc {
   uint32_t SecNameOff;    ///< Section name index in the .BTF string table
   uint32_t NumFieldReloc; ///< Number of offset reloc's in this section
 };
+
+/// CO-RE relocation kind codes used in .BTF.ext section.
+enum PatchableRelocKind : uint32_t {
+  FIELD_BYTE_OFFSET = 0,
+  FIELD_BYTE_SIZE,
+  FIELD_EXISTENCE,
+  FIELD_SIGNEDNESS,
+  FIELD_LSHIFT_U64,
+  FIELD_RSHIFT_U64,
+  BTF_TYPE_ID_LOCAL,
+  BTF_TYPE_ID_REMOTE,
+  TYPE_EXISTENCE,
+  TYPE_SIZE,
+  ENUM_VALUE_EXISTENCE,
+  ENUM_VALUE,
+  TYPE_MATCH,
+  MAX_FIELD_RELOC_KIND,
+};
+
+// Define a number of sub-types for CommonType, each with:
+// - An accessor for a relevant "tail" information (data fields that
+//   follow the CommonType record in binary format).
+// - A classof() definition based on CommonType::getKind() value to
+//   allow use with dyn_cast<>() function.
+
+// For CommonType sub-types that are followed by a single entry of
+// some type in the binary format.
+#define BTF_DEFINE_TAIL(Type, Accessor)                                        \
+  const Type &Accessor() const { return *getTrailingObjects<Type>(); }
+
+// For CommonType sub-types that are followed by CommonType::getVlen()
+// number of entries of some type in the binary format.
+#define BTF_DEFINE_TAIL_ARR(Type, Accessor)                                    \
+  ArrayRef<Type> Accessor() const {                                            \
+    return ArrayRef<Type>(getTrailingObjects<Type>(), getVlen());              \
+  }
+
+struct ArrayType final : CommonType,
+                         private TrailingObjects<ArrayType, BTFArray> {
+  friend TrailingObjects;
+  BTF_DEFINE_TAIL(BTFArray, getArray)
+
+  static bool classof(const CommonType *V) {
+    return V->getKind() == BTF_KIND_ARRAY;
+  }
+};
+
+struct StructType final : CommonType,
+                          private TrailingObjects<StructType, BTFMember> {
+  friend TrailingObjects;
+  BTF_DEFINE_TAIL_ARR(BTFMember, members)
+
+  static bool classof(const CommonType *V) {
+    return V->getKind() == BTF_KIND_STRUCT || V->getKind() == BTF_KIND_UNION;
+  }
+};
+
+struct EnumType final : CommonType, private TrailingObjects<EnumType, BTFEnum> {
+  friend TrailingObjects;
+  BTF_DEFINE_TAIL_ARR(BTFEnum, values)
+
+  static bool classof(const CommonType *V) {
+    return V->getKind() == BTF_KIND_ENUM;
+  }
+};
+
+struct Enum64Type final : CommonType,
+                          private TrailingObjects<Enum64Type, BTFEnum64> {
+  friend TrailingObjects;
+  BTF_DEFINE_TAIL_ARR(BTFEnum64, values)
+
+  static bool classof(const CommonType *V) {
+    return V->getKind() == BTF_KIND_ENUM64;
+  }
+};
+
+#undef BTF_DEFINE_TAIL
+#undef BTF_DEFINE_TAIL_ARR
 
 } // End namespace BTF.
 } // End namespace llvm.

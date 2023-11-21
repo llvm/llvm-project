@@ -322,12 +322,12 @@ define i256 @load_i256(ptr %ptr) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-O0-NEXT:    movq %rdi, %rax
 ; CHECK-O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-O0-NEXT:    movq %rdi, (%rsp) # 8-byte Spill
 ; CHECK-O0-NEXT:    movl $32, %edi
 ; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    callq __atomic_load@PLT
-; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-O0-NEXT:    movq (%rsp), %rdi # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
@@ -373,12 +373,12 @@ define void @store_i256(ptr %ptr, i256 %v) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-NEXT:    movq %rsi, %rax
 ; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-O0-NEXT:    movq %rax, (%rsp)
 ; CHECK-O0-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl $32, %edi
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O0-NEXT:    movq %rsp, %rdx
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
 ; CHECK-O0-NEXT:    callq __atomic_store@PLT
 ; CHECK-O0-NEXT:    addq $40, %rsp
@@ -393,8 +393,8 @@ define void @store_i256(ptr %ptr, i256 %v) {
 ; CHECK-O3-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; CHECK-O3-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-O3-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-O3-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-O3-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; CHECK-O3-NEXT:    movq %rsi, (%rsp)
+; CHECK-O3-NEXT:    movq %rsp, %rdx
 ; CHECK-O3-NEXT:    movl $32, %edi
 ; CHECK-O3-NEXT:    movq %rax, %rsi
 ; CHECK-O3-NEXT:    xorl %ecx, %ecx

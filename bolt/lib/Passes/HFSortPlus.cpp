@@ -567,7 +567,7 @@ private:
     Into->Score = score(Into);
 
     // Remove chain From From the list of active chains
-    llvm::erase_value(HotChains, From);
+    llvm::erase(HotChains, From);
   }
 
 private:

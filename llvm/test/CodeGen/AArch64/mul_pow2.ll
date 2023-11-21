@@ -858,12 +858,11 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; GISEL-LABEL: muladd_demand_commute:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI49_1
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_1]
 ; GISEL-NEXT:    adrp x8, .LCPI49_0
+; GISEL-NEXT:    movi v3.4s, #1, msl #16
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_0]
 ; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
-; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI49_0]
-; GISEL-NEXT:    and v0.16b, v1.16b, v0.16b
+; GISEL-NEXT:    and v0.16b, v1.16b, v3.16b
 ; GISEL-NEXT:    ret
   %m = mul <4 x i32> %x, <i32 131008, i32 131008, i32 131008, i32 131008>
   %a = add <4 x i32> %m, %y

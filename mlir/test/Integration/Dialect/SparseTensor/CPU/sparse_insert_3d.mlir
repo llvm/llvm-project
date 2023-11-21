@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -17,30 +17,30 @@
 // DEFINE: %{env} =
 //--------------------------------------------------------------------------------------------------
 
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #TensorCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : dense, d2 : compressed)
 }>
 
 #TensorRow = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "dense" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : dense)
 }>
 
 #CCoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed(nonunique), d2 : singleton)
 }>
 
 #DCoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique), d2 : singleton)
 }>
 
 
@@ -152,7 +152,7 @@ func.func @dump_dcoo(%arg0: tensor<5x4x3xf64, #DCoo>) {
     // CHECK-NEXT: ( 1, 2, 1, 2, 2 )
     // CHECK-NEXT: ( 1.1, 2.2, 3.3, 4.4, 5.5 )
     //
-    %tensora = bufferization.alloc_tensor() : tensor<5x4x3xf64, #TensorCSR>
+    %tensora = tensor.empty() : tensor<5x4x3xf64, #TensorCSR>
     %tensor1 = sparse_tensor.insert %f1 into %tensora[%c3, %c0, %c1] : tensor<5x4x3xf64, #TensorCSR>
     %tensor2 = sparse_tensor.insert %f2 into %tensor1[%c3, %c0, %c2] : tensor<5x4x3xf64, #TensorCSR>
     %tensor3 = sparse_tensor.insert %f3 into %tensor2[%c3, %c3, %c1] : tensor<5x4x3xf64, #TensorCSR>
@@ -168,7 +168,7 @@ func.func @dump_dcoo(%arg0: tensor<5x4x3xf64, #DCoo>) {
     // CHECK-NEXT: ( 0, 3, 2, 3 )
     // CHECK-NEXT: ( 0, 1.1, 2.2, 0, 3.3, 0, 0, 0, 4.4, 0, 0, 5.5 )
     //
-    %rowa = bufferization.alloc_tensor() : tensor<5x4x3xf64, #TensorRow>
+    %rowa = tensor.empty() : tensor<5x4x3xf64, #TensorRow>
     %row1 = sparse_tensor.insert %f1 into %rowa[%c3, %c0, %c1] : tensor<5x4x3xf64, #TensorRow>
     %row2 = sparse_tensor.insert %f2 into %row1[%c3, %c0, %c2] : tensor<5x4x3xf64, #TensorRow>
     %row3 = sparse_tensor.insert %f3 into %row2[%c3, %c3, %c1] : tensor<5x4x3xf64, #TensorRow>
@@ -184,7 +184,7 @@ func.func @dump_dcoo(%arg0: tensor<5x4x3xf64, #DCoo>) {
     // CHECK-NEXT: ( 0, 0, 3, 2, 3 )
     // CHECK-NEXT: ( 1, 2, 1, 2, 2 )
     // CHECK-NEXT: ( 1.1, 2.2, 3.3, 4.4, 5.5 )
-    %ccoo = bufferization.alloc_tensor() : tensor<5x4x3xf64, #CCoo>
+    %ccoo = tensor.empty() : tensor<5x4x3xf64, #CCoo>
     %ccoo1 = sparse_tensor.insert %f1 into %ccoo[%c3, %c0, %c1] : tensor<5x4x3xf64, #CCoo>
     %ccoo2 = sparse_tensor.insert %f2 into %ccoo1[%c3, %c0, %c2] : tensor<5x4x3xf64, #CCoo>
     %ccoo3 = sparse_tensor.insert %f3 into %ccoo2[%c3, %c3, %c1] : tensor<5x4x3xf64, #CCoo>
@@ -198,7 +198,7 @@ func.func @dump_dcoo(%arg0: tensor<5x4x3xf64, #DCoo>) {
     // CHECK-NEXT: ( 0, 0, 3, 2, 3 )
     // CHECK-NEXT: ( 1, 2, 1, 2, 2 )
     // CHECK-NEXT: ( 1.1, 2.2, 3.3, 4.4, 5.5 )
-    %dcoo = bufferization.alloc_tensor() : tensor<5x4x3xf64, #DCoo>
+    %dcoo = tensor.empty() : tensor<5x4x3xf64, #DCoo>
     %dcoo1 = sparse_tensor.insert %f1 into %dcoo[%c3, %c0, %c1] : tensor<5x4x3xf64, #DCoo>
     %dcoo2 = sparse_tensor.insert %f2 into %dcoo1[%c3, %c0, %c2] : tensor<5x4x3xf64, #DCoo>
     %dcoo3 = sparse_tensor.insert %f3 into %dcoo2[%c3, %c3, %c1] : tensor<5x4x3xf64, #DCoo>

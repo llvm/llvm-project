@@ -10,7 +10,6 @@
 #define LLVM_LIB_DWARFLINKERPARALLEL_DEBUGLINESECTIONEMITTER_H
 
 #include "DWARFEmitterImpl.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/DWARFLinkerParallel/AddressesMap.h"
 #include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"

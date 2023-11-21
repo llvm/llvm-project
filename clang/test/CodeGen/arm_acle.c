@@ -1690,6 +1690,22 @@ int32_t test_jcvt(double v) {
 }
 #endif
 
+#if defined(__ARM_FEATURE_DIRECTED_ROUNDING) && defined(__ARM_64BIT_STATE)
+
+// AArch64-LABEL: @test_rintn(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call double @llvm.roundeven.f64(double [[TMP0:%.*]])
+double test_rintn(double a) {
+  return __rintn(a);
+}
+
+// AArch64-LABEL: @test_rintnf(
+// AArch64-NEXT: entry:
+// AArch64-NEXT:      call float @llvm.roundeven.f32(float [[TMP0:%.*]])
+float test_rintnf(float b) {
+  return __rintnf(b);
+}
+#endif
 
 #if defined(__ARM_64BIT_STATE) && defined(__ARM_FEATURE_RNG)
 

@@ -27,7 +27,7 @@ resume:
 
 cleanup:
   call void @print(i32 %n.val)
-  call i1 @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -66,7 +66,7 @@ entry:
 declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare { i32, i1 } @llvm.coro.suspend.retcon.sl_i32i1s(...)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.prepare.retcon(ptr)
 
 declare ptr @prototype(ptr, i32, i1 zeroext)

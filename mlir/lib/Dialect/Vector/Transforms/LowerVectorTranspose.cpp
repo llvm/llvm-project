@@ -327,14 +327,15 @@ public:
     VectorType resType = op.getResultVectorType();
 
     // Set up convenience transposition table.
-    SmallVector<int64_t> transp;
-    for (auto attr : op.getTransp())
-      transp.push_back(cast<IntegerAttr>(attr).getInt());
+    ArrayRef<int64_t> transp = op.getPermutation();
 
     if (isShuffleLike(vectorTransformOptions.vectorTransposeLowering) &&
         succeeded(isTranspose2DSlice(op)))
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
+
+    if (inputType.isScalable())
+      return failure();
 
     // Handle a true 2-D matrix transpose differently when requested.
     if (vectorTransformOptions.vectorTransposeLowering ==

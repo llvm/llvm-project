@@ -1,4 +1,4 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV: OpTypeDeviceEvent
 ; CHECK-SPIRV: OpFunction
@@ -19,29 +19,27 @@
 ;;   release_event(e1);
 ;; }
 
-%opencl.clk_event_t = type opaque
-
 define dso_local spir_kernel void @clk_event_t_test(i32 addrspace(1)* nocapture noundef writeonly %res, i8 addrspace(1)* noundef %prof) local_unnamed_addr {
 entry:
-  %call = call spir_func %opencl.clk_event_t* @_Z17create_user_eventv()
-  %call1 = call spir_func zeroext i1 @_Z14is_valid_event12ocl_clkevent(%opencl.clk_event_t* %call)
+  %call = call spir_func target("spirv.DeviceEvent") @_Z17create_user_eventv()
+  %call1 = call spir_func zeroext i1 @_Z14is_valid_event12ocl_clkevent(target("spirv.DeviceEvent") %call)
   %conv = zext i1 %call1 to i32
   store i32 %conv, i32 addrspace(1)* %res, align 4
-  call spir_func void @_Z12retain_event12ocl_clkevent(%opencl.clk_event_t* %call)
-  call spir_func void @_Z21set_user_event_status12ocl_clkeventi(%opencl.clk_event_t* %call, i32 noundef -42)
-  call spir_func void @_Z28capture_event_profiling_info12ocl_clkeventiPU3AS1v(%opencl.clk_event_t* %call, i32 noundef 1, i8 addrspace(1)* noundef %prof)
-  call spir_func void @_Z13release_event12ocl_clkevent(%opencl.clk_event_t* %call)
+  call spir_func void @_Z12retain_event12ocl_clkevent(target("spirv.DeviceEvent") %call)
+  call spir_func void @_Z21set_user_event_status12ocl_clkeventi(target("spirv.DeviceEvent") %call, i32 noundef -42)
+  call spir_func void @_Z28capture_event_profiling_info12ocl_clkeventiPU3AS1v(target("spirv.DeviceEvent") %call, i32 noundef 1, i8 addrspace(1)* noundef %prof)
+  call spir_func void @_Z13release_event12ocl_clkevent(target("spirv.DeviceEvent") %call)
   ret void
 }
 
-declare spir_func %opencl.clk_event_t* @_Z17create_user_eventv() local_unnamed_addr
+declare spir_func target("spirv.DeviceEvent") @_Z17create_user_eventv() local_unnamed_addr
 
-declare spir_func zeroext i1 @_Z14is_valid_event12ocl_clkevent(%opencl.clk_event_t*) local_unnamed_addr
+declare spir_func zeroext i1 @_Z14is_valid_event12ocl_clkevent(target("spirv.DeviceEvent")) local_unnamed_addr
 
-declare spir_func void @_Z12retain_event12ocl_clkevent(%opencl.clk_event_t*) local_unnamed_addr
+declare spir_func void @_Z12retain_event12ocl_clkevent(target("spirv.DeviceEvent")) local_unnamed_addr
 
-declare spir_func void @_Z21set_user_event_status12ocl_clkeventi(%opencl.clk_event_t*, i32 noundef) local_unnamed_addr
+declare spir_func void @_Z21set_user_event_status12ocl_clkeventi(target("spirv.DeviceEvent"), i32 noundef) local_unnamed_addr
 
-declare spir_func void @_Z28capture_event_profiling_info12ocl_clkeventiPU3AS1v(%opencl.clk_event_t*, i32 noundef, i8 addrspace(1)* noundef) local_unnamed_addr
+declare spir_func void @_Z28capture_event_profiling_info12ocl_clkeventiPU3AS1v(target("spirv.DeviceEvent"), i32 noundef, i8 addrspace(1)* noundef) local_unnamed_addr
 
-declare spir_func void @_Z13release_event12ocl_clkevent(%opencl.clk_event_t*) local_unnamed_addr
+declare spir_func void @_Z13release_event12ocl_clkevent(target("spirv.DeviceEvent")) local_unnamed_addr

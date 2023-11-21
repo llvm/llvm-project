@@ -699,7 +699,6 @@ protected:
                                     eVoteNoOpinion),
           m_stop_info_sp(stop_info_sp), m_watch_sp(watch_sp) {
       assert(watch_sp);
-      m_watch_index = watch_sp->GetHardwareIndex();
     }
 
     bool DoWillResume(lldb::StateType resume_state,
@@ -753,13 +752,11 @@ protected:
         return;
       m_did_disable_wp = true;
       GetThread().GetProcess()->EnableWatchpoint(m_watch_sp.get(), true);
-      m_watch_sp->SetHardwareIndex(m_watch_index);
     }
 
   private:
     StopInfoWatchpointSP m_stop_info_sp;
     WatchpointSP m_watch_sp;
-    uint32_t m_watch_index = LLDB_INVALID_INDEX32;
     bool m_did_disable_wp = false;
   };
 
@@ -982,6 +979,12 @@ protected:
             m_should_stop = false;
           }
         }
+
+        // Don't stop if the watched region value is unmodified, and
+        // this is a Modify-type watchpoint.
+        if (m_should_stop && !wp_sp->WatchedValueReportable(exe_ctx))
+          m_should_stop = false;
+
         // Finally, if we are going to stop, print out the new & old values:
         if (m_should_stop) {
           wp_sp->CaptureWatchedValue(exe_ctx);

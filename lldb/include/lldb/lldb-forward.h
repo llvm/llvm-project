@@ -96,6 +96,9 @@ class File;
 class FileSpec;
 class FileSpecList;
 class Flags;
+namespace FormatEntity {
+struct Entry;
+} // namespace FormatEntity
 class FormatManager;
 class FormattersMatchCandidate;
 class FuncUnwinders;
@@ -130,6 +133,7 @@ class ObjectContainer;
 class ObjectFile;
 class ObjectFileJITDelegate;
 class OperatingSystem;
+class OperatingSystemInterface;
 class OptionGroup;
 class OptionGroupOptions;
 class OptionGroupPlatform;
@@ -216,6 +220,7 @@ class SymbolContextScope;
 class SymbolContextSpecifier;
 class SymbolFile;
 class SymbolFileType;
+class SymbolLocator;
 class SymbolVendor;
 class Symtab;
 class SyntheticChildren;
@@ -284,6 +289,7 @@ class VariableList;
 class Watchpoint;
 class WatchpointList;
 class WatchpointOptions;
+class WatchpointSetOptions;
 struct CompilerContext;
 struct LineEntry;
 struct PropertyDefinition;
@@ -332,6 +338,7 @@ typedef std::shared_ptr<lldb_private::ExecutionContextRef>
 typedef std::shared_ptr<lldb_private::ExpressionVariable> ExpressionVariableSP;
 typedef std::unique_ptr<lldb_private::File> FileUP;
 typedef std::shared_ptr<lldb_private::File> FileSP;
+typedef std::shared_ptr<lldb_private::FormatEntity::Entry> FormatEntrySP;
 typedef std::shared_ptr<lldb_private::Function> FunctionSP;
 typedef std::shared_ptr<lldb_private::FuncUnwinders> FuncUnwindersSP;
 typedef std::shared_ptr<lldb_private::InlineFunctionInfo> InlineFunctionInfoSP;
@@ -359,6 +366,8 @@ typedef std::shared_ptr<lldb_private::ObjectFileJITDelegate>
 typedef std::weak_ptr<lldb_private::ObjectFileJITDelegate>
     ObjectFileJITDelegateWP;
 typedef std::unique_ptr<lldb_private::OperatingSystem> OperatingSystemUP;
+typedef std::shared_ptr<lldb_private::OperatingSystemInterface>
+    OperatingSystemInterfaceSP;
 typedef std::shared_ptr<lldb_private::OptionValue> OptionValueSP;
 typedef std::weak_ptr<lldb_private::OptionValue> OptionValueWP;
 typedef std::shared_ptr<lldb_private::OptionValueProperties>

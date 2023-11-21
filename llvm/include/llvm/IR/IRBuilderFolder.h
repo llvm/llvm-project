@@ -70,24 +70,16 @@ public:
   virtual Value *FoldShuffleVector(Value *V1, Value *V2,
                                    ArrayRef<int> Mask) const = 0;
 
+  virtual Value *FoldCast(Instruction::CastOps Op, Value *V,
+                          Type *DestTy) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateCast(Instruction::CastOps Op, Constant *C,
-                            Type *DestTy) const = 0;
   virtual Value *CreatePointerCast(Constant *C, Type *DestTy) const = 0;
   virtual Value *CreatePointerBitCastOrAddrSpaceCast(Constant *C,
                                                      Type *DestTy) const = 0;
-  virtual Value *CreateIntCast(Constant *C, Type *DestTy,
-                               bool isSigned) const = 0;
-  virtual Value *CreateFPCast(Constant *C, Type *DestTy) const = 0;
-  virtual Value *CreateBitCast(Constant *C, Type *DestTy) const = 0;
-  virtual Value *CreateIntToPtr(Constant *C, Type *DestTy) const = 0;
-  virtual Value *CreatePtrToInt(Constant *C, Type *DestTy) const = 0;
-  virtual Value *CreateZExtOrBitCast(Constant *C, Type *DestTy) const = 0;
-  virtual Value *CreateSExtOrBitCast(Constant *C, Type *DestTy) const = 0;
-  virtual Value *CreateTruncOrBitCast(Constant *C, Type *DestTy) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Compare Instructions

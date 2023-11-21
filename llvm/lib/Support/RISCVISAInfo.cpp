@@ -59,6 +59,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"i", RISCVExtensionVersion{2, 1}},
     {"m", RISCVExtensionVersion{2, 0}},
 
+    {"smaia", RISCVExtensionVersion{1, 0}},
+    {"ssaia", RISCVExtensionVersion{1, 0}},
     {"svinval", RISCVExtensionVersion{1, 0}},
     {"svnapot", RISCVExtensionVersion{1, 0}},
     {"svpbmt", RISCVExtensionVersion{1, 0}},
@@ -69,10 +71,16 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xcvalu", RISCVExtensionVersion{1, 0}},
     {"xcvbi", RISCVExtensionVersion{1, 0}},
     {"xcvbitmanip", RISCVExtensionVersion{1, 0}},
+    {"xcvelw", RISCVExtensionVersion{1, 0}},
     {"xcvmac", RISCVExtensionVersion{1, 0}},
+    {"xcvmem", RISCVExtensionVersion{1, 0}},
     {"xcvsimd", RISCVExtensionVersion{1, 0}},
     {"xsfcie", RISCVExtensionVersion{1, 0}},
     {"xsfvcp", RISCVExtensionVersion{1, 0}},
+    {"xsfvfnrclipxfqf", RISCVExtensionVersion{1, 0}},
+    {"xsfvfwmaccqqq", RISCVExtensionVersion{1, 0}},
+    {"xsfvqmaccdod", RISCVExtensionVersion{1, 0}},
+    {"xsfvqmaccqoq", RISCVExtensionVersion{1, 0}},
     {"xtheadba", RISCVExtensionVersion{1, 0}},
     {"xtheadbb", RISCVExtensionVersion{1, 0}},
     {"xtheadbs", RISCVExtensionVersion{1, 0}},
@@ -106,6 +114,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"zdinx", RISCVExtensionVersion{1, 0}},
 
+    {"zfa", RISCVExtensionVersion{1, 0}},
     {"zfh", RISCVExtensionVersion{1, 0}},
     {"zfhmin", RISCVExtensionVersion{1, 0}},
     {"zfinx", RISCVExtensionVersion{1, 0}},
@@ -116,12 +125,12 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zicbom", RISCVExtensionVersion{1, 0}},
     {"zicbop", RISCVExtensionVersion{1, 0}},
     {"zicboz", RISCVExtensionVersion{1, 0}},
-    {"zicntr", RISCVExtensionVersion{1, 0}},
+    {"zicntr", RISCVExtensionVersion{2, 0}},
     {"zicsr", RISCVExtensionVersion{2, 0}},
     {"zifencei", RISCVExtensionVersion{2, 0}},
     {"zihintntl", RISCVExtensionVersion{1, 0}},
     {"zihintpause", RISCVExtensionVersion{2, 0}},
-    {"zihpm", RISCVExtensionVersion{1, 0}},
+    {"zihpm", RISCVExtensionVersion{2, 0}},
 
     {"zk", RISCVExtensionVersion{1, 0}},
     {"zkn", RISCVExtensionVersion{1, 0}},
@@ -161,12 +170,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
 // NOTE: This table should be sorted alphabetically by extension name.
 static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
-    {"smaia", RISCVExtensionVersion{1, 0}},
-    {"ssaia", RISCVExtensionVersion{1, 0}},
-
     {"zacas", RISCVExtensionVersion{1, 0}},
 
-    {"zfa", RISCVExtensionVersion{0, 2}},
     {"zfbfmin", RISCVExtensionVersion{0, 8}},
 
     {"zicfilp", RISCVExtensionVersion{0, 2}},
@@ -210,24 +215,36 @@ static void verifyTables() {
 #endif
 }
 
-void llvm::riscvExtensionsHelp() {
+static void PrintExtension(const std::string Name, const std::string Version,
+                           const std::string Description) {
+  outs() << "    "
+         << format(Description.empty() ? "%-20s%s\n" : "%-20s%-10s%s\n",
+                   Name.c_str(), Version.c_str(), Description.c_str());
+}
+
+void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
+
   outs() << "All available -march extensions for RISC-V\n\n";
-  outs() << '\t' << left_justify("Name", 20) << "Version\n";
+  PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
   RISCVISAInfo::OrderedExtensionMap ExtMap;
   for (const auto &E : SupportedExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
-  for (const auto &E : ExtMap)
-    outs() << format("\t%-20s%d.%d\n", E.first.c_str(), E.second.MajorVersion,
-                     E.second.MinorVersion);
+  for (const auto &E : ExtMap) {
+    std::string Version = std::to_string(E.second.MajorVersion) + "." +
+                          std::to_string(E.second.MinorVersion);
+    PrintExtension(E.first, Version, DescMap[E.first].str());
+  }
 
   outs() << "\nExperimental extensions\n";
   ExtMap.clear();
   for (const auto &E : SupportedExperimentalExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
-  for (const auto &E : ExtMap)
-    outs() << format("\t%-20s%d.%d\n", E.first.c_str(), E.second.MajorVersion,
-                     E.second.MinorVersion);
+  for (const auto &E : ExtMap) {
+    std::string Version = std::to_string(E.second.MajorVersion) + "." +
+                          std::to_string(E.second.MinorVersion);
+    PrintExtension(E.first, Version, DescMap["experimental-" + E.first].str());
+  }
 
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
@@ -295,21 +312,21 @@ void RISCVISAInfo::addExtension(StringRef ExtName, unsigned MajorVersion,
 }
 
 static StringRef getExtensionTypeDesc(StringRef Ext) {
-  if (Ext.startswith("s"))
+  if (Ext.starts_with("s"))
     return "standard supervisor-level extension";
-  if (Ext.startswith("x"))
+  if (Ext.starts_with("x"))
     return "non-standard user-level extension";
-  if (Ext.startswith("z"))
+  if (Ext.starts_with("z"))
     return "standard user-level extension";
   return StringRef();
 }
 
 static StringRef getExtensionType(StringRef Ext) {
-  if (Ext.startswith("s"))
+  if (Ext.starts_with("s"))
     return "s";
-  if (Ext.startswith("x"))
+  if (Ext.starts_with("x"))
     return "x";
-  if (Ext.startswith("z"))
+  if (Ext.starts_with("z"))
     return "z";
   return StringRef();
 }
@@ -625,9 +642,9 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   }
   // Must start with a valid base ISA name.
   unsigned XLen;
-  if (Arch.startswith("rv32i") || Arch.startswith("rv32e"))
+  if (Arch.starts_with("rv32i") || Arch.starts_with("rv32e"))
     XLen = 32;
-  else if (Arch.startswith("rv64i") || Arch.startswith("rv64e"))
+  else if (Arch.starts_with("rv64i") || Arch.starts_with("rv64e"))
     XLen = 64;
   else
     return createStringError(errc::invalid_argument,
@@ -688,9 +705,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                              "string must be lowercase");
   }
 
-  bool HasRV64 = Arch.startswith("rv64");
+  bool HasRV64 = Arch.starts_with("rv64");
   // ISA string must begin with rv32 or rv64.
-  if (!(Arch.startswith("rv32") || HasRV64) || (Arch.size() < 5)) {
+  if (!(Arch.starts_with("rv32") || HasRV64) || (Arch.size() < 5)) {
     return createStringError(
         errc::invalid_argument,
         "string must begin with rv32{i,e,g} or rv64{i,e,g}");
@@ -979,6 +996,10 @@ static const char *ImpliedExtsF[] = {"zicsr"};
 static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXsfvcp[] = {"zve32x"};
+static const char *ImpliedExtsXsfvfnrclipxfqf[] = {"zve32f"};
+static const char *ImpliedExtsXsfvfwmaccqqq[] = {"zve32f", "zvfbfmin"};
+static const char *ImpliedExtsXsfvqmaccdod[] = {"zve32x"};
+static const char *ImpliedExtsXsfvqmaccqoq[] = {"zve32x"};
 static const char *ImpliedExtsZacas[] = {"a"};
 static const char *ImpliedExtsZcb[] = {"zca"};
 static const char *ImpliedExtsZcd[] = {"d", "zca"};
@@ -1013,7 +1034,7 @@ static const char *ImpliedExtsZvfhmin[] = {"zve32f"};
 static const char *ImpliedExtsZvkn[] = {"zvkb", "zvkned", "zvknhb", "zvkt"};
 static const char *ImpliedExtsZvknc[] = {"zvbc", "zvkn"};
 static const char *ImpliedExtsZvkng[] = {"zvkg", "zvkn"};
-static const char *ImpliedExtsZvknhb[] = {"zvknha"};
+static const char *ImpliedExtsZvknhb[] = {"zve64x"};
 static const char *ImpliedExtsZvks[] = {"zvkb", "zvksed", "zvksh", "zvkt"};
 static const char *ImpliedExtsZvksc[] = {"zvbc", "zvks"};
 static const char *ImpliedExtsZvksg[] = {"zvkg", "zvks"};
@@ -1046,6 +1067,10 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"f"}, {ImpliedExtsF}},
     {{"v"}, {ImpliedExtsV}},
     {{"xsfvcp"}, {ImpliedExtsXsfvcp}},
+    {{"xsfvfnrclipxfqf"}, {ImpliedExtsXsfvfnrclipxfqf}},
+    {{"xsfvfwmaccqqq"}, {ImpliedExtsXsfvfwmaccqqq}},
+    {{"xsfvqmaccdod"}, {ImpliedExtsXsfvqmaccdod}},
+    {{"xsfvqmaccqoq"}, {ImpliedExtsXsfvqmaccqoq}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
     {{"zacas"}, {ImpliedExtsZacas}},
     {{"zcb"}, {ImpliedExtsZcb}},

@@ -1116,9 +1116,9 @@ std::optional<APInt>
 llvm::getIConstantSplatVal(const Register Reg, const MachineRegisterInfo &MRI) {
   if (auto SplatValAndReg =
           getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false)) {
-    std::optional<ValueAndVReg> ValAndVReg =
-        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI);
-    return ValAndVReg->Value;
+    if (std::optional<ValueAndVReg> ValAndVReg =
+        getIConstantVRegValWithLookThrough(SplatValAndReg->VReg, MRI))
+      return ValAndVReg->Value;
   }
 
   return std::nullopt;
@@ -1173,7 +1173,7 @@ llvm::getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
   if (auto Splat = getIConstantSplatSExtVal(MI, MRI))
     return RegOrConstant(*Splat);
   auto Reg = MI.getOperand(1).getReg();
-  if (any_of(make_range(MI.operands_begin() + 2, MI.operands_end()),
+  if (any_of(drop_begin(MI.operands(), 2),
              [&Reg](const MachineOperand &Op) { return Op.getReg() != Reg; }))
     return std::nullopt;
   return RegOrConstant(Reg);

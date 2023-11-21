@@ -13,7 +13,7 @@ COMPILER_RT_ABI long double __extendsftf2(float a);
 int test__extendsftf2(float a, uint64_t expectedHi, uint64_t expectedLo)
 {
     long double x = __extendsftf2(a);
-    int ret = compareResultLD(x, expectedHi, expectedLo);
+    int ret = compareResultF128(x, expectedHi, expectedLo);
 
     if (ret)
     {

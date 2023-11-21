@@ -47,7 +47,7 @@
 // CHECK:           %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_15]], [1 : index] : (tuple<!fir.heap<!fir.array<2xf32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<2xf32>>, i1>
 // CHECK:           %[[VAL_38:.*]] = fir.insert_value %[[VAL_37]], %[[VAL_14]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<2xf32>>, i1>, !fir.heap<!fir.array<2xf32>>) -> tuple<!fir.heap<!fir.array<2xf32>>, i1>
 // CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_4]]#0 : !fir.heap<!fir.array<2xf32>>, !fir.ref<!fir.array<2xf32>>
-// CHECK:           fir.freemem %[[VAL_14]]#1 : !fir.heap<!fir.array<2xf32>>
+// CHECK:           fir.freemem %[[VAL_14]]#0 : !fir.heap<!fir.array<2xf32>>
 // CHECK:           return
 // CHECK:         }
 func.func @_QPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "pi"}, %arg1: !fir.ref<!fir.array<2xf32>> {fir.bindc_name = "h1"}) {

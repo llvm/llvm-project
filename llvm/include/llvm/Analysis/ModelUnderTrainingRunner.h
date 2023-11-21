@@ -23,9 +23,10 @@
 
 namespace llvm {
 
-/// ModelUnderTrainingRunner - training mode implementation. It uses TF C APIs
+/// ModelUnderTrainingRunner - training mode implementation. It uses TFLite
 /// to dynamically load and evaluate a TF SavedModel
-/// (https://www.tensorflow.org/guide/saved_model). Runtime performance is
+/// (https://www.tensorflow.org/guide/saved_model) converted to TFLite. see
+/// lib/Analysis/models/saved-model-to-tflite.py. Runtime performance is
 /// sacrificed for ease of use while training.
 class ModelUnderTrainingRunner final : public MLModelRunner {
 public:

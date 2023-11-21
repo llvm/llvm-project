@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen --canonicalize --cse | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = ["dense", "compressed"]}>
-#COO = #sparse_tensor.encoding<{ lvlTypes = ["compressed_nu", "singleton"]}>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
+#COO = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
 
 // CHECK-LABEL:   func.func @sparse_alloc_copy_CSR(
 // CHECK-SAME:      %[[VAL_0:.*0]]: memref<?xindex>,

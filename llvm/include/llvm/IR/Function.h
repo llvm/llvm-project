@@ -97,14 +97,27 @@ private:
 
   friend class SymbolTableListTraits<Function>;
 
+public:
+  /// Is this function using intrinsics to record the position of debugging
+  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
+  /// \ref BasicBlock.
+  bool IsNewDbgInfoFormat;
+
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
   /// hasn't been set up yet.
-public:
   bool hasLazyArguments() const {
     return getSubclassDataFromValue() & (1<<0);
   }
+
+  /// \see BasicBlock::convertToNewDbgValues.
+  void convertToNewDbgValues();
+
+  /// \see BasicBlock::convertFromNewDbgValues.
+  void convertFromNewDbgValues();
+
+  void setIsNewDbgInfoFormat(bool NewVal);
 
 private:
   void CheckLazyArguments() const {
@@ -115,6 +128,8 @@ private:
   void BuildLazyArguments() const;
 
   void clearArguments();
+
+  void deleteBodyImpl(bool ShouldDrop);
 
   /// Function ctor - If the (optional) Module argument is specified, the
   /// function is automatically inserted into the end of the function list for
@@ -491,6 +506,13 @@ public:
   void setPresplitCoroutine() { addFnAttr(Attribute::PresplitCoroutine); }
   void setSplittedCoroutine() { removeFnAttr(Attribute::PresplitCoroutine); }
 
+  bool isCoroOnlyDestroyWhenComplete() const {
+    return hasFnAttribute(Attribute::CoroDestroyOnlyWhenComplete);
+  }
+  void setCoroDestroyOnlyWhenComplete() {
+    addFnAttr(Attribute::CoroDestroyOnlyWhenComplete);
+  }
+
   MemoryEffects getMemoryEffects() const;
   void setMemoryEffects(MemoryEffects ME);
 
@@ -667,7 +689,7 @@ public:
   /// the linkage to external.
   ///
   void deleteBody() {
-    dropAllReferences();
+    deleteBodyImpl(/*ShouldDrop=*/false);
     setLinkage(ExternalLinkage);
   }
 
@@ -690,6 +712,7 @@ public:
   /// Insert \p BB in the basic block list at \p Position. \Returns an iterator
   /// to the newly inserted BB.
   Function::iterator insert(Function::iterator Position, BasicBlock *BB) {
+    BB->setIsNewDbgInfoFormat(IsNewDbgInfoFormat);
     return BasicBlocks.insert(Position, BB);
   }
 
@@ -882,7 +905,9 @@ public:
   /// function, dropping all references deletes the entire body of the function,
   /// including any contained basic blocks.
   ///
-  void dropAllReferences();
+  void dropAllReferences() {
+    deleteBodyImpl(/*ShouldDrop=*/true);
+  }
 
   /// hasAddressTaken - returns true if there are any uses of this function
   /// other than direct calls or invokes to it, or blockaddress expressions.

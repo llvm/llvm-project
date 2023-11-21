@@ -4,6 +4,7 @@
 ; RUN: opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,ARM %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,RISCV %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,RISCV %s
+; RUN: opt -S -passes=lowertypetests -mtriple=loongarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=CHECK,LOONGARCH64 %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -44,6 +45,19 @@ define void @call_f() {
 entry:
 ; CHECK: call void @f()
   call void @f()
+  ret void
+}
+
+define void @struct() {
+; CHECK-LABEL: define void @struct() {
+; CHECK: %0 = select i1 icmp ne (ptr @f, ptr null), ptr @.cfi.jumptable, ptr null
+; CHECK-NEXT: %1 = icmp ne ptr %0, null
+; CHECK-NEXT: %2 = insertvalue { i1, i8 } poison, i1 %1, 0
+; CHECK-NEXT: %3 = insertvalue { i1, i8 } %2, i8 0, 1
+; CHECK-NEXT: %x = extractvalue { i1, i8 } %3, 0
+
+entry:
+  %x = extractvalue { i1, i8 } { i1 icmp ne (ptr @f, ptr null), i8 0 }, 0
   ret void
 }
 
@@ -116,6 +130,7 @@ define i1 @foo(ptr %p) {
 ; X86: define private void @[[JT]]() #{{.*}} align 8 {
 ; ARM: define private void @[[JT]]() #{{.*}} align 4 {
 ; RISCV: define private void @[[JT]]() #{{.*}} align 8 {
+; LOONGARCH64: define private void @[[JT]]() #{{.*}} align 8 {
 
 ; CHECK: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:

@@ -10,12 +10,12 @@
 #define LLVM_CLANG_BASIC_ATTRIBUTES_H
 
 #include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 
 class IdentifierInfo;
+class LangOptions;
+class TargetInfo;
 
 /// Return the version number associated with the attribute if we
 /// recognize and implement the attribute specified by the given information.

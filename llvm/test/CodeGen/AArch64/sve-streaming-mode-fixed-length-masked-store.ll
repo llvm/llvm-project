@@ -241,17 +241,18 @@ define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    mov z4.b, z0.b[4]
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    mov z2.s, #0 // =0x0
-; CHECK-NEXT:    strh w8, [sp, #12]
+; CHECK-NEXT:    strh w8, [sp, #14]
 ; CHECK-NEXT:    fmov w8, s3
 ; CHECK-NEXT:    mov z3.b, z0.b[2]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    strh w9, [sp, #12]
+; CHECK-NEXT:    fmov w9, s4
 ; CHECK-NEXT:    mov z4.b, z0.b[1]
-; CHECK-NEXT:    strh w8, [sp, #8]
+; CHECK-NEXT:    strh w8, [sp, #10]
 ; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    strh w9, [sp, #8]
+; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ldr d1, [sp, #8]
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    lsl z1.s, z1.s, #31
@@ -259,9 +260,8 @@ define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    mov z1.b, z0.b[3]
 ; CHECK-NEXT:    st1w { z2.s }, p1, [x0, x8, lsl #2]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    strh w8, [sp]
 ; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    strh w9, [sp]
 ; CHECK-NEXT:    strh w8, [sp, #6]
 ; CHECK-NEXT:    fmov w8, s3
 ; CHECK-NEXT:    strh w8, [sp, #4]

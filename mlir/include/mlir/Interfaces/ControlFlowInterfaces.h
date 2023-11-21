@@ -76,7 +76,7 @@ public:
   Value operator[](unsigned index) const {
     if (isOperandProduced(index))
       return Value();
-    return forwardedOperands[index - producedOperandCount];
+    return forwardedOperands[index - producedOperandCount].get();
   }
 
   /// Get the range of operands that are simply forwarded to the successor.

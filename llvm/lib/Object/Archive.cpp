@@ -1421,7 +1421,7 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
     // 64-bit global symbol tables, we need to merge them into a single table.
     raw_string_ostream Out(MergedGlobalSymtabBuf);
     uint64_t SymNum = SymtabInfos[0].SymNum + SymtabInfos[1].SymNum;
-    write(Out, SymNum, support::big);
+    write(Out, SymNum, llvm::endianness::big);
     // Merge symbol offset.
     Out << SymtabInfos[0].SymbolOffsetTable;
     Out << SymtabInfos[1].SymbolOffsetTable;

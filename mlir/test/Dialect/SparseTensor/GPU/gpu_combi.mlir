@@ -1,9 +1,10 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --pre-sparsification-rewrite \
+// RUN:             --sparse-reinterpret-map \
 // RUN:             --sparsification="parallelization-strategy=dense-outer-loop" \
 // RUN:             --sparse-gpu-codegen | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 //
 // CHECK-LABEL: gpu.module @sparse_kernels
@@ -60,4 +61,3 @@ func.func @matmuls(%A: tensor<1024x8xf64>,
       outs(%Z: tensor<1024x1024xf64>) -> tensor<1024x1024xf64>
   return %D : tensor<1024x1024xf64>
 }
-

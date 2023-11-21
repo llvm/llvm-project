@@ -444,9 +444,61 @@ OpFoldResult XOrOp::fold(FoldAdaptor adaptor) {
 // CastSOp
 //===----------------------------------------------------------------------===//
 
+static OpFoldResult
+foldCastOp(Attribute input, Type type,
+           function_ref<APInt(const APInt &, unsigned)> extFn,
+           function_ref<APInt(const APInt &, unsigned)> extOrTruncFn) {
+  auto attr = dyn_cast_if_present<IntegerAttr>(input);
+  if (!attr)
+    return {};
+  const APInt &value = attr.getValue();
+
+  if (isa<IndexType>(type)) {
+    // When casting to an index type, perform the cast assuming a 64-bit target.
+    // The result can be truncated to 32 bits as needed and always be correct.
+    // This is because `cast32(cast64(value)) == cast32(value)`.
+    APInt result = extOrTruncFn(value, 64);
+    return IntegerAttr::get(type, result);
+  }
+
+  // When casting from an index type, we must ensure the results respect
+  // `cast_t(value) == cast_t(trunc32(value))`.
+  auto intType = cast<IntegerType>(type);
+  unsigned width = intType.getWidth();
+
+  // If the result type is at most 32 bits, then the cast can always be folded
+  // because it is always a truncation.
+  if (width <= 32) {
+    APInt result = value.trunc(width);
+    return IntegerAttr::get(type, result);
+  }
+
+  // If the result type is at least 64 bits, then the cast is always a
+  // extension. The results will differ if `trunc32(value) != value)`.
+  if (width >= 64) {
+    if (extFn(value.trunc(32), 64) != value)
+      return {};
+    APInt result = extFn(value, width);
+    return IntegerAttr::get(type, result);
+  }
+
+  // Otherwise, we just have to check the property directly.
+  APInt result = value.trunc(width);
+  if (result != extFn(value.trunc(32), width))
+    return {};
+  return IntegerAttr::get(type, result);
+}
+
 bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
   return llvm::isa<IndexType>(lhsTypes.front()) !=
          llvm::isa<IndexType>(rhsTypes.front());
+}
+
+OpFoldResult CastSOp::fold(FoldAdaptor adaptor) {
+  return foldCastOp(
+      adaptor.getInput(), getType(),
+      [](const APInt &x, unsigned width) { return x.sext(width); },
+      [](const APInt &x, unsigned width) { return x.sextOrTrunc(width); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -456,6 +508,13 @@ bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
 bool CastUOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
   return llvm::isa<IndexType>(lhsTypes.front()) !=
          llvm::isa<IndexType>(rhsTypes.front());
+}
+
+OpFoldResult CastUOp::fold(FoldAdaptor adaptor) {
+  return foldCastOp(
+      adaptor.getInput(), getType(),
+      [](const APInt &x, unsigned width) { return x.zext(width); },
+      [](const APInt &x, unsigned width) { return x.zextOrTrunc(width); });
 }
 
 //===----------------------------------------------------------------------===//

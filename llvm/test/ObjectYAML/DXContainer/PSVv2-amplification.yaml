@@ -17,8 +17,8 @@ Parts:
       PayloadSizeInBytes: 4092
       MinimumWaveLaneCount: 0
       MaximumWaveLaneCount: 4294967295
-      UsesViewID:      128
-      SigInputVectors: 64
+      UsesViewID:      0
+      SigInputVectors: 0
       SigOutputVectors: [ 8, 16, 32, 64 ]
       NumThreadsX:     512
       NumThreadsY:     1024
@@ -40,6 +40,11 @@ Parts:
       SigInputElements: []
       SigOutputElements: []
       SigPatchOrPrimElements: []
+      InputOutputMap:
+        - [  ]
+        - [  ]
+        - [  ]
+        - [  ]
   - Name:            DXIL
     Size:            24
     Program:
@@ -59,8 +64,8 @@ Parts:
 # CHECK-NEXT: PayloadSizeInBytes: 4092
 # CHECK-NEXT: MinimumWaveLaneCount: 0
 # CHECK-NEXT: MaximumWaveLaneCount: 4294967295
-# CHECK-NEXT: UsesViewID:      128
-# CHECK-NEXT: SigInputVectors: 64
+# CHECK-NEXT: UsesViewID:      0
+# CHECK-NEXT: SigInputVectors: 0
 # CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
 # CHECK-NEXT: NumThreadsX:     512
 # CHECK-NEXT: NumThreadsY:     1024
@@ -82,4 +87,9 @@ Parts:
 # CHECK-NEXT: SigInputElements: []
 # CHECK-NEXT: SigOutputElements: []
 # CHECK-NEXT: SigPatchOrPrimElements: []
+# CHECK-NEXT: InputOutputMap:
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
+# CHECK-NEXT:   - [  ]
 # CHECK-NEXT: Name

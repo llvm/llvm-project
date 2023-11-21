@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -113,12 +114,35 @@ struct PSVInfo {
   SmallVector<SignatureElement> SigOutputElements;
   SmallVector<SignatureElement> SigPatchOrPrimElements;
 
+  using MaskVector = SmallVector<llvm::yaml::Hex32>;
+  std::array<MaskVector, 4> OutputVectorMasks;
+  MaskVector PatchOrPrimMasks;
+  std::array<MaskVector, 4> InputOutputMap;
+  MaskVector InputPatchMap;
+  MaskVector PatchOutputMap;
+
   void mapInfoForVersion(yaml::IO &IO);
 
   PSVInfo();
   PSVInfo(const dxbc::PSV::v0::RuntimeInfo *P, uint16_t Stage);
   PSVInfo(const dxbc::PSV::v1::RuntimeInfo *P);
   PSVInfo(const dxbc::PSV::v2::RuntimeInfo *P);
+};
+
+struct SignatureParameter {
+  uint32_t Stream;
+  std::string Name;
+  uint32_t Index;
+  dxbc::D3DSystemValue SystemValue;
+  dxbc::SigComponentType CompType;
+  uint32_t Register;
+  uint8_t Mask;
+  uint8_t ExclusiveMask;
+  dxbc::SigMinPrecision MinPrecision;
+};
+
+struct Signature {
+  llvm::SmallVector<SignatureParameter> Parameters;
 };
 
 struct Part {
@@ -130,6 +154,7 @@ struct Part {
   std::optional<ShaderFlags> Flags;
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
+  std::optional<DXContainerYAML::Signature> Signature;
 };
 
 struct Object {
@@ -143,9 +168,14 @@ struct Object {
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::Part)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
 
 namespace llvm {
 
@@ -191,6 +221,14 @@ template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
 
 template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
   static void mapping(IO &IO, llvm::DXContainerYAML::SignatureElement &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::SignatureParameter &El);
+};
+
+template <> struct MappingTraits<DXContainerYAML::Signature> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
 };
 
 } // namespace yaml

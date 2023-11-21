@@ -7,19 +7,19 @@
 
 __attribute__((target("sme")))
 void test_sme(svbool_t pg, void *ptr) {
-  svld1_hor_za8(0, 0, 0, pg, ptr);
+  svld1_hor_za8(0, 0, pg, ptr);
 }
 
 __attribute__((target("arch=armv8-a+sme")))
 void test_arch_sme(svbool_t pg, void *ptr) {
-  svld1_hor_vnum_za32(0, 0, 0, pg, ptr, 0);
+  svld1_hor_vnum_za32(0, 0, pg, ptr, 0);
 }
 
 __attribute__((target("+sme")))
 void test_plus_sme(svbool_t pg, void *ptr) {
-  svst1_ver_za16(0, 0, 0, pg, ptr);
+  svst1_ver_za16(0, 0, pg, ptr);
 }
 
 void undefined(svbool_t pg, void *ptr) {
-  svst1_ver_vnum_za64(0, 0, 0, pg, ptr, 0); // expected-error {{'svst1_ver_vnum_za64' needs target feature sme}}
+  svst1_ver_vnum_za64(0, 0, pg, ptr, 0); // expected-error {{'svst1_ver_vnum_za64' needs target feature sme}}
 }

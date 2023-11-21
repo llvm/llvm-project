@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,17 +20,17 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SM = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#SM = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 #trait_sampled_dense_dense = {
   indexing_maps = [
@@ -121,7 +121,7 @@ module {
   func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
                                %arga: tensor<8x8xf64>,
                                %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
-    %1 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
+    %1 = tensor.empty() : tensor<8x8xf64, #SM>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
                                tensor<8x8xf64>, tensor<8x8xf64>)
@@ -154,7 +154,7 @@ module {
           linalg.yield %q : f64
     } -> tensor<8x8xf64>
     // Sample the result with elements-wise multiplication with sparse matrix.
-    %3 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
+    %3 = tensor.empty() : tensor<8x8xf64, #SM>
     %4 = linalg.generic #trait_scale
       ins(%2, %args : tensor<8x8xf64>, tensor<8x8xf64, #SM>)
       outs(%3 : tensor<8x8xf64, #SM>) {

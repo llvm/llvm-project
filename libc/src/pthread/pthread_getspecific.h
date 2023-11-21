@@ -12,10 +12,10 @@
 #include <pthread.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void *pthread_getspecific(pthread_key_t);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETSPECIFIC_H

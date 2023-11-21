@@ -92,6 +92,10 @@ public:
   unsigned getRlistOpValue(const MCInst &MI, unsigned OpNo,
                            SmallVectorImpl<MCFixup> &Fixups,
                            const MCSubtargetInfo &STI) const;
+
+  unsigned getRegReg(const MCInst &MI, unsigned OpNo,
+                     SmallVectorImpl<MCFixup> &Fixups,
+                     const MCSubtargetInfo &STI) const;
 };
 } // end anonymous namespace
 
@@ -137,7 +141,7 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   // Emit AUIPC Ra, Func with R_RISCV_CALL relocation type.
   TmpInst = MCInstBuilder(RISCV::AUIPC).addReg(Ra).addExpr(CallExpr);
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 
   if (MI.getOpcode() == RISCV::PseudoTAIL ||
       MI.getOpcode() == RISCV::PseudoJump)
@@ -147,7 +151,7 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
     // Emit JALR Ra, Ra, 0
     TmpInst = MCInstBuilder(RISCV::JALR).addReg(Ra).addReg(Ra).addImm(0);
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
 // Expand PseudoAddTPRel to a simple ADD with the correct relocation.
@@ -186,7 +190,7 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
                        .addOperand(SrcReg)
                        .addOperand(TPReg);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 }
 
 static unsigned getInvertedBranchOp(unsigned BrOp) {
@@ -240,14 +244,14 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
         Opcode == RISCV::PseudoLongBNE ? RISCV::C_BEQZ : RISCV::C_BNEZ;
     MCInst TmpInst = MCInstBuilder(InvOpc).addReg(SrcReg1).addImm(6);
     uint16_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-    support::endian::write<uint16_t>(CB, Binary, support::little);
+    support::endian::write<uint16_t>(CB, Binary, llvm::endianness::little);
     Offset = 2;
   } else {
     unsigned InvOpc = getInvertedBranchOp(Opcode);
     MCInst TmpInst =
         MCInstBuilder(InvOpc).addReg(SrcReg1).addReg(SrcReg2).addImm(8);
     uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-    support::endian::write(CB, Binary, support::little);
+    support::endian::write(CB, Binary, llvm::endianness::little);
     Offset = 4;
   }
 
@@ -255,7 +259,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   MCInst TmpInst =
       MCInstBuilder(RISCV::JAL).addReg(RISCV::X0).addOperand(SrcSymbol);
   uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
-  support::endian::write(CB, Binary, support::little);
+  support::endian::write(CB, Binary, llvm::endianness::little);
 
   Fixups.clear();
   if (SrcSymbol.isExpr()) {
@@ -306,12 +310,12 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     llvm_unreachable("Unhandled encodeInstruction length!");
   case 2: {
     uint16_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::write<uint16_t>(CB, Bits, support::little);
+    support::endian::write<uint16_t>(CB, Bits, llvm::endianness::little);
     break;
   }
   case 4: {
     uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-    support::endian::write(CB, Bits, support::little);
+    support::endian::write(CB, Bits, llvm::endianness::little);
     break;
   }
   }
@@ -442,8 +446,11 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       RelaxCandidate = true;
       break;
     }
-  } else if (Kind == MCExpr::SymbolRef &&
-             cast<MCSymbolRefExpr>(Expr)->getKind() == MCSymbolRefExpr::VK_None) {
+  } else if ((Kind == MCExpr::SymbolRef &&
+                 cast<MCSymbolRefExpr>(Expr)->getKind() ==
+                     MCSymbolRefExpr::VK_None) ||
+             Kind == MCExpr::Binary) {
+    // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
       FixupKind = RISCV::fixup_riscv_jal;
     } else if (MIFrm == RISCVII::InstFormatB) {
@@ -501,6 +508,19 @@ unsigned RISCVMCCodeEmitter::getRlistOpValue(const MCInst &MI, unsigned OpNo,
   auto Imm = MO.getImm();
   assert(Imm >= 4 && "EABI is currently not implemented");
   return Imm;
+}
+
+unsigned RISCVMCCodeEmitter::getRegReg(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  const MCOperand &MO1 = MI.getOperand(OpNo + 1);
+  assert(MO.isReg() && MO1.isReg() && "Expected registers.");
+
+  unsigned Op = Ctx.getRegisterInfo()->getEncodingValue(MO.getReg());
+  unsigned Op1 = Ctx.getRegisterInfo()->getEncodingValue(MO1.getReg());
+
+  return Op | Op1 << 5;
 }
 
 #include "RISCVGenMCCodeEmitter.inc"

@@ -17,7 +17,7 @@ define void  @vector_broadcast() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %9 = shufflevector <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %10 = shufflevector <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %11 = shufflevector <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %zero = shufflevector <vscale x 8 x i8> undef, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
   %1 = shufflevector <vscale x 16 x i8> undef, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
@@ -40,7 +40,7 @@ define void @vector_insert_extract(<vscale x 4 x i32> %v0, <vscale x 16 x i32> %
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_scalable_from_scalable = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %v1, i64 0)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %extract_fixed_from_scalable = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
   %insert_fixed_into_scalable = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32> %v0, <16 x i32> %v2, i64 0)
@@ -72,7 +72,7 @@ define void @vector_reverse() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %reverse_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %reverse_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.reverse.nxv16i8(<vscale x 16 x i8> undef)
   %reverse_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.reverse.nxv32i8(<vscale x 32 x i8> undef)
@@ -129,7 +129,7 @@ define void @vector_splice() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.experimental.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.experimental.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.experimental.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.experimental.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
   %splice_nxv32i8 = call <vscale x 32 x i8> @llvm.experimental.vector.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 1)

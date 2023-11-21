@@ -2,23 +2,24 @@
 ; RUN: opt < %s -passes=slp-vectorizer -S -o - -mtriple=x86_64-unknown-linux -mcpu=bdver2 -pass-remarks-output=%t | FileCheck %s
 ; RUN: FileCheck --input-file=%t --check-prefix=YAML %s
 
-; YAML: --- !Passed
+; YAML: --- !Missed
 ; YAML-NEXT: Pass:            slp-vectorizer
-; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Name:            NotBeneficial
 ; YAML-NEXT: Function:        g
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-1'
-; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '4'
+; YAML-NEXT:   - String:          'List vectorization was possible but not beneficial with cost '
+; YAML-NEXT:   - Cost:            '0'
+; YAML-NEXT:   - String:          ' >= '
+; YAML-NEXT:   - Treshold:        '0'
 
 define <2 x i32> @g(<2 x i32> %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x i32> [[X:%.*]], i32 1
+; CHECK-NEXT:    [[X1X1:%.*]] = mul i32 [[X1]], [[X1]]
+; CHECK-NEXT:    [[AB:%.*]] = mul i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <2 x i32> poison, i32 [[X1X1]], i32 0
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <2 x i32> [[INS1]], i32 [[AB]], i32 1
+; CHECK-NEXT:    ret <2 x i32> [[INS2]]
 ;
   %x1 = extractelement <2 x i32> %x, i32 1
   %x1x1 = mul i32 %x1, %x1

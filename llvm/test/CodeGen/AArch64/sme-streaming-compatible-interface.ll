@@ -43,12 +43,12 @@ define void @streaming_compatible_caller_normal_callee() "aarch64_pstate_sm_comp
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB1_2
+; CHECK-NEXT:    tbz w19, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    bl normal_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB1_4
+; CHECK-NEXT:    tbz w19, #0, .LBB1_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB1_4:
@@ -79,12 +79,12 @@ define void @streaming_compatible_caller_streaming_callee() "aarch64_pstate_sm_c
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbnz x19, #0, .LBB2_2
+; CHECK-NEXT:    tbnz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    bl streaming_callee
-; CHECK-NEXT:    tbnz x19, #0, .LBB2_4
+; CHECK-NEXT:    tbnz w19, #0, .LBB2_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB2_4:
@@ -120,7 +120,7 @@ define void @streaming_compatible_caller_and_callee() "aarch64_pstate_sm_compati
 ; Handle special cases here.
 ;
 
-define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind #0 {
+define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: streaming_compatible_with_neon_vectors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
@@ -134,7 +134,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB4_2
+; CHECK-NEXT:    tbz w19, #0, .LBB4_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB4_2:
@@ -143,7 +143,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 ; CHECK-NEXT:    bl normal_callee_vec_arg
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    tbz x19, #0, .LBB4_4
+; CHECK-NEXT:    tbz w19, #0, .LBB4_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB4_4:
@@ -166,7 +166,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 }
 declare <2 x double> @normal_callee_vec_arg(<2 x double>)
 
-define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale x 2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind #0 {
+define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale x 2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: streaming_compatible_with_scalable_vectors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
@@ -204,14 +204,14 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB5_2
+; CHECK-NEXT:    tbz w19, #0, .LBB5_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    bl normal_callee_scalable_vec_arg
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    tbz x19, #0, .LBB5_4
+; CHECK-NEXT:    tbz w19, #0, .LBB5_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB5_4:
@@ -258,7 +258,7 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 
 declare <vscale x 2 x double> @normal_callee_scalable_vec_arg(<vscale x 2 x double>)
 
-define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 2 x i1> %arg) "aarch64_pstate_sm_compatible" nounwind #0 {
+define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 2 x i1> %arg) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: streaming_compatible_with_predicate_vectors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
@@ -296,14 +296,14 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB6_2
+; CHECK-NEXT:    tbz w19, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    bl normal_callee_predicate_vec_arg
 ; CHECK-NEXT:    str p0, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    tbz x19, #0, .LBB6_4
+; CHECK-NEXT:    tbz w19, #0, .LBB6_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB6_4:
@@ -360,7 +360,7 @@ define i32 @conditional_smstart_unreachable_block() "aarch64_pstate_sm_compatibl
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbnz x19, #0, .LBB7_2
+; CHECK-NEXT:    tbnz w19, #0, .LBB7_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB7_2:
@@ -381,12 +381,12 @@ define void @conditional_smstart_no_successor_block(i1 %p) "aarch64_pstate_sm_co
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbnz x19, #0, .LBB8_3
+; CHECK-NEXT:    tbnz w19, #0, .LBB8_3
 ; CHECK-NEXT:  // %bb.2: // %if.then
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB8_3: // %if.then
 ; CHECK-NEXT:    bl streaming_callee
-; CHECK-NEXT:    tbnz x19, #0, .LBB8_5
+; CHECK-NEXT:    tbnz w19, #0, .LBB8_5
 ; CHECK-NEXT:  // %bb.4: // %if.then
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB8_5: // %if.then
@@ -417,12 +417,12 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB9_2
+; CHECK-NEXT:    tbz w19, #0, .LBB9_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    bl normal_callee
-; CHECK-NEXT:    tbz x19, #0, .LBB9_4
+; CHECK-NEXT:    tbz w19, #0, .LBB9_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB9_4:
@@ -436,6 +436,3 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
   tail call void @normal_callee();
   ret void;
 }
-
-
-attributes #0 = { nounwind "target-features"="+sve" }

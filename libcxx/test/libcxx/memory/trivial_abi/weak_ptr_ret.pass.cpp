@@ -21,6 +21,8 @@ __attribute__((noinline)) void call_something() { asm volatile(""); }
 
 struct Node {
   explicit Node() {}
+  Node(const Node&) = default;
+  Node& operator=(const Node&) = default;
   ~Node() {}
 };
 

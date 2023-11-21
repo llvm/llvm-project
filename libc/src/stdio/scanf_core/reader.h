@@ -9,47 +9,64 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
-#include "src/stdio/scanf_core/file_reader.h"
-#include "src/stdio/scanf_core/string_reader.h"
+#include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
-enum class ReaderType { String, File };
+using StreamGetc = int (*)(void *);
+using StreamUngetc = void (*)(int, void *);
 
-class Reader final {
-  union {
-    StringReader *string_reader;
-    FileReader *file_reader;
-  };
+// This is intended to be either a raw string or a buffer syncronized with the
+// file's internal buffer.
+struct ReadBuffer {
+  char *buffer;
+  size_t buff_len;
+  size_t buff_cur = 0;
+};
 
-  const ReaderType reader_type;
+class Reader {
+  ReadBuffer *rb;
+
+  void *input_stream = nullptr;
+
+  StreamGetc stream_getc = nullptr;
+  StreamUngetc stream_ungetc = nullptr;
 
   size_t cur_chars_read = 0;
 
 public:
-  Reader(StringReader *init_string_reader)
-      : string_reader(init_string_reader), reader_type(ReaderType::String) {}
+  // TODO: Set buff_len with a proper constant
+  Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
 
-  Reader(FileReader *init_file_reader)
-      : file_reader(init_file_reader), reader_type(ReaderType::File) {}
+  Reader(void *stream, StreamGetc stream_getc_in, StreamUngetc stream_ungetc_in,
+         ReadBuffer *stream_buffer = nullptr)
+      : rb(stream_buffer), input_stream(stream), stream_getc(stream_getc_in),
+        stream_ungetc(stream_ungetc_in) {}
 
   // This returns the next character from the input and advances it by one
   // character. When it hits the end of the string or file it returns '\0' to
   // signal to stop parsing.
-  char getc();
+  LIBC_INLINE char getc() {
+    ++cur_chars_read;
+    if (rb != nullptr) {
+      char output = rb->buffer[rb->buff_cur];
+      ++(rb->buff_cur);
+      return output;
+    }
+    // This should reset the buffer if applicable.
+    return static_cast<char>(stream_getc(input_stream));
+  }
 
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.
   void ungetc(char c);
 
   size_t chars_read() { return cur_chars_read; }
-
-  bool has_error();
 };
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H

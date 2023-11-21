@@ -203,6 +203,7 @@ def alias_Bdynamic_dy: Flag<["-"], "dy">, Alias<Bdynamic>;
 def alias_Bstatic_dn: Flag<["-"], "dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: Flag<["-"], "non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: Flag<["-"], "static">, Alias<Bstatic>;
+def alias_dll: F<"dll">, Alias<shared>;
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_no_dynamicbase: F<"no-dynamicbase">, Alias<disable_dynamicbase>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
@@ -223,6 +224,7 @@ def: F<"no-undefined">;
 def: F<"pic-executable">;
 defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"sysroot">;
+def: F<"sort-common">;
 def: F<"start-group">;
 
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support

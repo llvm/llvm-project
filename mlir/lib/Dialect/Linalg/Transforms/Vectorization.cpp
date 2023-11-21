@@ -505,10 +505,10 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
       .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
       .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
-      .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXF; })
+      .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXIMUMF; })
       .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
       .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
-      .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINF; })
+      .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINIMUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
@@ -924,7 +924,6 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
       targetShape.back() == 1)
     return VectorMemoryAccessKind::Gather;
 
-
   // 2. Assume that it's a gather load when reading _from_ a tensor for which
   // the trailing dimension is 1, e.g. `tensor<1x4x1xi32>`.
   // TODO: Relax this condition.
@@ -1298,7 +1297,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     SmallVector<int64_t> zeroPos;
     auto results = indexingMap.getResults();
     for (const auto &result : llvm::enumerate(results)) {
-      if (result.value().isa<AffineConstantExpr>()) {
+      if (isa<AffineConstantExpr>(result.value())) {
         zeroPos.push_back(result.index());
       }
     }
@@ -1451,12 +1450,12 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
     LDBG("reduction precondition failed: no reduction iterator\n");
     return failure();
   }
-  for (OpOperand *opOperand : op.getDpsInitOperands()) {
-    AffineMap indexingMap = op.getMatchingIndexingMap(opOperand);
+  for (OpOperand &opOperand : op.getDpsInitsMutable()) {
+    AffineMap indexingMap = op.getMatchingIndexingMap(&opOperand);
     if (indexingMap.isPermutation())
       continue;
 
-    Operation *reduceOp = matchLinalgReduction(opOperand);
+    Operation *reduceOp = matchLinalgReduction(&opOperand);
     if (!reduceOp || !getCombinerOpKind(reduceOp)) {
       LDBG("reduction precondition failed: reduction detection failed\n");
       return failure();
@@ -1466,9 +1465,11 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 }
 
 static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
-  // TODO: Masking only supports dynamic generic ops for now.
-  if (!isa<linalg::GenericOp, linalg::FillOp, linalg::CopyOp,
-           linalg::ContractionOpInterface>(op.getOperation()))
+  // TODO: Masking only supports dynamic element-wise ops, linalg.generic ops,
+  // linalg.copy ops and ops that implement ContractionOpInterface for now.
+  if (!isElementwise(op) &&
+      !isa<linalg::GenericOp, linalg::CopyOp, linalg::ContractionOpInterface>(
+          op.getOperation()))
     return failure();
 
   LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");
@@ -1484,6 +1485,10 @@ static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
 static LogicalResult
 isValidMaskedInputVector(ArrayRef<int64_t> shape,
                          ArrayRef<int64_t> inputVectorSizes) {
+  LDBG("Iteration space static sizes:");
+  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
+
   if (inputVectorSizes.size() != shape.size()) {
     LDBG("Input vector sizes don't match the number of loops");
     return failure();
@@ -1511,8 +1516,7 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                               ArrayRef<int64_t> inputVectorSizes,
                               bool vectorizeNDExtract) {
   // tensor with dimension of 0 cannot be vectorized.
-  if (llvm::any_of(linalgOp.getStaticShape(),
-                   [](int64_t dim) { return dim == 0; }))
+  if (llvm::is_contained(linalgOp.getStaticShape(), 0))
     return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
@@ -1691,11 +1695,16 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
           .Case<linalg::LinalgOp>([&](auto linalgOp) {
             // TODO: isaConvolutionOpInterface that can also infer from generic
             // features. Will require stride/dilation attributes inference.
-            FailureOr<Operation *> convOr =
-                vectorizeConvolution(rewriter, linalgOp);
-            if (succeeded(convOr)) {
-              llvm::append_range(results, (*convOr)->getResults());
-              return success();
+            if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
+              FailureOr<Operation *> convOr =
+                  vectorizeConvolution(rewriter, linalgOp);
+              if (succeeded(convOr)) {
+                llvm::append_range(results, (*convOr)->getResults());
+                return success();
+              }
+
+              LDBG("Unsupported convolution can't be vectorized.\n");
+              return failure();
             }
 
             LDBG("Vectorize generic by broadcasting to the canonical vector "
@@ -2416,9 +2425,11 @@ bool isSupportedPoolKind(vector::CombiningKind kind) {
   switch (kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXF:
+  case vector::CombiningKind::MAXIMUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINF:
+  case vector::CombiningKind::MINIMUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;

@@ -482,7 +482,8 @@ void *DeviceTy::getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
 int DeviceTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
                             HostDataToTargetTy *Entry, int64_t Size) {
   assert(Entry && "Trying to delete a null entry from the HDTT map.");
-  assert(Entry->getTotalRefCount() == 0 && Entry->getDataEndThreadCount() == 0 &&
+  assert(Entry->getTotalRefCount() == 0 &&
+         Entry->getDataEndThreadCount() == 0 &&
          "Trying to delete entry that is in use or owned by another thread.");
 
   INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
@@ -538,15 +539,10 @@ void DeviceTy::init() {
     // Enables saving the device memory kernel output post execution if set.
     llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
         "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
-    // Sets the maximum to pre-allocate device memory.
-    llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
-        "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
-    DP("Activating Record-Replay for Device %d with %lu GB memory\n",
-       RTLDeviceID, OMPX_DeviceMemorySize.get());
 
-    RTL->activate_record_replay(RTLDeviceID,
-                                OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
-                                true, OMPX_ReplaySaveOutput);
+    uint64_t ReqPtrArgOffset;
+    RTL->activate_record_replay(RTLDeviceID, 0, nullptr, true,
+                                OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
   IsInit = true;

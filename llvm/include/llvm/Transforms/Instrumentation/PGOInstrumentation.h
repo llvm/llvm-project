@@ -18,10 +18,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <string>
 
 namespace llvm {
+
+extern cl::opt<bool> DebugInfoCorrelate;
 
 class Function;
 class Instruction;

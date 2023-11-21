@@ -16,9 +16,9 @@
 #include "llvm/Support/CachePruning.h"
 #include <optional>
 
-namespace llvm::CodeGenOpt {
-enum Level : int;
-} // namespace llvm::CodeGenOpt
+namespace llvm {
+enum class CodeGenOptLevel;
+} // namespace llvm
 
 namespace lld::wasm {
 
@@ -49,6 +49,7 @@ struct Configuration {
   bool extendedConst;
   bool growableTable;
   bool gcSections;
+  llvm::StringSet<> keepSections;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
@@ -72,7 +73,7 @@ struct Configuration {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
-  llvm::CodeGenOpt::Level ltoCgo;
+  llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
   llvm::StringRef thinLTOJobs;
   bool ltoDebugPassManager;

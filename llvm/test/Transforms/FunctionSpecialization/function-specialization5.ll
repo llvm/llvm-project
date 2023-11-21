@@ -2,8 +2,8 @@
 
 ; There's nothing to specialize here as both calls are the same, so check that:
 ;
-; CHECK-NOT: define internal i32 @foo.1(
-; CHECK-NOT: define internal i32 @foo.2(
+; CHECK-NOT: define internal i32 @foo.specialized.1(
+; CHECK-NOT: define internal i32 @foo.specialized.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

@@ -8,9 +8,10 @@
 
 # Representation of Fortran function calls
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## Procedure reference implementation protocol

@@ -59,7 +59,7 @@ static Expected<SmallVector<std::string, 1>>
 parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
   SmallVector<std::string> SubPatterns = {S.str()};
   if (!MaxSubPatterns || !S.contains('{'))
-    return SubPatterns;
+    return std::move(SubPatterns);
 
   struct BraceExpansion {
     size_t Start;
@@ -129,7 +129,7 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
       for (StringRef Orig : OrigSubPatterns)
         SubPatterns.emplace_back(Orig).replace(BE.Start, BE.Length, Term);
   }
-  return SubPatterns;
+  return std::move(SubPatterns);
 }
 
 Expected<GlobPattern>

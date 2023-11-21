@@ -5,10 +5,10 @@
 // config could be moved to lit.local.cfg. However, there are downstream users that
 //  do not use these LIT config files. Hence why this is kept inline.
 //
-// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
-// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{sparsifier_opts} = enable-runtime-library=true
+// DEFINE: %{sparsifier_opts_sve} = enable-arm-sve=true %{sparsifier_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
 // DEFINE: %{run_opts} = -e entry -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
@@ -20,17 +20,17 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{sparsifier_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
 // RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait_op1 = {
   indexing_maps = [
@@ -57,7 +57,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op2
        ins(%arga, %argb: tensor<?xcomplex<f64>, #SparseVector>,
                          tensor<?xcomplex<f64>, #SparseVector>)
@@ -74,7 +74,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -89,7 +89,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -104,7 +104,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -119,7 +119,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xcomplex<f64>, #SparseVector>) {
@@ -135,7 +135,7 @@ module {
                  -> tensor<?xcomplex<f64>, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xcomplex<f64>, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xcomplex<f64>, #SparseVector>
     %c = complex.constant [2.0 : f64, 0.0 : f64] : complex<f64>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
@@ -151,7 +151,7 @@ module {
                  -> tensor<?xf64, #SparseVector> {
     %c0 = arith.constant 0 : index
     %d = tensor.dim %arga, %c0 : tensor<?xcomplex<f64>, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_op1
        ins(%arga: tensor<?xcomplex<f64>, #SparseVector>)
         outs(%xv: tensor<?xf64, #SparseVector>) {

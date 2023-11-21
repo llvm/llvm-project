@@ -241,18 +241,19 @@ InputSection *InputSectionBase::getLinkOrderDep() const {
   return cast<InputSection>(file->getSections()[link]);
 }
 
-// Find a function symbol that encloses a given location.
-Defined *InputSectionBase::getEnclosingFunction(uint64_t offset) {
+// Find a symbol that encloses a given location.
+Defined *InputSectionBase::getEnclosingSymbol(uint64_t offset,
+                                              uint8_t type) const {
   for (Symbol *b : file->getSymbols())
     if (Defined *d = dyn_cast<Defined>(b))
-      if (d->section == this && d->type == STT_FUNC && d->value <= offset &&
-          offset < d->value + d->size)
+      if (d->section == this && d->value <= offset &&
+          offset < d->value + d->size && (type == 0 || type == d->type))
         return d;
   return nullptr;
 }
 
 // Returns an object file location string. Used to construct an error message.
-std::string InputSectionBase::getLocation(uint64_t offset) {
+std::string InputSectionBase::getLocation(uint64_t offset) const {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
@@ -273,7 +274,8 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
 //   foo.c:42 (/home/alice/possibly/very/long/path/foo.c:42)
 //
 //  Returns an empty string if there's no way to get line info.
-std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
+std::string InputSectionBase::getSrcMsg(const Symbol &sym,
+                                        uint64_t offset) const {
   return file->getSrcMsg(sym, *this, offset);
 }
 
@@ -286,7 +288,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
 // or
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
-std::string InputSectionBase::getObjMsg(uint64_t off) {
+std::string InputSectionBase::getObjMsg(uint64_t off) const {
   std::string filename = std::string(file->getName());
 
   std::string archive;
@@ -296,10 +298,8 @@ std::string InputSectionBase::getObjMsg(uint64_t off) {
   // Find a symbol that encloses a given location. getObjMsg may be called
   // before ObjFile::initSectionsAndLocalSyms where local symbols are
   // initialized.
-  for (Symbol *b : file->getSymbols())
-    if (auto *d = dyn_cast_or_null<Defined>(b))
-      if (d->section == this && d->value <= off && off < d->value + d->size)
-        return filename + ":(" + toString(*d) + ")" + archive;
+  if (Defined *d = getEnclosingSymbol(off))
+    return filename + ":(" + toString(*d) + ")" + archive;
 
   // If there's no symbol, print out the offset in the section.
   return (filename + ":(" + name + "+0x" + utohexstr(off) + ")" + archive)
@@ -435,10 +435,7 @@ void InputSection::copyRelocations(uint8_t *buf,
         continue;
       }
       SectionBase *section = d->section;
-      if (!section->isLive()) {
-        p->setSymbolAndType(0, 0, false);
-        continue;
-      }
+      assert(section->isLive());
 
       int64_t addend = rel.addend;
       const uint8_t *bufLoc = sec->content().begin() + rel.offset;
@@ -463,7 +460,13 @@ void InputSection::copyRelocations(uint8_t *buf,
 
       if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
-      else if (config->relocatable && type != target.noneRel)
+      // For SHF_ALLOC sections relocated by REL, append a relocation to
+      // sec->relocations so that relocateAlloc transitively called by
+      // writeSections will update the implicit addend. Non-SHF_ALLOC sections
+      // utilize relocateNonAlloc to process raw relocations and do not need
+      // this sec->relocations change.
+      else if (config->relocatable && (sec->flags & SHF_ALLOC) &&
+               type != target.noneRel)
         sec->addReloc({R_ABS, type, rel.offset, addend, &sym});
     } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
@@ -954,8 +957,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       }
     }
 
-    // For a relocatable link, only tombstone values are applied.
-    if (config->relocatable)
+    // For a relocatable link, content relocated by RELA remains unchanged and
+    // we can stop here, while content relocated by REL referencing STT_SECTION
+    // needs updating implicit addends.
+    if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
       continue;
 
     if (expr == R_SIZE) {
@@ -975,7 +980,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
-    if (expr != R_PC && expr != R_ARM_PCA) {
+    if (expr != R_PC) {
       error(msg);
       return;
     }
@@ -987,27 +992,15 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // relocations without any errors and relocate them as if they were at
     // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
-    warn(msg);
+    //
+    // RELA -r stopped earlier and does not get the warning. Suppress the
+    // warning for REL -r as well
+    // (https://github.com/ClangBuiltLinux/linux/issues/1937).
+    if (RelTy::IsRela || !config->relocatable)
+      warn(msg);
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
-  }
-}
-
-// This is used when '-r' is given.
-// For REL targets, InputSection::copyRelocations() may store artificial
-// relocations aimed to update addends. They are handled in relocateAlloc()
-// for allocatable sections, and this function does the same for
-// non-allocatable sections, such as sections with debug information.
-static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
-  const unsigned bits = config->is64 ? 64 : 32;
-
-  for (const Relocation &rel : sec->relocs()) {
-    // InputSection::copyRelocations() adds only R_ABS relocations.
-    assert(rel.expr == R_ABS);
-    uint8_t *bufLoc = buf + rel.offset;
-    uint64_t targetVA = SignExtend64(rel.sym->getVA(rel.addend), bits);
-    target->relocate(bufLoc, rel, targetVA);
   }
 }
 
@@ -1022,8 +1015,6 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   }
 
   auto *sec = cast<InputSection>(this);
-  if (config->relocatable)
-    relocateNonAllocForRelocatable(sec, buf);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
   const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();

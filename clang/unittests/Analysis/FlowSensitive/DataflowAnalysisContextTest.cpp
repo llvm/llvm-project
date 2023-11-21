@@ -46,6 +46,22 @@ TEST_F(DataflowAnalysisContextTest, AddFlowConditionConstraint) {
   EXPECT_TRUE(Context.flowConditionImplies(FC, C));
 }
 
+TEST_F(DataflowAnalysisContextTest, AddInvariant) {
+  Atom FC = A.makeFlowConditionToken();
+  auto &C = A.makeAtomRef(A.makeAtom());
+  Context.addInvariant(C);
+  EXPECT_TRUE(Context.flowConditionImplies(FC, C));
+}
+
+TEST_F(DataflowAnalysisContextTest, InvariantAndFCConstraintInteract) {
+  Atom FC = A.makeFlowConditionToken();
+  auto &C = A.makeAtomRef(A.makeAtom());
+  auto &D = A.makeAtomRef(A.makeAtom());
+  Context.addInvariant(A.makeImplies(C, D));
+  Context.addFlowConditionConstraint(FC, C);
+  EXPECT_TRUE(Context.flowConditionImplies(FC, D));
+}
+
 TEST_F(DataflowAnalysisContextTest, ForkFlowCondition) {
   Atom FC1 = A.makeFlowConditionToken();
   auto &C1 = A.makeAtomRef(A.makeAtom());
@@ -81,33 +97,6 @@ TEST_F(DataflowAnalysisContextTest, JoinFlowConditions) {
   EXPECT_FALSE(Context.flowConditionImplies(FC3, C1));
   EXPECT_FALSE(Context.flowConditionImplies(FC3, C2));
   EXPECT_TRUE(Context.flowConditionImplies(FC3, C3));
-}
-
-TEST_F(DataflowAnalysisContextTest, FlowConditionTautologies) {
-  // Fresh flow condition with empty/no constraints is always true.
-  Atom FC1 = A.makeFlowConditionToken();
-  EXPECT_TRUE(Context.flowConditionIsTautology(FC1));
-
-  // Literal `true` is always true.
-  Atom FC2 = A.makeFlowConditionToken();
-  Context.addFlowConditionConstraint(FC2, A.makeLiteral(true));
-  EXPECT_TRUE(Context.flowConditionIsTautology(FC2));
-
-  // Literal `false` is never true.
-  Atom FC3 = A.makeFlowConditionToken();
-  Context.addFlowConditionConstraint(FC3, A.makeLiteral(false));
-  EXPECT_FALSE(Context.flowConditionIsTautology(FC3));
-
-  // We can't prove that an arbitrary bool A is always true...
-  auto &C1 = A.makeAtomRef(A.makeAtom());
-  Atom FC4 = A.makeFlowConditionToken();
-  Context.addFlowConditionConstraint(FC4, C1);
-  EXPECT_FALSE(Context.flowConditionIsTautology(FC4));
-
-  // ... but we can prove A || !A is true.
-  Atom FC5 = A.makeFlowConditionToken();
-  Context.addFlowConditionConstraint(FC5, A.makeOr(C1, A.makeNot(C1)));
-  EXPECT_TRUE(Context.flowConditionIsTautology(FC5));
 }
 
 TEST_F(DataflowAnalysisContextTest, EquivBoolVals) {
