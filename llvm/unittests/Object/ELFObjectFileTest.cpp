@@ -979,14 +979,13 @@ Sections:
             Successors:    []
 )");
 
-  BBAddrMap E1 = {0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}}};
+  BBAddrMap E1(0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}});
   PGOAnalysisMap P1 = {892, {{}}, true, false, false};
-  BBAddrMap E2 = {0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}}};
+  BBAddrMap E2(0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}});
   PGOAnalysisMap P2 = {{}, {{BlockFrequency(343), {}}}, false, true, false};
-  BBAddrMap E3 = {0x33333,
-                  {{0, 0x0, 0x3, {false, true, true, false, false}},
-                   {1, 0x3, 0x3, {false, false, true, false, false}},
-                   {2, 0x6, 0x3, {false, false, false, false, false}}}};
+  BBAddrMap E3(0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}},
+                         {1, 0x3, 0x3, {false, false, true, false, false}},
+                         {2, 0x6, 0x3, {false, false, false, false, false}}});
   PGOAnalysisMap P3 = {{},
                        {{{},
                          {{1, BranchProbability::getRaw(0x1111'1111)},
@@ -996,11 +995,10 @@ Sections:
                        false,
                        false,
                        true};
-  BBAddrMap E4 = {0x44444,
-                  {{0, 0x0, 0x4, {false, false, false, true, true}},
-                   {1, 0x4, 0x4, {false, false, false, false, false}},
-                   {2, 0x8, 0x4, {false, false, false, false, false}},
-                   {3, 0xc, 0x4, {false, false, false, false, false}}}};
+  BBAddrMap E4(0x44444, {{0, 0x0, 0x4, {false, false, false, true, true}},
+                         {1, 0x4, 0x4, {false, false, false, false, false}},
+                         {2, 0x8, 0x4, {false, false, false, false, false}},
+                         {3, 0xc, 0x4, {false, false, false, false, false}}});
   PGOAnalysisMap P4 = {
       1000,
       {{BlockFrequency(1000),

@@ -818,7 +818,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       PGOAnalyses->push_back({FuncEntryCount, std::move(PGOBBEntries),
                               FuncEntryCountEnabled, BBFreqEnabled,
                               BrProbEnabled});
-    FunctionEntries.push_back({Address, std::move(BBEntries)});
+    FunctionEntries.emplace_back(Address, std::move(BBEntries));
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr or
   // MetadataDecodeErr (but not both), but we join all errors here to be safe.
