@@ -155,7 +155,7 @@ define <4 x float> @test_int_x86_avx512fp8_mask_cfcmadd_ph_bst2(<4 x float> %x0,
 ; CHECK-LABEL: test_int_x86_avx512fp8_mask_cfcmadd_ph_bst2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vfcmaddcph %xmm0, %xmm2, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq

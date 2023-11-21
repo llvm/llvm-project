@@ -154,14 +154,32 @@ define <8 x half> @fcopysign_v8f16(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X86-AVX2-NEXT:    retl
 ;
-; X86-AVX512-LABEL: fcopysign_v8f16:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-NEXT:    vmovdqa (%ecx), %xmm1
-; X86-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
-; X86-AVX512-NEXT:    vpternlogd $202, (%eax), %xmm1, %xmm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX512VL-LABEL: fcopysign_v8f16:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VL-NEXT:    vmovdqa (%ecx), %xmm1
+; X86-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
+; X86-AVX512VL-NEXT:    vpternlogd $202, (%eax), %xmm1, %xmm0
+; X86-AVX512VL-NEXT:    retl
+;
+; X86-AVX512FP16-LABEL: fcopysign_v8f16:
+; X86-AVX512FP16:       # %bb.0:
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512FP16-NEXT:    vmovdqa (%ecx), %xmm1
+; X86-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; X86-AVX512FP16-NEXT:    vpternlogd $202, (%eax), %xmm1, %xmm0
+; X86-AVX512FP16-NEXT:    retl
+;
+; X86-AVX512VLDQ-LABEL: fcopysign_v8f16:
+; X86-AVX512VLDQ:       # %bb.0:
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VLDQ-NEXT:    vmovdqa (%ecx), %xmm1
+; X86-AVX512VLDQ-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
+; X86-AVX512VLDQ-NEXT:    vpternlogd $202, (%eax), %xmm1, %xmm0
+; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v8f16:
 ; X64-SSE:       # %bb.0:
@@ -190,12 +208,26 @@ define <8 x half> @fcopysign_v8f16(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512-LABEL: fcopysign_v8f16:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm1
-; X64-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
-; X64-AVX512-NEXT:    vpternlogd $202, (%rsi), %xmm1, %xmm0
-; X64-AVX512-NEXT:    retq
+; X64-AVX512VL-LABEL: fcopysign_v8f16:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
+; X64-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
+; X64-AVX512VL-NEXT:    vpternlogd $202, (%rsi), %xmm1, %xmm0
+; X64-AVX512VL-NEXT:    retq
+;
+; X64-AVX512FP16-LABEL: fcopysign_v8f16:
+; X64-AVX512FP16:       # %bb.0:
+; X64-AVX512FP16-NEXT:    vmovdqa (%rdi), %xmm1
+; X64-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; X64-AVX512FP16-NEXT:    vpternlogd $202, (%rsi), %xmm1, %xmm0
+; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX512VLDQ-LABEL: fcopysign_v8f16:
+; X64-AVX512VLDQ:       # %bb.0:
+; X64-AVX512VLDQ-NEXT:    vmovdqa (%rdi), %xmm1
+; X64-AVX512VLDQ-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [2147450879,2147450879,2147450879,2147450879]
+; X64-AVX512VLDQ-NEXT:    vpternlogd $202, (%rsi), %xmm1, %xmm0
+; X64-AVX512VLDQ-NEXT:    retq
   %a0 = load <8 x half>, ptr %p0, align 16
   %a1 = load <8 x half>, ptr %p1, align 16
   %t = call <8 x half> @llvm.copysign.v8f16(<8 x half> %a0, <8 x half> %a1)
@@ -400,14 +432,32 @@ define <16 x half> @fcopysign_v16f16(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
-; X86-AVX512-LABEL: fcopysign_v16f16:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-NEXT:    vmovdqu (%ecx), %ymm1
-; X86-AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X86-AVX512-NEXT:    vpternlogd $202, (%eax), %ymm1, %ymm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX512VL-LABEL: fcopysign_v16f16:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VL-NEXT:    vmovdqu (%ecx), %ymm1
+; X86-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X86-AVX512VL-NEXT:    vpternlogd $202, (%eax), %ymm1, %ymm0
+; X86-AVX512VL-NEXT:    retl
+;
+; X86-AVX512FP16-LABEL: fcopysign_v16f16:
+; X86-AVX512FP16:       # %bb.0:
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512FP16-NEXT:    vmovdqu (%ecx), %ymm1
+; X86-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
+; X86-AVX512FP16-NEXT:    vpternlogd $202, (%eax), %ymm1, %ymm0
+; X86-AVX512FP16-NEXT:    retl
+;
+; X86-AVX512VLDQ-LABEL: fcopysign_v16f16:
+; X86-AVX512VLDQ:       # %bb.0:
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VLDQ-NEXT:    vmovdqu (%ecx), %ymm1
+; X86-AVX512VLDQ-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X86-AVX512VLDQ-NEXT:    vpternlogd $202, (%eax), %ymm1, %ymm0
+; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v16f16:
 ; X64-SSE:       # %bb.0:
@@ -441,12 +491,26 @@ define <16 x half> @fcopysign_v16f16(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512-LABEL: fcopysign_v16f16:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovdqu (%rdi), %ymm1
-; X64-AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X64-AVX512-NEXT:    vpternlogd $202, (%rsi), %ymm1, %ymm0
-; X64-AVX512-NEXT:    retq
+; X64-AVX512VL-LABEL: fcopysign_v16f16:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovdqu (%rdi), %ymm1
+; X64-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X64-AVX512VL-NEXT:    vpternlogd $202, (%rsi), %ymm1, %ymm0
+; X64-AVX512VL-NEXT:    retq
+;
+; X64-AVX512FP16-LABEL: fcopysign_v16f16:
+; X64-AVX512FP16:       # %bb.0:
+; X64-AVX512FP16-NEXT:    vmovdqu (%rdi), %ymm1
+; X64-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
+; X64-AVX512FP16-NEXT:    vpternlogd $202, (%rsi), %ymm1, %ymm0
+; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX512VLDQ-LABEL: fcopysign_v16f16:
+; X64-AVX512VLDQ:       # %bb.0:
+; X64-AVX512VLDQ-NEXT:    vmovdqu (%rdi), %ymm1
+; X64-AVX512VLDQ-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X64-AVX512VLDQ-NEXT:    vpternlogd $202, (%rsi), %ymm1, %ymm0
+; X64-AVX512VLDQ-NEXT:    retq
   %a0 = load <16 x half>, ptr %p0, align 16
   %a1 = load <16 x half>, ptr %p1, align 16
   %t = call <16 x half> @llvm.copysign.v16f16(<16 x half> %a0, <16 x half> %a1)
@@ -691,14 +755,32 @@ define <32 x half> @fcopysign_v32f16(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    retl
 ;
-; X86-AVX512-LABEL: fcopysign_v32f16:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-NEXT:    vmovdqu64 (%ecx), %zmm1
-; X86-AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X86-AVX512-NEXT:    vpternlogd $202, (%eax), %zmm1, %zmm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX512VL-LABEL: fcopysign_v32f16:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VL-NEXT:    vmovdqu64 (%ecx), %zmm1
+; X86-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X86-AVX512VL-NEXT:    vpternlogd $202, (%eax), %zmm1, %zmm0
+; X86-AVX512VL-NEXT:    retl
+;
+; X86-AVX512FP16-LABEL: fcopysign_v32f16:
+; X86-AVX512FP16:       # %bb.0:
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512FP16-NEXT:    vmovdqu64 (%ecx), %zmm1
+; X86-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} zmm0 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
+; X86-AVX512FP16-NEXT:    vpternlogd $202, (%eax), %zmm1, %zmm0
+; X86-AVX512FP16-NEXT:    retl
+;
+; X86-AVX512VLDQ-LABEL: fcopysign_v32f16:
+; X86-AVX512VLDQ:       # %bb.0:
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512VLDQ-NEXT:    vmovdqu64 (%ecx), %zmm1
+; X86-AVX512VLDQ-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X86-AVX512VLDQ-NEXT:    vpternlogd $202, (%eax), %zmm1, %zmm0
+; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcopysign_v32f16:
 ; X64-SSE:       # %bb.0:
@@ -746,12 +828,26 @@ define <32 x half> @fcopysign_v32f16(ptr %p0, ptr %p1) nounwind {
 ; X64-AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512-LABEL: fcopysign_v32f16:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vmovdqu64 (%rdi), %zmm1
-; X64-AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
-; X64-AVX512-NEXT:    vpternlogd $202, (%rsi), %zmm1, %zmm0
-; X64-AVX512-NEXT:    retq
+; X64-AVX512VL-LABEL: fcopysign_v32f16:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovdqu64 (%rdi), %zmm1
+; X64-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X64-AVX512VL-NEXT:    vpternlogd $202, (%rsi), %zmm1, %zmm0
+; X64-AVX512VL-NEXT:    retq
+;
+; X64-AVX512FP16-LABEL: fcopysign_v32f16:
+; X64-AVX512FP16:       # %bb.0:
+; X64-AVX512FP16-NEXT:    vmovdqu64 (%rdi), %zmm1
+; X64-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} zmm0 = [32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767,32767]
+; X64-AVX512FP16-NEXT:    vpternlogd $202, (%rsi), %zmm1, %zmm0
+; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX512VLDQ-LABEL: fcopysign_v32f16:
+; X64-AVX512VLDQ:       # %bb.0:
+; X64-AVX512VLDQ-NEXT:    vmovdqu64 (%rdi), %zmm1
+; X64-AVX512VLDQ-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879,2147450879]
+; X64-AVX512VLDQ-NEXT:    vpternlogd $202, (%rsi), %zmm1, %zmm0
+; X64-AVX512VLDQ-NEXT:    retq
   %a0 = load <32 x half>, ptr %p0, align 16
   %a1 = load <32 x half>, ptr %p1, align 16
   %t = call <32 x half> @llvm.copysign.v32f16(<32 x half> %a0, <32 x half> %a1)
@@ -761,11 +857,5 @@ declare <32 x half> @llvm.copysign.v32f16(<32 x half>, <32 x half>)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; X64: {{.*}}
 ; X64-AVX: {{.*}}
-; X64-AVX512FP16: {{.*}}
-; X64-AVX512VL: {{.*}}
-; X64-AVX512VLDQ: {{.*}}
 ; X86: {{.*}}
 ; X86-AVX: {{.*}}
-; X86-AVX512FP16: {{.*}}
-; X86-AVX512VL: {{.*}}
-; X86-AVX512VLDQ: {{.*}}

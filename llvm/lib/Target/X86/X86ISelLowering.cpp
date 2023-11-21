@@ -7646,6 +7646,21 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Unsupported vector type for broadcast.");
 
+  // When optimizing for size, generate up to 5 extra bytes for a broadcast
+  // instruction to save 8 or more bytes of constant pool data.
+  // TODO: If multiple splats are generated to load the same constant,
+  // it may be detrimental to overall size. There needs to be a way to detect
+  // that condition to know if this is truly a size win.
+  bool OptForSize = DAG.shouldOptForSize();
+
+  // On AVX512VL targets we're better off keeping the full width constant load
+  // and letting X86FixupVectorConstantsPass handle conversion to
+  // broadcast/broadcast-fold.
+  // AVX512 targets without AVX512VL can do this only for 512-bit vectors.
+  if (Subtarget.hasAVX512() && (Subtarget.hasVLX() || VT.is512BitVector()) &&
+      BVOp->isConstant() && !OptForSize)
+    return SDValue();
+
   // See if the build vector is a repeating sequence of scalars (inc. splat).
   SDValue Ld;
   BitVector UndefElements;
@@ -7771,12 +7786,6 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
   unsigned ScalarSize = Ld.getValueSizeInBits();
   bool IsGE256 = (VT.getSizeInBits() >= 256);
 
-  // When optimizing for size, generate up to 5 extra bytes for a broadcast
-  // instruction to save 8 or more bytes of constant pool data.
-  // TODO: If multiple splats are generated to load the same constant,
-  // it may be detrimental to overall size. There needs to be a way to detect
-  // that condition to know if this is truly a size win.
-  bool OptForSize = DAG.shouldOptForSize();
 
   // Handle broadcasting a single constant scalar from the constant pool
   // into a vector.

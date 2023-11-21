@@ -507,6 +507,54 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {MultiDomain ? X86::VPMOVZXDQZ128rm : 0, 2, 32, rebuildZExtCst}};
     return FixupConstant(Fixups, 128, 1);
   }
+  case X86::VMOVAPDZ128rmk:
+  case X86::VMOVUPDZ128rmk: {
+    FixupEntry Fixups[] = {
+        {MultiDomain ? X86::VPMOVSXBQZ128rmk : 0, 2, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZ128rmk : 0, 2, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZ128rmk : 0, 2, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZ128rmk : 0, 2, 16, rebuildZExtCst},
+        {X86::VMOVSDZrmk, 1, 64, rebuildZeroUpperCst},
+        {X86::VMOVDDUPZ128rmk, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXDQZ128rmk : 0, 2, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZ128rmk : 0, 2, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 128, 3);
+  }
+  case X86::VMOVAPDZ128rmkz:
+  case X86::VMOVUPDZ128rmkz: {
+    FixupEntry Fixups[] = {
+        {MultiDomain ? X86::VPMOVSXBQZ128rmkz : 0, 2, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZ128rmkz : 0, 2, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZ128rmkz : 0, 2, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZ128rmkz : 0, 2, 16, rebuildZExtCst},
+        {X86::VMOVSDZrmkz, 1, 64, rebuildZeroUpperCst},
+        {X86::VMOVDDUPZ128rmkz, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXDQZ128rmkz : 0, 2, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZ128rmkz : 0, 2, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 128, 2);
+  }
+  case X86::VMOVAPSZ128rmk:
+  case X86::VMOVUPSZ128rmk: {
+    FixupEntry Fixups[] = {
+        {X86::VMOVSSZrmk, 1, 32, rebuildZeroUpperCst},
+        {X86::VBROADCASTSSZ128rmk, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZ128rmk : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZ128rmk : 0, 4, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWDZ128rmk : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZ128rmk : 0, 4, 16, rebuildZExtCst}};
+    return FixupConstant(Fixups, 128, 3);
+  }
+  case X86::VMOVAPSZ128rmkz:
+  case X86::VMOVUPSZ128rmkz: {
+    FixupEntry Fixups[] = {
+        {X86::VMOVSSZrmkz, 1, 32, rebuildZeroUpperCst},
+        {X86::VBROADCASTSSZ128rmkz, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZ128rmkz : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZ128rmkz : 0, 4, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWDZ128rmkz : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZ128rmkz : 0, 4, 16, rebuildZExtCst}};
+    return FixupConstant(Fixups, 128, 2);
+  }
   case X86::VMOVAPDZ256rm:
   case X86::VMOVAPSZ256rm:
   case X86::VMOVUPDZ256rm:
@@ -526,6 +574,52 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {MultiDomain ? X86::VPMOVSXDQZ256rm : 0, 4, 32, rebuildSExtCst},
         {MultiDomain ? X86::VPMOVZXDQZ256rm : 0, 4, 32, rebuildZExtCst}};
     return FixupConstant(Fixups, 256, 1);
+  }
+  case X86::VMOVAPDZ256rmk:
+  case X86::VMOVUPDZ256rmk: {
+    FixupEntry Fixups[] = {
+        {MultiDomain ? X86::VPMOVSXBQZ256rmk : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZ256rmk : 0, 4, 8, rebuildZExtCst},
+        {X86::VBROADCASTSDZ256rmk, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWQZ256rmk : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZ256rmk : 0, 4, 16, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXDQZ256rmk : 0, 4, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZ256rmk : 0, 4, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 256, 3);
+  }
+  case X86::VMOVAPDZ256rmkz:
+  case X86::VMOVUPDZ256rmkz: {
+    FixupEntry Fixups[] = {
+        {MultiDomain ? X86::VPMOVSXBQZ256rmkz : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZ256rmkz : 0, 4, 8, rebuildZExtCst},
+        {X86::VBROADCASTSDZ256rmkz, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWQZ256rmkz : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZ256rmkz : 0, 4, 16, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXDQZ256rmkz : 0, 4, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZ256rmkz : 0, 4, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 256, 2);
+  }
+  case X86::VMOVAPSZ256rmk:
+  case X86::VMOVUPSZ256rmk: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSZ256rmk, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZ256rmk : 0, 8, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZ256rmk : 0, 8, 8, rebuildZExtCst},
+        {X86::VBROADCASTF32X4Z256rmk, 1, 128, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWDZ256rmk : 0, 8, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZ256rmk : 0, 8, 16, rebuildZExtCst}};
+    return FixupConstant(Fixups, 256, 3);
+  }
+  case X86::VMOVAPSZ256rmkz:
+  case X86::VMOVUPSZ256rmkz: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSZ256rmkz, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZ256rmkz : 0, 8, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZ256rmkz : 0, 8, 8, rebuildZExtCst},
+        {X86::VBROADCASTF32X4Z256rmkz, 1, 128, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWDZ256rmkz : 0, 8, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZ256rmkz : 0, 8, 16, rebuildZExtCst}};
+    return FixupConstant(Fixups, 256, 2);
   }
   case X86::VMOVAPDZrm:
   case X86::VMOVAPSZrm:
@@ -547,6 +641,54 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {MultiDomain ? X86::VPMOVSXDQZrm : 0, 8, 32, rebuildSExtCst},
         {MultiDomain ? X86::VPMOVZXDQZrm : 0, 8, 32, rebuildZExtCst}};
     return FixupConstant(Fixups, 512, 1);
+  }
+  case X86::VMOVAPDZrmk:
+  case X86::VMOVUPDZrmk: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSDZrmk, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBQZrmk : 0, 8, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZrmk : 0, 8, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZrmk : 0, 8, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZrmk : 0, 8, 16, rebuildZExtCst},
+        {X86::VBROADCASTF64X4Zrmk, 1, 256, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXDQZrmk : 0, 8, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZrmk : 0, 8, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 512, 3);
+  }
+  case X86::VMOVAPDZrmkz:
+  case X86::VMOVUPDZrmkz: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSDZrmkz, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBQZrmkz : 0, 8, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZrmkz : 0, 8, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZrmkz : 0, 8, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZrmkz : 0, 8, 16, rebuildZExtCst},
+        {X86::VBROADCASTF64X4Zrmkz, 1, 256, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXDQZrmkz : 0, 8, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZrmkz : 0, 8, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 512, 2);
+  }
+  case X86::VMOVAPSZrmk:
+  case X86::VMOVUPSZrmk: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSZrmk, 1, 32, rebuildSplatCst},
+        {X86::VBROADCASTF32X4Zrmk, 1, 128, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZrmk : 0, 16, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZrmk : 0, 16, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWDZrmk : 0, 16, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZrmk : 0, 16, 16, rebuildZExtCst}};
+    return FixupConstant(Fixups, 512, 3);
+  }
+  case X86::VMOVAPSZrmkz:
+  case X86::VMOVUPSZrmkz: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSZrmkz, 1, 32, rebuildSplatCst},
+        {X86::VBROADCASTF32X4Zrmkz, 1, 128, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZrmkz : 0, 16, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZrmkz : 0, 16, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWDZrmkz : 0, 16, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZrmkz : 0, 16, 16, rebuildZExtCst}};
+    return FixupConstant(Fixups, 512, 2);
   }
     /* Integer Loads */
   case X86::MOVDQArm:
@@ -643,6 +785,42 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXDQZ128rm, 2, 32, rebuildZExtCst}};
     return FixupConstant(Fixups, 128, 1);
   }
+  case X86::VMOVDQA32Z128rmk:
+  case X86::VMOVDQU32Z128rmk:
+    return FixupConstant({{X86::VPBROADCASTDZ128rmk, 1, 32, rebuildSplatCst},
+                          {X86::VPMOVSXBDZ128rmk, 4, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBDZ128rmk, 4, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWDZ128rmk, 4, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWDZ128rmk, 4, 16, rebuildZExtCst}},
+                         128, 3);
+  case X86::VMOVDQA32Z128rmkz:
+  case X86::VMOVDQU32Z128rmkz:
+    return FixupConstant({{X86::VPBROADCASTDZ128rmkz, 1, 32, rebuildSplatCst},
+                          {X86::VPMOVSXBDZ128rmkz, 4, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBDZ128rmkz, 4, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWDZ128rmkz, 4, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWDZ128rmkz, 4, 16, rebuildZExtCst}},
+                         128, 2);
+  case X86::VMOVDQA64Z128rmk:
+  case X86::VMOVDQU64Z128rmk:
+    return FixupConstant({{X86::VPMOVSXBQZ128rmk, 2, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBQZ128rmk, 2, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWQZ128rmk, 2, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWQZ128rmk, 2, 16, rebuildZExtCst},
+                          {X86::VPBROADCASTQZ128rmk, 1, 64, rebuildSplatCst},
+                          {X86::VPMOVSXDQZ128rmk, 2, 32, rebuildSExtCst},
+                          {X86::VPMOVZXDQZ128rmk, 2, 32, rebuildZExtCst}},
+                         128, 3);
+  case X86::VMOVDQA64Z128rmkz:
+  case X86::VMOVDQU64Z128rmkz:
+    return FixupConstant({{X86::VPMOVSXBQZ128rmkz, 2, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBQZ128rmkz, 2, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWQZ128rmkz, 2, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWQZ128rmkz, 2, 16, rebuildZExtCst},
+                          {X86::VPBROADCASTQZ128rmkz, 1, 64, rebuildSplatCst},
+                          {X86::VPMOVSXDQZ128rmkz, 2, 32, rebuildSExtCst},
+                          {X86::VPMOVZXDQZ128rmkz, 2, 32, rebuildZExtCst}},
+                         128, 2);
   case X86::VMOVDQA32Z256rm:
   case X86::VMOVDQA64Z256rm:
   case X86::VMOVDQU32Z256rm:
@@ -667,6 +845,46 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXDQZ256rm, 4, 32, rebuildZExtCst}};
     return FixupConstant(Fixups, 256, 1);
   }
+  case X86::VMOVDQA32Z256rmk:
+  case X86::VMOVDQU32Z256rmk:
+    return FixupConstant(
+        {{X86::VPBROADCASTDZ256rmk, 1, 32, rebuildSplatCst},
+         {X86::VPMOVSXBDZ256rmk, 8, 8, rebuildSExtCst},
+         {X86::VPMOVZXBDZ256rmk, 8, 8, rebuildZExtCst},
+         {X86::VBROADCASTI32X4Z256rmk, 1, 128, rebuildSplatCst},
+         {X86::VPMOVSXWDZ256rmk, 8, 16, rebuildSExtCst},
+         {X86::VPMOVZXWDZ256rmk, 8, 16, rebuildZExtCst}},
+        256, 3);
+  case X86::VMOVDQA32Z256rmkz:
+  case X86::VMOVDQU32Z256rmkz:
+    return FixupConstant(
+        {{X86::VPBROADCASTDZ256rmkz, 1, 32, rebuildSplatCst},
+         {X86::VPMOVSXBDZ256rmkz, 8, 8, rebuildSExtCst},
+         {X86::VPMOVZXBDZ256rmkz, 8, 8, rebuildZExtCst},
+         {X86::VBROADCASTI32X4Z256rmkz, 1, 128, rebuildSplatCst},
+         {X86::VPMOVSXWDZ256rmkz, 8, 16, rebuildSExtCst},
+         {X86::VPMOVZXWDZ256rmkz, 8, 16, rebuildZExtCst}},
+        256, 2);
+  case X86::VMOVDQA64Z256rmk:
+  case X86::VMOVDQU64Z256rmk:
+    return FixupConstant({{X86::VPMOVSXBQZ256rmk, 4, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBQZ256rmk, 4, 8, rebuildZExtCst},
+                          {X86::VPBROADCASTQZ256rmk, 1, 64, rebuildSplatCst},
+                          {X86::VPMOVSXWQZ256rmk, 4, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWQZ256rmk, 4, 16, rebuildZExtCst},
+                          {X86::VPMOVSXDQZ256rmk, 4, 32, rebuildSExtCst},
+                          {X86::VPMOVZXDQZ256rmk, 4, 32, rebuildZExtCst}},
+                         256, 3);
+  case X86::VMOVDQA64Z256rmkz:
+  case X86::VMOVDQU64Z256rmkz:
+    return FixupConstant({{X86::VPMOVSXBQZ256rmkz, 4, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBQZ256rmkz, 4, 8, rebuildZExtCst},
+                          {X86::VPBROADCASTQZ256rmkz, 1, 64, rebuildSplatCst},
+                          {X86::VPMOVSXWQZ256rmkz, 4, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWQZ256rmkz, 4, 16, rebuildZExtCst},
+                          {X86::VPMOVSXDQZ256rmkz, 4, 32, rebuildSExtCst},
+                          {X86::VPMOVZXDQZ256rmkz, 4, 32, rebuildZExtCst}},
+                         256, 2);
   case X86::VMOVDQA32Zrm:
   case X86::VMOVDQA64Zrm:
   case X86::VMOVDQU32Zrm:
@@ -692,6 +910,46 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPMOVZXDQZrm, 8, 32, rebuildZExtCst}};
     return FixupConstant(Fixups, 512, 1);
   }
+  case X86::VMOVDQA32Zrmk:
+  case X86::VMOVDQU32Zrmk:
+    return FixupConstant({{X86::VPBROADCASTDZrmk, 1, 32, rebuildSplatCst},
+                          {X86::VBROADCASTI32X4Zrmk, 1, 128, rebuildSplatCst},
+                          {X86::VPMOVSXBDZrmk, 16, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBDZrmk, 16, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWDZrmk, 16, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWDZrmk, 16, 16, rebuildZExtCst}},
+                         512, 3);
+  case X86::VMOVDQA32Zrmkz:
+  case X86::VMOVDQU32Zrmkz:
+    return FixupConstant({{X86::VPBROADCASTDZrmkz, 1, 32, rebuildSplatCst},
+                          {X86::VBROADCASTI32X4Zrmkz, 1, 128, rebuildSplatCst},
+                          {X86::VPMOVSXBDZrmkz, 16, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBDZrmkz, 16, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWDZrmkz, 16, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWDZrmkz, 16, 16, rebuildZExtCst}},
+                         512, 2);
+  case X86::VMOVDQA64Zrmk:
+  case X86::VMOVDQU64Zrmk:
+    return FixupConstant({{X86::VPBROADCASTQZrmk, 1, 64, rebuildSplatCst},
+                          {X86::VPMOVSXBQZrmk, 8, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBQZrmk, 8, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWQZrmk, 8, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWQZrmk, 8, 16, rebuildZExtCst},
+                          {X86::VBROADCASTI64X4Zrmk, 1, 256, rebuildSplatCst},
+                          {X86::VPMOVSXDQZrmk, 8, 32, rebuildSExtCst},
+                          {X86::VPMOVZXDQZrmk, 8, 32, rebuildZExtCst}},
+                         512, 3);
+  case X86::VMOVDQA64Zrmkz:
+  case X86::VMOVDQU64Zrmkz:
+    return FixupConstant({{X86::VPBROADCASTQZrmkz, 1, 64, rebuildSplatCst},
+                          {X86::VPMOVSXBQZrmkz, 8, 8, rebuildSExtCst},
+                          {X86::VPMOVZXBQZrmkz, 8, 8, rebuildZExtCst},
+                          {X86::VPMOVSXWQZrmkz, 8, 16, rebuildSExtCst},
+                          {X86::VPMOVZXWQZrmkz, 8, 16, rebuildZExtCst},
+                          {X86::VBROADCASTI64X4Zrmkz, 1, 256, rebuildSplatCst},
+                          {X86::VPMOVSXDQZrmkz, 8, 32, rebuildSExtCst},
+                          {X86::VPMOVZXDQZrmkz, 8, 32, rebuildZExtCst}},
+                         512, 2);
   }
 
   auto ConvertToBroadcast = [&](unsigned OpSrc, int BW) {
@@ -712,7 +970,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   // Attempt to find a AVX512 mapping from a full width memory-fold instruction
   // to a broadcast-fold instruction variant.
   if ((MI.getDesc().TSFlags & X86II::EncodingMask) == X86II::EVEX)
-    return ConvertToBroadcast(Opc, 32) || ConvertToBroadcast(Opc, 64);
+    return ConvertToBroadcast(Opc, 16) || ConvertToBroadcast(Opc, 32) ||
+           ConvertToBroadcast(Opc, 64);
 
   // Reverse the X86InstrInfo::setExecutionDomainCustom EVEX->VEX logic
   // conversion to see if we can convert to a broadcasted (integer) logic op.

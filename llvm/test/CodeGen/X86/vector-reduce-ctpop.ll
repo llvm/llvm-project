@@ -1552,7 +1552,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4
 ; AVX512VL-NEXT:    vpxor %xmm5, %xmm5, %xmm5
 ; AVX512VL-NEXT:    vpsadbw %zmm5, %zmm4, %zmm4
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm6 = [8,12,8,12,8,12,0,4]
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} ymm6 = [0,0,0,0,8,12,0,4]
 ; AVX512VL-NEXT:    vpermd %zmm4, %zmm6, %zmm4
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
@@ -1586,7 +1586,7 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; AVX512VPOPCNT-NEXT:    vinserti64x4 $1, %ymm4, %zmm5, %zmm4
 ; AVX512VPOPCNT-NEXT:    vpxor %xmm5, %xmm5, %xmm5
 ; AVX512VPOPCNT-NEXT:    vpsadbw %zmm5, %zmm4, %zmm4
-; AVX512VPOPCNT-NEXT:    vpmovsxbd {{.*#+}} ymm6 = [8,12,8,12,8,12,0,4]
+; AVX512VPOPCNT-NEXT:    vpmovsxbd {{.*#+}} ymm6 = [0,0,0,0,8,12,0,4]
 ; AVX512VPOPCNT-NEXT:    vpermd %zmm4, %zmm6, %zmm4
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VPOPCNT-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1

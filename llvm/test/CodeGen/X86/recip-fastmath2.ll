@@ -1689,17 +1689,29 @@ define <16 x float> @v16f32_two_step2(<16 x float> %x) #2 {
 ; HASWELL-NO-FMA-NEXT:    vaddps %ymm1, %ymm4, %ymm1
 ; HASWELL-NO-FMA-NEXT:    retq
 ;
-; AVX512-LABEL: v16f32_two_step2:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vrcp14ps %zmm0, %zmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512-NEXT:    vfmsub231ps {{.*#+}} zmm2 = (zmm0 * zmm1) - zmm2
-; AVX512-NEXT:    vfnmadd132ps {{.*#+}} zmm2 = -(zmm2 * zmm1) + zmm1
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0,9.0E+0,1.0E+1,1.1E+1,1.2E+1,1.3E+1,1.4E+1,1.5E+1,1.6E+1]
-; AVX512-NEXT:    vmulps %zmm1, %zmm2, %zmm3
-; AVX512-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm3 * zmm0) - zmm1
-; AVX512-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm2 * zmm0) + zmm3
-; AVX512-NEXT:    retq
+; KNL-LABEL: v16f32_two_step2:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vrcp14ps %zmm0, %zmm1
+; KNL-NEXT:    vmovaps {{.*#+}} zmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; KNL-NEXT:    vfmsub231ps {{.*#+}} zmm2 = (zmm0 * zmm1) - zmm2
+; KNL-NEXT:    vfnmadd132ps {{.*#+}} zmm2 = -(zmm2 * zmm1) + zmm1
+; KNL-NEXT:    vmovaps {{.*#+}} zmm1 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0,9.0E+0,1.0E+1,1.1E+1,1.2E+1,1.3E+1,1.4E+1,1.5E+1,1.6E+1]
+; KNL-NEXT:    vmulps %zmm1, %zmm2, %zmm3
+; KNL-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm3 * zmm0) - zmm1
+; KNL-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm2 * zmm0) + zmm3
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: v16f32_two_step2:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vrcp14ps %zmm0, %zmm1
+; SKX-NEXT:    vbroadcastss {{.*#+}} zmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SKX-NEXT:    vfmsub231ps {{.*#+}} zmm2 = (zmm0 * zmm1) - zmm2
+; SKX-NEXT:    vfnmadd132ps {{.*#+}} zmm2 = -(zmm2 * zmm1) + zmm1
+; SKX-NEXT:    vmovaps {{.*#+}} zmm1 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0,5.0E+0,6.0E+0,7.0E+0,8.0E+0,9.0E+0,1.0E+1,1.1E+1,1.2E+1,1.3E+1,1.4E+1,1.5E+1,1.6E+1]
+; SKX-NEXT:    vmulps %zmm1, %zmm2, %zmm3
+; SKX-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm3 * zmm0) - zmm1
+; SKX-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm2 * zmm0) + zmm3
+; SKX-NEXT:    retq
   %div = fdiv fast <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, %x
   ret <16 x float> %div
 }

@@ -633,8 +633,7 @@ define <4 x float> @test25(<4 x float> %a0) {
 ;
 ; AVX512-LABEL: test25:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = mem[0],xmm0[1,2],mem[3]
 ; AVX512-NEXT:    retq
   %bc1 = bitcast <4 x float> %a0 to <4 x i32>
   %bc2 = bitcast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0> to <4 x i32>

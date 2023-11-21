@@ -152,7 +152,7 @@ define void @neg_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 ; X86-AVX512-NEXT:    vmovups (%ecx), %ymm0
 ; X86-AVX512-NEXT:    vcmpnltps (%eax), %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vmovdqa %ymm0, (%eax)
+; X86-AVX512-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-AVX512-NEXT:    vzeroupper
 ; X86-AVX512-NEXT:    retl
 ;
@@ -161,7 +161,7 @@ define void @neg_masks(ptr %a, ptr %b, ptr %c) nounwind uwtable noinline ssp {
 ; X64-AVX512-NEXT:    vmovups (%rsi), %ymm0
 ; X64-AVX512-NEXT:    vcmpnltps (%rdi), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vmovdqa %ymm0, (%rax)
+; X64-AVX512-NEXT:    vmovaps %ymm0, (%rax)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
   %v0 = load <8 x float>, ptr %a, align 16

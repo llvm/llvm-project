@@ -545,7 +545,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; AVX512-LABEL: v16f32_no_estimate:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vsqrtps %zmm0, %zmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)

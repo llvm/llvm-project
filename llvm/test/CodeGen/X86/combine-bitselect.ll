@@ -1160,7 +1160,7 @@ define void @constantfold_andn_mask() nounwind {
 ; AVX512VL-NEXT:    pushq %rax
 ; AVX512VL-NEXT:    callq use@PLT
 ; AVX512VL-NEXT:    vmovdqu (%rax), %xmm1
-; AVX512VL-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,248,31,248,31,248,31,248,31,248,31,248,31,248,31,248]
 ; AVX512VL-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpavgb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpandn %xmm1, %xmm0, %xmm0
