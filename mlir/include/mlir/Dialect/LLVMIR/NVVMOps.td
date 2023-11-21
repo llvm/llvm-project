@@ -1429,7 +1429,7 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     that each bit position in the 16-bit `multicastMask` operand corresponds to
     the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.     
 
-    The `l2CacheHint` operand is optinal, and it is used to specify cache 
+    The `l2CacheHint` operand is optional, and it is used to specify cache 
     eviction policy that may be used during the memory access.
     
     [For more information, see PTX ISA]
