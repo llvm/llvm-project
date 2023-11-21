@@ -76,8 +76,8 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  if (getCoordinates().size() > 5)
-    return emitError("Maximum 5 coordinates and dimension is supported");
+  if (getCoordinates().empty() || getCoordinates().size() > 5)
+    return emitError("expects coordinates between 1 to 5 dimension");
 
   // Check for im2col mode
   if (!getIm2colOffsets().empty()) {
