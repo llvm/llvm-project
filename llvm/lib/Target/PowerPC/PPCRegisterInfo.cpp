@@ -642,16 +642,9 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
       (RegClass->hasSuperClassEq(&PPC::CRRCRegClass) ||
        RegClass->hasSuperClassEq(&PPC::CRBITRCRegClass))) {
     std::set<MCPhysReg> ModifiedRegisters;
-    bool Skip = true;
-    // Scan from the last instruction writes VirtReg to the beginning of the
-    // MBB.
     for (MachineInstr &MI :
          llvm::make_range(LastUseMBB->rbegin(), LastUseMBB->rend())) {
       if (MI.isDebugInstr())
-        continue;
-      if (MI.modifiesRegister(VirtReg, TRI))
-        Skip = false;
-      if (Skip)
         continue;
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||

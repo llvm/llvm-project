@@ -10,8 +10,8 @@ define ppc_fp128 @test_maxfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 6, 4
 ; CHECK-NEXT:    fcmpu 1, 5, 3
-; CHECK-NEXT:    crand 20, 6, 1
-; CHECK-NEXT:    cror 20, 5, 20
+; CHECK-NEXT:    crand 24, 6, 1
+; CHECK-NEXT:    cror 20, 5, 24
 ; CHECK-NEXT:    bc 12, 20, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    fmr 6, 4
@@ -22,8 +22,8 @@ define ppc_fp128 @test_maxfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128
 ; CHECK-NEXT:    fmr 5, 3
 ; CHECK-NEXT:  .LBB0_4: # %entry
 ; CHECK-NEXT:    fcmpu 1, 5, 1
-; CHECK-NEXT:    crand 20, 6, 1
-; CHECK-NEXT:    cror 20, 5, 20
+; CHECK-NEXT:    crand 24, 6, 1
+; CHECK-NEXT:    cror 20, 5, 24
 ; CHECK-NEXT:    bc 12, 20, .LBB0_6
 ; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    fmr 6, 2
@@ -34,8 +34,8 @@ define ppc_fp128 @test_maxfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128
 ; CHECK-NEXT:    fmr 5, 1
 ; CHECK-NEXT:  .LBB0_8: # %entry
 ; CHECK-NEXT:    fcmpu 1, 5, 7
-; CHECK-NEXT:    crand 20, 6, 1
-; CHECK-NEXT:    cror 20, 5, 20
+; CHECK-NEXT:    crand 24, 6, 1
+; CHECK-NEXT:    cror 20, 5, 24
 ; CHECK-NEXT:    bc 12, 20, .LBB0_10
 ; CHECK-NEXT:  # %bb.9: # %entry
 ; CHECK-NEXT:    fmr 5, 7
@@ -136,8 +136,8 @@ define ppc_fp128 @test_minfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fcmpu 0, 6, 4
 ; CHECK-NEXT:    fcmpu 1, 5, 3
-; CHECK-NEXT:    crand 20, 6, 0
-; CHECK-NEXT:    cror 20, 4, 20
+; CHECK-NEXT:    crand 24, 6, 0
+; CHECK-NEXT:    cror 20, 4, 24
 ; CHECK-NEXT:    bc 12, 20, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    fmr 6, 4
@@ -148,8 +148,8 @@ define ppc_fp128 @test_minfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128
 ; CHECK-NEXT:    fmr 5, 3
 ; CHECK-NEXT:  .LBB3_4: # %entry
 ; CHECK-NEXT:    fcmpu 1, 5, 1
-; CHECK-NEXT:    crand 20, 6, 0
-; CHECK-NEXT:    cror 20, 4, 20
+; CHECK-NEXT:    crand 24, 6, 0
+; CHECK-NEXT:    cror 20, 4, 24
 ; CHECK-NEXT:    bc 12, 20, .LBB3_6
 ; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    fmr 6, 2
@@ -160,8 +160,8 @@ define ppc_fp128 @test_minfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128
 ; CHECK-NEXT:    fmr 5, 1
 ; CHECK-NEXT:  .LBB3_8: # %entry
 ; CHECK-NEXT:    fcmpu 1, 5, 7
-; CHECK-NEXT:    crand 20, 6, 0
-; CHECK-NEXT:    cror 20, 4, 20
+; CHECK-NEXT:    crand 24, 6, 0
+; CHECK-NEXT:    cror 20, 4, 24
 ; CHECK-NEXT:    bc 12, 20, .LBB3_10
 ; CHECK-NEXT:  # %bb.9: # %entry
 ; CHECK-NEXT:    fmr 5, 7

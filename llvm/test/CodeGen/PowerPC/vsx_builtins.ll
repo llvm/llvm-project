@@ -139,10 +139,10 @@ declare i32 @llvm.ppc.vsx.xvtsqrtsp(<4 x float>)
 define i32 @xvtdivdp_andi(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: xvtdivdp_andi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvtdivdp cr0, v2, v3
+; CHECK-NEXT:    xvtdivdp cr1, v2, v3
 ; CHECK-NEXT:    li r4, 222
-; CHECK-NEXT:    mfocrf r3, 128
-; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    mfocrf r3, 64
+; CHECK-NEXT:    rlwinm r3, r3, 8, 28, 31
 ; CHECK-NEXT:    andi. r3, r3, 2
 ; CHECK-NEXT:    li r3, 22
 ; CHECK-NEXT:    iseleq r3, r4, r3
