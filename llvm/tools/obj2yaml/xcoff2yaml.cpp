@@ -28,12 +28,12 @@ class XCOFFDumper {
   // Dump auxiliary symbols.
   Error dumpFileAuxSym(XCOFFYAML::Symbol &Sym,
                        const XCOFFSymbolRef &SymbolEntRef);
-  void dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
-                      const XCOFFSymbolRef &SymbolEntRef);
-  void dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
+  Error dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
                        const XCOFFSymbolRef &SymbolEntRef);
-  void dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
-                       const XCOFFSymbolRef &SymbolEntRef);
+  Error dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
+                        const XCOFFSymbolRef &SymbolEntRef);
+  Error dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
+                        const XCOFFSymbolRef &SymbolEntRef);
   Error dumpAuxSyms(XCOFFYAML::Symbol &Sym, const XCOFFSymbolRef &SymbolEntRef);
   void dumpFuncAuxSym(XCOFFYAML::Symbol &Sym, const uintptr_t AuxAddress);
   void dumpExpAuxSym(XCOFFYAML::Symbol &Sym, const uintptr_t AuxAddress);
@@ -146,10 +146,11 @@ Error XCOFFDumper::dumpFileAuxSym(XCOFFYAML::Symbol &Sym,
   return Error::success();
 }
 
-void XCOFFDumper::dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
-                                 const XCOFFSymbolRef &SymbolEntRef) {
-  assert(Sym.NumberOfAuxEntries == 1 &&
-         "expected a single aux symbol for C_STAT!");
+Error XCOFFDumper::dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
+                                  const XCOFFSymbolRef &SymbolEntRef) {
+  if (Sym.NumberOfAuxEntries != 1)
+    return createError("expected a single aux symbol for C_STAT, while got: " +
+                       Twine(Sym.NumberOfAuxEntries.value()));
 
   const XCOFFSectAuxEntForStat *AuxEntPtr =
       getAuxEntPtr<XCOFFSectAuxEntForStat>(
@@ -161,6 +162,7 @@ void XCOFFDumper::dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
   StatAuxSym.NumberOfRelocEnt = AuxEntPtr->NumberOfRelocEnt;
   Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::SectAuxEntForStat>(StatAuxSym));
+  return Error::success();
 }
 
 void XCOFFDumper::dumpFuncAuxSym(XCOFFYAML::Symbol &Sym,
@@ -223,9 +225,17 @@ void XCOFFDumper::dumpCscetAuxSym(XCOFFYAML::Symbol &Sym,
 
 Error XCOFFDumper::dumpAuxSyms(XCOFFYAML::Symbol &Sym,
                                const XCOFFSymbolRef &SymbolEntRef) {
+  auto ErrOrCsectAuxRef = SymbolEntRef.getXCOFFCsectAuxRef();
+  if (!ErrOrCsectAuxRef)
+    return ErrOrCsectAuxRef.takeError();
+  XCOFFCsectAuxRef CsectAuxRef = ErrOrCsectAuxRef.get();
+
   for (uint8_t I = 1; I <= Sym.NumberOfAuxEntries; ++I) {
-    if (I == Sym.NumberOfAuxEntries && !Obj.is64Bit())
-      break;
+
+    if (I == Sym.NumberOfAuxEntries && !Obj.is64Bit()) {
+      dumpCscetAuxSym(Sym, CsectAuxRef);
+      return Error::success();
+    }
 
     uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
         SymbolEntRef.getEntryAddress(), I);
@@ -233,29 +243,27 @@ Error XCOFFDumper::dumpAuxSyms(XCOFFYAML::Symbol &Sym,
     if (Obj.is64Bit()) {
       XCOFF::SymbolAuxType Type = *Obj.getSymbolAuxType(AuxAddress);
       if (Type == XCOFF::SymbolAuxType::AUX_CSECT)
-        continue;
-      if (Type == XCOFF::SymbolAuxType::AUX_FCN)
+        dumpCscetAuxSym(Sym, CsectAuxRef);
+      else if (Type == XCOFF::SymbolAuxType::AUX_FCN)
         dumpFuncAuxSym(Sym, AuxAddress);
       else if (Type == XCOFF::SymbolAuxType::AUX_EXCEPT)
         dumpExpAuxSym(Sym, AuxAddress);
       else
-        llvm_unreachable("invalid aux symbol entry");
+        return createError("invalid auxiliary symbol type: " +
+                           Twine(static_cast<uint32_t>(Type)));
     } else
       dumpFuncAuxSym(Sym, AuxAddress);
   }
 
-  auto ErrOrCsectAuxRef = SymbolEntRef.getXCOFFCsectAuxRef();
-  if (!ErrOrCsectAuxRef)
-    return ErrOrCsectAuxRef.takeError();
-
-  dumpCscetAuxSym(Sym, ErrOrCsectAuxRef.get());
   return Error::success();
 }
 
-void XCOFFDumper::dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
-                                  const XCOFFSymbolRef &SymbolEntRef) {
-  assert(Sym.NumberOfAuxEntries == 1 &&
-         "expected a single aux symbol for C_BLOCK or C_FCN!");
+Error XCOFFDumper::dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
+                                   const XCOFFSymbolRef &SymbolEntRef) {
+  if (Sym.NumberOfAuxEntries != 1)
+    return createError(
+        "expected a single aux symbol for C_BLOCK or C_FCN, while got: " +
+        Twine(Sym.NumberOfAuxEntries.value()));
 
   uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
       SymbolEntRef.getEntryAddress(), 1);
@@ -274,12 +282,14 @@ void XCOFFDumper::dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
 
   Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::BlockAuxEnt>(BlockAuxSym));
+  return Error::success();
 }
 
-void XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
-                                  const XCOFFSymbolRef &SymbolEntRef) {
-  assert(Sym.NumberOfAuxEntries == 1 &&
-         "expected a single aux symbol for C_DWARF!");
+Error XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
+                                   const XCOFFSymbolRef &SymbolEntRef) {
+  if (Sym.NumberOfAuxEntries != 1)
+    return createError("expected a single aux symbol for C_DWARF, while got: " +
+                       Twine(Sym.NumberOfAuxEntries.value()));
 
   uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
       SymbolEntRef.getEntryAddress(), 1);
@@ -299,6 +309,7 @@ void XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
 
   Sym.AuxEntries.push_back(
       std::make_unique<XCOFFYAML::SectAuxEntForDWARF>(DwarfAuxSym));
+  return Error::success();
 }
 
 Error XCOFFDumper::dumpSymbols() {
@@ -335,7 +346,8 @@ Error XCOFFDumper::dumpSymbols() {
           return E;
         break;
       case XCOFF::C_STAT:
-        dumpStatAuxSym(Sym, SymbolEntRef);
+        if (Error E = dumpStatAuxSym(Sym, SymbolEntRef))
+          return E;
         break;
       case XCOFF::C_EXT:
       case XCOFF::C_WEAKEXT:
@@ -345,10 +357,12 @@ Error XCOFFDumper::dumpSymbols() {
         break;
       case XCOFF::C_BLOCK:
       case XCOFF::C_FCN:
-        dumpBlockAuxSym(Sym, SymbolEntRef);
+        if (Error E = dumpBlockAuxSym(Sym, SymbolEntRef))
+          return E;
         break;
       case XCOFF::C_DWARF:
-        dumpDwarfAuxSym(Sym, SymbolEntRef);
+        if (Error E = dumpDwarfAuxSym(Sym, SymbolEntRef))
+          return E;
         break;
       default:
         break;
