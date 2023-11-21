@@ -180,21 +180,19 @@ static StringRef getSubsection(StringRef Section,
   return Section.substr(Off->getOffset(), Off->getLength());
 }
 
-static Error sectionOverflowErrorOrWarning(uint32_t PrevOffset,
-    uint32_t OverflowedOffset,
-    StringRef SectionName,
-    const OnCuIndexOverflow &overflowOptValue,
-    bool &SeeOverflowFlag) {
+static Error sectionOverflowErrorOrWarning(
+    uint32_t PrevOffset, uint32_t OverflowedOffset, StringRef SectionName,
+    const OnCuIndexOverflow &overflowOptValue, bool &SeeOverflowFlag) {
   std::string Msg =
       (SectionName +
        Twine(" Section Contribution Offset overflow 4G. Previous Offset ") +
        Twine(PrevOffset) + Twine(", After overflow offset ") +
        Twine(OverflowedOffset) + Twine("."))
           .str();
-  if (overflowOptValue == OnCuIndexOverflow::Continue) {
+  if (OverflowOptValue == OnCuIndexOverflow::Continue) {
     WithColor::defaultWarningHandler(make_error<DWPError>(Msg));
     return Error::success();
-  } else if (overflowOptValue == OnCuIndexOverflow::SoftStop) {
+  } else if (OverflowOptValue == OnCuIndexOverflow::SoftStop) {
     SeeOverflowFlag = true;
     WithColor::defaultWarningHandler(make_error<DWPError>(Msg));
     return Error::success();
@@ -206,7 +204,7 @@ static Error addAllTypesFromDWP(
     MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     const DWARFUnitIndex &TUIndex, MCSection *OutputTypes, StringRef Types,
     const UnitIndexEntry &TUEntry, uint32_t &TypesOffset,
-    unsigned TypesContributionIndex, const OnCuIndexOverflow &overflowOptValue,
+    unsigned TypesContributionIndex, const OnCuIndexOverflow &OverflowOptValue,
     bool &SeeOverflowFlag) {
   Out.switchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
@@ -238,9 +236,9 @@ static Error addAllTypesFromDWP(
     static_assert(sizeof(OldOffset) == sizeof(TypesOffset));
     TypesOffset += C.getLength();
     if (OldOffset > TypesOffset) {
-      if (Error Err = sectionOverflowErrorOrWarning(
-              OldOffset, TypesOffset, "Types", 
-              overflowOptValue, SeeOverflowFlag))
+      if (Error Err =
+              sectionOverflowErrorOrWarning(OldOffset, TypesOffset, "Types",
+                                            overflowOptValue, SeeOverflowFlag))
         return Err;
       return Error::success();
     }
@@ -252,7 +250,7 @@ static Error addAllTypesFromTypesSection(
     MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     MCSection *OutputTypes, const std::vector<StringRef> &TypesSections,
     const UnitIndexEntry &CUEntry, uint32_t &TypesOffset,
-    const OnCuIndexOverflow &overflowOptValue, bool &SeeOverflowFlag) {
+    const OnCuIndexOverflow &OverflowOptValue, bool &SeeOverflowFlag) {
   for (StringRef Types : TypesSections) {
     Out.switchSection(OutputTypes);
     uint64_t Offset = 0;
@@ -281,9 +279,9 @@ static Error addAllTypesFromTypesSection(
       uint32_t OldOffset = TypesOffset;
       TypesOffset += C.getLength32();
       if (OldOffset > TypesOffset) {
-        if (Error Err = sectionOverflowErrorOrWarning(
-                OldOffset, TypesOffset, "Types", 
-                overflowOptValue, SeeOverflowFlag))
+        if (Error Err = sectionOverflowErrorOrWarning(OldOffset, TypesOffset,
+                                                      "Types", overflowOptValue,
+                                                      SeeOverflowFlag))
           return Err;
         return Error::success();
       }
@@ -593,7 +591,7 @@ Error handleSection(
 }
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            const OnCuIndexOverflow &overflowOptValue) {
+            const OnCuIndexOverflow &OverflowOptValue) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();
@@ -700,7 +698,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
           if (SectionIndex == Index) {
             if (Error Err = sectionOverflowErrorOrWarning(
                     OldOffset, ContributionOffsets[Index], *Section.getName(),
-                    overflowOptValue, SeeOverflowFlag))
+                    OverflowOptValue, SeeOverflowFlag))
               return Err;
           }
           ++SectionIndex;
@@ -734,7 +732,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
               C.getLength32()) {
             if (Error Err = sectionOverflowErrorOrWarning(
                     InfoSectionOffset, InfoSectionOffset + C.getLength32(),
-                    "debug_info", overflowOptValue, SeeOverflowFlag))
+                    "debug_info", OverflowOptValue, SeeOverflowFlag))
               return Err;
             if (SeeOverflowFlag)
               break;
@@ -780,7 +778,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
         if (Error Err = addAllTypesFromTypesSection(
                 Out, TypeIndexEntries, TypesSection, CurTypesSection, CurEntry,
                 ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES, 2)],
-                overflowOptValue, SeeOverflowFlag))
+                OverflowOptValue, SeeOverflowFlag))
           return Err;
       }
       continue;
@@ -878,7 +876,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
       if (Error Err = addAllTypesFromDWP(
               Out, TypeIndexEntries, TUIndex, OutSection, TypeInputSection,
               CurEntry, ContributionOffsets[TypesContributionIndex],
-              TypesContributionIndex, overflowOptValue, SeeOverflowFlag))
+              TypesContributionIndex, OverflowOptValue, SeeOverflowFlag))
         return Err;
     }
     if (SeeOverflowFlag)
