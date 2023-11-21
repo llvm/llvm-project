@@ -29,13 +29,26 @@ Following types are considered as hostile:
 .. code-block:: c++
 
   // Call some async API while holding a lock.
-  {
-    const my::MutexLock l(&mu_);
+  task coro() {
+    const std::lock_guard l(&mu_);
 
     // Oops! The async Bar function may finish on a different
-    // thread from the one that created the MutexLock object and therefore called
-    // Mutex::Lock -- now Mutex::Unlock will be called on the wrong thread.
+    // thread from the one that created the lock_guard (and called
+    // Mutex::Lock). After suspension, Mutex::Unlock will be called on the wrong thread.
     co_await Bar();
+  }
+
+.. code-block:: c++
+
+  struct [[clang::annotate("coro_raii_safe_suspend")]] safe_awaitable {
+    bool await_ready() noexcept { return false; }
+    void await_suspend(std::coroutine_handle<>) noexcept {}
+    void await_resume() noexcept {}
+  };
+
+  task coro() {
+    const std::lock_guard l(&mu_);
+    co_await safe_awaitable{};
   }
 
 
