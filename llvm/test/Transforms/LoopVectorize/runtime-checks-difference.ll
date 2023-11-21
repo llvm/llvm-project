@@ -272,3 +272,56 @@ outer.latch:
 exit:
   ret void
 }
+
+; Test case where the AddRec for the pointers in the inner loop have the AddRec
+; of the outer loop as start value.
+; TODO: It is sufficient to subtract the start values (%dst, %src) of the outer
+;       AddRecs.
+define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i64 noundef %m, i64 noundef %n) {
+; CHECK-LABEL: @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N:%.*]], 2
+; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
+; CHECK:       outer.loop:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[OUTER_IV_NEXT:%.*]], [[INNER_EXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], [[OUTER_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[DST1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[SRC2]], [[TMP1]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[OUTER_IV]], [[N]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+;
+entry:
+  br label %outer.loop
+
+outer.loop:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %inner.exit ]
+  %mul = mul nsw i64 %outer.iv, %n
+  br label %inner.loop
+
+inner.loop:
+  %iv.inner = phi i64 [ 0, %outer.loop ], [ %iv.inner.next, %inner.loop ]
+  %idx = add nuw nsw i64 %iv.inner, %mul
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %idx
+  %l = load i32, ptr %gep.src, align 4
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %idx
+  %add = add nsw i32 %l, 10
+  store i32 %add, ptr %gep.dst, align 4
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %inner.exit.cond = icmp eq i64 %iv.inner.next, %n
+  br i1 %inner.exit.cond, label %inner.exit, label %inner.loop
+
+inner.exit:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.exit.cond = icmp eq i64 %outer.iv.next, %m
+  br i1 %outer.exit.cond, label %outer.exit, label %outer.loop
+
+outer.exit:
+  ret void
+}
