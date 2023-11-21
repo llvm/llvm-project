@@ -20,11 +20,13 @@ namespace clang {
 class DeclsQuerier : public ASTDeserializationListener {
 public:
   void DeclRead(serialization::DeclID ID, const Decl *D) override {
-    // Filter Decl's to avoid store too many informations.
+    if (!isa<NamedDecl>(D))
+      return;
+
     if (!D->getLexicalDeclContext())
       return;
 
-    if (!isa<FunctionDecl>(D) && 
+    if (!isa<FunctionDecl>(D) &&
         !D->getLexicalDeclContext()->getRedeclContext()->isFileContext())
       return;
 

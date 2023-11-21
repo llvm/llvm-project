@@ -1,4 +1,4 @@
-//===- GetUsedDeclActionPlugin.cpp -----------------------------------------===//
+//===- GetUsedDeclsFromModulesPlugin.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,10 +23,17 @@ namespace clang {
 class DeclsQuerier : public ASTDeserializationListener {
 public:
   void DeclRead(serialization::DeclID ID, const Decl *D) override {
+    if (Stopped)
+      return;
+
     // We only cares about function decls, var decls, tag decls (class, struct, enum, union).
     if (!isa<NamedDecl>(D))
       return;
     
+    // Filter Decl's to avoid store too many informations.
+    if (!D->getLexicalDeclContext())
+      return;
+
     // We only records the template declaration if the declaration is placed in templates.
     if (auto *FD = dyn_cast<FunctionDecl>(D); FD && FD->getDescribedFunctionTemplate())
       return;
@@ -62,6 +69,7 @@ public:
   }
 
   llvm::StringMap<std::vector<const NamedDecl *>> Names;
+  bool Stopped = false;
 };
 
 class DeclsQuerierConsumer : public ASTConsumer {
@@ -97,6 +105,10 @@ public:
     std::unique_ptr<raw_pwrite_stream> OS = getOutputFile();
     if (!OS)
       return;
+    
+    /// Otherwise the process of computing ODR Hash may involve more decls
+    /// get deserialized.
+    Querier.Stopped = true;
 
     using namespace llvm::json;
 
@@ -130,7 +142,6 @@ public:
   DeclsQueryAction(StringRef OutputFile) : OutputFile(OutputFile) {}
   DeclsQueryAction() = default;
 
-
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
     return std::make_unique<DeclsQuerierConsumer>(CI, InFile, OutputFile);
@@ -159,11 +170,11 @@ To get used decls from modules.
 
 The output is printed to the std output by default when use it as a standalone tool.
 
-If you're using plugin, use -fplugin-arg-decls_query_from_modules-output=<output-file>
+If you're using plugin, use -fplugin-arg-get_used_decls_from_modules-output=<output-file>
 to specify the output path of used decls.
   )cpp";
 }
 }
 
 static clang::FrontendPluginRegistry::Add<clang::DeclsQueryAction>
-X("decls_query_from_modules", "query used decls from modules");
+X("get_used_decls_from_modules", "query used decls from modules");

@@ -10,6 +10,7 @@
 #define CLANG_TOOLS_CLANG_NAMED_MODULES_QUERIER_GET_DECLS_INFO_TO_JSON_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/ODRHash.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/JSON.h"
@@ -19,11 +20,11 @@ inline unsigned getHashValue(const NamedDecl *ND) {
   ODRHash Hasher;
 
   if (auto *FD = dyn_cast<FunctionDecl>(ND))
-    Hasher.AddFunctionDecl(FD);
+    return FD->getODRHash();
   else if (auto *ED = dyn_cast<EnumDecl>(ND))
-    Hasher.AddEnumDecl(ED);
-  else if (auto *CRD = dyn_cast<CXXRecordDecl>(ND))
-    Hasher.AddCXXRecordDecl(CRD);
+    return const_cast<EnumDecl*>(ED)->getODRHash();
+  else if (auto *CRD = dyn_cast<CXXRecordDecl>(ND); CRD && CRD->hasDefinition())
+    return CRD->getODRHash();
   else {
     Hasher.AddDecl(ND);
     Hasher.AddSubDecl(ND);

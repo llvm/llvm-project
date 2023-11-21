@@ -22,6 +22,6 @@ clang_target_link_libraries(clang-named-modules-querier
   ${CLANG_NAMED_MODULES_QUERIER}
   )
 
-add_llvm_library(ClangGetDeclsInModulesPlugin PARTIAL_SOURCES_INTENDED MODULE GetUsedDeclActionPlugin.cpp PLUGIN_TOOL clang)
+add_llvm_library(ClangGetUsedDeclsFromModulesPlugin PARTIAL_SOURCES_INTENDED MODULE GetUsedDeclsFromModulesPlugin.cpp PLUGIN_TOOL clang)
 
 add_llvm_library(ClangGetUsedFilesFromModulesPlugin PARTIAL_SOURCES_INTENDED MODULE GetUsedFilesFromModulesPlugin.cpp PLUGIN_TOOL clang)
