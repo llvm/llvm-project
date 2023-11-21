@@ -8190,6 +8190,28 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res);
 }
 
+static void getVCIXOperands(SDValue &Op, SelectionDAG &DAG,
+                            SmallVector<SDValue> &Ops) {
+  SDLoc DL(Op);
+
+  const RISCVSubtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  for (const SDValue &V : Op->op_values()) {
+    EVT ValType = V.getValueType();
+    if (ValType.isScalableVector() && ValType.isFloatingPoint()) {
+      MVT InterimIVT =
+          MVT::getVectorVT(MVT::getIntegerVT(ValType.getScalarSizeInBits()),
+                           ValType.getVectorElementCount());
+      Ops.push_back(DAG.getBitcast(InterimIVT, V));
+    } else if (ValType.isFixedLengthVector()) {
+      MVT OpContainerVT = getContainerForFixedLengthVector(
+          DAG, V.getSimpleValueType(), Subtarget);
+      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
+    } else
+      Ops.push_back(V);
+  }
+}
+
 // LMUL * VLEN should be greater than or equal to EGS * SEW
 static inline bool isValidEGW(int EGS, EVT VT,
                               const RISCVSubtarget &Subtarget) {
@@ -8417,26 +8439,27 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_sf_vc_v_fvw: {
     MVT VT = Op.getSimpleValueType();
 
-    if (!VT.isFixedLengthVector())
+    SmallVector<SDValue> Ops;
+    getVCIXOperands(Op, DAG, Ops);
+
+    MVT RetVT = VT;
+    if (VT.isFixedLengthVector())
+      RetVT = getContainerForFixedLengthVector(VT);
+    else if (VT.isFloatingPoint())
+      RetVT = MVT::getVectorVT(MVT::getIntegerVT(VT.getScalarSizeInBits()),
+                               VT.getVectorElementCount());
+
+    SDValue NewNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, RetVT, Ops);
+
+    if (VT.isFixedLengthVector())
+      NewNode = convertFromScalableVector(VT, NewNode, DAG, Subtarget);
+    else if (VT.isFloatingPoint())
+      NewNode = DAG.getBitcast(VT, NewNode);
+
+    if (Op == NewNode)
       break;
 
-    SmallVector<SDValue, 6> Ops;
-    for (const SDValue &V : Op->op_values()) {
-      // Skip non-fixed vector operands.
-      if (!V.getValueType().isFixedLengthVector()) {
-        Ops.push_back(V);
-        continue;
-      }
-
-      MVT OpContainerVT =
-          getContainerForFixedLengthVector(V.getSimpleValueType());
-      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
-    }
-
-    MVT RetContainerVT = getContainerForFixedLengthVector(VT);
-    SDValue Scalable =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, RetContainerVT, Ops);
-    return convertFromScalableVector(VT, Scalable, DAG, Subtarget);
+    return NewNode;
   }
   }
 
@@ -8573,30 +8596,33 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::riscv_sf_vc_v_vvw_se:
   case Intrinsic::riscv_sf_vc_v_fvw_se: {
     MVT VT = Op.getSimpleValueType();
+    SDLoc DL(Op);
+    SmallVector<SDValue> Ops;
+    getVCIXOperands(Op, DAG, Ops);
 
-    if (!VT.isFixedLengthVector())
-      break;
+    MVT RetVT = VT;
+    if (VT.isFixedLengthVector())
+      RetVT = getContainerForFixedLengthVector(VT);
+    else if (VT.isFloatingPoint())
+      RetVT = MVT::getVectorVT(MVT::getIntegerVT(RetVT.getScalarSizeInBits()),
+                               RetVT.getVectorElementCount());
 
-    SmallVector<SDValue, 6> Ops;
-    for (const SDValue &V : Op->op_values()) {
-      // Skip non-fixed vector operands.
-      if (!V.getValueType().isFixedLengthVector()) {
-        Ops.push_back(V);
-        continue;
-      }
+    SDVTList VTs = DAG.getVTList({RetVT, MVT::Other});
+    SDValue NewNode = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops);
 
-      MVT OpContainerVT =
-          getContainerForFixedLengthVector(V.getSimpleValueType());
-      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
+    if (VT.isFixedLengthVector()) {
+      SDValue FixedVector =
+          convertFromScalableVector(VT, NewNode, DAG, Subtarget);
+      NewNode = DAG.getMergeValues({FixedVector, NewNode.getValue(1)}, DL);
+    } else if (VT.isFloatingPoint()) {
+      SDValue BitCast = DAG.getBitcast(VT, NewNode.getValue(0));
+      NewNode = DAG.getMergeValues({BitCast, NewNode.getValue(1)}, DL);
     }
 
-    SDLoc DL(Op);
-    MVT RetContainerVT = getContainerForFixedLengthVector(VT);
-    SDVTList VTs = DAG.getVTList({RetContainerVT, MVT::Other});
-    SDValue ScalableVector = DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops);
-    SDValue FixedVector =
-        convertFromScalableVector(VT, ScalableVector, DAG, Subtarget);
-    return DAG.getMergeValues({FixedVector, ScalableVector.getValue(1)}, DL);
+    if (Op == NewNode)
+      break;
+
+    return NewNode;
   }
   }
 
@@ -8741,25 +8767,16 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::riscv_sf_vc_ivw_se:
   case Intrinsic::riscv_sf_vc_vvw_se:
   case Intrinsic::riscv_sf_vc_fvw_se: {
-    if (!llvm::any_of(Op->op_values(), [&](const SDValue &V) {
-          return V.getValueType().isFixedLengthVector();
-        }))
+    SmallVector<SDValue> Ops;
+    getVCIXOperands(Op, DAG, Ops);
+
+    SDValue NewNode =
+        DAG.getNode(ISD::INTRINSIC_VOID, SDLoc(Op), Op->getVTList(), Ops);
+
+    if (Op == NewNode)
       break;
 
-    SmallVector<SDValue, 6> Ops;
-    for (const SDValue &V : Op->op_values()) {
-      // Skip non-fixed vector operands.
-      if (!V.getValueType().isFixedLengthVector()) {
-        Ops.push_back(V);
-        continue;
-      }
-
-      MVT OpContainerVT =
-          getContainerForFixedLengthVector(V.getSimpleValueType());
-      Ops.push_back(convertToScalableVector(OpContainerVT, V, DAG, Subtarget));
-    }
-
-    return DAG.getNode(ISD::INTRINSIC_VOID, SDLoc(Op), Op->getVTList(), Ops);
+    return NewNode;
   }
   }
 

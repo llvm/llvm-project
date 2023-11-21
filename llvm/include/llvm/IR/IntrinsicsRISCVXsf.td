@@ -42,7 +42,7 @@ let TargetPrefix = "riscv" in {
   //        (bit<27-26>, bit<11-7>, vector_in, vector_in/scalar_in, vl)
   class RISCVSFCustomVC_XV<bit HasDst, bit HasSE, bit ImmScalar>
         : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<0>],
+                    !listconcat(!if(HasDst, [llvm_anyint_ty, llvm_anyvector_ty],
                                             [llvm_anyint_ty, LLVMMatchType<0>, llvm_anyvector_ty]),
                                 [llvm_any_ty, llvm_anyint_ty]),
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>],                        // bit<27-26>
@@ -61,8 +61,8 @@ let TargetPrefix = "riscv" in {
   //        (bit<27-26>, vector_in, vector_in, vector_in/scalar_in, vl)
   class RISCVSFCustomVC_XVV<bit HasDst, bit HasSE, bit ImmScalar>
         : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-                                            [llvm_anyint_ty, llvm_anyvector_ty, LLVMMatchType<1>]),
+                    !listconcat(!if(HasDst, [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty],
+                                            [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty]),
                                 [llvm_any_ty, llvm_anyint_ty]),
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>],                        // bit<27-26>
                                 !if(ImmScalar, [ImmArg<ArgIndex<3>>], []),               // ScalarOperand
@@ -76,7 +76,7 @@ let TargetPrefix = "riscv" in {
   //        (bit<27-26>, wvector_in, vector_in, vector_in/scalar_in, vl)
   class RISCVSFCustomVC_XVW<bit HasDst, bit HasSE, bit ImmScalar>
         : Intrinsic<!if(HasDst, [llvm_anyvector_ty], []),
-                    !listconcat(!if(HasDst, [llvm_anyint_ty, LLVMMatchType<0>, llvm_anyvector_ty],
+                    !listconcat(!if(HasDst, [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty],
                                             [llvm_anyint_ty, llvm_anyvector_ty, llvm_anyvector_ty]),
                                 [llvm_any_ty, llvm_anyint_ty]),
                     !listconcat([IntrNoMem, ImmArg<ArgIndex<0>>],                        // bit<27-26>
