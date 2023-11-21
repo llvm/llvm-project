@@ -205,6 +205,10 @@ New check aliases
   <clang-tidy/checks/cppcoreguidelines/macro-to-enum>` to :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` was added.
 
+- New alias :doc:`hicpp-ignored-remove-result
+  <clang-tidy/checks/hicpp/ignored-remove-result>` to :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

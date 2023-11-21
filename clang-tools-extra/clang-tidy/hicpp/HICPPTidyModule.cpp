@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
+#include "../bugprone/UnusedReturnValueCheck.h"
 #include "../bugprone/UseAfterMoveCheck.h"
 #include "../cppcoreguidelines/AvoidGotoCheck.h"
 #include "../cppcoreguidelines/NoMallocCheck.h"
@@ -41,6 +42,15 @@
 #include "NoAssemblerCheck.h"
 #include "SignedBitwiseCheck.h"
 
+namespace {
+
+// Checked functions for hicpp-ignored-remove-result.
+const llvm::StringRef CheckedFunctions = "::std::remove;"
+                                         "::std::remove_if;"
+                                         "::std::unique;";
+
+} // namespace
+
 namespace clang::tidy {
 namespace hicpp {
 
@@ -64,6 +74,8 @@ public:
         "hicpp-explicit-conversions");
     CheckFactories.registerCheck<readability::FunctionSizeCheck>(
         "hicpp-function-size");
+    CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
+        "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "hicpp-named-parameter");
     CheckFactories.registerCheck<bugprone::UseAfterMoveCheck>(
@@ -106,6 +118,14 @@ public:
         "hicpp-uppercase-literal-suffix");
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeVarargCheck>(
         "hicpp-vararg");
+  }
+
+  ClangTidyOptions getModuleOptions() override {
+    ClangTidyOptions Options;
+    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
+    Opts["hicpp-ignored-remove-result.CheckedFunctions"] = CheckedFunctions;
+    Opts["hicpp-ignored-remove-result.AllowCastToVoid"] = "true";
+    return Options;
   }
 };
 
