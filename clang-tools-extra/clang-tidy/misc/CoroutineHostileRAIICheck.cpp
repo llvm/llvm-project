@@ -52,6 +52,19 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
   }
   return IsHostile;
 }
+
+AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  return Node.getCommonExpr() &&
+         InnerMatcher.matches(*Node.getCommonExpr(), Finder, Builder);
+}
+
+AST_MATCHER(Decl, isRAIISafeAwaitable) {
+for (const auto &Attr : Node.specific_attrs<clang::AnnotateAttr>())
+    if (Attr->getAnnotation() == "coro_raii_safe_suspend")
+      return true;
+  return false;
+}
 } // namespace
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
@@ -68,7 +81,9 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
                                namedDecl(hasAnyName(RAIITypesList))))))
                        .bind("raii");
-  Finder->addMatcher(expr(anyOf(coawaitExpr(), coyieldExpr()),
+  auto Allowed = awaiatable(
+      hasType(hasCanonicalType(hasDeclaration(isRAIISafeAwaitable()))));
+  Finder->addMatcher(expr(anyOf(coawaitExpr(unless(Allowed)), coyieldExpr()),
                           forEachPrevStmt(declStmt(forEach(
                               varDecl(anyOf(ScopedLockable, OtherRAII))))))
                          .bind("suspension"),
