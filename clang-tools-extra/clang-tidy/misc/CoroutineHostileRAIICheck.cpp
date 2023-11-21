@@ -60,7 +60,7 @@ AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
 }
 
 AST_MATCHER(Decl, isRAIISafeAwaitable) {
-for (const auto &Attr : Node.specific_attrs<clang::AnnotateAttr>())
+  for (const auto &Attr : Node.specific_attrs<clang::AnnotateAttr>())
     if (Attr->getAnnotation() == "coro_raii_safe_suspend")
       return true;
   return false;
