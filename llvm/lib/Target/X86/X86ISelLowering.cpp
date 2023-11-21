@@ -1596,6 +1596,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STORE,              VT, Custom);
     }
     setF16Action(MVT::v16f16, Expand);
+    if (Subtarget.hasAVX2())
+      setOperationAction(ISD::FABS, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
