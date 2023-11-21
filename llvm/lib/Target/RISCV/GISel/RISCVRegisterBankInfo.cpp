@@ -423,6 +423,34 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);
     break;
   }
+  case TargetOpcode::G_MERGE_VALUES: {
+    // Use FPR64 for s64 merge on rv32.
+    assert(MI.getNumOperands() == 3 && "Unsupported G_MERGE_VALUES");
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      // FIXME: OpdsMapping[0, 1] should probably visit their uses to determine
+      // if GPRValueMapping or FPRValueMapping
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[1] = GPRValueMapping;
+      OpdsMapping[2] = GPRValueMapping;
+    }
+    break;
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    // Use FPR64 for s64 unmerge on rv32.
+    assert(MI.getNumOperands() == 3 && "Unsupported G_UNMERGE_VALUES");
+    LLT Ty = MRI.getType(MI.getOperand(2).getReg());
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
+      // FIXME: OpdsMapping[0, 1] should probably visit their uses to determine
+      // if GPRValueMapping or FPRValueMapping
+      OpdsMapping[0] = GPRValueMapping;
+      OpdsMapping[1] = GPRValueMapping;
+      OpdsMapping[2] = getFPValueMapping(Ty.getSizeInBits());
+    }
+    break;
+  }
   default:
     // By default map all scalars to GPR.
     for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {

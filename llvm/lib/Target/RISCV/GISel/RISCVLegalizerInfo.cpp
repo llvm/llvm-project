@@ -86,6 +86,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
     getActionDefinitionsBuilder(Op)
+        .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+          return ST.hasStdExtD() && typeIs(LitTyIdx, s32)(Query) &&
+                 typeIs(BigTyIdx, s64)(Query);
+        })
         .widenScalarToNextPow2(LitTyIdx, XLen)
         .widenScalarToNextPow2(BigTyIdx, XLen)
         .clampScalar(LitTyIdx, sXLen, sXLen)
