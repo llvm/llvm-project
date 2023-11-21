@@ -199,12 +199,12 @@ bool SimpleCaptureInfo::isNotCapturedBefore(const Value *Object,
   return isNonEscapingLocalObject(Object, &IsCapturedCache);
 }
 
-static bool isNotInCycle(const Instruction *I, const DominatorTree &DT,
+static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
                          const LoopInfo *LI) {
   BasicBlock *BB = const_cast<BasicBlock *>(I->getParent());
   SmallVector<BasicBlock *> Succs(successors(BB));
   return Succs.empty() ||
-         !isPotentiallyReachableFromMany(Succs, BB, nullptr, &DT, LI);
+         !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
 bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
@@ -231,7 +231,7 @@ bool EarliestEscapeInfo::isNotCapturedBefore(const Value *Object,
   if (I == Iter.first->second) {
     if (OrAt)
       return false;
-    return isNotInCycle(I, DT, LI);
+    return isNotInCycle(I, &DT, LI);
   }
 
   return !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
@@ -1721,7 +1721,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   if (!Inst || Inst->getParent()->isEntryBlock())
     return true;
 
-  return isNotInCycle(Inst, *DT, /*LI*/ nullptr);
+  return isNotInCycle(Inst, DT, /*LI*/ nullptr);
 }
 
 /// Computes the symbolic difference between two de-composed GEPs.
