@@ -322,9 +322,7 @@ public:
     return Invocation->getHeaderSearchOptsPtr();
   }
 
-  APINotesOptions &getAPINotesOpts() {
-    return Invocation->getAPINotesOpts();
-  }
+  APINotesOptions &getAPINotesOpts() { return Invocation->getAPINotesOpts(); }
   const APINotesOptions &getAPINotesOpts() const {
     return Invocation->getAPINotesOpts();
   }
