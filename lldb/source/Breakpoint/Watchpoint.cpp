@@ -324,8 +324,8 @@ void Watchpoint::DumpWithLevel(Stream *s,
   }
 
   if (description_level >= lldb::eDescriptionLevelVerbose) {
-    s->Printf("\n    hw_index = %i  hit_count = %-4u  ignore_count = %-4u",
-              GetHardwareIndex(), GetHitCount(), GetIgnoreCount());
+    s->Printf("\n    hit_count = %-4u  ignore_count = %-4u", GetHitCount(),
+              GetIgnoreCount());
   }
 }
 
@@ -350,9 +350,7 @@ bool Watchpoint::IsDisabledDuringEphemeralMode() {
 
 void Watchpoint::SetEnabled(bool enabled, bool notify) {
   if (!enabled) {
-    if (!m_is_ephemeral)
-      SetHardwareIndex(LLDB_INVALID_INDEX32);
-    else
+    if (m_is_ephemeral)
       ++m_disabled_count;
 
     // Don't clear the snapshots for now.

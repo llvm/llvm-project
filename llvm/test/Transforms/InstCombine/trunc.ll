@@ -99,7 +99,7 @@ define <2 x i64> @test2_vec_nonuniform(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec_nonuniform(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 37>
-; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i64> [[D1]], <i64 36, i64 37>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], <i64 36, i64 37>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;
@@ -115,7 +115,7 @@ define <2 x i64> @test2_vec_undef(<2 x i64> %a) {
 ; CHECK-LABEL: @test2_vec_undef(
 ; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i64> [[A:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i64> [[A]], <i64 36, i64 undef>
-; CHECK-NEXT:    [[D:%.*]] = ashr <2 x i64> [[D1]], <i64 36, i64 undef>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i64> [[D1]], <i64 36, i64 undef>
 ; CHECK-NEXT:    call void @use_vec(<2 x i32> [[B]])
 ; CHECK-NEXT:    ret <2 x i64> [[D]]
 ;

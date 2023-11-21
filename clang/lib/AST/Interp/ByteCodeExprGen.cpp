@@ -2231,10 +2231,12 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!Func)
     return false;
 
-  // Put arguments on the stack.
-  for (const auto *Arg : E->arguments()) {
-    if (!this->visit(Arg))
-      return false;
+  if (!Func->isUnevaluatedBuiltin()) {
+    // Put arguments on the stack.
+    for (const auto *Arg : E->arguments()) {
+      if (!this->visit(Arg))
+        return false;
+    }
   }
 
   if (!this->emitCallBI(Func, E, E))

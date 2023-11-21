@@ -4681,3 +4681,200 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   for (const auto &Error : ExpectedLogErrors)
     EXPECT_TRUE(errors.find(Error) != std::string::npos);
 }
+
+TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
+  // Test that llvm-gsymutil lookup the correct funtion info when address
+  // ranges overlap. When functions overlap we always want to pick the first
+  // function info when symbolicating if there are multiple entries with the
+  // same address. Previous to this fix we would just binary search the address
+  // table and pick the first function info that matched the address. After
+  // this fix we now always select the first matching entry whose address range
+  // contains the lookup address to ensure we have the most debug info. We have
+  // seen case where the debug info would contain a small range and a symbol
+  // would have the same start address but the range was larger and sometimes,
+  // depending on how the binary search of the address table happened, we would
+  // pick these latter entries. We want the first entries because they always
+  // have the most debug info.
+  //
+  // To repro this case, we just make some simple DWARF that has two
+  // overlapping ranges and ensure that any lookups between 0x1000 and 0x104f
+  // match "foo", and any ranges between 0x1050 and 0x1fff match "bar".
+  //
+  // 0x0000000b: DW_TAG_compile_unit
+  //               DW_AT_name	("/tmp/main.cpp")
+  //               DW_AT_language	(DW_LANG_C)
+  //               DW_AT_stmt_list	(0x00000000)
+  //
+  // 0x00000015:   DW_TAG_subprogram
+  //                 DW_AT_name	("foo")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001050)
+  //
+  // 0x0000002a:   DW_TAG_subprogram
+  //                 DW_AT_name	("bar")
+  //                 DW_AT_low_pc	(0x0000000000001000)
+  //                 DW_AT_high_pc	(0x0000000000001100)
+  //
+  // 0x0000003f:   NULL
+
+  StringRef yamldata = R"(
+  debug_str:
+    - ''
+    - '/tmp/main.cpp'
+    - foo
+    - bar
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_udata
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+  debug_info:
+    - Length:          0x3C
+      Version:         4
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x1
+            - Value:           0x2
+            - Value:           0x0
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xF
+            - Value:           0x1000
+            - Value:           0x1050
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x13
+            - Value:           0x1000
+            - Value:           0x1100
+        - AbbrCode:        0x0
+  debug_line:
+    - Length:          71
+      Version:         2
+      PrologueLength:  36
+      MinInstLength:   1
+      DefaultIsStmt:   1
+      LineBase:        251
+      LineRange:       14
+      OpcodeBase:      13
+      StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
+      IncludeDirs:
+        - '/tmp'
+      Files:
+        - Name:            main.cpp
+          DirIdx:          1
+          ModTime:         0
+          Length:          0
+      Opcodes:
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          9
+          SubOpcode:       DW_LNE_set_address
+          Data:            4096
+        - Opcode:          DW_LNS_advance_line
+          SData:           9
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            16
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_copy
+          Data:            0
+        - Opcode:          DW_LNS_advance_pc
+          Data:            64
+        - Opcode:          DW_LNS_advance_line
+          SData:           1
+          Data:            0
+        - Opcode:          DW_LNS_extended_op
+          ExtLen:          1
+          SubOpcode:       DW_LNE_end_sequence
+          Data:            0
+  )";
+  auto ErrOrSections = DWARFYAML::emitDebugSections(yamldata);
+  ASSERT_THAT_EXPECTED(ErrOrSections, Succeeded());
+  std::unique_ptr<DWARFContext> DwarfContext =
+      DWARFContext::create(*ErrOrSections, 8);
+  ASSERT_TRUE(DwarfContext.get() != nullptr);
+  std::string errors;
+  raw_string_ostream OS(errors);
+  GsymCreator GC;
+  DwarfTransformer DT(*DwarfContext, GC);
+  const uint32_t ThreadCount = 1;
+  ASSERT_THAT_ERROR(DT.convert(ThreadCount, &OS), Succeeded());
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  OS.flush();
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = llvm::endianness::native;
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should be two functions in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 2u);
+  // Verify "foo" is correctly looked up for each of its addresses.
+  for (uint64_t Addr = 0x1000; Addr < 0x1050; ++Addr) {
+    auto ExpFI = GR->getFunctionInfo(Addr);
+    ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+    ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1050));
+    StringRef FuncName = GR->getString(ExpFI->Name);
+    EXPECT_EQ(FuncName, "foo");
+  }
+
+  // Verify "bar" is correctly looked up for each of its addresses.
+  for (uint64_t Addr = 0x1050; Addr < 0x1100; ++Addr) {
+    auto ExpFI = GR->getFunctionInfo(Addr);
+    ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+    ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x1100));
+    StringRef FuncName = GR->getString(ExpFI->Name);
+    EXPECT_EQ(FuncName, "bar");
+  }
+
+  // Prior to the fix for this issue when we dumped an entire GSYM file, we
+  // were using a function that would extract a FunctionInfo object for a
+  // given address which caused us to always dump the first FunctionInfo
+  // entry for a given address. We now dump it correctly using an address
+  // index. Below we verify that we dump the right FunctionInfo gets dumped.
+
+  SmallString<512> DumpStr;
+  raw_svector_ostream DumpStrm(DumpStr);
+  GR->dump(DumpStrm);
+
+  // Make sure we see both "foo" and "bar" in the output of an entire GSYM
+  // dump. Prior to this fix we would two "foo" entries.
+  std::vector<std::string> ExpectedDumpLines = {
+      "@ 0x00000068: [0x0000000000001000 - 0x0000000000001050) \"foo\"",
+      "@ 0x00000088: [0x0000000000001000 - 0x0000000000001100) \"bar\""};
+  // Make sure all expected errors are in the error stream for the two invalid
+  // inlined functions that we removed due to invalid range scoping.
+  for (const auto &Line : ExpectedDumpLines)
+    EXPECT_TRUE(DumpStr.find(Line) != std::string::npos);
+}

@@ -42,9 +42,16 @@ namespace llvm {
   public:
     X86ELFTargetObjectFile() {
       PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
+      SupportIndirectSymViaGOTPCRel = true;
     }
     /// Describe a TLS variable address within debug info.
     const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
+
+    const MCExpr *
+    getIndirectSymViaGOTPCRel(const GlobalValue *GV, const MCSymbol *Sym,
+                              const MCValue &MV, int64_t Offset,
+                              MachineModuleInfo *MMI,
+                              MCStreamer &Streamer) const override;
   };
 
 } // end namespace llvm

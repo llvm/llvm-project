@@ -442,6 +442,10 @@ enum NodeType : unsigned {
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,
 
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
+
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,
@@ -608,8 +612,6 @@ public:
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                  MachineInstr &MI, MachineBasicBlock *BB,
                                  bool HasTile) const;
-  MachineBasicBlock *EmitZTSpillFill(MachineInstr &MI, MachineBasicBlock *BB,
-                                     bool IsSpill) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *

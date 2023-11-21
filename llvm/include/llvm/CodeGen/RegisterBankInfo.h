@@ -177,7 +177,7 @@ public:
     /// \note This method does not check anything when assertions are disabled.
     ///
     /// \return True is the check was successful.
-    bool verify(const RegisterBankInfo &RBI, unsigned MeaningfulBitWidth) const;
+    bool verify(const RegisterBankInfo &RBI, TypeSize MeaningfulBitWidth) const;
 
     /// Print this on dbgs() stream.
     void dump() const;
@@ -631,7 +631,7 @@ public:
   ///
   /// \note Since this is a copy, both registers have the same size.
   virtual unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
-                            unsigned Size) const {
+                            TypeSize Size) const {
     // Optimistically assume that copies are coalesced. I.e., when
     // they are on the same bank, they are free.
     // Otherwise assume a non-zero cost of 1. The targets are supposed
@@ -641,7 +641,7 @@ public:
 
   /// \returns true if emitting a copy from \p Src to \p Dst is impossible.
   bool cannotCopy(const RegisterBank &Dst, const RegisterBank &Src,
-                  unsigned Size) const {
+                  TypeSize Size) const {
     return copyCost(Dst, Src, Size) == std::numeric_limits<unsigned>::max();
   }
 
@@ -749,7 +749,7 @@ public:
   /// virtual register.
   ///
   /// \pre \p Reg != 0 (NoRegister).
-  unsigned getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
+  TypeSize getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
                          const TargetRegisterInfo &TRI) const;
 
   /// Check that information hold by this instance make sense for the

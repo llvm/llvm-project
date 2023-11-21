@@ -102,6 +102,8 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -230,6 +232,8 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* ``SBWatchpoint::GetHardwareIndex`` is deprecated and now returns -1
+  to indicate the index is unavailable.
 * Methods in SBHostOS related to threads have had their implementations
   removed. These methods will return a value indicating failure.
 * ``SBType::FindDirectNestedType`` function is added. It's useful
