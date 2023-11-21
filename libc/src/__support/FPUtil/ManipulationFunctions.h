@@ -17,10 +17,10 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <fenv.h>
 #include <limits.h>
 #include <math.h>
 
@@ -180,8 +180,9 @@ LIBC_INLINE T nextafter(T from, T to) {
   return cpp::bit_cast<T>(int_val);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T nexttoward(T from, long double to) {
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+nexttoward(T from, long double to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;
