@@ -183,15 +183,15 @@
 // local folder hierarchy that meets this requirement.
 // Note: this might not work with weird RPATH configurations.
 // RUN: rm -rf %t/install
-// RUN: mkdir -pv %t/install/bin
+// RUN: mkdir -p %t/install/bin
 // RUN: cp %clang %t/install/bin/clang
-// RUN: mkdir -pv %t/install/include/c++/v1
+// RUN: mkdir -p %t/install/include/c++/v1
 
 // Headers in (1) and in (2) -> (1) is preferred over (2)
 // RUN: rm -rf %t/symlinked1
-// RUN: mkdir -pv %t/symlinked1/bin
-// RUN: ln -svf %t/install/bin/clang %t/symlinked1/bin/clang
-// RUN: mkdir -pv %t/symlinked1/include/c++/v1
+// RUN: mkdir -p %t/symlinked1/bin
+// RUN: ln -sf %t/install/bin/clang %t/symlinked1/bin/clang
+// RUN: mkdir -p %t/symlinked1/include/c++/v1
 
 // RUN: %t/symlinked1/bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
@@ -207,8 +207,8 @@
 
 // Headers in (2) and in (3) -> (2) is preferred over (3)
 // RUN: rm -rf %t/symlinked2
-// RUN: mkdir -pv %t/symlinked2/bin
-// RUN: ln -svf %t/install/bin/clang %t/symlinked2/bin/clang
+// RUN: mkdir -p %t/symlinked2/bin
+// RUN: ln -sf %t/install/bin/clang %t/symlinked2/bin/clang
 
 // RUN: %t/symlinked2/bin/clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin \
