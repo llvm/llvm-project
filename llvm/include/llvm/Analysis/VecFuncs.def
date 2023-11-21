@@ -492,6 +492,7 @@ TLI_DEFINE_VECFUNC( "exp2", "_ZGVnN2v_exp2", FIXED(2), "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC( "llvm.exp2.f64", "_ZGVnN2v_exp2", FIXED(2), "_ZGV_LLVM_N2v")
 
 TLI_DEFINE_VECFUNC( "exp10", "_ZGVnN2v_exp10", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC( "llvm.exp10.f64", "_ZGVnN2v_exp10", FIXED(2), "_ZGV_LLVM_N2v")
 
 TLI_DEFINE_VECFUNC( "lgamma", "_ZGVnN2v_lgamma", FIXED(2), "_ZGV_LLVM_N2v")
 
@@ -544,6 +545,7 @@ TLI_DEFINE_VECFUNC( "exp2f", "_ZGVnN4v_exp2f", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC( "llvm.exp2.f32", "_ZGVnN4v_exp2f", FIXED(4), "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC( "exp10f", "_ZGVnN4v_exp10f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC( "llvm.exp10.f32", "_ZGVnN4v_exp10f", FIXED(4), "_ZGV_LLVM_N4v")
 
 TLI_DEFINE_VECFUNC( "lgammaf", "_ZGVnN4v_lgammaf", FIXED(4), "_ZGV_LLVM_N4v")
 
@@ -609,6 +611,8 @@ TLI_DEFINE_VECFUNC("llvm.exp2.f32", "_ZGVsMxv_exp2f", SCALABLE(4), MASKED, "_ZGV
 
 TLI_DEFINE_VECFUNC("exp10", "_ZGVsMxv_exp10",  SCALABLE(2), MASKED, "_ZGVsMxv")
 TLI_DEFINE_VECFUNC("exp10f", "_ZGVsMxv_exp10f", SCALABLE(4), MASKED, "_ZGVsMxv")
+TLI_DEFINE_VECFUNC("llvm.exp10.f64", "_ZGVsMxv_exp10",  SCALABLE(2), MASKED, "_ZGVsMxv")
+TLI_DEFINE_VECFUNC("llvm.exp10.f32", "_ZGVsMxv_exp10f", SCALABLE(4), MASKED, "_ZGVsMxv")
 
 TLI_DEFINE_VECFUNC("fmod", "_ZGVsMxvv_fmod", SCALABLE(2), MASKED, "_ZGVsMxvv")
 TLI_DEFINE_VECFUNC("fmodf", "_ZGVsMxvv_fmodf", SCALABLE(4), MASKED, "_ZGVsMxvv")
@@ -752,6 +756,11 @@ TLI_DEFINE_VECFUNC("exp10", "armpl_vexp10q_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2
 TLI_DEFINE_VECFUNC("exp10f", "armpl_vexp10q_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("exp10", "armpl_svexp10_f64_x",  SCALABLE(2), MASKED, "_ZGVsMxv")
 TLI_DEFINE_VECFUNC("exp10f", "armpl_svexp10_f32_x", SCALABLE(4), MASKED, "_ZGVsMxv")
+
+TLI_DEFINE_VECFUNC("llvm.exp10.f64", "armpl_vexp10q_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.exp10.f32", "armpl_vexp10q_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp10.f64", "armpl_svexp10_f64_x",  SCALABLE(2), MASKED, "_ZGVsMxv")
+TLI_DEFINE_VECFUNC("llvm.exp10.f32", "armpl_svexp10_f32_x", SCALABLE(4), MASKED, "_ZGVsMxv")
 
 TLI_DEFINE_VECFUNC("expm1", "armpl_vexpm1q_f64", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("expm1f", "armpl_vexpm1q_f32", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
