@@ -7601,13 +7601,13 @@ For example,
   task<int> dangling_refs(int a) {
     // `coro` captures reference to a temporary. `foo` would now contain a dangling reference to `a`.
     auto foo = coro(1);
-    // `coro` captures reference to local variable `a` which is destroyed after the return. 
+    // `coro` captures reference to local variable `a` which is destroyed after the return.
     return coro(a);
   }
 
 `Lifetime bound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound> _` static analysis
 can be used to detect such instances when coroutines capture references which may die earlier than the
-coroutine frame itself. In the above example, if the CRT `task` is annotated with 
+coroutine frame itself. In the above example, if the CRT `task` is annotated with
 ``[[clang::coro_lifetimebound]]``, then lifetime bound analysis would detect capturing reference to
 temporaries or return address of a local variable.
 
@@ -7620,7 +7620,7 @@ Both coroutines and coroutine wrappers are part of this analysis.
   };
 
   Task<int> coro(const int& a) { co_return a + 1; }
-  Task<int> [[clang::coro_wrapper]] coro_wrapper(const int& a, const int& b) { 
+  Task<int> [[clang::coro_wrapper]] coro_wrapper(const int& a, const int& b) {
     return a > b ? coro(a) : coro(b);
   }
   Task<int> temporary_reference() {
