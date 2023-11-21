@@ -976,7 +976,7 @@ public:
   }
 
   /// NoCFIValue is always a pointer.
-  inline PointerType *getType() const {
+  PointerType *getType() const {
     return cast<PointerType>(Value::getType());
   }
 
