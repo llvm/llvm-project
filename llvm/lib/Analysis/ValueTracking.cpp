@@ -589,29 +589,33 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   if (!Q.AC || !Q.CxtI)
     return false;
 
-  if (Q.CxtI && V->getType()->isPointerTy()) {
-    SmallVector<Attribute::AttrKind, 2> AttrKinds{Attribute::NonNull};
-    if (!NullPointerIsDefined(Q.CxtI->getFunction(),
-                              V->getType()->getPointerAddressSpace()))
-      AttrKinds.push_back(Attribute::Dereferenceable);
-
-    if (getKnowledgeValidInContext(V, AttrKinds, Q.CxtI, Q.DT, Q.AC))
-      return true;
-  }
-
-  for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
-    if (!AssumeVH)
+  for (AssumptionCache::ResultElem &Elem : Q.AC->assumptionsFor(V)) {
+    if (!Elem.Assume)
       continue;
-    CallInst *I = cast<CallInst>(AssumeVH);
+
+    AssumeInst *I = cast<AssumeInst>(Elem.Assume);
     assert(I->getFunction() == Q.CxtI->getFunction() &&
            "Got assumption for the wrong function!");
+
+    if (Elem.Index != AssumptionCache::ExprResultIdx) {
+      if (!V->getType()->isPointerTy())
+        continue;
+      if (RetainedKnowledge RK = getKnowledgeFromBundle(
+              *I, I->bundle_op_info_begin()[Elem.Index])) {
+        if (RK.WasOn == V &&
+            (RK.AttrKind == Attribute::NonNull ||
+             (RK.AttrKind == Attribute::Dereferenceable &&
+              !NullPointerIsDefined(Q.CxtI->getFunction(),
+                                    V->getType()->getPointerAddressSpace()))) &&
+            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+          return true;
+      }
+      continue;
+    }
 
     // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
-
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
-           "must be an assume intrinsic");
 
     Value *RHS;
     CmpInst::Predicate Pred;
@@ -741,31 +745,33 @@ void llvm::computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
   unsigned BitWidth = Known.getBitWidth();
 
-  // Refine Known set if the pointer alignment is set by assume bundles.
-  if (V->getType()->isPointerTy()) {
-    if (RetainedKnowledge RK = getKnowledgeValidInContext(
-            V, { Attribute::Alignment }, Q.CxtI, Q.DT, Q.AC)) {
-      if (isPowerOf2_64(RK.ArgValue))
-        Known.Zero.setLowBits(Log2_64(RK.ArgValue));
-    }
-  }
-
   // Note that the patterns below need to be kept in sync with the code
   // in AssumptionCache::updateAffectedValues.
 
-  for (auto &AssumeVH : Q.AC->assumptionsFor(V)) {
-    if (!AssumeVH)
+  for (AssumptionCache::ResultElem &Elem : Q.AC->assumptionsFor(V)) {
+    if (!Elem.Assume)
       continue;
-    CallInst *I = cast<CallInst>(AssumeVH);
+
+    AssumeInst *I = cast<AssumeInst>(Elem.Assume);
     assert(I->getParent()->getParent() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
+
+    if (Elem.Index != AssumptionCache::ExprResultIdx) {
+      if (!V->getType()->isPointerTy())
+        continue;
+      if (RetainedKnowledge RK = getKnowledgeFromBundle(
+              *I, I->bundle_op_info_begin()[Elem.Index])) {
+        if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
+            isPowerOf2_64(RK.ArgValue) &&
+            isValidAssumeForContext(I, Q.CxtI, Q.DT))
+          Known.Zero.setLowBits(Log2_64(RK.ArgValue));
+      }
+      continue;
+    }
 
     // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
-
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
-           "must be an assume intrinsic");
 
     Value *Arg = I->getArgOperand(0);
 
