@@ -1106,7 +1106,7 @@ static void addValueProfData(InstrProfRecord &Record) {
   Record.addValueData(IPVK_IndirectCallTarget, 4, nullptr, 0, nullptr);
 }
 
-TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
+TEST(ValueProfileReadWriteTest, value_prof_data_read_write) {
   InstrProfRecord SrcRecord({1ULL << 31, 2});
   addValueProfData(SrcRecord);
   std::unique_ptr<ValueProfData> VPData =
@@ -1171,8 +1171,7 @@ TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write) {
   ASSERT_EQ(1800U, VD_3[1].Count);
 }
 
-TEST_P(MaybeSparseInstrProfTest, value_prof_data_read_write_mapping) {
-
+TEST(ValueProfileReadWriteTest, symtab_mapping) {
   NamedInstrProfRecord SrcRecord("caller", 0x1234, {1ULL << 31, 2});
   addValueProfData(SrcRecord);
   std::unique_ptr<ValueProfData> VPData =
@@ -1240,7 +1239,7 @@ TEST_P(MaybeSparseInstrProfTest, get_weighted_function_counts) {
 }
 
 // Testing symtab creator interface used by indexed profile reader.
-TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
+TEST(SymtabTest, instr_prof_symtab_test) {
   std::vector<StringRef> FuncNames;
   FuncNames.push_back("func1");
   FuncNames.push_back("func2");
@@ -1296,13 +1295,13 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_test) {
 }
 
 // Test that we get an error when creating a bogus symtab.
-TEST_P(MaybeSparseInstrProfTest, instr_prof_bogus_symtab_empty_func_name) {
+TEST(SymtabTest, instr_prof_bogus_symtab_empty_func_name) {
   InstrProfSymtab Symtab;
   EXPECT_TRUE(ErrorEquals(instrprof_error::malformed, Symtab.addFuncName("")));
 }
 
 // Testing symtab creator interface used by value profile transformer.
-TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
+TEST(SymtabTest, instr_prof_symtab_module_test) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = std::make_unique<Module>("MyModule.cpp", Ctx);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx),
@@ -1346,7 +1345,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
 
 // Testing symtab serialization and creator/deserialization interface
 // used by coverage map reader, and raw profile reader.
-TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
+TEST(SymtabTest, instr_prof_symtab_compression_test) {
   std::vector<std::string> FuncNames1;
   std::vector<std::string> FuncNames2;
   for (int I = 0; I < 3; I++) {
