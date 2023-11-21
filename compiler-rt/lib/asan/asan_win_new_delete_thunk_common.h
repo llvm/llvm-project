@@ -25,7 +25,7 @@
 #ifndef ASAN_WIN_NEW_DELETE_THUNK_COMMON_H
 #define ASAN_WIN_NEW_DELETE_THUNK_COMMON_H
 
-#include <sanitizer_common/sanitizer_internal_defs.h>
+#include "sanitizer_common/sanitizer_internal_defs.h"
 // Fake std::nothrow_t and std::align_val_t to avoid including <new>.
 namespace std {
 struct nothrow_t {};
