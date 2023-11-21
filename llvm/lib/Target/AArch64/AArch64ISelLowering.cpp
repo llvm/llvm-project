@@ -2579,6 +2579,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::GLD1_IMM_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::GLD1Q_MERGE_ZERO)
+    MAKE_CASE(AArch64ISD::GLD1Q_INDEX_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::GLD1S_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::GLD1S_SCALED_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::GLD1S_SXTW_MERGE_ZERO)
@@ -2604,6 +2605,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::GLDNT1_INDEX_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::GLDNT1S_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::SST1Q_PRED)
+    MAKE_CASE(AArch64ISD::SST1Q_INDEX_PRED)
     MAKE_CASE(AArch64ISD::ST1_PRED)
     MAKE_CASE(AArch64ISD::SST1_PRED)
     MAKE_CASE(AArch64ISD::SST1_SCALED_PRED)
@@ -22761,10 +22763,11 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // For FPs, ACLE only supports _packed_ single and double precision types.
-  // SST1Q_PRED is the ST1Q for sve2p1 and should allow all sizes
+  // SST1Q_[INDEX_]PRED is the ST1Q for sve2p1 and should allow all sizes.
   if (SrcElVT.isFloatingPoint())
     if ((SrcVT != MVT::nxv4f32) && (SrcVT != MVT::nxv2f64) &&
-        (Opcode != AArch64ISD::SST1Q_PRED ||
+        ((Opcode != AArch64ISD::SST1Q_PRED &&
+          Opcode != AArch64ISD::SST1Q_INDEX_PRED) ||
          ((SrcVT != MVT::nxv8f16) && (SrcVT != MVT::nxv8bf16))))
       return SDValue();
 
@@ -22782,6 +22785,10 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
     Offset =
         getScaledOffsetForBitWidth(DAG, Offset, DL, SrcElVT.getSizeInBits());
     Opcode = AArch64ISD::SSTNT1_PRED;
+  } else if (Opcode == AArch64ISD::SST1Q_INDEX_PRED) {
+    Offset =
+        getScaledOffsetForBitWidth(DAG, Offset, DL, SrcElVT.getSizeInBits());
+    Opcode = AArch64ISD::SST1Q_PRED;
   }
 
   // In the case of non-temporal gather loads there's only one SVE instruction
@@ -22789,7 +22796,8 @@ static SDValue performScatterStoreCombine(SDNode *N, SelectionDAG &DAG,
   //    * stnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
   // Since we do have intrinsics that allow the arguments to be in a different
   // order, we may need to swap them to match the spec.
-  if (Opcode == AArch64ISD::SSTNT1_PRED && Offset.getValueType().isVector())
+  if ((Opcode == AArch64ISD::SSTNT1_PRED || Opcode == AArch64ISD::SST1Q_PRED) &&
+      Offset.getValueType().isVector())
     std::swap(Base, Offset);
 
   // SST1_IMM requires that the offset is an immediate that is:
@@ -22872,21 +22880,26 @@ static SDValue performGatherLoadCombine(SDNode *N, SelectionDAG &DAG,
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(4);
 
-  // For "scalar + vector of indices", just scale the indices. This only
-  // applies to non-temporal gathers because there's no instruction that takes
-  // indicies.
+  // For "scalar + vector of indices", scale the indices to obtain unscaled
+  // offsets. This applies to non-temporal and quadword gathers, which do not
+  // have an addressing mode with scaled offset.
   if (Opcode == AArch64ISD::GLDNT1_INDEX_MERGE_ZERO) {
     Offset = getScaledOffsetForBitWidth(DAG, Offset, DL,
                                         RetVT.getScalarSizeInBits());
     Opcode = AArch64ISD::GLDNT1_MERGE_ZERO;
+  } else if (Opcode == AArch64ISD::GLD1Q_INDEX_MERGE_ZERO) {
+    Offset = getScaledOffsetForBitWidth(DAG, Offset, DL,
+                                        RetVT.getScalarSizeInBits());
+    Opcode = AArch64ISD::GLD1Q_MERGE_ZERO;
   }
 
-  // In the case of non-temporal gather loads there's only one SVE instruction
-  // per data-size: "scalar + vector", i.e.
-  //    * ldnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
+  // In the case of non-temporal gather loads and quadword gather loads there's
+  // only one addressing mode : "vector + scalar", e.g.
+  //   ldnt1{b|h|w|d} { z0.s }, p0/z, [z0.s, x0]
   // Since we do have intrinsics that allow the arguments to be in a different
   // order, we may need to swap them to match the spec.
-  if (Opcode == AArch64ISD::GLDNT1_MERGE_ZERO &&
+  if ((Opcode == AArch64ISD::GLDNT1_MERGE_ZERO ||
+       Opcode == AArch64ISD::GLD1Q_MERGE_ZERO) &&
       Offset.getValueType().isVector())
     std::swap(Base, Offset);
 
@@ -23736,6 +23749,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1Q_MERGE_ZERO);
+    case Intrinsic::aarch64_sve_ld1q_gather_index:
+      return performGatherLoadCombine(N, DAG,
+                                      AArch64ISD::GLD1Q_INDEX_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1_gather_index:
       return performGatherLoadCombine(N, DAG,
                                       AArch64ISD::GLD1_SCALED_MERGE_ZERO);
@@ -23781,6 +23797,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                       AArch64ISD::GLDFF1_IMM_MERGE_ZERO);
     case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1Q_PRED);
+    case Intrinsic::aarch64_sve_st1q_scatter_index:
+      return performScatterStoreCombine(N, DAG, AArch64ISD::SST1Q_INDEX_PRED);
     case Intrinsic::aarch64_sve_st1_scatter:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1_PRED);
     case Intrinsic::aarch64_sve_st1_scatter_index:
