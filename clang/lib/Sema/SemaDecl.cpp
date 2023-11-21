@@ -442,7 +442,6 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   UsingShadowDecl *FoundUsingShadow = nullptr;
   switch (Result.getResultKind()) {
   case LookupResult::NotFound:
-  case LookupResult::NotFoundInCurrentInstantiation:
     if (CorrectedII) {
       TypeNameValidatorCCC CCC(/*AllowInvalid=*/true, isClassName,
                                AllowDeducedTemplate);
@@ -482,8 +481,23 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         }
       }
     }
-    // If typo correction failed or was not performed, fall through
-    [[fallthrough]];
+    Result.suppressDiagnostics();
+    return nullptr;
+  case LookupResult::NotFoundInCurrentInstantiation: {
+    if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
+      QualType T;
+      T = Context.getDependentNameType(ElaboratedTypeKeyword::None,
+                                       SS->getScopeRep(), &II);
+      TypeLocBuilder TLB;
+      DependentNameTypeLoc TL = TLB.push<DependentNameTypeLoc>(T);
+      TL.setElaboratedKeywordLoc(SourceLocation());
+      TL.setQualifierLoc(SS->getWithLocInContext(Context));
+      TL.setNameLoc(NameLoc);
+      return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
+    }
+    Result.suppressDiagnostics();
+    return nullptr;
+  }
   case LookupResult::FoundOverloaded:
   case LookupResult::FoundUnresolvedValue:
     Result.suppressDiagnostics();

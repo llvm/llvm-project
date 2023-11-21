@@ -610,6 +610,9 @@ Bug Fixes in This Version
   inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 - Fix crash during instantiation of some class template specializations within class
   templates. Fixes (`#70375 <https://github.com/llvm/llvm-project/issues/70375>`_)
+- Fixed false positive error emitted by clang when performing qualified name
+  lookup and the current class instantiation has dependent bases.
+  Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
