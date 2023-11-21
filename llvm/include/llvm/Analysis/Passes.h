@@ -34,13 +34,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createDelinearizationPass - This pass implements attempts to restore
-  // multidimensional array indices from linearized expressions.
-  //
-  FunctionPass *createDelinearizationPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   // createRegionInfoPass - This pass finds all single entry single exit regions
   // in a function and builds the region hierarchy.
   //
