@@ -499,8 +499,8 @@ loop:
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %invoke.cont ]
   invoke i32 @InvokeCall()
           to label %invoke.cont unwind label %lpad
-; CHECK: edge loop -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge loop -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK: edge loop -> invoke.cont probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge loop -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
 
 invoke.cont:
   %inc = add nsw i32 %i.0, 1

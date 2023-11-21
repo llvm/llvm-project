@@ -243,8 +243,8 @@ entry:
 if.then:
   invoke i32 @InvokeCall()
           to label %invoke.cont unwind label %lpad
-; CHECK:  edge if.then -> invoke.cont probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK:  edge if.then -> lpad probability is 0x00008000 / 0x80000000 = 0.00%
+; CHECK:  edge if.then -> invoke.cont probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK:  edge if.then -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
 
 invoke.cont:
   call void @ColdFunc() #0
@@ -270,8 +270,8 @@ if.then:
   invoke i32 @InvokeCall()
           to label %invoke.cont unwind label %lpad
 ; The cold call heuristic should not kick in when the cold callsite is in EH path.
-; CHECK: edge if.then -> invoke.cont probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge if.then -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK: edge if.then -> invoke.cont probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge if.then -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
 
 invoke.cont:
   br label %if.end
@@ -298,8 +298,8 @@ if.then:
           to label %invoke.cont unwind label %lpad
 ; Regardless of cold calls, edge weights from a invoke instruction should be
 ; determined by the invoke heuristic.
-; CHECK: edge if.then -> invoke.cont probability is 0x7fff8000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge if.then -> lpad probability is 0x00008000 / 0x80000000 = 0.00%
+; CHECK: edge if.then -> invoke.cont probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge if.then -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
 
 invoke.cont:
   call void @ColdFunc() #0
@@ -318,13 +318,13 @@ if.end:
 ; CHECK-LABEL: test_invoke_code_profiled
 define void @test_invoke_code_profiled(i1 %c) personality ptr @__gxx_personality_v0 {
 entry:
-; CHECK: edge entry -> invoke.to0 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge entry -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK: edge entry -> invoke.to0 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge entry -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
   invoke i32 @InvokeCall() to label %invoke.to0 unwind label %lpad
 
 invoke.to0:
-; CHECK: edge invoke.to0 -> invoke.to1 probability is 0x7ffff800 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge invoke.to0 -> lpad probability is 0x00000800 / 0x80000000 = 0.00%
+; CHECK: edge invoke.to0 -> invoke.to1 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+; CHECK: edge invoke.to0 -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
   invoke i32 @InvokeCall() to label %invoke.to1 unwind label %lpad,
      !prof !{!"branch_weights", i32 444}
 

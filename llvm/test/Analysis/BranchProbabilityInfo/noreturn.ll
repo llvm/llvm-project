@@ -118,8 +118,8 @@ if.then:                                          ; preds = %entry
   %exception = call ptr @__cxa_allocate_exception(i64 1) #0
   invoke i32 @smallFunction(i32 %idx)
           to label %invoke.cont unwind label %lpad
-; CHECK: edge if.then -> invoke.cont probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge if.then -> lpad probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge if.then -> invoke.cont probability is 0x80000000 / 0x80000000 = 100.00%
+; CHECK: edge if.then -> lpad probability is 0x00000000 / 0x80000000 = 0.00%
 
 invoke.cont:                                      ; preds = %if.then
   call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #1

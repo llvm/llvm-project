@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 #define LLVM_ANALYSIS_BRANCHPROBABILITYINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -181,7 +182,7 @@ public:
   /// can be used when updating the CFG to update the branch probability
   /// information.
   void setEdgeProbability(const BasicBlock *Src,
-                          const SmallVectorImpl<BranchProbability> &Probs);
+                          ArrayRef<BranchProbability> Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///
@@ -406,6 +407,7 @@ private:
   /// Based on computed weights by \p computeEstimatedBlockWeight set
   /// probabilities on branches.
   bool calcEstimatedHeuristics(const BasicBlock *BB);
+  bool calcFixedWeights(const BasicBlock *BB);
   bool calcMetadataWeights(const BasicBlock *BB);
   bool calcPointerHeuristics(const BasicBlock *BB);
   bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);

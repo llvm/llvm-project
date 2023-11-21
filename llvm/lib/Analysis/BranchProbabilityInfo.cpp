@@ -870,6 +870,20 @@ void BranchProbabilityInfo::computeEestimateBlockWeight(
   } while (!BlockWorkList.empty() || !LoopWorkList.empty());
 }
 
+bool BranchProbabilityInfo::calcFixedWeights(const BasicBlock *BB) {
+  const Instruction *Terminator = BB->getTerminator();
+  if (const InvokeInst *Invoke = dyn_cast<InvokeInst>(Terminator)) {
+    assert(Invoke->getNormalDest() == Invoke->getSuccessor(0) &&
+           Invoke->getUnwindDest() == Invoke->getSuccessor(1) &&
+           "unexpected successor ordering");
+    const BranchProbability BP[] = {BranchProbability::getOne(),
+                                    BranchProbability::getZero()};
+    setEdgeProbability(BB, BP);
+    return true;
+  }
+  return false;
+}
+
 // Calculate edge probabilities based on block's estimated weight.
 // Note that gathered weights were not scaled for loops. Thus edges entering
 // and exiting loops requires special processing.
@@ -1130,7 +1144,7 @@ BranchProbabilityInfo::getEdgeProbability(const BasicBlock *Src,
 
 /// Set the edge probability for all edges at once.
 void BranchProbabilityInfo::setEdgeProbability(
-    const BasicBlock *Src, const SmallVectorImpl<BranchProbability> &Probs) {
+    const BasicBlock *Src, ArrayRef<BranchProbability> Probs) {
   assert(Src->getTerminator()->getNumSuccessors() == Probs.size());
   eraseBlock(Src); // Erase stale data if any.
   if (Probs.size() == 0)
@@ -1255,6 +1269,8 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LoopI,
     if (BB->getTerminator()->getNumSuccessors() < 2)
       continue;
     if (calcMetadataWeights(BB))
+      continue;
+    if (calcFixedWeights(BB))
       continue;
     if (calcEstimatedHeuristics(BB))
       continue;
