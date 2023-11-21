@@ -669,7 +669,6 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
               TRI->superregs_inclusive(VRM->getPhys(MO.getReg())),
               std::inserter(AdjacentAllocatedCRs, AdjacentAllocatedCRs.begin()),
               [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
-        return;
       }
     };
     // Search backward.
