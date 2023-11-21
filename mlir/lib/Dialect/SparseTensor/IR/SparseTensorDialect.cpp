@@ -369,11 +369,6 @@ SparseTensorEncodingAttr::getStaticDimSliceOffset(Dimension dim) const {
 }
 
 std::optional<uint64_t>
-SparseTensorEncodingAttr::getStaticDimSliceSize(Dimension dim) const {
-  return getDimSlice(dim).getStaticSize();
-}
-
-std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticDimSliceStride(Dimension dim) const {
   return getDimSlice(dim).getStaticStride();
 }
@@ -382,12 +377,6 @@ std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticLvlSliceOffset(Level lvl) const {
   // FIXME: `toOrigDim` is deprecated.
   return getStaticDimSliceOffset(toOrigDim(*this, lvl));
-}
-
-std::optional<uint64_t>
-SparseTensorEncodingAttr::getStaticLvlSliceSize(Level lvl) const {
-  // FIXME: `toOrigDim` is deprecated.
-  return getStaticDimSliceSize(toOrigDim(*this, lvl));
 }
 
 std::optional<uint64_t>
@@ -1744,33 +1733,26 @@ LogicalResult SortOp::verify() {
   if (!xPerm.isPermutation())
     emitError(llvm::formatv("Expected a permutation map, got {0}", xPerm));
 
-  std::optional<int64_t> cn = getConstantIntValue(getN());
   // We can't check the size of the buffers when n or buffer dimensions aren't
   // compile-time constants.
+  std::optional<int64_t> cn = getConstantIntValue(getN());
   if (!cn)
     return success();
 
-  uint64_t n = cn.value();
-  uint64_t ny = 0;
-  if (auto nyAttr = getNyAttr()) {
-    ny = nyAttr.getInt();
-  }
-
-  // FIXME: update the types of variables used in expressions bassed as
-  // the `minSize` argument, to avoid implicit casting at the callsites
-  // of this lambda.
+  // Verify dimensions.
   const auto checkDim = [&](Value v, Size minSize, const char *message) {
     const Size sh = getMemRefType(v).getShape()[0];
     if (!ShapedType::isDynamic(sh) && sh < minSize)
       emitError(llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
   };
-
+  uint64_t n = cn.value();
+  uint64_t ny = 0;
+  if (auto nyAttr = getNyAttr())
+    ny = nyAttr.getInt();
   checkDim(getXy(), n * (nx + ny),
            "Expected dimension(xy) >= n * (rank(perm_map) + ny)");
-
-  for (Value opnd : getYs()) {
+  for (Value opnd : getYs())
     checkDim(opnd, n, "Expected dimension(y) >= n");
-  }
 
   return success();
 }
