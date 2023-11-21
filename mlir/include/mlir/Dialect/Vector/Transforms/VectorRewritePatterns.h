@@ -147,6 +147,23 @@ void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
 void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
                                          PatternBenefit benefit = 1);
 
+/// Patterns that fold chained vector reductions. These patterns assume that
+/// vector addition (e.g., `arith.addf` with vector operands) is cheaper than
+/// vector reduction.
+///
+/// Example:
+/// ```
+/// %a = vector.reduction <add> %a, %acc
+/// %b = vector.reduction <add> %b, %a
+/// ```
+/// is transformed into:
+/// ```
+/// %a = arith.addf %a, %b
+/// %b = vector.reduction <add> %a, %acc
+/// ```
+void populateChainedVectorReductionFoldingPatterns(RewritePatternSet &patterns,
+                                                   PatternBenefit benefit = 1);
+
 /// Populate `patterns` with the following patterns.
 ///
 /// [DecomposeDifferentRankInsertStridedSlice]
