@@ -15,7 +15,6 @@
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
-#include <__functional/operations.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
@@ -42,12 +41,12 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 boo
   return true;
 }
 
-template < class _Tp,
-           class _Up,
-           class _BinaryPredicate,
-           __enable_if_t<__desugars_to<__equal_tag, _BinaryPredicate, _Tp, _Up>::value && !is_volatile<_Tp>::value &&
-                             !is_volatile<_Up>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
-                         int> = 0>
+template <class _Tp,
+          class _Up,
+          class _BinaryPredicate,
+          __enable_if_t<__desugars_to<__equal_tag, _BinaryPredicate, _Tp, _Up>::value && !is_volatile<_Tp>::value &&
+                            !is_volatile<_Up>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
+                        int> = 0>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&) {
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));

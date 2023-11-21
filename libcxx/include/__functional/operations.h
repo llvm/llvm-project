@@ -40,16 +40,13 @@ struct _LIBCPP_TEMPLATE_VIS plus
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
-// For the typed version of plus, we require that the left- and right-hand
-// side of the plus operator matches
+// The non-transparent std::plus specialization is only equivalent to a raw plus
+// operator when we don't perform an implicit conversion when calling it.
 template <class _Tp>
 struct __desugars_to<__plus_tag, plus<_Tp>, _Tp, _Tp> : true_type {};
 
-#if _LIBCPP_STD_VER >= 14
-// In the transparent case, we do not enforce that
 template <class _Tp, class _Up>
 struct __desugars_to<__plus_tag, plus<void>, _Tp, _Up> : true_type {};
-#endif
 
 #if _LIBCPP_STD_VER >= 14
 template <>
@@ -354,16 +351,14 @@ struct _LIBCPP_TEMPLATE_VIS equal_to<void>
 };
 #endif
 
-// For the typed version of equal_to, we require that the left- and right-hand
-// side of the equality operator matches
+// The non-transparent std::equal_to specialization is only equivalent to a raw equality
+// comparison when we don't perform an implicit conversion when calling it.
 template <class _Tp>
 struct __desugars_to<__equal_tag, equal_to<_Tp>, _Tp, _Tp> : true_type {};
 
-#if _LIBCPP_STD_VER >= 14
 // In the transparent case, we do not enforce that
 template <class _Tp, class _Up>
 struct __desugars_to<__equal_tag, equal_to<void>, _Tp, _Up> : true_type {};
-#endif
 
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp = void>

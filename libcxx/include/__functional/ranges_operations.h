@@ -13,7 +13,6 @@
 #include <__concepts/equality_comparable.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
-#include <__functional/operations.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/operation_traits.h>
 #include <__utility/forward.h>
