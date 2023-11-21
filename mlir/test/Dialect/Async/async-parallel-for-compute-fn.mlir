@@ -69,6 +69,25 @@ func.func @sink_constant_step(%arg0: memref<?xf32>, %lb: index, %ub: index) {
 
 // -----
 
+// Smoke test that parallel for doesn't crash when func dialect is not used.
+
+// CHECK-LABEL: llvm.func @without_func_dialect()
+llvm.func @without_func_dialect() {
+  %cst = arith.constant 0.0 : f32
+
+  %c0 = arith.constant 0 : index
+  %c22 = arith.constant 22 : index
+  %c1 = arith.constant 1 : index
+  %54 = memref.alloc() : memref<22xf32>
+  %alloc_4 = memref.alloc() : memref<22xf32>
+  scf.parallel (%arg0) = (%c0) to (%c22) step (%c1) {
+    memref.store %cst, %alloc_4[%arg0] : memref<22xf32>
+  }
+  llvm.return
+}
+
+// -----
+
 // Check that for statically known inner loop bound block size is aligned and
 // inner loop uses statically known loop trip counts.
 
