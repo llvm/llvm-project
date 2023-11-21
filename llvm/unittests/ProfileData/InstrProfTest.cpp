@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/bit.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -715,7 +714,7 @@ INSTANTIATE_TEST_SUITE_P(
     WeightAndEndiannessTest, InstrProfReaderWriterTest,
     ::testing::Combine(
         ::testing::Bool(),          /* Sparse */
-        ::testing::Values(1U, 10U), /* Weight */
+        ::testing::Values(1U, 10U), /* ProfWeight */
         ::testing::Values(llvm::endianness::big,
                           llvm::endianness::little) /* Endianness */
         ));
