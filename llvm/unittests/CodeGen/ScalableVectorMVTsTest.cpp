@@ -135,7 +135,7 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
   EVT v2i64 = EVT::getVectorVT(Ctx, MVT::i64, 2);
   EVT v2f64 = EVT::getVectorVT(Ctx, MVT::f64, 2);
 
-  EVT nxv5i32 = EVT::getVectorVT(Ctx, MVT::i32, 5, /*Scalable=*/ true);
+  EVT nxv5i32 = EVT::getVectorVT(Ctx, MVT::i32, 5, /*Scalable=*/true);
   ASSERT_FALSE(nxv5i32.is16BitVector());
   ASSERT_FALSE(nxv5i32.is32BitVector());
   ASSERT_FALSE(nxv5i32.is64BitVector());
