@@ -38,6 +38,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
   const LLT sDoubleXLen = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
+  const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
@@ -245,7 +246,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // TODO: Support vector version of G_IS_FPCLASS.
   getActionDefinitionsBuilder(G_IS_FPCLASS)
-      .customIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)));
+      .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
 
   getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
 
