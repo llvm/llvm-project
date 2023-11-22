@@ -50,8 +50,8 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
 
   // LLVM bitcode file
   if (auto *f = dyn_cast<BitcodeFile>(file)) {
-    f->parse(symName);
     bitcodeFiles.push_back(f);
+    f->parse(symName);
     return;
   }
 
