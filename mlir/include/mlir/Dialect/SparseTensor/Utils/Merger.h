@@ -57,7 +57,7 @@ using LatPointId = unsigned;
 using LatSetId = unsigned;
 
 /// A pair of level and its corresponding DimLevelType of a tensor.
-using LvlDLTPair = std::pair<Level, DimLevelType>;
+using LvlLTPair = std::pair<Level, DimLevelType>;
 
 /// A pair of loop id and its coefficients. E.g., for affine expression in the
 /// affine map `2 * d0`, loop id = 0, coefficient = 2.
@@ -422,9 +422,9 @@ public:
 
   /// Sets the level number and level-type of the `t`th tensor on
   /// `i`th loop.
-  void setLevelAndType(TensorId t, LoopId i, Level lvl, DimLevelType dlt) {
-    assert(isValidLevel(t, lvl) && isValidLoopId(i) && isValidDLT(dlt));
-    lvlTypes[t][i] = dlt;
+  void setLevelAndType(TensorId t, LoopId i, Level lvl, DimLevelType lt) {
+    assert(isValidLevel(t, lvl) && isValidLoopId(i) && isValidLT(lt));
+    lvlTypes[t][i] = lt;
     loopToLvl[t][i] = lvl;
     lvlToLoop[t][lvl] = i;
     // TODO: favor a constant loop bound when there are multiple choices.
@@ -467,12 +467,12 @@ public:
   /// Sets whether the output tensor is sparse or not.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
 
-  /// Establishes the two-way map that i <-> <t, lvl, dlt>.
+  /// Establishes the two-way map that i <-> <t, lvl, lt>.
   void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
-                                   DimLevelType dlt, unsigned coefficient) {
+                                   DimLevelType lt, unsigned coefficient) {
     assert(isValidLoopId(i) && isValidLevel(t, lvl));
     assert(!loopToUnresolvedLvls[i][t].has_value()); // must be the first def
-    loopToUnresolvedLvls[i][t] = std::make_pair(lvl, dlt);
+    loopToUnresolvedLvls[i][t] = std::make_pair(lvl, lt);
     levelToDependentLoop[t][lvl].emplace_back(i, coefficient);
   }
 
@@ -508,9 +508,9 @@ public:
   /// non-trivial index expression.
   bool isSparseLvlWithNonTrivialIdxExp(TensorLoopId b) const {
     if (isLvlWithNonTrivialIdxExp(b)) {
-      auto dlt = getLoopDependentLevelType(b);
-      return isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
-             isLooseCompressedDLT(dlt) || is2OutOf4DLT(dlt);
+      auto lt = getLoopDependentLevelType(b);
+      return isCompressedLT(lt) || isSingletonLT(lt) ||
+             isLooseCompressedLT(lt) || is2OutOf4LT(lt);
     }
     return false;
   }
@@ -647,9 +647,9 @@ private:
   /// Map from a loop to its dependencies if any.
   /// The dependencies of a loop is a set of (tensor, level) pairs.
   /// It is currently only set for non-trivial index expressions.
-  /// E.g., A[i+j] => i and j will have dependencies {A0, dlt(A0)} to indicate
+  /// E.g., A[i+j] => i and j will have dependencies {A0, lt(A0)} to indicate
   /// that i and j are used in the non-trivial index expression on A0.
-  std::vector<std::vector<std::optional<LvlDLTPair>>> loopToUnresolvedLvls;
+  std::vector<std::vector<std::optional<LvlLTPair>>> loopToUnresolvedLvls;
 
   /// The inverse map of ldxToDependencies from tensor level -> dependent loop
   /// E.g., A[2i+j], we have A0 => {(2, i), (1, j)}, to indicate that A0 uses

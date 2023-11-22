@@ -293,17 +293,17 @@ public:
 
   // We can't just delegate these, since we want to use this class's
   // `getLvlType` method instead of STEA's.
-  bool isDenseLvl(Level l) const { return isDenseDLT(getLvlType(l)); }
-  bool isCompressedLvl(Level l) const { return isCompressedDLT(getLvlType(l)); }
+  bool isDenseLvl(Level l) const { return isDenseLT(getLvlType(l)); }
+  bool isCompressedLvl(Level l) const { return isCompressedLT(getLvlType(l)); }
   bool isLooseCompressedLvl(Level l) const {
-    return isLooseCompressedDLT(getLvlType(l));
+    return isLooseCompressedLT(getLvlType(l));
   }
-  bool isSingletonLvl(Level l) const { return isSingletonDLT(getLvlType(l)); }
-  bool is2OutOf4Lvl(Level l) const { return is2OutOf4DLT(getLvlType(l)); }
-  bool isOrderedLvl(Level l) const { return isOrderedDLT(getLvlType(l)); }
-  bool isUniqueLvl(Level l) const { return isUniqueDLT(getLvlType(l)); }
-  bool isWithPos(Level l) const { return isWithPosDLT(getLvlType(l)); }
-  bool isWithCrd(Level l) const { return isWithCrdDLT(getLvlType(l)); }
+  bool isSingletonLvl(Level l) const { return isSingletonLT(getLvlType(l)); }
+  bool is2OutOf4Lvl(Level l) const { return is2OutOf4LT(getLvlType(l)); }
+  bool isOrderedLvl(Level l) const { return isOrderedLT(getLvlType(l)); }
+  bool isUniqueLvl(Level l) const { return isUniqueLT(getLvlType(l)); }
+  bool isWithPos(Level l) const { return isWithPosLT(getLvlType(l)); }
+  bool isWithCrd(Level l) const { return isWithCrdLT(getLvlType(l)); }
 
   /// Returns the coordinate-overhead bitwidth, defaulting to zero.
   unsigned getCrdWidth() const { return enc ? enc.getCrdWidth() : 0; }

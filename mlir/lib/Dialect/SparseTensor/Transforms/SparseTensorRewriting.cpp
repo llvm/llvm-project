@@ -45,8 +45,8 @@ static bool isZeroValue(Value val) {
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(Value v) {
   auto enc = getSparseTensorEncoding(v.getType());
-  return enc && !llvm::all_of(enc.getLvlTypes(), [](auto dlt) {
-           return dlt == DimLevelType::Dense;
+  return enc && !llvm::all_of(enc.getLvlTypes(), [](auto lt) {
+           return lt == DimLevelType::Dense;
          });
 }
 static bool isSparseTensor(OpOperand *op) { return isSparseTensor(op->get()); }
