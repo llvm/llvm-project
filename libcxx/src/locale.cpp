@@ -540,9 +540,9 @@ locale::__imp::use_facet(long id) const
 // This class basically implements __attribute__((no_destroy)), which isn't supported
 // by GCC as of writing this.
 template <class T>
-struct no_destroy {
+struct __no_destroy {
     template <class... Args>
-    explicit no_destroy(Args&&... args) {
+    explicit __no_destroy(Args&&... args) {
         T* obj = reinterpret_cast<T*>(&buf);
         new (obj) T(std::forward<Args>(args)...);
     }
@@ -555,12 +555,12 @@ struct no_destroy {
 };
 
 const locale& locale::classic() {
-    static const no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
+    static const __no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
     return c.get();
 }
 
 locale& locale::__global() {
-    static no_destroy<locale> g(locale::classic());
+    static __no_destroy<locale> g(locale::classic());
     return g.get();
 }
 
