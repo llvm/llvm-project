@@ -1462,6 +1462,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   while (NonFrameStart != End &&
          NonFrameStart->getFlag(MachineInstr::FrameSetup))
     ++NonFrameStart;
+
   LivePhysRegs LiveRegs(*TRI);
   if (NonFrameStart != MBB.end()) {
     getLivePhysRegsUpTo(*NonFrameStart, *TRI, LiveRegs);
@@ -1471,6 +1472,19 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     LiveRegs.removeReg(AArch64::FP);
     LiveRegs.removeReg(AArch64::LR);
   }
+
+  auto VerifyClobberOnExit = make_scope_exit([&]() {
+    if (NonFrameStart == MBB.end())
+      return;
+    // Check if any of the newly instructions clobber any of the live registers.
+    for (MachineInstr &MI :
+         make_range(MBB.instr_begin(), NonFrameStart->getIterator())) {
+      for (auto &Op : MI.operands())
+        if (Op.isReg() && Op.isDef())
+          assert(!LiveRegs.contains(Op.getReg()) &&
+                 "live register clobbered by inserted prologue instructions");
+    }
+  });
 #endif
 
   bool IsFunclet = MBB.isEHFuncletEntry();
@@ -1940,19 +1954,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     emitCalleeSavedGPRLocations(MBB, MBBI);
     emitCalleeSavedSVELocations(MBB, MBBI);
   }
-
-#ifndef NDEBUG
-  if (NonFrameStart != MBB.end()) {
-    // Check if any of the newly instructions clobber any of the live registers.
-    for (MachineInstr &MI :
-         make_range(MBB.instr_begin(), NonFrameStart->getIterator())) {
-      for (auto &Op : MI.operands())
-        if (Op.isReg() && Op.isDef())
-          assert(!LiveRegs.contains(Op.getReg()) &&
-                 "live register clobbered by inserted prologue instructions");
-    }
-  }
-#endif
 }
 
 static bool isFuncletReturnInstr(const MachineInstr &MI) {

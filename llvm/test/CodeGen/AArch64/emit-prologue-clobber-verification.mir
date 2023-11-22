@@ -7,6 +7,7 @@
 # register for prologue computations at the beginning of the prologue.
 # Use this to check we catch that the prologue clobbers $x9.
 name: x9_clobbered_on_fn_entry
+tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:
