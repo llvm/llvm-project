@@ -50,8 +50,7 @@ cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D BOLT_CLANG_EXE=/usr/bin/clang \
       -D LLVM_CCACHE_BUILD=ON \
-      -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
-      -D Python3_EXECUTABLE="$(which python3)"
+      -D MLIR_ENABLE_BINDINGS_PYTHON=ON
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
