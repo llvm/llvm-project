@@ -130,8 +130,6 @@ static SmallString<32> buildSuspendPrefixStr(CGCoroData &Coro, AwaitKind Kind) {
 }
 
 static bool memberCallExpressionCanThrow(const Expr *E) {
-  E->dump();
-  std::terminate();
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
     if (const auto *Proto =
             CE->getMethodDecl()->getType()->getAs<FunctionProtoType>())
