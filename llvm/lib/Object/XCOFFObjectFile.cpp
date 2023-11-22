@@ -1289,7 +1289,7 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
     return true;
 
   return createError(
-      "Symbol csect aux entry with index " +
+      "symbol csect aux entry with index " +
       Twine(getObject()->getSymbolIndex(CsectAuxRef.getEntryAddress())) +
       " has invalid symbol type " +
       Twine::utohexstr(CsectAuxRef.getSymbolType()));
