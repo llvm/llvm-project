@@ -584,9 +584,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     //    DPValue xyzzy
     //    %bar = call i32 @foobar()
     // where %foo is hoisted, then the DPValue "blah" will be seen twice, once
-    // attached to %foo, then to %bar as it will "fall down" onto the call.
-    // cloneDebugInfoFrom takes an optional "start cloning from here" position
-    // to account for this behaviour.
+    // attached to %foo, then when %foo his hoisted it will "fall down" onto the
+    // function call:
+    //    DPValue blah
+    //    DPValue xyzzy
+    //    %bar = call i32 @foobar()
+    // causing it to appear attached to the call too. cloneDebugInfoFrom takes
+    // an optional "start cloning from here" position to account for this
+    // behaviour.
     std::optional<DPValue::self_iterator> NextDbgInst = std::nullopt;
 
     while (I != E) {
@@ -602,10 +607,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
           !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
 
-        auto DbgValueRange = LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
-        // Remap any new instructions,
-        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat)
+        if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
+          auto DbgValueRange = LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
           RemapDPValueRange(M, DbgValueRange, ValueMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        }
 
         NextDbgInst = I->getDbgValueRange().begin();
         Inst->moveBefore(LoopEntryBranch);

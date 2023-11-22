@@ -64,8 +64,9 @@ return:                                           ; preds = %if.end
 ; Repeat of the tak function, with only one DILocalVariable, checking that we
 ; don't insert duplicate debug intrinsics. The initial duplicates are preserved.
 ; FIXME: this test checks for the de-duplication behaviour that loop-rotate
-; has today, however it might not be correct -- should not the _last_
-; assignment to the variable be preserved, not the first?
+; has today, however it might not be correct. In the if.then block the preserved
+; dbg.value is for %x -- should not the _last_dbg.value, for %z, have been
+; preserved?
 define i32 @tak_dup(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !50 {
 ; CHECK-LABEL: define i32 @tak_dup(
 ; CHECK: entry
@@ -114,10 +115,15 @@ return:                                           ; preds = %if.end
 ; Check that the dbg.values move up to being immediately below the PHIs,
 ; using their Values. However once we exit the loop, the x and y values
 ; become irrelevant and undef, only z gets an LCSSA PHI to preserve it.
-; FIXME: could we do better than this?
-; (The icmp is initially undominated by any dbg.value, but as the first
-;  iteration is peeled off into the entry block, it's then safe to have it
-;  dominated by subsequent dbg.values).
+;
+; Note that while the icmp is initially undominated by any dbg.value and thus
+; shouldn't get a variable location, the first iteration is peeled off into the
+; entry block. It's then safe to have it dominated by subsequent dbg.values as
+; every path to the icmp is preceeded by a dbg.value.
+;
+; FIXME: could we choose to preserve more information about the loop, x and y
+; might not be live out of the loop, but they might still be dominated by a
+; describable Value.
 
 define i32 @tak2(i32 %x, i32 %y, i32 %z) nounwind ssp !dbg !21 {
 ; CHECK-LABEL: define i32 @tak2(

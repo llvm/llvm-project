@@ -1973,8 +1973,8 @@ bool llvm::LowerDbgDeclare(Function &F) {
 }
 
 // RemoveDIs: re-implementation of insertDebugValuesForPHIs, but which pulls the
-// debug-info out of the blocks DPValues rather than dbg.value intrinsics.
-static void insertDebugValuesForPHIsDDD(BasicBlock *BB,
+// debug-info out of the block's DPValues rather than dbg.value intrinsics.
+static void insertDPValuesForPHIs(BasicBlock *BB,
                                     SmallVectorImpl<PHINode *> &InsertedPHIs) {
   assert(BB && "No BasicBlock to clone DPValue(s) from.");
   if (InsertedPHIs.size() == 0)
@@ -2044,7 +2044,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   if (InsertedPHIs.size() == 0)
     return;
 
-  insertDebugValuesForPHIsDDD(BB, InsertedPHIs);
+  insertDPValuesForPHIs(BB, InsertedPHIs);
 
   // Map existing PHI nodes to their dbg.values.
   ValueToValueMapTy DbgValueMap;
