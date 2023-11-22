@@ -26,7 +26,8 @@ void cannot_increment_at_the_end_iterator() {
   TEST_LIBCPP_ASSERT_FAILURE(striv_it++, "Cannot increment an iterator already at the end.");
 }
 
-int main() {
+int main(int, char**) {
   cannot_increment_at_the_end_iterator();
+
   return 0;
 }
