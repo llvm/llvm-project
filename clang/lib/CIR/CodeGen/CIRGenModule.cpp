@@ -978,7 +978,15 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     assert(!UnimplementedFeature::setDLLStorageClass());
 
   if (Linkage == mlir::cir::GlobalLinkageKind::CommonLinkage) {
-    llvm_unreachable("common linkage is NYI");
+    // common vars aren't constant even if declared const.
+    GV.setConstant(false);
+    // Tentative definition of global variables may be initialized with
+    // non-zero null pointers. In this case they should have weak linkage
+    // since common linkage must have zero initializer and must not have
+    // explicit section therefore cannot have non-zero initial value.
+    auto Initializer = GV.getInitialValue();
+    if (Initializer && !getBuilder().isNullValue(*Initializer))
+      GV.setLinkage(mlir::cir::GlobalLinkageKind::WeakAnyLinkage);
   }
 
   // TODO(cir): setNonAliasAttributes(D, GV);
@@ -1413,6 +1421,7 @@ mlir::SymbolTable::Visibility CIRGenModule::getMLIRVisibilityFromCIRLinkage(
   case mlir::cir::GlobalLinkageKind::ExternalWeakLinkage:
   case mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage:
   case mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage:
+  case mlir::cir::GlobalLinkageKind::CommonLinkage:
     return mlir::SymbolTable::Visibility::Public;
   default: {
     llvm::errs() << "visibility not implemented for '"
