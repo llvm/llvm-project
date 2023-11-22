@@ -81,7 +81,7 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
   bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
-                           MachineRegisterInfo &MRI) const;
+                         MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
                            MachineRegisterInfo &MRI) const;
 
@@ -672,8 +672,7 @@ bool RISCVInstructionSelector::selectUnmergeValues(
   Register Src = MI.getOperand(2).getReg();
   Register Lo = MI.getOperand(0).getReg();
   Register Hi = MI.getOperand(1).getReg();
-  if (!isRegInFprb(Src, MRI) ||
-      !(isRegInGprb(Lo, MRI) && isRegInGprb(Hi, MRI)))
+  if (!isRegInFprb(Src, MRI) || !(isRegInGprb(Lo, MRI) && isRegInGprb(Hi, MRI)))
     return false;
   MachineInstr *Result = MIB.buildInstr(RISCV::SplitF64Pseudo, {Lo, Hi}, {Src});
 
@@ -765,12 +764,12 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
 }
 
 bool RISCVInstructionSelector::isRegInGprb(Register Reg,
-                                          MachineRegisterInfo &MRI) const {
+                                           MachineRegisterInfo &MRI) const {
   return RBI.getRegBank(Reg, MRI, TRI)->getID() == RISCV::GPRBRegBankID;
 }
 
 bool RISCVInstructionSelector::isRegInFprb(Register Reg,
-                                          MachineRegisterInfo &MRI) const {
+                                           MachineRegisterInfo &MRI) const {
   return RBI.getRegBank(Reg, MRI, TRI)->getID() == RISCV::FPRBRegBankID;
 }
 
