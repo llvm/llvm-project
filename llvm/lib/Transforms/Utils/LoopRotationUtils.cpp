@@ -608,8 +608,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
 
         if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat) {
-          auto DbgValueRange = LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
-          RemapDPValueRange(M, DbgValueRange, ValueMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+          auto DbgValueRange =
+              LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInst);
+          RemapDPValueRange(M, DbgValueRange, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         }
 
         NextDbgInst = I->getDbgValueRange().begin();
@@ -631,7 +633,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         for (DPValue &DPV : make_early_inc_range(Range))
           if (DbgIntrinsics.count(makeHashDPV(DPV)))
             DPV.eraseFromParent();
-        RemapDPValueRange(M, Range, ValueMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        RemapDPValueRange(M, Range, ValueMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         NextDbgInst = std::nullopt;
       }
 

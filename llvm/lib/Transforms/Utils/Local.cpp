@@ -1975,13 +1975,13 @@ bool llvm::LowerDbgDeclare(Function &F) {
 // RemoveDIs: re-implementation of insertDebugValuesForPHIs, but which pulls the
 // debug-info out of the block's DPValues rather than dbg.value intrinsics.
 static void insertDPValuesForPHIs(BasicBlock *BB,
-                                    SmallVectorImpl<PHINode *> &InsertedPHIs) {
+                                  SmallVectorImpl<PHINode *> &InsertedPHIs) {
   assert(BB && "No BasicBlock to clone DPValue(s) from.");
   if (InsertedPHIs.size() == 0)
     return;
 
   // Map existing PHI nodes to their DPValues.
-  DenseMap<Value*, DPValue *> DbgValueMap;
+  DenseMap<Value *, DPValue *> DbgValueMap;
   for (auto &I : *BB) {
     for (auto &DPV : I.getDbgValueRange()) {
       for (Value *V : DPV.location_ops())
@@ -1996,9 +1996,7 @@ static void insertDPValuesForPHIs(BasicBlock *BB,
   // so that if a DPValue is being rewritten to use more than one of the
   // inserted PHIs in the same destination BB, we can update the same DPValue
   // with all the new PHIs instead of creating one copy for each.
-  MapVector<std::pair<BasicBlock *, DPValue *>,
-            DPValue *>
-      NewDbgValueMap;
+  MapVector<std::pair<BasicBlock *, DPValue *>, DPValue *> NewDbgValueMap;
   // Then iterate through the new PHIs and look to see if they use one of the
   // previously mapped PHIs. If so, create a new DPValue that will propagate
   // the info through the new PHI. If we use more than one new PHI in a single
