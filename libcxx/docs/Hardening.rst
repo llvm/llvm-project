@@ -36,7 +36,7 @@ modes are:
 Notes for users
 ---------------
 
-As a user, you can consult your vendor to know which level of hardening is
+As a libc++ user, consult with your vendor to determine the level of hardening
 enabled by default.
 
 Users wishing for a different hardening level to their vendor default are able
