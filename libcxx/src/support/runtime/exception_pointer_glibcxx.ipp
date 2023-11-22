@@ -70,17 +70,9 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
 #  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
 void *exception_ptr::__init_native_exception(size_t size, type_info* tinfo, void (_LIBCXX_DTOR_FUNC* dest)(void*)) noexcept
 {
-    void *(*cxa_init_primary_exception_fn)(void*, std::type_info*, void(_LIBCXX_DTOR_FUNC*)(void*)) = __cxa_init_primary_exception;
-    if (cxa_init_primary_exception_fn != nullptr)
-    {
-        void* __ex = __cxa_allocate_exception(size);
-        (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
-        return __ex;
-    }
-    else
-    {
-        return nullptr;
-    }
+    void* __ex = __cxa_allocate_exception(size);
+    (void)__cxa_init_primary_exception(__ex, tinfo, dest);
+    return __ex;
 }
 
 void exception_ptr::__free_native_exception(void* thrown_object) noexcept
