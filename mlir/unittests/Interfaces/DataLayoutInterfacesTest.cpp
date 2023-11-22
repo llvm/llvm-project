@@ -57,9 +57,7 @@ struct CustomDataLayoutSpec
 
   using Base::Base;
 
-  static constexpr StringRef getAttrName() {
-    return "test.custom_data_layout_spec";
-  }
+  static constexpr StringLiteral name = "test.custom_data_layout_spec";
 
   static CustomDataLayoutSpec get(MLIRContext *ctx,
                                   ArrayRef<DataLayoutEntryInterface> entries) {

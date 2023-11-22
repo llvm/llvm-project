@@ -20,7 +20,6 @@
 namespace mlir {
 class Dialect;
 class MLIRContext;
-class StringAttr;
 
 //===----------------------------------------------------------------------===//
 // AbstractType
@@ -44,11 +43,6 @@ public:
   /// reference to it if it exists.
   static std::optional<std::reference_wrapper<const AbstractType>>
   lookup(StringRef name, MLIRContext *context);
-
-  /// Look up the specified abstract type in the MLIRContext and return a
-  /// reference to it if it exists.
-  static std::optional<std::reference_wrapper<const AbstractType>>
-  lookup(StringAttr name, MLIRContext *context);
 
   /// This method is used by Dialect objects when they register the list of
   /// types they contain.

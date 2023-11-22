@@ -269,7 +269,7 @@ void DefGen::emitTopLevelDeclarations() {
 }
 
 void DefGen::emitName() {
-  std::string name;
+  StringRef name;
   if (auto *attrDef = dyn_cast<AttrDef>(&def)) {
     name = attrDef->getAttrName();
   } else {
