@@ -127,7 +127,7 @@ class ClangFormatHelper(FormatHelper):
         return False
 
     def should_include_extensionless_file(self, path: str) -> bool:
-        return path.startswith('libcxx/include')
+        return path.startswith("libcxx/include")
 
     def filter_changed_files(self, changed_files: list[str]) -> list[str]:
         filtered_files = []
