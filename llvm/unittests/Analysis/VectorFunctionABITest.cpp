@@ -533,6 +533,30 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
   EXPECT_EQ(VectorName, "custom_vector_sincos");
 }
 
+// Make sure that we get the correct VF if the return type is wider than any
+// parameter type.
+TEST_F(VFABIParserTest, ParseWiderReturnTypeSVE) {
+  EXPECT_TRUE(
+    invokeParser("_ZGVsMxvv_foo(vector_foo)", "foo", "i64(i32, i32)"));
+  EXPECT_EQ(VF, ElementCount::getScalable(2));
+}
+
+// Make sure we handle void return types.
+TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
+  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "void(i16)"));
+  EXPECT_EQ(VF, ElementCount::getScalable(8));
+}
+
+// Make sure we reject unsupported parameter types.
+TEST_F(VFABIParserTest, ParseUnsupportedElementTypeSVE) {
+  EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "void(i128)"));
+}
+
+// Make sure we reject unsupported return types
+TEST_F(VFABIParserTest, ParseUnsupportedReturnTypeSVE) {
+  EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "fp128(float)"));
+}
+
 class VFABIAttrTest : public testing::Test {
 protected:
   void SetUp() override {
