@@ -754,7 +754,7 @@ static mlir::Value getReductionInitValue(mlir::Location loc, mlir::Type type,
     if (auto ty = type.dyn_cast<mlir::FloatType>()) {
       const llvm::fltSemantics &sem = ty.getFloatSemantics();
       return builder.createRealConstant(
-          loc, type, llvm::APFloat::getSmallest(sem, /*Negative=*/true));
+          loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/false));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
     int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
