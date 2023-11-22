@@ -73,6 +73,8 @@ private:
                        MachineRegisterInfo &MRI) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &MI, MachineIRBuilder &MIB,
                                       MachineRegisterInfo &MRI) const;
+  bool selectFence(MachineInstr &MI, MachineIRBuilder &MIB,
+                   MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -612,6 +614,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectFPCompare(MI, MIB, MRI);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(MI, MIB, MRI);
+  case TargetOpcode::G_FENCE:
+    return selectFence(MI, MIB, MRI);
   default:
     return false;
   }
@@ -1081,6 +1085,59 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
   case Intrinsic::debugtrap:
     MIB.buildInstr(RISCV::EBREAK, {}, {});
     break;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVInstructionSelector::selectFence(MachineInstr &MI,
+                                           MachineIRBuilder &MIB,
+                                           MachineRegisterInfo &MRI) const {
+  AtomicOrdering FenceOrdering =
+      static_cast<AtomicOrdering>(MI.getOperand(0).getImm());
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(MI.getOperand(1).getImm());
+
+  if (STI.hasStdExtZtso()) {
+    // The only fence that needs an instruction is a sequentially-consistent
+    // cross-thread fence.
+    if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
+        FenceSSID == SyncScope::System) {
+      // fence rw, rw
+      MIB.buildInstr(RISCV::FENCE, {}, {})
+          .addImm(RISCVFenceField::R | RISCVFenceField::W)
+          .addImm(RISCVFenceField::R | RISCVFenceField::W);
+    } else {
+      // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+      MIB.buildInstr(TargetOpcode::MEMBARRIER, {}, {});
+    }
+  } else if (FenceSSID == SyncScope::SingleThread) {
+    // singlethread fences only synchronize with signal handlers on the same
+    // thread and thus only need to preserve instruction order, not actually
+    // enforce memory ordering.
+    MIB.buildInstr(TargetOpcode::MEMBARRIER, {}, {});
+  } else if (FenceOrdering == AtomicOrdering::AcquireRelease) {
+    MIB.buildInstr(RISCV::FENCE_TSO, {}, {});
+  } else {
+    unsigned Pred, Succ;
+    switch (FenceOrdering) {
+    default:
+      llvm_unreachable("Unexpected ordering");
+    case AtomicOrdering::Acquire:
+      Pred = RISCVFenceField::R;
+      Succ = RISCVFenceField::R | RISCVFenceField::W;
+      break;
+    case AtomicOrdering::Release:
+      Pred = RISCVFenceField::R | RISCVFenceField::W;
+      Succ = RISCVFenceField::W;
+      break;
+    case AtomicOrdering::SequentiallyConsistent:
+      Pred = RISCVFenceField::R | RISCVFenceField::W;
+      Succ = RISCVFenceField::R | RISCVFenceField::W;
+      break;
+    }
+    MIB.buildInstr(RISCV::FENCE, {}, {}).addImm(Pred).addImm(Succ);
   }
 
   MI.eraseFromParent();
