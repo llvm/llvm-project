@@ -1545,7 +1545,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return;
       }
     }
-
     // Now process the instruction normally.
     break;
   }
