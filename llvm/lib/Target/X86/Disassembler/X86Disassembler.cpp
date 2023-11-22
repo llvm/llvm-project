@@ -1257,6 +1257,11 @@ static int getInstructionID(struct InternalInstruction *insn,
     attrMask &= ~ATTR_ADSIZE;
   }
 
+  // Absolute jump need special handling
+  if (insn->rex2ExtensionPrefix[0] == 0xd5 && insn->opcodeType == ONEBYTE &&
+      insn->opcode == 0xA1)
+    attrMask |= ATTR_REX2;
+
   if (insn->mode == MODE_16BIT) {
     // JCXZ/JECXZ need special handling for 16-bit mode because the meaning
     // of the AdSize prefix is inverted w.r.t. 32-bit mode.

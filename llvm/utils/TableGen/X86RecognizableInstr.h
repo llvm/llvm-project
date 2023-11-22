@@ -155,6 +155,8 @@ namespace X86Local {
   enum {
     AdSize16 = 1, AdSize32 = 2, AdSize64 = 3
   };
+
+  enum { ExplicitREX2 = 1 };
 }
 
 namespace X86Disassembler {
@@ -206,6 +208,8 @@ struct RecognizableInstrBase {
   bool ForceDisassemble;
   // The CD8_Scale field from the record
   uint8_t CD8_Scale;
+  /// If explicitOpPrefix field from the record equals ExplicitREX2
+  bool ExplicitREX2Prefix;
   /// \param insn The CodeGenInstruction to extract information from.
   RecognizableInstrBase(const CodeGenInstruction &insn);
   /// \returns true if this instruction should be emitted
