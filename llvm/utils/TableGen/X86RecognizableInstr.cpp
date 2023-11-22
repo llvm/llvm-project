@@ -129,6 +129,8 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
   CD8_Scale = byteFromRec(Rec, "CD8_Scale");
   HasVEX_L = Rec->getValueAsBit("hasVEX_L");
+  ExplicitREX2Prefix =
+      byteFromRec(Rec, "explicitOpPrefixBits") == X86Local::ExplicitREX2;
 
   EncodeRC = HasEVEX_B &&
              (Form == X86Local::MRMDestReg || Form == X86Local::MRMSrcReg);
@@ -340,6 +342,8 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_XD;
     else if (OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS;
+    else if (ExplicitREX2Prefix)
+      insnContext = IC_64BIT_REX2;
     else if (HasREX_W)
       insnContext = IC_64BIT_REXW;
     else

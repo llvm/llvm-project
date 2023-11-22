@@ -67,7 +67,8 @@ enum attributeBits {
   ATTR_EVEXK  = 0x1 << 10,
   ATTR_EVEXKZ = 0x1 << 11,
   ATTR_EVEXB  = 0x1 << 12,
-  ATTR_max    = 0x1 << 13,
+  ATTR_REX2   = 0x1 << 13,
+  ATTR_max    = 0x1 << 14,
 };
 
 // Combinations of the above attributes that are relevant to instruction
@@ -118,6 +119,7 @@ enum attributeBits {
   ENUM_ENTRY(IC_64BIT_REXW_OPSIZE,  8,  "The Dynamic Duo!  Prefer over all "   \
                                         "else because this changes most "      \
                                         "operands' meaning")                   \
+  ENUM_ENTRY(IC_64BIT_REX2,         2,  "requires a REX2 prefix")              \
   ENUM_ENTRY(IC_VEX,                1,  "requires a VEX prefix")               \
   ENUM_ENTRY(IC_VEX_XS,             2,  "requires VEX and the XS prefix")      \
   ENUM_ENTRY(IC_VEX_XD,             2,  "requires VEX and the XD prefix")      \
