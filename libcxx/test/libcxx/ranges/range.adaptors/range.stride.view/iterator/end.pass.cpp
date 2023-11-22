@@ -34,8 +34,9 @@ void cannot_dereference_past_the_end_iterator() {
   TEST_LIBCPP_ASSERT_FAILURE(*striv_it, "Cannot dereference an iterator at the end.");
 }
 
-int main() {
+int main(int, char**) {
   cannot_dereference_at_the_end_iterator();
   cannot_dereference_past_the_end_iterator();
+
   return 0;
 }
