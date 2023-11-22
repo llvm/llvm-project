@@ -4872,7 +4872,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<BinaryOperator>(I)->setIsExact(true);
         } else if (Opc == Instruction::Or) {
           if (Record[OpNum] & (1 << bitc::PDI_DISJOINT))
-            cast<BinaryOperator>(I)->setIsDisjoint(true);
+            cast<PossiblyDisjointInst>(I)->setIsDisjoint(true);
         } else if (isa<FPMathOperator>(I)) {
           FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
           if (FMF.any())

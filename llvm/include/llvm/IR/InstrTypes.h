@@ -422,15 +422,11 @@ class PossiblyDisjointInst : public BinaryOperator {
 public:
   enum { IsDisjoint = (1 << 0) };
 
-private:
-  friend class Instruction;
-
   void setIsDisjoint(bool B) {
     SubclassOptionalData =
         (SubclassOptionalData & ~IsDisjoint) | (B * IsDisjoint);
   }
 
-public:
   bool isDisjoint() const { return SubclassOptionalData & IsDisjoint; }
 
   static bool classof(const Instruction *I) {

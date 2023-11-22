@@ -317,10 +317,6 @@ void Instruction::setIsExact(bool b) {
   cast<PossiblyExactOperator>(this)->setIsExact(b);
 }
 
-void Instruction::setIsDisjoint(bool b) {
-  cast<PossiblyDisjointInst>(this)->setIsDisjoint(b);
-}
-
 void Instruction::setNonNeg(bool b) {
   assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
   SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
@@ -425,10 +421,6 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
 
 bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
-}
-
-bool Instruction::isDisjoint() const {
-  return cast<PossiblyDisjointInst>(this)->isDisjoint();
 }
 
 void Instruction::setFast(bool B) {
@@ -544,9 +536,9 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (isa<PossiblyExactOperator>(this))
       setIsExact(PE->isExact());
 
-  if (auto *PD = dyn_cast<PossiblyDisjointInst>(V))
-    if (isa<PossiblyDisjointInst>(this))
-      setIsDisjoint(PD->isDisjoint());
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(SrcPD->isDisjoint());
 
   // Copy the fast-math flags.
   if (auto *FP = dyn_cast<FPMathOperator>(V))
@@ -574,9 +566,9 @@ void Instruction::andIRFlags(const Value *V) {
     if (isa<PossiblyExactOperator>(this))
       setIsExact(isExact() && PE->isExact());
 
-  if (auto *PE = dyn_cast<PossiblyDisjointInst>(V))
-    if (isa<PossiblyDisjointInst>(this))
-      setIsDisjoint(isDisjoint() && PE->isDisjoint());
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(DestPD->isDisjoint() && SrcPD->isDisjoint());
 
   if (auto *FP = dyn_cast<FPMathOperator>(V)) {
     if (isa<FPMathOperator>(this)) {
