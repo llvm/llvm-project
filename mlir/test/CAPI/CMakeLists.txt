@@ -43,6 +43,7 @@ _add_capi_test_executable(mlir-capi-llvm-test
     MLIRCAPIIR
     MLIRCAPILLVM
     MLIRCAPIRegisterEverything
+    MLIRCAPITarget
 )
 
 _add_capi_test_executable(mlir-capi-pass-test
