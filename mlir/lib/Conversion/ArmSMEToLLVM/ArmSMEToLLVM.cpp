@@ -1,24 +1,34 @@
-//===- LegalizeForLLVMExport.cpp - Prepare ArmSME for LLVM translation ----===//
+//===- ArmSMEToLLVM.cpp - Convert ArmSME to LLVM dialect ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements lowering of ArmSME operations to LLVM intrinsics.
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Conversion/ArmSMEToLLVM/ArmSMEToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
-#include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTARMSMETOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
-using namespace mlir::arm_sme;
 
 namespace {
 
@@ -40,11 +50,11 @@ namespace {
 ///  The 'arm_sme.cast_tile_to_vector' (which models the return) and the
 ///  'arith.shli' (which generates the mask) will be folded away after tile
 ///  allocation and canonization.
-struct ZeroOpConversion : public ConvertOpToLLVMPattern<ZeroOp> {
-  using ConvertOpToLLVMPattern<ZeroOp>::ConvertOpToLLVMPattern;
+struct ZeroOpConversion : public ConvertOpToLLVMPattern<arm_sme::ZeroOp> {
+  using ConvertOpToLLVMPattern<arm_sme::ZeroOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(ZeroOp zero, OpAdaptor adaptor,
+  matchAndRewrite(arm_sme::ZeroOp zero, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = zero.getLoc();
 
@@ -121,7 +131,7 @@ struct ZeroOpConversion : public ConvertOpToLLVMPattern<ZeroOp> {
 };
 
 /// Lower `arm_sme.load_tile_slice` to SME intrinsics.
-struct LoadTileSliceToArmSMELowering
+struct LoadTileSliceConversion
     : public ConvertOpToLLVMPattern<arm_sme::LoadTileSliceOp> {
   using ConvertOpToLLVMPattern<
       arm_sme::LoadTileSliceOp>::ConvertOpToLLVMPattern;
@@ -220,7 +230,7 @@ struct LoadTileSliceToArmSMELowering
 };
 
 /// Lower for `arm_sme.store_tile_slice` to SME intrinsics.
-struct StoreTileSliceToArmSMELowering
+struct StoreTileSliceConversion
     : public ConvertOpToLLVMPattern<arm_sme::StoreTileSliceOp> {
   using ConvertOpToLLVMPattern<
       arm_sme::StoreTileSliceOp>::ConvertOpToLLVMPattern;
@@ -313,7 +323,7 @@ struct StoreTileSliceToArmSMELowering
 };
 
 /// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics.
-struct MoveVectorToTileSliceToArmSMELowering
+struct MoveVectorToTileSliceConversion
     : public ConvertOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
   using ConvertOpToLLVMPattern<
       arm_sme::MoveVectorToTileSliceOp>::ConvertOpToLLVMPattern;
@@ -373,7 +383,7 @@ struct MoveVectorToTileSliceToArmSMELowering
 };
 
 /// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics.
-struct MoveTileSliceToVectorArmSMELowering
+struct MoveTileSliceToVectorConversion
     : public ConvertOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
   using ConvertOpToLLVMPattern<
       arm_sme::MoveTileSliceToVectorOp>::ConvertOpToLLVMPattern;
@@ -456,7 +466,8 @@ struct OuterProductOpConversion
       //   * half-precision   - +sme2p1,+b16b16
       //
       // It should be possible to control lowering based on target features.
-      // [1] https://developer.arm.com/downloads/-/exploration-tools/feature-names-for-a-profile
+      // [1]
+      // https://developer.arm.com/downloads/-/exploration-tools/feature-names-for-a-profile
       if ((vectorType.getRank() != 2) || !vectorType.allDimsScalable())
         return false;
 
@@ -475,7 +486,7 @@ struct OuterProductOpConversion
     };
 
     // TODO: Support CombiningKind::Sub for outer products.
-    if (outerProductOp.getKind() != CombiningKind::Add)
+    if (outerProductOp.getKind() != arm_sme::CombiningKind::Add)
       return outerProductOp.emitError("unsupported kind");
 
     auto resultVectorType = outerProductOp.getResultType();
@@ -522,32 +533,56 @@ struct OuterProductOpConversion
 
 } // namespace
 
-void mlir::configureArmSMELegalizeForExportTarget(
-    LLVMConversionTarget &target) {
+namespace {
+
+struct ConvertArmSMEToLLVMPass
+    : public impl::ConvertArmSMEToLLVMBase<ConvertArmSMEToLLVMPass> {
+  void runOnOperation() override {
+    LLVMConversionTarget target(getContext());
+    RewritePatternSet patterns(&getContext());
+    ArmSMETypeConverter converter(&getContext(),
+                                  LowerToLLVMOptions(&getContext()));
+
+    configureArmSMEToLLVMConversionLegality(target);
+    populateArmSMEToLLVMConversionPatterns(converter, patterns);
+
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
+} // namespace
+
+void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
+  target.addIllegalDialect<arm_sme::ArmSMEDialect>();
   target.addLegalOp<
-      scf::ForOp, scf::YieldOp, arm_sme::CastTileToVector,
-      arm_sme::CastVectorToTile, arm_sme::aarch64_sme_zero,
-      arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_ld1b_horiz,
-      arm_sme::aarch64_sme_ld1h_horiz, arm_sme::aarch64_sme_ld1w_horiz,
-      arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_ld1q_horiz,
-      arm_sme::aarch64_sme_st1b_horiz, arm_sme::aarch64_sme_st1h_horiz,
-      arm_sme::aarch64_sme_st1w_horiz, arm_sme::aarch64_sme_st1d_horiz,
-      arm_sme::aarch64_sme_st1q_horiz, arm_sme::aarch64_sme_ld1b_vert,
-      arm_sme::aarch64_sme_ld1h_vert, arm_sme::aarch64_sme_ld1w_vert,
-      arm_sme::aarch64_sme_ld1d_vert, arm_sme::aarch64_sme_ld1q_vert,
-      arm_sme::aarch64_sme_st1b_vert, arm_sme::aarch64_sme_st1h_vert,
-      arm_sme::aarch64_sme_st1w_vert, arm_sme::aarch64_sme_st1d_vert,
-      arm_sme::aarch64_sme_st1q_vert, arm_sme::aarch64_sme_read_horiz,
-      arm_sme::aarch64_sme_read_vert, arm_sme::aarch64_sme_write_horiz,
-      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa>();
-  target.addLegalOp<GetTileID>();
-  target.addIllegalOp<vector::OuterProductOp>();
+      arm_sme::GetTileID, arm_sme::CastTileToVector, arm_sme::CastVectorToTile,
+      arm_sme::aarch64_sme_zero, arm_sme::aarch64_sme_str,
+      arm_sme::aarch64_sme_ld1b_horiz, arm_sme::aarch64_sme_ld1h_horiz,
+      arm_sme::aarch64_sme_ld1w_horiz, arm_sme::aarch64_sme_ld1d_horiz,
+      arm_sme::aarch64_sme_ld1q_horiz, arm_sme::aarch64_sme_st1b_horiz,
+      arm_sme::aarch64_sme_st1h_horiz, arm_sme::aarch64_sme_st1w_horiz,
+      arm_sme::aarch64_sme_st1d_horiz, arm_sme::aarch64_sme_st1q_horiz,
+      arm_sme::aarch64_sme_ld1b_vert, arm_sme::aarch64_sme_ld1h_vert,
+      arm_sme::aarch64_sme_ld1w_vert, arm_sme::aarch64_sme_ld1d_vert,
+      arm_sme::aarch64_sme_ld1q_vert, arm_sme::aarch64_sme_st1b_vert,
+      arm_sme::aarch64_sme_st1h_vert, arm_sme::aarch64_sme_st1w_vert,
+      arm_sme::aarch64_sme_st1d_vert, arm_sme::aarch64_sme_st1q_vert,
+      arm_sme::aarch64_sme_read_horiz, arm_sme::aarch64_sme_read_vert,
+      arm_sme::aarch64_sme_write_horiz, arm_sme::aarch64_sme_write_vert,
+      arm_sme::aarch64_sme_mopa>();
+  target.addLegalDialect<arith::ArithDialect>();
+  target.addLegalOp<UnrealizedConversionCastOp>();
 }
 
-void mlir::populateArmSMELegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<
-      LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
-      MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
-      OuterProductOpConversion, ZeroOpConversion>(converter);
+void mlir::populateArmSMEToLLVMConversionPatterns(
+    ArmSMETypeConverter &converter, RewritePatternSet &patterns) {
+  patterns.add<LoadTileSliceConversion, MoveTileSliceToVectorConversion,
+               MoveVectorToTileSliceConversion, StoreTileSliceConversion,
+               OuterProductOpConversion, ZeroOpConversion>(converter);
+}
+
+std::unique_ptr<Pass> mlir::createConvertArmSMEToLLVMPass() {
+  return std::make_unique<ConvertArmSMEToLLVMPass>();
 }

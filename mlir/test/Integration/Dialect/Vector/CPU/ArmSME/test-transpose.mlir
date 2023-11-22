@@ -2,7 +2,7 @@
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
+// DEFINE:   -convert-arm-sme-to-llvm -cse -canonicalize \
 // DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
