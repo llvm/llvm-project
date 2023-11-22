@@ -299,7 +299,6 @@ public:
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
-
   /// AArch64 supports MachineCombiner.
   bool useMachineCombiner() const override;
 
