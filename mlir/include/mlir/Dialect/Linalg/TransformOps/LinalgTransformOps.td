@@ -1819,7 +1819,7 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedOptionalAttr<I64ArrayAttr, "{}">:$interchange,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
                    DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
