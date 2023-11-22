@@ -85,14 +85,21 @@ public:
   LogicalResult
   matchAndRewrite(GetSliceOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type resType = op.getType();
+    // Note using the namespace sparse_tensor here is not significant.
+    // It just happens to be convenient to reuse the existing utility.
+    Type resType = sparse_tensor::getOpaquePointerType(rewriter);
+    Type origResType = op.getType();
     Location loc = op->getLoc();
     SmallVector<Value> operands{adaptor.getOperands()[0]};
-    auto fn = mlir::sparse_tensor::getFunc(
-        op->getParentOfType<ModuleOp>(), "getSlice", resType,
-        adaptor.getOperands(), mlir::sparse_tensor::EmitCInterface::On);
+    // replace %a = part_tensor.get_slice : part_tensor, ... -> sparse_tensor
+    // with    %a1 = call @getSlice(%a) : (partTensor) -> i8*
+    //         %a2 = unrealized_conversion_cast %a1 : i8* to %sparseTensor
     Value callRet =
-        rewriter.create<func::CallOp>(loc, resType, fn, adaptor.getOperands())
+        createFuncCall(rewriter, loc, "getSlice", resType,
+                       adaptor.getOperands(), sparse_tensor::EmitCInterface::On)
+            .getResult(0);
+    callRet =
+        rewriter.create<UnrealizedConversionCastOp>(loc, origResType, callRet)
             .getResult(0);
     rewriter.replaceOp(op, callRet);
     return success();
