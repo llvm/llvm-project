@@ -1793,9 +1793,9 @@ Value *llvm::addDiffRuntimeChecks(
     auto *VFTimesUFTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * C.AccessSize));
-    Value *Sink = Expander.expandCodeFor(C.SinkStart, Ty, Loc);
-    Value *Src = Expander.expandCodeFor(C.SrcStart, Ty, Loc);
-    Value *Diff = ChkBuilder.CreateSub(Sink, Src);
+    auto &SE = *Expander.getSE();
+    Value *Diff = Expander.expandCodeFor(
+        SE.getMinusSCEV(C.SinkStart, C.SrcStart), Ty, Loc);
     Value *IsConflict =
         ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
     if (C.NeedsFreeze)
