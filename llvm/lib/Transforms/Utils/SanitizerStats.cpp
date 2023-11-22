@@ -42,7 +42,7 @@ StructType *SanitizerStatReport::makeModuleStatsTy() {
 void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
   Function *F = B.GetInsertBlock()->getParent();
   Module *M = F->getParent();
-  PointerType *Int8PtrTy = B.getInt8PtrTy();
+  PointerType *Int8PtrTy = B.getPtrTy();
   IntegerType *IntPtrTy = B.getIntPtrTy(M->getDataLayout());
   ArrayType *StatTy = ArrayType::get(Int8PtrTy, 2);
 

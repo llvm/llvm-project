@@ -153,7 +153,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
                                 Value *Length, bool isLast) {
   auto Int64Ty = Builder.getInt64Ty();
-  auto CharPtrTy = Builder.getInt8PtrTy();
+  auto CharPtrTy = Builder.getPtrTy();
   auto Int32Ty = Builder.getInt32Ty();
   auto M = Builder.GetInsertBlock()->getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_append_string_n", Int64Ty,
@@ -165,7 +165,7 @@ static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
 static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                            bool IsLast) {
   Arg = Builder.CreateBitCast(
-      Arg, Builder.getInt8PtrTy(Arg->getType()->getPointerAddressSpace()));
+      Arg, Builder.getPtrTy(Arg->getType()->getPointerAddressSpace()));
   auto Length = getStrlenWithNull(Builder, Arg);
   return callAppendStringN(Builder, Desc, Arg, Length, IsLast);
 }
@@ -300,7 +300,7 @@ static Value *callBufferedPrintfStart(
 
   Type *Tys_alloc[1] = {Builder.getInt32Ty()};
   Type *I8Ptr =
-      Builder.getInt8PtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace());
+      Builder.getPtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace());
   FunctionType *FTy_alloc = FunctionType::get(I8Ptr, Tys_alloc, false);
   auto PrintfAllocFn =
       M->getOrInsertFunction(StringRef("__printf_alloc"), FTy_alloc, Attr);

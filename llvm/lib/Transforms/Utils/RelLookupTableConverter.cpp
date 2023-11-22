@@ -160,7 +160,7 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
                                      "reltable.intrinsic");
 
   // Create a bitcast instruction if necessary.
-  if (Load->getType() != Builder.getInt8PtrTy())
+  if (Load->getType() != Builder.getPtrTy())
     Result = Builder.CreateBitCast(Result, Load->getType(), "reltable.bitcast");
 
   // Replace load instruction with the new generated instruction sequence.

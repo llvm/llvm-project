@@ -1481,7 +1481,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
       IRBuilder<> Builder(AllocInst);
       auto *Frame = Builder.CreateAlloca(Shape.FrameTy);
       Frame->setAlignment(Shape.FrameAlign);
-      auto *VFrame = Builder.CreateBitCast(Frame, Builder.getInt8PtrTy());
+      auto *VFrame = Builder.CreateBitCast(Frame, Builder.getPtrTy());
       AllocInst->replaceAllUsesWith(Builder.getFalse());
       AllocInst->eraseFromParent();
       CoroBegin->replaceAllUsesWith(VFrame);

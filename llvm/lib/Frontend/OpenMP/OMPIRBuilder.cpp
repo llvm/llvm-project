@@ -1806,7 +1806,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
         ++P;
       }
 
-      DepArrayPtr = Builder.CreateBitCast(DepArray, Builder.getInt8PtrTy());
+      DepArrayPtr = Builder.CreateBitCast(DepArray, Builder.getPtrTy());
       Builder.restoreIP(OldIP);
     }
 
@@ -2082,7 +2082,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   // Create and populate array of type-erased pointers to private reduction
   // values.
   unsigned NumReductions = ReductionInfos.size();
-  Type *RedArrayTy = ArrayType::get(Builder.getInt8PtrTy(), NumReductions);
+  Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), NumReductions);
   Builder.restoreIP(AllocaIP);
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
@@ -2094,7 +2094,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     Value *RedArrayElemPtr = Builder.CreateConstInBoundsGEP2_64(
         RedArrayTy, RedArray, 0, Index, "red.array.elem." + Twine(Index));
     Value *Casted =
-        Builder.CreateBitCast(RI.PrivateVariable, Builder.getInt8PtrTy(),
+        Builder.CreateBitCast(RI.PrivateVariable, Builder.getPtrTy(),
                               "private.red.var." + Twine(Index) + ".casted");
     Builder.CreateStore(Casted, RedArrayElemPtr);
   }
@@ -2104,7 +2104,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   Function *Func = Builder.GetInsertBlock()->getParent();
   Module *Module = Func->getParent();
   Value *RedArrayPtr =
-      Builder.CreateBitCast(RedArray, Builder.getInt8PtrTy(), "red.array.ptr");
+      Builder.CreateBitCast(RedArray, Builder.getPtrTy(), "red.array.ptr");
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   bool CanGenerateAtomic =
@@ -2197,12 +2197,12 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     const ReductionInfo &RI = En.value();
     Value *LHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
         RedArrayTy, LHSArrayPtr, 0, En.index());
-    Value *LHSI8Ptr = Builder.CreateLoad(Builder.getInt8PtrTy(), LHSI8PtrPtr);
+    Value *LHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), LHSI8PtrPtr);
     Value *LHSPtr = Builder.CreateBitCast(LHSI8Ptr, RI.Variable->getType());
     Value *LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
     Value *RHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
         RedArrayTy, RHSArrayPtr, 0, En.index());
-    Value *RHSI8Ptr = Builder.CreateLoad(Builder.getInt8PtrTy(), RHSI8PtrPtr);
+    Value *RHSI8Ptr = Builder.CreateLoad(Builder.getPtrTy(), RHSI8PtrPtr);
     Value *RHSPtr =
         Builder.CreateBitCast(RHSI8Ptr, RI.PrivateVariable->getType());
     Value *RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
@@ -5198,12 +5198,12 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
     // args[I] = &dims
     Builder.restoreIP(CodeGenIP);
     Value *DAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        DimsAddr, Builder.getInt8PtrTy());
+        DimsAddr, Builder.getPtrTy());
     Value *P = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        ArrayType::get(Builder.getPtrTy(), Info.NumberOfPtrs),
         Info.RTArgs.PointersArray, 0, I);
     Builder.CreateAlignedStore(
-        DAddr, P, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+        DAddr, P, M.getDataLayout().getPrefTypeAlign(Builder.getPtrTy()));
     ++L;
   }
 }
@@ -5225,7 +5225,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
   // Detect if we have any capture size requiring runtime evaluation of the
   // size so that a constant array could be eventually used.
   ArrayType *PointerArrayType =
-      ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs);
+      ArrayType::get(Builder.getPtrTy(), Info.NumberOfPtrs);
 
   Info.RTArgs.BasePointersArray = Builder.CreateAlloca(
       PointerArrayType, /* ArraySize = */ nullptr, ".offload_baseptrs");
