@@ -182,7 +182,7 @@ static StringRef getSubsection(StringRef Section,
 
 static Error sectionOverflowErrorOrWarning(
     uint32_t PrevOffset, uint32_t OverflowedOffset, StringRef SectionName,
-    const OnCuIndexOverflow &OverflowOptValue, bool &SeeOverflowFlag) {
+    OnCuIndexOverflow OverflowOptValue, bool &SeeOverflowFlag) {
   std::string Msg =
       (SectionName +
        Twine(" Section Contribution Offset overflow 4G. Previous Offset ") +
@@ -204,7 +204,7 @@ static Error addAllTypesFromDWP(
     MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     const DWARFUnitIndex &TUIndex, MCSection *OutputTypes, StringRef Types,
     const UnitIndexEntry &TUEntry, uint32_t &TypesOffset,
-    unsigned TypesContributionIndex, const OnCuIndexOverflow &OverflowOptValue,
+    unsigned TypesContributionIndex, OnCuIndexOverflow OverflowOptValue,
     bool &SeeOverflowFlag) {
   Out.switchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
@@ -251,7 +251,7 @@ static Error addAllTypesFromTypesSection(
     MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
     MCSection *OutputTypes, const std::vector<StringRef> &TypesSections,
     const UnitIndexEntry &CUEntry, uint32_t &TypesOffset,
-    const OnCuIndexOverflow &OverflowOptValue, bool &SeeOverflowFlag) {
+    OnCuIndexOverflow OverflowOptValue, bool &SeeOverflowFlag) {
   for (StringRef Types : TypesSections) {
     Out.switchSection(OutputTypes);
     uint64_t Offset = 0;
