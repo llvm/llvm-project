@@ -987,10 +987,10 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC,
     // the linker.
     //
     // We are using this --whole-archive/--no-whole-archive bracket w/o
-    // any further checks, because -Wl,--whole-archive at the flang-new new
-    // line will not sucessfully complete, unless the user correctly specified
-    // -Wl,--no-whole-archive (e.g., -Wl,--whole-archive -ldummy
-    // -Wl,--no-whole-archive).
+    // any further checks, because -Wl,--whole-archive at the flang
+    // driver's link line will not sucessfully complete, unless the user
+    // correctly specified -Wl,--whole-archive/-Wl,--no-whole-archive
+    // (e.g., -Wl,--whole-archive -ldummy -Wl,--no-whole-archive).
     CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lFortran_main");
     CmdArgs.push_back("--no-whole-archive");
@@ -1006,7 +1006,7 @@ void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
                                          ArgStringList &CmdArgs) {
   // Default to the <driver-path>/../lib directory. This works fine on the
   // platforms that we have tested so far. We will probably have to re-fine
-  // this in the future. In particular, on some platforms, we may need to useq
+  // this in the future. In particular, on some platforms, we may need to use
   // lib64 instead of lib.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
