@@ -1443,7 +1443,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -1456,6 +1455,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineBasicBlock::iterator End = MBB.end();
 #ifndef NDEBUG
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   // Collect live register from the end of MBB up to the start of the existing
   // frame setup instructions.
   MachineBasicBlock::iterator NonFrameStart = MBB.begin();
