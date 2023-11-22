@@ -73,6 +73,7 @@ enum ActionType {
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
+  GenArmVectorType,
   GenArmNeonSema,
   GenArmNeonTest,
   GenArmMveHeader,
@@ -229,6 +230,8 @@ cl::opt<ActionType> Action(
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
+        clEnumValN(GenArmVectorType, "gen-arm-vector-type",
+                   "Generate arm_vector_type.h for clang"),
         clEnumValN(GenArmNeonSema, "gen-arm-neon-sema",
                    "Generate ARM NEON sema support for clang"),
         clEnumValN(GenArmNeonTest, "gen-arm-neon-test",
@@ -279,11 +282,14 @@ cl::opt<ActionType> Action(
                    "Generate riscv_vector_builtin_cg.inc for clang"),
         clEnumValN(GenRISCVVectorBuiltinSema, "gen-riscv-vector-builtin-sema",
                    "Generate riscv_vector_builtin_sema.inc for clang"),
-        clEnumValN(GenRISCVSiFiveVectorBuiltins, "gen-riscv-sifive-vector-builtins",
+        clEnumValN(GenRISCVSiFiveVectorBuiltins,
+                   "gen-riscv-sifive-vector-builtins",
                    "Generate riscv_sifive_vector_builtins.inc for clang"),
-        clEnumValN(GenRISCVSiFiveVectorBuiltinCG, "gen-riscv-sifive-vector-builtin-codegen",
+        clEnumValN(GenRISCVSiFiveVectorBuiltinCG,
+                   "gen-riscv-sifive-vector-builtin-codegen",
                    "Generate riscv_sifive_vector_builtin_cg.inc for clang"),
-        clEnumValN(GenRISCVSiFiveVectorBuiltinSema, "gen-riscv-sifive-vector-builtin-sema",
+        clEnumValN(GenRISCVSiFiveVectorBuiltinSema,
+                   "gen-riscv-sifive-vector-builtin-sema",
                    "Generate riscv_sifive_vector_builtin_sema.inc for clang"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
@@ -448,6 +454,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenArmFP16:
     EmitFP16(Records, OS);
+    break;
+  case GenArmVectorType:
+    EmitVectorType(Records, OS);
     break;
   case GenArmBF16:
     EmitBF16(Records, OS);
