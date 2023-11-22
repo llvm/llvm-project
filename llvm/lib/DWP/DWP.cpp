@@ -202,13 +202,12 @@ static Error sectionOverflowErrorOrWarning(uint32_t PrevOffset,
   return make_error<DWPError>(Msg);
 }
 
-static Error
-addAllTypesFromDWP(MCStreamer &Out,
-                   MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
-                   const DWARFUnitIndex &TUIndex, MCSection *OutputTypes,
-                   StringRef Types, const UnitIndexEntry &TUEntry,
-                   uint32_t &TypesOffset, unsigned TypesContributionIndex,
-                   OnCuIndexOverflow OverflowOptValue, bool &AnySectionOverflow) {
+static Error addAllTypesFromDWP(
+    MCStreamer &Out, MapVector<uint64_t, UnitIndexEntry> &TypeIndexEntries,
+    const DWARFUnitIndex &TUIndex, MCSection *OutputTypes, StringRef Types,
+    const UnitIndexEntry &TUEntry, uint32_t &TypesOffset,
+    unsigned TypesContributionIndex, OnCuIndexOverflow OverflowOptValue,
+    bool &AnySectionOverflow) {
   Out.switchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
     auto *I = E.getContributions();
@@ -239,9 +238,9 @@ addAllTypesFromDWP(MCStreamer &Out,
     static_assert(sizeof(OldOffset) == sizeof(TypesOffset));
     TypesOffset += C.getLength();
     if (OldOffset > TypesOffset) {
-      if (Error Err =
-              sectionOverflowErrorOrWarning(OldOffset, TypesOffset, "Types",
-                                            OverflowOptValue, AnySectionOverflow))
+      if (Error Err = sectionOverflowErrorOrWarning(OldOffset, TypesOffset,
+                                                    "Types", OverflowOptValue,
+                                                    AnySectionOverflow))
         return Err;
       if (AnySectionOverflow)
         return Error::success();
