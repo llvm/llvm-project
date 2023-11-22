@@ -19,7 +19,6 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -98,7 +97,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -3486,7 +3484,7 @@ private:
     BasicBlock *BB;
 
     /// Simple memory allocation for ScheduleData.
-    std::vector<std::unique_ptr<ScheduleData[]>> ScheduleDataChunks;
+    SmallVector<std::unique_ptr<ScheduleData[]>> ScheduleDataChunks;
 
     /// The size of a ScheduleData array in ScheduleDataChunks.
     int ChunkSize;
@@ -11614,7 +11612,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                           VecCallCosts.first <= VecCallCosts.second;
 
       Value *ScalarArg = nullptr;
-      std::vector<Value *> OpVecs;
+      SmallVector<Value *> OpVecs;
       SmallVector<Type *, 2> TysForDecl;
       // Add return type if intrinsic is overloaded on it.
       if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
