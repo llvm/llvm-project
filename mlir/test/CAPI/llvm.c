@@ -9,15 +9,9 @@
 
 // RUN: mlir-capi-llvm-test 2>&1 | FileCheck %s
 
-#include "llvm-c/Core.h"
-#include "llvm-c/Support.h"
-#include "llvm-c/Types.h"
-
-#include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Dialect/LLVM.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
-#include "mlir-c/RegisterEverything.h"
-#include "mlir-c/Target/LLVMIR.h"
 
 #include <assert.h>
 #include <math.h>
@@ -79,47 +73,11 @@ static void testTypeCreation(MlirContext ctx) {
           mlirTypeEqual(i32_i64_s, i32_i64_s_ref));
 }
 
-// CHECK-LABEL: testToLLVMIR()
-static void testToLLVMIR(MlirContext ctx) {
-  fprintf(stderr, "testToLLVMIR()\n");
-  LLVMContextRef llvmCtx = LLVMContextCreate();
-
-  const char *moduleString = "llvm.func @add(%arg0: i64, %arg1: i64) -> i64 { \
-                                %0 = llvm.add %arg0, %arg1  : i64 \
-                                llvm.return %0 : i64 \
-                             }";
-
-  mlirRegisterAllLLVMTranslations(ctx);
-
-  MlirModule module =
-      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
-
-  MlirOperation operation = mlirModuleGetOperation(module);
-
-  LLVMModuleRef llvmModule = mlirTranslateModuleToLLVMIR(operation, llvmCtx);
-
-  // clang-format off
-  // CHECK: ; ModuleID = 'LLVMDialectModule'
-  // CHECK-NEXT: source_filename = "LLVMDialectModule"
-  // CHECK: declare ptr @malloc(i64 %0)
-  // CHECK: declare void @free(ptr %0)
-  // CHECK: define i64 @add(i64 %0, i64 %1) {
-  // CHECK-NEXT:   %3 = add i64 %0, %1
-  // CHECK-NEXT:   ret i64 %3
-  // CHECK-NEXT: }
-  // clang-format on
-  LLVMDumpModule(llvmModule);
-
-  LLVMDisposeModule(llvmModule);
-  mlirModuleDestroy(module);
-}
-
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__llvm__(), ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("llvm"));
   testTypeCreation(ctx);
-  testToLLVMIR(ctx);
   mlirContextDestroy(ctx);
   return 0;
 }
