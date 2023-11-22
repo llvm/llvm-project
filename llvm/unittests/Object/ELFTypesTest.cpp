@@ -99,4 +99,3 @@ static_assert(
     std::is_same_v<decltype(PGOAnalysisMap::PGOBBEntry::SuccessorEntry::ID),
                    decltype(BBAddrMap::BBEntry::ID)>,
     "PGOAnalysisMap should use the same type for basic block ID as BBAddrMap");
-

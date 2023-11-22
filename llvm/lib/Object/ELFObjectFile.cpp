@@ -839,4 +839,3 @@ Expected<std::vector<BBAddrMap>> ELFObjectFileBase::readBBAddrMap(
   return readBBAddrMapImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
                            TextSectionIndex, PGOAnalyses);
 }
-
