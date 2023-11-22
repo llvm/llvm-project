@@ -778,8 +778,8 @@ public:
     ASSERT(TId == mapping::getThreadIdInBlock(), "Bad thread id");
 
     // All teams need to participate.
-    Ty NumBlocks = mapping::getNumberOfBlocks();
-    Ty BId = mapping::getBlockId();
+    Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
+    Ty BId = mapping::getBlockIdInKernel();
 
     // If the block chunk is not specified we pick a default now.
     if (BlockChunk == 0)
@@ -825,8 +825,8 @@ public:
     Ty TId = mapping::getThreadIdInBlock();
 
     // All teams need to participate.
-    Ty NumBlocks = mapping::getNumberOfBlocks();
-    Ty BId = mapping::getBlockId();
+    Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
+    Ty BId = mapping::getBlockIdInKernel();
 
     // If the block chunk is not specified we pick a default now.
     if (BlockChunk == 0)
