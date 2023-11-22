@@ -126,7 +126,7 @@ public:
   void foreachField(
       llvm::function_ref<bool(
           FieldIndex /*fieldIdx*/, SparseTensorFieldKind /*fieldKind*/,
-          Level /*lvl (if applicable)*/, DimLevelType /*DLT (if applicable)*/)>)
+          Level /*lvl (if applicable)*/, DimLevelType /*LT (if applicable)*/)>)
       const;
 
   /// Gets the field index for required field.
