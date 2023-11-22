@@ -67,6 +67,12 @@ inline bool isBoxAddressType(mlir::Type type) {
   return type && type.isa<fir::BaseBoxType>();
 }
 
+/// Is this a fir.boxproc address type?
+inline bool isBoxProcAddressType(mlir::Type type) {
+  type = fir::dyn_cast_ptrEleTy(type);
+  return type && type.isa<fir::BoxProcType>();
+}
+
 /// Is this a fir.box or fir.class address or value type?
 inline bool isBoxAddressOrValueType(mlir::Type type) {
   return fir::unwrapRefType(type).isa<fir::BaseBoxType>();
