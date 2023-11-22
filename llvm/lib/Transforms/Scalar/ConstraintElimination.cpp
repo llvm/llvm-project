@@ -455,6 +455,9 @@ static Decomposition decompose(Value *V,
   if (Ty->isPointerTy() && !IsSigned) {
     if (auto *GEP = dyn_cast<GEPOperator>(V))
       return decomposeGEP(*GEP, Preconditions, IsSigned, DL);
+    if (isa<ConstantPointerNull>(V))
+      return int64_t(0);
+
     return V;
   }
 
