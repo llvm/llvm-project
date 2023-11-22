@@ -106,6 +106,12 @@ use m
 ! CHECK: %[[VAL_7:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 ! CHECK: %[[VAL_8:.*]] = fir.box_addr %[[VAL_7]] : (!fir.boxproc<(!fir.ref<f32>) -> f32>) -> ((!fir.ref<f32>) -> f32)
 ! CHECK: %[[VAL_9:.*]] = fir.call %[[VAL_8]](%5#1) fastmath<contract> : (!fir.ref<f32>) -> f32
+
+  nullify(p1)
+! CHECK: %[[VAL_10:.*]] = fir.zero_bits () -> ()
+! CHECK: %[[VAL_11:.*]] = fir.emboxproc %[[VAL_10]] : (() -> ()) -> !fir.boxproc<() -> ()>
+! CHECK: %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.boxproc<() -> ()>) -> !fir.boxproc<(!fir.ref<f32>) -> f32>
+! CHECK: fir.store %[[VAL_12]] to %[[VAL_3]]#0 : !fir.ref<!fir.boxproc<(!fir.ref<f32>) -> f32>>
 end subroutine
 
 subroutine  sub4()
