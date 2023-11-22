@@ -274,7 +274,12 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // interfaces the intrinsic implements. If the corresponding flags are set, the
 // "aliasAttrs" list contains the arguments required by the access group and
 // alias analysis interfaces. Derived intrinsics should append the "aliasAttrs"
-// to their argument list if they set one of the flags.
+// to their argument list if they set one of the flags. LLVM `immargs` can be
+// represented as MLIR attributes by providing both the `immArgPositions` and
+// `immArgAttrNames` lists. These two lists should have equal length, with
+// `immArgPositions` containing the argument positions on the LLVM IR attribute
+// that are `immargs`, and `immArgAttrNames` mapping these to corresponding
+// MLIR attributes.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
@@ -320,7 +325,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   string mlirBuilder = [{
     SmallVector<Value> mlirOperands;
     SmallVector<NamedAttribute> mlirAttrs;
-    if (failed(LLVM::detail::convertIntrinsicArguments(moduleImport,
+    if (failed(moduleImport.convertIntrinsicArguments(
       llvmOperands,
       }] # immArgPositionsCpp # [{,
       }] # immArgAttrNamesCpp # [{,

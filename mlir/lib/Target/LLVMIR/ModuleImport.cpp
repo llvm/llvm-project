@@ -700,7 +700,7 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
 
 /// Returns an integer or float attribute for the provided scalar constant
 /// `constScalar` or nullptr if the conversion fails.
-static Attribute getScalarConstantAsAttr(OpBuilder &builder,
+static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
@@ -1199,41 +1199,36 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
-LogicalResult mlir::LLVM::detail::convertIntrinsicArguments(
-    ModuleImport &moduleInport, ArrayRef<llvm::Value *> values,
-    ArrayRef<unsigned> immArgPositions, ArrayRef<StringLiteral> immArgAttrNames,
-    SmallVectorImpl<Value> &valuesOut,
+LogicalResult ModuleImport::convertIntrinsicArguments(
+    ArrayRef<llvm::Value *> values, ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames, SmallVectorImpl<Value> &valuesOut,
     SmallVectorImpl<NamedAttribute> &attrsOut) {
-
   assert(immArgPositions.size() == immArgAttrNames.size() &&
          "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
          "length");
 
-  auto maybeMlirValues = moduleInport.convertValues(values);
-  if (failed(maybeMlirValues))
-    return failure();
-
-  auto mlirValues = std::move(maybeMlirValues).value();
+  SmallVector<llvm::Value *> operands(values);
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
-    IntegerAttr integerAttr;
-    FloatAttr floatAttr;
-    Value &value = mlirValues[immArgPos];
-    auto nameAttr = StringAttr::get(value.getContext(), immArgName);
-    if (matchPattern(value, m_Constant(&integerAttr)))
-      attrsOut.push_back({nameAttr, integerAttr});
-    else if (matchPattern(value, m_Constant(&floatAttr)))
-      attrsOut.push_back({nameAttr, floatAttr});
-    else {
-      assert("expected immarg to be float or integer constant");
-      return failure();
-    }
+    auto &value = operands[immArgPos];
+    auto *constant = llvm::cast<llvm::Constant>(value);
+    auto attr = getScalarConstantAsAttr(builder, constant);
+    assert(attr && attr.getType().isIntOrFloat() &&
+           "expected immarg to be float or integer constant");
+    auto nameAttr = StringAttr::get(attr.getContext(), immArgName);
+    attrsOut.push_back({nameAttr, attr});
     // Mark matched attribute values as null (so they can be removed below).
     value = nullptr;
   }
 
-  llvm::copy_if(mlirValues, std::back_inserter(valuesOut),
-                [](Value value) { return bool(value); });
+  for (llvm::Value *value : operands) {
+    if (!value)
+      continue;
+    auto mlirValue = convertValue(value);
+    if (failed(mlirValue))
+      return failure();
+    valuesOut.push_back(*mlirValue);
+  }
 
   return success();
 }

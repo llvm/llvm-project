@@ -465,7 +465,6 @@ define void @trap_intrinsics() {
 
 ; CHECK-LABEL:  llvm.func @memcpy_test
 define void @memcpy_test(i32 %0, ptr %1, ptr %2) {
-  ; CHECK: %[[CST:.+]] = llvm.mlir.constant(10 : i64) : i64
   ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   call void @llvm.memcpy.p0.p0.i32(ptr %1, ptr %2, i32 %0, i1 false)
   ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}) <{isVolatile = false, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
