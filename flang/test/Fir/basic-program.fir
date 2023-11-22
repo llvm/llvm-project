@@ -72,6 +72,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   MemoryAllocationOpt
+// PASSES-NEXT:   ConstExtruderOpt
 
 // PASSES-NEXT: Inliner
 // PASSES-NEXT: SimplifyRegionLite

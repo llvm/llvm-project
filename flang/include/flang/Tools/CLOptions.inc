@@ -282,10 +282,6 @@ inline void createDefaultFIROptimizerPassPipeline(
   else
     fir::addMemoryAllocationOpt(pm);
 
-  // FIR Inliner Callback
-  pc.invokeFIRInlinerCallback(pm, pc.OptLevel);
-
-  pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 
   // Polymorphic types

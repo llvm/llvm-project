@@ -6,6 +6,7 @@ add_flang_library(FIRTransforms
   AnnotateConstant.cpp
   AssumedRankOpConversion.cpp
   CharacterConversion.cpp
+  ConstExtruder.cpp
   ControlFlowConverter.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp

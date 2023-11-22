@@ -251,6 +251,16 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   ];
 }
 
+// This needs to be a "mlir::ModuleOp" pass, because it inserts global constants
+def ConstExtruderOpt : Pass<"const-extruder-opt", "mlir::ModuleOp"> {
+  let summary = "Convert scalar literals of function arguments to global constants.";
+  let description = [{
+    Convert scalar literals of function arguments to global constants.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let constructor = "::fir::createConstExtruderPass()";
+}
+
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
   let summary = "Move local array allocations from heap memory into stack memory";
   let description = [{
