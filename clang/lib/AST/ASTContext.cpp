@@ -1638,7 +1638,7 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
   // It is an error for alignas to decrease alignment, so we can
   // ignore that possibility;  Sema should diagnose it.
   bool UseAlignAttrOnly;
-  if (FieldDecl *FD = dyn_cast<FieldDecl>(D))
+  if (const FieldDecl *FD = dyn_cast<FieldDecl>(D))
     UseAlignAttrOnly =
         FD->hasAttr<PackedAttr>() || FD->getParent()->hasAttr<PackedAttr>();
   else
