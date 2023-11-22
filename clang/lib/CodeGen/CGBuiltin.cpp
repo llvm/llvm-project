@@ -916,7 +916,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   // Build a load of the counted_by field.
   bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
-  const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
+  Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
   Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
   llvm::Type *CountedByTy = CountedByInst->getType();
 
@@ -945,7 +945,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
                      : Builder.CreateZExtOrTrunc(FAMSize, ResType);
   Value *Res = FAMSize;
 
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+  if (isa<DeclRefExpr>(Base)) {
     // The whole struct is specificed in the __bdos.
     const RecordDecl *OuterRD =
         CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
