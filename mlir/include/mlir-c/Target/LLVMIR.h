@@ -1,6 +1,7 @@
-//===- LLVMIR.h - C Interface for MLIR LLVMIR Target -------------------===//
+//===-- LLVMIR.h - C Interface for MLIR LLVMIR Target -------------*- C -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM
+// Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -21,12 +22,15 @@
 extern "C" {
 #endif
 
-// Translate operation that satisfies LLVM dialect module requirements into an
-// LLVM IR module living in the given context. This translates operations from
-// any dilalect that has a registered implementation of
-// LLVMTranslationDialectInterface.
-MLIR_CAPI_EXPORTED LLVMModuleRef
-mlirTranslateModuleToLLVMIR(MlirOperation module, LLVMContextRef context);
+/// Translate operation that satisfies LLVM dialect module requirements into an
+/// LLVM IR module living in the given context. This translates operations from
+/// any dilalect that has a registered implementation of
+/// LLVMTranslationDialectInterface.
+///
+/// \returns the generated LLVM IR Module from the translated MLIR module, it is
+/// owned by the caller.
+MLIR_CAPI_EXPORTED LLVMModuleRef mlirTranslateModuleToLLVMIR(
+    MlirOperation module, LLVMContextRef context, MlirStringRef llvmModuleName);
 
 #ifdef __cplusplus
 }

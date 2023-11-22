@@ -106,6 +106,7 @@ tools = [
     "mlir-capi-quant-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
+    "mlir-capi-translation-test",
     "mlir-cpu-runner",
     add_runtime("mlir_runner_utils"),
     add_runtime("mlir_c_runner_utils"),
