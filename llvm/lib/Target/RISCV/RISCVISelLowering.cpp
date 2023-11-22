@@ -19695,6 +19695,13 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
     return SDValue();
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
 }
+
+bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
+    EVT VT, const APInt &AndMask) const {
+  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())
+    return AndMask.ugt(1024);
+  return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
+}
 namespace llvm::RISCVVIntrinsicsTable {
 
 #define GET_RISCVVIntrinsicsTable_IMPL
