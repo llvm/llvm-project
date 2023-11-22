@@ -133,7 +133,7 @@ class ClangFormatHelper(FormatHelper):
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
-            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx"):
+            if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm"):
                 if not self.should_be_excluded(path):
                     filtered_files.append(path)
             elif ext == "" and self.should_include_extensionless_file(path):
