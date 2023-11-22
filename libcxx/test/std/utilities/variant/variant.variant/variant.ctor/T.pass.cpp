@@ -80,10 +80,7 @@ void test_T_ctor_sfinae() {
     };
     static_assert(!std::is_constructible<V, X>::value,
                   "no boolean conversion in constructor");
-#ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
-    static_assert(!std::is_constructible<V, std::false_type>::value,
-                  "no converted to bool in constructor");
-#else
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     static_assert(std::is_constructible<V, std::false_type>::value,
                   "converted to bool in constructor");
 #endif
