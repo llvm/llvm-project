@@ -2510,10 +2510,11 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
 }
 
 static bool compareModuleHeaders(const Module::Header &A,
-                                const Module::Header &B) {
+                                 const Module::Header &B) {
   return A.NameAsWritten < B.NameAsWritten ||
-    (A.NameAsWritten == B.NameAsWritten &&
-     A.PathRelativeToRootModuleDirectory < B.PathRelativeToRootModuleDirectory);
+         (A.NameAsWritten == B.NameAsWritten &&
+          A.PathRelativeToRootModuleDirectory <
+              B.PathRelativeToRootModuleDirectory);
 }
 
 /// Parse an umbrella directory declaration.
