@@ -1714,13 +1714,14 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       auto Builder =
           BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
               .addImm(0);
+      OldWaitcntInstr = Builder.getInstr();
+
       if (IsGFX10Plus) {
         Builder =
             BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
                 .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                 .addImm(0);
       }
-      OldWaitcntInstr = Builder.getInstr();
       Modified = true;
     }
   }
@@ -1859,9 +1860,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Encoding.SGPR0 =
       TRI->getEncodingValue(AMDGPU::SGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
-
-  TrackedWaitcntSet.clear();
-  BlockInfos.clear();
 
   bool Modified = false;
 

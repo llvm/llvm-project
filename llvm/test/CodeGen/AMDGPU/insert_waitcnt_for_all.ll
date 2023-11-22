@@ -68,7 +68,6 @@ define void @test_load_store(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_store_short v[2:3], v0, off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
