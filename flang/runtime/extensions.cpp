@@ -30,7 +30,7 @@
 
 inline int getlogin_r(char *buf, size_t bufSize) {
   wchar_t w_username[UNLEN + 1] = {};
-  DWORD nameLen = UNLEN + 1;
+  DWORD nameLen{UNLEN + 1};
 
   if (GetUserName(w_username, &nameLen)) {
     // Convert the wchar_t string to a regular C string using wcstombs_s
