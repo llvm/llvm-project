@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/DataExtractor.h"
+#include <type_traits>
 
 using namespace llvm;
 using namespace object;
@@ -650,12 +651,9 @@ ELFFile<ELFT>::toMappedAddr(uint64_t VAddr, WarningHandler WarnHandler) const {
 // int limit.
 // Also returns zero if ULEBSizeErr is already in an error state.
 // ULEBSizeErr is an out variable if an error occurs.
-template <typename IntTy>
+template <typename IntTy, std::enable_if_t<std::is_unsigned_v<IntTy>, int> = 0>
 static IntTy readULEB128As(DataExtractor &Data, DataExtractor::Cursor &Cur,
                            Error &ULEBSizeErr) {
-  static_assert(std::is_unsigned_v<IntTy> &&
-                    (std::numeric_limits<IntTy>::radix == 2),
-                "only use unsigned radix 2");
   // Bail out and do not extract data if ULEBSizeErr is already set.
   if (ULEBSizeErr)
     return 0;

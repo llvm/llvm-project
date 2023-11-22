@@ -958,8 +958,6 @@ struct PGOAnalysisMap {
              std::tie(Other.BlockFreq, Other.Successors);
     }
   };
-  // This field is duplicated from BBAddrMap since this class needs a different
-  // type for the vector of entries.
   uint64_t FuncEntryCount;           // Prof count from IR function
   std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
 
