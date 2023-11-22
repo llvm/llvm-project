@@ -347,7 +347,6 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) no
 ; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; i686-NEXT:    shrdl %cl, %eax, (%esp) # 4-byte Folded Spill
-; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    shrl %cl, %esi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl %esi, 28(%ecx)
@@ -489,7 +488,6 @@ define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) no
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; i686-NEXT:    shrdl %cl, %esi, %ebx
-; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    sarl %cl, %ebp
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl %ebp, 28(%ecx)
@@ -623,11 +621,9 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nou
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; i686-NEXT:    shll %cl, %edi
 ; i686-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; i686-NEXT:    movl %ecx, %edi
 ; i686-NEXT:    shldl %cl, %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; i686-NEXT:    negl %ebp
 ; i686-NEXT:    movl 64(%esp,%ebp), %esi
-; i686-NEXT:    movl %edi, %ecx
 ; i686-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; i686-NEXT:    movl (%esp), %edi # 4-byte Reload
 ; i686-NEXT:    shldl %cl, %edi, %esi
