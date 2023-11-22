@@ -17,8 +17,6 @@
 
 __asan_InitDefine<op_new_scalar_align> init_new_scalar_align;
 
-extern "C" void* __cdecl __asan_new_align(size_t size, std::align_val_t align);
-
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void* operator new(size_t size, std::align_val_t align) {

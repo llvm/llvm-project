@@ -17,8 +17,6 @@
 
 __asan_InitDefine<op_delete_array> init_delete_array;
 
-extern "C" void __cdecl __asan_delete_array(void* ptr);
-
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete[](void* ptr) noexcept {

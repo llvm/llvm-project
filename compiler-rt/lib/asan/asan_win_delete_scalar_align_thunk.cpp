@@ -17,8 +17,6 @@
 
 __asan_InitDefine<op_delete_scalar_align> init_delete_scalar_align;
 
-extern "C" void __cdecl __asan_delete_align(void* ptr, std::align_val_t align);
-
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete(void* ptr, std::align_val_t align) noexcept {

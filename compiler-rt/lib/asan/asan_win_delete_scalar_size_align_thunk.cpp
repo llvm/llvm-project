@@ -15,9 +15,6 @@
 // see diagram in asan_win_new_delete_thunk_common.h for the ordering of the
 // new/delete fallbacks.
 
-extern "C" void __cdecl __asan_delete_size_align(
-    void* ptr, size_t size, std::align_val_t align) noexcept;
-
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete(void* ptr, size_t size, std::align_val_t align) noexcept {

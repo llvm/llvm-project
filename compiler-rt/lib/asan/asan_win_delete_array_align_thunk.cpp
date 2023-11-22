@@ -17,9 +17,6 @@
 
 __asan_InitDefine<op_delete_array_align> init_delete_array_align;
 
-extern "C" void __cdecl __asan_delete_array_align(void* ptr,
-                                                  std::align_val_t align);
-
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete[](void* ptr, std::align_val_t align) noexcept {

@@ -100,4 +100,45 @@ struct __asan_InitDefine {
 template <defined_ops Id>
 int __asan_InitDefine<Id>::defined = 0;
 
+extern "C" void __cdecl __asan_delete_array_align(
+    void* ptr, std::align_val_t align);
+
+extern "C" void __cdecl __asan_delete_array_size_align(
+    void* ptr, size_t size,
+    std::align_val_t align);
+
+extern "C" void __cdecl __asan_delete_array_size(
+    void* ptr, size_t size);
+
+extern "C" void __cdecl __asan_delete_array(void* ptr);
+
+extern "C" void __cdecl __asan_delete_align(void* ptr, std::align_val_t align);
+
+extern "C" void __cdecl __asan_delete_size_align(void* ptr, size_t size,
+    std::align_val_t align) noexcept;
+
+extern "C" void __cdecl __asan_delete_size(void* ptr, size_t size);
+
+extern "C" void __cdecl __asan_delete(void* ptr);
+
+extern "C" void* __cdecl __asan_new_array_align_nothrow(size_t size,
+                                                        std::align_val_t align);
+
+extern "C" void* __cdecl __asan_new_array_align(size_t size,
+                                                std::align_val_t align);
+
+extern "C" void* __cdecl __asan_new_array_nothrow(size_t size);
+
+extern "C" void* __cdecl __asan_new_array(size_t size);
+
+extern "C" void* __cdecl __asan_new_align_nothrow(size_t size,
+                                                  std::align_val_t align);
+
+extern "C" void* __cdecl __asan_new_align(size_t size, std::align_val_t align);
+
+extern "C" void* __cdecl __asan_new_nothrow(size_t size);
+
+extern "C" void* __cdecl __asan_new(size_t size);
+
 #endif // ASAN_WIN_NEW_DELETE_THUNK_COMMON_H
+
