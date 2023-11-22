@@ -32,7 +32,8 @@ public:
                                             MCSymbolAttr Linkage,
                                             MCSymbolAttr Visibility) override;
   void emitXCOFFRefDirective(const MCSymbol *Symbol) override;
-  void emitXCOFFRenameDirective(const MCSymbol *Name, StringRef Rename) override;
+  void emitXCOFFRenameDirective(const MCSymbol *Name,
+                                 StringRef Rename) override;
   void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;

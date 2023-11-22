@@ -91,9 +91,9 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
-#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -504,10 +504,10 @@ bool AsmPrinter::doInitialization(Module &M) {
     // a rename for the default text-section symbol name.  This call has
     // no effect when generating object code directly.
     MCSection *TextSection =
-      OutStreamer->getContext().getObjectFileInfo()->getTextSection();
+        OutStreamer->getContext().getObjectFileInfo()->getTextSection();
     MCSymbolXCOFF *XSym =
-      static_cast<MCSectionXCOFF *>(TextSection)->getQualNameSymbol();
-    if (XSym->hasRename()) 
+        static_cast<MCSectionXCOFF *>(TextSection)->getQualNameSymbol();
+    if (XSym->hasRename())
       OutStreamer->emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
   }
 
