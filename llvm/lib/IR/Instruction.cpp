@@ -318,10 +318,7 @@ void Instruction::setIsExact(bool b) {
 }
 
 void Instruction::setIsDisjoint(bool b) {
-  assert(isa<PossiblyDisjointInst>(this) && "Must be or");
-  SubclassOptionalData =
-      (SubclassOptionalData & ~PossiblyDisjointInst::IsDisjoint) |
-      (b * PossiblyDisjointInst::IsDisjoint);
+  cast<PossiblyDisjointInst>(this)->setIsDisjoint(b);
 }
 
 void Instruction::setNonNeg(bool b) {
@@ -431,8 +428,7 @@ bool Instruction::isExact() const {
 }
 
 bool Instruction::isDisjoint() const {
-  assert(isa<PossiblyDisjointInst>(this) && "Must be or");
-  return (SubclassOptionalData & PossiblyDisjointInst::IsDisjoint) != 0;
+  return cast<PossiblyDisjointInst>(this)->isDisjoint();
 }
 
 void Instruction::setFast(bool B) {

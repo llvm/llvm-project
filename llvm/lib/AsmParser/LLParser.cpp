@@ -6373,7 +6373,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (parseLogical(Inst, PFS, KeywordVal))
       return true;
     if (Disjoint)
-      cast<PossiblyDisjointInst>(Inst)->setIsDisjoint(true);
+      cast<BinaryOperator>(Inst)->setIsDisjoint(true);
     return false;
   }
   case lltok::kw_and:
