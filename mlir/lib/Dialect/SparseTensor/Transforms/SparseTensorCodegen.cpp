@@ -1341,7 +1341,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         continue;
       }
 
-      if (isDLTWithPos(dlt)) {
+      if (isWithPosDLT(dlt)) {
         assert(isCompressedDLT(dlt) || isLooseCompressedDLT(dlt));
         if (isLooseCompressedDLT(dlt)) {
           memSize = rewriter.create<arith::MulIOp>(loc, memSize, c2);
@@ -1356,7 +1356,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         memSize = genIndexLoad(rewriter, loc, desc.getPosMemRef(lvl), posBack);
         posBack = rewriter.create<arith::SubIOp>(loc, posBack, c1);
       }
-      assert(isDLTWithCrd(dlt) && lvl <= trailCOOStart);
+      assert(isWithCrdDLT(dlt) && lvl <= trailCOOStart);
       // FIXME: This seems to be unnecessarily complex, can we simplify it?
       if (lvl == trailCOOStart) {
         Value cooSz = rewriter.create<arith::MulIOp>(
