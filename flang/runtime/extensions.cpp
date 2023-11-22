@@ -29,7 +29,7 @@
 #define LOGIN_NAME_MAX UNLEN
 
 inline int getlogin_r(char *buf, size_t bufSize) {
-  wchar_t w_username[UNLEN + 1];
+  wchar_t w_username[UNLEN + 1] = {};
   DWORD nameLen = UNLEN + 1;
 
   if (GetUserName(w_username, &nameLen)) {
@@ -82,7 +82,7 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 }
 
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
-  std::array<char, LOGIN_NAME_MAX + 1> str;
+  std::array<char, LOGIN_NAME_MAX + 1> str = {};
 
   int error = getlogin_r(str.data(), str.size());
   Terminator terminator{__FILE__, __LINE__};
