@@ -377,7 +377,7 @@ void Value::setNameImpl(const Twine &NewName) {
 void Value::setName(const Twine &NewName) {
   setNameImpl(NewName);
   if (Function *F = dyn_cast<Function>(this))
-    F->recalculateIntrinsicID();
+    F->updateAfterNameChange();
 }
 
 void Value::takeName(Value *V) {
