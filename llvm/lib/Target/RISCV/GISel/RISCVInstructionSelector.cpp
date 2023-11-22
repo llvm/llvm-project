@@ -72,6 +72,8 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
+  bool selectIntrinsicWithSideEffects(MachineInstr &I, MachineIRBuilder &MIB,
+                                      MachineRegisterInfo &MRI);
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -564,6 +566,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    return selectIntrinsicWithSideEffects(MI, MIB, MRI);
   default:
     return false;
   }
@@ -1096,6 +1100,27 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
   }
 
   MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
+    MachineInstr &I, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
+  // Find the intrinsic ID.
+  unsigned IntrinID = cast<GIntrinsic>(I).getIntrinsicID();
+
+  // Select the instruction.
+  switch (IntrinID) {
+  default:
+    return false;
+  case Intrinsic::trap:
+    MIB.buildInstr(RISCV::UNIMP, {}, {});
+    break;
+  case Intrinsic::debugtrap:
+    MIB.buildInstr(RISCV::EBREAK, {}, {});
+    break;
+  }
+
+  I.eraseFromParent();
   return true;
 }
 
