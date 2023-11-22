@@ -9,7 +9,6 @@
 // UNSUPPORTED: target={{.+}}-windows-gnu
 // XFAIL: LIBCXX-AIX-FIXME
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
-// Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
 // Hangs with msan.
 // UNSUPPORTED: msan
 
