@@ -6223,8 +6223,8 @@ static SDValue getBROADCAST_LOAD(unsigned Opcode, const SDLoc &DL, EVT VT,
   if (!Mem || !Mem->readMem() || !Mem->isSimple() || Mem->isNonTemporal())
     return SDValue();
 
-  SDValue Ptr =
-      DAG.getMemBasePlusOffset(Mem->getBasePtr(), TypeSize::Fixed(Offset), DL);
+  SDValue Ptr = DAG.getMemBasePlusOffset(Mem->getBasePtr(),
+                                         TypeSize::getFixed(Offset), DL);
   SDVTList Tys = DAG.getVTList(VT, MVT::Other);
   SDValue Ops[] = {Mem->getChain(), Ptr};
   SDValue BcstLd = DAG.getMemIntrinsicNode(
@@ -12422,7 +12422,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
     SDValue NewAddr =
-        DAG.getMemBasePlusOffset(BaseAddr, TypeSize::Fixed(Offset), DL);
+        DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(Offset), DL);
 
     // Directly form VBROADCAST_LOAD if we're using VBROADCAST opcode rather
     // than MOVDDUP.
@@ -19675,7 +19675,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI);
   if (SrcVT == MVT::i32) {
     SDValue OffsetSlot =
-        DAG.getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), dl);
+        DAG.getMemBasePlusOffset(StackSlot, TypeSize::getFixed(4), dl);
     SDValue Store1 = DAG.getStore(Chain, dl, Src, StackSlot, MPI, SlotAlign);
     SDValue Store2 = DAG.getStore(Store1, dl, DAG.getConstant(0, dl, MVT::i32),
                                   OffsetSlot, MPI.getWithOffset(4), SlotAlign);
@@ -24354,7 +24354,7 @@ static SDValue splitVectorStore(StoreSDNode *Store, SelectionDAG &DAG) {
   unsigned HalfOffset = Value0.getValueType().getStoreSize();
   SDValue Ptr0 = Store->getBasePtr();
   SDValue Ptr1 =
-      DAG.getMemBasePlusOffset(Ptr0, TypeSize::Fixed(HalfOffset), DL);
+      DAG.getMemBasePlusOffset(Ptr0, TypeSize::getFixed(HalfOffset), DL);
   SDValue Ch0 =
       DAG.getStore(Store->getChain(), DL, Value0, Ptr0, Store->getPointerInfo(),
                    Store->getOriginalAlign(),
@@ -24390,7 +24390,7 @@ static SDValue scalarizeVectorStore(StoreSDNode *Store, MVT StoreVT,
   for (unsigned i = 0; i != NumElems; ++i) {
     unsigned Offset = i * ScalarSize;
     SDValue Ptr = DAG.getMemBasePlusOffset(Store->getBasePtr(),
-                                           TypeSize::Fixed(Offset), DL);
+                                           TypeSize::getFixed(Offset), DL);
     SDValue Scl = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, StoreSVT, StoredVal,
                               DAG.getIntPtrConstant(i, DL));
     SDValue Ch = DAG.getStore(Store->getChain(), DL, Scl, Ptr,
@@ -24786,7 +24786,7 @@ SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MemOps.push_back(Store);
 
   // Store fp_offset
-  FIN = DAG.getMemBasePlusOffset(FIN, TypeSize::Fixed(4), DL);
+  FIN = DAG.getMemBasePlusOffset(FIN, TypeSize::getFixed(4), DL);
   Store = DAG.getStore(
       Op.getOperand(0), DL,
       DAG.getConstant(FuncInfo->getVarArgsFPOffset(), DL, MVT::i32), FIN,
@@ -39950,8 +39950,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
             LN->isSimple()) {
           unsigned Offset = ShiftAmt / 8;
           SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-          SDValue Ptr = DAG.getMemBasePlusOffset(LN->getBasePtr(),
-                                                 TypeSize::Fixed(Offset), DL);
+          SDValue Ptr = DAG.getMemBasePlusOffset(
+              LN->getBasePtr(), TypeSize::getFixed(Offset), DL);
           SDValue Ops[] = { LN->getChain(), Ptr };
           SDValue BcastLd = DAG.getMemIntrinsicNode(
               X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MVT::i16,
@@ -49843,7 +49843,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     unsigned HalfOffset = 16;
     SDValue Ptr1 = Ld->getBasePtr();
     SDValue Ptr2 =
-        DAG.getMemBasePlusOffset(Ptr1, TypeSize::Fixed(HalfOffset), dl);
+        DAG.getMemBasePlusOffset(Ptr1, TypeSize::getFixed(HalfOffset), dl);
     EVT HalfVT = EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(),
                                   NumElems / 2);
     SDValue Load1 =
@@ -50018,7 +50018,7 @@ static bool getParamsForOneTrueMaskedElt(MaskedLoadStoreSDNode *MaskedOp,
   Addr = MaskedOp->getBasePtr();
   if (TrueMaskElt != 0) {
     Offset = TrueMaskElt * EltVT.getStoreSize();
-    Addr = DAG.getMemBasePlusOffset(Addr, TypeSize::Fixed(Offset),
+    Addr = DAG.getMemBasePlusOffset(Addr, TypeSize::getFixed(Offset),
                                     SDLoc(MaskedOp));
   }
 
@@ -50312,7 +50312,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       Hi = combinevXi1ConstantToInteger(Hi, DAG);
 
       SDValue Ptr0 = St->getBasePtr();
-      SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, TypeSize::Fixed(4), dl);
+      SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, TypeSize::getFixed(4), dl);
 
       SDValue Ch0 =
           DAG.getStore(St->getChain(), dl, Lo, Ptr0, St->getPointerInfo(),
