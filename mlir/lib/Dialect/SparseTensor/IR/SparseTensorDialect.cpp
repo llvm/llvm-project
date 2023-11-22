@@ -72,11 +72,11 @@ void StorageLayout::foreachField(
   // Per-level storage.
   for (Level l = 0; l < end; l++) {
     const auto dlt = lvlTypes[l];
-    if (isDLTWithPos(dlt)) {
+    if (isWithPosDLT(dlt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, dlt)))
         return;
     }
-    if (isDLTWithCrd(dlt)) {
+    if (isWithCrdDLT(dlt)) {
       if (!(callback(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt)))
         return;
     }

@@ -302,8 +302,8 @@ public:
   bool is2OutOf4Lvl(Level l) const { return is2OutOf4DLT(getLvlType(l)); }
   bool isOrderedLvl(Level l) const { return isOrderedDLT(getLvlType(l)); }
   bool isUniqueLvl(Level l) const { return isUniqueDLT(getLvlType(l)); }
-  bool isWithPos(Level l) const { return isDLTWithPos(getLvlType(l)); }
-  bool isWithCrd(Level l) const { return isDLTWithCrd(getLvlType(l)); }
+  bool isWithPos(Level l) const { return isWithPosDLT(getLvlType(l)); }
+  bool isWithCrd(Level l) const { return isWithCrdDLT(getLvlType(l)); }
 
   /// Returns the coordinate-overhead bitwidth, defaulting to zero.
   unsigned getCrdWidth() const { return enc ? enc.getCrdWidth() : 0; }
