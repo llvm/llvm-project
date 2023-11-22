@@ -94,6 +94,126 @@ define <vscale x 8 x bfloat> @ld1q_gather_u64base_bf16(<vscale x 1 x i1> %pg, <v
   ret <vscale x 8 x bfloat> %load
 }
 
+define <vscale x 16 x i8> @test_svdl1q_gather_u64offset_s8(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv16i8(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 16 x i8> %0
+}
+
+define <vscale x 16 x i8> @test_svdl1q_gather_u64offset_u8(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_u8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv16i8(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 16 x i8> %0
+}
+
+define <vscale x 8 x i16> @test_svdl1q_gather_u64offset_s16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8i16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 8 x i16> %0
+}
+
+define <vscale x 8 x i16> @test_svdl1q_gather_u64offset_u16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8i16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 8 x i16> %0
+}
+
+define <vscale x 4 x i32> @test_svdl1q_gather_u64offset_s32(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv4i32(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 4 x i32> %0
+}
+
+define <vscale x 4 x i32> @test_svdl1q_gather_u64offset_u32(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv4i32(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 4 x i32> %0
+}
+
+define <vscale x 2 x i64> @test_svdl1q_gather_u64offset_s64(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_s64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv2i64(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 2 x i64> %0
+}
+
+define <vscale x 2 x i64> @test_svdl1q_gather_u64offset_u64(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_u64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv2i64(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 2 x i64> %0
+}
+
+define <vscale x 8 x bfloat> @test_svdl1q_gather_u64offset_bf16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8bf16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 8 x bfloat> %0
+}
+
+define <vscale x 8 x half> @test_svdl1q_gather_u64offset_f16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 8 x half> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8f16(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 8 x half> %0
+}
+
+define <vscale x 4 x float> @test_svdl1q_gather_u64offset_f32(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 4 x float> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv4f32(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 4 x float> %0
+}
+
+define <vscale x 2 x double> @test_svdl1q_gather_u64offset_f64(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off) {
+; CHECK-LABEL: test_svdl1q_gather_u64offset_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld1q { z0.q }, p0/z, [z0.d, x0]
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 2 x double> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv2f64(<vscale x 1 x i1> %pg, ptr %base, <vscale x 2 x i64> %off)
+  ret <vscale x 2 x double> %0
+}
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv16i8.nxv2i64(<vscale x 1 x i1>, <vscale x 2 x i64>, i64)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv8i16.nxv2i64(<vscale x 1 x i1>, <vscale x 2 x i64>, i64)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv4i32.nxv2i64(<vscale x 1 x i1>, <vscale x 2 x i64>, i64)
@@ -102,4 +222,11 @@ declare <vscale x 8 x half> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv8f16.
 declare <vscale x 4 x float> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv4f32.nxv2i64(<vscale x 1 x i1>, <vscale x 2 x i64>, i64)
 declare <vscale x 2 x double> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv2f64.nxv2i64(<vscale x 1 x i1>, <vscale x 2 x i64>, i64)
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1q.gather.scalar.offset.nxv8bf16.nxv2i64(<vscale x 1 x i1>, <vscale x 2 x i64>, i64)
-
+declare <vscale x 16 x i8> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv16i8(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8i16(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv4i32(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv2i64(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8bf16(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 8 x half> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv8f16(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 4 x float> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv4f32(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)
+declare <vscale x 2 x double> @llvm.aarch64.sve.ld1q.gather.vector.offset.nxv2f64(<vscale x 1 x i1>, ptr, <vscale x 2 x i64>)

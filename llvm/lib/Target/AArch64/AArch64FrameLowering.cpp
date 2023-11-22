@@ -1214,7 +1214,7 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
       SEH->eraseFromParent();
   }
 
-  TypeSize Scale = TypeSize::Fixed(1);
+  TypeSize Scale = TypeSize::getFixed(1);
   unsigned Width;
   int64_t MinOffset, MaxOffset;
   bool Success = static_cast<const AArch64InstrInfo *>(TII)->getMemOpInfo(

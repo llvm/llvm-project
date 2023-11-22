@@ -52,7 +52,7 @@ llvm::TypeSize
 mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
                                        DataLayoutEntryListRef params) {
   if (isa<IntegerType, FloatType>(type))
-    return llvm::TypeSize::Fixed(type.getIntOrFloatBitWidth());
+    return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
 
   if (auto ctype = dyn_cast<ComplexType>(type)) {
     Type et = ctype.getElementType();
