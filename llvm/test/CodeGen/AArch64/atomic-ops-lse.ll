@@ -114,7 +114,7 @@ define dso_local void @test_atomic_load_add_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddal w0, [x[[ADDR]]]
+; CHECK: ldaddal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -134,7 +134,7 @@ define dso_local void @test_atomic_load_add_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddal x0, [x[[ADDR]]]
+; CHECK: ldaddal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -238,7 +238,7 @@ define dso_local void @test_atomic_load_or_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsetal w0, [x[[ADDR]]]
+; CHECK: ldsetal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -258,7 +258,7 @@ define dso_local void @test_atomic_load_or_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsetal x0, [x[[ADDR]]]
+; CHECK: ldsetal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -362,7 +362,7 @@ define dso_local void @test_atomic_load_xor_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: steoral w0, [x[[ADDR]]]
+; CHECK: ldeoral w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -382,7 +382,7 @@ define dso_local void @test_atomic_load_xor_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: steoral x0, [x[[ADDR]]]
+; CHECK: ldeoral x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -517,7 +517,7 @@ define dso_local void @test_atomic_load_min_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsminal w0, [x[[ADDR]]]
+; CHECK: ldsminal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -542,7 +542,7 @@ define dso_local void @test_atomic_load_min_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsminal x0, [x[[ADDR]]]
+; CHECK: ldsminal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -677,7 +677,7 @@ define dso_local void @test_atomic_load_umin_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stuminal w0, [x[[ADDR]]]
+; CHECK: lduminal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -702,7 +702,7 @@ define dso_local void @test_atomic_load_umin_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stuminal x0, [x[[ADDR]]]
+; CHECK: lduminal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -837,7 +837,7 @@ define dso_local void @test_atomic_load_max_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmaxal w0, [x[[ADDR]]]
+; CHECK: ldsmaxal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -862,7 +862,7 @@ define dso_local void @test_atomic_load_max_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmaxal x0, [x[[ADDR]]]
+; CHECK: ldsmaxal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -997,7 +997,7 @@ define dso_local void @test_atomic_load_umax_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumaxal w0, [x[[ADDR]]]
+; CHECK: ldumaxal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1022,7 +1022,7 @@ define dso_local void @test_atomic_load_umax_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumaxal x0, [x[[ADDR]]]
+; CHECK: ldumaxal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1499,7 +1499,7 @@ define dso_local void @test_atomic_load_sub_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddal w[[NEG]], [x[[ADDR]]]
+; CHECK: ldaddal w[[NEG]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -1522,7 +1522,7 @@ define dso_local void @test_atomic_load_sub_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddal x[[NEG]], [x[[ADDR]]]
+; CHECK: ldaddal x[[NEG]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -1977,7 +1977,7 @@ define dso_local void @test_atomic_load_and_i32_noret(i32 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stclral w[[NOT]], [x[[ADDR]]]
+; CHECK: ldclral w[[NOT]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -1999,7 +1999,7 @@ define dso_local void @test_atomic_load_and_i64_noret(i64 %offset) nounwind {
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stclral x[[NOT]], [x[[ADDR]]]
+; CHECK: ldclral x[[NOT]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2103,7 +2103,7 @@ define dso_local void @test_atomic_load_add_i32_noret_acq_rel(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddal w0, [x[[ADDR]]]
+; CHECK: ldaddal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2123,7 +2123,7 @@ define dso_local void @test_atomic_load_add_i64_noret_acq_rel(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddal x0, [x[[ADDR]]]
+; CHECK: ldaddal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2227,7 +2227,7 @@ define dso_local void @test_atomic_load_add_i32_noret_acquire(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stadda w0, [x[[ADDR]]]
+; CHECK: ldadda w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2247,7 +2247,7 @@ define dso_local void @test_atomic_load_add_i64_noret_acquire(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stadda x0, [x[[ADDR]]]
+; CHECK: ldadda x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2619,7 +2619,7 @@ define dso_local void @test_atomic_load_add_i64_noret_seq_cst(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddal x0, [x[[ADDR]]]
+; CHECK: ldaddal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2729,7 +2729,7 @@ define dso_local void @test_atomic_load_and_i32_noret_acq_rel(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stclral w[[NOT]], [x[[ADDR]]]
+; CHECK: ldclral w[[NOT]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2751,7 +2751,7 @@ define dso_local void @test_atomic_load_and_i64_noret_acq_rel(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stclral x[[NOT]], [x[[ADDR]]]
+; CHECK: ldclral x[[NOT]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2861,7 +2861,7 @@ define dso_local void @test_atomic_load_and_i32_noret_acquire(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stclra w[[NOT]], [x[[ADDR]]]
+; CHECK: ldclra w[[NOT]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -2883,7 +2883,7 @@ define dso_local void @test_atomic_load_and_i64_noret_acquire(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stclra x[[NOT]], [x[[ADDR]]]
+; CHECK: ldclra x[[NOT]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3257,7 +3257,7 @@ define dso_local void @test_atomic_load_and_i32_noret_seq_cst(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stclral w[[NOT]], [x[[ADDR]]]
+; CHECK: ldclral w[[NOT]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3279,7 +3279,7 @@ define dso_local void @test_atomic_load_and_i64_noret_seq_cst(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stclral x[[NOT]], [x[[ADDR]]]
+; CHECK: ldclral x[[NOT]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3805,7 +3805,7 @@ define dso_local void @test_atomic_load_max_i32_noret_acq_rel(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmaxal w0, [x[[ADDR]]]
+; CHECK: ldsmaxal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3830,7 +3830,7 @@ define dso_local void @test_atomic_load_max_i64_noret_acq_rel(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmaxal x0, [x[[ADDR]]]
+; CHECK: ldsmaxal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3965,7 +3965,7 @@ define dso_local void @test_atomic_load_max_i32_noret_acquire(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmaxa w0, [x[[ADDR]]]
+; CHECK: ldsmaxa w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -3990,7 +3990,7 @@ define dso_local void @test_atomic_load_max_i64_noret_acquire(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmaxa x0, [x[[ADDR]]]
+; CHECK: ldsmaxa x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4445,7 +4445,7 @@ define dso_local void @test_atomic_load_max_i32_noret_seq_cst(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmaxal w0, [x[[ADDR]]]
+; CHECK: ldsmaxal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4470,7 +4470,7 @@ define dso_local void @test_atomic_load_max_i64_noret_seq_cst(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmaxal x0, [x[[ADDR]]]
+; CHECK: ldsmaxal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4605,7 +4605,7 @@ define dso_local void @test_atomic_load_min_i32_noret_acq_rel(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsminal w0, [x[[ADDR]]]
+; CHECK: ldsminal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4630,7 +4630,7 @@ define dso_local void @test_atomic_load_min_i64_noret_acq_rel(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsminal x0, [x[[ADDR]]]
+; CHECK: ldsminal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4765,7 +4765,7 @@ define dso_local void @test_atomic_load_min_i32_noret_acquire(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsmina w0, [x[[ADDR]]]
+; CHECK: ldsmina w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -4790,7 +4790,7 @@ define dso_local void @test_atomic_load_min_i64_noret_acquire(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsmina x0, [x[[ADDR]]]
+; CHECK: ldsmina x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5245,7 +5245,7 @@ define dso_local void @test_atomic_load_min_i32_noret_seq_cst(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsminal w0, [x[[ADDR]]]
+; CHECK: ldsminal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5270,7 +5270,7 @@ define dso_local void @test_atomic_load_min_i64_noret_seq_cst(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsminal x0, [x[[ADDR]]]
+; CHECK: ldsminal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5374,7 +5374,7 @@ define dso_local void @test_atomic_load_or_i32_noret_acq_rel(i32 %offset) nounwi
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsetal w0, [x[[ADDR]]]
+; CHECK: ldsetal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5394,7 +5394,7 @@ define dso_local void @test_atomic_load_or_i64_noret_acq_rel(i64 %offset) nounwi
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsetal x0, [x[[ADDR]]]
+; CHECK: ldsetal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5498,7 +5498,7 @@ define dso_local void @test_atomic_load_or_i32_noret_acquire(i32 %offset) nounwi
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stseta w0, [x[[ADDR]]]
+; CHECK: ldseta w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5518,7 +5518,7 @@ define dso_local void @test_atomic_load_or_i64_noret_acquire(i64 %offset) nounwi
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stseta x0, [x[[ADDR]]]
+; CHECK: ldseta x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5870,7 +5870,7 @@ define dso_local void @test_atomic_load_or_i32_noret_seq_cst(i32 %offset) nounwi
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stsetal w0, [x[[ADDR]]]
+; CHECK: ldsetal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -5890,7 +5890,7 @@ define dso_local void @test_atomic_load_or_i64_noret_seq_cst(i64 %offset) nounwi
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stsetal x0, [x[[ADDR]]]
+; CHECK: ldsetal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -6004,7 +6004,7 @@ define dso_local void @test_atomic_load_sub_i32_noret_acq_rel(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddal w[[NEG]], [x[[ADDR]]]
+; CHECK: ldaddal w[[NEG]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -6027,7 +6027,7 @@ define dso_local void @test_atomic_load_sub_i64_noret_acq_rel(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddal x[[NEG]], [x[[ADDR]]]
+; CHECK: ldaddal x[[NEG]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -6142,7 +6142,7 @@ define dso_local void @test_atomic_load_sub_i32_noret_acquire(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stadda w[[NEG]], [x[[ADDR]]]
+; CHECK: ldadda w[[NEG]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -6165,7 +6165,7 @@ define dso_local void @test_atomic_load_sub_i64_noret_acquire(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stadda x[[NEG]], [x[[ADDR]]]
+; CHECK: ldadda x[[NEG]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -6556,7 +6556,7 @@ define dso_local void @test_atomic_load_sub_i32_noret_seq_cst(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: staddal w[[NEG]], [x[[ADDR]]]
+; CHECK: ldaddal w[[NEG]], w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -6579,7 +6579,7 @@ define dso_local void @test_atomic_load_sub_i64_noret_seq_cst(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: staddal x[[NEG]], [x[[ADDR]]]
+; CHECK: ldaddal x[[NEG]], x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
 
   ret void
@@ -7345,7 +7345,7 @@ define dso_local void @test_atomic_load_umax_i32_noret_acq_rel(i32 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumaxal w0, [x[[ADDR]]]
+; CHECK: ldumaxal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -7370,7 +7370,7 @@ define dso_local void @test_atomic_load_umax_i64_noret_acq_rel(i64 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumaxal x0, [x[[ADDR]]]
+; CHECK: ldumaxal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -7505,7 +7505,7 @@ define dso_local void @test_atomic_load_umax_i32_noret_acquire(i32 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumaxa w0, [x[[ADDR]]]
+; CHECK: ldumaxa w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -7530,7 +7530,7 @@ define dso_local void @test_atomic_load_umax_i64_noret_acquire(i64 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumaxa x0, [x[[ADDR]]]
+; CHECK: ldumaxa x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -7985,7 +7985,7 @@ define dso_local void @test_atomic_load_umax_i32_noret_seq_cst(i32 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumaxal w0, [x[[ADDR]]]
+; CHECK: ldumaxal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8010,7 +8010,7 @@ define dso_local void @test_atomic_load_umax_i64_noret_seq_cst(i64 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumaxal x0, [x[[ADDR]]]
+; CHECK: ldumaxal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8145,7 +8145,7 @@ define dso_local void @test_atomic_load_umin_i32_noret_acq_rel(i32 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stuminal w0, [x[[ADDR]]]
+; CHECK: lduminal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8170,7 +8170,7 @@ define dso_local void @test_atomic_load_umin_i64_noret_acq_rel(i64 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stuminal x0, [x[[ADDR]]]
+; CHECK: lduminal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8305,7 +8305,7 @@ define dso_local void @test_atomic_load_umin_i32_noret_acquire(i32 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stumina w0, [x[[ADDR]]]
+; CHECK: ldumina w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8330,7 +8330,7 @@ define dso_local void @test_atomic_load_umin_i64_noret_acquire(i64 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stumina x0, [x[[ADDR]]]
+; CHECK: ldumina x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8785,7 +8785,7 @@ define dso_local void @test_atomic_load_umin_i32_noret_seq_cst(i32 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: stuminal w0, [x[[ADDR]]]
+; CHECK: lduminal w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8810,7 +8810,7 @@ define dso_local void @test_atomic_load_umin_i64_noret_seq_cst(i64 %offset) noun
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: stuminal x0, [x[[ADDR]]]
+; CHECK: lduminal x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8914,7 +8914,7 @@ define dso_local void @test_atomic_load_xor_i32_noret_acq_rel(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: steoral w0, [x[[ADDR]]]
+; CHECK: ldeoral w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -8934,7 +8934,7 @@ define dso_local void @test_atomic_load_xor_i64_noret_acq_rel(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: steoral x0, [x[[ADDR]]]
+; CHECK: ldeoral x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -9038,7 +9038,7 @@ define dso_local void @test_atomic_load_xor_i32_noret_acquire(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: steora w0, [x[[ADDR]]]
+; CHECK: ldeora w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -9058,7 +9058,7 @@ define dso_local void @test_atomic_load_xor_i64_noret_acquire(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: steora x0, [x[[ADDR]]]
+; CHECK: ldeora x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -9410,7 +9410,7 @@ define dso_local void @test_atomic_load_xor_i32_noret_seq_cst(i32 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var32
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var32
 
-; CHECK: steoral w0, [x[[ADDR]]]
+; CHECK: ldeoral w0, w[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
@@ -9430,7 +9430,7 @@ define dso_local void @test_atomic_load_xor_i64_noret_seq_cst(i64 %offset) nounw
 ; CHECK: adrp [[TMPADDR:x[0-9]+]], var64
 ; CHECK: add x[[ADDR:[0-9]+]], [[TMPADDR]], {{#?}}:lo12:var64
 
-; CHECK: steoral x0, [x[[ADDR]]]
+; CHECK: ldeoral x0, x[[NEW:[0-9]+]], [x[[ADDR]]]
 ; CHECK-NOT: dmb
   ret void
 }
