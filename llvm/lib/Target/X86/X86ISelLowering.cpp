@@ -50888,20 +50888,11 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
     return DAG.getTarget().Options.NoSignedZerosFPMath ||
            Flags.hasNoSignedZeros();
   };
-  auto IsVectorAllNegativeZero = [](const SDNode *N) {
-    if (N->getOpcode() != X86ISD::VBROADCAST_LOAD)
-      return false;
-    assert(N->getSimpleValueType(0).getScalarType() == MVT::f32 &&
-           "Unexpected vector type!");
-    if (ConstantPoolSDNode *CP =
-            dyn_cast<ConstantPoolSDNode>(N->getOperand(1)->getOperand(0))) {
-      APInt AI = APInt(32, 0x80008000, true);
-      if (const auto *CI = dyn_cast<ConstantInt>(CP->getConstVal()))
-        return CI->getValue() == AI;
-      if (const auto *CF = dyn_cast<ConstantFP>(CP->getConstVal()))
-        return CF->getValue() == APFloat(APFloat::IEEEsingle(), AI);
-    }
-    return false;
+  auto IsVectorAllNegativeZero = [&DAG](SDValue Op) {
+    APInt AI = APInt(32, 0x80008000, true);
+    KnownBits Bits = DAG.computeKnownBits(Op);
+    return Bits.getBitWidth() == 32 && Bits.isConstant() &&
+           Bits.getConstant() == AI;
   };
 
   if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() ||
@@ -50933,7 +50924,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
       if ((Opcode == X86ISD::VFMADDC || Opcode == X86ISD::VFCMADDC) &&
           ((ISD::isBuildVectorAllZeros(Op0->getOperand(2).getNode()) &&
             HasNoSignedZero(Op0->getFlags())) ||
-           IsVectorAllNegativeZero(Op0->getOperand(2).getNode()))) {
+           IsVectorAllNegativeZero(Op0->getOperand(2)))) {
         MulOp0 = Op0.getOperand(0);
         MulOp1 = Op0.getOperand(1);
         IsConj = Opcode == X86ISD::VFCMADDC;
