@@ -126,6 +126,9 @@ class ClangFormatHelper(FormatHelper):
             return True
         return False
 
+    def should_include_extensionless_file(self, path: str) -> bool:
+        return path.startswith('libcxx/include')
+
     def filter_changed_files(self, changed_files: list[str]) -> list[str]:
         filtered_files = []
         for path in changed_files:
@@ -133,6 +136,8 @@ class ClangFormatHelper(FormatHelper):
             if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx"):
                 if not self.should_be_excluded(path):
                     filtered_files.append(path)
+            elif ext == "" and self.should_include_extensionless_file(path):
+                filtered_files.append(path)
         return filtered_files
 
     def format_run(
