@@ -260,11 +260,6 @@ mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
   // the function type.
   assert(isFuncTypeConvertible(FT) && "NYI");
 
-  // While we're converting the parameter types for a function, we don't want to
-  // recursively convert any pointed-to structs. Converting directly-used
-  // structs is ok though.
-  assert(RecordsBeingLaidOut.insert(Ty).second && "NYI");
-
   // The function type can be built; call the appropriate routines to build it
   const CIRGenFunctionInfo *FI;
   if (const auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
