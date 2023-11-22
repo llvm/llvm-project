@@ -334,6 +334,10 @@ Attribute Changes in Clang
         [[clang::code_align(A)]] for(;;) { }
       }
 
+- Clang now introduced ``[[clang::coro_lifetimebound]]`` attribute.
+  All parameters of a function are considered to be lifetime bound if the function
+  returns a type annotated with ``[[clang::coro_lifetimebound]]`` and ``[[clang::coro_return_type]]``.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
