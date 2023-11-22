@@ -3899,11 +3899,25 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "hasAPUDevice called on uninitialized plugin");
 
-    return IsEquippedWithAPU;
+    return IsEquippedWithMI300A;
+  }
+
+  bool hasMI300xDevice() {
+    if (!Initialized)
+      FATAL_MESSAGE(1, "%s", "hasMI300xDevice called on uninitialized plugin");
+
+    return IsEquippedWithMI300X;
+  }
+
+  bool hasGfx90aDevice() {
+    if (!Initialized)
+      FATAL_MESSAGE(1, "%s", "hasGfx90aDevice called on uninitialized plugin");
+
+    return IsEquippedWithGFX90A;
   }
 
   bool hasDGpuWithUsmSupport() override final {
-    return !hasAPUDevice() && IsSystemSupportingManagedMemory();
+    return hasGfx90aDevice() || hasMI300xDevice();
   }
 
   bool AreAllocationsForMapsOnApusDisabled() override final {
@@ -3963,7 +3977,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   void checkInvalidImage(__tgt_image_info *Info,
-                         __tgt_device_image *TgtImage) override final {
+                              __tgt_device_image *TgtImage) override final {
 
     utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
                                                       IsXnackEnabled());
@@ -4147,17 +4161,39 @@ private:
 
   void scanForUSMCapableDevices() {
 
+    char GfxName[64];
     for (hsa_agent_t GPUAgent : KernelAgents) {
+      std::memset((void *)&GfxName, 0, sizeof(char) * 64);
 
-      hsa_status_t Stat = hsa_agent_get_info(
-          GPUAgent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_SVM_DIRECT_HOST_ACCESS,
-          &IsEquippedWithAPU);
+      hsa_status_t Status = hsa_agent_get_info(
+          GPUAgent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME, GfxName);
 
-      if (Stat != HSA_STATUS_SUCCESS)
-        continue;
+      std::string StrGfxName(GfxName);
 
-      if (IsEquippedWithAPU)
-        return;
+      std::transform(std::begin(StrGfxName), std::end(StrGfxName),
+                     std::begin(StrGfxName),
+                     [](char c) { return std::tolower(c); });
+
+      if (StrGfxName == "gfx90a") {
+        IsEquippedWithGFX90A = true;
+      } else if (StrGfxName == "gfx940") {
+        IsEquippedWithMI300A = true;
+      } else if (StrGfxName == "gfx941") {
+        IsEquippedWithMI300X = true;
+      } else if (StrGfxName == "gfx942") {
+        uint32_t ChipID = 0;
+        Status = hsa_agent_get_info(
+            GPUAgent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_CHIP_ID, &ChipID);
+
+        if (Status != HSA_STATUS_SUCCESS) {
+          continue;
+        }
+
+        if (ChipID & 0x1)
+          IsEquippedWithMI300X = true;
+        else
+          IsEquippedWithMI300A = true;
+      }
     }
   }
 
@@ -4166,7 +4202,9 @@ private:
   /// we can safely call HSA functions (e.g., hsa_shut_down).
   bool Initialized;
 
-  bool IsEquippedWithAPU{false};
+  bool IsEquippedWithMI300A{false};
+  bool IsEquippedWithMI300X{false};
+  bool IsEquippedWithGFX90A{false};
 
   BoolEnvar NoMapChecks;
   BoolEnvar DisableUsmMaps;
