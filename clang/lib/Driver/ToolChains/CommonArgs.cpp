@@ -982,7 +982,20 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC,
   // These are handled earlier on Windows by telling the frontend driver to add
   // the correct libraries to link against as dependents in the object file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    // --whole-archive needs to be part of the link line to make sure
+    // that the main() function from Fortran_main.a is pulled in by
+    // the linker.
+    //
+    // We are using this --whole-archive/--no-whole-archive bracket w/o
+    // any further checks, because -Wl,--whole-archive at the flang-new new
+    // line will not sucessfully complete, unless the user correctly specified
+    // -Wl,--no-whole-archive (e.g., -Wl,--whole-archive -ldummy
+    // -Wl,--no-whole-archive).
+    CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lFortran_main");
+    CmdArgs.push_back("--no-whole-archive");
+
+    // Perform regular linkage of the remaining runtime libraries.
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
   }
@@ -993,7 +1006,7 @@ void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
                                          ArgStringList &CmdArgs) {
   // Default to the <driver-path>/../lib directory. This works fine on the
   // platforms that we have tested so far. We will probably have to re-fine
-  // this in the future. In particular, on some platforms, we may need to use
+  // this in the future. In particular, on some platforms, we may need to useq
   // lib64 instead of lib.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
