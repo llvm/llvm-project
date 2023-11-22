@@ -423,6 +423,10 @@ bool RISCVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
+static const MCPhysReg ArgGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
+                                    RISCV::X13, RISCV::X14, RISCV::X15,
+                                    RISCV::X16, RISCV::X17};
+
 /// If there are varargs that were passed in a0-a7, the data in those registers
 /// must be copied to the varargs save area on the stack.
 void RISCVCallLowering::saveVarArgRegisters(
@@ -431,8 +435,7 @@ void RISCVCallLowering::saveVarArgRegisters(
   MachineFunction &MF = MIRBuilder.getMF();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
-  ArrayRef<MCPhysReg> ArgRegs({RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13,
-                               RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17});
+  ArrayRef<MCPhysReg> ArgRegs(ArgGPRs);
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
 
   // Offset of the first variable argument from stack pointer, and size of
