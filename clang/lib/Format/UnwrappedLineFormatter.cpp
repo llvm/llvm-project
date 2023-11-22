@@ -1308,7 +1308,7 @@ private:
 
 } // anonymous namespace
 
-static bool lineContainsPPDefinition(const AnnotatedLine &Line) {
+static bool LineContainsPPDefinition(const AnnotatedLine &Line) {
   auto *Tok = Line.getFirstNonComment();
   if (!Tok || !Tok->is(tok::hash) || !Tok->Next)
     return false;
@@ -1363,7 +1363,7 @@ unsigned UnwrappedLineFormatter::format(
                           Indent != TheLine.First->OriginalColumn;
     bool ShouldFormat = TheLine.Affected || FixIndentation;
 
-    if (Style.IgnorePPDefinitions && lineContainsPPDefinition(TheLine))
+    if (Style.IgnorePPDefinitions && LineContainsPPDefinition(TheLine))
       ShouldFormat = false;
 
     // We cannot format this line; if the reason is that the line had a
