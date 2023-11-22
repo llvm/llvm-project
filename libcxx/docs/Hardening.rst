@@ -21,7 +21,7 @@ modes are:
   done with relatively little overhead in constant time and are intended to be
   used in production. We recommend most projects to adopt the fast mode.
 - **Extensive mode**, which contains all the checks from the fast mode and
-  additionally some checks for undefined behavior that incur relatively little
+  some additional checks for undefined behavior that incur relatively little
   overhead but aren't security-critical. While the performance penalty is
   somewhat more significant compared to the fast mode, the extensive mode is
   still intended for use in production builds.
