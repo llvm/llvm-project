@@ -4006,28 +4006,56 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PNRasPPR8:$Pd), 0>;
 // SVE2.1 non-widening BFloat16 to BFloat16 instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasSVE2p1_or_HasSME2p1, HasB16B16] in {
-def BFADD_ZZZ : sve_fp_3op_u_zd<0b00, 0b000, "bfadd", ZPR16>;
-def BFSUB_ZZZ : sve_fp_3op_u_zd<0b00, 0b001, "bfsub", ZPR16>;
-def BFMUL_ZZZ : sve_fp_3op_u_zd<0b00, 0b010, "bfmul", ZPR16>;
+let Predicates = [HasSVE2p1, HasB16B16, UseExperimentalZeroingPseudos] in {
+defm BFADD_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fadd>;
+defm BFSUB_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fsub>;
+defm BFMUL_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmul>;
+defm BFMAXNM_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmaxnm>;
+defm BFMINNM_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fminnm>;
+defm BFMIN_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmin>;
+defm BFMAX_ZPZZ : sve2p1_bf_2op_p_zds_zeroing<int_aarch64_sve_fmax>;
+} //HasSVE2p1_or_HasSME2p1, HasB16B16, UseExperimentalZeroingPseudos
 
-def BFMLA_ZPmZZ : sve_fp_3op_p_zds_a<0b00, 0b00, "bfmla", ZPR16>;
-def BFMLS_ZPmZZ : sve_fp_3op_p_zds_a<0b00, 0b01, "bfmls", ZPR16>;
+let Predicates = [HasSVE2p1, HasB16B16] in {
 
-def BFADD_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0000, "bfadd", ZPR16>;
-def BFSUB_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0001, "bfsub", ZPR16>;
-def BFMUL_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0010, "bfmul", ZPR16>;
-def BFMAXNM_ZPZmZ : sve_fp_2op_p_zds<0b00, 0b0100, "bfmaxnm", ZPR16>;
-def BFMINNM_ZPZmZ : sve_fp_2op_p_zds<0b00, 0b0101, "bfminnm", ZPR16>;
-def BFMAX_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0110, "bfmax", ZPR16>;
-def BFMIN_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0111, "bfmin", ZPR16>;
+defm BFMLA_ZPmZZ : sve_fp_3op_p_zds_a_bf<0b00, "bfmla", "BFMLA_ZPZZZ", AArch64fmla_m1>;
+defm BFMLS_ZPmZZ : sve_fp_3op_p_zds_a_bf<0b01, "bfmls", "BFMLS_ZPZZZ", AArch64fmls_m1>;
 
-defm BFMLA_ZZZI : sve2p1_fp_bfma_by_indexed_elem<"bfmla", 0b10>;
-defm BFMLS_ZZZI : sve2p1_fp_bfma_by_indexed_elem<"bfmls", 0b11>;
+defm BFMLA_ZPZZZ : sve_fp_3op_pred_bf<AArch64fmla_p>;
+defm BFMLS_ZPZZZ : sve_fp_3op_pred_bf<AArch64fmls_p>;
 
-defm BFMUL_ZZZI : sve2p1_fp_bfmul_by_indexed_elem<"bfmul">;
+defm BFMLA_ZZZI : sve2p1_fp_bfma_by_indexed_elem<"bfmla", 0b10, int_aarch64_sve_fmla_lane>;
+defm BFMLS_ZZZI : sve2p1_fp_bfma_by_indexed_elem<"bfmls", 0b11, int_aarch64_sve_fmls_lane>;
 
-def BFCLAMP_ZZZ : sve2p1_fclamp<"bfclamp", 0b00, ZPR16>;
+defm BFADD_ZPmZZ : sve2p1_bf_2op_p_zds<0b0000, "bfadd", "BFADD_ZPZZ", AArch64fadd_m1, DestructiveBinaryComm>;
+defm BFSUB_ZPmZZ : sve2p1_bf_2op_p_zds<0b0001, "bfsub", "BFSUB_ZPZZ", AArch64fsub_m1, DestructiveBinaryComm>;
+defm BFMUL_ZPmZZ : sve2p1_bf_2op_p_zds<0b0010, "bfmul", "BFMUL_ZPZZ", AArch64fmul_m1, DestructiveBinaryComm>;
+
+defm BFADD_ZZZ : sve2p1_bf_3op_u_zd<0b000, "bfadd", fadd, AArch64fadd_p>;
+defm BFSUB_ZZZ : sve2p1_bf_3op_u_zd<0b001, "bfsub", fsub, AArch64fsub_p>;
+defm BFMUL_ZZZ : sve2p1_bf_3op_u_zd<0b010, "bfmul", fmul, AArch64fmul_p>;
+
+defm BFADD_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fadd_p>;
+defm BFSUB_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fsub_p>;
+defm BFMUL_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fmul_p>;
+
+
+defm BFMAX_ZPmZZ : sve2p1_bf_2op_p_zds<0b0110, "bfmax", "BFMAX_ZPZZ", int_aarch64_sve_fmax, DestructiveBinaryComm>;
+defm BFMIN_ZPmZZ : sve2p1_bf_2op_p_zds<0b0111, "bfmin", "BFMIN_ZPZZ", int_aarch64_sve_fmin, DestructiveBinaryComm>;
+
+defm BFMAX_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fmax_p>;
+defm BFMIN_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fmin_p>;
+
+
+defm BFMAXNM_ZPmZZ : sve2p1_bf_2op_p_zds<0b0100, "bfmaxnm", "BFMAXNM_ZPZZ", int_aarch64_sve_fmaxnm, DestructiveBinaryComm>;
+defm BFMINNM_ZPmZZ : sve2p1_bf_2op_p_zds<0b0101, "bfminnm", "BFMINNM_ZPZZ", int_aarch64_sve_fminnm, DestructiveBinaryComm>;
+
+defm BFMAXNM_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fmaxnm_p>;
+defm BFMINNM_ZPZZ : sve2p1_bf_bin_pred_zds<AArch64fminnm_p>;
+
+defm BFMUL_ZZZI : sve2p1_fp_bfmul_by_indexed_elem<"bfmul", int_aarch64_sve_fmul_lane>;
+
+defm BFCLAMP_ZZZ : sve2p1_bfclamp<"bfclamp", int_aarch64_sve_fclamp>;
 } // End HasSVE2p1_or_HasSME2p1, HasB16B16
 
 
