@@ -182,20 +182,25 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 6:
-    return std::make_pair(MCFixupKind(LoongArch::fixup_loongarch_add6),
-                          MCFixupKind(LoongArch::fixup_loongarch_sub6));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD6),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB6));
   case 8:
-    return std::make_pair(MCFixupKind(LoongArch::fixup_loongarch_add8),
-                          MCFixupKind(LoongArch::fixup_loongarch_sub8));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD8),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB8));
   case 16:
-    return std::make_pair(MCFixupKind(LoongArch::fixup_loongarch_add16),
-                          MCFixupKind(LoongArch::fixup_loongarch_sub16));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD16),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB16));
   case 32:
-    return std::make_pair(MCFixupKind(LoongArch::fixup_loongarch_add32),
-                          MCFixupKind(LoongArch::fixup_loongarch_sub32));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD32),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB32));
   case 64:
-    return std::make_pair(MCFixupKind(LoongArch::fixup_loongarch_add64),
-                          MCFixupKind(LoongArch::fixup_loongarch_sub64));
+    return std::make_pair(
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_ADD64),
+        MCFixupKind(FirstLiteralRelocationKind + ELF::R_LARCH_SUB64));
   }
 }
 
