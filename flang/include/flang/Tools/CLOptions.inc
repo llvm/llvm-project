@@ -157,8 +157,8 @@ inline void addDebugFoundationPass(mlir::PassManager &pm) {
       [&]() { return fir::createAddDebugFoundationPass(); });
 }
 
-inline void addFIRToLLVMPass(mlir::PassManager &pm,
-    const MLIRToLLVMPassPipelineConfig &config) {
+inline void addFIRToLLVMPass(
+    mlir::PassManager &pm, const MLIRToLLVMPassPipelineConfig &config) {
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
   options.applyTBAA = config.AliasAnalysis;
