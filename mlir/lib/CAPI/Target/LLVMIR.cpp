@@ -11,6 +11,7 @@
 #include "llvm-c/Support.h"
 
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include <memory>
 
 #include "mlir/CAPI/IR.h"
@@ -25,14 +26,13 @@ LLVMModuleRef mlirTranslateModuleToLLVMIR(MlirOperation module,
                                           MlirStringRef llvmModuleName) {
   Operation *moduleOp = unwrap(module);
 
-  llvm::LLVMContext *ctx = reinterpret_cast<llvm::LLVMContext *>(context);
+  llvm::LLVMContext *ctx = llvm::unwrap(context);
 
   std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
       moduleOp, *ctx,
       llvm::StringRef(llvmModuleName.data, llvmModuleName.length));
 
-  LLVMModuleRef moduleRef = reinterpret_cast<LLVMModuleRef>(
-      const_cast<llvm::Module *>(llvmModule.release()));
+  LLVMModuleRef moduleRef = llvm::wrap(llvmModule.release());
 
   return moduleRef;
 }
