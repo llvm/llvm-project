@@ -46,11 +46,11 @@ __global__ void kernel() {
 // OPT: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // OPT: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 //.
-// OPTNONE: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+// OPTNONE: !0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
 // OPTNONE: !1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
 // OPTNONE: !2 = !{i32 1, !"wchar_size", i32 4}
 //.
-// OPT: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+// OPT: !0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
 // OPT: !1 = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
 // OPT: !2 = !{i32 1, !"wchar_size", i32 4}
 //.
