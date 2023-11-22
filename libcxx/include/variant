@@ -1252,6 +1252,25 @@ struct __overload {
   auto operator()(_Tp, _Up&&) const -> __check_for_narrowing<_Tp, _Up>;
 };
 
+// TODO(LLVM-19): Remove all occurrences of this macro.
+#ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
+template <class _Tp, size_t>
+struct __overload_bool  {
+  template <class _Up, class _Ap = __remove_cvref_t<_Up>>
+  auto operator()(bool, _Up&&) const
+      -> enable_if_t<is_same_v<_Ap, bool>, __type_identity<_Tp>>;
+};
+
+template <size_t _Idx>
+struct __overload<bool, _Idx> : __overload_bool<bool, _Idx> {};
+template <size_t _Idx>
+struct __overload<bool const, _Idx> : __overload_bool<bool const, _Idx> {};
+template <size_t _Idx>
+struct __overload<bool volatile, _Idx> : __overload_bool<bool volatile, _Idx> {};
+template <size_t _Idx>
+struct __overload<bool const volatile, _Idx> : __overload_bool<bool const volatile, _Idx> {};
+#endif
+
 template <class ..._Bases>
 struct __all_overloads : _Bases... {
   void operator()() const;

@@ -81,6 +81,12 @@ Deprecations and Removals
 - The non-conforming constructor ``std::future_error(std::error_code)`` has been removed. Please use the
   ``std::future_error(std::future_errc)`` constructor provided in C++17 instead.
 
+- `P1957 <https://wg21.link/P1957>` has been implemented in Clang and libc++ removed a code path that led to
+  narrowing conversions in ``std::variant`` behaving in a non-standard way. This may change how some uses of
+  ``std::variant``'s constructor behave in user code. The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT``
+  macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
+  In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
