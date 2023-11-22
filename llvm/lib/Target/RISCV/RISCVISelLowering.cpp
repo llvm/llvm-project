@@ -4629,8 +4629,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       if (ISD::isNormalLoad(V.getNode()) && cast<LoadSDNode>(V)->isSimple()) {
         auto *Ld = cast<LoadSDNode>(V);
         Offset *= SVT.getStoreSize();
-        SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(),
-                                                   TypeSize::Fixed(Offset), DL);
+        SDValue NewAddr = DAG.getMemBasePlusOffset(
+            Ld->getBasePtr(), TypeSize::getFixed(Offset), DL);
 
         // If this is SEW=64 on RV32, use a strided load with a stride of x0.
         if (SVT.isInteger() && SVT.bitsGT(XLenVT)) {

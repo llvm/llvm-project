@@ -970,16 +970,17 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
 
   return llvm::TypeSwitch<Type, llvm::TypeSize>(type)
       .Case<BFloat16Type, Float16Type>(
-          [](Type) { return llvm::TypeSize::Fixed(16); })
-      .Case<Float32Type>([](Type) { return llvm::TypeSize::Fixed(32); })
+          [](Type) { return llvm::TypeSize::getFixed(16); })
+      .Case<Float32Type>([](Type) { return llvm::TypeSize::getFixed(32); })
       .Case<Float64Type, LLVMX86MMXType>(
-          [](Type) { return llvm::TypeSize::Fixed(64); })
-      .Case<Float80Type>([](Type) { return llvm::TypeSize::Fixed(80); })
-      .Case<Float128Type>([](Type) { return llvm::TypeSize::Fixed(128); })
+          [](Type) { return llvm::TypeSize::getFixed(64); })
+      .Case<Float80Type>([](Type) { return llvm::TypeSize::getFixed(80); })
+      .Case<Float128Type>([](Type) { return llvm::TypeSize::getFixed(128); })
       .Case<IntegerType>([](IntegerType intTy) {
-        return llvm::TypeSize::Fixed(intTy.getWidth());
+        return llvm::TypeSize::getFixed(intTy.getWidth());
       })
-      .Case<LLVMPPCFP128Type>([](Type) { return llvm::TypeSize::Fixed(128); })
+      .Case<LLVMPPCFP128Type>(
+          [](Type) { return llvm::TypeSize::getFixed(128); })
       .Case<LLVMFixedVectorType>([](LLVMFixedVectorType t) {
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());
@@ -1000,7 +1001,7 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
                           LLVMPointerType, LLVMFunctionType, LLVMTargetExtType>(
                    ty)) &&
                "unexpected missing support for primitive type");
-        return llvm::TypeSize::Fixed(0);
+        return llvm::TypeSize::getFixed(0);
       });
 }
 
