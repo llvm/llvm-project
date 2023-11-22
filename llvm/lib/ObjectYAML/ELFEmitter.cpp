@@ -176,9 +176,8 @@ struct Fragment {
 /// TODO: This class still has a ways to go before it is truly a "single
 /// point of truth".
 template <class ELFT> class ELFState {
-public:
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
-private:
+
   enum class SymtabType { Static, Dynamic };
 
   /// The future symbol table string section.
@@ -1410,8 +1409,6 @@ void ELFState<ELFT>::writeSectionContent(
   }
 
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
-    const ELFYAML::PGOAnalysisMapEntry *PGOEntry =
-        PGOAnalyses ? &PGOAnalyses->at(Idx) : nullptr;
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
       if (E.Version > 2)
@@ -1437,42 +1434,43 @@ void ELFState<ELFT>::writeSectionContent(
     uint64_t NumBlocks =
         E.NumBlocks.value_or(E.BBEntries ? E.BBEntries->size() : 0);
     SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
+    // Write all BBEntries.
+    if (E.BBEntries) {
+      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *E.BBEntries) {
+        if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
+          SHeader.sh_size += CBA.writeULEB128(BBE.ID);
+        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
+                           CBA.writeULEB128(BBE.Size) +
+                           CBA.writeULEB128(BBE.Metadata);
+      }
+    }
 
-    if (PGOEntry && PGOEntry->FuncEntryCount)
-      SHeader.sh_size += CBA.writeULEB128(*PGOEntry->FuncEntryCount);
+    if (!PGOAnalyses)
+      continue;
+    const ELFYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
 
-    const auto *PGOBBEntries = PGOEntry && PGOEntry->PGOBBEntries
-                                   ? &PGOEntry->PGOBBEntries.value()
-                                   : nullptr;
-    if (PGOBBEntries && E.BBEntries &&
-        E.BBEntries->size() != PGOBBEntries->size()) {
-      PGOBBEntries = nullptr;
+    if (PGOEntry.FuncEntryCount)
+      SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
+
+    if (!PGOEntry.PGOBBEntries)
+      continue;
+
+    const auto &PGOBBEntries = PGOEntry.PGOBBEntries.value();
+    if (!E.BBEntries || E.BBEntries->size() != PGOBBEntries.size()) {
       WithColor::warning() << "PBOBBEntries must be the same length as "
                               "BBEntries in SHT_LLVM_BB_ADDR_MAP.\n"
                            << "Mismatch on function with address: "
                            << E.Address;
+      continue;
     }
 
-    // Write all BBEntries.
-    if (!E.BBEntries)
-      continue;
-    for (const auto &[BBIdx, BBE] : llvm::enumerate(*E.BBEntries)) {
-      const auto *PGOBBE = PGOBBEntries ? &PGOBBEntries->at(BBIdx) : nullptr;
-      if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
-        SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-      SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset) +
-                         CBA.writeULEB128(BBE.Size) +
-                         CBA.writeULEB128(BBE.Metadata);
-
-      if (PGOBBE) {
-        if (PGOBBE->BBFreq)
-          SHeader.sh_size += CBA.writeULEB128(*PGOBBE->BBFreq);
-        if (PGOBBE->Successors) {
-          if (PGOBBE->Successors->size() > 2)
-            SHeader.sh_size += CBA.writeULEB128(PGOBBE->Successors->size());
-          for (const auto &[ID, BrProb] : *PGOBBE->Successors)
-            SHeader.sh_size += CBA.writeULEB128(ID) + CBA.writeULEB128(BrProb);
-        }
+    for (const auto &PGOBBE : PGOBBEntries) {
+      if (PGOBBE.BBFreq)
+        SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
+      if (PGOBBE.Successors) {
+        SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
+        for (const auto &[ID, BrProb] : *PGOBBE.Successors)
+          SHeader.sh_size += CBA.writeULEB128(ID) + CBA.writeULEB128(BrProb);
       }
     }
   }

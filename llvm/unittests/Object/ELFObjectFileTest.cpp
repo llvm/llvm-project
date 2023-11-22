@@ -910,15 +910,15 @@ Sections:
           - ID:            0
             AddressOffset: 0x0
             Size:          0x3
-            Metadata:      0x46
+            Metadata:      0x6
           - ID:            1
             AddressOffset: 0x0
             Size:          0x3
-            Metadata:      0x24
+            Metadata:      0x4
           - ID:            2
             AddressOffset: 0x0
             Size:          0x3
-            Metadata:      0x00
+            Metadata:      0x0
     PGOAnalyses:
       - PGOBBEntries:
          - Successors:
@@ -941,19 +941,19 @@ Sections:
           - ID:            0
             AddressOffset: 0x0
             Size:          0x4
-            Metadata:      0x78
+            Metadata:      0x18
           - ID:            1
             AddressOffset: 0x0
             Size:          0x4
-            Metadata:      0x40
+            Metadata:      0x0
           - ID:            2
             AddressOffset: 0x0
             Size:          0x4
-            Metadata:      0x20
+            Metadata:      0x0
           - ID:            3
             AddressOffset: 0x0
             Size:          0x4
-            Metadata:      0x00
+            Metadata:      0x0
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:

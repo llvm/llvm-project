@@ -807,11 +807,6 @@ struct BBAddrMap {
       bool HasIndirectBranch : 1; // If this block ends with an indirect branch
                                   // (branch via a register).
 
-      // Number of bits used when encoding Metadata, that way an extension
-      // can pack into the extra space if possible. This must be updated when
-      // new bits are added here.
-      static constexpr uint32_t NumberOfBits = 5;
-
       bool operator==(const Metadata &Other) const {
         return HasReturn == Other.HasReturn &&
                HasTailCall == Other.HasTailCall && IsEHPad == Other.IsEHPad &&
@@ -891,25 +886,9 @@ struct PGOAnalysisMap {
     BrProb = (1 << 2),
   };
 
-  /// Super-set of BBAddrMap::BBEntry with additional fields for block frequency
-  /// and branch probability.
+  /// Extra basic block data with fields for block frequency and branch
+  /// probability.
   struct PGOBBEntry {
-    using BaseMetadata = BBAddrMap::BBEntry::Metadata;
-
-    /// Enum indicating how many successors a block has. This enum must fit
-    /// into two bits.
-    enum class SuccessorsType {
-      /// None should be present if BBAddrMap.feature has disabled branch
-      /// probability.
-      None = 0,
-      /// Single successor blocks are not present in the successor entries.
-      One = 1,
-      /// Common case for conditional branches to avoid encoding size.
-      Two = 2,
-      /// Uncommon case which needs successor size to be encoded.
-      Multiple = 3,
-    };
-
     /// Single successor of a given basic block that contains the tag and branch
     /// probability associated with it.
     struct SuccessorEntry {
@@ -928,36 +907,12 @@ struct PGOAnalysisMap {
     /// List of successors of the current block
     llvm::SmallVector<SuccessorEntry, 2> Successors;
 
-    /// Converts number of successors into a SuccessorsType.
-    static SuccessorsType getSuccessorsType(unsigned SuccessorsCount) {
-      return SuccessorsCount == 0   ? SuccessorsType::None
-             : SuccessorsCount == 1 ? SuccessorsType::One
-             : SuccessorsCount == 2 ? SuccessorsType::Two
-                                    : SuccessorsType::Multiple;
-    }
-
-    /// Encodes extra information in the free bits of the base metadata
-    static uint32_t encodeMD(BaseMetadata MD, SuccessorsType SuccType) {
-      return MD.encode() | static_cast<uint32_t>(SuccType)
-                               << BaseMetadata::NumberOfBits;
-    }
-
-    /// Extracts successors type then defers all errors to the base metadata
-    static Expected<std::pair<BaseMetadata, SuccessorsType>>
-    decodeMD(uint32_t V) {
-      auto SuccType = SuccessorsType((V >> BaseMetadata::NumberOfBits) & 0b11);
-      V &= ~(0b11 << BaseMetadata::NumberOfBits); // Clear extra bits
-      BaseMetadata MD;
-      if (llvm::Error E = BaseMetadata::decode(V).moveInto(MD))
-        return std::move(E);
-      return std::make_pair(MD, SuccType);
-    }
-
     bool operator==(const PGOBBEntry &Other) const {
       return std::tie(BlockFreq, Successors) ==
              std::tie(Other.BlockFreq, Other.Successors);
     }
   };
+
   uint64_t FuncEntryCount;           // Prof count from IR function
   std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
 

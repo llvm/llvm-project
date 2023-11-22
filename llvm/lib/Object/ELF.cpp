@@ -723,6 +723,12 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           Feature & uint8_t(PGOAnalysisMap::Features::FuncEntryCnt);
       BBFreqEnabled = Feature & uint8_t(PGOAnalysisMap::Features::BBFreq);
       BrProbEnabled = Feature & uint8_t(PGOAnalysisMap::Features::BrProb);
+      if (Feature != 0 && Version < 2 && Cur)
+        return createError(
+            "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
+            "PGO features are enabled: version = " +
+            Twine(static_cast<int>(Version)) +
+            " feature = " + Twine(static_cast<int>(Feature)));
     }
     uint64_t SectionOffset = Cur.tell();
     auto Address =
@@ -741,18 +747,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     }
     uint32_t NumBlocks = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
 
-    if (Feature != 0 && Version < 2 && Cur)
-      return createError("version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
-                         "PGO features are enabled: version = " +
-                         Twine(static_cast<int>(Version)) +
-                         " feature = " + Twine(static_cast<int>(Feature)));
-
-    uint64_t FuncEntryCount =
-        FuncEntryCountEnabled ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
-                              : 0;
-
     std::vector<BBAddrMap::BBEntry> BBEntries;
-    std::vector<PGOAnalysisMap::PGOBBEntry> PGOBBEntries;
     uint32_t PrevBBEndOffset = 0;
     for (uint32_t BlockIndex = 0;
          !MetadataDecodeErr && !ULEBSizeErr && Cur && (BlockIndex < NumBlocks);
@@ -768,53 +763,53 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         Offset += PrevBBEndOffset;
         PrevBBEndOffset = Offset + Size;
       }
-
-      BBAddrMap::BBEntry::Metadata Metadata;
-      PGOAnalysisMap::PGOBBEntry::SuccessorsType ST{};
-      if (BrProbEnabled) {
-        auto MetadataOrErr = PGOAnalysisMap::PGOBBEntry::decodeMD(MD);
-        if (Error E = MetadataOrErr.takeError()) {
-          MetadataDecodeErr = std::move(E);
-          break;
-        }
-        std::tie(Metadata, ST) = *MetadataOrErr;
-      } else {
-        auto MetadataOrErr = BBAddrMap::BBEntry::Metadata::decode(MD);
-        if (Error E = MetadataOrErr.takeError()) {
-          MetadataDecodeErr = std::move(E);
-          break;
-        }
-        Metadata = *MetadataOrErr;
+      Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+          BBAddrMap::BBEntry::Metadata::decode(MD);
+      if (!MetadataOrErr) {
+        MetadataDecodeErr = MetadataOrErr.takeError();
+        break;
       }
-
-      uint64_t BBF =
-          BBFreqEnabled ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr) : 0;
-
-      llvm::SmallVector<PGOAnalysisMap::PGOBBEntry::SuccessorEntry, 2>
-          Successors;
-      if (BrProbEnabled) {
-        auto SuccCount =
-            ST == PGOAnalysisMap::PGOBBEntry::SuccessorsType::Multiple
-                ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
-                : uint64_t(ST);
-        for (uint64_t I = 0; I < SuccCount; ++I) {
-          uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-          uint32_t BrProb = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-          if (PGOAnalyses)
-            Successors.push_back({BBID, BranchProbability::getRaw(BrProb)});
-        }
-      }
-
-      BBEntries.push_back({ID, Offset, Size, Metadata});
-      if (PGOAnalyses)
-        PGOBBEntries.push_back({BlockFrequency(BBF), std::move(Successors)});
+      BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
     }
-
-    if (PGOAnalyses)
-      PGOAnalyses->push_back({FuncEntryCount, std::move(PGOBBEntries),
-                              FuncEntryCountEnabled, BBFreqEnabled,
-                              BrProbEnabled});
     FunctionEntries.emplace_back(Address, std::move(BBEntries));
+
+    if (FuncEntryCountEnabled || BBFreqEnabled || BrProbEnabled) {
+      // Function entry count
+      uint64_t FuncEntryCount =
+          FuncEntryCountEnabled
+              ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
+              : 0;
+
+      std::vector<PGOAnalysisMap::PGOBBEntry> PGOBBEntries;
+      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
+                                    (BlockIndex < NumBlocks);
+           ++BlockIndex) {
+        // Block frequency
+        uint64_t BBF =
+            BBFreqEnabled ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr) : 0;
+
+        // Branch probability
+        llvm::SmallVector<PGOAnalysisMap::PGOBBEntry::SuccessorEntry, 2>
+            Successors;
+        if (BrProbEnabled) {
+          auto SuccCount = readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr);
+          for (uint64_t I = 0; I < SuccCount; ++I) {
+            uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            uint32_t BrProb = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            if (PGOAnalyses)
+              Successors.push_back({BBID, BranchProbability::getRaw(BrProb)});
+          }
+        }
+
+        if (PGOAnalyses)
+          PGOBBEntries.push_back({BlockFrequency(BBF), std::move(Successors)});
+      }
+
+      if (PGOAnalyses)
+        PGOAnalyses->push_back({FuncEntryCount, std::move(PGOBBEntries),
+                                FuncEntryCountEnabled, BBFreqEnabled,
+                                BrProbEnabled});
+    }
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr or
   // MetadataDecodeErr (but not both), but we join all errors here to be safe.
