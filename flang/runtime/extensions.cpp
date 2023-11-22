@@ -84,7 +84,7 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
   std::array<char, LOGIN_NAME_MAX + 1> str = {};
 
-  int error = getlogin_r(str.data(), str.size());
+  int error{getlogin_r(str.data(), str.size())};
   Terminator terminator{__FILE__, __LINE__};
   RUNTIME_CHECK(terminator, error == 0);
 
