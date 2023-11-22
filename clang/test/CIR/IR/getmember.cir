@@ -15,13 +15,6 @@ module  {
     cir.return
   }
 
-  // FIXME: remove bypass once codegen for CIR records is patched.
-  cir.func @shouldBypassMemberIndexCheckForIncompleteRecords(%arg0 : !cir.ptr<!ty_22Incomplete22>) {
-    // CHECK: cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Incomplete22> -> !cir.ptr<!u32i>
-    %0 = cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Incomplete22> -> !cir.ptr<!u32i>
-    cir.return
-  }
-
   // FIXME: remove bypass once codegen for CIR class records is patched.
   cir.func @shouldBypassMemberTypeCheckForClassRecords(%arg0 : !cir.ptr<!ty_22Class22>) {
     // CHECK: cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Class22> -> !cir.ptr<!cir.ptr<!u32i>> 
