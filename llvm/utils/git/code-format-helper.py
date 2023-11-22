@@ -115,17 +115,6 @@ class ClangFormatHelper(FormatHelper):
     def instructions(self) -> str:
         return " ".join(self.cf_cmd)
 
-    @cached_property
-    def libcxx_excluded_files(self) -> list[str]:
-        with open("libcxx/utils/data/ignore_format.txt", "r") as ifd:
-            return [excl.strip() for excl in ifd.readlines()]
-
-    def should_be_excluded(self, path: str) -> bool:
-        if path in self.libcxx_excluded_files:
-            print(f"{self.name}: Excluding file {path}")
-            return True
-        return False
-
     def should_include_extensionless_file(self, path: str) -> bool:
         return path.startswith("libcxx/include")
 
@@ -134,8 +123,7 @@ class ClangFormatHelper(FormatHelper):
         for path in changed_files:
             _, ext = os.path.splitext(path)
             if ext in (".cpp", ".c", ".h", ".hpp", ".hxx", ".cxx", ".inc", ".cppm"):
-                if not self.should_be_excluded(path):
-                    filtered_files.append(path)
+                filtered_files.append(path)
             elif ext == "" and self.should_include_extensionless_file(path):
                 filtered_files.append(path)
         return filtered_files
