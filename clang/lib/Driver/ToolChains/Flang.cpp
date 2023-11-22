@@ -147,16 +147,14 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Arg *optLevel =
       Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4);
   if (aliasAnalysis) {
-    bool falias_analysis =
+    bool faliasAnalysis =
         aliasAnalysis->getOption().matches(options::OPT_falias_analysis);
     // only pass on the argument if it does not match that implied by the
     // optimization level
-    if (optLevel) {
-      if (!falias_analysis) {
-        CmdArgs.push_back("-fno-alias-analysis");
-      }
+    if (optLevel && !faliasAnalysis) {
+      CmdArgs.push_back("-fno-alias-analysis");
     } else {
-      if (falias_analysis)
+      if (faliasAnalysis)
         // requested alias analysis but no optimization enabled
         CmdArgs.push_back("-falias-analysis");
     }
