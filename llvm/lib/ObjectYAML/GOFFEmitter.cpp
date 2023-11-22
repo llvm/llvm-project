@@ -193,7 +193,7 @@ void GOFFOstream::write_impl(const char *Ptr, size_t Size) {
 class GOFFState {
   void writeHeader(GOFFYAML::FileHeader &FileHdr);
   void writeEnd();
-  void writeSymbol(GOFFYAML::Symbol Sym);
+//  void writeSymbol(GOFFYAML::Symbol Sym);
 //  void writeSection(GOFFYAML::Section Sec);
 //  void writeRelocationDirectory(GOFFYAML::Relocations Rel);
 
@@ -204,7 +204,7 @@ class GOFFState {
 
   GOFFState(raw_ostream &OS, GOFFYAML::Object &Doc,
             yaml::ErrorHandler ErrHandler)
-      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), SymbolID(0), HasError(false) {
+      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), /*SymbolID(0),*/ HasError(false) {
   }
 
   ~GOFFState() { GW.finalize(); }
@@ -219,7 +219,7 @@ private:
   GOFFOstream GW;
   GOFFYAML::Object &Doc;
   yaml::ErrorHandler ErrHandler;
-  uint16_t SymbolID;
+  //uint16_t SymbolID;
   bool HasError;
 };
 
@@ -268,7 +268,7 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
   }
 }
 
-void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
+/*void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
   if (Sym.ID != SymbolID + 1)
     reportError("symbol IDs not monotonic " + Sym.Name);
   else
@@ -317,7 +317,7 @@ void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
      << binaryBe(static_cast<uint16_t>(SymLength)) // Name length
      << SymName.str();
 #undef BIT
-}
+} */
 
 /*
 void GOFFState::writeSection(GOFFYAML::Section Sec) {

@@ -345,11 +345,11 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::inputOne(
     GOFFYAML::Section Sec;
     IO.mapRequired("Section", Sec);
     Elem = std::make_unique<GOFFYAML::Section>(std::move(Sec));
-  } else if (Key == "Symbol") {
+  } /*else if (Key == "Symbol") {
     GOFFYAML::Symbol Sym;
     IO.mapRequired("Symbol", Sym);
     Elem = std::make_unique<GOFFYAML::Symbol>(std::move(Sym));
-  }
+  }*/
 }
 
 void CustomMappingTraits<GOFFYAML::RecordPtr>::output(

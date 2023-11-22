@@ -98,7 +98,7 @@ public:
 };
 typedef std::unique_ptr<RecordBase> RecordPtr;
 
-struct Relocation {
+/*struct Relocation {
   GOFF_RLDFLAGS Flags;
   GOFF_RLDREFERENCETYPE ReferenceType;
   GOFF_RLDREFERENTTYPE ReferentType;
@@ -175,7 +175,7 @@ struct Symbol : public RecordBase {
     return Rec->getKind() == RBK_Symbol;
   }
 };
-
+*/
 struct FileHeader {
   uint32_t TargetEnvironment;
   uint32_t TargetOperatingSystem;
