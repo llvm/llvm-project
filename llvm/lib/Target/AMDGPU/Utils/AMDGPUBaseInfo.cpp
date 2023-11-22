@@ -2028,13 +2028,9 @@ bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }
 
-bool isGFX12Plus(const MCSubtargetInfo &STI) {
-  return isGFX12(STI);
-}
+bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
 
-bool isNotGFX12Plus(const MCSubtargetInfo &STI) {
-  return !isGFX12Plus(STI);
-}
+bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
   return !isGFX11Plus(STI);
