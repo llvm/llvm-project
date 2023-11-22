@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 #define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 
+#include <__availability>
 #include <__config>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
@@ -30,7 +31,7 @@ namespace std { // purposefully not using versioning namespace
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
+#  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
   template <class _Ep>
   _LIBCPP_HIDE_FROM_ABI _LIBCXX_DTOR_FUNC static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
@@ -68,7 +69,8 @@ public:
 
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
-#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
+#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);
@@ -90,17 +92,16 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
     exception_ptr::__free_native_exception(__ex);
     return current_exception();
   }
-#  else
-#    ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#    else
   try {
     throw __e;
   } catch (...) {
     return current_exception();
   }
-#    else
+#    endif
+#  else
   ((void)__e);
   std::abort();
-#    endif
 #  endif
 }
 
