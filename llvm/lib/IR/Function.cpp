@@ -912,7 +912,7 @@ Intrinsic::ID Function::lookupIntrinsicID(StringRef Name) {
                                                      : Intrinsic::not_intrinsic;
 }
 
-void Function::recalculateIntrinsicID() {
+void Function::updateAfterNameChange() {
   LibFuncCache = UnknownLibFunc;
   StringRef Name = getName();
   if (!Name.startswith("llvm.")) {

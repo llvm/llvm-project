@@ -250,12 +250,11 @@ public:
 
   static Intrinsic::ID lookupIntrinsicID(StringRef Name);
 
-  /// Recalculate the ID for this function if it is an Intrinsic defined
-  /// in llvm/Intrinsics.h.  Sets the intrinsic ID to Intrinsic::not_intrinsic
-  /// if the name of this function does not match an intrinsic in that header.
+  /// Update internal caches that depend on the function name (such as the
+  /// intrinsic ID and libcall cache).
   /// Note, this method does not need to be called directly, as it is called
   /// from Value::setName() whenever the name of this function changes.
-  void recalculateIntrinsicID();
+  void updateAfterNameChange();
 
   /// getCallingConv()/setCallingConv(CC) - These method get and set the
   /// calling convention of this function.  The enum values for the known
