@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Frontend/ASTUnit.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 
@@ -40,24 +41,26 @@ void ASTMergeAction::ExecuteAction() {
       DiagIDs(CI.getDiagnostics().getDiagnosticIDs());
   auto SharedState = std::make_shared<ASTImporterSharedState>(
       *CI.getASTContext().getTranslationUnitDecl());
+  llvm::SmallVector<std::unique_ptr<ASTUnit>> Units(ASTFiles.size());
   for (unsigned I = 0, N = ASTFiles.size(); I != N; ++I) {
     IntrusiveRefCntPtr<DiagnosticsEngine>
         Diags(new DiagnosticsEngine(DiagIDs, &CI.getDiagnosticOpts(),
                                     new ForwardingDiagnosticConsumer(
                                           *CI.getDiagnostics().getClient()),
                                     /*ShouldOwnClient=*/true));
-    std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
+    Units[I] = ASTUnit::LoadFromASTFile(
         ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
         CI.getFileSystemOpts(), CI.getHeaderSearchOptsPtr(), false);
 
-    if (!Unit)
+    if (!Units[I])
       continue;
 
     ASTImporter Importer(CI.getASTContext(), CI.getFileManager(),
-                         Unit->getASTContext(), Unit->getFileManager(),
+                         Units[I]->getASTContext(), Units[I]->getFileManager(),
                          /*MinimalImport=*/false, SharedState);
 
-    TranslationUnitDecl *TU = Unit->getASTContext().getTranslationUnitDecl();
+    TranslationUnitDecl *TU =
+        Units[I]->getASTContext().getTranslationUnitDecl();
     for (auto *D : TU->decls()) {
       // Don't re-import __va_list_tag, __builtin_va_list.
       if (const auto *ND = dyn_cast<NamedDecl>(D))
