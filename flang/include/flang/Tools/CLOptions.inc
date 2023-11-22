@@ -158,10 +158,10 @@ inline void addDebugFoundationPass(mlir::PassManager &pm) {
 }
 
 inline void addFIRToLLVMPass(mlir::PassManager &pm,
-    llvm::OptimizationLevel optLevel = defaultOptLevel, bool applyTbaa = true) {
+    const MLIRToLLVMPassPipelineConfig &config) {
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
-  options.applyTBAA = applyTbaa;
+  options.applyTBAA = config.AliasAnalysis;
   options.forceUnifiedTBAATree = useOldAliasTags;
   addPassConditionally(pm, disableFirToLlvmIr,
       [&]() { return fir::createFIRToLLVMPass(options); });
@@ -311,7 +311,7 @@ inline void createDefaultFIRCodeGenPassPipeline(
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
 
-  fir::addFIRToLLVMPass(pm, config.OptLevel, config.AliasAnalysis);
+  fir::addFIRToLLVMPass(pm, config);
 }
 
 /// Create a pass pipeline for lowering from MLIR to LLVM IR
