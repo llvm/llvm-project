@@ -262,7 +262,7 @@ void TestTypeWithLayoutType::print(AsmPrinter &printer) const {
 llvm::TypeSize
 TestTypeWithLayoutType::getTypeSizeInBits(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::Fixed(extractKind(params, "size"));
+  return llvm::TypeSize::getFixed(extractKind(params, "size"));
 }
 
 uint64_t

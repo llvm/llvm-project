@@ -92,7 +92,7 @@ struct SingleQueryType
       llvm::report_fatal_error("repeated call");
 
     executed = true;
-    return llvm::TypeSize::Fixed(1);
+    return llvm::TypeSize::getFixed(1);
   }
 
   uint64_t getABIAlignment(const DataLayout &layout,
@@ -161,10 +161,10 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     if (auto iType = dyn_cast<IntegerType>(type)) {
       for (DataLayoutEntryInterface entry : params)
         if (llvm::dyn_cast_if_present<Type>(entry.getKey()) == type)
-          return llvm::TypeSize::Fixed(
+          return llvm::TypeSize::getFixed(
               8 *
               cast<IntegerAttr>(entry.getValue()).getValue().getZExtValue());
-      return llvm::TypeSize::Fixed(8 * iType.getIntOrFloatBitWidth());
+      return llvm::TypeSize::getFixed(8 * iType.getIntOrFloatBitWidth());
     }
 
     // Use the default process for everything else.
