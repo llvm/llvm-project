@@ -877,14 +877,14 @@ func.func @test_transpose_dyn(%arg0: tensor<1x?x3x4xi32>) -> () {
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d1, d0)>
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 
-// CHECK-LABEL: @test_transpose_dyn
+// CHECK-LABEL: @test_transpose_dyn_multiple_2d
 // CHECK-SAME: (%[[ARG0:.+]]: tensor<?x?xf32>)
-func.func @test_transpose_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
+func.func @test_transpose_dyn_multiple_2d(%arg0: tensor<?x?xf32>) -> () {
   %0 = arith.constant dense<[1, 0]> : tensor<2xi32>
-  // CHECK: %[[C0:.+]] = arith.constant 0
-  // CHECK: %[[DIM0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
-  // CHECK: %[[C1:.+]] = arith.constant 1
-  // CHECK: %[[DIM1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
+  // CHECK-DAG: %[[C0:.+]] = arith.constant 0
+  // CHECK-DAG: %[[DIM0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
+  // CHECK-DAG: %[[C1:.+]] = arith.constant 1
+  // CHECK-DAG: %[[DIM1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[DIM1]], %[[DIM0]])
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x?xf32>) outs([[OUT:%.+]] : tensor<?x?xf32>)
   // CHECK: ^bb0([[ARG1:%.+]]: f32, [[ARG2:%.+]]: f32)
@@ -896,6 +896,29 @@ func.func @test_transpose_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
 
 // -----
 
+// CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+// CHECK-LABEL: @test_transpose_dyn_multiple_3d
+// CHECK-SAME: (%[[ARG0:.+]]: tensor<?x?x?xf32>)
+func.func @test_transpose_dyn_multiple_3d(%arg0: tensor<?x?x?xf32>) {
+  %0 = arith.constant dense<[2, 0, 1]> : tensor<3xi32>
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[DIM0:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x?x?xf32>
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG: %[[DIM1:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<?x?x?xf32>
+  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK-DAG: %[[DIM2:.*]] = tensor.dim %[[ARG0]], %[[C2]] : tensor<?x?x?xf32>
+  // CHECK: %[[INIT:.*]] = tensor.empty(%[[DIM2]], %[[DIM0]], %[[DIM1]]) : tensor<?x?x?xf32>
+  // CHECK: %[[GENERIC:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[ARG0]] : tensor<?x?x?xf32>) outs(%[[INIT]] : tensor<?x?x?xf32>) {
+  // CHECK: ^bb0(%[[IN0:.*]]: f32, %[[OUT0:.*]]: f32):
+  // CHECK:   linalg.yield %[[IN0]] : f32
+  // CHECK: } -> tensor<?x?x?xf32>
+  %1 = "tosa.transpose"(%arg0, %0) : (tensor<?x?x?xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
+  return
+}
+
+// -----
 
 // CHECK-LABEL: @reduce_float
 // CHECK-SAME: [[ARG0:%.+]]: tensor<5x4xf32>
