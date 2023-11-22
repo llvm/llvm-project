@@ -1637,10 +1637,12 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
   //
   // It is an error for alignas to decrease alignment, so we can
   // ignore that possibility;  Sema should diagnose it.
-  bool IsPackedField = isa<FieldDecl>(D) &&
-                       (D->hasAttr<PackedAttr>() ||
-                        cast<FieldDecl>(D)->getParent()->hasAttr<PackedAttr>());
-  bool UseAlignAttrOnly = isa<FieldDecl>(D) ? IsPackedField : AlignFromAttr;
+  bool UseAlignAttrOnly;
+  if (FieldDecl *FD = dyn_cast<FieldDecl>(D))
+    UseAlignAttrOnly =
+        FD->hasAttr<PackedAttr>() || FD->getParent()->hasAttr<PackedAttr>();
+  else
+    UseAlignAttrOnly = AlignFromAttr != 0;
   // If we're using the align attribute only, just ignore everything
   // else about the declaration and its type.
   if (UseAlignAttrOnly) {
