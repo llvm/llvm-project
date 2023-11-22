@@ -43,9 +43,9 @@ class BasicExprCommandsTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-    @expectedFailure(
-        "llvm.org/pr17135 <rdar://problem/14874559> APFloat::toString does not identify the correct (i.e. least) precision."
-    )
+    # llvm.org/pr17135 <rdar://problem/14874559>
+    # APFloat::toString does not identify the correct (i.e. least) precision.
+    @expectedFailure
     def test_floating_point_expr_commands(self):
         self.build_and_run()
 
