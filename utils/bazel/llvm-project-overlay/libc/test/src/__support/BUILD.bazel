@@ -10,11 +10,14 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
-libc_test(
-    name = "blockstore_test",
-    srcs = ["blockstore_test.cpp"],
-    deps = ["//libc:__support_blockstore"],
-)
+# This test is currently disabled because of an issue in
+# `libc/src/__support/CPP/new.h` which currently fails with
+# "error: cannot apply asm label to function after its first use"
+# libc_test(
+#     name = "blockstore_test",
+#     srcs = ["blockstore_test.cpp"],
+#     deps = ["//libc:__support_blockstore"],
+# )
 
 libc_test(
     name = "endian_test",
