@@ -959,6 +959,9 @@ private:
 
   SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                         SmallVectorImpl<SDNode *> &Created) const override;
+
+  bool shouldFoldSelectWithSingleBitTest(EVT VT,
+                                         const APInt &AndMask) const override;
 };
 
 namespace RISCV {
