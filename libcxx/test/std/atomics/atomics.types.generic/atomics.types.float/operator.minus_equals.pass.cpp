@@ -9,6 +9,8 @@
 // UNSUPPORTED: target={{.+}}-windows-gnu
 // XFAIL: LIBCXX-AIX-FIXME
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// Hangs with msan.
+// UNSUPPORTED: msan
 
 // floating-point-type operator-=(floating-point-type) volatile noexcept;
 // floating-point-type operator-=(floating-point-type) noexcept;
