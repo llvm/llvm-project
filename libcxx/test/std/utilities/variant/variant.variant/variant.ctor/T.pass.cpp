@@ -80,7 +80,7 @@ void test_T_ctor_sfinae() {
     };
     static_assert(!std::is_constructible<V, X>::value,
                   "no boolean conversion in constructor");
-#if defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
+#ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     static_assert(!std::is_constructible<V, std::false_type>::value,
                   "no converted to bool in constructor");
 #else
@@ -204,14 +204,14 @@ void test_construction_with_repeated_types() {
   static_assert(std::is_constructible<V, Bar>::value, "");
 }
 
-#if !defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
 void test_vector_bool() {
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
   std::vector<bool> vec = {true};
   std::variant<bool, int> v = vec[0];
   assert(v.index() == 0);
   assert(std::get<0>(v) == true);
-}
 #endif
+}
 
 int main(int, char**) {
   test_T_ctor_basic();
@@ -219,8 +219,6 @@ int main(int, char**) {
   test_T_ctor_sfinae();
   test_no_narrowing_check_for_class_types();
   test_construction_with_repeated_types();
-#if !defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
   test_vector_bool();
-#endif
   return 0;
 }
