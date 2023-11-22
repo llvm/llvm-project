@@ -242,9 +242,9 @@ void ParseOpenACCClauseList(Parser &P) {
 ExprResult Parser::ParseOpenACCRoutineName() {
 
   ExprResult Res;
-  if (getLangOpts().CPlusPlus)
+  if (getLangOpts().CPlusPlus) {
     Res = ParseCXXIdExpression(/*isAddressOfOperand=*/false);
-  else {
+  } else {
     // There isn't anything quite the same as ParseCXXIdExpression for C, so we
     // need to get the identifier, then call into Sema ourselves.
 
