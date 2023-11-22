@@ -265,8 +265,6 @@ protected:
         process_sp->SyncIOHandler(0, std::chrono::seconds(2));
 
         llvm::StringRef data = stream.GetString();
-        if (!data.empty())
-          result.AppendMessage(data);
         // If we didn't have a local executable, then we wouldn't have had an
         // executable module before launch.
         if (!exe_module_sp)
@@ -282,6 +280,8 @@ protected:
               exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
         }
         result.SetStatus(eReturnStatusSuccessFinishResult);
+        if (!data.empty())
+          result.AppendMessage(data);
         result.SetDidChangeProcessState(true);
       } else {
         result.AppendError(
