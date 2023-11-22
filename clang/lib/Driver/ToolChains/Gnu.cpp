@@ -2121,9 +2121,9 @@ void Generic_GCC::GCCInstallationDetector::init(
   CandidateTripleAliases.push_back(TargetTriple.str());
   std::string TripleNoVendor = TargetTriple.getArchName().str() + "-" +
                                TargetTriple.getOSAndEnvironmentName().str();
-  if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor) {
+  if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor)
     CandidateTripleAliases.push_back(TripleNoVendor);
-  }
+
   CollectLibDirsAndTriples(TargetTriple, BiarchVariantTriple, CandidateLibDirs,
                            CandidateTripleAliases, CandidateBiarchLibDirs,
                            CandidateBiarchTripleAliases);
