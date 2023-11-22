@@ -217,21 +217,19 @@ private:
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
 
-  // Transitive Incoming Values are chains of PHI Nodes that
-  // may all refer to the same value.
+  // Transitively Incoming Values (TIV) is a set of Values that can "feed" a
+  // value to the initial PHI-node. It is defined like this:
   //
-  // For example:
+  // * the initial PHI-node belongs to TIV.
   //
-  // %a = load %0
-  // %c = phi [%a, %d]
-  // %d = phi [%e, %c]
-  // %e = phi [%c, %f]
-  // %f = phi [%j, %h]
-  // %j = phi [%h, %j]
-  // %h = phi [%g, %c]
+  // * for every PHI-node in TIV, its operands belong to TIV
   //
-  // In the real world, there would be branches and other code between these
-  // phi-nodes.
+  // If TIV for the initial PHI-node (P) contains more than one constant or a
+  // value that is not a PHI-node, then P cannot be folded to a constant.
+  //
+  // As soon as we detect these cases, we bail, without constructing the
+  // full TIV.
+  // Otherwise P can be folded to the one constant in TIV.
   bool discoverTransitivelyIncomingValues(Constant *Const, PHINode *Root,
                                           DenseSet<PHINode *> &TransitivePHIs);
 
