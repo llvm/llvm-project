@@ -137,7 +137,7 @@ def HasSVE           : Predicate<"Subtarget->hasSVE()">,
 def HasSVE2          : Predicate<"Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->hasSVE2p1()">,
-                                 AssemblerPredicate<(any_of FeatureSVE2p1), "sve2p1">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2p1), "sve2p1">;
 def HasSVE2AES       : Predicate<"Subtarget->hasSVE2AES()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->hasSVE2SM4()">,
