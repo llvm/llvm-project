@@ -22,6 +22,7 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/APITypes.h"
 #include "Shared/Profile.h"
 
 #include "OpenMP/Mapping.h"
@@ -1669,9 +1670,14 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
     // ToDo: mhalk Do we need a check for TracingActive here?
-    InterfaceRAII TargetSubmitTraceRAII(
+
+    // Calls "begin" for the OMPT trace record and let the plugin
+    // enqueue the stop operation for after the kernel is done. The stop
+    // operation completes the trace record entry with the information from
+    // within the plugin, eg., kernel timing info.
+    TracerInterfaceRAII TargetTraceRAII(
         RegionInterface.getTraceGenerators<ompt_callback_target_submit>(),
-        DeviceId, NumTeams);
+        AsyncInfo, DeviceId, NumTeams);
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),

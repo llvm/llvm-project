@@ -17,6 +17,7 @@
 #include "PluginManager.h"
 #include "private.h"
 
+#include "Shared/APITypes.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Profile.h"
 
@@ -121,17 +122,17 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
       auto CallbackFunctions =
           (TargetDataFunction == targetDataBegin)
               ? RegionInterface.getCallbacks<ompt_target_enter_data>()
-              : (TargetDataFunction == targetDataEnd)
-                    ? RegionInterface.getCallbacks<ompt_target_exit_data>()
-                    : RegionInterface.getCallbacks<ompt_target_update>();
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getCallbacks<ompt_target_exit_data>()
+              : RegionInterface.getCallbacks<ompt_target_update>();
 
       auto TraceGenerators =
           (TargetDataFunction == targetDataBegin)
               ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
-              : (TargetDataFunction == targetDataEnd)
-                    ? RegionInterface
-                          .getTraceGenerators<ompt_target_exit_data>()
-                    : RegionInterface.getTraceGenerators<ompt_target_update>();
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
+              : RegionInterface.getTraceGenerators<ompt_target_update>();
+
       InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
                                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
@@ -145,6 +146,11 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
 
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
+
+#ifdef OMPT_SUPPORT
+  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
+    delete AI->OmptEventInfo;
+#endif
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
 }
@@ -342,6 +348,11 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
+
+#ifdef OMPT_SUPPORT
+  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
+    delete AI->OmptEventInfo;
+#endif
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
   assert(Rc == OFFLOAD_SUCCESS && "offload failed");

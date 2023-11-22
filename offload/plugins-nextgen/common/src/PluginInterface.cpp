@@ -25,6 +25,7 @@
 #ifdef OMPT_SUPPORT
 #include "OmptDeviceTracing.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Interface.h"
 #include "omp-tools.h"
 #endif
 
@@ -444,7 +445,9 @@ setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
-      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
+  LocalAsyncInfo.OmptEventInfo = nullptr;
+}
 
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
@@ -454,10 +457,22 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
   // libomptarget.) In that case, and assuming the current status code is
   // correct, we will synchronize explicitly when the object is deleted. Update
   // the error with the result of the synchronize operation.
-  if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
+  if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err) {
+    DP("Synchronizing Operation for LOCAL\n");
     Err = Device.synchronize(&LocalAsyncInfo);
+    // Invalidate the wrapper object.
+  }
 
-  // Invalidate the wrapper object.
+  // This case is used to transfer information about OMPT down from libomptarget
+  // to the plugins / other parts of the runtime for asynchronous profiling.
+  // Since we want to maintain the possibility to enforce synchronous mode,
+  // This was introduced.
+  else if (AsyncInfoPtr && !AsyncInfoPtr->ExecAsync && AsyncInfoPtr->Queue &&
+           !Err) {
+    DP("Synchronizing Operation for EXECASYNC\n");
+    Err = Device.synchronize(AsyncInfoPtr);
+  }
+
   AsyncInfoPtr = nullptr;
 }
 
@@ -641,7 +656,10 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
-  OMPT_IF_TRACING_ENABLED(setOmptGrantedNumTeams(NumBlocks););
+  OMPT_IF_TRACING_ENABLED(setOmptGrantedNumTeams(NumBlocks);
+                          // Set number of granted teams for OMPT
+                          __tgt_async_info *AI = AsyncInfoWrapper;
+                          AI->OmptEventInfo->NumTeams = NumBlocks;);
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     LaunchParams, AsyncInfoWrapper);

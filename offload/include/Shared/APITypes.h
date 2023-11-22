@@ -20,6 +20,12 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
+#include <variant>
+
+#ifdef OMPT_SUPPORT
+#include <omp-tools.h>
+#endif
 
 extern "C" {
 
@@ -69,6 +75,11 @@ struct __tgt_device_binary {
 
 // clang-format on
 
+// OMPT: Forward declare for function pointer type
+namespace llvm::omp::target::ompt {
+struct OmptEventInfoTy;
+} // namespace llvm::omp::target::ompt
+
 /// This struct contains information exchanged between different asynchronous
 /// operations for device-dependent optimization and potential synchronization
 struct __tgt_async_info {
@@ -85,6 +96,11 @@ struct __tgt_async_info {
   /// ensure it is a valid location while the transfer to the device is
   /// happening.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// Use for sync interface. When false => synchronous execution
+  bool ExecAsync = true;
+  /// Maintain the actal data for the OMPT stuff
+  llvm::omp::target::ompt::OmptEventInfoTy *OmptEventInfo = nullptr;
 };
 
 /// This struct contains all of the arguments to a target kernel region launch.

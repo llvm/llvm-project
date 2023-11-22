@@ -79,6 +79,12 @@ DeviceTy::~DeviceTy() {
   dumpTargetPointerMappings(&Loc, *this);
 }
 
+/// Used to set the asynchronous execution mode
+inline void setAsyncInfoSynchronous(__tgt_async_info *AI, bool SetSynchronous) {
+  if (SetSynchronous)
+    AI->ExecAsync = false;
+}
+
 llvm::Error DeviceTy::init() {
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
@@ -160,18 +166,14 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
-      InterfaceRAII TargetDataSubmitTraceRAII(
+      TracerInterfaceRAII TargetDataSubmitTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_to_device>(),
-          omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          AsyncInfo, omp_get_initial_device(), HstPtrBegin, DeviceID,
+          TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-#ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || !AsyncInfo || ompt::TracingActive)
-#else
-  if (ForceSynchronousTargetRegions || !AsyncInfo)
-#endif
-    return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
                                 AsyncInfo);
 }
@@ -192,18 +194,14 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
-      InterfaceRAII TargetDataRetrieveTraceRAII(
+      TracerInterfaceRAII TargetDataSubmitTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_from_device>(),
-          DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
+          AsyncInfo, DeviceID, TgtPtrBegin, omp_get_initial_device(),
+          HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-#ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || ompt::TracingActive)
-#else
-  if (ForceSynchronousTargetRegions)
-#endif
-    return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
                                   AsyncInfo);
 }
@@ -223,21 +221,13 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
       // ToDo: mhalk Do we need a check for TracingActive here?
-      InterfaceRAII TargetDataExchangeTraceRAII(
+      TracerInterfaceRAII TargetDataExchangeTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_from_device>(),
-          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          AsyncInfo, RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-#ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || !AsyncInfo || ompt::TracingActive) {
-#else
-  if (ForceSynchronousTargetRegions || !AsyncInfo) {
-#endif
-
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
-  }
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
                                   DstPtr, Size, AsyncInfo);
 }
@@ -267,13 +257,8 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
-#ifdef OMPT_SUPPORT
-  if (ForceSynchronousTargetRegions || ompt::TracingActive)
-#else
-  if (ForceSynchronousTargetRegions)
-#endif
-    return RTL->launch_kernel_sync(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
-                                   TgtOffsets, &KernelArgs);
+
+  setAsyncInfoSynchronous(AsyncInfo, ForceSynchronousTargetRegions);
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                             &KernelArgs, AsyncInfo);
 }

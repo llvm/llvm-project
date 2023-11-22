@@ -334,16 +334,10 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
   return DataPtr;
 }
 
-void Interface::startTargetDataSubmitTrace(int64_t SrcDeviceId,
-                                           void *SrcPtrBegin,
-                                           int64_t DstDeviceId,
-                                           void *DstPtrBegin, size_t Size,
-                                           void *Code) {}
-
 ompt_record_ompt_t *
-Interface::stopTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
-                                     int64_t DstDeviceId, void *DstPtrBegin,
-                                     size_t Size, void *Code) {
+Interface::startTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                      int64_t DstDeviceId, void *DstPtrBegin,
+                                      size_t Size, void *Code) {
   if (isTracingTypeDisabled(ompt_callback_target_data_op))
     return nullptr;
 
@@ -356,26 +350,21 @@ Interface::stopTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
     return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
+  DataPtr->time = 0; // Set to sanity value and let "stop" function fix it
+
+  // Set some of the data-op specific fields here
   setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
                              ompt_target_data_transfer_to_device, SrcPtrBegin,
                              SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
 
-  // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target_data_submit trace record %p\n", DataPtr);
+  DP("OMPT-Async: Returning data trace record buf ptr %p\n", DataPtr);
   return DataPtr;
 }
 
-void Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId,
-                                             void *SrcPtrBegin,
-                                             int64_t DstDeviceId,
-                                             void *DstPtrBegin, size_t Size,
-                                             void *Code) {}
-
 ompt_record_ompt_t *
-Interface::stopTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
-                                       int64_t DstDeviceId, void *DstPtrBegin,
-                                       size_t Size, void *Code) {
+Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                        int64_t DstDeviceId, void *DstPtrBegin,
+                                        size_t Size, void *Code) {
   if (isTracingTypeDisabled(ompt_callback_target_data_op))
     return nullptr;
 
@@ -383,26 +372,40 @@ Interface::stopTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
           ompt_callback_target_data_op, SrcDeviceId);
 
-  // This event will not be traced
-  if (DataPtr == nullptr)
+  if (!DataPtr)
     return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
+  DataPtr->time = 0; // Set to sanity value and let "stop" function fix it
+
+  // Set some of the data-op specific fields here
   setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
                              ompt_target_data_transfer_from_device, SrcPtrBegin,
                              SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
 
-  // The trace record has been created, mark it ready for delivery to the tool
-  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target_data_submit trace record %p\n", DataPtr);
+  DP("OMPT-Async: Returning data trace record buf ptr %p\n", DataPtr);
   return DataPtr;
 }
 
-void Interface::startTargetSubmitTrace(int64_t DeviceId,
-                                       unsigned int NumTeams) {}
+ompt_record_ompt_t *Interface::stopTargetDataMovementTraceAsync(
+    ompt_record_ompt_t *DataPtr, uint64_t NanosStart, uint64_t NanosEnd) {
+  if (isTracingTypeDisabled(ompt_callback_target_data_op))
+    return nullptr;
 
-ompt_record_ompt_t *Interface::stopTargetSubmitTrace(int64_t DeviceId,
-                                                     unsigned int NumTeams) {
+  // Finalize the data that comes from the plugin.
+  DataPtr->time = NanosStart;
+  auto Record = static_cast<ompt_record_target_data_op_t *>(
+      &DataPtr->record.target_data_op);
+  Record->end_time = NanosEnd;
+
+  // The trace record has been created, mark it ready for delivery to the tool
+  TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
+  DP("OMPT-Async: Completed target_data trace record %p\n", DataPtr);
+  return DataPtr;
+}
+
+ompt_record_ompt_t *Interface::startTargetSubmitTrace(int64_t DeviceId,
+                                                      unsigned int NumTeams) {
   if (isTracingTypeDisabled(ompt_callback_target_submit))
     return nullptr;
 
@@ -410,16 +413,31 @@ ompt_record_ompt_t *Interface::stopTargetSubmitTrace(int64_t DeviceId,
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
           ompt_callback_target_submit, DeviceId);
 
-  // This event will not be traced
-  if (DataPtr == nullptr)
-    return nullptr;
-
+  // Set all known entries and leave remaining to the stop function
   setTraceRecordCommon(DataPtr, ompt_callback_target_submit);
-  setTraceRecordTargetKernel(&DataPtr->record.target_kernel, NumTeams);
+  DataPtr->time = 0; // Set to sanity value and let "stop" function fix it
+  // Kernel specific things
+  DataPtr->record.target_kernel.requested_num_teams = NumTeams;
+  DataPtr->record.target_kernel.host_op_id = getHostOpId();
 
-  // The trace record has been created, mark it ready for delivery to the tool
+  // May be null if event is not traced
+  DP("OMPT-Async: Returning kernel trace record buf ptr %p\n", DataPtr);
+  return DataPtr;
+}
+
+ompt_record_ompt_t *
+Interface::stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
+                                      int64_t DeviceId, unsigned int NumTeams,
+                                      uint64_t NanosStart, uint64_t NanosStop) {
+  // Common fields
+  DataPtr->time = NanosStart;
+  // Submit specific
+  DataPtr->record.target_kernel.end_time = NanosStop;
+  DataPtr->record.target_kernel.granted_num_teams = NumTeams;
+
+  // Ready Record
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target_submit trace record %p\n", DataPtr);
+  DP("OMPT-Async: Completed trace record buf ptr %p\n", DataPtr);
   return DataPtr;
 }
 
