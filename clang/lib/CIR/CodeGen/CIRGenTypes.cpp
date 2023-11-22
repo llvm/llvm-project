@@ -615,27 +615,26 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     break;
   }
   case Type::IncompleteArray: {
-    assert(0 && "not implemented");
+    const IncompleteArrayType *A = cast<IncompleteArrayType>(Ty);
+    assert(A->getIndexTypeCVRQualifiers() == 0 &&
+           "FIXME: We only handle trivial array types so far!");
+    // int X[] -> [0 x int], unless the element type is not sized.  If it is
+    // unsized (e.g. an incomplete struct) just use [0 x i8].
+    ResultType = convertTypeForMem(A->getElementType());
+    if (!Builder.isSized(ResultType)) {
+      SkippedLayout = true;
+      ResultType = Builder.getUInt8Ty();
+    }
+    ResultType = Builder.getArrayType(ResultType, 0);  
     break;
   }
   case Type::ConstantArray: {
     const ConstantArrayType *A = cast<ConstantArrayType>(Ty);
     auto EltTy = convertTypeForMem(A->getElementType());
 
-    // FIXME(cir): add a `isSized` method to CIRGenBuilder.
-    auto isSized = [&](mlir::Type ty) {
-      if (ty.isIntOrFloat() ||
-          ty.isa<mlir::cir::PointerType, mlir::cir::StructType,
-                 mlir::cir::ArrayType, mlir::cir::BoolType,
-                 mlir::cir::IntType>())
-        return true;
-      assert(0 && "not implemented");
-      return false;
-    };
-
     // FIXME: In LLVM, "lower arrays of undefined struct type to arrays of
     // i8 just to have a concrete type". Not sure this makes sense in CIR yet.
-    assert(isSized(EltTy) && "not implemented");
+    assert(Builder.isSized(EltTy) && "not implemented");
     ResultType = ::mlir::cir::ArrayType::get(Builder.getContext(), EltTy,
                                              A->getSize().getZExtValue());
     break;
