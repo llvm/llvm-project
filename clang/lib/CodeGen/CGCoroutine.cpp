@@ -129,12 +129,32 @@ static SmallString<32> buildSuspendPrefixStr(CGCoroData &Coro, AwaitKind Kind) {
   return Prefix;
 }
 
-static bool memberCallExpressionCanThrow(const Expr *E) {
+static bool FunctionProtoNoexcept(const FunctionProtoType *Proto) {
+  return isNoexceptExceptionSpec(Proto->getExceptionSpecType()) &&
+         Proto->canThrow() == CT_Cannot;
+}
+
+static bool ResumeExprCanThrow(const CoroutineSuspendExpr &S) {
+  const Expr *E = S.getResumeExpr();
+
+  // If the return type of await_resume is not void, get the CXXMemberCallExpr
+  // from its SubExpr.
+  if (const auto *BindTempExpr = dyn_cast<CXXBindTemporaryExpr>(E)) {
+    auto *Temporary = BindTempExpr->getTemporary();
+    const auto *DtorProto = Temporary->getDestructor()
+                                ->getCanonicalDecl()
+                                ->getType()
+                                ->getAs<FunctionProtoType>();
+    bool DtorCanThrow = !FunctionProtoNoexcept(DtorProto);
+    if (DtorCanThrow) {
+      return true;
+    }
+    E = BindTempExpr->getSubExpr();
+  }
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
     if (const auto *Proto =
             CE->getMethodDecl()->getType()->getAs<FunctionProtoType>())
-      if (isNoexceptExceptionSpec(Proto->getExceptionSpecType()) &&
-          Proto->canThrow() == CT_Cannot)
+      if (FunctionProtoNoexcept(Proto))
         return false;
   return true;
 }
@@ -233,7 +253,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // is marked as 'noexcept', we avoid generating this additional IR.
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
-      memberCallExpressionCanThrow(S.getResumeExpr())) {
+      ResumeExprCanThrow(S)) {
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
