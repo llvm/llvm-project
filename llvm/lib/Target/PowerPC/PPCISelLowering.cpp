@@ -12661,6 +12661,44 @@ PPCTargetLowering::emitProbedAlloca(MachineInstr &MI,
   return TailMBB;
 }
 
+static bool IsSelectCC(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case PPC::SELECT_CC_I4:
+  case PPC::SELECT_CC_I8:
+  case PPC::SELECT_CC_F4:
+  case PPC::SELECT_CC_F8:
+  case PPC::SELECT_CC_F16:
+  case PPC::SELECT_CC_VRRC:
+  case PPC::SELECT_CC_VSFRC:
+  case PPC::SELECT_CC_VSSRC:
+  case PPC::SELECT_CC_VSRC:
+  case PPC::SELECT_CC_SPE4:
+  case PPC::SELECT_CC_SPE:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool IsSelect(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case PPC::SELECT_I4:
+  case PPC::SELECT_I8:
+  case PPC::SELECT_F4:
+  case PPC::SELECT_F8:
+  case PPC::SELECT_F16:
+  case PPC::SELECT_SPE:
+  case PPC::SELECT_SPE4:
+  case PPC::SELECT_VRRC:
+  case PPC::SELECT_VSFRC:
+  case PPC::SELECT_VSSRC:
+  case PPC::SELECT_VSRC:
+    return true;
+  default:
+    return false;
+  }
+}
+
 MachineBasicBlock *
 PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -12689,7 +12727,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const bool HasISEL = Subtarget.hasISEL();
 
   // To "insert" these instructions we actually have to insert their
   // control-flow patterns.
@@ -12699,7 +12736,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &MRI = F->getRegInfo();
 
-  if (HasISEL &&
+  if (Subtarget.hasISEL() &&
       (MI.getOpcode() == PPC::SELECT_CC_I4 ||
        MI.getOpcode() == PPC::SELECT_CC_I8 ||
        MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8)) {
@@ -12714,28 +12751,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     DebugLoc dl = MI.getDebugLoc();
     TII->insertSelect(*BB, MI, dl, MI.getOperand(0).getReg(), Cond,
                       MI.getOperand(2).getReg(), MI.getOperand(3).getReg());
-  } else if (MI.getOpcode() == PPC::SELECT_CC_I4 ||
-             MI.getOpcode() == PPC::SELECT_CC_I8 ||
-             MI.getOpcode() == PPC::SELECT_CC_F4 ||
-             MI.getOpcode() == PPC::SELECT_CC_F8 ||
-             MI.getOpcode() == PPC::SELECT_CC_F16 ||
-             MI.getOpcode() == PPC::SELECT_CC_VRRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSFRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSSRC ||
-             MI.getOpcode() == PPC::SELECT_CC_VSRC ||
-             MI.getOpcode() == PPC::SELECT_CC_SPE4 ||
-             MI.getOpcode() == PPC::SELECT_CC_SPE ||
-             MI.getOpcode() == PPC::SELECT_I4 ||
-             MI.getOpcode() == PPC::SELECT_I8 ||
-             MI.getOpcode() == PPC::SELECT_F4 ||
-             MI.getOpcode() == PPC::SELECT_F8 ||
-             MI.getOpcode() == PPC::SELECT_F16 ||
-             MI.getOpcode() == PPC::SELECT_SPE ||
-             MI.getOpcode() == PPC::SELECT_SPE4 ||
-             MI.getOpcode() == PPC::SELECT_VRRC ||
-             MI.getOpcode() == PPC::SELECT_VSFRC ||
-             MI.getOpcode() == PPC::SELECT_VSSRC ||
-             MI.getOpcode() == PPC::SELECT_VSRC) {
+  } else if (IsSelectCC(MI) || IsSelect(MI)) {
     // The incoming instruction knows the destination vreg to set, the
     // condition code register to branch on, the true/false values to
     // select between, and a branch opcode to use.
@@ -12762,15 +12778,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BB->addSuccessor(copy0MBB);
     BB->addSuccessor(sinkMBB);
 
-    if (MI.getOpcode() == PPC::SELECT_I4 || MI.getOpcode() == PPC::SELECT_I8 ||
-        MI.getOpcode() == PPC::SELECT_F4 || MI.getOpcode() == PPC::SELECT_F8 ||
-        MI.getOpcode() == PPC::SELECT_F16 ||
-        MI.getOpcode() == PPC::SELECT_SPE4 ||
-        MI.getOpcode() == PPC::SELECT_SPE ||
-        MI.getOpcode() == PPC::SELECT_VRRC ||
-        MI.getOpcode() == PPC::SELECT_VSFRC ||
-        MI.getOpcode() == PPC::SELECT_VSSRC ||
-        MI.getOpcode() == PPC::SELECT_VSRC) {
+    if (IsSelect(MI)) {
       BuildMI(BB, dl, TII->get(PPC::BC))
           .addReg(MI.getOperand(1).getReg())
           .addMBB(sinkMBB);
