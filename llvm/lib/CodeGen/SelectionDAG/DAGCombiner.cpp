@@ -27252,8 +27252,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     if (ConstAndRHS && ConstAndRHS->getAPIntValue().popcount() == 1) {
       // Shift the tested bit over the sign bit.
       const APInt &AndMask = ConstAndRHS->getAPIntValue();
-      unsigned ShCt = AndMask.getBitWidth() - 1;
-      if (!TLI.shouldAvoidTransformToShift(VT, ShCt)) {
+      if (TLI.shouldFoldSelectWithSingleBitTest(VT, AndMask)) {
+        unsigned ShCt = AndMask.getBitWidth() - 1;
         SDValue ShlAmt =
             DAG.getConstant(AndMask.countl_zero(), SDLoc(AndLHS),
                             getShiftAmountTy(AndLHS.getValueType()));
