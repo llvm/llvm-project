@@ -218,7 +218,7 @@ body:             |
     ; CHECK-LABEL: name: inout
     ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 16)
     ; CHECK-NEXT: MOV32mr %stack.0, 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %stack.0)
-    ; CHECK-NEXT: INLINEASM &"# $0 $1", 24 /* mayload maystore attdialect */, 262190 /* mem:m */, %stack.0, 1, $noreg, 0, $noreg, 262190 /* mem:m */, %stack.0, 1, $noreg, 0, $noreg, 12 /* clobber */, implicit-def dead early-clobber $ax, 12 /* clobber */, implicit-def dead early-clobber $cx, 12 /* clobber */, implicit-def dead early-clobber $dx, 12 /* clobber */, implicit-def dead early-clobber $si, 12 /* clobber */, implicit-def dead early-clobber $di, 12 /* clobber */, implicit-def dead early-clobber $bx, 12 /* clobber */, implicit-def dead early-clobber $bp :: (store (s32) into %stack.0)
+    ; CHECK-NEXT: INLINEASM &"# $0 $1", 24 /* mayload maystore attdialect */, 262190 /* mem:m */, %stack.0, 1, $noreg, 0, $noreg, 262190 /* mem:m */, %stack.0, 1, $noreg, 0, $noreg, 12 /* clobber */, implicit-def dead early-clobber $ax, 12 /* clobber */, implicit-def dead early-clobber $cx, 12 /* clobber */, implicit-def dead early-clobber $dx, 12 /* clobber */, implicit-def dead early-clobber $si, 12 /* clobber */, implicit-def dead early-clobber $di, 12 /* clobber */, implicit-def dead early-clobber $bx, 12 /* clobber */, implicit-def dead early-clobber $bp :: (load store (s32) on %stack.0)
     ; CHECK-NEXT: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
     ; CHECK-NEXT: MOV32mr %fixed-stack.0, 1, $noreg, 0, $noreg, [[MOV32rm1]] :: (store (s32) into %ir.2, align 16)
     ; CHECK-NEXT: $eax = COPY [[MOV32rm1]]
