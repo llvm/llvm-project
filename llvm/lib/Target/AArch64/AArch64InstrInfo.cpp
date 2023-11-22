@@ -3519,21 +3519,21 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   switch (Opcode) {
   // Not a memory operation or something we want to handle.
   default:
-    Scale = TypeSize::Fixed(0);
+    Scale = TypeSize::getFixed(0);
     Width = 0;
     MinOffset = MaxOffset = 0;
     return false;
   case AArch64::STRWpost:
   case AArch64::LDRWpost:
     Width = 32;
-    Scale = TypeSize::Fixed(4);
+    Scale = TypeSize::getFixed(4);
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::LDURQi:
   case AArch64::STURQi:
     Width = 16;
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3545,7 +3545,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURDi:
   case AArch64::STLURXi:
     Width = 8;
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3558,7 +3558,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURSi:
   case AArch64::STLURWi:
     Width = 4;
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3573,7 +3573,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURHHi:
   case AArch64::STLURHi:
     Width = 2;
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3588,7 +3588,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURBBi:
   case AArch64::STLURBi:
     Width = 1;
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     MinOffset = -256;
     MaxOffset = 255;
     break;
@@ -3596,14 +3596,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDNPQi:
   case AArch64::STPQi:
   case AArch64::STNPQi:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 32;
     MinOffset = -64;
     MaxOffset = 63;
     break;
   case AArch64::LDRQui:
   case AArch64::STRQui:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 16;
     MinOffset = 0;
     MaxOffset = 4095;
@@ -3616,7 +3616,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STPDi:
   case AArch64::STNPXi:
   case AArch64::STNPDi:
-    Scale = TypeSize::Fixed(8);
+    Scale = TypeSize::getFixed(8);
     Width = 16;
     MinOffset = -64;
     MaxOffset = 63;
@@ -3626,14 +3626,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRDui:
   case AArch64::STRXui:
   case AArch64::STRDui:
-    Scale = TypeSize::Fixed(8);
+    Scale = TypeSize::getFixed(8);
     Width = 8;
     MinOffset = 0;
     MaxOffset = 4095;
     break;
   case AArch64::StoreSwiftAsyncContext:
     // Store is an STRXui, but there might be an ADDXri in the expansion too.
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     Width = 8;
     MinOffset = 0;
     MaxOffset = 4095;
@@ -3646,7 +3646,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STPSi:
   case AArch64::STNPWi:
   case AArch64::STNPSi:
-    Scale = TypeSize::Fixed(4);
+    Scale = TypeSize::getFixed(4);
     Width = 8;
     MinOffset = -64;
     MaxOffset = 63;
@@ -3656,7 +3656,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSWui:
   case AArch64::STRWui:
   case AArch64::STRSui:
-    Scale = TypeSize::Fixed(4);
+    Scale = TypeSize::getFixed(4);
     Width = 4;
     MinOffset = 0;
     MaxOffset = 4095;
@@ -3667,7 +3667,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSHXui:
   case AArch64::STRHui:
   case AArch64::STRHHui:
-    Scale = TypeSize::Fixed(2);
+    Scale = TypeSize::getFixed(2);
     Width = 2;
     MinOffset = 0;
     MaxOffset = 4095;
@@ -3678,7 +3678,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSBXui:
   case AArch64::STRBui:
   case AArch64::STRBBui:
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     Width = 1;
     MinOffset = 0;
     MaxOffset = 4095;
@@ -3687,14 +3687,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDPXpost:
   case AArch64::STPDpre:
   case AArch64::LDPDpost:
-    Scale = TypeSize::Fixed(8);
+    Scale = TypeSize::getFixed(8);
     Width = 8;
     MinOffset = -512;
     MaxOffset = 504;
     break;
   case AArch64::STPQpre:
   case AArch64::LDPQpost:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 16;
     MinOffset = -1024;
     MaxOffset = 1008;
@@ -3703,26 +3703,26 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STRDpre:
   case AArch64::LDRXpost:
   case AArch64::LDRDpost:
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     Width = 8;
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::STRQpre:
   case AArch64::LDRQpost:
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     Width = 16;
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::ADDG:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 0;
     MinOffset = 0;
     MaxOffset = 63;
     break;
   case AArch64::TAGPstack:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 0;
     // TAGP with a negative offset turns into SUBP, which has a maximum offset
     // of 63 (not 64!).
@@ -3732,42 +3732,42 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDG:
   case AArch64::STGi:
   case AArch64::STZGi:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 16;
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::STR_ZZZZXI:
   case AArch64::LDR_ZZZZXI:
-    Scale = TypeSize::Scalable(16);
+    Scale = TypeSize::getScalable(16);
     Width = SVEMaxBytesPerVector * 4;
     MinOffset = -256;
     MaxOffset = 252;
     break;
   case AArch64::STR_ZZZXI:
   case AArch64::LDR_ZZZXI:
-    Scale = TypeSize::Scalable(16);
+    Scale = TypeSize::getScalable(16);
     Width = SVEMaxBytesPerVector * 3;
     MinOffset = -256;
     MaxOffset = 253;
     break;
   case AArch64::STR_ZZXI:
   case AArch64::LDR_ZZXI:
-    Scale = TypeSize::Scalable(16);
+    Scale = TypeSize::getScalable(16);
     Width = SVEMaxBytesPerVector * 2;
     MinOffset = -256;
     MaxOffset = 254;
     break;
   case AArch64::LDR_PXI:
   case AArch64::STR_PXI:
-    Scale = TypeSize::Scalable(2);
+    Scale = TypeSize::getScalable(2);
     Width = SVEMaxBytesPerVector / 8;
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
-    Scale = TypeSize::Scalable(16);
+    Scale = TypeSize::getScalable(16);
     Width = SVEMaxBytesPerVector;
     MinOffset = -256;
     MaxOffset = 255;
@@ -3794,7 +3794,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDNF1D_IMM:
     // A full vectors worth of data
     // Width = mbytes * elements
-    Scale = TypeSize::Scalable(16);
+    Scale = TypeSize::getScalable(16);
     Width = SVEMaxBytesPerVector;
     MinOffset = -8;
     MaxOffset = 7;
@@ -3807,7 +3807,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST2H_IMM:
   case AArch64::ST2W_IMM:
   case AArch64::ST2D_IMM:
-    Scale = TypeSize::Scalable(32);
+    Scale = TypeSize::getScalable(32);
     Width = SVEMaxBytesPerVector * 2;
     MinOffset = -8;
     MaxOffset = 7;
@@ -3820,7 +3820,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST3H_IMM:
   case AArch64::ST3W_IMM:
   case AArch64::ST3D_IMM:
-    Scale = TypeSize::Scalable(48);
+    Scale = TypeSize::getScalable(48);
     Width = SVEMaxBytesPerVector * 3;
     MinOffset = -8;
     MaxOffset = 7;
@@ -3833,7 +3833,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::ST4H_IMM:
   case AArch64::ST4W_IMM:
   case AArch64::ST4D_IMM:
-    Scale = TypeSize::Scalable(64);
+    Scale = TypeSize::getScalable(64);
     Width = SVEMaxBytesPerVector * 4;
     MinOffset = -8;
     MaxOffset = 7;
@@ -3855,7 +3855,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDNF1SW_D_IMM:
     // A half vector worth of data
     // Width = mbytes * elements
-    Scale = TypeSize::Scalable(8);
+    Scale = TypeSize::getScalable(8);
     Width = SVEMaxBytesPerVector / 2;
     MinOffset = -8;
     MaxOffset = 7;
@@ -3872,7 +3872,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDNF1SH_D_IMM:
     // A quarter vector worth of data
     // Width = mbytes * elements
-    Scale = TypeSize::Scalable(4);
+    Scale = TypeSize::getScalable(4);
     Width = SVEMaxBytesPerVector / 4;
     MinOffset = -8;
     MaxOffset = 7;
@@ -3884,20 +3884,20 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDNF1SB_D_IMM:
     // A eighth vector worth of data
     // Width = mbytes * elements
-    Scale = TypeSize::Scalable(2);
+    Scale = TypeSize::getScalable(2);
     Width = SVEMaxBytesPerVector / 8;
     MinOffset = -8;
     MaxOffset = 7;
     break;
   case AArch64::ST2Gi:
   case AArch64::STZ2Gi:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 32;
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::STGPi:
-    Scale = TypeSize::Fixed(16);
+    Scale = TypeSize::getFixed(16);
     Width = 16;
     MinOffset = -64;
     MaxOffset = 63;
@@ -3909,7 +3909,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1RSB_H_IMM:
   case AArch64::LD1RSB_S_IMM:
   case AArch64::LD1RSB_D_IMM:
-    Scale = TypeSize::Fixed(1);
+    Scale = TypeSize::getFixed(1);
     Width = 1;
     MinOffset = 0;
     MaxOffset = 63;
@@ -3919,7 +3919,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1RH_D_IMM:
   case AArch64::LD1RSH_S_IMM:
   case AArch64::LD1RSH_D_IMM:
-    Scale = TypeSize::Fixed(2);
+    Scale = TypeSize::getFixed(2);
     Width = 2;
     MinOffset = 0;
     MaxOffset = 63;
@@ -3927,13 +3927,13 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LD1RW_IMM:
   case AArch64::LD1RW_D_IMM:
   case AArch64::LD1RSW_IMM:
-    Scale = TypeSize::Fixed(4);
+    Scale = TypeSize::getFixed(4);
     Width = 4;
     MinOffset = 0;
     MaxOffset = 63;
     break;
   case AArch64::LD1RD_IMM:
-    Scale = TypeSize::Fixed(8);
+    Scale = TypeSize::getFixed(8);
     Width = 8;
     MinOffset = 0;
     MaxOffset = 63;
