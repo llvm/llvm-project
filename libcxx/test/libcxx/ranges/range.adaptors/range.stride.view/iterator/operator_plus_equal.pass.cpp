@@ -24,7 +24,9 @@ void operator_plus_equal_past_end_is_illegal() {
   auto striv_it = striv.begin();
   TEST_LIBCPP_ASSERT_FAILURE(striv_it += 3, "Advancing the iterator beyond the end is not allowed.");
 }
-int main() {
+
+int main(int, char**) {
   operator_plus_equal_past_end_is_illegal();
+
   return 0;
 }
