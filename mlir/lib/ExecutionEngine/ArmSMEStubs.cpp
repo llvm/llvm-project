@@ -11,17 +11,17 @@
 #include <iostream>
 
 #ifdef _WIN32
-#ifndef MLIR_RUNNERUTILS_EXPORT
+#ifndef MLIR_ARMSMEABISTUBS_EXPORT
 #ifdef mlir_arm_sme_abi_stubs_EXPORTS
 // We are building this library
-#define MLIR_ARNSMEABISTUBS_EXPORT __declspec(dllexport)
+#define MLIR_ARMSMEABISTUBS_EXPORT __declspec(dllexport)
 #else
 // We are using this library
-#define MLIR_ARNSMEABISTUBS_EXPORT __declspec(dllimport)
-#endif // mlir_runner_utils_EXPORTS
-#endif // MLIR_RUNNERUTILS_EXPORT
+#define MLIR_ARMSMEABISTUBS_EXPORT __declspec(dllimport)
+#endif // mlir_arm_sme_abi_stubs_EXPORTS
+#endif // MLIR_ARMSMEABISTUBS_EXPORT
 #else
-#define MLIR_ARNSMEABISTUBS_EXPORT LLVM_ATTRIBUTE_WEAK
+#define MLIR_ARMSMEABISTUBS_EXPORT LLVM_ATTRIBUTE_WEAK
 #endif // _WIN32
 
 // The actual implementation of these routines is in:
@@ -33,7 +33,7 @@
 
 extern "C" {
 
-bool MLIR_ARNSMEABISTUBS_EXPORT __aarch64_sme_accessible() {
+bool MLIR_ARMSMEABISTUBS_EXPORT __aarch64_sme_accessible() {
   // The ArmSME tests are run within an emulator so we assume SME is available.
   return true;
 }
@@ -43,20 +43,20 @@ struct sme_state {
   int64_t x1;
 };
 
-sme_state MLIR_ARNSMEABISTUBS_EXPORT __arm_sme_state() {
+sme_state MLIR_ARMSMEABISTUBS_EXPORT __arm_sme_state() {
   std::cerr << "[warning] __arm_sme_state() stubbed!\n";
   return sme_state{};
 }
 
-void MLIR_ARNSMEABISTUBS_EXPORT __arm_tpidr2_restore() {
+void MLIR_ARMSMEABISTUBS_EXPORT __arm_tpidr2_restore() {
   std::cerr << "[warning] __arm_tpidr2_restore() stubbed!\n";
 }
 
-void MLIR_ARNSMEABISTUBS_EXPORT __arm_tpidr2_save() {
+void MLIR_ARMSMEABISTUBS_EXPORT __arm_tpidr2_save() {
   std::cerr << "[warning] __arm_tpidr2_save() stubbed!\n";
 }
 
-void MLIR_ARNSMEABISTUBS_EXPORT __arm_za_disable() {
+void MLIR_ARMSMEABISTUBS_EXPORT __arm_za_disable() {
   std::cerr << "[warning] __arm_za_disable() stubbed!\n";
 }
 }
