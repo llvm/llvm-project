@@ -339,6 +339,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_blockstore",
+    hdrs = ["src/__support/blockstore.h"],
+    deps = [
+        ":__support_cpp_new",
+        ":__support_libc_assert",
+    ],
+)
+
+libc_support_library(
     name = "__support_arg_list",
     hdrs = ["src/__support/arg_list.h"],
     deps = [
@@ -351,6 +360,22 @@ libc_support_library(
     hdrs = ["src/__support/c_string.h"],
     deps = [
         ":__support_cpp_string",
+    ],
+)
+
+libc_support_library(
+    name = "__support_fixedvector",
+    hdrs = ["src/__support/fixedvector.h"],
+    deps = [
+        ":__support_cpp_array",
+    ],
+)
+
+libc_support_library(
+    name = "__support_char_vector",
+    hdrs = ["src/__support/char_vector.h"],
+    deps = [
+        ":__support_common",
     ],
 )
 
