@@ -32,8 +32,13 @@ int main(int, char**)
 
   static_assert(!std::is_constructible<std::variant<int, bool>, decltype("meow")>::value, "");
   static_assert(!std::is_constructible<std::variant<int, const bool>, decltype("meow")>::value, "");
-
+#if defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
+  static_assert(!std::is_constructible<std::variant<int, const volatile bool>, decltype("meow")>::value, "");
+  static_assert(!std::is_constructible<std::variant<bool>, std::true_type>::value, "");
+#else
   static_assert(std::is_constructible<std::variant<bool>, std::true_type>::value, "");
+#endif
+
   static_assert(!std::is_constructible<std::variant<bool>, std::unique_ptr<char> >::value, "");
   static_assert(!std::is_constructible<std::variant<bool>, decltype(nullptr)>::value, "");
 

@@ -146,8 +146,13 @@ void test_T_assignment_sfinae() {
     };
     static_assert(!std::is_assignable<V, X>::value,
                   "no boolean conversion in operator=");
+#if defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
+    static_assert(!std::is_assignable<V, std::false_type>::value,
+                  "no converted to bool in operator=");
+#else
     static_assert(std::is_assignable<V, std::false_type>::value,
                   "converted to bool in operator=");
+#endif
   }
   {
     struct X {};
@@ -296,6 +301,7 @@ void test_T_assignment_performs_assignment() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
 
+#if !defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
 void test_T_assignment_vector_bool() {
   std::vector<bool> vec = {true};
   std::variant<bool, int> v;
@@ -303,6 +309,7 @@ void test_T_assignment_vector_bool() {
   assert(v.index() == 0);
   assert(std::get<0>(v) == true);
 }
+#endif
 
 int main(int, char**) {
   test_T_assignment_basic();
@@ -310,7 +317,9 @@ int main(int, char**) {
   test_T_assignment_performs_assignment();
   test_T_assignment_noexcept();
   test_T_assignment_sfinae();
+#if !defined(_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT)
   test_T_assignment_vector_bool();
+#endif
 
   return 0;
 }
