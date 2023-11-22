@@ -147,7 +147,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, sXLen}});
 
-  getActionDefinitionsBuilder(G_PTRMASK).customFor({{p0, sXLen}});
+  getActionDefinitionsBuilder(G_PTRMASK).lowerFor({{p0, sXLen}});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{sXLen, p0}})
@@ -290,25 +290,6 @@ bool RISCVLegalizerInfo::legalizeShlAshrLshr(
   return true;
 }
 
-bool RISCVLegalizerInfo::legalizePtrMask(MachineInstr &MI,
-                                         MachineIRBuilder &MIRBuilder,
-                                         GISelChangeObserver &Observer) const {
-  assert(MI.getOpcode() == TargetOpcode::G_PTRMASK);
-
-  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
-  Register Tmp1 =
-      MRI.createGenericVirtualRegister(MRI.getType(MI.getOperand(2).getReg()));
-  Register Tmp2 =
-      MRI.createGenericVirtualRegister(MRI.getType(MI.getOperand(2).getReg()));
-  MIRBuilder.buildPtrToInt(Tmp1, MI.getOperand(1).getReg());
-  MIRBuilder.buildAnd(Tmp2, Tmp1, MI.getOperand(2).getReg());
-  MIRBuilder.buildIntToPtr(MI.getOperand(0).getReg(), Tmp2);
-
-  Observer.erasingInstr(MI);
-  MI.eraseFromParent();
-  return true;
-}
-
 bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
                                         MachineInstr &MI) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
@@ -330,9 +311,6 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
   }
-  case TargetOpcode::G_PTRMASK:
-    return legalizePtrMask(MI, MIRBuilder, Observer);
   }
-
   llvm_unreachable("expected switch to return");
 }

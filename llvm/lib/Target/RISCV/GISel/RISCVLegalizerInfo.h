@@ -31,9 +31,6 @@ public:
 private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
-
-  bool legalizePtrMask(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                       GISelChangeObserver &Observer) const;
 };
 } // end namespace llvm
 #endif

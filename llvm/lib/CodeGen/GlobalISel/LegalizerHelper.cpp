@@ -3780,6 +3780,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
+  case G_PTRMASK:
+    return lowerPtrMask(MI);
   }
 }
 
@@ -8404,4 +8406,21 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   if (Opc == TargetOpcode::G_MEMSET)
     return lowerMemset(MI, Dst, Src, KnownLen, DstAlign, IsVolatile);
   return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerPtrMask(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTRMASK);
+
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  Register Tmp1 =
+      MRI.createGenericVirtualRegister(MRI.getType(MI.getOperand(2).getReg()));
+  Register Tmp2 =
+      MRI.createGenericVirtualRegister(MRI.getType(MI.getOperand(2).getReg()));
+  MIRBuilder.buildPtrToInt(Tmp1, MI.getOperand(1).getReg());
+  MIRBuilder.buildAnd(Tmp2, Tmp1, MI.getOperand(2).getReg());
+  MIRBuilder.buildIntToPtr(MI.getOperand(0).getReg(), Tmp2);
+
+  MI.eraseFromParent();
+  return Legalized;
 }
