@@ -25,12 +25,13 @@
 #include <complex>
 #include <cassert>
 
+template <typename T>
 constexpr bool test() {
   // T&
   {
-    std::complex<double> c(-1, 1);
-    static_assert(std::is_same_v<decltype(std::get<0>(c)), double&>);
-    static_assert(std::is_same_v<decltype(std::get<1>(c)), double&>);
+    std::complex<T> c(-1, 1);
+    static_assert(std::is_same_v<decltype(std::get<0>(c)), T&>);
+    static_assert(std::is_same_v<decltype(std::get<1>(c)), T&>);
     assert(std::get<0>(c) == -1);
     assert(std::get<1>(c) == 1);
 
@@ -44,27 +45,27 @@ constexpr bool test() {
 
   // const T&
   {
-    const std::complex<double> c(-1, 1);
-    static_assert(std::is_same_v<decltype(std::get<0>(c)), const double&>);
-    static_assert(std::is_same_v<decltype(std::get<1>(c)), const double&>);
+    const std::complex<T> c(-1, 1);
+    static_assert(std::is_same_v<decltype(std::get<0>(c)), const T&>);
+    static_assert(std::is_same_v<decltype(std::get<1>(c)), const T&>);
     assert(std::get<0>(c) == -1);
     assert(std::get<1>(c) == 1);
   }
 
   // T&&
   {
-    std::complex<double> c1(-1, 1), c2(-2, 2);
-    static_assert(std::is_same_v<decltype(std::get<0>(std::move(c1))), double&&>);
-    static_assert(std::is_same_v<decltype(std::get<1>(std::move(c1))), double&&>);
+    std::complex<T> c1(-1, 1), c2(-2, 2);
+    static_assert(std::is_same_v<decltype(std::get<0>(std::move(c1))), T&&>);
+    static_assert(std::is_same_v<decltype(std::get<1>(std::move(c1))), T&&>);
     assert(std::get<0>(std::move(c1)) == -1);
     assert(std::get<1>(std::move(c2)) == 2);
   }
 
   // const T&&
   {
-    const std::complex<double> c1(-1, 1), c2(-2, 2);
-    static_assert(std::is_same_v<decltype(std::get<0>(std::move(c1))), const double&&>);
-    static_assert(std::is_same_v<decltype(std::get<1>(std::move(c1))), const double&&>);
+    const std::complex<T> c1(-1, 1), c2(-2, 2);
+    static_assert(std::is_same_v<decltype(std::get<0>(std::move(c1))), const T&&>);
+    static_assert(std::is_same_v<decltype(std::get<1>(std::move(c1))), const T&&>);
     assert(std::get<0>(std::move(c1)) == -1);
     assert(std::get<1>(std::move(c2)) == 2);
   }
@@ -73,6 +74,10 @@ constexpr bool test() {
 }
 
 int main() {
-  test();
-  static_assert(test());
+  test<double>();
+  test<float>();
+  test<long double>();
+  static_assert(test<double>());
+  static_assert(test<float>());
+  static_assert(test<long double>());
 }
