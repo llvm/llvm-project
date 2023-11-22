@@ -408,8 +408,8 @@ static void genEndInsert(OpBuilder &builder, Location loc,
         builder.setInsertionPointAfter(loop);
       }
     } else {
-      assert(isDenseLT(lt) || isLooseCompressedLT(lt) ||
-             isSingletonLT(lt) || is2OutOf4LT(lt));
+      assert(isDenseLT(lt) || isLooseCompressedLT(lt) || isSingletonLT(lt) ||
+             is2OutOf4LT(lt));
     }
   }
 }

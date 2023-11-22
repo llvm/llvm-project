@@ -247,9 +247,7 @@ constexpr bool isValidLT(DimLevelType lt) {
 }
 
 /// Check if the `DimLevelType` is the special undefined value.
-constexpr bool isUndefLT(DimLevelType lt) {
-  return lt == DimLevelType::Undef;
-}
+constexpr bool isUndefLT(DimLevelType lt) { return lt == DimLevelType::Undef; }
 
 /// Check if the `DimLevelType` is dense (regardless of properties).
 constexpr bool isDenseLT(DimLevelType lt) {
@@ -288,8 +286,8 @@ constexpr bool isWithPosLT(DimLevelType lt) {
 
 /// Check if the `DimLevelType` needs coordinates array.
 constexpr bool isWithCrdLT(DimLevelType lt) {
-  return isCompressedLT(lt) || isSingletonLT(lt) ||
-         isLooseCompressedLT(lt) || is2OutOf4LT(lt);
+  return isCompressedLT(lt) || isSingletonLT(lt) || isLooseCompressedLT(lt) ||
+         is2OutOf4LT(lt);
 }
 
 /// Check if the `DimLevelType` is ordered (regardless of storage format).
@@ -316,7 +314,7 @@ constexpr std::optional<LevelFormat> getLevelFormat(DimLevelType lt) {
 constexpr std::optional<DimLevelType>
 buildLevelType(LevelFormat lf, bool ordered, bool unique) {
   auto lt = static_cast<DimLevelType>(static_cast<uint8_t>(lf) |
-                                       (ordered ? 0 : 2) | (unique ? 0 : 1));
+                                      (ordered ? 0 : 2) | (unique ? 0 : 1));
   return isValidLT(lt) ? std::optional(lt) : std::nullopt;
 }
 

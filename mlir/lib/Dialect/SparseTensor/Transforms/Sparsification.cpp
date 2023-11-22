@@ -981,8 +981,8 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
       }
       needsUniv = true;
     }
-    if (isCompressedLT(lt) || isSingletonLT(lt) ||
-        isLooseCompressedLT(lt) || is2OutOf4LT(lt) || isIdxReduc) {
+    if (isCompressedLT(lt) || isSingletonLT(lt) || isLooseCompressedLT(lt) ||
+        is2OutOf4LT(lt) || isIdxReduc) {
       // Only when this is a index reduction loop, can the lt be undefined.
       assert(!isUndefLT(lt) || isIdxReduc);
       // sparse/singleton levels, or a dense/sparse index reduction loop.

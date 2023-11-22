@@ -121,9 +121,7 @@ public:
   }
 
   /// Safely checks if the level uses singleton storage.
-  bool isSingletonLvl(uint64_t l) const {
-    return isSingletonLT(getLvlType(l));
-  }
+  bool isSingletonLvl(uint64_t l) const { return isSingletonLT(getLvlType(l)); }
 
   /// Safely checks if the level uses 2 out of 4 storage.
   bool is2OutOf4Lvl(uint64_t l) const { return is2OutOf4LT(getLvlType(l)); }
