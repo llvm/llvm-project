@@ -54,8 +54,7 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
                                                        kSanitizerStatKindBits)),
            PtrTy)}));
 
-  FunctionType *StatReportTy =
-      FunctionType::get(B.getVoidTy(), PtrTy, false);
+  FunctionType *StatReportTy = FunctionType::get(B.getVoidTy(), PtrTy, false);
   FunctionCallee StatReport =
       M->getOrInsertFunction("__sanitizer_stat_report", StatReportTy);
 
