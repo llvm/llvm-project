@@ -149,8 +149,9 @@ Error XCOFFDumper::dumpFileAuxSym(XCOFFYAML::Symbol &Sym,
 Error XCOFFDumper::dumpStatAuxSym(XCOFFYAML::Symbol &Sym,
                                   const XCOFFSymbolRef &SymbolEntRef) {
   if (Sym.NumberOfAuxEntries != 1)
-    return createError("expected a single aux symbol for C_STAT, while got: " +
-                       Twine(Sym.NumberOfAuxEntries.value()));
+    return createError("failed to parse symbol \"" + Sym.SymbolName +
+                       "\": expected 1 aux symbol for C_STAT, while got " +
+                       Twine(static_cast<uint32_t>(*Sym.NumberOfAuxEntries)));
 
   const XCOFFSectAuxEntForStat *AuxEntPtr =
       getAuxEntPtr<XCOFFSectAuxEntForStat>(
@@ -249,7 +250,8 @@ Error XCOFFDumper::dumpAuxSyms(XCOFFYAML::Symbol &Sym,
       else if (Type == XCOFF::SymbolAuxType::AUX_EXCEPT)
         dumpExpAuxSym(Sym, AuxAddress);
       else
-        return createError("invalid auxiliary symbol type: " +
+        return createError("failed to parse symbol \"" + Sym.SymbolName +
+                           "\": invalid auxiliary symbol type: " +
                            Twine(static_cast<uint32_t>(Type)));
     } else
       dumpFuncAuxSym(Sym, AuxAddress);
@@ -262,8 +264,9 @@ Error XCOFFDumper::dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
                                    const XCOFFSymbolRef &SymbolEntRef) {
   if (Sym.NumberOfAuxEntries != 1)
     return createError(
-        "expected a single aux symbol for C_BLOCK or C_FCN, while got: " +
-        Twine(Sym.NumberOfAuxEntries.value()));
+        "failed to parse symbol \"" + Sym.SymbolName +
+        "\": expected 1 aux symbol for C_BLOCK or C_FCN, while got " +
+        Twine(static_cast<uint32_t>(*Sym.NumberOfAuxEntries)));
 
   uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
       SymbolEntRef.getEntryAddress(), 1);
@@ -288,8 +291,9 @@ Error XCOFFDumper::dumpBlockAuxSym(XCOFFYAML::Symbol &Sym,
 Error XCOFFDumper::dumpDwarfAuxSym(XCOFFYAML::Symbol &Sym,
                                    const XCOFFSymbolRef &SymbolEntRef) {
   if (Sym.NumberOfAuxEntries != 1)
-    return createError("expected a single aux symbol for C_DWARF, while got: " +
-                       Twine(Sym.NumberOfAuxEntries.value()));
+    return createError("failed to parse symbol \"" + Sym.SymbolName +
+                       "\": expected 1 aux symbol for C_DWARF, while got " +
+                       Twine(static_cast<uint32_t>(*Sym.NumberOfAuxEntries)));
 
   uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
       SymbolEntRef.getEntryAddress(), 1);

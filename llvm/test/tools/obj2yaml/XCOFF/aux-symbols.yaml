@@ -262,3 +262,60 @@ Symbols:
     AuxEntries:
       - Type:            AUX_SYM
         LineNum:         1
+
+## Check that error messages are reported appropriately.
+
+# RUN: yaml2obj %s --docnum=3 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR1
+# ERROR1: failed to parse symbol "SYM_STAT": expected 1 aux symbol for C_STAT, while got 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               SYM_STAT
+    StorageClass:       C_STAT
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_STAT
+      - Type: AUX_STAT
+
+# RUN: yaml2obj %s --docnum=4 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR2
+# ERROR2: failed to parse symbol "SYM_BLOCK": expected 1 aux symbol for C_BLOCK or C_FCN, while got 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               SYM_BLOCK
+    StorageClass:       C_BLOCK
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_SYM
+      - Type: AUX_SYM
+
+# RUN: yaml2obj %s --docnum=5 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR3
+# ERROR3: failed to parse symbol "SYM_DWARF": expected 1 aux symbol for C_DWARF, while got 2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               SYM_DWARF
+    StorageClass:       C_DWARF
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type: AUX_SECT
+      - Type: AUX_SECT
+
+# RUN: yaml2obj %s --docnum=6 -o - | not obj2yaml 2>&1 | FileCheck %s --check-prefix=ERROR4
+# ERROR4: failed to parse symbol "SYM_EXT": invalid auxiliary symbol type: 252
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Symbols:
+  - Name:         SYM_EXT
+    StorageClass: C_EXT
+    AuxEntries:
+      - Type: AUX_FILE
+      - Type: AUX_CSECT

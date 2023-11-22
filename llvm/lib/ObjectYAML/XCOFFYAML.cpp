@@ -298,9 +298,11 @@ void MappingTraits<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>>::mapping(
   IO.mapRequired("Type", AuxType);
   switch (AuxType) {
   case XCOFFYAML::AUX_EXCEPT:
-    if (!Is64)
+    if (!Is64) {
       IO.setError("an auxiliary symbol of type AUX_EXCEPT cannot be defined in "
                   "XCOFF32");
+      return;
+    }
     ResetAuxSym(new XCOFFYAML::ExcpetionAuxEnt());
     auxSymMapping(IO, *cast<XCOFFYAML::ExcpetionAuxEnt>(AuxSym.get()));
     break;
@@ -325,9 +327,11 @@ void MappingTraits<std::unique_ptr<XCOFFYAML::AuxSymbolEnt>>::mapping(
     auxSymMapping(IO, *cast<XCOFFYAML::SectAuxEntForDWARF>(AuxSym.get()));
     break;
   case XCOFFYAML::AUX_STAT:
-    if (Is64)
+    if (Is64) {
       IO.setError(
           "an auxiliary symbol of type AUX_STAT cannot be defined in XCOFF64");
+      return;
+    }
     ResetAuxSym(new XCOFFYAML::SectAuxEntForStat());
     auxSymMapping(IO, *cast<XCOFFYAML::SectAuxEntForStat>(AuxSym.get()));
     break;
