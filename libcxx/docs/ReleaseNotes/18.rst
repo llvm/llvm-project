@@ -120,6 +120,9 @@ LLVM 19
   Note that the ``_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION`` macro can be defined in LLVM 18 to eagerly remove
   the specialization and prepare code bases for the unconditional removal in LLVM 19.
 
+- The ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` macro that changed the behavior for narrowing conversions
+  in ``std::variant`` will be removed in LLVM 19.
+
 LLVM 20
 ~~~~~~~
 
