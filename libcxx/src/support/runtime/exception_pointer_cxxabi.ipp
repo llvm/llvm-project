@@ -11,27 +11,6 @@
 #error this header may only be used with libc++abi or libcxxrt
 #endif
 
-#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
-#    if defined(LIBCXXRT)
-extern "C"
-{
-    // Although libcxxrt defines these two (as an ABI-library should),
-    // it doesn't declare them in some versions.
-    void *__cxa_allocate_exception(size_t);
-    void __cxa_free_exception(void*);
-
-    // In libcxxrt this function is not marked as noexcept
-    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void*, std::type_info*, void(_LIBCXX_DTOR_FUNC *)(void*));
-}
-#    else
-extern "C"
-{
-    // In libcxxabi this function IS noexcept
-    _LIBCPP_WEAK __cxa_exception *__cxa_init_primary_exception(void*, std::type_info*, void(_LIBCXX_DTOR_FUNC *)(void*)) throw();
-}
-#    endif
-#  endif
-
 namespace std {
 
 exception_ptr::~exception_ptr() noexcept
@@ -56,20 +35,12 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
-#  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
+#  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
 void *exception_ptr::__init_native_exception(size_t size, type_info* tinfo, void (_LIBCXX_DTOR_FUNC* dest)(void*)) noexcept
 {
-    __cxa_exception *(*cxa_init_primary_exception_fn)(void*, std::type_info*, void(_LIBCXX_DTOR_FUNC*)(void*)) = __cxa_init_primary_exception;
-    if (cxa_init_primary_exception_fn != nullptr)
-    {
-        void* __ex = __cxa_allocate_exception(size);
-        (void)cxa_init_primary_exception_fn(__ex, tinfo, dest);
-        return __ex;
-    }
-    else
-    {
-        return nullptr;
-    }
+    void* __ex = __cxa_allocate_exception(size);
+    (void)__cxa_init_primary_exception(__ex, tinfo, dest);
+    return __ex;
 }
 
 void exception_ptr::__free_native_exception(void* thrown_object) noexcept

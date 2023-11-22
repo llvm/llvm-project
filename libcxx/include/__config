@@ -1030,10 +1030,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCXX_DTOR_FUNC
 #  endif
 
-#  if !defined(_LIBCPP_HAS_NO_EXCEPTIONS) && !defined(_LIBCPP_HAS_NO_RTTI) && !defined(__APPLE__)
-#    define _LIBCPP_EXCEPTION_PTR_DIRECT_INIT
-#  endif
-
 #  ifndef _LIBCPP_WEAK
 #    define _LIBCPP_WEAK __attribute__((__weak__))
 #  endif
