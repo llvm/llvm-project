@@ -8,64 +8,42 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// ranges
+// constexpr _View base() const& requires copy_constructible<_View>;
+// constexpr _View base() &&;
 
-// std::views::stride_view
-
-#include "test.h"
 #include <cassert>
 #include <ranges>
 
+#include "test.h"
+#include "test_iterators.h"
+
 template <typename T>
-concept can_call_base_on = requires(T t) { std::forward<T>(t).base(); };
+concept hasLValueQualifiedBase = requires(T&& t) { t.base(); };
 
 constexpr bool test() {
   int buff[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-  // Check the const& overload
   {
-    bool moved(false), copied(false);
-    MovedCopiedTrackedBasicView range(buff, buff + 8, &moved, &copied);
-    std::ranges::stride_view<MovedCopiedTrackedBasicView<int>> const view(std::move(range), 3);
-    assert(moved);
-    assert(!copied);
-    std::same_as<MovedCopiedTrackedBasicView<int>> decltype(auto) result = view.base();
-    assert(result.begin() == buff);
-    assert(result.end() == buff + 8);
+    using CopyableInputView = CopyableView<cpp17_input_iterator<int*>>;
+    auto str(std::ranges::stride_view<CopyableInputView>(
+        CopyableInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + 8)), 1));
+    assert(*str.base().begin() == *buff);
+    assert(*(std::move(str)).base().begin() == *buff);
+
+    ASSERT_SAME_TYPE(decltype(str.base()), CopyableInputView);
+    ASSERT_SAME_TYPE(decltype(std::move(str).base()), CopyableInputView);
+    static_assert(hasLValueQualifiedBase<decltype(str)>);
   }
 
-  // Check the && overload
   {
-    bool moved(false), copied(false);
-    MovedCopiedTrackedBasicView range(buff, buff + 8, &moved, &copied);
-    std::ranges::stride_view<MovedCopiedTrackedBasicView<int>> view(std::move(range), 3);
-    assert(moved);
-    assert(!copied);
-    std::same_as<MovedCopiedTrackedBasicView<int>> decltype(auto) result = std::move(view).base();
-    assert(result.begin() == buff);
-    assert(result.end() == buff + 8);
-  }
+    using MoveOnlyInputView = MoveOnlyView<cpp17_input_iterator<int*>>;
+    auto str(std::ranges::stride_view<MoveOnlyInputView>(
+        MoveOnlyInputView(cpp17_input_iterator<int*>(buff), cpp17_input_iterator<int*>(buff + 8)), 1));
+    assert(*(std::move(str)).base().begin() == *buff);
 
-  // Check the && overload (again)
-  {
-    bool moved(false), copied(false);
-    MovedCopiedTrackedBasicView range(buff, buff + 8, &moved, &copied);
-    std::same_as<MovedCopiedTrackedBasicView<int>> decltype(auto) result =
-        std::ranges::stride_view<MovedCopiedTrackedBasicView<int>>(std::move(range), 3).base();
-    assert(moved);
-    assert(!copied);
-    assert(result.begin() == buff);
-    assert(result.end() == buff + 8);
+    ASSERT_SAME_TYPE(decltype(std::move(str).base()), MoveOnlyInputView);
+    static_assert(!hasLValueQualifiedBase<decltype(str)>);
   }
-
-  // Ensure the const& overload is not considered when the base is not copy-constructible
-  {
-    static_assert(!can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>> const&>);
-    static_assert(!can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>>&>);
-    static_assert(can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>>&&>);
-    static_assert(can_call_base_on<std::ranges::stride_view<MovedOnlyTrackedBasicView<>>>);
-  }
-
   return true;
 }
 

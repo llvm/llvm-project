@@ -138,18 +138,34 @@ struct MoveOnlyView : std::ranges::view_base {
   T begin_;
   T end_;
 
-  constexpr MoveOnlyView(T b, T e) : begin_(b), end_(e) {}
+  constexpr explicit MoveOnlyView(T b, T e) : begin_(b), end_(e) {}
 
   constexpr MoveOnlyView(const MoveOnlyView&)            = delete;
   constexpr MoveOnlyView(MoveOnlyView&& other)           = default;
   constexpr MoveOnlyView& operator=(MoveOnlyView&&)      = default;
   constexpr MoveOnlyView& operator=(const MoveOnlyView&) = delete;
 
-  constexpr T begin() { return begin_; }
   constexpr T begin() const { return begin_; }
-  constexpr sentinel_wrapper<T> end() { return sentinel_wrapper<T>{end_}; }
   constexpr sentinel_wrapper<T> end() const { return sentinel_wrapper<T>{end_}; }
 };
+static_assert(std::ranges::view<MoveOnlyView<cpp17_input_iterator<int*>>>);
+static_assert(!std::copyable<MoveOnlyView<cpp17_input_iterator<int*>>>);
+
+template <std::input_iterator T, std::sentinel_for<T> S = sentinel_wrapper<T>>
+struct CopyableView : std::ranges::view_base {
+  T begin_;
+  T end_;
+
+  constexpr explicit CopyableView(T b, T e) : begin_(b), end_(e) {}
+
+  constexpr CopyableView(const CopyableView&)            = default;
+  constexpr CopyableView& operator=(const CopyableView&) = default;
+
+  constexpr T begin() const { return begin_; }
+  constexpr sentinel_wrapper<T> end() const { return sentinel_wrapper<T>{end_}; }
+};
+static_assert(std::ranges::view<CopyableView<cpp17_input_iterator<int*>>>);
+static_assert(std::copyable<CopyableView<cpp17_input_iterator<int*>>>);
 
 //TODO: Rename as View.
 template <std::input_iterator T, std::sentinel_for<T> S = sentinel_wrapper<T>>
