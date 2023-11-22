@@ -316,8 +316,6 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     Register GISFPCLASS = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
     const MachineOperand &ImmOp = MI.getOperand(2);
-    const unsigned XLen = STI.getXLen();
-    const LLT sXLen = LLT::scalar(XLen);
     MachineIRBuilder MIB(MI);
 
     // Turn LLVM IR's floating point classes to that in RISC-V,
