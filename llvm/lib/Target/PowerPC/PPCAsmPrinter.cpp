@@ -1663,7 +1663,7 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
     //   TLS variable address + Offset > 32KB.
 
     // The assembly that is printed is actually:
-    //  TLSVar[storageMappingClass]@le + Offset - Delta
+    //  TLSVar@le + Offset - Delta
     // where Delta is a multiple of 64KB: ((FinalAddress + 32768) & ~0xFFFF).
     ptrdiff_t OffsetDelta = Offset - ((FinalAddress + 32768) & ~0xFFFF);
     // Check that the total instruction displacement fits within [-32768,32768).

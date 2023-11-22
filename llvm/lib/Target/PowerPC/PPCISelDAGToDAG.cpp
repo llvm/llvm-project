@@ -7580,22 +7580,19 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   // InitialADDI is the addi feeding into N (also an addi), and the addi that
   // we want optimized out.
   SDValue InitialADDI = N->getOperand(0);
-  if (!InitialADDI.isMachineOpcode())
-    return;
-  if (InitialADDI.getMachineOpcode() != PPC::ADDI8)
+  if (!InitialADDI.isMachineOpcode() ||
+      (InitialADDI.getMachineOpcode() != PPC::ADDI8))
     return;
 
-  // The first operand of the InitialADDI will be the thread pointer.
+  // The first operand of the InitialADDI should be the thread pointer.
   // This transformation is only performed if the first operand of the
   // addi is the thread pointer.
   SDValue TPRegNode = InitialADDI.getOperand(0);
   RegisterSDNode *TPReg = dyn_cast_or_null<RegisterSDNode>(TPRegNode.getNode());
-  if (!TPReg)
-    return;
-  if (TPReg->getReg() != Subtarget.getThreadPointerRegister())
+  if (!TPReg || (TPReg->getReg() != Subtarget.getThreadPointerRegister()))
     return;
 
-  // The second operand of the InitialADDI will be a TargetGlobalTLSAddress,
+  // The second operand of the InitialADDI should be the global TLS address
   // (the local-exec TLS variable). We only perform the folding if the TLS
   // variable is the second operand.
   SDValue TLSVarNode = InitialADDI.getOperand(1);
@@ -7603,12 +7600,15 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
   if (!GA)
     return;
 
+  // The local-exec TLS variable should only have the MO_TPREL_FLAG target flag,
+  // so this optimization is not performed otherwise if the flag is not set.
   unsigned TargetFlags = GA->getTargetFlags();
   if ((TargetFlags & PPCII::MO_TPREL_FLAG) == 0)
     return;
+
   // The second operand of the addi that we want to preserve will be an
-  // immediate. We add this immediate together with the address of the TLS
-  // variable found in InitialADDI in order to preserve the correct TLS address
+  // immediate. We add this immediate, together with the address of the TLS
+  // variable found in InitialADDI, in order to preserve the correct TLS address
   // information during assembly printing.
   int Offset = N->getConstantOperandVal(1);
   TLSVarNode = DAG->getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA), MVT::i64,
