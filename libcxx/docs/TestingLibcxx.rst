@@ -330,13 +330,48 @@ additional headers.
           taken to make it work in earlier language versions.
 
 
-Additional reading
-------------------
+Test names
+----------
 
-The function ``CxxStandardLibraryTest`` in the file
-``libcxx/utils/libcxx/test/format.py`` has documentation about writing test. It
-explains the difference between the test named  ``foo.pass.cpp`` and named
-``foo.verify.cpp`` are.
+The names of test files have meaning for the libcxx-specific configuration of 
+Lit. A complete description can be found in the docstring for the function 
+``CxxStandardLibraryTest`` in the file ``libcxx/utils/libcxx/test/format.py``.
+
+For quick reference, here is an overview of some of the most useful patterns:
+
+.. list-table:: Lit Meaning of libcxx Test Filenames
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Name Pattern
+     - Meaning
+   * - ``FOO.pass.cpp``
+     - Compiles, links and runs successfully
+   * - ``FOO.pass.mm``
+     - Same as ``FOO.pass.cpp``, but for Objective-C++
+
+   * - ``FOO.compile.pass.cpp``
+     - Compiles successfully, link and run not attempted
+   * - ``FOO.compile.pass.mm``
+     - Same as ``FOO.compile.pass.cpp``, but for Objective-C++
+   * - ``FOO.compile.fail.cpp``
+     - Does not compile successfully
+
+   * - ``FOO.link.pass.cpp``
+     - Compiles and links successfully, run not attempted
+   * - ``FOO.link.pass.mm``
+     - Same as ``FOO.link.pass.cpp``, but for Objective-C++
+   * - ``FOO.link.fail.cpp``
+     - Compiles successfully, but fails to link
+
+   * - ``FOO.sh.<anything>``
+     - A builtin Lit Shell test
+
+   * - ``FOO.gen.<anything>``
+     - A ``.sh`` test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected by LLVM split-file, and each generated file leads to a separate Lit test that runs that file as defined by the test format. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties in the library.  Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
+
+   * - ``FOO.verify.cpp``
+     - Compiles with clang-verify. This type of test is automatically marked as UNSUPPORTED if the compiler does not support clang-verify.
 
 Benchmarks
 ==========
