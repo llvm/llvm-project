@@ -181,7 +181,8 @@ LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
 llvm::TypeSize
 LLVMArrayType::getTypeSizeInBits(const DataLayout &dataLayout,
                                  DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::Fixed(kBitsInByte * getTypeSize(dataLayout, params));
+  return llvm::TypeSize::getFixed(kBitsInByte *
+                                  getTypeSize(dataLayout, params));
 }
 
 llvm::TypeSize LLVMArrayType::getTypeSize(const DataLayout &dataLayout,
@@ -305,7 +306,7 @@ LLVMPointerType::getTypeSizeInBits(const DataLayout &dataLayout,
                                    DataLayoutEntryListRef params) const {
   if (std::optional<uint64_t> size =
           getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Size))
-    return llvm::TypeSize::Fixed(*size);
+    return llvm::TypeSize::getFixed(*size);
 
   // For other memory spaces, use the size of the pointer to the default memory
   // space.
@@ -492,7 +493,7 @@ LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
 llvm::TypeSize
 LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  auto structSize = llvm::TypeSize::Fixed(0);
+  auto structSize = llvm::TypeSize::getFixed(0);
   uint64_t structAlignment = 1;
   for (Type element : getBody()) {
     uint64_t elementAlignment =
