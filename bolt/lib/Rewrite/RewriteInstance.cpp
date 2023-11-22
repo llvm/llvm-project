@@ -742,6 +742,8 @@ Error RewriteInstance::run() {
 
   runOptimizationPasses();
 
+  finalizeMetadataPreEmit();
+
   emitAndLink();
 
   updateMetadata();
@@ -3414,6 +3416,10 @@ void RewriteInstance::emitAndLink() {
     outs() << "BOLT-INFO: cache metrics after emitting functions:\n";
     CacheMetrics::printAll(BC->getSortedFunctions());
   }
+}
+
+void RewriteInstance::finalizeMetadataPreEmit() {
+  MetadataManager.runFinalizersPreEmit();
 }
 
 void RewriteInstance::updateMetadata() {
