@@ -111,6 +111,16 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
+        name="has-latomic",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) { return 0; }
+          """,
+            ["-latomic"],
+        ),
+    ),
+    Feature(
         name="non-lockfree-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
