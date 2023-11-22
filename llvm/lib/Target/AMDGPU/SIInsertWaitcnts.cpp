@@ -1715,10 +1715,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
           BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT))
               .addImm(0);
       if (IsGFX10Plus) {
-        Builder = 
-          BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
-                         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-                         .addImm(0);
+        Builder =
+            BuildMI(Block, Iter, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
+                .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
+                .addImm(0);
       }
       OldWaitcntInstr = Builder.getInstr();
       Modified = true;
