@@ -952,8 +952,9 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   if (!StateNotFailed)
     return;
 
-  ProgramStateRef StateFailed = State->BindExpr(
-      CE, C.getLocationContext(), SVB.makeIntVal(-1, C.getASTContext().LongTy));
+  ProgramStateRef StateFailed =
+      State->BindExpr(CE, C.getLocationContext(),
+                      SVB.makeIntVal(*EofVal, C.getASTContext().LongTy));
 
   C.addTransition(StateNotFailed);
   C.addTransition(StateFailed);
