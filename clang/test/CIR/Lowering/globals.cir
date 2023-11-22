@@ -144,4 +144,6 @@ module {
   // MLIR:   %0 = cir.llvmir.zeroinit : !llvm.struct<"struct.Bar", (i32, i8)>
   // MLIR:   llvm.return %0 : !llvm.struct<"struct.Bar", (i32, i8)>
   // MLIR: }
+  cir.global common @comm = #cir.int<0> : !s32i
+  // MLIR: llvm.mlir.global common @comm(0 : i32) {addr_space = 0 : i32} : i32
 }
