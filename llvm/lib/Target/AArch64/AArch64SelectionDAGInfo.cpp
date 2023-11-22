@@ -140,8 +140,8 @@ static SDValue EmitUnrolledSetTag(SelectionDAG &DAG, const SDLoc &dl,
   unsigned OffsetScaled = 0;
   while (OffsetScaled < ObjSizeScaled) {
     if (ObjSizeScaled - OffsetScaled >= 2) {
-      SDValue AddrNode =
-          DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(OffsetScaled * 16), dl);
+      SDValue AddrNode = DAG.getMemBasePlusOffset(
+          Ptr, TypeSize::getFixed(OffsetScaled * 16), dl);
       SDValue St = DAG.getMemIntrinsicNode(
           OpCode2, dl, DAG.getVTList(MVT::Other),
           {Chain, TagSrc, AddrNode},
@@ -153,8 +153,8 @@ static SDValue EmitUnrolledSetTag(SelectionDAG &DAG, const SDLoc &dl,
     }
 
     if (ObjSizeScaled - OffsetScaled > 0) {
-      SDValue AddrNode =
-          DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(OffsetScaled * 16), dl);
+      SDValue AddrNode = DAG.getMemBasePlusOffset(
+          Ptr, TypeSize::getFixed(OffsetScaled * 16), dl);
       SDValue St = DAG.getMemIntrinsicNode(
           OpCode1, dl, DAG.getVTList(MVT::Other),
           {Chain, TagSrc, AddrNode},

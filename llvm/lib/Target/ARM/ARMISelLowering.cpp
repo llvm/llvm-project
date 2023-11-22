@@ -16644,7 +16644,7 @@ static SDValue PerformSplittingToNarrowingStores(StoreSDNode *St,
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
     unsigned NewOffset = i * NumElements * ToEltVT.getSizeInBits() / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue Extract =
         DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewFromVT, Trunc.getOperand(0),
@@ -16693,7 +16693,7 @@ static SDValue PerformSplittingMVETruncToNarrowingStores(StoreSDNode *St,
     unsigned NewOffset =
         i * FromVT.getVectorNumElements() * ToVT.getScalarSizeInBits() / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue Extract = Trunc.getOperand(i);
     SDValue Store = DAG.getTruncStore(
@@ -17773,7 +17773,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
     unsigned NewOffset = (i * NewFromVT.getSizeInBits()) / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue NewLoad =
         DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
@@ -18610,7 +18610,7 @@ SDValue ARMTargetLowering::PerformMVETruncCombine(
   if (!DCI.isAfterLegalizeDAG())
     return SDValue();
 
-  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::Fixed(16), Align(4));
+  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::getFixed(16), Align(4));
   int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   int NumIns = N->getNumOperands();
   assert((NumIns == 2 || NumIns == 4) &&
@@ -18687,7 +18687,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   for (unsigned i = 0; i < FromVT.getVectorNumElements() / NumElements; i++) {
     unsigned NewOffset = (i * NewFromVT.getSizeInBits()) / 8;
     SDValue NewPtr =
-        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::Fixed(NewOffset));
+        DAG.getObjectPtrOffset(DL, BasePtr, TypeSize::getFixed(NewOffset));
 
     SDValue NewLoad =
         DAG.getLoad(ISD::UNINDEXED, NewExtType, NewToVT, DL, Ch, NewPtr, Offset,
@@ -18778,7 +18778,7 @@ SDValue ARMTargetLowering::PerformMVEExtCombine(
 
   // Lower to a stack store and reload:
   //  VSTRW.32 a, stack; VLDRH.32 stack; VLDRH.32 stack+8;
-  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::Fixed(16), Align(4));
+  SDValue StackPtr = DAG.CreateStackTemporary(TypeSize::getFixed(16), Align(4));
   int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   int NumOuts = N->getNumValues();
   assert((NumOuts == 2 || NumOuts == 4) &&

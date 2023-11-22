@@ -1239,7 +1239,7 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
   } else {
     MPI = N->getPointerInfo().getWithOffset(IncrementSize);
     // Increment the pointer to the other half.
-    Ptr = DAG.getObjectPtrOffset(DL, Ptr, TypeSize::Fixed(IncrementSize));
+    Ptr = DAG.getObjectPtrOffset(DL, Ptr, TypeSize::getFixed(IncrementSize));
   }
 }
 
@@ -7207,7 +7207,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
   unsigned i = 0, Offset = Increment;
   for (i=1; i < NumElts; ++i, Offset += Increment) {
     SDValue NewBasePtr =
-        DAG.getObjectPtrOffset(dl, BasePtr, TypeSize::Fixed(Offset));
+        DAG.getObjectPtrOffset(dl, BasePtr, TypeSize::getFixed(Offset));
     Ops[i] = DAG.getExtLoad(ExtType, dl, EltVT, Chain, NewBasePtr,
                             LD->getPointerInfo().getWithOffset(Offset), LdEltVT,
                             LD->getOriginalAlign(), MMOFlags, AAInfo);

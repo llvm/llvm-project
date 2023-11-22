@@ -178,17 +178,17 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::Fixed(ST->is64Bit() ? 64 : 32);
+    return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
     if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
-      return TypeSize::Fixed(512);
+      return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
-      return TypeSize::Fixed(256);
+      return TypeSize::getFixed(256);
     if (ST->hasSSE1() && PreferVectorWidth >= 128)
-      return TypeSize::Fixed(128);
-    return TypeSize::Fixed(0);
+      return TypeSize::getFixed(128);
+    return TypeSize::getFixed(0);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::Scalable(0);
+    return TypeSize::getScalable(0);
   }
 
   llvm_unreachable("Unsupported register kind");

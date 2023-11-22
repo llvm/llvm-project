@@ -10980,7 +10980,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     EVT SrcVT = Src.ShuffleVec.getValueType();
 
     TypeSize SrcVTSize = SrcVT.getSizeInBits();
-    if (SrcVTSize == TypeSize::Fixed(VTSize))
+    if (SrcVTSize == TypeSize::getFixed(VTSize))
       continue;
 
     // This stage of the search produces a source with the same element type as
@@ -20977,7 +20977,7 @@ static SDValue performLOADCombine(SDNode *N,
   for (unsigned I = 0; I < Num256Loads; I++) {
     unsigned PtrOffset = I * 32;
     SDValue NewPtr = DAG.getMemBasePlusOffset(
-        BasePtr, TypeSize::Fixed(PtrOffset), DL, Flags);
+        BasePtr, TypeSize::getFixed(PtrOffset), DL, Flags);
     Align NewAlign = commonAlignment(LD->getAlign(), PtrOffset);
     SDValue NewLoad = DAG.getLoad(
         NewVT, DL, Chain, NewPtr, LD->getPointerInfo().getWithOffset(PtrOffset),
@@ -20995,8 +20995,8 @@ static SDValue performLOADCombine(SDNode *N,
   MVT RemainingVT = MVT::getVectorVT(
       MemVT.getVectorElementType().getSimpleVT(),
       BitsRemaining / MemVT.getVectorElementType().getSizeInBits());
-  SDValue NewPtr =
-      DAG.getMemBasePlusOffset(BasePtr, TypeSize::Fixed(PtrOffset), DL, Flags);
+  SDValue NewPtr = DAG.getMemBasePlusOffset(
+      BasePtr, TypeSize::getFixed(PtrOffset), DL, Flags);
   Align NewAlign = commonAlignment(LD->getAlign(), PtrOffset);
   SDValue RemainingLoad =
       DAG.getLoad(RemainingVT, DL, Chain, NewPtr,

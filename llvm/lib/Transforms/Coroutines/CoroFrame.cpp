@@ -1075,7 +1075,7 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
       RetType = CharSizeType;
     else {
       if (Size % 8 != 0)
-        Size = TypeSize::Fixed(Size + 8 - (Size % 8));
+        Size = TypeSize::getFixed(Size + 8 - (Size % 8));
 
       RetType = Builder.createArrayType(
           Size, Layout.getPrefTypeAlign(Ty).value(), CharSizeType,
