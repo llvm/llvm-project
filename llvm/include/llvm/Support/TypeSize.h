@@ -97,16 +97,14 @@ protected:
 
   constexpr FixedOrScalableQuantity() = default;
   constexpr FixedOrScalableQuantity(ScalarTy Quantity, bool Scalable)
-      : Quantity(Quantity), Scalable(Quantity ? Scalable : false) {}
+      : Quantity(Quantity), Scalable(Scalable) {}
 
   friend constexpr LeafTy &operator+=(LeafTy &LHS, const LeafTy &RHS) {
     assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
             LHS.Scalable == RHS.Scalable) &&
            "Incompatible types");
     LHS.Quantity += RHS.Quantity;
-    if (!LHS.Quantity)
-      LHS.Scalable = false;
-    else if (RHS.Quantity)
+    if (!RHS.isZero())
       LHS.Scalable = RHS.Scalable;
     return LHS;
   }
@@ -116,9 +114,7 @@ protected:
             LHS.Scalable == RHS.Scalable) &&
            "Incompatible types");
     LHS.Quantity -= RHS.Quantity;
-    if (!LHS.Quantity)
-      LHS.Scalable = false;
-    else if (RHS.Quantity)
+    if (!RHS.isZero())
       LHS.Scalable = RHS.Scalable;
     return LHS;
   }

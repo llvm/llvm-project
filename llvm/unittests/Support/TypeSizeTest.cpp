@@ -82,11 +82,13 @@ static_assert(UINT64_C(2) * TSFixed32 == TypeSize::getFixed(64));
 static_assert(alignTo(TypeSize::getFixed(7), 8) == TypeSize::getFixed(8));
 
 static_assert(TypeSize() == TypeSize::getFixed(0));
-static_assert(TypeSize() == TypeSize::getScalable(0));
-static_assert(TypeSize::getFixed(0) == TypeSize::getScalable(0));
+static_assert(TypeSize::getFixed(0) != TypeSize::getScalable(0));
+static_assert(TypeSize::getFixed(0).isZero());
+static_assert(TypeSize::getScalable(0).isZero());
 static_assert(TypeSize::getFixed(0) ==
+              (TypeSize::getFixed(4) - TypeSize::getFixed(4)));
+static_assert(TypeSize::getScalable(0) ==
               (TypeSize::getScalable(4) - TypeSize::getScalable(4)));
-static_assert(!TypeSize().isScalable());
 static_assert(TypeSize::getFixed(0) + TypeSize::getScalable(8) ==
               TypeSize::getScalable(8));
 static_assert(TypeSize::getScalable(8) + TypeSize::getFixed(0) ==
