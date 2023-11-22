@@ -27,7 +27,8 @@ void stride_view_over_only_input_ranges() {
       [&range] { std::ranges::stride_view sv(range, -1); }(), "The value of stride must be greater than 0");
 }
 
-int main() {
+int main(int, char**) {
   stride_view_over_only_input_ranges();
+
   return 0;
 }
