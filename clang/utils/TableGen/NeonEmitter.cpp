@@ -593,6 +593,8 @@ public:
   // Emit arm_bf16.h.inc
   void runBF16(raw_ostream &o);
 
+  void runVectorType(raw_ostream &o);
+
   // Emit all the __builtin prototypes used in arm_neon.h, arm_fp16.h and
   // arm_bf16.h
   void runHeader(raw_ostream &o);
@@ -2531,6 +2533,44 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
   OS << "#endif /* __ARM_FP16_H */\n";
 }
 
+void NeonEmitter::runVectorType(raw_ostream &OS) {
+  OS << "/*===---- arm_vector_type - ARM vector type "
+        "------===\n"
+        " *\n"
+        " *\n"
+        " * Part of the LLVM Project, under the Apache License v2.0 with LLVM "
+        "Exceptions.\n"
+        " * See https://llvm.org/LICENSE.txt for license information.\n"
+        " * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception\n"
+        " *\n"
+        " *===-----------------------------------------------------------------"
+        "------===\n"
+        " */\n\n";
+  OS << "#ifndef __ARM_NEON_TYPES_H\n";
+  OS << "#define __ARM_NEON_TYPES_H\n";
+  OS << "#ifdef __cplusplus\n";
+  OS << "extern \"C\" {\n";
+  OS << "#endif\n";
+  OS << "#ifndef __ARM_NEON_H\n";
+
+  std::string TypedefTypes("QcQsQiQlQUcQUsQUiQUlQhQfQdQb");
+  std::vector<TypeSpec> TDTypeVec = TypeSpec::fromTypeSpecs(TypedefTypes);
+  for (auto &TS : TDTypeVec) {
+    Type T(TS, ".");
+    OS << "typedef __attribute__((vector_size(16))) ";
+
+    Type T2 = T;
+    T2.makeScalar();
+    OS << T2.str();
+    OS << " " << T.str() << ";\n";
+  }
+  OS << "#endif\n";
+  OS << "#ifdef __cplusplus\n";
+  OS << "} // extern \"C\"\n";
+  OS << "#endif\n";
+  OS << "#endif //__ARM_NEON_TYPES_H\n";
+}
+
 void NeonEmitter::runBF16(raw_ostream &OS) {
   OS << "/*===---- arm_bf16.h - ARM BF16 intrinsics "
         "-----------------------------------===\n"
@@ -2623,6 +2663,10 @@ void clang::EmitBF16(RecordKeeper &Records, raw_ostream &OS) {
 
 void clang::EmitNeonSema(RecordKeeper &Records, raw_ostream &OS) {
   NeonEmitter(Records).runHeader(OS);
+}
+
+void clang::EmitVectorType(RecordKeeper &Records, raw_ostream &OS) {
+  NeonEmitter(Records).runVectorType(OS);
 }
 
 void clang::EmitNeonTest(RecordKeeper &Records, raw_ostream &OS) {
