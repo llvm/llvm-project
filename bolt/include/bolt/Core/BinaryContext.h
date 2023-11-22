@@ -1231,8 +1231,8 @@ public:
   /// Return the pair where the first size is for the main part, and the second
   /// size is for the cold one.
   /// Modify BinaryBasicBlock::OutputAddressRange for each basic block in the
-  /// function in place so that BB.OutputAddressRange.second less
-  /// BB.OutputAddressRange.first gives the emitted size of BB.
+  /// function in place so that BinaryBasicBlock::getOutputSize() gives the
+  /// emitted size of the basic block.
   std::pair<size_t, size_t> calculateEmittedSize(BinaryFunction &BF,
                                                  bool FixBranches = true);
 

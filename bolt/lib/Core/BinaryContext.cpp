@@ -2347,9 +2347,9 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   }
 
   // Populate new start and end offsets of each basic block.
-  BinaryBasicBlock *PrevBB = nullptr;
   uint64_t FragmentIndex = 0;
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    BinaryBasicBlock *PrevBB = nullptr;
     for (BinaryBasicBlock *BB : FF) {
       const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
       BB->setOutputStartAddress(BBStartOffset);
@@ -2360,7 +2360,6 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     if (PrevBB)
       PrevBB->setOutputEndAddress(FragmentSizes[FragmentIndex]);
     FragmentIndex++;
-    PrevBB = nullptr;
   }
 
   // Clean-up the effect of the code emission.
