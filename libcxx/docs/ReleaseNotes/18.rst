@@ -87,15 +87,15 @@ Deprecations and Removals
   macro is provided to restore the previous behavior, and it will be supported in the LLVM 18 release only.
   In LLVM 19 and beyond, ``_LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT`` will not be honored anymore.
 
+- The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro is not honored anymore in LLVM 18.
+  Please see the updated documentation about the hardening modes in libc++ and in particular the
+  ``_LIBCPP_VERBOSE_ABORT`` macro for details.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
 LLVM 18
 ~~~~~~~
-
-- The ``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro will not be honored anymore in LLVM 18.
-  Please see the updated documentation about the hardening modes in libc++ and in particular the
-  ``_LIBCPP_VERBOSE_ABORT`` macro for details.
 
 - The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
   ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,

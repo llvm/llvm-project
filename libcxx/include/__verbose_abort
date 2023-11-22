@@ -38,13 +38,6 @@ void __libcpp_verbose_abort(const char *__format, ...);
 // make sure that the program terminates but without taking any complex dependencies in this header.
 #if !defined(_LIBCPP_VERBOSE_ABORT)
 
-// Support _LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED until LLVM 18, but tell people
-// to move to customizing _LIBCPP_VERBOSE_ABORT instead.
-#  if defined(_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT) && defined(_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED)
-#    undef _LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT
-#    warning _LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED is deprecated, please customize _LIBCPP_VERBOSE_ABORT instead
-#  endif
-
 #  if defined(_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT)
 // The decltype is there to suppress -Wunused warnings in this configuration.
 void __use(const char*, ...);
