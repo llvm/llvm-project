@@ -1410,11 +1410,8 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   // which can not be deleted, cause a mul instruction has far more weight than
   // add and shl instruction in IR, thus this method cannot achieve the goal of
   // simplifying instructions, just return null.
-  if ((!I.getOperand(0)->hasOneUser() || !I.getOperand(1)->hasOneUser()))
-    return nullptr;
-
   if (!match(&I, m_c_Add(m_Shl(m_Value(CrossSum), m_SpecificInt(HalfBits)),
-                         m_Mul(m_Value(YLo), m_Value(XLo)))))
+                         m_OneUse(m_Mul(m_Value(YLo), m_Value(XLo))))))
     return nullptr;
 
   // XLo = X & HalfMask
