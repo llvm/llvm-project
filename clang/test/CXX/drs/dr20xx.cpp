@@ -61,6 +61,14 @@ namespace dr2026 { // dr2026: 11
   }
 }
 
+namespace dr2049 { // dr2049: 18 drafting
+#if __cplusplus > 202002L
+template <int* x = {}> struct X {};
+X<> a;
+X<nullptr> b;
+#endif
+}
+
 namespace dr2061 { // dr2061: yes
 #if __cplusplus >= 201103L
   namespace A {

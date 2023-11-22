@@ -6226,6 +6226,15 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
   return R;
 }
 
+ExprResult Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T,
+                                                     APValue &Value,
+                                                     Sema::CCEKind CCE,
+                                                     bool RequireInt) {
+
+  APValue PreNarrowingValue;
+  return ::EvaluateConvertedConstantExpression(*this, E, T, Value, CCE,
+                                               RequireInt, PreNarrowingValue);
+}
 
 /// dropPointerConversions - If the given standard conversion sequence
 /// involves any pointer conversions, remove them.  This may change
