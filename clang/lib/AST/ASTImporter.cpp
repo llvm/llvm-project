@@ -6378,10 +6378,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
         // variable.
         return Importer.MapImported(D, FoundDef);
       }
-      // FIXME HandleNameConflict
-      return make_error<ASTImportError>(ASTImportError::NameConflict);
     }
-    return Importer.MapImported(D, D2);
   } else {
     TemplateArgumentListInfo ToTAInfo;
     if (const ASTTemplateArgumentListInfo *Args = D->getTemplateArgsInfo()) {
