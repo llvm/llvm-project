@@ -23748,6 +23748,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ld1_gather:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
+    case Intrinsic::aarch64_sve_ld1q_gather_vector_offset:
       return performGatherLoadCombine(N, DAG, AArch64ISD::GLD1Q_MERGE_ZERO);
     case Intrinsic::aarch64_sve_ld1q_gather_index:
       return performGatherLoadCombine(N, DAG,
@@ -23796,6 +23797,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performGatherLoadCombine(N, DAG,
                                       AArch64ISD::GLDFF1_IMM_MERGE_ZERO);
     case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
+    case Intrinsic::aarch64_sve_st1q_scatter_vector_offset:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1Q_PRED);
     case Intrinsic::aarch64_sve_st1q_scatter_index:
       return performScatterStoreCombine(N, DAG, AArch64ISD::SST1Q_INDEX_PRED);
