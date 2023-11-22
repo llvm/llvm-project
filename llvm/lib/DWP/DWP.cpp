@@ -593,7 +593,7 @@ Error handleSection(
 }
 
 Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            const OnCuIndexOverflow &OverflowOptValue) {
+            OnCuIndexOverflow OverflowOptValue) {
   const auto &MCOFI = *Out.getContext().getObjectFileInfo();
   MCSection *const StrSection = MCOFI.getDwarfStrDWOSection();
   MCSection *const StrOffsetSection = MCOFI.getDwarfStrOffDWOSection();

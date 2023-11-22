@@ -125,7 +125,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   DwpOptTable Tbl;
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
-  OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::HardStop;
+  OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::Continue;
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -144,12 +144,14 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   }
 
   OutputFilename = Args.getLastArgValue(OPT_outputFileName, "");
-  ContinueOption =
+  if (Args.hasArg(OPT_continueOnCuIndexOverflow)) {
+    ContinueOption =
       Args.getLastArgValue(OPT_continueOnCuIndexOverflow, "hard-stop");
-  if (ContinueOption == "soft-stop") {
-    OverflowOptValue = OnCuIndexOverflow::SoftStop;
-  } else if (ContinueOption == "continue") {
-    OverflowOptValue = OnCuIndexOverflow::Continue;
+    if (ContinueOption == "soft-stop") {
+      OverflowOptValue = OnCuIndexOverflow::SoftStop;
+    } else {
+      ContinueOption = OnCuIndexOverflow::Continue;
+    }
   }
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_execFileNames))
