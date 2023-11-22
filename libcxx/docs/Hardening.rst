@@ -24,7 +24,7 @@ modes are:
   additionally some checks for undefined behavior that incur relatively little
   overhead but aren't security-critical. While the performance penalty is
   somewhat more significant compared to the fast mode, the extensive mode is
-  still intended to be usable in production.
+  still intended for use in production builds.
 - **Debug mode**, which enables all the available checks in the library,
   including internal assertions, some of which might be very expensive. This
   mode is intended to be used for testing, not in production.
