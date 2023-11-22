@@ -330,7 +330,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[3] = GPRValueMapping;
     break;
   case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI: {
+  case TargetOpcode::G_FPTOUI:
+  case RISCV::G_FCLASS: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[1] = getFPValueMapping(Ty.getSizeInBits());
@@ -351,12 +352,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);
-    break;
-  }
-  case TargetOpcode::G_IS_FPCLASS: {
-    LLT FPTy = MRI.getType(MI.getOperand(1).getReg());
-    OperandsMapping = getOperandsMapping(
-        {GPRValueMapping, getFPValueMapping(FPTy.getSizeInBits()), nullptr});
     break;
   }
   default:

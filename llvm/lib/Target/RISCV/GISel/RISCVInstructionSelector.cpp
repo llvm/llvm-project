@@ -72,8 +72,6 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
-  bool selectIsFPClass(MachineInstr &MI, MachineIRBuilder &MIB,
-                       MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -396,7 +394,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI, MIB, MRI);
   const unsigned Opc = MI.getOpcode();
 
-  if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
+  if (!MI.isPreISelOpcode() || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
       const Register DefReg = MI.getOperand(0).getReg();
       const LLT DefTy = MRI.getType(DefReg);
@@ -566,8 +564,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
-  case TargetOpcode::G_IS_FPCLASS:
-    return selectIsFPClass(MI, MIB, MRI);
   default:
     return false;
   }
@@ -1096,65 +1092,6 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
   if (NeedInvert) {
     auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
     if (!Xor.constrainAllUses(TII, TRI, RBI))
-      return false;
-  }
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool RISCVInstructionSelector::selectIsFPClass(MachineInstr &MI,
-                                               MachineIRBuilder &MIB,
-                                               MachineRegisterInfo &MRI) const {
-  Register GISFPCLASS = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  const MachineOperand &ImmOp = MI.getOperand(2);
-  const unsigned XLen = STI.getXLen();
-  unsigned NewOpc = MRI.getType(Src).getSizeInBits() == 32 ? RISCV::FCLASS_S
-                                                           : RISCV::FCLASS_D;
-
-  // Turn LLVM IR's floating point classes to that in RISC-V,
-  // by simply rotating the 10-bit immediate right by two bits.
-  APInt GFpClassImm(10, static_cast<uint64_t>(ImmOp.getImm()));
-  APInt FClassMask = GFpClassImm.rotr(2).zext(XLen);
-
-  Register FClassResult = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-  // Insert FCLASS_S/D.
-  auto FClass = MIB.buildInstr(NewOpc, {FClassResult}, {Src});
-  if (!FClass.constrainAllUses(TII, TRI, RBI))
-    return false;
-
-  if (FClassMask == 1) {
-    // If Mask is 1, we don't need to generate additional instructions
-    // other than `ANDI rs, 1`, which will likely be folded into an identical
-    // one commonly generated for G_IS_FPCLASS's users.
-    auto And =
-        MIB.buildInstr(RISCV::ANDI, {GISFPCLASS}, {FClassResult}).addImm(1U);
-    if (!And.constrainAllUses(TII, TRI, RBI))
-      return false;
-  } else if (FClassMask.popcount() == 1) {
-    // If there is only a single bit set in the mask, lower to SLLI + SRLI.
-    auto SLLI =
-        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {FClassResult})
-            .addImm(FClassMask.countl_zero());
-    if (!SLLI.constrainAllUses(TII, TRI, RBI))
-      return false;
-    auto SRLI = MIB.buildInstr(RISCV::SRLI, {GISFPCLASS}, {SLLI.getReg(0)})
-                    .addImm(XLen - 1);
-    if (!SRLI.constrainAllUses(TII, TRI, RBI))
-      return false;
-  } else {
-    // Otherwise, lower to ANDI + SNEZ.
-    auto And =
-        MIB.buildInstr(RISCV::ANDI, {&RISCV::GPRRegClass}, {FClassResult})
-            .addImm(FClassMask.getLimitedValue());
-    if (!And.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    Register Zero = RISCV::X0;
-    auto SNEZ =
-        MIB.buildInstr(RISCV::SLTU, {GISFPCLASS}, {Zero, And.getReg(0)});
-    if (!SNEZ.constrainAllUses(TII, TRI, RBI))
       return false;
   }
 
