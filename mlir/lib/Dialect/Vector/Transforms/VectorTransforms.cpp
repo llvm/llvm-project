@@ -1402,7 +1402,7 @@ struct FoldArithExtIntoContractionOp
   }
 };
 
-/// Pattern to fold chained to reduction to a series of vector additions and a
+/// Pattern to fold chained reduction to a series of vector additions and a
 /// final reduction. This form should require fewer subgroup operations.
 ///
 /// ```mlir

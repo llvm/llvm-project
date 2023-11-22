@@ -148,8 +148,10 @@ void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
                                          PatternBenefit benefit = 1);
 
 /// Patterns that fold chained vector reductions. These patterns assume that
-/// vector addition (e.g., `arith.addf` with vector operands) is cheaper than
-/// vector reduction.
+/// elementwise operations (e.g., `arith.addf` with vector operands) are
+/// cheaper than vector reduction.
+/// Note that these patterns change the order of reduction which may not always
+/// produce bit-identical results on some floating point inputs.
 ///
 /// Example:
 /// ```
