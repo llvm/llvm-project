@@ -6165,7 +6165,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
-        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags,
+        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
         "omp_offloading_entries");
     return;
   }

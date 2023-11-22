@@ -80,24 +80,33 @@
 // CUDA-NEXT:   br i1 icmp ne (ptr @__start_cuda_offloading_entries, ptr @__stop_cuda_offloading_entries), label %while.entry, label %while.end
 
 //      CUDA: while.entry:
-// CUDA-NEXT:  %entry1 = phi ptr [ @__start_cuda_offloading_entries, %entry ], [ %7, %if.end ]
-// CUDA-NEXT:  %1 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 0
-// CUDA-NEXT:  %addr = load ptr, ptr %1, align 8
-// CUDA-NEXT:  %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 1
-// CUDA-NEXT:  %name = load ptr, ptr %2, align 8
-// CUDA-NEXT:  %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 2
-// CUDA-NEXT:  %size = load i64, ptr %3, align 4
-// CUDA-NEXT:  %4 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 3
-// CUDA-NEXT:  %flag = load i32, ptr %4, align 4
-// CUDA-NEXT:  %5 = icmp eq i64 %size, 0
-// CUDA-NEXT:  br i1 %5, label %if.then, label %if.else
+// CUDA-NEXT:   %entry1 = phi ptr [ @__start_cuda_offloading_entries, %entry ], [ %11, %if.end ]
+// CUDA-NEXT:   %1 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 0
+// CUDA-NEXT:   %addr = load ptr, ptr %1, align 8
+// CUDA-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 1
+// CUDA-NEXT:   %name = load ptr, ptr %2, align 8
+// CUDA-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 2
+// CUDA-NEXT:   %size = load i64, ptr %3, align 4
+// CUDA-NEXT:   %4 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 3
+// CUDA-NEXT:   %flags = load i32, ptr %4, align 4
+// CUDA-NEXT:   %5 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 4
+// CUDA-NEXT:   %textype = load i32, ptr %4, align 4
+// CUDA-NEXT:   %type = and i32 %flags, 7
+// CUDA-NEXT:   %6 = and i32 %flags, 8
+// CUDA-NEXT:   %extern = lshr i32 %6, 3
+// CUDA-NEXT:   %7 = and i32 %flags, 16
+// CUDA-NEXT:   %constant = lshr i32 %7, 4
+// CUDA-NEXT:   %8 = and i32 %flags, 32
+// CUDA-NEXT:   %normalized = lshr i32 %8, 5
+// CUDA-NEXT:   %9 = icmp eq i64 %size, 0
+// CUDA-NEXT:   br i1 %9, label %if.then, label %if.else
 
 //      CUDA: if.then:
-// CUDA-NEXT:   %6 = call i32 @__cudaRegisterFunction(ptr %0, ptr %addr, ptr %name, ptr %name, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
+// CUDA-NEXT:   %10 = call i32 @__cudaRegisterFunction(ptr %0, ptr %addr, ptr %name, ptr %name, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: if.else:
-// CUDA-NEXT:   switch i32 %flag, label %if.end [
+// CUDA-NEXT:   switch i32 %type, label %if.end [
 // CUDA-NEXT:     i32 0, label %sw.global
 // CUDA-NEXT:     i32 1, label %sw.managed
 // CUDA-NEXT:     i32 2, label %sw.surface
@@ -105,22 +114,24 @@
 // CUDA-NEXT:   ]
 
 //      CUDA: sw.global:
-// CUDA-NEXT:   call void @__cudaRegisterVar(ptr %0, ptr %addr, ptr %name, ptr %name, i32 0, i64 %size, i32 0, i32 0)
+// CUDA-NEXT:   call void @__cudaRegisterVar(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %extern, i64 %size, i32 %constant, i32 0)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.managed:
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.surface:
+// CUDA-NEXT:   call void @__cudaRegisterSurface(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %extern)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: sw.texture:
+// CUDA-NEXT:   call void @__cudaRegisterTexture(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %normalized, i32 %extern)
 // CUDA-NEXT:   br label %if.end
 
 //      CUDA: if.end:
-// CUDA-NEXT:   %7 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
-// CUDA-NEXT:   %8 = icmp eq ptr %7, @__stop_cuda_offloading_entries
-// CUDA-NEXT:   br i1 %8, label %while.end, label %while.entry
+// CUDA-NEXT:   %11 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
+// CUDA-NEXT:   %12 = icmp eq ptr %11, @__stop_cuda_offloading_entries
+// CUDA-NEXT:   br i1 %12, label %while.end, label %while.entry
 
 //      CUDA: while.end:
 // CUDA-NEXT:   ret void
@@ -168,7 +179,7 @@
 // HIP-NEXT:   br i1 icmp ne (ptr @__start_hip_offloading_entries, ptr @__stop_hip_offloading_entries), label %while.entry, label %while.end
 
 //      HIP: while.entry:
-// HIP-NEXT:   %entry1 = phi ptr [ @__start_hip_offloading_entries, %entry ], [ %7, %if.end ]
+// HIP-NEXT:   %entry1 = phi ptr [ @__start_hip_offloading_entries, %entry ], [ %11, %if.end ]
 // HIP-NEXT:   %1 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 0
 // HIP-NEXT:   %addr = load ptr, ptr %1, align 8
 // HIP-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 1
@@ -176,16 +187,25 @@
 // HIP-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 2
 // HIP-NEXT:   %size = load i64, ptr %3, align 4
 // HIP-NEXT:   %4 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 3
-// HIP-NEXT:   %flag = load i32, ptr %4, align 4
-// HIP-NEXT:   %5 = icmp eq i64 %size, 0
-// HIP-NEXT:   br i1 %5, label %if.then, label %if.else
+// HIP-NEXT:   %flags = load i32, ptr %4, align 4
+// HIP-NEXT:   %5 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 0, i32 4
+// HIP-NEXT:   %textype = load i32, ptr %4, align 4
+// HIP-NEXT:   %type = and i32 %flags, 7
+// HIP-NEXT:   %6 = and i32 %flags, 8
+// HIP-NEXT:   %extern = lshr i32 %6, 3
+// HIP-NEXT:   %7 = and i32 %flags, 16
+// HIP-NEXT:   %constant = lshr i32 %7, 4
+// HIP-NEXT:   %8 = and i32 %flags, 32
+// HIP-NEXT:   %normalized = lshr i32 %8, 5
+// HIP-NEXT:   %9 = icmp eq i64 %size, 0
+// HIP-NEXT:   br i1 %9, label %if.then, label %if.else
 
 //      HIP: if.then:
-// HIP-NEXT:   %6 = call i32 @__hipRegisterFunction(ptr %0, ptr %addr, ptr %name, ptr %name, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
+// HIP-NEXT:   %10 = call i32 @__hipRegisterFunction(ptr %0, ptr %addr, ptr %name, ptr %name, i32 -1, ptr null, ptr null, ptr null, ptr null, ptr null)
 // HIP-NEXT:   br label %if.end
 
 //      HIP: if.else:
-// HIP-NEXT:   switch i32 %flag, label %if.end [
+// HIP-NEXT:   switch i32 %type, label %if.end [
 // HIP-NEXT:     i32 0, label %sw.global
 // HIP-NEXT:     i32 1, label %sw.managed
 // HIP-NEXT:     i32 2, label %sw.surface
@@ -193,22 +213,24 @@
 // HIP-NEXT:   ]
 
 //      HIP: sw.global:
-// HIP-NEXT:   call void @__hipRegisterVar(ptr %0, ptr %addr, ptr %name, ptr %name, i32 0, i64 %size, i32 0, i32 0)
+// HIP-NEXT:   call void @__hipRegisterVar(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %extern, i64 %size, i32 %constant, i32 0)
 // HIP-NEXT:   br label %if.end
 
 //      HIP: sw.managed:
 // HIP-NEXT:   br label %if.end
 
 //      HIP: sw.surface:
+// HIP-NEXT:   call void @__hipRegisterSurface(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %extern)
 // HIP-NEXT:   br label %if.end
 
 //      HIP: sw.texture:
+// HIP-NEXT:   call void @__hipRegisterTexture(ptr %0, ptr %addr, ptr %name, ptr %name, i32 %textype, i32 %normalized, i32 %extern)
 // HIP-NEXT:   br label %if.end
 
 //      HIP: if.end:
-// HIP-NEXT:   %7 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
-// HIP-NEXT:   %8 = icmp eq ptr %7, @__stop_hip_offloading_entries
-// HIP-NEXT:   br i1 %8, label %while.end, label %while.entry
+// HIP-NEXT:   %11 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i64 1
+// HIP-NEXT:   %12 = icmp eq ptr %11, @__stop_hip_offloading_entries
+// HIP-NEXT:   br i1 %12, label %while.end, label %while.entry
 
 //      HIP: while.end:
 // HIP-NEXT:   ret void
