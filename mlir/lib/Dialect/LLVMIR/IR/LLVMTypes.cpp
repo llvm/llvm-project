@@ -181,7 +181,8 @@ LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
 llvm::TypeSize
 LLVMArrayType::getTypeSizeInBits(const DataLayout &dataLayout,
                                  DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::Fixed(kBitsInByte * getTypeSize(dataLayout, params));
+  return llvm::TypeSize::getFixed(kBitsInByte *
+                                  getTypeSize(dataLayout, params));
 }
 
 llvm::TypeSize LLVMArrayType::getTypeSize(const DataLayout &dataLayout,
@@ -305,7 +306,7 @@ LLVMPointerType::getTypeSizeInBits(const DataLayout &dataLayout,
                                    DataLayoutEntryListRef params) const {
   if (std::optional<uint64_t> size =
           getPointerDataLayoutEntry(params, *this, PtrDLEntryPos::Size))
-    return llvm::TypeSize::Fixed(*size);
+    return llvm::TypeSize::getFixed(*size);
 
   // For other memory spaces, use the size of the pointer to the default memory
   // space.
@@ -492,7 +493,7 @@ LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
 llvm::TypeSize
 LLVMStructType::getTypeSizeInBits(const DataLayout &dataLayout,
                                   DataLayoutEntryListRef params) const {
-  auto structSize = llvm::TypeSize::Fixed(0);
+  auto structSize = llvm::TypeSize::getFixed(0);
   uint64_t structAlignment = 1;
   for (Type element : getBody()) {
     uint64_t elementAlignment =
@@ -970,16 +971,17 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
 
   return llvm::TypeSwitch<Type, llvm::TypeSize>(type)
       .Case<BFloat16Type, Float16Type>(
-          [](Type) { return llvm::TypeSize::Fixed(16); })
-      .Case<Float32Type>([](Type) { return llvm::TypeSize::Fixed(32); })
+          [](Type) { return llvm::TypeSize::getFixed(16); })
+      .Case<Float32Type>([](Type) { return llvm::TypeSize::getFixed(32); })
       .Case<Float64Type, LLVMX86MMXType>(
-          [](Type) { return llvm::TypeSize::Fixed(64); })
-      .Case<Float80Type>([](Type) { return llvm::TypeSize::Fixed(80); })
-      .Case<Float128Type>([](Type) { return llvm::TypeSize::Fixed(128); })
+          [](Type) { return llvm::TypeSize::getFixed(64); })
+      .Case<Float80Type>([](Type) { return llvm::TypeSize::getFixed(80); })
+      .Case<Float128Type>([](Type) { return llvm::TypeSize::getFixed(128); })
       .Case<IntegerType>([](IntegerType intTy) {
-        return llvm::TypeSize::Fixed(intTy.getWidth());
+        return llvm::TypeSize::getFixed(intTy.getWidth());
       })
-      .Case<LLVMPPCFP128Type>([](Type) { return llvm::TypeSize::Fixed(128); })
+      .Case<LLVMPPCFP128Type>(
+          [](Type) { return llvm::TypeSize::getFixed(128); })
       .Case<LLVMFixedVectorType>([](LLVMFixedVectorType t) {
         llvm::TypeSize elementSize =
             getPrimitiveTypeSizeInBits(t.getElementType());
@@ -1000,7 +1002,7 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
                           LLVMPointerType, LLVMFunctionType, LLVMTargetExtType>(
                    ty)) &&
                "unexpected missing support for primitive type");
-        return llvm::TypeSize::Fixed(0);
+        return llvm::TypeSize::getFixed(0);
       });
 }
 

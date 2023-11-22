@@ -2166,6 +2166,9 @@ def int_aarch64_sve_ld1_gather_uxtw_index : AdvSIMD_GatherLoad_SV_32b_Offsets_In
 // 128-bit loads, scaled offsets (indices)
 def int_aarch64_sve_ld1q_gather_index : AdvSIMD_GatherLoadQ_SV_Intrinsic;
 
+// 128-bit loads, unscaled offsets
+def int_aarch64_sve_ld1q_gather_vector_offset : AdvSIMD_GatherLoadQ_SV_Intrinsic;
+
 //
 // Gather loads: vector base + scalar offset
 //
@@ -2246,6 +2249,9 @@ def int_aarch64_sve_st1_scatter_uxtw_index
 
 // 128-bit stores, scaled offsets (indices)
 def int_aarch64_sve_st1q_scatter_index : AdvSIMD_ScatterStoreQ_SV_Intrinsic;
+
+// 128-bit stores, unscaled offsets
+def int_aarch64_sve_st1q_scatter_vector_offset : AdvSIMD_ScatterStoreQ_SV_Intrinsic;
 
 //
 // Scatter stores: vector base + scalar offset

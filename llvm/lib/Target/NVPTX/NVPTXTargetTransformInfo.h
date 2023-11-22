@@ -78,7 +78,7 @@ public:
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::Fixed(32);
+    return TypeSize::getFixed(32);
   }
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
 
