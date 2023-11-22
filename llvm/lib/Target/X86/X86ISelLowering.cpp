@@ -50824,37 +50824,18 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   int CombineOpcode =
       N->getOpcode() == X86ISD::VFCMULC ? X86ISD::VFMULC : X86ISD::VFCMULC;
-  auto isConjugationConstant = [](const Constant *c) {
-    if (const auto *CI = dyn_cast<ConstantInt>(c)) {
-      APInt ConjugationInt32 = APInt(32, 0x80000000, true);
-      APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
-      switch (CI->getBitWidth()) {
-      case 16:
-        return false;
-      case 32:
-        return CI->getValue() == ConjugationInt32;
-      case 64:
-        return CI->getValue() == ConjugationInt64;
-      default:
-        llvm_unreachable("Unexpected bit width");
-      }
-    }
-    if (const auto *CF = dyn_cast<ConstantFP>(c))
-      return CF->getType()->isFloatTy() && CF->isNegativeZeroValue();
-    return false;
-  };
   auto combineConjugation = [&](SDValue &r) {
     if (LHS->getOpcode() == ISD::BITCAST && RHS.hasOneUse()) {
       SDValue XOR = LHS.getOperand(0);
       if (XOR->getOpcode() == ISD::XOR && XOR.hasOneUse()) {
-        SDValue XORRHS = XOR.getOperand(1);
-        if (XORRHS.getOpcode() == ISD::BITCAST && XORRHS.hasOneUse())
-          XORRHS = XORRHS.getOperand(0);
-        if (XORRHS.getOpcode() == X86ISD::VBROADCAST_LOAD &&
-            XORRHS.getOperand(1).getNumOperands()) {
-          ConstantPoolSDNode *CP =
-              dyn_cast<ConstantPoolSDNode>(XORRHS.getOperand(1).getOperand(0));
-          if (CP && isConjugationConstant(CP->getConstVal())) {
+        KnownBits XORRHS = DAG.computeKnownBits(XOR.getOperand(1));
+        if (XORRHS.isConstant()) {
+          APInt ConjugationInt32 = APInt(32, 0x80000000, true);
+          APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
+          if ((XORRHS.getBitWidth() == 32 &&
+               XORRHS.getConstant() == ConjugationInt32) ||
+              (XORRHS.getBitWidth() == 64 &&
+               XORRHS.getConstant() == ConjugationInt64)) {
             SelectionDAG::FlagInserter FlagsInserter(DAG, N);
             SDValue I2F = DAG.getBitcast(VT, LHS.getOperand(0).getOperand(0));
             SDValue FCMulC = DAG.getNode(CombineOpcode, SDLoc(N), VT, RHS, I2F);
