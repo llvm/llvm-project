@@ -10,6 +10,8 @@
 // XFAIL: LIBCXX-AIX-FIXME
 // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
 // XFAIL: tsan
+// Hangs with msan.
+// UNSUPPORTED: msan
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 // floating-point-type fetch_sub(floating-point-type,
