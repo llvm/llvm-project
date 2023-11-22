@@ -696,6 +696,8 @@ hlfir::Entity hlfir::derefPointersAndAllocatables(mlir::Location loc,
     // or fir.class to hold bounds, dynamic type or length parameter
     // information. Keep them boxed.
     return boxLoad;
+  } else if (entity.isProcedurePointer()) {
+    return hlfir::Entity{builder.create<fir::LoadOp>(loc, entity)};
   }
   return entity;
 }
