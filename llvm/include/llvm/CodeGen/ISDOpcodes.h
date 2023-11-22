@@ -1374,6 +1374,9 @@ enum NodeType {
   // Outputs: [rv], output chain, glue
   PATCHPOINT,
 
+  /// COMPLEX_FMUL - Do a naive complex floating-point multiplication.
+  COMPLEX_FMUL,
+
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"

@@ -1170,6 +1170,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::VP_FCOPYSIGN:
+  case ISD::COMPLEX_FMUL:
     SplitVecRes_BinOp(N, Lo, Hi);
     break;
   case ISD::FMA: case ISD::VP_FMA:
@@ -4148,6 +4149,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::COMPLEX_FMUL:
   // Vector-predicated binary op widening. Note that -- unlike the
   // unpredicated versions -- we don't have to worry about trapping on
   // operations like UDIV, FADD, etc., as we pass on the original vector

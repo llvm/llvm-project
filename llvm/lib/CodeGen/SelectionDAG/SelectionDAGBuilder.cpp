@@ -7701,6 +7701,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_deinterleave2:
     visitVectorDeinterleave(I);
     return;
+  case Intrinsic::experimental_complex_fmul:
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::COMPLEX_FMUL, sdl, ResultVT,
+                             getValue(I.getOperand(0)),
+                             getValue(I.getOperand(1)), Flags));
+    return;
   }
 }
 

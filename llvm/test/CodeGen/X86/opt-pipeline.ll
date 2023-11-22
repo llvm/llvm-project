@@ -65,6 +65,7 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Expand complex intrinsics
 ; CHECK-NEXT:       Interleaved Access Pass
 ; CHECK-NEXT:       X86 Partial Reduction
 ; CHECK-NEXT:       Expand indirectbr instructions
