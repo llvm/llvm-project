@@ -224,9 +224,12 @@ class PRGreeter:
         comment = f"""\
 Thank you for submitting a Pull Request (PR) to the LLVM Project!
 
-You can add reviewers by using the "Reviewers" section on this page.
+This PR will be automatically labeled and the relevant teams will be
+notified.
 
-If this is not working for you, it's probably because you don't have write
+If you wish to, you can add reviewers by using the "Reviewers" section on this page.
+
+If this is not working for you, it is probably because you do not have write
 permissions for the repository. In which case you can instead tag reviewers by
 name in a comment by using `@` followed by their GitHub username.
 
