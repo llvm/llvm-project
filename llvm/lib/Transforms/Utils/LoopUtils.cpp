@@ -632,14 +632,16 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
 
         // RemoveDIs: do the same as below for DPValues.
         if (Block->IsNewDbgInfoFormat) {
-          for (DPValue &DPV : llvm::make_early_inc_range(I.getDbgValueRange())) {
-            auto Key =
-                DeadDebugSet.find(DebugVariable(DPV.getVariable(), DPV.getExpression(), nullptr));
+          for (DPValue &DPV :
+               llvm::make_early_inc_range(I.getDbgValueRange())) {
+            auto Key = DeadDebugSet.find(
+                DebugVariable(DPV.getVariable(), DPV.getExpression(), nullptr));
             if (Key != DeadDebugSet.end())
               continue;
             // Unlinks the DPV from it's container, for later insertion.
             DPV.removeFromParent();
-            DeadDebugSet.insert(DebugVariable(DPV.getVariable(), DPV.getExpression(), nullptr));
+            DeadDebugSet.insert(
+                DebugVariable(DPV.getVariable(), DPV.getExpression(), nullptr));
             DeadDPValues.push_back(&DPV);
           }
         }
@@ -662,7 +664,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Move dbg.values out the loop so that earlier location ranges are still
     // terminated and loop invariant assignments are preserved.
     DIBuilder DIB(*ExitBlock->getModule());
-    BasicBlock::iterator InsertDbgValueBefore = ExitBlock->getFirstInsertionPt();
+    BasicBlock::iterator InsertDbgValueBefore =
+        ExitBlock->getFirstInsertionPt();
     assert(InsertDbgValueBefore != ExitBlock->end() &&
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
