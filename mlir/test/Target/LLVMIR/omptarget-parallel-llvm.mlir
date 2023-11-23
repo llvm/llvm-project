@@ -54,29 +54,29 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   }
 }
 
-// CHECK: define weak_odr protected amdgpu_kernel void [[FUNC0:@.*]](
-// CHECK-SAME: ptr [[TMP:%.*]], ptr [[TMP0:.*]]) {
-// CHECK:         [[TMP1:%.*]] = alloca [1 x ptr], align 8, addrspace(5)
-// CHECK:         [[TMP2:%.*]] = addrspacecast ptr addrspace(5) [[TMP1]] to ptr
-// CHECK:         [[STRUCTARG:%.*]] = alloca { ptr }, align 8, addrspace(5)
-// CHECK:         [[STRUCTARG_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[STRUCTARG]] to ptr
-// CHECK:         [[TMP3:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK:         [[TMP4:%.*]] = addrspacecast ptr addrspace(5) [[TMP3]] to ptr
-// CHECK:         store ptr [[TMP0]], ptr [[TMP4]], align 8
-// CHECK:         [[TMP5:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) [[KERNEL_ENV:@.*]] to ptr), ptr [[TMP]])
-// CHECK:         [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP5]], -1
-// CHECK:         br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
-// CHECK:         [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8
-// CHECK:         [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
-// CHECK:         [[GEP_:%.*]] = getelementptr { ptr }, ptr addrspace(5) [[STRUCTARG]], i32 0, i32 0
-// CHECK:         store ptr [[TMP6]], ptr addrspace(5) [[GEP_]], align 8
-// CHECK:         [[TMP7:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
-// CHECK:         store ptr [[STRUCTARG_ASCAST]], ptr [[TMP7]], align 8
-// CHECK:         call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[OMP_GLOBAL_THREAD_NUM]], i32 1, i32 -1, i32 -1, ptr [[FUNC1:@.*]], ptr null, ptr [[TMP2]], i64 1)
+// CHECK: define weak_odr protected amdgpu_kernel void @[[FUNC0:.*]](
+// CHECK-SAME: ptr %[[TMP:.*]], ptr %[[TMP0:.*]]) {
+// CHECK:         %[[TMP1:.*]] = alloca [1 x ptr], align 8, addrspace(5)
+// CHECK:         %[[TMP2:.*]] = addrspacecast ptr addrspace(5) %[[TMP1]] to ptr
+// CHECK:         %[[STRUCTARG:.*]] = alloca { ptr }, align 8, addrspace(5)
+// CHECK:         %[[STRUCTARG_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[STRUCTARG]] to ptr
+// CHECK:         %[[TMP3:.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK:         %[[TMP4:.*]] = addrspacecast ptr addrspace(5) %[[TMP3]] to ptr
+// CHECK:         store ptr %[[TMP0]], ptr %[[TMP4]], align 8
+// CHECK:         %[[TMP5:.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{.*}} to ptr), ptr %[[TMP]])
+// CHECK:         %[[EXEC_USER_CODE:.*]] = icmp eq i32 %[[TMP5]], -1
+// CHECK:         br i1 %[[EXEC_USER_CODE]], label %[[USER_CODE_ENTRY:.*]], label %[[WORKER_EXIT:.*]]
+// CHECK:         %[[TMP6:.*]] = load ptr, ptr %[[TMP4]], align 8
+// CHECK:         %[[OMP_GLOBAL_THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
+// CHECK:         %[[GEP_:.*]] = getelementptr { ptr }, ptr addrspace(5) %[[STRUCTARG]], i32 0, i32 0
+// CHECK:         store ptr %[[TMP6]], ptr addrspace(5) %[[GEP_]], align 8
+// CHECK:         %[[TMP7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[TMP2]], i64 0, i64 0
+// CHECK:         store ptr %[[STRUCTARG_ASCAST]], ptr %[[TMP7]], align 8
+// CHECK:         call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 %[[OMP_GLOBAL_THREAD_NUM]], i32 1, i32 -1, i32 -1, ptr @[[FUNC1:.*]], ptr null, ptr %[[TMP2]], i64 1)
 // CHECK:         call void @__kmpc_target_deinit()
 
-// CHECK: define internal void [[FUNC1]](
-// CHECK-SAME: ptr noalias noundef [[TID_ADDR_ASCAST:%.*]], ptr noalias noundef [[ZERO_ADDR_ASCAST:%.*]], ptr [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK: define internal void @[[FUNC1]](
+// CHECK-SAME: ptr noalias noundef {{.*}}, ptr noalias noundef {{.*}}, ptr {{.*}}) #{{[0-9]+}} {
 
 // Test if num_threads OpenMP clause for target region is correctly lowered
 // and passed as a param to kmpc_parallel_51 function
@@ -88,7 +88,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-SAME:  i32 [[NUM_THREADS_TMP0:%.*]], i32 1, i32 156,
 // CHECK-SAME:  i32 -1,  ptr [[FUNC_NUM_THREADS1:@.*]], ptr null, ptr [[NUM_THREADS_TMP1:%.*]], i64 1)
 
-// The one of arguments of  kmpc_parallel_51 function is responsible for handling if clause
+// One of the arguments of  kmpc_parallel_51 function is responsible for handling if clause
 // of omp parallel construct for target region. If this  argument is nonzero,
 // then kmpc_parallel_51 launches multiple threads for parallel region.
 //
@@ -98,13 +98,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // is correctly lowered to LLVM IR code and the if condition variable
 // is passed as a param to kmpc_parallel_51 function
 
-// CHECK: define weak_odr protected amdgpu_kernel void [[FUNC2:@.*]](
-// CHECK-SAME: ptr [[IFCOND_ARG0:%.*]], ptr [[IFCOND_ARG1:.*]], ptr [[IFCOND_ARG2:.*]]) {
-// CHECK:         store ptr [[IFCOND_ARG2]], ptr [[IFCOND_TMP1:%.]], align 8
-// CHECK:         [[IFCOND_TMP2:%.*]] = load i32, ptr [[IFCOND_TMP1]], align 4
-// CHECK:         [[IFCOND_TMP3:%.*]] = icmp ne i32 [[IFCOND_TMP2]], 0
-// CHECK:         [[IFCOND_TMP4:%.*]] = sext i1 [[IFCOND_TMP3]] to i32
+// CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(
+// CHECK-SAME: ptr {{.*}}, ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]]) {
+// CHECK:         store ptr %[[IFCOND_ARG2]], ptr %[[IFCOND_TMP1:.*]], align 8
+// CHECK:         %[[IFCOND_TMP2:.*]] = load i32, ptr %[[IFCOND_TMP1]], align 4
+// CHECK:         %[[IFCOND_TMP3:.*]] = icmp ne i32 %[[IFCOND_TMP2]], 0
+// CHECK:         %[[IFCOND_TMP4:.*]] = sext i1 %[[IFCOND_TMP3]] to i32
 // CHECK:         call void @__kmpc_parallel_51(ptr addrspacecast (
-// CHECK-SAME:  ptr addrspace(1) @[[IFCOND_GLOB:[0-9]+]] to ptr),
-// CHECK-SAME:  i32 [[IFCOND_THREAD_NUM:%.*]], i32 [[IFCOND_TMP4]], i32 -1,
-// CHECK-SAME:  i32 -1,  ptr [[FUNC1:@.*]], ptr null, ptr [[IFCOND_TMP5:%.*]], i64 1)
+// CHECK-SAME:  ptr addrspace(1) {{.*}} to ptr),
+// CHECK-SAME:  i32 {{.*}}, i32 %[[IFCOND_TMP4]], i32 -1,
+// CHECK-SAME:  i32 -1,  ptr {{.*}}, ptr null, ptr {{.*}}, i64 1)
