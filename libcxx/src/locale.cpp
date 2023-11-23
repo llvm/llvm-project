@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__utility/no_destroy.h>
 #include <algorithm>
-#include <atomic>
 #include <clocale>
 #include <codecvt>
 #include <cstddef>
@@ -158,17 +158,12 @@ public:
 
     void acquire();
     void release();
+    static __no_destroy<__imp> classic_locale_imp_;
+
 private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
     template <class F> void install_from(const __imp& other);
-
-    // We don't do reference counting on the classic locale.
-    // It's never destroyed anyway, but atomic reference counting may be very
-    // expensive in parallel applications. The classic locale is used by default
-    // in all streams. Note: if a new global locale is installed, then we lose
-    // the benefit of no reference counting.
-    static std::atomic<__imp*> classic_;
 };
 
 locale::__imp::__imp(size_t refs)
@@ -547,57 +542,35 @@ locale::__imp::use_facet(long id) const
 
 // locale
 
-// This class basically implements __attribute__((no_destroy)), which isn't supported
-// by GCC as of writing this.
-template <class T>
-struct __no_destroy {
-    template <class... Args>
-    explicit __no_destroy(Args&&... args) {
-        T* obj = reinterpret_cast<T*>(&buf);
-        new (obj) T(std::forward<Args>(args)...);
-    }
-
-    T& get() { return *reinterpret_cast<T*>(&buf); }
-    T const& get() const { return *reinterpret_cast<T const*>(&buf); }
-
-  private:
-    alignas(T) byte buf[sizeof(T)];
-};
-
-std::atomic<locale::__imp*> locale::__imp::classic_;
+// We don't do reference counting on the classic locale.
+// It's never destroyed anyway, but atomic reference counting may be very
+// expensive in parallel applications. The classic locale is used by default
+// in all streams. Note: if a new global locale is installed, then we lose
+// the benefit of no reference counting.
+__no_destroy<locale::__imp> locale::__imp::classic_locale_imp_(__uninitialized_tag{}); // initialized below in classic()
 
 const locale& locale::classic() {
-    static const __no_destroy<locale> c(__private_tag{}, []{
-        __imp* ptr = &make<__imp>(1u);
-        // We use relaxed memory ordering because readers don't access
-        // the contents of the objects, they are interested in just the
-        // pointer value.
-        // If a locale uses the classic imp, then this store happens
-        // before acquire/release methods, and they must observe the
-        // right value and omit reference counting.
-        // If a locale uses a non-classic imp, then it does not matter
-        // what value it will load, the result of the comparison will
-        // be false in all cases.
-        classic_.store(ptr, std::memory_order_relaxed);
-        return ptr;
-    }());
-    return c.get();
+  static const __no_destroy<locale> classic_locale(__private_tag{}, [] {
+    // executed exactly once on first initialization of `classic_locale`
+    locale::__imp::classic_locale_imp_.__emplace(1u);
+    return &locale::__imp::classic_locale_imp_.__get();
+  }());
+  return classic_locale.__get();
 }
 
 locale& locale::__global() {
-    static __no_destroy<locale> g(locale::classic());
-    return g.get();
-
-void locale::__imp::acquire()
-{
-    if (this != classic_.load(std::memory_order_relaxed))
-        __add_shared();
+  static __no_destroy<locale> g(locale::classic());
+  return g.__get();
 }
 
-void locale::__imp::release()
-{
-    if (this != classic_.load(std::memory_order_relaxed))
-        __release_shared();
+void locale::__imp::acquire() {
+  if (this != &locale::__imp::classic_locale_imp_.__get())
+    __add_shared();
+}
+
+void locale::__imp::release() {
+  if (this != &locale::__imp::classic_locale_imp_.__get())
+    __release_shared();
 }
 
 locale::locale() noexcept
