@@ -35,6 +35,9 @@ class RISCVTargetStreamer : public MCTargetStreamer {
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
   bool HasRVC = false;
   bool HasTSO = false;
+  bool HasZicfilp = false;
+  bool HasZicfiss = false;
+  bool IsRV64 = false;
 
 public:
   RISCVTargetStreamer(MCStreamer &S);
@@ -58,11 +61,15 @@ public:
                                     StringRef StringValue);
 
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
+  void emitGNUProgramProperties();
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }
+  bool hasZicfilp() const { return HasZicfilp; }
+  bool hasZicfiss() const { return HasZicfiss; }
+  bool isRV64() const { return IsRV64; }
 };
 
 // This part is for ascii assembly output

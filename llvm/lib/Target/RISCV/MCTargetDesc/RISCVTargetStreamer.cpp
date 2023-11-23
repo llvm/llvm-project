@@ -13,7 +13,10 @@
 #include "RISCVTargetStreamer.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -22,7 +25,11 @@ using namespace llvm;
 
 RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
-void RISCVTargetStreamer::finish() { finishAttributeSection(); }
+void RISCVTargetStreamer::finish() {
+  finishAttributeSection();
+  emitGNUProgramProperties();
+}
+
 void RISCVTargetStreamer::reset() {}
 
 void RISCVTargetStreamer::emitDirectiveOptionPush() {}
@@ -52,6 +59,9 @@ void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
   HasRVC = STI.hasFeature(RISCV::FeatureStdExtC) ||
            STI.hasFeature(RISCV::FeatureStdExtZca);
   HasTSO = STI.hasFeature(RISCV::FeatureStdExtZtso);
+  HasZicfilp = STI.hasFeature(RISCV::FeatureStdExtZicfilp);
+  HasZicfiss = STI.hasFeature(RISCV::FeatureStdExtZicfiss);
+  IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
 }
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
@@ -75,6 +85,47 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
     auto &ISAInfo = *ParseResult;
     emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
   }
+}
+
+void RISCVTargetStreamer::emitGNUProgramProperties() {
+  unsigned FeatureAndFlags = 0;
+  // Check Zicfilp or Zicfiss with features
+  // TODO should we check with codegen enable
+  // ex. -mllvm -riscv-hardware-shadow-stack=true ?
+  if (hasZicfilp())
+    FeatureAndFlags |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_SIMPLE;
+
+  if (hasZicfiss())
+    FeatureAndFlags |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+
+  if (FeatureAndFlags == 0)
+    return;
+
+  MCStreamer &OutStreamer = getStreamer();
+  MCContext &Context = OutStreamer.getContext();
+  MCSectionELF *Nt = Context.getELFSection(".note.gnu.property", ELF::SHT_NOTE,
+                                           ELF::SHF_ALLOC);
+  MCSection *Cur = OutStreamer.getCurrentSectionOnly();
+  OutStreamer.switchSection(Nt);
+
+  // Emit the note header.
+  uint64_t DataSize = isRV64() ? 4 : 3;
+  OutStreamer.emitValueToAlignment(isRV64() ? Align(8) : Align(4));
+  OutStreamer.emitIntValue(4, 4);     // data size for note name
+  OutStreamer.emitIntValue(4 * DataSize, 4); // data size
+  OutStreamer.emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4); // note type
+  OutStreamer.emitBytes(StringRef("GNU", 4));               // note name
+
+  // Emit the CFI(Zicfilp/Zicfiss) properties.
+  OutStreamer.emitIntValue(ELF::GNU_PROPERTY_RISCV_FEATURE_1_AND,
+                           4);        // and property
+  OutStreamer.emitIntValue(4, 4);     // data size
+  OutStreamer.emitIntValue(FeatureAndFlags, 4); // data
+  if (isRV64())
+    OutStreamer.emitIntValue(0, 4);     // Padding
+
+  OutStreamer.endSection(Nt);
+  OutStreamer.switchSection(Cur);
 }
 
 // This part is for ascii assembly output
