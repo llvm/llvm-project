@@ -22,21 +22,33 @@ RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWA
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN: dsymutil --linker llvm --no-odr -y %p/dummy-debug-map-amr64.map \
 RUN:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
+
+### Uncomment following when llvm-dwarfdump will print resolved address ranges
+### for the case mutiplue compile units.
+COM: rm -rf %t.dir && mkdir -p %t.dir
+COM: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+COM:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+COM: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s \
+COM: --check-prefixes=CHECK,CHECK-LLVM
+
 
 CHECK:.debug_abbrev contents:
 CHECK-NEXT: Abbrev table for offset: 0x00000000
 
 CHECK: .debug_info contents:
-CHECK-NEXT: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK-LLVM: Compile Unit: length = 0x0000001f, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
+CHECK-LLVM: DW_TAG_compile_unit
+CHECK-LLVM: DW_TAG_base_type
+CHECK: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = {{.*}}, addr_size = 0x08
 CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
 CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
 CHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
-CHECK: 0x0000002c:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK:   DW_TAG_subprogram
 CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[#%.16x,LOCLIST_LOWPC:]])
-CHECK: 0x0000003c:     DW_TAG_formal_parameter [3]   (0x0000002c)
+CHECK:     DW_TAG_formal_parameter
 CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
 CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])

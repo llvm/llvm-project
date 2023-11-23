@@ -2195,4 +2195,26 @@ define i16 @ashr_umax_demanded(i16 %x) {
   ret i16 %shr
 }
 
+define i128 @shift_zext_nneg(i8 %arg) {
+; CHECK-LABEL: @shift_zext_nneg(
+; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i8 [[ARG:%.*]] to i128
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i128 1, [[EXT]]
+; CHECK-NEXT:    ret i128 [[SHL]]
+;
+  %ext = zext i8 %arg to i128
+  %shl = shl i128 1, %ext
+  ret i128 %shl
+}
+
+define i129 @shift_zext_not_nneg(i8 %arg) {
+; CHECK-LABEL: @shift_zext_not_nneg(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ARG:%.*]] to i129
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i129 1, [[EXT]]
+; CHECK-NEXT:    ret i129 [[SHL]]
+;
+  %ext = zext i8 %arg to i129
+  %shl = shl i129 1, %ext
+  ret i129 %shl
+}
+
 declare i16 @llvm.umax.i16(i16, i16)

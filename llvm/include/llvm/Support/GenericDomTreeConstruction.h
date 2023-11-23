@@ -286,8 +286,8 @@ struct SemiNCAInfo {
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
       for (const auto &N : WInfo.ReverseChildren) {
-        if (NodeToInfo.count(N) == 0)  // Skip unreachable predecessors.
-          continue;
+        assert(NodeToInfo.contains(N) &&
+               "ReverseChildren should not contain unreachable predecessors");
 
         const TreeNodePtr TN = DT.getNode(N);
         // Skip predecessors whose level is above the subtree we are processing.

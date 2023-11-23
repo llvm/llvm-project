@@ -187,6 +187,10 @@ add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
 
+add_math_entrypoint_object(nexttoward)
+add_math_entrypoint_object(nexttowardf)
+add_math_entrypoint_object(nexttowardl)
+
 add_math_entrypoint_object(pow)
 add_math_entrypoint_object(powf)
 

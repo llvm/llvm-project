@@ -10025,6 +10025,11 @@ def err_duplicate_case_differing_expr : Error<
 def warn_case_empty_range : Warning<"empty case range specified">;
 def warn_missing_case_for_condition :
   Warning<"no case matching constant switch condition '%0'">;
+def err_loop_attr_conflict : Error<
+  "conflicting loop attribute %0">;
+def err_attribute_power_of_two_in_range : Error<
+  "%0 attribute requires an integer argument which is a constant power of two "
+  "between %1 and %2 inclusive; provided argument was %3">;
 
 def warn_def_missing_case : Warning<"%plural{"
   "1:enumeration value %1 not explicitly handled in switch|"
@@ -10962,8 +10967,6 @@ def note_omp_atomic_compare: Note<
   "expect binary operator in conditional expression|expect '<', '>' or '==' as order operator|expect comparison in a form of 'x == e', 'e == x', 'x ordop expr', or 'expr ordop x'|"
   "expect lvalue for result value|expect scalar value|expect integer value|unexpected 'else' statement|expect '==' operator|expect an assignment statement 'v = x'|"
   "expect a 'if' statement|expect no more than two statements|expect a compound statement|expect 'else' statement|expect a form 'r = x == e; if (r) ...'}0">;
-def err_omp_atomic_fail_wrong_or_no_clauses : Error<"expected a memory order clause">;
-def err_omp_atomic_fail_no_compare : Error<"expected 'compare' clause with the 'fail' modifier">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
@@ -11594,7 +11597,7 @@ def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines."
 >;
 def err_coroutine_return_type : Error<
-  "function returns a type %0 makred with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
+  "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
   "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
 } // end of coroutines issue category
