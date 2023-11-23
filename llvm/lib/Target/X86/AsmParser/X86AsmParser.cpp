@@ -422,7 +422,6 @@ private:
     IES_RPAREN,
     IES_REGISTER,
     IES_INTEGER,
-    IES_IDENTIFIER,
     IES_ERROR
   };
 
