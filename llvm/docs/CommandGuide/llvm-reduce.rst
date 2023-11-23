@@ -108,8 +108,8 @@ exit code if there were any errors.
 EXAMPLE
 -------
 
-`llvm-reduce` can be used to simplify a test that causes a compiler
-crash.
+:program:`llvm-reduce` can be used to simplify a test that causes a
+compiler crash.
 
 For example, let's assume that `opt` is crashing on the IR file
 `test.ll` with error message `Assertion failed at line 1234 of
