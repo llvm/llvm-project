@@ -87,16 +87,10 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
     auto loc = tileLoadOp.getLoc();
     auto tileType = tileLoadOp.getVectorType();
     auto tileElementType = tileType.getElementType();
-    unsigned tileElementWidth = tileElementType.getIntOrFloatBitWidth();
 
-    // Create 'arm_sme.get_tile' op.
-    auto tileId = rewriter.create<arm_sme::GetTileID>(
-        loc, rewriter.getIntegerType(tileElementWidth));
-
-    // Create `arm_sme.cast_tile_to_vector` to cast tile ID to a vector type to
-    // use as input tile to 'arm_sme.load_tile_slice' ops.
-    auto tile =
-        rewriter.create<arm_sme::CastTileToVector>(loc, tileType, tileId);
+    // Allocate a new SME tile.
+    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTile>(
+        rewriter, loc, tileType);
 
     // Create a loop that loads each ZA tile slice from memory.
     auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -128,8 +122,8 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
     getMemrefIndices(tileLoadOp.getIndices(),
                      tileLoadOp.getMemRefType().getRank(), tileSliceIndex,
                      numTileSlices, memrefIndices, loc, rewriter);
-    rewriter.create<arm_sme::LoadTileSliceOp>(
-        loc, tileType, tileLoadOp.getBase(), allTruePredicate, tile,
+    tileLoadOp.createOpAndForwardTileId<arm_sme::LoadTileSliceOp>(
+        rewriter, loc, tileType, tileLoadOp.getBase(), allTruePredicate, tile,
         memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
@@ -209,7 +203,8 @@ struct TileLoadOpWithMaskAndPadZeroConversion
     // Initialize tile with zero to satisfy padding. Inactive cols will be
     // zeroed anyway since the loads use zeroing predication. For inactive rows
     // however, no load will occur so these need to be zeroed.
-    auto tile = rewriter.create<arm_sme::ZeroOp>(loc, tileType);
+    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::ZeroOp>(
+        rewriter, loc, tileType);
 
     // Create a loop to load the active tile slices from memory.
     auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -226,9 +221,9 @@ struct TileLoadOpWithMaskAndPadZeroConversion
     getMemrefIndices(tileLoadOp.getIndices(),
                      tileLoadOp.getMemRefType().getRank(), tileSliceIndex,
                      upperBound, memrefIndices, loc, rewriter);
-    rewriter.create<arm_sme::LoadTileSliceOp>(
-        loc, tileType, tileLoadOp.getBase(), numColsOp, tile, memrefIndices,
-        tileSliceIndex, tileLoadOp.getLayout());
+    tileLoadOp.createOpAndForwardTileId<arm_sme::LoadTileSliceOp>(
+        rewriter, loc, tileType, tileLoadOp.getBase(), numColsOp, tile,
+        memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -276,7 +271,6 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto loc = tileLoadOp.getLoc();
     auto tileType = tileLoadOp.getVectorType();
     auto tileElementType = tileType.getElementType();
-    unsigned tileElementWidth = tileElementType.getIntOrFloatBitWidth();
 
     auto maskOp = tileLoadOp.getMask();
     if (!maskOp)
@@ -304,14 +298,9 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto numColsI32 = rewriter.create<arith::IndexCastUIOp>(
         loc, rewriter.getI32Type(), numCols);
 
-    // Create 'arm_sme.get_tile' op.
-    auto tileId = rewriter.create<arm_sme::GetTileID>(
-        loc, rewriter.getIntegerType(tileElementWidth));
-
-    // Create `arm_sme.cast_tile_to_vector` to cast tile ID to a vector type to
-    // use as input tile to 'arm_sme.load_tile_slice' ops.
-    auto tile =
-        rewriter.create<arm_sme::CastTileToVector>(loc, tileType, tileId);
+    // Allocate a new SME tile.
+    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTile>(
+        rewriter, loc, tileType);
 
     // Create a loop that loads each ZA tile slice from memory.
     auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -356,8 +345,8 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
         /*passthru=*/pad1DOp);
 
     // Create 'arm_sme.move_vector_to_tile_slice' to move slice into tile.
-    rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
-        loc, tileType, loadSlice->getResult(0), tile, tileSliceIndex,
+    tileLoadOp.createOpAndForwardTileId<arm_sme::MoveVectorToTileSliceOp>(
+        rewriter, loc, tileType, loadSlice->getResult(0), tile, tileSliceIndex,
         tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
@@ -450,8 +439,9 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
     getMemrefIndices(tileStoreOp.getIndices(),
                      tileStoreOp.getMemRefType().getRank(), tileSliceIndex,
                      upperBound, memrefIndices, loc, rewriter);
-    rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
-        tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex, maskCols,
+
+    tileStoreOp.replaceWithAndForwardTileId<arm_sme::StoreTileSliceOp>(
+        rewriter, tileStoreOp.getValueToStore(), tileSliceIndex, maskCols,
         tileStoreOp.getBase(), memrefIndices, tileStoreOp.getLayout());
 
     return success();
@@ -506,6 +496,7 @@ struct TileVectorPrintOpConversion : public OpRewritePattern<vector::PrintOp> {
       rewriter.setInsertionPointToStart(forOp.getBody());
       // Extract the current row from the tile.
       Value rowIndex = forOp.getInductionVar();
+      // FIXME: Forward tile IDs.
       auto tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
           loc, printOp.getSource(), rowIndex);
       // Print the row with a 1D vector.print.

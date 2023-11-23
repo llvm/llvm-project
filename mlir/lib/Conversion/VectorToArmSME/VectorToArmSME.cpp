@@ -44,20 +44,6 @@ static scf::ForOp getLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
   return forOp;
 }
 
-/// Returns a tile of the given vector type.
-static arm_sme::CastTileToVector
-getSMETileAndCastToVector(PatternRewriter &rewriter, Location loc,
-                          VectorType type) {
-  unsigned tileElementWidth = type.getElementType().getIntOrFloatBitWidth();
-
-  // Create 'arm_sme.get_tile' op.
-  auto tileId = rewriter.create<arm_sme::GetTileID>(
-      loc, rewriter.getIntegerType(tileElementWidth));
-
-  // Create `arm_sme.cast_tile_to_vector` to cast tile ID to a vector type.
-  return rewriter.create<arm_sme::CastTileToVector>(loc, type, tileId);
-}
-
 namespace {
 
 /// Conversion pattern for vector.transfer_read.
@@ -267,8 +253,7 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
         tileSliceType, denseAttr.getSplatValue<Attribute>());
     auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
 
-    arm_sme::CastTileToVector tile =
-        getSMETileAndCastToVector(rewriter, loc, tileType);
+    auto tile = rewriter.create<arm_sme::GetTile>(loc, tileType);
 
     auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
     auto tileSliceIndex = forOp.getInductionVar();
@@ -330,8 +315,7 @@ struct BroadcastOpToArmSMELowering
     else
       return failure();
 
-    arm_sme::CastTileToVector tile =
-        getSMETileAndCastToVector(rewriter, loc, tileType);
+    auto tile = rewriter.create<arm_sme::GetTile>(loc, tileType);
 
     // Create a loop over ZA tile slices.
     auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
@@ -387,8 +371,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
     Value broadcastOp1D = rewriter.create<vector::BroadcastOp>(
         loc, tileSliceType, splatOp.getInput());
 
-    arm_sme::CastTileToVector tile =
-        getSMETileAndCastToVector(rewriter, loc, tileType);
+    auto tile = rewriter.create<arm_sme::GetTile>(loc, tileType);
 
     // Next, create a loop over ZA tile slices and "move" the generated 1-d
     // vector to each slice.
