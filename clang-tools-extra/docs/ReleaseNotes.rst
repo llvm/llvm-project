@@ -174,6 +174,12 @@ New checks
   Flags coroutines that suspend while a lock guard is in scope at the
   suspension point.
 
+- New :doc:`hicpp-ignored-remove-result
+  <clang-tidy/checks/hicpp/ignored-remove-result>` check.
+
+  Ensure that the result of ``std::remove``, ``std::remove_if`` and
+  ``std::unique`` are not ignored according to rule 17.5.1.
+
 - New :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check.
 
@@ -204,10 +210,6 @@ New check aliases
 - New alias :doc:`cppcoreguidelines-macro-to-enum
   <clang-tidy/checks/cppcoreguidelines/macro-to-enum>` to :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` was added.
-
-- New alias :doc:`hicpp-ignored-remove-result
-  <clang-tidy/checks/hicpp/ignored-remove-result>` to :doc:`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

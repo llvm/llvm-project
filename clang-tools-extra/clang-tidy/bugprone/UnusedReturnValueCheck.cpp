@@ -133,6 +133,11 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                             "::boost::system::error_code"))),
       AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
 
+UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
+                                               ClangTidyContext *Context,
+                                               std::string CheckedFunctions)
+    : ClangTidyCheck(Name, Context), CheckedFunctions(CheckedFunctions) {}
+
 void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckedFunctions", CheckedFunctions);
   Options.store(Opts, "CheckedReturnTypes",
