@@ -406,20 +406,20 @@ body: |
   ; CHECK-LABEL: name: exec_mask
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr1_vgpr2
+  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   $exec = COPY $vgpr1_vgpr2
+  ; CHECK-NEXT:   $exec = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   bb.0:
-    liveins: $vgpr1_vgpr2
+    liveins: $sgpr0_sgpr1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $exec = COPY $vgpr1_vgpr2
+    $exec = COPY $sgpr0_sgpr1
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   bb.1:
     liveins: $vgpr0
@@ -433,20 +433,20 @@ body: |
   ; CHECK-LABEL: name: exec_mask_lo
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   $exec_lo = COPY $vgpr1
+  ; CHECK-NEXT:   $exec_lo = COPY $sgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   bb.0:
-    liveins: $vgpr1
+    liveins: $sgpr0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $exec_lo = COPY $vgpr1
+    $exec_lo = COPY $sgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   bb.1:
     liveins: $vgpr0
@@ -460,20 +460,20 @@ body: |
   ; CHECK-LABEL: name: exec_mask_hi
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   $exec_hi = COPY $vgpr1
+  ; CHECK-NEXT:   $exec_hi = COPY $sgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   bb.0:
-    liveins: $vgpr1
+    liveins: $sgpr0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $exec_hi = COPY $vgpr1
+    $exec_hi = COPY $sgpr0
     $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   bb.1:
     liveins: $vgpr0
