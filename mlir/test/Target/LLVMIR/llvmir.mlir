@@ -179,7 +179,7 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // CHECK: declare ptr @malloc(i64)
 llvm.func @malloc(i64) -> !llvm.ptr
 // CHECK: declare void @free(ptr)
-
+llvm.func @free(!llvm.ptr)
 
 //
 // Basic functionality: function and block conversion, function calls,
