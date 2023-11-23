@@ -1041,33 +1041,34 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       // load, then just extract the lower subvector and avoid the second load.
       auto *Ld = cast<LoadSDNode>(N);
       MVT VT = N->getSimpleValueType(0);
-      if (ISD::isNormalLoad(Ld) && Ld->isSimple() &&
-          (VT.is128BitVector() || VT.is256BitVector())) {
-        SDValue Ptr = Ld->getBasePtr();
-        SDValue Chain = Ld->getChain();
-        for (SDNode *User : Ptr->uses()) {
-          auto *UserLd = dyn_cast<LoadSDNode>(N);
-          MVT UserVT = User->getSimpleValueType(0);
-          if (User != N && UserLd && ISD::isNormalLoad(User) &&
-              UserLd->getBasePtr() == Ptr && UserLd->getChain() == Chain &&
-              !User->hasAnyUseOfValue(1) &&
-              (UserVT.is256BitVector() || UserVT.is512BitVector()) &&
-              UserVT.getSizeInBits() > VT.getSizeInBits()) {
-            SDLoc dl(N);
-            unsigned NumSubElts =
-                VT.getSizeInBits() / UserVT.getScalarSizeInBits();
-            MVT SubVT = MVT::getVectorVT(UserVT.getScalarType(), NumSubElts);
-            SDValue Extract = CurDAG->getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT,
-                                              SDValue(User, 0),
-                                              CurDAG->getIntPtrConstant(0, dl));
-            SDValue Res = CurDAG->getBitcast(VT, Extract);
-            --I;
-            SDValue To[] = {Res, SDValue(UserLd, 1)};
-            CurDAG->ReplaceAllUsesWith(N, To);
-            ++I;
-            MadeChange = true;
-            continue;
-          }
+      if (!ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
+          !(VT.is128BitVector() || VT.is256BitVector()))
+        break;
+
+      SDValue Ptr = Ld->getBasePtr();
+      SDValue Chain = Ld->getChain();
+      for (SDNode *User : Ptr->uses()) {
+        auto *UserLd = dyn_cast<LoadSDNode>(N);
+        MVT UserVT = User->getSimpleValueType(0);
+        if (User != N && UserLd && ISD::isNormalLoad(User) &&
+            UserLd->getBasePtr() == Ptr && UserLd->getChain() == Chain &&
+            !User->hasAnyUseOfValue(1) &&
+            (UserVT.is256BitVector() || UserVT.is512BitVector()) &&
+            UserVT.getSizeInBits() > VT.getSizeInBits()) {
+          SDLoc dl(N);
+          unsigned NumSubElts =
+              VT.getSizeInBits() / UserVT.getScalarSizeInBits();
+          MVT SubVT = MVT::getVectorVT(UserVT.getScalarType(), NumSubElts);
+          SDValue Extract = CurDAG->getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT,
+                                            SDValue(User, 0),
+                                            CurDAG->getIntPtrConstant(0, dl));
+          SDValue Res = CurDAG->getBitcast(VT, Extract);
+          --I;
+          SDValue To[] = {Res, SDValue(UserLd, 1)};
+          CurDAG->ReplaceAllUsesWith(N, To);
+          ++I;
+          MadeChange = true;
+          continue;
         }
       }
       break;
