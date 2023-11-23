@@ -89,18 +89,12 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
-  int exitstatVal;
-  int cmdstatVal;
-  pid_t pid;
-  std::array<char, 30> cmdstr;
-  cmdstr.fill(' ');
-
   // cmdstat specified in 16.9.73
-  // It is assigned the value −1 if the processor does not support command
-  // line execution, a processor-dependent positive value if an error
-  // condition occurs, or the value −2 if no error condition occurs but WAIT
-  // is present with the value false and the processor does not support
-  // asynchronous execution. Otherwise it is assigned the value 0
+  // −1 if the processor does not support command line execution,
+  // a processor-dependent positive value if an error condition occurs
+  // −2 if no error condition occurs but WAIT is present with the value false
+  // and the processor does not support asynchronous execution. Otherwise it is
+  // assigned the value 0
   enum CMD_STAT {
     ASYNC_NO_SUPPORT_ERR = -2,
     NO_SUPPORT_ERR = -1,
@@ -113,62 +107,81 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
   if (command) {
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
   }
-
-  if (wait) {
-    // either wait is not specified or wait is true: synchronous mode
-    exitstatVal = std::system(command->OffsetElement());
-    cmdstatVal = CMD_EXECUTED;
-  } else {
-// Asynchronous mode, Windows doesn't support fork()
-#ifdef _WIN32
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    if (CreateProcess(nullptr, const_cast<char *>(cmd), nullptr, nullptr, FALSE,
-            0, nullptr, nullptr, &si, &pi)) {
-      if (!GetExitCodeProcess(pi.hProcess, (DWORD)&exitstatVal)) {
-        cmdstatVal = (uint32_t)GetLastError();
-        std::strncpy(cmdstr.data(), "GetExitCodeProcess failed.", 26);
-      } else {
-        cmdstatVal = CMD_EXECUTED;
-      }
-    } else {
-      cmdstatVal = (uint32_t)GetLastError();
-      std::strncpy(cmdstr.data(), "CreateProcess failed.", 21);
-    }
-
-#else
-    pid = fork();
-    if (pid < 0) {
-      std::strncpy(cmdstr.data(), "Fork failed", 11);
-      cmdstatVal = FORK_ERR;
-    } else if (pid == 0) {
-      exitstatVal =
-          execl("/bin/sh", "sh", "-c", command->OffsetElement(), (char *)NULL);
-      cmdstatVal = CMD_EXECUTED;
-      std::strncpy(cmdstr.data(), "Command executed.", 17);
-    }
-#endif
-  }
-
   if (exitstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
-    StoreIntToDescriptor(exitstat, exitstatVal, terminator);
+    // If sync, assigned processor-dependent exit status. Otherwise unchanged
   }
 
   if (cmdstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat));
-    StoreIntToDescriptor(cmdstat, cmdstatVal, terminator);
+    // If a condition occurs that would assign a nonzero value to CMDSTAT but
+    // the CMDSTAT variable is not present, error termination is initiated.
+    // Assigned 0 as specifed in standard, if error then overwrite
+    StoreIntToDescriptor(cmdstat, CMD_EXECUTED, terminator);
   }
 
   if (cmdmsg) {
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(cmdmsg));
-    FillWithSpaces(*cmdmsg);
-    CopyToDescriptor(*cmdmsg, cmdstr.data(), cmdstr.size(), nullptr);
+  }
+
+  if (wait) {
+    // either wait is not specified or wait is true: synchronous mode
+    int exitstatVal = std::system(command->OffsetElement());
+    StoreIntToDescriptor(exitstat, exitstatVal, terminator);
+  } else {
+// Asynchronous mode
+#ifdef _WIN32
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+
+    // append "cmd.exe /c " to the begining of command
+    const char *cmd = command->OffsetElement();
+    const char *prefix = "cmd.exe /c ";
+    char *newCmd = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
+    if (newCmd != NULL) {
+      std::strcpy(newCmd, prefix);
+      std::strcat(newCmd, cmd);
+    } else {
+      terminator.Crash("Memory allocation failed for newCmd");
+    }
+
+    // Convert the narrow string to a wide string
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, NULL, 0);
+    wchar_t *wcmd = new wchar_t[size_needed];
+    if (MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, wcmd, size_needed) != 0) {
+      terminator.Crash(
+          "Char to wider char conversion failed with error code: %lu.",
+          GetLastError());
+    }
+    free(newCmd);
+
+    if (!CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
+            nullptr, &si, &pi)) {
+      if (!cmdstat) {
+        terminator.Crash(
+            "CreateProcess failed with error code: %lu.", GetLastError());
+      } else {
+        StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
+        CopyToDescriptor(*cmdmsg, "CreateProcess failed.", 21, nullptr);
+      }
+    }
+    delete[] wcmd;
+#else
+    pid_t pid = fork();
+    if (pid < 0) {
+      if (!cmdstat) {
+        terminator.Crash("Fork failed with error code: %d.", FORK_ERR);
+      } else {
+        StoreIntToDescriptor(cmdstat, FORK_ERR, terminator);
+        CopyToDescriptor(*cmdmsg, "Fork failed", 11, nullptr);
+      }
+    } else if (pid == 0) {
+      execl("/bin/sh", "sh", "-c", command->OffsetElement(), (char *)NULL);
+    }
+#endif
   }
 }
 
