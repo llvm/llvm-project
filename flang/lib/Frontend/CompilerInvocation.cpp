@@ -18,6 +18,7 @@
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Tools/TargetSetup.h"
 #include "flang/Version.inc"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -1346,7 +1347,8 @@ void CompilerInvocation::setFortranOpts() {
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>
 CompilerInvocation::getSemanticsCtx(
-    Fortran::parser::AllCookedSources &allCookedSources) {
+    Fortran::parser::AllCookedSources &allCookedSources,
+    const llvm::TargetMachine &targetMachine) {
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
@@ -1359,21 +1361,10 @@ CompilerInvocation::getSemanticsCtx(
       .set_moduleFileSuffix(getModuleFileSuffix())
       .set_underscoring(getCodeGenOpts().Underscoring);
 
-  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
-  // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
-    semanticsContext->targetCharacteristics().DisableType(
-        Fortran::common::TypeCategory::Real, /*kind=*/10);
-  }
-
-  std::string version = Fortran::common::getFlangFullVersion();
-  semanticsContext->targetCharacteristics()
-      .set_compilerOptionsString(allCompilerInvocOpts)
-      .set_compilerVersionString(version);
-
-  if (targetTriple.isPPC())
-    semanticsContext->targetCharacteristics().set_isPPC(true);
-
+  std::string compilerVersion = Fortran::common::getFlangFullVersion();
+  Fortran::tools::setUpTargetCharacteristics(
+      semanticsContext->targetCharacteristics(), targetMachine, compilerVersion,
+      allCompilerInvocOpts);
   return semanticsContext;
 }
 

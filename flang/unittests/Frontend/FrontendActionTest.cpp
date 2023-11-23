@@ -64,6 +64,13 @@ protected:
     compInst.createDiagnostics();
     invoc = std::make_shared<CompilerInvocation>();
 
+    // Set-up default target triple and initialize LLVM Targets so that the
+    // target data layout can be passed to the frontend.
+    invoc->getTargetOpts().triple =
+        llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+
     compInst.setInvocation(std::move(invoc));
     compInst.getFrontendOpts().inputs.push_back(
         FrontendInputFile(inputFilePath, Language::Fortran));
@@ -174,13 +181,7 @@ TEST_F(FrontendActionTest, EmitLLVM) {
   // Set-up the action kind.
   compInst.getInvocation().getFrontendOpts().programAction = EmitLLVM;
 
-  // Set-up default target triple.
-  compInst.getInvocation().getTargetOpts().triple =
-      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-
   // Initialise LLVM backend
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
 
   // Set-up the output stream. We are using output buffer wrapped as an output
@@ -209,13 +210,7 @@ TEST_F(FrontendActionTest, EmitAsm) {
   // Set-up the action kind.
   compInst.getInvocation().getFrontendOpts().programAction = EmitAssembly;
 
-  // Set-up default target triple.
-  compInst.getInvocation().getTargetOpts().triple =
-      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-
   // Initialise LLVM backend
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
 
   // Set-up the output stream. We are using output buffer wrapped as an output

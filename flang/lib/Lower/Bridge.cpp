@@ -44,6 +44,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -4979,7 +4980,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
-    const Fortran::common::LanguageFeatureControl &languageFeatures)
+    const Fortran::common::LanguageFeatureControl &languageFeatures,
+    const llvm::DataLayout *dataLayout)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
@@ -5035,4 +5037,6 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(module.get() && "module was not created");
   fir::setTargetTriple(*module.get(), triple);
   fir::setKindMapping(*module.get(), kindMap);
+  if (dataLayout)
+    fir::support::setMLIRDataLayout(*module.get(), *dataLayout);
 }

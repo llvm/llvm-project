@@ -26,6 +26,10 @@
 #include "llvm/Option/ArgList.h"
 #include <memory>
 
+namespace llvm {
+class TargetMachine;
+}
+
 namespace Fortran::frontend {
 
 /// Fill out Opts based on the options given in Args.
@@ -158,7 +162,8 @@ public:
 
   /// Creates and configures semantics context based on the compilation flags.
   std::unique_ptr<Fortran::semantics::SemanticsContext>
-  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources);
+  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
+                  const llvm::TargetMachine &);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }
