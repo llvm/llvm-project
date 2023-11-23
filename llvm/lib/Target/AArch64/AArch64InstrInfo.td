@@ -869,7 +869,7 @@ def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 def AArch64probedalloca
     : SDNode<"AArch64ISD::PROBED_ALLOCA",
              SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
-             [SDNPHasChain]>;
+             [SDNPHasChain, SDNPMayStore]>;
 
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
