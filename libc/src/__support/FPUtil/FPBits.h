@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
-#include "PlatformDefs.h"
-
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/bit.h"
