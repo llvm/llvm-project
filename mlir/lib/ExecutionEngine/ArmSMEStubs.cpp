@@ -21,7 +21,7 @@
 #endif // mlir_arm_sme_abi_stubs_EXPORTS
 #endif // MLIR_ARMSMEABISTUBS_EXPORTED
 #else
-#define MLIR_ARMSMEABISTUBS_EXPORTED __attribute__((visibility("default")) LLVM_ATTRIBUTE_WEAK
+#define MLIR_ARMSMEABISTUBS_EXPORTED LLVM_ATTRIBUTE_WEAK
 #endif // (defined(_WIN32) || defined(__CYGWIN__))
 
 // The actual implementation of these routines is in:
