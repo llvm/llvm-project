@@ -19,8 +19,6 @@
 
 namespace mlir {
 class Location;
-class Value;
-class Type;
 }
 namespace fir {
 class ExtendedValue;
@@ -30,9 +28,6 @@ class EntityWithAttributes;
 }
 namespace Fortran::evaluate {
 struct ProcedureDesignator;
-}
-namespace Fortran::semantics {
-class Symbol;
 }
 
 namespace Fortran::lower {
@@ -55,10 +50,5 @@ hlfir::EntityWithAttributes convertProcedureDesignatorToHLFIR(
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 
-/// Generate initialization for procedure pointer to procedure target.
-mlir::Value
-convertProcedureDesignatorInitialTarget(Fortran::lower::AbstractConverter &,
-                                        mlir::Location,
-                                        const Fortran::semantics::Symbol &sym);
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERT_PROCEDURE_DESIGNATOR_H

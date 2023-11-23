@@ -4845,9 +4845,6 @@ private:
         }
         // See C15100 and C15101
         fir::emitFatalError(loc, "cannot be POINTER, ALLOCATABLE");
-      case PassBy::BoxProcRef:
-        // Procedure pointer: no action here.
-        break;
       }
     }
 
