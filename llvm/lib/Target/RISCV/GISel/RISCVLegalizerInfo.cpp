@@ -34,11 +34,11 @@ static LegalityPredicate typeIsScalarFPArith(unsigned TypeIdx,
   };
 }
 
-RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
-  const unsigned XLen = ST.getXLen();
-  const LLT sXLen = LLT::scalar(XLen);
+RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
+    : STI(ST), XLen(STI.getXLen()), sXLen(LLT::scalar(XLen)) {
   const LLT sDoubleXLen = LLT::scalar(2 * XLen);
   const LLT p0 = LLT::pointer(0, XLen);
+  const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
@@ -244,6 +244,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .legalIf(all(typeIs(0, sXLen), typeIsScalarFPArith(1, ST)))
       .clampScalar(0, sXLen, sXLen);
 
+  // TODO: Support vector version of G_IS_FPCLASS.
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
+
   getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
@@ -308,6 +312,25 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
 
     return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
            LegalizerHelper::Legalized;
+  }
+  case TargetOpcode::G_IS_FPCLASS: {
+    Register GISFPCLASS = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    const MachineOperand &ImmOp = MI.getOperand(2);
+    MachineIRBuilder MIB(MI);
+
+    // Turn LLVM IR's floating point classes to that in RISC-V,
+    // by simply rotating the 10-bit immediate right by two bits.
+    APInt GFpClassImm(10, static_cast<uint64_t>(ImmOp.getImm()));
+    auto FClassMask = MIB.buildConstant(sXLen, GFpClassImm.rotr(2).zext(XLen));
+    auto ConstZero = MIB.buildConstant(sXLen, 0);
+
+    auto GFClass = MIB.buildInstr(RISCV::G_FCLASS, {sXLen}, {Src});
+    auto And = MIB.buildAnd(sXLen, GFClass, FClassMask);
+    MIB.buildICmp(CmpInst::ICMP_NE, GISFPCLASS, And, ConstZero);
+
+    MI.eraseFromParent();
+    return true;
   }
   }
 
