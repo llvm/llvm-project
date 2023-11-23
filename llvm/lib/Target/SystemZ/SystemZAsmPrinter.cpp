@@ -1030,32 +1030,41 @@ void SystemZAsmPrinter::emitADASection() {
   OutStreamer->popSection();
 }
 
+static std::string getProductID(Module &M) {
+  std::string ProductID;
+  if (auto *MD = M.getModuleFlag("zos_product_id"))
+    ProductID = cast<MDString>(MD)->getString().str();
+  if (ProductID.empty())
+    ProductID = "LLVM";
+  return ProductID;
+}
+
 static uint32_t getProductVersion(Module &M) {
   if (auto *VersionVal = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("zos_product_major_version")))
-    return VersionVal->getValue().getZExtValue();
+    return VersionVal->getZExtValue();
   return LLVM_VERSION_MAJOR;
 }
 
 static uint32_t getProductRelease(Module &M) {
-  if (auto *ReleaseVal = cast_or_null<ConstantAsMetadata>(
+  if (auto *ReleaseVal = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("zos_product_minor_version")))
-    return cast<ConstantInt>(ReleaseVal->getValue())->getZExtValue();
+    return ReleaseVal->getZExtValue();
   return LLVM_VERSION_MINOR;
 }
 
 static uint32_t getProductPatch(Module &M) {
-  if (auto *PatchVal = cast_or_null<ConstantAsMetadata>(
+  if (auto *PatchVal = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("zos_product_patchlevel")))
-    return cast<ConstantInt>(PatchVal->getValue())->getZExtValue();
+    return PatchVal->getZExtValue();
   return LLVM_VERSION_PATCH;
 }
 
 static time_t getTranslationTime(Module &M) {
   std::time_t Time = 0;
-  if (auto *Val = cast_or_null<ConstantAsMetadata>(
+  if (auto *Val = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("zos_translation_time"))) {
-    long SecondsSinceEpoch = cast<ConstantInt>(Val->getValue())->getSExtValue();
+    long SecondsSinceEpoch =  Val->getSExtValue();
     Time = static_cast<time_t>(SecondsSinceEpoch);
   }
   return Time;
@@ -1070,15 +1079,7 @@ void SystemZAsmPrinter::emitIDRLSection(Module &M) {
   uint32_t ProductVersion = getProductVersion(M);
   uint32_t ProductRelease = getProductRelease(M);
 
-  std::string ProductID;
-  if (auto *MD = M.getModuleFlag("zos_product_id"))
-    ProductID = cast<MDString>(MD)->getString().str();
-
-  if (ProductID.empty()) {
-    char ProductIDFormatted[11]; // 10 + null.
-    snprintf(ProductIDFormatted, sizeof(ProductIDFormatted), "LLVM");
-    ProductID = ProductIDFormatted;
-  }
+  std::string ProductID = getProductID(M);
 
   SmallString<IDRLDataLength + 1> TempStr;
   raw_svector_ostream O(TempStr);
