@@ -206,7 +206,7 @@ void SSAUpdater::UpdateDebugValues(Instruction *I) {
       continue;
     UpdateDebugValue(I, DbgValue);
   }
-  for (auto &DPV: DPValues) {
+  for (auto &DPV : DPValues) {
     if (DPV->getParent() == I->getParent())
       continue;
     UpdateDebugValue(I, DPV);
@@ -232,8 +232,7 @@ void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
   if (HasValueForBlock(UserBB)) {
     Value *NewVal = GetValueAtEndOfBlock(UserBB);
     DbgValue->replaceVariableLocationOp(I, NewVal);
-  }
-  else
+  } else
     DbgValue->setKillLocation();
 }
 
@@ -242,8 +241,7 @@ void SSAUpdater::UpdateDebugValue(Instruction *I, DPValue *DPV) {
   if (HasValueForBlock(UserBB)) {
     Value *NewVal = GetValueAtEndOfBlock(UserBB);
     DPV->replaceVariableLocationOp(I, NewVal);
-  }
-  else
+  } else
     DPV->setKillLocation();
 }
 

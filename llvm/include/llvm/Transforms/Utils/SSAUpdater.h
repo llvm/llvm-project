@@ -124,8 +124,7 @@ public:
   void UpdateDebugValues(Instruction *I);
   void UpdateDebugValues(Instruction *I,
                          SmallVectorImpl<DbgValueInst *> &DbgValues);
-  void UpdateDebugValues(Instruction *I,
-                         SmallVectorImpl<DPValue *> &DbgValues);
+  void UpdateDebugValues(Instruction *I, SmallVectorImpl<DPValue *> &DbgValues);
 
   /// Rewrite a use like \c RewriteUse but handling in-block definitions.
   ///
