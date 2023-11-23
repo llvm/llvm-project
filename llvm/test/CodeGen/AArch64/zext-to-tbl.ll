@@ -1345,10 +1345,6 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    zip1 v1.8b, v1.8b, v0.8b
 ; CHECK-BE-NEXT:    zip2 v4.8b, v2.8b, v0.8b
 ; CHECK-BE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
-; CHECK-BE-NEXT:    rev16 v3.8b, v3.8b
-; CHECK-BE-NEXT:    rev16 v1.8b, v1.8b
-; CHECK-BE-NEXT:    rev16 v4.8b, v4.8b
-; CHECK-BE-NEXT:    rev16 v2.8b, v2.8b
 ; CHECK-BE-NEXT:    ushll v3.4s, v3.4h, #0
 ; CHECK-BE-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-BE-NEXT:    and v3.16b, v3.16b, v0.16b

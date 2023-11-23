@@ -260,7 +260,7 @@ static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
   auto builder = mlir::OpBuilder(mlirModule.getRegion());
   for (const std::string &lib : libs) {
     builder.create<mlir::LLVM::LinkerOptionsOp>(
-        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:", lib}));
+        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
 }
 

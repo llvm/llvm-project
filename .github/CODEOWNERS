@@ -42,6 +42,10 @@
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar
 /mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar
 
+# Transform Dialect in MLIR.
+/mlir/include/mlir/Dialect/Transform/* @ftynse
+/mlir/lib/Dialect/Transform/* @ftynse
+
 # SPIR-V in MLIR.
 /mlir/**/SPIRV/ @antiagainst @kuhar
 /mlir/**/SPIRVTo*/ @antiagainst @kuhar

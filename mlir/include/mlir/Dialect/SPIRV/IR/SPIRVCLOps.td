@@ -113,6 +113,229 @@ class SPIRV_CLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
+def SPIRV_CLAtan2Op : SPIRV_CLBinaryArithmeticOp<"atan2", 7, SPIRV_Float > {
+  let summary = "Compute the arc tangent of y / x.";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type, y and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+        ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    atan2-op ::= ssa-id `=` `spirv.CL.atan2` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.atan2 %0, %1 : f32
+    %3 = spirv.CL.atan2 %0, %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLAcosOp : SPIRV_CLUnaryArithmeticOp<"acos", 0, SPIRV_Float > {
+  let summary = "Compute the arc cosine of x.";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    acos-op ::= ssa-id `=` `spirv.CL.acos` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.acos %0 : f32
+    %3 = spirv.CL.acos %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLAcoshOp : SPIRV_CLUnaryArithmeticOp<"acosh", 1, SPIRV_Float > {
+  let summary = "Compute the inverse hyperbolic cosine of x .";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    acosh-op ::= ssa-id `=` `spirv.CL.acosh` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.acosh %0 : f32
+    %3 = spirv.CL.acosh %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLAsinOp : SPIRV_CLUnaryArithmeticOp<"asin", 3, SPIRV_Float > {
+  let summary = "Compute the arc sine of x.";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    asin-op ::= ssa-id `=` `spirv.CL.asin` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.asin %0 : f32
+    %3 = spirv.CL.asin %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLAsinhOp : SPIRV_CLUnaryArithmeticOp<"asinh", 4, SPIRV_Float > {
+  let summary = "Compute the inverse hyperbolic sine of x.";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    asinh-op ::= ssa-id `=` `spirv.CL.asinh` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.asinh %0 : f32
+    %3 = spirv.CL.asinh %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLAtanOp : SPIRV_CLUnaryArithmeticOp<"atan", 6, SPIRV_Float > {
+  let summary = "Compute the arc tangent of x.";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    atan-op ::= ssa-id `=` `spirv.CL.atan` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.atan %0 : f32
+    %3 = spirv.CL.atan %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLAtanhOp : SPIRV_CLUnaryArithmeticOp<"atanh", 8, SPIRV_Float > {
+  let summary = "Compute the hyperbolic arc tangent of x.";
+
+  let description = [{
+    Result is an angle in radians.
+
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    atanh-op ::= ssa-id `=` `spirv.CL.atanh` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.atanh %0 : f32
+    %3 = spirv.CL.atanh %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
   let summary = [{
     Round x to integral value using the round to positive infinity rounding
@@ -170,6 +393,36 @@ def SPIRV_CLCosOp : SPIRV_CLUnaryArithmeticOp<"cos", 14, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.cos %0 : f32
     %3 = spirv.CL.cos %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLCoshOp : SPIRV_CLUnaryArithmeticOp<"cosh", 15, SPIRV_Float > {
+  let summary = "Compute the hyperbolic cosine of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    cosh-op ::= ssa-id `=` `spirv.CL.cosh` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.cosh %0 : f32
+    %3 = spirv.CL.cosh %1 : vector<4xf16>
     ```
   }];
 }
@@ -268,72 +521,6 @@ def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
 
 // -----
 
-def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
-  let summary = [{
-    Round x to the integral value using the round to negative infinity
-    rounding mode.
-  }];
-
-  let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spirv.CL.floor` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.floor %0 : f32
-    %3 = spirv.CL.ceifloorl %1 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
-  let summary = [{
-    Compute the correctly rounded floating-point representation of the sum
-    of c with the infinitely precise product of a and b. Rounding of
-    intermediate products shall not occur. Edge case results are per the
-    IEEE 754-2008 standard.
-  }];
-
-  let description = [{
-    Result Type, a, b and c must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    fma-op ::= ssa-id `=` `spirv.CL.fma` ssa-use, ssa-use, ssa-use `:`
-               float-scalar-vector-type
-    ```
-
-    #### Example:
-
-    ```mlir
-    %0 = spirv.CL.fma %a, %b, %c : f32
-    %1 = spirv.CL.fma %a, %b, %c : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
 def SPIRV_CLFMaxOp : SPIRV_CLBinaryArithmeticOp<"fmax", 27, SPIRV_Float> {
   let summary = "Return maximum of two floating-point operands";
 
@@ -395,6 +582,72 @@ def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
+  let summary = [{
+    Round x to the integral value using the round to negative infinity
+    rounding mode.
+  }];
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    floor-op ::= ssa-id `=` `spirv.CL.floor` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.floor %0 : f32
+    %3 = spirv.CL.floor %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
+  let summary = [{
+    Compute the correctly rounded floating-point representation of the sum
+    of c with the infinitely precise product of a and b. Rounding of
+    intermediate products shall not occur. Edge case results are per the
+    IEEE 754-2008 standard.
+  }];
+
+  let description = [{
+    Result Type, a, b and c must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    fma-op ::= ssa-id `=` `spirv.CL.fma` ssa-use, ssa-use, ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.fma %a, %b, %c : f32
+    %1 = spirv.CL.fma %a, %b, %c : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
   let summary = "Compute the natural logarithm of x.";
 
@@ -419,6 +672,37 @@ def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.log %0 : f32
     %3 = spirv.CL.log %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float> {
+  let summary = "Returns the linear blend of x & y implemented as: x + (y - x) * a";
+
+  let description = [{
+    Result Type, x, y and a must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    Note: This instruction can be implemented using contractions such as mad
+    or fma.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    mix-op ::= ssa-id `=` `spirv.CL.mix` ssa-use, ssa-use, ssa-use `:`
+           float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.mix %a, %b, %c : f32
+    %1 = spirv.CL.mix %a, %b, %c : vector<3xf16>
     ```
   }];
 }
@@ -450,38 +734,6 @@ def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.pow %0, %1 : f32
     %3 = spirv.CL.pow %0, %1 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
-  let summary = [{
-    Return the integral value nearest to x rounding halfway cases away from
-    zero, regardless of the current rounding direction.
-  }];
-
-  let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    round-op ::= ssa-id `=` `spirv.CL.round` ssa-use `:`
-               float-scalar-vector-type
-    ```
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.round %0 : f32
-    %3 = spirv.CL.round %0 : vector<3xf16>
     ```
   }];
 }
@@ -521,6 +773,38 @@ def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
+  let summary = [{
+    Return the integral value nearest to x rounding halfway cases away from
+    zero, regardless of the current rounding direction.
+  }];
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    round-op ::= ssa-id `=` `spirv.CL.round` ssa-use `:`
+               float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.round %0 : f32
+    %3 = spirv.CL.round %0 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
   let summary = "Compute inverse square root of x.";
 
@@ -545,96 +829,6 @@ def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
     ```mlir
     %2 = spirv.CL.rsqrt %0 : f32
     %3 = spirv.CL.rsqrt %1 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
-  let summary = "Compute sine of x radians.";
-
-  let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sin-op ::= ssa-id `=` `spirv.CL.sin` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.sin %0 : f32
-    %3 = spirv.CL.sin %1 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLSqrtOp : SPIRV_CLUnaryArithmeticOp<"sqrt", 61, SPIRV_Float> {
-  let summary = "Compute square root of x.";
-
-  let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spirv.CL.sqrt` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.sqrt %0 : f32
-    %3 = spirv.CL.sqrt %1 : vector<3xf16>
-    ```
-  }];
-}
-
-// -----
-
-def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
-  let summary = "Compute hyperbolic tangent of x radians.";
-
-  let description = [{
-    Result Type and x must be floating-point or vector(2,3,4,8,16) of
-    floating-point values.
-
-    All of the operands, including the Result Type operand, must be of the
-    same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    tanh-op ::= ssa-id `=` `spirv.CL.tanh` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
-    #### Example:
-
-    ```mlir
-    %2 = spirv.CL.tanh %0 : f32
-    %3 = spirv.CL.tanh %1 : vector<3xf16>
     ```
   }];
 }
@@ -698,33 +892,6 @@ def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
-  let summary = "Return maximum of two unsigned integer operands";
-
-  let description = [{
-    Returns y if x < y, otherwise it returns x, where x and y are treated as unsigned integers.
-
-    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
-
-    All of the operands, including the Result Type operand, must be of the same type.
-
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    umax-op ::= ssa-id `=` `spirv.CL.u_max` ssa-use `:`
-                integer-scalar-vector-type
-    ```
-    #### Example:
-    ```mlir
-    %2 = spirv.CL.u_max %0, %1 : i32
-    %3 = spirv.CL.u_max %0, %1 : vector<3xi16>
-    ```
-  }];
-}
-
-// -----
-
 def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
   let summary = "Return minimum of two signed integer operands";
 
@@ -746,6 +913,183 @@ def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
     ```mlir
     %2 = spirv.CL.s_min %0, %1 : i32
     %3 = spirv.CL.s_min %0, %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
+  let summary = "Compute sine of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    sin-op ::= ssa-id `=` `spirv.CL.sin` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.sin %0 : f32
+    %3 = spirv.CL.sin %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSinhOp : SPIRV_CLUnaryArithmeticOp<"sinh", 59, SPIRV_Float > {
+  let summary = "Compute hyperbolic sine of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    sinh-op ::= ssa-id `=` `spirv.CL.sinh` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.sinh %0 : f32
+    %3 = spirv.CL.sinh %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSqrtOp : SPIRV_CLUnaryArithmeticOp<"sqrt", 61, SPIRV_Float> {
+  let summary = "Compute square root of x.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    sqrt-op ::= ssa-id `=` `spirv.CL.sqrt` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.sqrt %0 : f32
+    %3 = spirv.CL.sqrt %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLTanOp : SPIRV_CLUnaryArithmeticOp<"tan", 62, SPIRV_Float > {
+  let summary = "Compute tangent of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    tan-op ::= ssa-id `=` `spirv.CL.tan` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.tan %0 : f32
+    %3 = spirv.CL.tan %1 : vector<4xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
+  let summary = "Compute hyperbolic tangent of x radians.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    tanh-op ::= ssa-id `=` `spirv.CL.tanh` ssa-use `:`
+               float-scalar-vector-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.tanh %0 : f32
+    %3 = spirv.CL.tanh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
+  let summary = "Return maximum of two unsigned integer operands";
+
+  let description = [{
+    Returns y if x < y, otherwise it returns x, where x and y are treated as unsigned integers.
+
+    Result Type,x and y must be integer or vector(2,3,4,8,16) of integer values.
+
+    All of the operands, including the Result Type operand, must be of the same type.
+
+    <!-- End of AutoGen section -->
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    umax-op ::= ssa-id `=` `spirv.CL.u_max` ssa-use `:`
+                integer-scalar-vector-type
+    ```
+    #### Example:
+    ```mlir
+    %2 = spirv.CL.u_max %0, %1 : i32
+    %3 = spirv.CL.u_max %0, %1 : vector<3xi16>
     ```
   }];
 }

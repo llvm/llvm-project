@@ -271,8 +271,17 @@ class EVEX2VEXOverride<string VEXInstrName> {
 // Prevent EVEX->VEX conversion from considering this instruction.
 class NotEVEX2VEXConvertible { bit notEVEX2VEXConvertible = 1; }
 
-// Force the instruction to use VEX encoding.
-class ExplicitVEXPrefix { bit ExplicitVEXPrefix = 1; }
+// Force the instruction to use REX2/VEX/EVEX encoding.
+class ExplicitOpPrefix<bits<2> val> {
+  bits<2> Value = val;
+}
+def NoExplicitOpPrefix : ExplicitOpPrefix<0>;
+def ExplicitREX2       : ExplicitOpPrefix<1>;
+def ExplicitVEX        : ExplicitOpPrefix<2>;
+def ExplicitEVEX       : ExplicitOpPrefix<3>;
+class ExplicitREX2Prefix { ExplicitOpPrefix explicitOpPrefix = ExplicitREX2; }
+class ExplicitVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitVEX; }
+class ExplicitEVEXPrefix { ExplicitOpPrefix explicitOpPrefix = ExplicitEVEX; }
 
 class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
               string AsmStr, Domain d = GenericDomain>
@@ -354,7 +363,8 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   string EVEX2VEXOverride = ?;
 
   bit notEVEX2VEXConvertible = 0; // Prevent EVEX->VEX conversion.
-  bit ExplicitVEXPrefix = 0; // Force the instruction to use VEX encoding.
+  ExplicitOpPrefix explicitOpPrefix = NoExplicitOpPrefix;
+  bits<2> explicitOpPrefixBits = explicitOpPrefix.Value;
   // Force to check predicate before compress EVEX to VEX encoding.
   bit checkVEXPredicate = 0;
   // TSFlags layout should be kept in sync with X86BaseInfo.h.
@@ -381,7 +391,7 @@ class X86Inst<bits<8> opcod, Format f, ImmType i, dag outs, dag ins,
   let TSFlags{47-45} = !if(!eq(CD8_Scale, 0), 0, !add(!logtwo(CD8_Scale), 1));
   let TSFlags{48}    = hasEVEX_RC;
   let TSFlags{49}    = hasNoTrackPrefix;
-  let TSFlags{50}    = ExplicitVEXPrefix;
+  let TSFlags{51-50} = explicitOpPrefixBits;
 }
 
 class PseudoI<dag oops, dag iops, list<dag> pattern>
