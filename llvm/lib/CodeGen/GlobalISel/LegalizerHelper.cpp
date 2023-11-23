@@ -2483,6 +2483,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_IS_FPCLASS:
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
