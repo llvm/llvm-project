@@ -744,6 +744,16 @@ AbstractAttribute *AbstractAttribute::lookupMutable(TypeID typeID,
   return impl.registeredAttributes.lookup(typeID);
 }
 
+std::optional<std::reference_wrapper<const AbstractAttribute>>
+AbstractAttribute::lookup(StringRef name, MLIRContext *context) {
+  MLIRContextImpl &impl = context->getImpl();
+  const AbstractAttribute *type = impl.nameToAttribute.lookup(name);
+
+  if (!type)
+    return std::nullopt;
+  return {*type};
+}
+
 //===----------------------------------------------------------------------===//
 // OperationName
 //===----------------------------------------------------------------------===//
