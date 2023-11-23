@@ -143,7 +143,7 @@ ElementCount EVT::getExtendedVectorElementCount() const {
 TypeSize EVT::getExtendedSizeInBits() const {
   assert(isExtended() && "Type is not extended!");
   if (IntegerType *ITy = dyn_cast<IntegerType>(LLVMTy))
-    return TypeSize::Fixed(ITy->getBitWidth());
+    return TypeSize::getFixed(ITy->getBitWidth());
   if (VectorType *VTy = dyn_cast<VectorType>(LLVMTy))
     return VTy->getPrimitiveSizeInBits();
   llvm_unreachable("Unrecognized extended type!");
