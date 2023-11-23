@@ -269,17 +269,17 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
 
 /// Remap the Values used in the DPValue \a V using the value map \a VM.
 inline void RemapDPValue(Module *M, DPValue *V, ValueToValueMapTy &VM,
-                  RemapFlags Flags = RF_None,
-                  ValueMapTypeRemapper *TypeMapper = nullptr,
-                  ValueMaterializer *Materializer = nullptr) {
+                         RemapFlags Flags = RF_None,
+                         ValueMapTypeRemapper *TypeMapper = nullptr,
+                         ValueMaterializer *Materializer = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer).remapDPValue(M, *V);
 }
 
 /// Remap the Values used in the DPValue \a V using the value map \a VM.
-inline void RemapDPValueRange(Module *M, iterator_range<DPValueIterator> Range, ValueToValueMapTy &VM,
-                  RemapFlags Flags = RF_None,
-                  ValueMapTypeRemapper *TypeMapper = nullptr,
-                  ValueMaterializer *Materializer = nullptr) {
+inline void RemapDPValueRange(Module *M, iterator_range<DPValueIterator> Range,
+                              ValueToValueMapTy &VM, RemapFlags Flags = RF_None,
+                              ValueMapTypeRemapper *TypeMapper = nullptr,
+                              ValueMaterializer *Materializer = nullptr) {
   ValueMapper(VM, Flags, TypeMapper, Materializer).remapDPValueRange(M, Range);
 }
 
