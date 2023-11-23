@@ -566,3 +566,78 @@ define i1 @gep_i16_sub_1_uge_inbounds_var_idx(ptr %dst, i64 %off) {
   %res.2 = xor i1 %res.1, %cmp.sub.3
   ret i1 %res.2
 }
+
+define i1 @gep_i32_two_indices_known_lt_and_positive(ptr %a, i8 %idx.1, i8 %idx.2) {
+; CHECK-LABEL: @gep_i32_two_indices_known_lt_and_positive(
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[IDX_1:%.*]], [[IDX_2:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LT]])
+; CHECK-NEXT:    [[IDX_1_POS:%.*]] = icmp sge i8 [[IDX_1]], 0
+; CHECK-NEXT:    [[IDX_2_POS:%.*]] = icmp sge i8 [[IDX_2]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_1_POS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_2_POS]])
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i8 [[IDX_1]]
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[GEP_1]], i8 -3
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i8 [[IDX_2]]
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, ptr [[GEP_3]], i8 -3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_2]], [[GEP_4]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %lt = icmp ult i8 %idx.1, %idx.2
+  call void @llvm.assume(i1 %lt)
+  %idx.1.pos = icmp sge i8 %idx.1, 0
+  %idx.2.pos = icmp sge i8 %idx.2, 0
+  call void @llvm.assume(i1 %idx.1.pos)
+  call void @llvm.assume(i1 %idx.2.pos)
+  %gep.1 = getelementptr inbounds i32, ptr %a, i8 %idx.1
+  %gep.2 = getelementptr inbounds i32, ptr %gep.1, i8 -3
+  %gep.3 = getelementptr inbounds i32, ptr %a, i8 %idx.2
+  %gep.4 = getelementptr inbounds i32, ptr %gep.3, i8 -3
+  %c = icmp ult ptr %gep.2, %gep.4
+  ret i1 %c
+}
+
+define i1 @gep_i32_two_indices_known_lt_and_not_known_positive(ptr %a, i8 %idx.1, i8 %idx.2) {
+; CHECK-LABEL: @gep_i32_two_indices_known_lt_and_not_known_positive(
+; CHECK-NEXT:    [[LT:%.*]] = icmp ult i8 [[IDX_1:%.*]], [[IDX_2:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LT]])
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i8 [[IDX_1]]
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[GEP_1]], i8 -3
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i8 [[IDX_2]]
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, ptr [[GEP_3]], i8 -3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_2]], [[GEP_4]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %lt = icmp ult i8 %idx.1, %idx.2
+  call void @llvm.assume(i1 %lt)
+  %gep.1 = getelementptr inbounds i32, ptr %a, i8 %idx.1
+  %gep.2 = getelementptr inbounds i32, ptr %gep.1, i8 -3
+  %gep.3 = getelementptr inbounds i32, ptr %a, i8 %idx.2
+  %gep.4 = getelementptr inbounds i32, ptr %gep.3, i8 -3
+  %c = icmp ult ptr %gep.2, %gep.4
+  ret i1 %c
+}
+
+define i1 @gep_i32_two_indices_known_positive_but_not_lt(ptr %a, i8 %idx.1, i8 %idx.2) {
+; CHECK-LABEL: @gep_i32_two_indices_known_positive_but_not_lt(
+; CHECK-NEXT:    [[IDX_1_POS:%.*]] = icmp sge i8 [[IDX_1:%.*]], 0
+; CHECK-NEXT:    [[IDX_2_POS:%.*]] = icmp sge i8 [[IDX_2:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_1_POS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IDX_2_POS]])
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i8 [[IDX_1]]
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[GEP_1]], i8 -3
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i8 [[IDX_2]]
+; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, ptr [[GEP_3]], i8 -3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_2]], [[GEP_4]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %idx.1.pos = icmp sge i8 %idx.1, 0
+  %idx.2.pos = icmp sge i8 %idx.2, 0
+  call void @llvm.assume(i1 %idx.1.pos)
+  call void @llvm.assume(i1 %idx.2.pos)
+  %gep.1 = getelementptr inbounds i32, ptr %a, i8 %idx.1
+  %gep.2 = getelementptr inbounds i32, ptr %gep.1, i8 -3
+  %gep.3 = getelementptr inbounds i32, ptr %a, i8 %idx.2
+  %gep.4 = getelementptr inbounds i32, ptr %gep.3, i8 -3
+  %c = icmp ult ptr %gep.2, %gep.4
+  ret i1 %c
+}
