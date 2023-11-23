@@ -94,6 +94,8 @@ entry:
 ; As above, but with 17 SVE vectors of stack space. Now we need
 ; a probing loops since stack adjustment may be greater than
 ; the probe size (17 x 256 = 4354 bytes)
+; TODO: Allocating `k*16+r` SVE vectors can be unrolled into
+; emiting the `k + r` sequences of `addvl sp, sp, #-N; str xzr, [sp]`
 define void @sve_17_vector(ptr %out) #0 {
 ; CHECK-LABEL: sve_17_vector:
 ; CHECK:       // %bb.0: // %entry

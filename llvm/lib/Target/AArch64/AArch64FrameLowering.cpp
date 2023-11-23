@@ -803,7 +803,9 @@ void AArch64FrameLowering::allocateStackSpace(
     return;
   }
 
-// Emit a variable-length allocation probing loop.
+  // Emit a variable-length allocation probing loop.
+  // TODO: As an optimisation, the loop can be "unrolled" into a few parts,
+  // each of them guaranteed to adjust the stack by less than the probe size.
   Register TargetReg = findScratchNonCalleeSaveRegister(&MBB);
   assert(TargetReg != AArch64::NoRegister);
   // SUB Xd, SP, AllocSize
