@@ -416,7 +416,7 @@ LANGOPT(XLPragmaPack, 1, 0, "IBM XL #pragma pack handling")
 
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 LANGOPT(APINotes, 1, 0, "use external API notes")
-LANGOPT(APINotesModules, 1, 0, "use external API notes")
+LANGOPT(APINotesModules, 1, 0, "use module-based external API notes")
 LANGOPT(NeededByPCHOrCompilationUsesPCH, 1, 0, "compilation involves pch")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
