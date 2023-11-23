@@ -1085,15 +1085,14 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 1);
   }
 
-  if (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_be) {
-    auto *InlineAsm = llvm::MDString::get(TheModule.getContext(), "inline-asm");
-    if (CodeGenOpts.StackClashProtector)
-      getModule().addModuleFlag(llvm::Module::Override, "probe-stack",
-                                InlineAsm);
-    if (CodeGenOpts.StackProbeSize && CodeGenOpts.StackProbeSize != 4096)
-      getModule().addModuleFlag(llvm::Module::Min, "stack-probe-size",
-                                CodeGenOpts.StackProbeSize);
-  }
+  if (CodeGenOpts.StackClashProtector)
+    getModule().addModuleFlag(
+        llvm::Module::Override, "probe-stack",
+        llvm::MDString::get(TheModule.getContext(), "inline-asm"));
+
+  if (CodeGenOpts.StackProbeSize && CodeGenOpts.StackProbeSize != 4096)
+    getModule().addModuleFlag(llvm::Module::Min, "stack-probe-size",
+                              CodeGenOpts.StackProbeSize);
 
   if (!CodeGenOpts.MemoryProfileOutput.empty()) {
     llvm::LLVMContext &Ctx = TheModule.getContext();
@@ -2306,8 +2305,12 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if ((!D || !D->hasAttr<NoUwtableAttr>()) && CodeGenOpts.UnwindTables)
     B.addUWTableAttr(llvm::UWTableKind(CodeGenOpts.UnwindTables));
 
-  if (CodeGenOpts.StackClashProtector && !getTarget().getTriple().isAArch64())
+  if (CodeGenOpts.StackClashProtector)
     B.addAttribute("probe-stack", "inline-asm");
+
+  if (CodeGenOpts.StackProbeSize && CodeGenOpts.StackProbeSize != 4096)
+    B.addAttribute("stack-probe-size",
+                   std::to_string(CodeGenOpts.StackProbeSize));
 
   if (!hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
