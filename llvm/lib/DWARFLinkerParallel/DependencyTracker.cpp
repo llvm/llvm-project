@@ -316,6 +316,8 @@ bool isAlreadyMarked(const CompileUnit::DIEInfo &Info,
   case CompileUnit::NotSet:
     llvm_unreachable("Unset placement type is specified.");
   };
+
+  llvm_unreachable("Unknown CompileUnit::DieOutputPlacement enum");
 }
 
 bool isAlreadyMarked(const UnitEntryPairTy &Entry,
