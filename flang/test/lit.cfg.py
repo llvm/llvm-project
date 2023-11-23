@@ -122,6 +122,7 @@ if config.flang_standalone_build:
 # the build directory holding that tool.
 tools = [
     ToolSubst("%flang", command=FindTool("flang-new"), unresolved="fatal"),
+    ToolSubst("%clang", command=FindTool("clang"), unresolved="fatal"),
     ToolSubst(
         "%flang_fc1",
         command=FindTool("flang-new"),
