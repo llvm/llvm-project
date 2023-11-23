@@ -24,7 +24,6 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -46,8 +45,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -3713,106 +3710,4 @@ void SimpleLoopUnswitchPass::printPipeline(
   OS << (NonTrivial ? "" : "no-") << "nontrivial;";
   OS << (Trivial ? "" : "no-") << "trivial";
   OS << '>';
-}
-
-namespace {
-
-class SimpleLoopUnswitchLegacyPass : public LoopPass {
-  bool NonTrivial;
-
-public:
-  static char ID; // Pass ID, replacement for typeid
-
-  explicit SimpleLoopUnswitchLegacyPass(bool NonTrivial = false)
-      : LoopPass(ID), NonTrivial(NonTrivial) {
-    initializeSimpleLoopUnswitchLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-    getLoopAnalysisUsage(AU);
-  }
-};
-
-} // end anonymous namespace
-
-bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-
-  Function &F = *L->getHeader()->getParent();
-
-  LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << *L
-                    << "\n");
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-  MemorySSAUpdater MSSAU(MSSA);
-
-  auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
-  auto *SE = SEWP ? &SEWP->getSE() : nullptr;
-
-  auto UnswitchCB = [&L, &LPM](bool CurrentLoopValid, bool PartiallyInvariant,
-                               bool InjectedCondition,
-                               ArrayRef<Loop *> NewLoops) {
-    // If we did a non-trivial unswitch, we have added new (cloned) loops.
-    for (auto *NewL : NewLoops)
-      LPM.addLoop(*NewL);
-
-    // If the current loop remains valid, re-add it to the queue. This is
-    // a little wasteful as we'll finish processing the current loop as well,
-    // but it is the best we can do in the old PM.
-    if (CurrentLoopValid) {
-      // If the current loop has been unswitched using a partially invariant
-      // condition or injected invariant condition, we should not re-add the
-      // current loop to avoid unswitching on the same condition again.
-      if (!PartiallyInvariant && !InjectedCondition)
-        LPM.addLoop(*L);
-    } else
-      LPM.markLoopAsDeleted(*L);
-  };
-
-  auto DestroyLoopCB = [&LPM](Loop &L, StringRef /* Name */) {
-    LPM.markLoopAsDeleted(L);
-  };
-
-  if (VerifyMemorySSA)
-    MSSA->verifyMemorySSA();
-  bool Changed =
-      unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial, UnswitchCB, SE,
-                   &MSSAU, nullptr, nullptr, DestroyLoopCB);
-
-  if (VerifyMemorySSA)
-    MSSA->verifyMemorySSA();
-
-  // Historically this pass has had issues with the dominator tree so verify it
-  // in asserts builds.
-  assert(DT.verify(DominatorTree::VerificationLevel::Fast));
-
-  return Changed;
-}
-
-char SimpleLoopUnswitchLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(SimpleLoopUnswitchLegacyPass, "simple-loop-unswitch",
-                      "Simple unswitch loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(SimpleLoopUnswitchLegacyPass, "simple-loop-unswitch",
-                    "Simple unswitch loops", false, false)
-
-Pass *llvm::createSimpleLoopUnswitchLegacyPass(bool NonTrivial) {
-  return new SimpleLoopUnswitchLegacyPass(NonTrivial);
 }

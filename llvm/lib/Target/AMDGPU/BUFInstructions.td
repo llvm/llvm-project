@@ -692,7 +692,8 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in, bit hasGFX12En
   dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddrClass:$vaddr)));
   dag SOffset = !if(hasGFX12Enc, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
   dag MainInputs = !con((ins SReg_128:$srsrc), SOffset, (ins offset:$offset));
-  dag CPol = !if(vdata_in, (ins CPol_GLC1:$cpol), (ins CPol_0:$cpol));
+  dag CPol = !if(vdata_in, (ins CPol_GLC_WithDefault:$cpol),
+                           (ins CPol_NonGLC_WithDefault:$cpol));
 
   dag ret = !con(Data, MainInputs, CPol);
 }

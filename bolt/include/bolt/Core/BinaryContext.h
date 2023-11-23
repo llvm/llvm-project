@@ -1290,6 +1290,9 @@ public:
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;
 
+  /// Dump the assembly representation of MCInst to debug output.
+  void dump(const MCInst &Inst) const;
+
   /// Print the string name for a CFI operation.
   static void printCFI(raw_ostream &OS, const MCCFIInstruction &Inst);
 

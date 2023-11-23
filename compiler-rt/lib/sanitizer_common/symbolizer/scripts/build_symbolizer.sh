@@ -76,6 +76,7 @@ if [[ ! -d ${ZLIB_BUILD} ]]; then
     git clone https://github.com/madler/zlib ${ZLIB_BUILD}
   else
     ZLIB_SRC=$(readlink -f $ZLIB_SRC)
+    mkdir -p ${ZLIB_BUILD}
     cp -r ${ZLIB_SRC}/* ${ZLIB_BUILD}/
   fi
 fi

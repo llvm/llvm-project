@@ -544,9 +544,6 @@ public:
   /// Record a fact that must be true if this point in the program is reached.
   void assume(const Formula &);
 
-  /// Deprecated synonym for `assume()`.
-  void addToFlowCondition(const Formula &F) { assume(F); }
-
   /// Returns true if the formula is always true when this point is reached.
   /// Returns false if the formula may be false (or the flow condition isn't
   /// sufficiently precise to prove that it is true) or if the solver times out.
@@ -562,9 +559,6 @@ public:
   /// Returns false if the formula is always false when this point is reached
   /// (or the flow condition is overly constraining) or if the solver times out.
   bool allows(const Formula &) const;
-
-  /// Deprecated synonym for `proves()`.
-  bool flowConditionImplies(const Formula &F) const { return proves(F); }
 
   /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
   /// returns null.
