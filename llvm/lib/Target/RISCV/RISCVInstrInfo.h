@@ -224,9 +224,6 @@ public:
 
   MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
-  void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
-                             MachineInstr &NewMI1,
-                             MachineInstr &NewMI2) const override;
   bool
   getMachineCombinerPatterns(MachineInstr &Root,
                              SmallVectorImpl<MachineCombinerPattern> &Patterns,
