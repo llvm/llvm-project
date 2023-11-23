@@ -111,8 +111,7 @@ public:
     CharBoxValueAttribute, // BoxChar with VALUE
     // Passing a character procedure as a <procedure address, result length>
     // tuple.
-    CharProcTuple,
-    BoxProcRef
+    CharProcTuple
   };
   /// Different properties of an entity that can be passed/returned.
   /// One-to-One mapping with PassEntityBy but for
@@ -125,8 +124,7 @@ public:
     CharProcTuple,
     Box,
     MutableBox,
-    Value,
-    BoxProcRef
+    Value
   };
 
   using FortranEntity = typename PassedEntityTypes<T>::FortranEntity;

@@ -18,7 +18,6 @@
 #include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
-#include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -480,8 +479,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (global && globalIsInitialized(global))
     return global;
 
-  if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      Fortran::semantics::IsProcedurePointer(sym))
+  if (Fortran::semantics::IsProcedurePointer(sym))
     TODO(loc, "procedure pointer globals");
 
   // If this is an array, check to see if we can use a dense attribute
@@ -509,8 +507,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (!global)
     global = builder.createGlobal(loc, symTy, globalName, linkage,
                                   mlir::Attribute{}, isConst, var.isTarget());
-  if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
-      !Fortran::semantics::IsProcedure(sym)) {
+  if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init()) {
@@ -530,6 +527,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             b.create<fir::HasValueOp>(loc, box);
           });
     }
+
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
@@ -554,39 +552,10 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder.create<fir::HasValueOp>(loc, castTo);
           });
     }
-  } else if (Fortran::semantics::IsProcedurePointer(sym)) {
-    const auto *details{sym.detailsIf<Fortran::semantics::ProcEntityDetails>()};
-    if (details && details->init()) {
-      auto sym{*details->init()};
-      if (sym) // Has a procedure target.
-        Fortran::lower::createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
-                  converter, loc, *sym)};
-              auto castTo{builder.createConvert(loc, symTy, box)};
-              b.create<fir::HasValueOp>(loc, castTo);
-            });
-      else { // Has NULL() target.
-        Fortran::lower::createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
-              b.create<fir::HasValueOp>(loc, box);
-            });
-      }
-    } else {
-      // No initialization.
-      Fortran::lower::createGlobalInitialization(
-          builder, global, [&](fir::FirOpBuilder &b) {
-            auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
-            b.create<fir::HasValueOp>(loc, box);
-          });
-    }
   } else if (sym.has<Fortran::semantics::CommonBlockDetails>()) {
     mlir::emitError(loc, "COMMON symbol processed elsewhere");
   } else {
-    TODO(loc, "global"); // Something else
+    TODO(loc, "global"); // Procedure pointer or something else
   }
   // Creates zero initializer for globals without initializers, this is a common
   // and expected behavior (although not required by the standard)
@@ -676,16 +645,8 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
   bool isTarg = var.isTarget();
-
   // Let the builder do all the heavy lifting.
-  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
-    return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
-
-  // Local procedure pointer.
-  auto res{builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg)};
-  auto box{fir::factory::createNullBoxProc(builder, loc, ty)};
-  builder.create<fir::StoreOp>(loc, box, res);
-  return res;
+  return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
 }
 
 /// Must \p var be default initialized at runtime when entering its scope.
@@ -1581,8 +1542,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   // is useful to maintain the address of the commonblock in an MLIR value and
   // query it. hlfir.declare need not be created for these.
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      (!Fortran::semantics::IsProcedure(sym) ||
-       Fortran::semantics::IsPointer(sym)) &&
+      !Fortran::semantics::IsProcedure(sym) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     bool isCrayPointee =
         sym.test(Fortran::semantics::Symbol::Flag::CrayPointee);
@@ -1727,16 +1687,6 @@ genAllocatableOrPointerDeclare(Fortran::lower::AbstractConverter &converter,
                    /*lbounds=*/std::nullopt, force);
 }
 
-/// Map a procedure pointer
-static void genProcPointer(Fortran::lower::AbstractConverter &converter,
-                           Fortran::lower::SymMap &symMap,
-                           const Fortran::semantics::Symbol &sym,
-                           mlir::Value addr, bool force = false) {
-  genDeclareSymbol(converter, symMap, sym, addr, mlir::Value{},
-                   /*shape=*/std::nullopt,
-                   /*lbounds=*/std::nullopt, force);
-}
-
 /// Map a symbol represented with a runtime descriptor to its FIR fir.box and
 /// evaluated specification expressions. Will optionally create fir.declare.
 static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
@@ -1788,20 +1738,8 @@ void Fortran::lower::mapSymbolAttributes(
 
       Fortran::lower::genDeclareSymbol(converter, symMap, sym, undefOp);
     }
-
-    // Procedure pointer.
-    if (Fortran::semantics::IsPointer(sym)) {
-      // global
-      mlir::Value boxAlloc = preAlloc;
-      // dummy or passed result
-      if (!boxAlloc)
-        if (Fortran::lower::SymbolBox symbox = symMap.lookupSymbol(sym))
-          boxAlloc = symbox.getAddr();
-      // local
-      if (!boxAlloc)
-        boxAlloc = createNewLocal(converter, loc, var, preAlloc);
-      genProcPointer(converter, symMap, sym, boxAlloc, replace);
-    }
+    if (Fortran::semantics::IsPointer(sym))
+      TODO(loc, "procedure pointers");
     return;
   }
 
