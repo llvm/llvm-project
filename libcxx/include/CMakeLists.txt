@@ -816,7 +816,6 @@ set(files
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
   __type_traits/operation_traits.h
-  __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
