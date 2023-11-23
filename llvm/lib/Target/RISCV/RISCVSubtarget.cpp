@@ -58,7 +58,7 @@ static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
 
 static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
-    "riscv-min-jump-table-entries", cl::init(5), cl::Hidden,
+    "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
 
 void RISCVSubtarget::anchor() {}
