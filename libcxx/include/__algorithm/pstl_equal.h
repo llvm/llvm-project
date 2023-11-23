@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_EQUAL_H
 #define _LIBCPP___ALGORITHM_PSTL_EQUAL_H
 
+#include <__algorithm/equal.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__functional/operations.h>
