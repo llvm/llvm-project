@@ -12,6 +12,7 @@
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__functional/operations.h>
+#include <__iterator/iterator_traits.h>
 #include <__numeric/pstl_transform_reduce.h>
 #include <__utility/move.h>
 
