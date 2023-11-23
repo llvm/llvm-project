@@ -290,10 +290,18 @@ static ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
   return ParseRet::None;
 }
 
-// Returns the 'natural' VF for a given scalar element type, assuming a minimum
-// vector size of 128b. This matches AArch64 SVE, which is currently the only
-// scalable architecture with a defined vector function variant name mangling.
-static std::optional<ElementCount> getElementCountForTy(const Type *Ty) {
+// Returns the 'natural' VF for a given scalar element type, based on the
+// current architecture.
+//
+// For SVE (currently the only scalable architecture with a defined name
+// mangling), we assume a minimum vector size of 128b and return a VF based on
+// the number of elements of the given type which would fit in such a vector.
+static std::optional<ElementCount> getElementCountForTy(const VFISAKind ISA,
+                                                        const Type *Ty) {
+  // Only AArch64 SVE is supported at present.
+  assert(ISA == VFISAKind::SVE &&
+         "Scalable VF decoding only implemented for SVE\n");
+
   if (Ty->isIntegerTy(64) || Ty->isDoubleTy() || Ty->isPointerTy())
     return ElementCount::getScalable(2);
   if (Ty->isIntegerTy(32) || Ty->isFloatTy())
@@ -311,14 +319,9 @@ static std::optional<ElementCount> getElementCountForTy(const Type *Ty) {
 static std::optional<ElementCount>
 getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
                            const SmallVectorImpl<VFParameter> &Params) {
-  // Look up the minimum known register size in order to calculate minimum VF.
-  // Only AArch64 SVE is supported at present.
-  assert(ISA == VFISAKind::SVE &&
-         "Scalable VF decoding only implemented for SVE\n");
-
   // Start with a very wide EC and drop when we find smaller ECs based on type.
   ElementCount MinEC =
-        ElementCount::getScalable(std::numeric_limits<unsigned int>::max());
+      ElementCount::getScalable(std::numeric_limits<unsigned int>::max());
   for (auto &Param : Params) {
     // Only vector parameters are used when determining the VF; uniform or
     // linear are left as scalars, so do not affect VF.
@@ -329,7 +332,7 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
         return std::nullopt;
       Type *PTy = Signature->getParamType(Param.ParamPos);
 
-      std::optional<ElementCount> EC = getElementCountForTy(PTy);
+      std::optional<ElementCount> EC = getElementCountForTy(ISA, PTy);
       // If we have an unknown scalar element type we can't find a reasonable
       // VF.
       if (!EC)
@@ -344,7 +347,7 @@ getScalableECFromSignature(const FunctionType *Signature, const VFISAKind ISA,
   // Also check the return type if not void.
   Type *RetTy = Signature->getReturnType();
   if (!RetTy->isVoidTy()) {
-    std::optional<ElementCount> ReturnEC = getElementCountForTy(RetTy);
+    std::optional<ElementCount> ReturnEC = getElementCountForTy(ISA, RetTy);
     // If we have an unknown scalar element type we can't find a reasonable VF.
     if (!ReturnEC)
       return std::nullopt;
@@ -427,20 +430,15 @@ std::optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // Figure out the number of lanes in vectors for this function variant. This
   // is easy for fixed length, as the vlen encoding just gives us the value
   // directly. However, if the vlen mangling indicated that this function
-  // variant expects scalable vectors, then we need to figure out the minimum
-  // based on the widest scalar types in vector arguments.
+  // variant expects scalable vectors we need to work it out based on the
+  // demangled parameter types and the scalar function signature.
   std::optional<ElementCount> EC;
   if (ParsedVF.second) {
-    // Scalable VF, need to work out the minimum from the element types
-    // in the scalar function arguments.
     EC = getScalableECFromSignature(CI.getFunctionType(), ISA, Parameters);
-
     if (!EC)
       return std::nullopt;
-  } else {
-    // Fixed length VF
+  } else
     EC = ElementCount::getFixed(ParsedVF.first);
-  }
 
   // Check for the <scalarname> and the optional <redirection>, which
   // are separated from the prefix with "_"

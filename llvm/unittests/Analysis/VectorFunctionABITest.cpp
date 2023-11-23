@@ -537,7 +537,7 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
 // parameter type.
 TEST_F(VFABIParserTest, ParseWiderReturnTypeSVE) {
   EXPECT_TRUE(
-    invokeParser("_ZGVsMxvv_foo(vector_foo)", "foo", "i64(i32, i32)"));
+      invokeParser("_ZGVsMxvv_foo(vector_foo)", "foo", "i64(i32, i32)"));
   EXPECT_EQ(VF, ElementCount::getScalable(2));
 }
 
