@@ -580,6 +580,55 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   return builder.CreateCall(fn, args);
 }
 
+llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
+    llvm::IRBuilderBase &builder, ModuleTranslation &moduleTranslation,
+    Operation *intrOp, llvm::Intrinsic::ID intrinsic, unsigned numResults,
+    ArrayRef<unsigned> overloadedResults, ArrayRef<unsigned> overloadedOperands,
+    ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames) {
+  assert(immArgPositions.size() == immArgAttrNames.size() &&
+         "LLVM `immArgPositions` and MLIR `immArgAttrNames` should have equal "
+         "length");
+
+  // Map operands and attributes to LLVM values.
+  auto operands = moduleTranslation.lookupValues(intrOp->getOperands());
+  SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
+  for (auto [immArgPos, immArgName] :
+       llvm::zip(immArgPositions, immArgAttrNames)) {
+    auto attr = llvm::cast<TypedAttr>(intrOp->getAttr(immArgName));
+    assert(attr.getType().isIntOrFloat() && "expected int or float immarg");
+    auto *type = moduleTranslation.convertType(attr.getType());
+    args[immArgPos] = LLVM::detail::getLLVMConstant(
+        type, attr, intrOp->getLoc(), moduleTranslation);
+  }
+  unsigned opArg = 0;
+  for (auto &arg : args) {
+    if (!arg)
+      arg = operands[opArg++];
+  }
+
+  // Resolve overloaded intrinsic declaration.
+  SmallVector<llvm::Type *> overloadedTypes;
+  for (unsigned overloadedResultIdx : overloadedResults) {
+    if (numResults > 1) {
+      // More than one result is mapped to an LLVM struct.
+      overloadedTypes.push_back(moduleTranslation.convertType(
+          llvm::cast<LLVM::LLVMStructType>(intrOp->getResult(0).getType())
+              .getBody()[overloadedResultIdx]));
+    } else {
+      overloadedTypes.push_back(
+          moduleTranslation.convertType(intrOp->getResult(0).getType()));
+    }
+  }
+  for (unsigned overloadedOperandIdx : overloadedOperands)
+    overloadedTypes.push_back(args[overloadedOperandIdx]->getType());
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Function *llvmIntr =
+      llvm::Intrinsic::getDeclaration(module, intrinsic, overloadedTypes);
+
+  return builder.CreateCall(llvmIntr, args);
+}
+
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.
 LogicalResult
