@@ -1261,7 +1261,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     auto *BDV = Pair.first;
     Value *Base = Pair.second.getBaseValue();
     assert(BDV && Base);
-    // the assumption is that whenever we have a derived ptr(s), their base
+    // Whenever we have a derived ptr(s), their base
     // ptr(s) must be of the same size, not necessarily the same type
     assert(DL.getTypeAllocSize(BDV->getType()) ==
                DL.getTypeAllocSize(Base->getType()) &&
