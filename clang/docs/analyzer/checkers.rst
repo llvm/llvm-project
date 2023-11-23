@@ -760,19 +760,19 @@ Security related checkers.
 security.cert.env.InvalidPtr
 """"""""""""""""""""""""""""""""""
 
-Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
+Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV31-C.+Do+not+rely+on+an+environment+pointer+following+an+operation+that+may+invalidate+it>`_ and `ENV34-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV34-C.+Do+not+store+pointers+returned+by+certain+functions>`_.
 
-ENV31-C:
-Rule is about the possible problem with `main` function's third argument, environment pointer,
-"envp". When environment array is modified using some modification function
-such as putenv, setenv or others, It may happen that memory is reallocated,
-however "envp" is not updated to reflect the changes and points to old memory
-region.
+* **ENV31-C**:
+  Rule is about the possible problem with ``main`` function's third argument, environment pointer,
+  "envp". When environment array is modified using some modification function
+  such as ``putenv``, ``setenv`` or others, It may happen that memory is reallocated,
+  however "envp" is not updated to reflect the changes and points to old memory
+  region.
 
-ENV34-C:
-Some functions return a pointer to a statically allocated buffer.
-Consequently, subsequent call of these functions will invalidate previous
-pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
+* **ENV34-C**:
+  Some functions return a pointer to a statically allocated buffer.
+  Consequently, subsequent call of these functions will invalidate previous
+  pointer. These functions include: ``getenv``, ``localeconv``, ``asctime``, ``setlocale``, ``strerror``
 
 .. code-block:: c
 
