@@ -948,8 +948,10 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
         attr->getMaxRange().getInt()));
   
   // Add function attribute frame-pointer, if found.
-  if (mlir::LLVM::FramePointerKindAttr attr = func.getFramePointerAttr())
-    llvmFunc->addFnAttr("frame-pointer", stringifyFramePointerKind(attr.getValue()));
+  if (FramePointerKindAttr attr = func.getFramePointerAttr())
+    llvmFunc->addFnAttr("frame-pointer",
+                        LLVM::framePointerKind::stringifyFramePointerKind(
+                            (attr.getFramePointerKind())));
 
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();

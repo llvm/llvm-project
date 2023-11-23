@@ -2309,7 +2309,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                                    IntegerAttr::get(intTy, minRange),
                                    IntegerAttr::get(intTy, maxRange)));
   }
-  // Parse the optional comdat selector.:q
+  // Parse the optional comdat selector.
   if (succeeded(parser.parseOptionalKeyword("comdat"))) {
     SymbolRefAttr comdat;
     if (parser.parseLParen() || parser.parseAttribute(comdat) ||
