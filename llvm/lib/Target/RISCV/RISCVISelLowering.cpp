@@ -1363,8 +1363,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
   setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
 
-  setMinimumJumpTableEntries(5);
-
   // Jumps are expensive, compared to logic
   setJumpIsExpensive();
 
@@ -19701,6 +19699,11 @@ bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     return AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
+
+unsigned RISCVTargetLowering::getMinimumJumpTableEntries() const {
+  return Subtarget.getMinimumJumpTableEntries();
+}
+
 namespace llvm::RISCVVIntrinsicsTable {
 
 #define GET_RISCVVIntrinsicsTable_IMPL
