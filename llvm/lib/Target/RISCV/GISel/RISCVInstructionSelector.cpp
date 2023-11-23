@@ -73,7 +73,7 @@ private:
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &MI, MachineIRBuilder &MIB,
-                                      MachineRegisterInfo &MRI);
+                                      MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -1104,7 +1104,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
 }
 
 bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
-    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) {
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
   // Find the intrinsic ID.
   unsigned IntrinID = cast<GIntrinsic>(MI).getIntrinsicID();
 
