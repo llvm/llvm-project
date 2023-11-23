@@ -3,7 +3,8 @@
 // bit different from the C++ version. This test ensures that these differences
 // are accounted for.
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
 
 char string[] = "whatnow";
 // CHECK: cir.global external @string = #cir.const_array<"whatnow\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8>
@@ -48,7 +49,31 @@ struct {
 // CHECK: cir.global external @nestedStringPtr = #cir.const_struct<{#cir.global_view<@".str"> : !cir.ptr<!s8i>}>
 
 int *globalPtr = &nestedString.y[1];
-// CHECK: cir.global external @globalPtr = #cir.global_view<@nestedString, [0 : i32, 1 : i32, 1 : i32]>
+// CHECK: cir.global external @globalPtr = #cir.global_view<@nestedString, [1 : i32, 1 : i32]> : !cir.ptr<!s32i>
+
+const int i = 12;
+int i2 = i;
+struct { int i; } i3 = {i};
+// CHECK: cir.global external @i2 = #cir.int<12> : !s32i
+// CHECK: cir.global external @i3 = #cir.const_struct<{#cir.int<12> : !s32i}> : !ty_22anon2E722
+
+int a[10][10][10];
+int *a2 = &a[3][0][8];
+struct { int *p; } a3 = {&a[3][0][8]};
+// CHECK: cir.global external @a2 = #cir.global_view<@a, [3 : i32, 0 : i32, 8 : i32]> : !cir.ptr<!s32i>
+// CHECK: cir.global external @a3 = #cir.const_struct<{#cir.global_view<@a, [3 : i32, 0 : i32, 8 : i32]> : !cir.ptr<!s32i>}> : !ty_22anon2E922
+
+int p[10];
+int *p1 = &p[0];
+struct { int *x; } p2 = {&p[0]};
+// CHECK: cir.global external @p1 = #cir.global_view<@p> : !cir.ptr<!s32i>
+// CHECK: cir.global external @p2 = #cir.const_struct<{#cir.global_view<@p> : !cir.ptr<!s32i>}> : !ty_22anon2E1122
+
+int q[10];
+int *q1 = q;
+struct { int *x; } q2 = {q};
+// CHECK: cir.global external @q1 = #cir.global_view<@q> : !cir.ptr<!s32i>
+// CHECK: cir.global external @q2 = #cir.const_struct<{#cir.global_view<@q> : !cir.ptr<!s32i>}> : !ty_22anon2E1322
 
 // TODO: test tentatives with internal linkage.
 
