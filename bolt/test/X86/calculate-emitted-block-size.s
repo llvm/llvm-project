@@ -19,44 +19,31 @@
 # RUN:         --data=%t.fdata --reorder-blocks=ext-tsp \
 # RUN:     2>&1 | FileCheck --check-prefix=SPLITHOTCOLD %s
 
-# SPLITALL: Binary Function "chain" after split-functions
 # SPLITALL: {{^\.LBB00}}
-# SPLITALL: Output Start Address: 0
-# SPLITALL: Output End Address: 18
+# SPLITALL: Output Address Range: [0x0, 0x12) (18 bytes)
 # SPLITALL: {{^\.LFT0}}
-# SPLITALL: Output Start Address: 0
-# SPLITALL: Output End Address: 10
+# SPLITALL: Output Address Range: [0x0, 0xa) (10 bytes)
 # SPLITALL: {{^\.Ltmp1}}
-# SPLITALL: Output Start Address: 0
-# SPLITALL: Output End Address: 2
+# SPLITALL: Output Address Range: [0x0, 0x2) (2 bytes)
 # SPLITALL: {{^\.Ltmp0}}
-# SPLITALL: Output Start Address: 0
-# SPLITALL: Output End Address: 16
+# SPLITALL: Output Address Range: [0x0, 0x10) (16 bytes)
 # SPLITALL: {{^\.Ltmp2}}
-# SPLITALL: Output Start Address: 0
-# SPLITALL: Output End Address: 8
+# SPLITALL: Output Address Range: [0x0, 0x8) (8 bytes)
 # SPLITALL: {{^\.LFT1}}
-# SPLITALL: Output Start Address: 0
-# SPLITALL: Output End Address: 8
+# SPLITALL: Output Address Range: [0x0, 0x8) (8 bytes)
 
 # SPLITHOTCOLD: {{^\.LBB00}}
-# SPLITHOTCOLD: Output Start Address: 0
-# SPLITHOTCOLD: Output End Address: 9
+# SPLITHOTCOLD: Output Address Range: [0x0, 0x9) (9 bytes)
 # SPLITHOTCOLD: {{^\.LFT0}}
-# SPLITHOTCOLD: Output Start Address: 9
-# SPLITHOTCOLD: Output End Address: 14
+# SPLITHOTCOLD: Output Address Range: [0x9, 0xe) (5 bytes)
 # SPLITHOTCOLD: {{^\.Ltmp1}}
-# SPLITHOTCOLD: Output Start Address: 14
-# SPLITHOTCOLD: Output End Address: 16
+# SPLITHOTCOLD: Output Address Range: [0xe, 0x10) (2 bytes)
 # SPLITHOTCOLD: {{^\.Ltmp0}}
-# SPLITHOTCOLD: Output Start Address: 16
-# SPLITHOTCOLD: Output End Address: 27
+# SPLITHOTCOLD: Output Address Range: [0x10, 0x1b) (11 bytes)
 # SPLITHOTCOLD: {{^\.Ltmp2}}
-# SPLITHOTCOLD: Output Start Address: 27
-# SPLITHOTCOLD: Output End Address: 32
+# SPLITHOTCOLD: Output Address Range: [0x1b, 0x20) (5 bytes)
 # SPLITHOTCOLD: {{^\.LFT1}}
-# SPLITHOTCOLD: Output Start Address: 0
-# SPLITHOTCOLD: Output End Address: 8
+# SPLITHOTCOLD: Output Address Range: [0x0, 0x8) (8 bytes)
 
         .text
         .globl  chain

@@ -518,10 +518,12 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
          << " instructions, align : " << BB->getAlignment() << ")\n";
 
       if (opts::PrintOutputAddressRange)
-        OS << "  Output Start Address: " << BB->getOutputAddressRange().first
-           << "\n"
-           << "  Output End Address: " << BB->getOutputAddressRange().second
-           << "\n";
+        OS << "  Output Address Range: ["
+           << "0x" << Twine::utohexstr(BB->getOutputAddressRange().first)
+           << ", "
+           << "0x" << Twine::utohexstr(BB->getOutputAddressRange().second)
+           << ") "
+           << "(" << BB->getOutputSize() << " bytes)\n";
 
       if (isEntryPoint(*BB)) {
         if (MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB))
