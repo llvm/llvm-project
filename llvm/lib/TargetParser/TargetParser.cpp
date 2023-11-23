@@ -61,6 +61,7 @@ constexpr GPUInfo R600GPUs[] = {
 // This table should be sorted by the value of GPUKind
 // Don't bother listing the implicitly true features
 constexpr GPUInfo AMDGCNGPUs[] = {
+    // clang-format off
     // Name         Canonical    Kind        Features
     //              Name
     {{"gfx600"},    {"gfx600"},  GK_GFX600,  FEATURE_FAST_FMA_F32},
@@ -123,6 +124,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1103"},   {"gfx1103"}, GK_GFX1103, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    // clang-format on
 };
 
 const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
@@ -203,6 +205,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
     return {0, 0, 0};
   }
 
+  // clang-format off
   switch (AK) {
   case GK_GFX600:  return {6, 0, 0};
   case GK_GFX601:  return {6, 0, 1};
@@ -248,6 +251,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1151: return {11, 5, 1};
   default:         return {0, 0, 0};
   }
+  // clang-format on
 }
 
 StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
