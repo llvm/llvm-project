@@ -20,7 +20,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __uninitialized_tag {};
 
-// This class stores an object of type T but never destroys it.
+// This class stores an object of type _Tp but never destroys it.
 //
 // This is akin to using __attribute__((no_destroy)), except that it is possible
 // to control the lifetime of the object with more flexibility by deciding e.g.
