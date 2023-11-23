@@ -85,6 +85,12 @@ def main():
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
+    parser.add_argument(
+        "--reset-variable-names",
+        action="store_true",
+        help="Reset all variable names to correspond closely to the variable names in IR. "
+        "This tends to result in larger diffs.",
+    )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
 
@@ -170,13 +176,19 @@ def main():
             )
             builder.processed_prefixes(prefixes)
 
+        prefix_set = set(
+            [prefix for prefixes, _, _ in prefix_list for prefix in prefixes]
+        )
+
+        if not ti.args.reset_variable_names:
+            original_check_lines = common.collect_original_check_lines(ti, prefix_set)
+        else:
+            original_check_lines = {}
+
         func_dict = builder.finish_and_get_func_dict()
         is_in_function = False
         is_in_function_start = False
         has_checked_pre_function_globals = False
-        prefix_set = set(
-            [prefix for prefixes, _, _ in prefix_list for prefix in prefixes]
-        )
         common.debug("Rewriting FileCheck prefixes:", str(prefix_set))
         output_lines = []
 
@@ -230,6 +242,7 @@ def main():
                         args.version,
                         global_vars_seen_dict,
                         is_filtered=builder.is_filtered(),
+                        original_check_lines=original_check_lines.get(func, {}),
                     ),
                 )
             )
@@ -261,6 +274,9 @@ def main():
                             args.version,
                             global_vars_seen_dict,
                             is_filtered=builder.is_filtered(),
+                            original_check_lines=original_check_lines.get(
+                                func_name, {}
+                            ),
                         )
                     )
                     is_in_function_start = False
