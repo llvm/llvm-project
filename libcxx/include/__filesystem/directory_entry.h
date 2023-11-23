@@ -41,7 +41,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class directory_entry {
-  typedef path _Path;
+  typedef filesystem::path _Path;
 
 public:
   // constructors and destructors
