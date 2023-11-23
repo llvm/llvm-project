@@ -289,7 +289,13 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
 
 void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  if (getBufferizeDestinationOnly()) {
+    // The destination is replaced with a newly allocated buffer, but the op
+    // itself remains in place.
+    onlyReadsHandle(getTarget(), effects);
+  } else {
+    consumesHandle(getTarget(), effects);
+  }
   producesHandle(getAllocatedBuffer(), effects);
   producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
