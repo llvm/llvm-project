@@ -292,7 +292,7 @@ be [bufferized](Bufferization.md) before being converted.
 
 ### Conversion of LLVM Container Types with Non-Compatible Element Types
 
-Progressive lowering may result in there existing LLVM container types, such
+Progressive lowering may result in there LLVM container types, such
 as LLVM dialect structures, containing non-compatible types:
 `!llvm.struct<(index)>`. Such types are converted recursively using the rules
 described above.

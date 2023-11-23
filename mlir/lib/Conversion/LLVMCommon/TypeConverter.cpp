@@ -113,10 +113,11 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         return success();
       }
 
-      // If it has been initialized and has the same body, just use it. This
-      // ensures that recursive structs keep being recursive rather than
-      // including a non-updated name.
-      if (TypeRange(convertedType.getBody()) == TypeRange(convertedElemTypes)) {
+      // If it has been initialized, has the same body and packed bit, just use
+      // it. This ensures that recursive structs keep being recursive rather
+      // than including a non-updated name.
+      if (TypeRange(convertedType.getBody()) == TypeRange(convertedElemTypes) &&
+          convertedType.isPacked() == type.isPacked()) {
         results.push_back(convertedType);
         return success();
       }
