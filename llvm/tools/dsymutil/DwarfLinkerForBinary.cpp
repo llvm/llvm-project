@@ -1063,7 +1063,6 @@ DwarfLinkerForBinary::AddressManager<AddressesMapBase>::hasValidRelocationAt(
     uint64_t EndOffset) {
   std::vector<ValidReloc> Relocs =
       getRelocations(AllRelocs, StartOffset, EndOffset);
-
   if (Relocs.size() == 0)
     return std::nullopt;
 
