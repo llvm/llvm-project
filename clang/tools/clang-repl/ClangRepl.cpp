@@ -15,8 +15,6 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/Sema.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -125,14 +123,22 @@ ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
 
     return {};
   }
-  auto *MainCI = (*Interp)->getCompilerInstance();
-  auto CC = clang::ReplCodeCompleter();
-  CC.codeComplete(MainCI, Buffer, Lines, Pos + 1,
-                  MainInterp.getCompilerInstance(), Results);
+
+  codeComplete(
+      const_cast<clang::CompilerInstance *>((*Interp)->getCompilerInstance()),
+      Buffer, Lines, Pos + 1, MainInterp.getCompilerInstance(), Results);
+
+  size_t space_pos = Buffer.rfind(" ");
+  llvm::StringRef Prefix;
+  if (space_pos == llvm::StringRef::npos) {
+    Prefix = Buffer;
+  } else {
+    Prefix = Buffer.substr(space_pos + 1);
+  }
+
   for (auto c : Results) {
-    if (c.find(CC.Prefix) == 0)
-      Comps.push_back(
-          llvm::LineEditor::Completion(c.substr(CC.Prefix.size()), c));
+    if (c.find(Prefix) == 0)
+      Comps.push_back(llvm::LineEditor::Completion(c.substr(Prefix.size()), c));
   }
   return Comps;
 }
