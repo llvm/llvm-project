@@ -10,4 +10,6 @@ add_mlir_library(MLIRLspServerSupportLib
 
   LINK_LIBS PUBLIC
   MLIRSupport
+  PRIVATE
+  ${LLVM_ATOMIC_LIB}
   )
