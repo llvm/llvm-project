@@ -78,6 +78,9 @@ public:
   /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
   bool AllowAMDGPUUnsafeFPAtomics = false;
 
+  /// \brief If enabled, allow fine-grained memory access on AMDGPU.
+  bool AllowAMDGPUFineGrainedMem = false;
+
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
       llvm::CodeObjectVersionKind::COV_None;
