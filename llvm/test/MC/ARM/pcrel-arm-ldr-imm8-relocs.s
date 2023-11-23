@@ -12,16 +12,11 @@
 // The value format is decimal in these specific cases, but it's hex for other
 // ldr instructions. These checks are valid for both formats.
 
-@ ARM_ADDEND: r0, [pc, #-
-@ ARM_ADDEND 8]
-@ ARM_ADDEND: r0, [pc, #-
-@ ARM_ADDEND 8]
-@ ARM_ADDEND: r0, [pc, #-
-@ ARM_ADDEND 8]
-@ ARM_ADDEND: r0, [pc, #-
-@ ARM_ADDEND 16]
-@ ARM_ADDEND: r0, [pc, #-
-@ ARM_ADDEND 16]
+@ ARM_ADDEND: r0, [pc, #-{{(0x)?}}8]
+@ ARM_ADDEND: r0, [pc, #-{{(0x)?}}8]
+@ ARM_ADDEND: r0, [pc, #-{{(0x)?}}8]
+@ ARM_ADDEND: r0, [pc, #-{{16|0x10}}]
+@ ARM_ADDEND: r0, [pc, #-{{16|0x10}}]
 @ ARM_ADDEND: r0, [pc]
 
     .arm
