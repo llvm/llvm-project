@@ -983,6 +983,7 @@ define i64 @mul81(i64 %a) {
   ret i64 %c
 }
 
+
 define i64 @mul153(i64 %a) {
 ; RV64I-LABEL: mul153:
 ; RV64I:       # %bb.0:
@@ -1995,9 +1996,9 @@ define i64 @mul49(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul49:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh1add a1, a0, a0
-; RV64ZBA-NEXT:    sh2add a0, a1, a0
+; RV64ZBA-NEXT:    sh3add a1, a0, a0
 ; RV64ZBA-NEXT:    sh2add a0, a0, a1
+; RV64ZBA-NEXT:    sh2add a0, a1, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 49
   ret i64 %c
