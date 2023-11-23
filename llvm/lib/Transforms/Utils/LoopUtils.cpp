@@ -634,14 +634,12 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
         if (Block->IsNewDbgInfoFormat) {
           for (DPValue &DPV :
                llvm::make_early_inc_range(I.getDbgValueRange())) {
-            auto Key = DeadDebugSet.find(
-                DebugVariable(DPV.getVariable(), DPV.getExpression(), nullptr));
-            if (Key != DeadDebugSet.end())
+            DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
+                              DPV.getDebugLoc().get());
+            if (!DeadDebugSet.insert(Key).second)
               continue;
             // Unlinks the DPV from it's container, for later insertion.
             DPV.removeFromParent();
-            DeadDebugSet.insert(
-                DebugVariable(DPV.getVariable(), DPV.getExpression(), nullptr));
             DeadDPValues.push_back(&DPV);
           }
         }
