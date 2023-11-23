@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__utility/unreachable.h>
 #include <algorithm>
 #include <clocale>
 #include <codecvt>
@@ -15,9 +14,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <locale>
+#include <new>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 #include <vector>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -154,8 +155,6 @@ public:
         {return static_cast<size_t>(id) < facets_.size() && facets_[static_cast<size_t>(id)];}
     const locale::facet* use_facet(long id) const;
 
-    static const locale& make_classic();
-    static       locale& make_global();
 private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
@@ -538,37 +537,31 @@ locale::__imp::use_facet(long id) const
 
 // locale
 
-const locale&
-locale::__imp::make_classic()
-{
-    // only one thread can get in here and it only gets in once
-    alignas(locale) static std::byte buf[sizeof(locale)];
-    locale* c = reinterpret_cast<locale*>(&buf);
-    c->__locale_ = &make<__imp>(1u);
-    return *c;
+// This class basically implements __attribute__((no_destroy)), which isn't supported
+// by GCC as of writing this.
+template <class T>
+struct __no_destroy {
+    template <class... Args>
+    explicit __no_destroy(Args&&... args) {
+        T* obj = reinterpret_cast<T*>(&buf);
+        new (obj) T(std::forward<Args>(args)...);
+    }
+
+    T& get() { return *reinterpret_cast<T*>(&buf); }
+    T const& get() const { return *reinterpret_cast<T const*>(&buf); }
+
+  private:
+    alignas(T) byte buf[sizeof(T)];
+};
+
+const locale& locale::classic() {
+    static const __no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
+    return c.get();
 }
 
-const locale&
-locale::classic()
-{
-    static const locale& c = __imp::make_classic();
-    return c;
-}
-
-locale&
-locale::__imp::make_global()
-{
-    // only one thread can get in here and it only gets in once
-    alignas(locale) static std::byte buf[sizeof(locale)];
-    auto *obj = ::new (&buf) locale(locale::classic());
-    return *obj;
-}
-
-locale&
-locale::__global()
-{
-    static locale& g = __imp::make_global();
-    return g;
+locale& locale::__global() {
+    static __no_destroy<locale> g(locale::classic());
+    return g.get();
 }
 
 locale::locale() noexcept
