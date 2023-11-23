@@ -151,38 +151,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     """
     Lit test format for the C++ Standard Library conformance test suite.
 
-    This test format is based on top of the ShTest format -- it basically
-    creates a shell script performing the right operations (compile/link/run)
-    based on the extension of the test file it encounters. It supports files
-    with the following extensions:
-
-    FOO.pass.cpp            - Compiles, links and runs successfully
-    FOO.pass.mm             - Same as .pass.cpp, but for Objective-C++
-
-    FOO.compile.pass.cpp    - Compiles successfully, link and run not attempted
-    FOO.compile.pass.mm     - Same as .compile.pass.cpp, but for Objective-C++
-    FOO.compile.fail.cpp    - Does not compile successfully
-
-    FOO.link.pass.cpp       - Compiles and links successfully, run not attempted
-    FOO.link.pass.mm        - Same as .link.pass.cpp, but for Objective-C++
-    FOO.link.fail.cpp       - Compiles successfully, but fails to link
-
-    FOO.sh.<anything>       - A builtin Lit Shell test
-
-    FOO.gen.<anything>      - A .sh test that generates one or more Lit tests on the
-                              fly. Executing this test must generate one or more files
-                              as expected by LLVM split-file, and each generated file
-                              leads to a separate Lit test that runs that file as
-                              defined by the test format. This can be used to generate
-                              multiple Lit tests from a single source file, which is
-                              useful for testing repetitive properties in the library.
-                              Be careful not to abuse this since this is not a replacement
-                              for usual code reuse techniques.
-
-    FOO.verify.cpp          - Compiles with clang-verify. This type of test is
-                              automatically marked as UNSUPPORTED if the compiler
-                              does not support Clang-verify.
-
+    Lit tests are contained in files that follow a certain pattern. That
+    pattern determines the semantics of the test. See
+    libcxx/docs/TestingLibcxx.rst or https://libcxx.llvm.org/TestingLibcxx.html
+    for a complete description of those semantics.
 
     Substitution requirements
     ===============================
