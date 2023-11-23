@@ -1430,6 +1430,7 @@ static void emitDefineCFAWithFP(MachineFunction &MF, MachineBasicBlock &MBB,
       .setMIFlags(MachineInstr::FrameSetup);
 }
 
+#ifndef NDEBUG
 /// Collect live registers from the end of \p MI's parent up to (including) \p
 /// MI in \p LiveRegs.
 static void getLivePhysRegsUpTo(MachineInstr &MI, const TargetRegisterInfo &TRI,
@@ -1441,6 +1442,7 @@ static void getLivePhysRegsUpTo(MachineInstr &MI, const TargetRegisterInfo &TRI,
        reverse(make_range(MI.getIterator(), MBB.instr_end())))
     LiveRegs.stepBackward(MI);
 }
+#endif
 
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
