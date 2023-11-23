@@ -22,15 +22,13 @@
 using namespace mlir;
 
 LLVMModuleRef mlirTranslateModuleToLLVMIR(MlirOperation module,
-                                          LLVMContextRef context,
-                                          MlirStringRef llvmModuleName) {
+                                          LLVMContextRef context) {
   Operation *moduleOp = unwrap(module);
 
   llvm::LLVMContext *ctx = llvm::unwrap(context);
 
-  std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(
-      moduleOp, *ctx,
-      llvm::StringRef(llvmModuleName.data, llvmModuleName.length));
+  std::unique_ptr<llvm::Module> llvmModule =
+      mlir::translateModuleToLLVMIR(moduleOp, *ctx);
 
   LLVMModuleRef moduleRef = llvm::wrap(llvmModule.release());
 

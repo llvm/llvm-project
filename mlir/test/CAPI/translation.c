@@ -43,10 +43,7 @@ static void testToLLVMIR(MlirContext ctx) {
 
   MlirOperation operation = mlirModuleGetOperation(module);
 
-  MlirStringRef name = mlirStringRefCreateFromCString("LLVMDialectModule");
-
-  LLVMModuleRef llvmModule =
-      mlirTranslateModuleToLLVMIR(operation, llvmCtx, name);
+  LLVMModuleRef llvmModule = mlirTranslateModuleToLLVMIR(operation, llvmCtx);
 
   // clang-format off
   // CHECK: declare ptr @malloc(i64 %{{.*}})
