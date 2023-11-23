@@ -2513,10 +2513,6 @@ struct FormatStyle {
   /// \version 13
   std::vector<std::string> IfMacros;
 
-  /// Ignore formatting in preprocessor definitions.
-  /// \version 18
-  bool IgnorePPDefinitions;
-
   /// Specify whether access modifiers should have their own indentation level.
   ///
   /// When ``false``, access modifiers are indented (or outdented) relative to
@@ -3888,6 +3884,10 @@ struct FormatStyle {
   /// \version 13
   unsigned ShortNamespaceLines;
 
+  /// Do not format macro definitions.
+  /// \version 18
+  bool SkipMacroDefinition;
+
   /// Include sorting options.
   enum SortIncludesOptions : int8_t {
     /// Includes are never sorted.
@@ -4788,7 +4788,6 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
-           IgnorePPDefinitions == R.IgnorePPDefinitions &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
            IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
            IncludeStyle.IncludeIsMainRegex ==
@@ -4850,6 +4849,7 @@ struct FormatStyle {
            RequiresExpressionIndentation == R.RequiresExpressionIndentation &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
+           SkipMacroDefinition == R.SkipMacroDefinition &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&

@@ -1363,7 +1363,7 @@ unsigned UnwrappedLineFormatter::format(
                           Indent != TheLine.First->OriginalColumn;
     bool ShouldFormat = TheLine.Affected || FixIndentation;
 
-    if (Style.IgnorePPDefinitions && LineContainsPPDefinition(TheLine))
+    if (Style.SkipMacroDefinition && LineContainsPPDefinition(TheLine))
       ShouldFormat = false;
 
     // We cannot format this line; if the reason is that the line had a

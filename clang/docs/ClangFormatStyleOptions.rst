@@ -3232,11 +3232,6 @@ the configuration (without a prefix: ``Auto``).
   For example: `KJ_IF_MAYBE
   <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
 
-.. _IgnorePPDefinitions:
-
-**IgnorePPDefinitions** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <IgnorePPDefinitions>`
-  Ignore formatting in preprocessor definitions.
-
 .. _IncludeBlocks:
 
 **IncludeBlocks** (``IncludeBlocksStyle``) :versionbadge:`clang-format 6` :ref:`¶ <IncludeBlocks>`
@@ -4904,6 +4899,11 @@ the configuration (without a prefix: ``Auto``).
        int foo;                           int foo;
        int bar;                           int bar;
      } // namespace b                   } // namespace b
+
+.. _SkipMacroDefinition:
+
+**SkipMacroDefinition** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinition>`
+  Do not format macro definitions.
 
 .. _SortIncludes:
 

@@ -1138,7 +1138,7 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
-  if (Style.IgnorePPDefinitions) {
+  if (Style.SkipMacroDefinition) {
     do {
       nextToken();
     } while (!eof());
