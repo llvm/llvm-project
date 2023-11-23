@@ -57236,7 +57236,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(X86::DF, &X86::DFCCRRegClass);
 
     // fpsr -> FPSW
-    if (StringRef("{fpsr}").equals_insensitive(Constraint))
+    // Only allow for clobber.
+    if (StringRef("{fpsr}").equals_insensitive(Constraint) && VT == MVT::Other)
       return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
     return Res;
