@@ -98,11 +98,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
-  auto &BSwap = getActionDefinitionsBuilder(G_BSWAP);
+  auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
   if (ST.hasStdExtZbb())
-    BSwap.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
+    BSWAPActions.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
   else
-    BSwap.maxScalar(0, sXLen).lower();
+    BSWAPActions.maxScalar(0, sXLen).lower();
 
   getActionDefinitionsBuilder(
       {G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF})
@@ -226,10 +226,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_ABS).lower();
 
-  auto &MinMax = getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
+  auto &MinMaxActions =
+      getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
   if (ST.hasStdExtZbb())
-    MinMax.legalFor({sXLen}).minScalar(0, sXLen);
-  MinMax.lower();
+    MinMaxActions.legalFor({sXLen}).minScalar(0, sXLen);
+  MinMaxActions.lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
