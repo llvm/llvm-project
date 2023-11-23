@@ -4032,7 +4032,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   case BuiltinType::ULong:
     TypeNameOS << "uint64";
     break;
-  case BuiltinType::Half:
+  case BuiltinType::Float16:
     TypeNameOS << "float16";
     break;
   case BuiltinType::Float:
