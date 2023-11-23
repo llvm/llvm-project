@@ -82,9 +82,8 @@ locale_t __cloc() {
 
 namespace {
 
-struct releaser
-{
-    void operator()(locale::facet* p) {p->__release_shared();}
+struct releaser {
+  void operator()(locale::facet* p) { p->__release_shared(); }
 };
 
 template <class T, class ...Args>
@@ -160,7 +159,7 @@ public:
     void release();
     static __no_destroy<__imp> classic_locale_imp_;
 
-private:
+  private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
     template <class F> void install_from(const __imp& other);
@@ -573,62 +572,47 @@ void locale::__imp::release() {
     __release_shared();
 }
 
-locale::locale() noexcept
-    : __locale_(__global().__locale_)
-{
-    __locale_->acquire();
-}
+locale::locale() noexcept : __locale_(__global().__locale_) { __locale_->acquire(); }
 
-locale::locale(const locale& l) noexcept
-    : __locale_(l.__locale_)
-{
-    __locale_->acquire();
-}
+locale::locale(const locale& l) noexcept : __locale_(l.__locale_) { __locale_->acquire(); }
 
-locale::~locale()
-{
-    __locale_->release();
-}
+locale::~locale() { __locale_->release(); }
 
 const locale&
 locale::operator=(const locale& other) noexcept
 {
-    other.__locale_->acquire();
-    __locale_->release();
-    __locale_ = other.__locale_;
-    return *this;
+  other.__locale_->acquire();
+  __locale_->release();
+  __locale_ = other.__locale_;
+  return *this;
 }
 
 locale::locale(const char* name)
     : __locale_(name ? new __imp(name)
                      : (__throw_runtime_error("locale constructed with null"), nullptr))
 {
-    __locale_->acquire();
+  __locale_->acquire();
 }
 
-locale::locale(const string& name)
-    : __locale_(new __imp(name))
-{
-    __locale_->acquire();
-}
+locale::locale(const string& name) : __locale_(new __imp(name)) { __locale_->acquire(); }
 
 locale::locale(const locale& other, const char* name, category c)
     : __locale_(name ? new __imp(*other.__locale_, name, c)
                      : (__throw_runtime_error("locale constructed with null"), nullptr))
 {
-    __locale_->acquire();
+  __locale_->acquire();
 }
 
 locale::locale(const locale& other, const string& name, category c)
     : __locale_(new __imp(*other.__locale_, name, c))
 {
-    __locale_->acquire();
+  __locale_->acquire();
 }
 
 locale::locale(const locale& other, const locale& one, category c)
     : __locale_(new __imp(*other.__locale_, *one.__locale_, c))
 {
-    __locale_->acquire();
+  __locale_->acquire();
 }
 
 string
