@@ -105,7 +105,7 @@ struct MatchBuilder {
   // Used for top-level matchers (i.e. the match that replaces Val with its
   // constant).
   //
-  // E.g. The matcher of `std::numbers::pi` uses this matcher to look to
+  // E.g. The matcher of `std::numbers::pi` uses this matcher to look for
   // floatLiterals that have the value of pi.
   //
   // If the match is for a top-level match, we only care about the literal.
