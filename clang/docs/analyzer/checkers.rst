@@ -804,11 +804,11 @@ Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/disp
   }
 
 
-The ``InvalidatingGetEnv`` option is available for treating getenv calls as
-invalidating. When enabled, the checker issues a warning if getenv is called
+The ``InvalidatingGetEnv`` option is available for treating ``getenv`` calls as
+invalidating. When enabled, the checker issues a warning if ``getenv`` is called
 multiple times and their results are used without first creating a copy.
 This level of strictness might be considered overly pedantic for the commonly
-used getenv implementations.
+used ``getenv`` implementations.
 
 To enable this option, use:
 ``-analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true``.
