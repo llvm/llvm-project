@@ -26,9 +26,9 @@ double istream_numbers(std::locale* loc) {
 struct LocaleSelector {
   std::locale* imbue;
   std::locale old;
+  static std::mutex mutex;
 
   LocaleSelector(benchmark::State& state) {
-    static std::mutex mutex;
     std::lock_guard guard(mutex);
     switch (state.range(0)) {
     case 0: {
@@ -57,11 +57,12 @@ struct LocaleSelector {
   }
 
   ~LocaleSelector() {
-    static std::mutex mutex;
     std::lock_guard guard(mutex);
     std::locale::global(old);
   }
 };
+
+std::mutex LocaleSelector::mutex;
 
 static void BM_Istream_numbers(benchmark::State& state) {
   LocaleSelector sel(state);
