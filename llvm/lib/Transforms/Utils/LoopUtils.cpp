@@ -1787,17 +1787,28 @@ Value *llvm::addDiffRuntimeChecks(
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
+  auto &SE = *Expander.getSE();
+  // Map to keep track of created compares, The key is the pair of operands for
+  // the compare, to allow detecting and re-using redundant compares.
+  DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
   for (const auto &C : Checks) {
     Type *Ty = C.SinkStart->getType();
     // Compute VF * IC * AccessSize.
     auto *VFTimesUFTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * C.AccessSize));
-    auto &SE = *Expander.getSE();
     Value *Diff = Expander.expandCodeFor(
         SE.getMinusSCEV(C.SinkStart, C.SrcStart), Ty, Loc);
-    Value *IsConflict =
+
+    // Check if the same compare has already been created earlier. In that case,
+    // there is no need to check it again.
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
+    if (IsConflict)
+      continue;
+
+    IsConflict =
         ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
     if (C.NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
