@@ -480,6 +480,11 @@ bool AArch64SwiftABIInfo::isLegalVectorType(CharUnits VectorSize,
 }
 
 bool AArch64ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
+  // For the soft-float ABI variant, no types are considered to be homogeneous
+  // aggregates.
+  if (Kind == AArch64ABIKind::AAPCSSoft)
+    return false;
+
   // Homogeneous aggregates for AAPCS64 must have base types of a floating
   // point type or a short-vector type. This is the same as the 32-bit ABI,
   // but with the difference that any floating-point type is allowed,
