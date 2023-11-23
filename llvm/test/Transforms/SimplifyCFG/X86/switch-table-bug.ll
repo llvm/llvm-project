@@ -9,11 +9,8 @@ target triple = "x86_64-apple-darwin12.0.0"
 define i64 @_TFO6reduce1E5toRawfS0_FT_Si(i2) {
 ; CHECK-LABEL: @_TFO6reduce1E5toRawfS0_FT_Si(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TMP0:%.*]], -2
-; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i64], ptr @switch.table._TFO6reduce1E5toRawfS0_FT_Si, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, ptr [[SWITCH_GEP]], align 8
-; CHECK-NEXT:    ret i64 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i2 [[TMP0:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[SWITCH_IDX_CAST]]
 ;
 entry:
   switch i2 %0, label %1 [

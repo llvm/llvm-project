@@ -6186,6 +6186,21 @@ public:
   static bool WouldFitInRegister(const DataLayout &DL, uint64_t TableSize,
                                  Type *ElementType);
 
+  static SmallVector<Constant *, 64> buildTableContents(
+      uint64_t TableSize, ConstantInt *Offset,
+      const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
+      Constant *DefaultValue);
+  static bool
+  canBeSingleValueKind(const SmallVectorImpl<Constant *> &TableContents);
+  static bool
+  canBeLinearMapKind(const SmallVectorImpl<Constant *> &TableContents,
+                     bool &NonMonotonic, APInt &DistToPrev);
+  static bool canBeBitMapKind(const SmallVectorImpl<Constant *> &TableContents,
+                              const DataLayout &DL);
+  static bool
+  canOnlyFallbackToArrayKind(const SmallVectorImpl<Constant *> &TableContents,
+                             const DataLayout &DL);
+
 private:
   // Depending on the contents of the table, it can be represented in
   // different ways.
@@ -6231,97 +6246,36 @@ SwitchLookupTable::SwitchLookupTable(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
     Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName) {
-  assert(Values.size() && "Can't build lookup table without values!");
-  assert(TableSize >= Values.size() && "Can't fit values in table!");
-
-  // If all values in the table are equal, this is that value.
-  SingleValue = Values.begin()->second;
-
-  Type *ValueType = Values.begin()->second->getType();
-
   // Build up the table contents.
-  SmallVector<Constant *, 64> TableContents(TableSize);
-  for (size_t I = 0, E = Values.size(); I != E; ++I) {
-    ConstantInt *CaseVal = Values[I].first;
-    Constant *CaseRes = Values[I].second;
-    assert(CaseRes->getType() == ValueType);
-
-    uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
-    TableContents[Idx] = CaseRes;
-
-    if (CaseRes != SingleValue)
-      SingleValue = nullptr;
-  }
-
-  // Fill in any holes in the table with the default result.
-  if (Values.size() < TableSize) {
-    assert(DefaultValue &&
-           "Need a default value to fill the lookup table holes.");
-    assert(DefaultValue->getType() == ValueType);
-    for (uint64_t I = 0; I < TableSize; ++I) {
-      if (!TableContents[I])
-        TableContents[I] = DefaultValue;
-    }
-
-    if (DefaultValue != SingleValue)
-      SingleValue = nullptr;
-  }
+  SmallVector<Constant *, 64> TableContents =
+      buildTableContents(TableSize, Offset, Values, DefaultValue);
 
   // If each element in the table contains the same value, we only need to store
   // that single value.
-  if (SingleValue) {
+  if (canBeSingleValueKind(TableContents)) {
+    SingleValue = TableContents[0];
     Kind = SingleValueKind;
     return;
   }
-
-  // Check if we can derive the value with a linear transformation from the
-  // table index.
-  if (isa<IntegerType>(ValueType)) {
-    bool LinearMappingPossible = true;
-    APInt PrevVal;
-    APInt DistToPrev;
-    // When linear map is monotonic and signed overflow doesn't happen on
-    // maximum index, we can attach nsw on Add and Mul.
-    bool NonMonotonic = false;
-    assert(TableSize >= 2 && "Should be a SingleValue table.");
-    // Check if there is the same distance between two consecutive values.
-    for (uint64_t I = 0; I < TableSize; ++I) {
-      ConstantInt *ConstVal = dyn_cast<ConstantInt>(TableContents[I]);
-      if (!ConstVal) {
-        // This is an undef. We could deal with it, but undefs in lookup tables
-        // are very seldom. It's probably not worth the additional complexity.
-        LinearMappingPossible = false;
-        break;
-      }
-      const APInt &Val = ConstVal->getValue();
-      if (I != 0) {
-        APInt Dist = Val - PrevVal;
-        if (I == 1) {
-          DistToPrev = Dist;
-        } else if (Dist != DistToPrev) {
-          LinearMappingPossible = false;
-          break;
-        }
-        NonMonotonic |=
-            Dist.isStrictlyPositive() ? Val.sle(PrevVal) : Val.sgt(PrevVal);
-      }
-      PrevVal = Val;
-    }
-    if (LinearMappingPossible) {
-      LinearOffset = cast<ConstantInt>(TableContents[0]);
-      LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
-      bool MayWrap = false;
-      APInt M = LinearMultiplier->getValue();
-      (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
-      LinearMapValWrapped = NonMonotonic || MayWrap;
-      Kind = LinearMapKind;
-      ++NumLinearMaps;
-      return;
-    }
+  // When linear map is monotonic and signed overflow doesn't happen on
+  // maximum index, we can attach nsw on Add and Mul.
+  bool NonMonotonic = false;
+  APInt DistToPrev;
+  if (canBeLinearMapKind(TableContents, NonMonotonic, DistToPrev)) {
+    LinearOffset = cast<ConstantInt>(TableContents[0]);
+    LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
+    bool MayWrap = false;
+    APInt M = LinearMultiplier->getValue();
+    (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
+    LinearMapValWrapped = NonMonotonic || MayWrap;
+    Kind = LinearMapKind;
+    ++NumLinearMaps;
+    return;
   }
 
+  Type *ValueType = Values.begin()->second->getType();
   // If the type is integer and the table fits in a register, build a bitmap.
-  if (WouldFitInRegister(DL, TableSize, ValueType)) {
+  if (canBeBitMapKind(TableContents, DL)) {
     IntegerType *IT = cast<IntegerType>(ValueType);
     APInt TableInt(TableSize * IT->getBitWidth(), 0);
     for (uint64_t I = TableSize; I > 0; --I) {
@@ -6428,6 +6382,110 @@ bool SwitchLookupTable::WouldFitInRegister(const DataLayout &DL,
   if (TableSize >= UINT_MAX / IT->getBitWidth())
     return false;
   return DL.fitsInLegalInteger(TableSize * IT->getBitWidth());
+}
+
+SmallVector<Constant *, 64> SwitchLookupTable::buildTableContents(
+    uint64_t TableSize, ConstantInt *Offset,
+    const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
+    Constant *DefaultValue) {
+  assert(Values.size() && "Can't build lookup table without values!");
+  assert(TableSize >= Values.size() && "Can't fit values in table!");
+
+  Type *ValueType = Values.begin()->second->getType();
+
+  // Build up the table contents.
+  SmallVector<Constant *, 64> TableContents(TableSize);
+  for (size_t I = 0, E = Values.size(); I != E; ++I) {
+    ConstantInt *CaseVal = Values[I].first;
+    Constant *CaseRes = Values[I].second;
+    assert(CaseRes->getType() == ValueType);
+
+    uint64_t Idx = (CaseVal->getValue() - Offset->getValue()).getLimitedValue();
+    TableContents[Idx] = CaseRes;
+  }
+
+  // Fill in any holes in the table with the default result.
+  if (Values.size() < TableSize) {
+    assert(DefaultValue &&
+           "Need a default value to fill the lookup table holes.");
+    assert(DefaultValue->getType() == ValueType);
+    for (uint64_t I = 0; I < TableSize; ++I) {
+      if (!TableContents[I])
+        TableContents[I] = DefaultValue;
+    }
+  }
+  return TableContents;
+}
+
+bool SwitchLookupTable::canBeSingleValueKind(
+    const SmallVectorImpl<Constant *> &TableContents) {
+  // If all values in the table are equal, this is that value.
+  const Constant *SingleValue = TableContents[0];
+  for (const Constant *Value : TableContents) {
+    if (Value != SingleValue)
+      return false;
+  }
+  return true;
+}
+
+bool SwitchLookupTable::canBeLinearMapKind(
+    const SmallVectorImpl<Constant *> &TableContents, bool &NonMonotonic,
+    APInt &DistToPrev) {
+  Type *ValueType = TableContents[0]->getType();
+  // Check if we can derive the value with a linear transformation from the
+  // table index.
+  if (!isa<IntegerType>(ValueType))
+    return false;
+  bool LinearMappingPossible = true;
+  APInt PrevVal;
+  auto TableSize = TableContents.size();
+
+  // When linear map is monotonic and signed overflow doesn't happen on
+  // maximum index, we can attach nsw on Add and Mul.
+  assert(TableSize >= 2 && "Should be a SingleValue table.");
+  // Check if there is the same distance between two consecutive values.
+  for (uint64_t I = 0; I < TableSize; ++I) {
+    ConstantInt *ConstVal = dyn_cast<ConstantInt>(TableContents[I]);
+    if (!ConstVal) {
+      // This is an undef. We could deal with it, but undefs in lookup tables
+      // are very seldom. It's probably not worth the additional complexity.
+      LinearMappingPossible = false;
+      break;
+    }
+    const APInt &Val = ConstVal->getValue();
+    if (I != 0) {
+      APInt Dist = Val - PrevVal;
+      if (I == 1) {
+        DistToPrev = Dist;
+      } else if (Dist != DistToPrev) {
+        LinearMappingPossible = false;
+        break;
+      }
+      NonMonotonic |=
+          Dist.isStrictlyPositive() ? Val.sle(PrevVal) : Val.sgt(PrevVal);
+    }
+    PrevVal = Val;
+  }
+  return LinearMappingPossible;
+}
+
+bool SwitchLookupTable::canBeBitMapKind(
+    const SmallVectorImpl<Constant *> &TableContents, const DataLayout &DL) {
+  return WouldFitInRegister(DL, TableContents.size(),
+                            TableContents[0]->getType());
+}
+
+bool SwitchLookupTable::canOnlyFallbackToArrayKind(
+    const SmallVectorImpl<Constant *> &TableContents, const DataLayout &DL) {
+  if (canBeSingleValueKind(TableContents))
+    return false;
+  bool NonMonotonic = false;
+  APInt DistToPrev;
+  if (canBeLinearMapKind(TableContents, NonMonotonic, DistToPrev))
+    return false;
+  if (canBeBitMapKind(TableContents, DL))
+    return false;
+  return true;
 }
 
 static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
@@ -6743,6 +6801,42 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   Module &Mod = *CommonDest->getParent()->getParent();
   BasicBlock *LookupBB = BasicBlock::Create(
       Mod.getContext(), "switch.lookup", CommonDest->getParent(), CommonDest);
+  // If we are generating a covered lookup table, try to find an index that
+  // doesn't create an array of values.
+  // TODO: We could more expensive check, and choose the index with the best sum
+  // of all kinds.
+  if (MaxTableSize == TableSize && TableSize * PHIs.size() <= 128) {
+    for (uint64_t Offset = 0; Offset < TableSize; Offset++) {
+      auto *TableIndexOffset =
+          ConstantInt::get(MaxCaseVal->getIntegerType(), Offset);
+      bool CanOnlyFallbackToArrayKind = false;
+      for (PHINode *PHI : PHIs) {
+        const ResultListTy &ResultList = ResultLists[PHI];
+
+        // If using a bitmask, use any value to fill the lookup table holes.
+        Constant *DV =
+            NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
+        SmallVector<Constant *, 64> TableContents =
+            SwitchLookupTable::buildTableContents(TableSize, TableIndexOffset,
+                                                  ResultList, DV);
+        if (SwitchLookupTable::canOnlyFallbackToArrayKind(TableContents, DL)) {
+          CanOnlyFallbackToArrayKind = true;
+          break;
+        }
+      }
+      if (!CanOnlyFallbackToArrayKind) {
+        if (Offset == 0)
+          UseSwitchConditionAsTableIndex = true;
+        MinCaseVal = TableIndexOffset;
+        APInt One(TableIndexOffset->getValue().getBitWidth(), 1);
+        bool Overflow = false;
+        MaxCaseVal = cast<ConstantInt>(ConstantInt::get(
+            MaxCaseVal->getType(),
+            TableIndexOffset->getValue().usub_ov(One, Overflow)));
+        break;
+      }
+    }
+  }
 
   // Compute the table index value.
   Builder.SetInsertPoint(SI);
