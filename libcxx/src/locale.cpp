@@ -567,18 +567,20 @@ struct __no_destroy {
 std::atomic<locale::__imp*> locale::__imp::classic_;
 
 const locale& locale::classic() {
-    static const __no_destroy<locale> c(__private_tag{}, &make<__imp>(1u));
-    // TODO:
-    // We use relaxed memory ordering because readers don't access
-    // the contents of the objects, they are interested in just the
-    // pointer value.
-    // If a locale uses the classic imp, then this store happens
-    // before acquire/release methods, and they must observe the
-    // right value and omit reference counting.
-    // If a locale uses a non-classic imp, then it does not matter
-    // what value it will load, the result of the comparison will
-    // be false in all cases.
-    classic_.store(c->__locale_, std::memory_order_relaxed);
+    static const __no_destroy<locale> c(__private_tag{}, []{
+        __imp* ptr = &make<__imp>(1u);
+        // We use relaxed memory ordering because readers don't access
+        // the contents of the objects, they are interested in just the
+        // pointer value.
+        // If a locale uses the classic imp, then this store happens
+        // before acquire/release methods, and they must observe the
+        // right value and omit reference counting.
+        // If a locale uses a non-classic imp, then it does not matter
+        // what value it will load, the result of the comparison will
+        // be false in all cases.
+        classic_.store(ptr, std::memory_order_relaxed);
+        return ptr;
+    }());
     return c.get();
 }
 
