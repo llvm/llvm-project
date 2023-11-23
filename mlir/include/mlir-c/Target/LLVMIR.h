@@ -29,8 +29,8 @@ extern "C" {
 ///
 /// \returns the generated LLVM IR Module from the translated MLIR module, it is
 /// owned by the caller.
-MLIR_CAPI_EXPORTED LLVMModuleRef mlirTranslateModuleToLLVMIR(
-    MlirOperation module, LLVMContextRef context, MlirStringRef llvmModuleName);
+MLIR_CAPI_EXPORTED LLVMModuleRef
+mlirTranslateModuleToLLVMIR(MlirOperation module, LLVMContextRef context);
 
 #ifdef __cplusplus
 }
