@@ -19,7 +19,6 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __uninitialized_tag {};
-struct __zero_initialized_tag {};
 
 // This class stores an object of type T but never destroys it.
 //
@@ -30,7 +29,6 @@ struct __zero_initialized_tag {};
 template <class _Tp>
 struct __no_destroy {
   _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(__uninitialized_tag) {}
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __no_destroy(__zero_initialized_tag) : __buf{} {}
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args) {
