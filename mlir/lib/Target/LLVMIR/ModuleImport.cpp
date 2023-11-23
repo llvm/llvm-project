@@ -619,6 +619,19 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
+void ModuleImport::setIntegerFlagsAttr(llvm::Instruction *inst,
+                                       Operation *op) const {
+  IntegerArithFlagsInterface iface = cast<IntegerArithFlagsInterface>(op);
+
+  IntegerArithFlags value = {};
+  value = bitEnumSet(value, IntegerArithFlags::nsw, inst->hasNoSignedWrap());
+  value = bitEnumSet(value, IntegerArithFlags::nuw, inst->hasNoUnsignedWrap());
+
+  IntegerArithFlagsAttr attr =
+      IntegerArithFlagsAttr::get(op->getContext(), value);
+  iface->setAttr(iface.getIntegerArithAttrName(), attr);
+}
+
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
                                         Operation *op) const {
   auto iface = cast<FastmathFlagsInterface>(op);
