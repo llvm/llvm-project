@@ -466,7 +466,7 @@ class InitListChecker {
                                const InitializedEntity &ParentEntity,
                                InitListExpr *ILE, bool &RequiresSecondPass,
                                bool FillWithNoInit = false,
-                               bool WarnIfMissing = true);
+                               bool WarnIfMissing = false);
   void FillInEmptyInitializations(const InitializedEntity &Entity,
                                   InitListExpr *ILE, bool &RequiresSecondPass,
                                   InitListExpr *OuterILE, unsigned OuterIndex,
@@ -732,7 +732,7 @@ void InitListChecker::FillInEmptyInitForField(
 
     if (hadError || VerifyOnly) {
       // Do nothing
-    } else if (Init < NumInits) {
+    } else {
       if (WarnIfMissing) {
         auto CheckAnonMember = [&](const FieldDecl *FD,
                                    auto &&CheckAnonMember) -> FieldDecl * {
@@ -768,14 +768,16 @@ void InitListChecker::FillInEmptyInitForField(
               << FieldToDiagnose;
       }
 
-      ILE->setInit(Init, MemberInit.getAs<Expr>());
-    } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
-      // Empty initialization requires a constructor call, so
-      // extend the initializer list to include the constructor
-      // call and make a note that we'll need to take another pass
-      // through the initializer list.
-      ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
-      RequiresSecondPass = true;
+      if (Init < NumInits) {
+        ILE->setInit(Init, MemberInit.getAs<Expr>());
+      } else if (!isa<ImplicitValueInitExpr>(MemberInit.get())) {
+        // Empty initialization requires a constructor call, so
+        // extend the initializer list to include the constructor
+        // call and make a note that we'll need to take another pass
+        // through the initializer list.
+        ILE->updateInit(SemaRef.Context, Init, MemberInit.getAs<Expr>());
+        RequiresSecondPass = true;
+      }
     }
   } else if (InitListExpr *InnerILE
                = dyn_cast<InitListExpr>(ILE->getInit(Init))) {
