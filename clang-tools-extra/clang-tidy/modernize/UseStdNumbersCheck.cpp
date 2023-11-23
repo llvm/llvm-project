@@ -320,7 +320,6 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
   Finder->addMatcher(
       expr(traverse(TK_IgnoreUnlessSpelledInSource,
                     expr(anyOfExhaustive(ConstantMatchers))),
-           unless(isInTemplateInstantiation()),
            unless(hasParent(expr(
                anyOf(implicitCastExpr(hasImplicitDestinationType(isFloating())),
                      explicitCastExpr(hasDestinationType(isFloating())))))),
