@@ -95,8 +95,6 @@ static bool TypeHasMayAlias(QualType QTy) {
 
 /// Check if the given type is a valid base type to be used in access tags.
 static bool isValidBaseType(QualType QTy) {
-  if (QTy->isReferenceType())
-    return false;
   if (const RecordType *TTy = QTy->getAs<RecordType>()) {
     const RecordDecl *RD = TTy->getDecl()->getDefinition();
     // Incomplete types are not valid base access types.
@@ -414,8 +412,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
 }
 
 llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
-  if (!isValidBaseType(QTy))
-    return nullptr;
+  assert(isValidBaseType(QTy) && "Must be a valid base type");
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
   if (llvm::MDNode *N = BaseTypeMetadataCache[Ty])
@@ -426,6 +423,10 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
   // first generate the node for the type and then add that node to the cache.
   llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
   return BaseTypeMetadataCache[Ty] = TypeNode;
+}
+
+llvm::MDNode *CodeGenTBAA::maybeGetBaseTypeInfo(QualType QTy) {
+  return isValidBaseType(QTy) ? getBaseTypeInfo(QTy) : nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {
