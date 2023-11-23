@@ -412,8 +412,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         return NK_Dependent_Narrowing;
 
       Expr::EvalResult R;
-      if ((Ctx.getLangOpts().C23 &&
-           Initializer->EvaluateAsRValue(R, Ctx)) ||
+      if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
           Initializer->isCXX11ConstantExpr(Ctx, &ConstantValue)) {
         // Constant!
         if (Ctx.getLangOpts().C23)
@@ -423,9 +422,9 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         // Convert the source value into the target type.
         bool ignored;
         llvm::APFloat Converted = FloatVal;
-        llvm::APFloat::opStatus ConvertStatus = Converted.convert(
-          Ctx.getFloatTypeSemantics(ToType),
-          llvm::APFloat::rmNearestTiesToEven, &ignored);
+        llvm::APFloat::opStatus ConvertStatus =
+            Converted.convert(Ctx.getFloatTypeSemantics(ToType),
+                              llvm::APFloat::rmNearestTiesToEven, &ignored);
         Converted.convert(Ctx.getFloatTypeSemantics(FromType),
                           llvm::APFloat::rmNearestTiesToEven, &ignored);
         if (Ctx.getLangOpts().C23) {

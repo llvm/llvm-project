@@ -8621,7 +8621,8 @@ static bool checkForConflictWithNonVisibleExternC(Sema &S, const T *ND,
 }
 
 static bool CheckC23ConstexprVarTypeQualifiers(Sema &SemaRef,
-                                            SourceLocation VarLoc, QualType T) {
+                                               SourceLocation VarLoc,
+                                               QualType T) {
   if (const auto *A = SemaRef.Context.getAsArrayType(T)) {
     T = A->getElementType();
   }
@@ -8632,7 +8633,7 @@ static bool CheckC23ConstexprVarTypeQualifiers(Sema &SemaRef,
   }
 
   if (T->isRecordType()) {
-    RecordDecl *RD = T->getAsRecordDecl();
+    const RecordDecl *RD = T->getAsRecordDecl();
     for (const auto &F : RD->fields())
       if (CheckC23ConstexprVarTypeQualifiers(SemaRef, VarLoc, F->getType()))
         return true;
@@ -14297,20 +14298,20 @@ static ImplicitConversionKind getConversionKind(QualType FromType,
                                                 QualType ToType) {
   if (ToType->isIntegerType()) {
     if (FromType->isComplexType())
-     return ICK_Complex_Real;
+      return ICK_Complex_Real;
     if (FromType->isFloatingType())
-     return ICK_Floating_Integral;
+      return ICK_Floating_Integral;
     if (FromType->isIntegerType())
-     return ICK_Integral_Conversion;
+      return ICK_Integral_Conversion;
   }
 
   if (ToType->isFloatingType()) {
     if (FromType->isComplexType())
-     return ICK_Complex_Real;
+      return ICK_Complex_Real;
     if (FromType->isFloatingType())
-     return ICK_Floating_Conversion;
+      return ICK_Floating_Conversion;
     if (FromType->isIntegerType())
-     return ICK_Floating_Integral;
+      return ICK_Floating_Integral;
   }
 
   return ICK_Identity;
@@ -14350,7 +14351,6 @@ static bool checkC23ConstexprInitConversion(Sema &S, const Expr *Init) {
   case NK_Variable_Narrowing:
   case NK_Not_Narrowing:
     return false;
-
   }
   llvm_unreachable("unhandled case in switch");
 }

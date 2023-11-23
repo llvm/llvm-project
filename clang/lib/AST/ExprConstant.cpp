@@ -2232,10 +2232,9 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
   }
 
   if (Info.getLangOpts().C23) {
-    auto *VarD = dyn_cast_or_null<VarDecl>(BaseVD);
-    if (VarD && VarD->isConstexpr() && !LVal.isNullPointer()) {
+    if (const auto *VarD = dyn_cast_if_present<VarDecl>(BaseVD);
+        VarD && VarD->isConstexpr() && !LVal.isNullPointer())
       Info.report(Loc, diag::err_c23_constexpr_pointer_not_null);
-    }
   }
 
   // Check that the object is a global. Note that the fake 'this' object we
@@ -4118,7 +4117,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     bool IsConstant = BaseType.isConstant(Info.Ctx);
     bool ConstexprVar = false;
-    if (const auto *VD = dyn_cast_or_null<VarDecl>(
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(
             Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
       ConstexprVar = VD->isConstexpr();
 
