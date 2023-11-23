@@ -394,7 +394,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI, MIB, MRI);
   const unsigned Opc = MI.getOpcode();
 
-  if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
+  if (!MI.isPreISelOpcode() || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
       const Register DefReg = MI.getOperand(0).getReg();
       const LLT DefTy = MRI.getType(DefReg);
