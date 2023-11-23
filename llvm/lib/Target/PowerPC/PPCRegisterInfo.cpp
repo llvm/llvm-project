@@ -649,7 +649,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
       (RegClass->hasSuperClassEq(&PPC::CRRCRegClass) ||
        RegClass->hasSuperClassEq(&PPC::CRBITRCRegClass))) {
     std::set<MCRegister> AdjacentAllocatedCRs;
-    auto FindAllocatedCR = [&](MachineInstr &MI) {
+    auto FindAllocatedCRs = [&](MachineInstr &MI) {
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||
             !MO.isDef())
@@ -658,11 +658,6 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         if (!RC->hasSuperClassEq(&PPC::CRRCRegClass) &&
             !RC->hasSuperClassEq(&PPC::CRBITRCRegClass))
           continue;
-        // PhysReg as hint to avoid potential split. Current
-        // getRegAllocationHints doesn't interface LiveInterval, so the
-        // interference check is not viable. In the other side, CRs don't live
-        // cross multiple BBs in common cases, so checking interference might
-        // help rare seen cases.
         if (VRM->hasPhys(MO.getReg()))
           llvm::copy_if(
               TRI->superregs_inclusive(VRM->getPhys(MO.getReg())),
@@ -670,21 +665,23 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
               [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
       }
     };
-    // Search backward.
-    unsigned ScanDistance = 0;
-    for (auto I = ++LastDefMI->getReverseIterator();
-         I != LastDefMI->getParent()->rend() && ScanDistance < CRWAWWindowSize;
-         ++I) {
-      ++ScanDistance;
-      FindAllocatedCR(*I);
+    {
+      // Search backward.
+      unsigned ScanDistance = 0;
+      auto I = ++LastDefMI->getReverseIterator();
+      for (; I != LastDefMI->getParent()->rend() &&
+             ScanDistance < CRWAWWindowSize;
+           ++I, ++ScanDistance)
+        FindAllocatedCRs(*I);
     }
-    // Search forward.
-    ScanDistance = 0;
-    for (auto I = ++LastDefMI->getIterator();
-         I != LastDefMI->getParent()->end() && ScanDistance < CRWAWWindowSize;
-         ++I) {
-      ++ScanDistance;
-      FindAllocatedCR(*I);
+    {
+      // Search forward.
+      unsigned ScanDistance = 0;
+      auto I = ++LastDefMI->getIterator();
+      for (;
+           I != LastDefMI->getParent()->end() && ScanDistance < CRWAWWindowSize;
+           ++I, ++ScanDistance)
+        FindAllocatedCRs(*I);
     }
     llvm::copy_if(llvm::make_range(Order.begin(), Order.end()),
                   std::back_inserter(Hints), [&](MCPhysReg Reg) {
