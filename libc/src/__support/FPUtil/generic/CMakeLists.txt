@@ -10,7 +10,6 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.platform_defs
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.bit
     libc.src.__support.uint128

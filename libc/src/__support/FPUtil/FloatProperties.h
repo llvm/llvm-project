@@ -9,11 +9,22 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 
-#include "PlatformDefs.h"
-
 #include "src/__support/UInt128.h"
+#include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_XXX
 
 #include <stdint.h>
+
+// https://developer.arm.com/documentation/dui0491/i/C-and-C---Implementation-Details/Basic-data-types
+// https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms
+// https://docs.amd.com/bundle/HIP-Programming-Guide-v5.1/page/Programming_with_HIP.html
+#if defined(_WIN32) || defined(__arm__) || defined(__NVPTX__) ||               \
+    defined(__AMDGPU__) || (defined(__APPLE__) && defined(__aarch64__))
+#define LONG_DOUBLE_IS_DOUBLE
+#endif
+
+#if !defined(LONG_DOUBLE_IS_DOUBLE) && defined(LIBC_TARGET_ARCH_IS_X86)
+#define SPECIAL_X86_LONG_DOUBLE
+#endif
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
