@@ -29,22 +29,26 @@ struct __uninitialized_tag {};
 template <class _Tp>
 struct __no_destroy {
   _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(__uninitialized_tag) {}
+  _LIBCPP_HIDE_FROM_ABI ~__no_destroy() {
+    // nothing
+  }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args) {
-    new (&__buf) _Tp(std::forward<_Args>(__args)...);
-  }
+  _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args) : __obj_(std::forward<_Args>(__args)...) {}
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _Tp& __emplace(_Args&&... __args) {
-    return *new (&__buf) _Tp(std::forward<_Args>(__args)...);
+    new (&__obj_) _Tp(std::forward<_Args>(__args)...);
+    return __obj_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp& __get() { return *reinterpret_cast<_Tp*>(&__buf); }
-  _LIBCPP_HIDE_FROM_ABI _Tp const& __get() const { return *reinterpret_cast<_Tp const*>(&__buf); }
+  _LIBCPP_HIDE_FROM_ABI _Tp& __get() { return __obj_; }
+  _LIBCPP_HIDE_FROM_ABI _Tp const& __get() const { return __obj_; }
 
 private:
-  _ALIGNAS_TYPE(_Tp) char __buf[sizeof(_Tp)];
+  union {
+    _Tp __obj_;
+  };
 };
 
 _LIBCPP_END_NAMESPACE_STD
