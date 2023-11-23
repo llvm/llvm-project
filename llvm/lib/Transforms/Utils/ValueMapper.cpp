@@ -562,8 +562,10 @@ void Mapper::remapDPValue(DPValue &V) {
       llvm::any_of(NewVals, [&](Value *V) { return V == nullptr;})) {
     V.setKillLocation();
   } else {
+    // Either we have all non-empty NewVals, or we're permitted to ignore
+    // missing locals.
     for (unsigned int I = 0; I < Vals.size(); ++I)
-      if (NewVals[I] || !IgnoreMissingLocals)
+      if (NewVals[I])
         V.replaceVariableLocationOp(I, NewVals[I]);
   }
 }
