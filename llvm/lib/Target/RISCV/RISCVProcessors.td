@@ -19,6 +19,8 @@ class RISCVTuneInfo {
   bits<16> PrefetchDistance = 0;
   bits<16> MinPrefetchStride = 1;
   bits<32> MaxPrefetchIterationsAhead = -1;
+
+  bits<32> MinimumJumpTableEntries = 5;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -26,7 +28,8 @@ def RISCVTuneInfoTable : GenericTable {
   let CppTypeName = "RISCVTuneInfo";
   let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment",
                 "CacheLineSize", "PrefetchDistance",
-                "MinPrefetchStride", "MaxPrefetchIterationsAhead"];
+                "MinPrefetchStride", "MaxPrefetchIterationsAhead",
+                "MinimumJumpTableEntries"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
