@@ -93,9 +93,9 @@ exit:                                             ; preds = %bb.f4, %bb.f3, %bb.
 }
 
 ; Test for the cloning of dbg.values on elided instructions -- down one path
-; being threaded, the and in the function below is optimised away, but it's
+; being threaded, the `and` in the function below is optimised away, but its
 ; debug-info should still be preserved.
-; Similarly, the call to f1 gets cloned, it's dbg.value should be cloned too.
+; Similarly, the call to f1 gets cloned, its dbg.value should be cloned too.
 define void @test16(i1 %c, i1 %c2, i1 %c3, i1 %c4) nounwind ssp !dbg !30 {
 ; CHECK-LABEL: define void @test16(i1
 entry:
@@ -110,7 +110,7 @@ lor.lhs.false.i:
 
 ; CHECK-LABEL: land.end.thr_comm:
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 0,
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 0,
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32 1,
 ; CHECK-NEXT:  call void @f1()
 ; CHECK-NEXT:  br i1 %c4,
 
@@ -122,7 +122,7 @@ land.end:
   call void @llvm.dbg.value(metadata i32 0, metadata !32, metadata !DIExpression()), !dbg !33
   %cmp12 = and i1 %cmp, %0, !dbg !33
   %xor1 = xor i1 %cmp12, %c4, !dbg !33
-  call void @llvm.dbg.value(metadata i32 0, metadata !32, metadata !DIExpression()), !dbg !33
+  call void @llvm.dbg.value(metadata i32 1, metadata !32, metadata !DIExpression()), !dbg !33
   call void @f1()
   br i1 %xor1, label %if.then, label %if.end, !dbg !33
 
