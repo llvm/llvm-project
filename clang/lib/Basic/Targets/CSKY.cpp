@@ -308,7 +308,8 @@ bool CSKYTargetInfo::validateAsmConstraint(
   }
 }
 
-unsigned CSKYTargetInfo::getMinGlobalAlign(uint64_t Size) const {
+unsigned CSKYTargetInfo::getMinGlobalAlign(uint64_t Size,
+                                           const VarDecl *VD) const {
   if (Size >= 32)
     return 32;
   return 0;

@@ -71,7 +71,7 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
 
-  unsigned getMinGlobalAlign(uint64_t) const override;
+  unsigned getMinGlobalAlign(uint64_t, const VarDecl *) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 

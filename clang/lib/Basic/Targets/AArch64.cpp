@@ -1517,8 +1517,9 @@ MicrosoftARM64TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_MicrosoftWin64;
 }
 
-unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize) const {
-  unsigned Align = WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize);
+unsigned MicrosoftARM64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                                     const VarDecl *VD) const {
+  unsigned Align = WindowsARM64TargetInfo::getMinGlobalAlign(TypeSize, VD);
 
   // MSVC does size based alignment for arm64 based on alignment section in
   // below document, replicate that to keep alignment consistent with object

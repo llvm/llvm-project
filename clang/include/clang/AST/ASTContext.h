@@ -2406,11 +2406,11 @@ public:
 
   /// Return the alignment in bits that should be given to a
   /// global variable with type \p T.
-  unsigned getAlignOfGlobalVar(QualType T) const;
+  unsigned getAlignOfGlobalVar(QualType T, const VarDecl *VD) const;
 
   /// Return the alignment in characters that should be given to a
   /// global variable with type \p T.
-  CharUnits getAlignOfGlobalVarInChars(QualType T) const;
+  CharUnits getAlignOfGlobalVarInChars(QualType T, const VarDecl *VD) const;
 
   /// Return a conservative estimate of the alignment of the specified
   /// decl \p D.
