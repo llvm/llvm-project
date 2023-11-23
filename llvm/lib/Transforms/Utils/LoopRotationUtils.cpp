@@ -589,9 +589,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     //    DPValue blah
     //    DPValue xyzzy
     //    %bar = call i32 @foobar()
-    // causing it to appear attached to the call too. cloneDebugInfoFrom takes
-    // an optional "start cloning from here" position to account for this
-    // behaviour.
+    // causing it to appear attached to the call too.
+    //
+    // To avoid this, cloneDebugInfoFrom takes an optional "start cloning from
+    // here" position to account for this behaviour. We point it at any DPValues
+    // on the next instruction, here labelled xyzzy, before we hoist %foo.
+    // Later, we only only clone DPValues from that position (xyzzy) onwards,
+    // which avoids cloning DPValue "blah" multiple times.
     std::optional<DPValue::self_iterator> NextDbgInst = std::nullopt;
 
     while (I != E) {
