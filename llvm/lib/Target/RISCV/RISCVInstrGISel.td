@@ -17,10 +17,10 @@ class RISCVGenericInstruction : GenericInstruction {
   let Namespace = "RISCV";
 }
 
-// Pseudo equivalent to a RISCVISD::FPCLASS.
+// Pseudo equivalent to a RISCVISD::FCLASS.
 def G_FCLASS : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
 }
-def : GINodeEquiv<G_FCLASS, riscv_fpclass>;
+def : GINodeEquiv<G_FCLASS, riscv_fclass>;
