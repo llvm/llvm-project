@@ -1369,14 +1369,6 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
           m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(cast<StringAttr>(targetTripleAttr).getValue());
 
-  // Inject declarations for `malloc` and `free` functions that can be used in
-  // memref allocation/deallocation coming from standard ops lowering.
-  llvm::IRBuilder<> builder(llvmContext);
-  llvmModule->getOrInsertFunction("malloc", builder.getInt8PtrTy(),
-                                  builder.getInt64Ty());
-  llvmModule->getOrInsertFunction("free", builder.getVoidTy(),
-                                  builder.getInt8PtrTy());
-
   return llvmModule;
 }
 
