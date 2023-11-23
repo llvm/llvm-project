@@ -13,7 +13,7 @@
 ; CHECK: for.body.i.epil.preheader:
 ; CHECK:   br label %for.body.i.epil, !dbg ![[LOOP_LOC]]
 ; CHECK: for.body.i.epil:
-;; Ensure that when we clone the div/add/add and it's following dbg.values,
+;; Ensure that when we clone the div/add/add and its following dbg.values,
 ;; those dbg.values are remapped to the duplicated adds, not the originals.
 ; CHECK:      %div.i.epil = sdiv i32 %t.08.i.epil, 2,
 ; CHECK-NEXT: %add.i.epil = add i32 %t.08.i.epil, %a,

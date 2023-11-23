@@ -7,7 +7,7 @@
 ;; FIXME: the hoisted load dominates the duplicated dbg.value, however as it's
 ;; not subsequently used in the loop, so it doesn't get remapped into the
 ;; debug user and we get a undef/poison dbg.value. This is suboptimal, but it's
-;; important that it gets duplicated nonetheless.
+;; important that the dbg.value gets duplicated nonetheless.
 
 declare void @clobber()
 declare void @llvm.dbg.value(metadata, metadata, metadata)
