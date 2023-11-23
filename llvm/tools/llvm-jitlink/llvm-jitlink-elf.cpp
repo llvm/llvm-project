@@ -12,6 +12,7 @@
 
 #include "llvm-jitlink.h"
 
+#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
@@ -23,6 +24,10 @@ using namespace llvm::jitlink;
 static bool isELFGOTSection(Section &S) { return S.getName() == "$__GOT"; }
 
 static bool isELFStubsSection(Section &S) { return S.getName() == "$__STUBS"; }
+
+static bool isELFAArch32StubsSection(Section &S) {
+  return S.getName().starts_with("__llvm_jitlink_aarch32_STUBS_");
+}
 
 static Expected<Edge &> getFirstRelocationEdge(LinkGraph &G, Block &B) {
   auto EItr =
@@ -64,6 +69,15 @@ static Expected<Symbol &> getELFStubTarget(LinkGraph &G, Block &B) {
   return getELFGOTTarget(G, GOTSym.getBlock());
 }
 
+static Expected<std::string>
+getELFAArch32StubTargetName(LinkGraph &G, Block &B, orc::ExecutionSession &ES) {
+  auto E = getFirstRelocationEdge(G, B);
+  if (!E)
+    return E.takeError();
+  Symbol &StubTarget = E->getTarget();
+  return StubTarget.getName().str();
+}
+
 namespace llvm {
 
 Error registerELFGraphInfo(Session &S, LinkGraph &G) {
@@ -98,6 +112,7 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
 
     bool isGOTSection = isELFGOTSection(Sec);
     bool isStubsSection = isELFStubsSection(Sec);
+    bool isAArch32StubsSection = isELFAArch32StubsSection(Sec);
 
     bool SectionContainsContent = false;
     bool SectionContainsZeroFill = false;
@@ -137,6 +152,18 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
                                                Sym->getTargetFlags()};
         else
           return TS.takeError();
+        SectionContainsContent = true;
+      } else if (isAArch32StubsSection) {
+        if (Sym->isSymbolZeroFill())
+          return make_error<StringError>("zero-fill atom in Stub section",
+                                         inconvertibleErrorCode());
+
+        if (auto Name = getELFAArch32StubTargetName(G, Sym->getBlock(), S.ES))
+          FileInfo.StubInfos[*Name] = {Sym->getSymbolContent(),
+                                       Sym->getAddress().getValue(),
+                                       Sym->getTargetFlags()};
+        else
+          return Name.takeError();
         SectionContainsContent = true;
       }
 
