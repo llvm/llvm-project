@@ -611,3 +611,8 @@
 // CHECK-INT-OBJEMITTER-NOT: unsupported option '-fintegrated-objemitter' for target
 // RUN: not %clang -### -fno-integrated-objemitter --target=x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
 // CHECK-NOINT-OBJEMITTER: unsupported option '-fno-integrated-objemitter' for target
+
+// RUN: %clang -### -S -fpartial-inlining %s 2>&1 | FileCheck -check-prefix=CHECK-PARTIAL-INLINING %s
+// CHECK-PARTIAL-INLINING: "-mllvm" "-enable-partial-inlining"
+// RUN: %clang -### -S -fno-partial-inlining %s 2>&1 | FileCheck -check-prefix=CHECK-NO-PARTIAL-INLINING %s
+// CHECK-NO-PARTIAL-INLINING: "-mllvm" "-disable-partial-inlining"
