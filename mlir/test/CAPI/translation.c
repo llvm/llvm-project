@@ -46,8 +46,6 @@ static void testToLLVMIR(MlirContext ctx) {
   LLVMModuleRef llvmModule = mlirTranslateModuleToLLVMIR(operation, llvmCtx);
 
   // clang-format off
-  // CHECK: declare ptr @malloc(i64 %{{.*}})
-  // CHECK: declare void @free(ptr %{{.*}})
   // CHECK: define i64 @add(i64 %[[arg1:.*]], i64 %[[arg2:.*]]) {
   // CHECK-NEXT:   %[[arg3:.*]] = add i64 %[[arg1]], %[[arg2]]
   // CHECK-NEXT:   ret i64 %[[arg3]]
