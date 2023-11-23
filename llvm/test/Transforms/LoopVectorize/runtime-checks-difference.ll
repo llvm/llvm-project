@@ -274,9 +274,8 @@ exit:
 }
 
 ; Test case where the AddRec for the pointers in the inner loop have the AddRec
-; of the outer loop as start value.
-; TODO: It is sufficient to subtract the start values (%dst, %src) of the outer
-;       AddRecs.
+; of the outer loop as start value. It is sufficient to subtract the start
+; values (%dst, %src) of the outer AddRecs.
 define void @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i64 noundef %m, i64 noundef %n) {
 ; CHECK-LABEL: @nested_loop_start_of_inner_ptr_addrec_is_same_outer_addrec(
 ; CHECK-NEXT:  entry:
