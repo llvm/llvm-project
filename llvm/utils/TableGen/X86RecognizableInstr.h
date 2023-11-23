@@ -162,9 +162,10 @@ enum {
   XOP9 = 5,
   XOPA = 6,
   ThreeDNow = 7,
-  T_MAP5 = 8,
-  T_MAP6 = 9,
-  T_MAP7 = 10
+  T_MAP4 = 8,
+  T_MAP5 = 9,
+  T_MAP6 = 10,
+  T_MAP7 = 11
 };
 
 enum { PD = 1, XS = 2, XD = 3, PS = 4 };

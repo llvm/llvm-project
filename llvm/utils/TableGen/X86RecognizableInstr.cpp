@@ -805,6 +805,9 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
   case X86Local::ThreeDNow:
     opcodeType = THREEDNOW_MAP;
     break;
+  case X86Local::T_MAP4:
+    opcodeType = MAP4;
+    break;
   case X86Local::T_MAP5:
     opcodeType = MAP5;
     break;
