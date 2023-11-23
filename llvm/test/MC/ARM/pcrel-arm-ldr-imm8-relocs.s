@@ -3,11 +3,11 @@
 @ RUN: llvm-objdump -d --triple=armv7 %t | FileCheck %s --check-prefix=ARM_ADDEND
 
 @ ARM: R_ARM_LDRS_PC_G0
-@ ARM: foo1
 @ ARM: R_ARM_LDRS_PC_G0
-@ ARM: foo2
 @ ARM: R_ARM_LDRS_PC_G0
-@ ARM: foo3
+@ ARM: R_ARM_LDRS_PC_G0
+@ ARM: R_ARM_LDRS_PC_G0
+@ ARM: R_ARM_LDRS_PC_G0
 
 // The value format is decimal in these specific cases, but it's hex for other
 // ldr instructions. These checks are valid for both formats.
@@ -18,6 +18,11 @@
 @ ARM_ADDEND 8]
 @ ARM_ADDEND: r0, [pc, #-
 @ ARM_ADDEND 8]
+@ ARM_ADDEND: r0, [pc, #-
+@ ARM_ADDEND 16]
+@ ARM_ADDEND: r0, [pc, #-
+@ ARM_ADDEND 16]
+@ ARM_ADDEND: r0, [pc]
 
     .arm
     .section .text.bar, "ax"
@@ -25,17 +30,18 @@
     .global bar
     .type bar, %function
 bar:
-    ldrh r0, foo1
-    ldrsb r0, foo2
-    ldrsh r0, foo3
+    ldrh r0, foo
+    ldrsb r0, foo
+    ldrsh r0, foo
+    ldrh r0, just_after-8
+    ldrsb r0, just_after-8
+    ldrsh r0, foo+8
     bx lr
 
     .section .data.foo, "a", %progbits
     .balign 4
-    .global foo1
-    .global foo2
-    .global foo3
-foo1:
-foo2:
-foo3:
+    .global foo
+foo:
     .word 0x11223344, 0x55667788
+just_after:
+    .word 0x9900aabb, 0xccddeeff
