@@ -1257,9 +1257,9 @@ static int getInstructionID(struct InternalInstruction *insn,
     attrMask &= ~ATTR_ADSIZE;
   }
 
-  // Absolute jump need special handling
+  // Absolute jump and pushp/popp need special handling
   if (insn->rex2ExtensionPrefix[0] == 0xd5 && insn->opcodeType == ONEBYTE &&
-      insn->opcode == 0xA1)
+      (insn->opcode == 0xA1 || (insn->opcode & 0xf0) == 0x50))
     attrMask |= ATTR_REX2;
 
   if (insn->mode == MODE_16BIT) {
