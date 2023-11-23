@@ -105,10 +105,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     BSwap.maxScalar(0, sXLen).lower();
 
   getActionDefinitionsBuilder(
-      {G_CTPOP, G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF})
+      {G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF})
       .maxScalar(0, sXLen)
       .scalarSameSizeAs(1, 0)
       .lower();
+
+  auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
+  if (ST.hasStdExtZbb()) {
+    CTPOPActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+  }
 
   getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
       .legalFor({s32, sXLen, p0})
