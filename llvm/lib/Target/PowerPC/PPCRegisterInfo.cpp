@@ -643,12 +643,12 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
   }
 
-  // In single MBB, allocate different CRs for adjacent definitions can improve
-  // performance.
+  // In single MBB, allocate different CRs for neighboring definitions can
+  // improve performance.
   if (DefInOneMI && LastDefMI &&
       (RegClass->hasSuperClassEq(&PPC::CRRCRegClass) ||
        RegClass->hasSuperClassEq(&PPC::CRBITRCRegClass))) {
-    std::set<MCRegister> AdjacentAllocatedCRs;
+    std::set<MCRegister> NeighboringAllocatedCRs;
     auto FindAllocatedCRs = [&](MachineInstr &MI) {
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg() || !MO.getReg() || !MO.getReg().isVirtual() ||
@@ -661,7 +661,8 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         if (VRM->hasPhys(MO.getReg()))
           llvm::copy_if(
               TRI->superregs_inclusive(VRM->getPhys(MO.getReg())),
-              std::inserter(AdjacentAllocatedCRs, AdjacentAllocatedCRs.begin()),
+              std::inserter(NeighboringAllocatedCRs,
+                            NeighboringAllocatedCRs.begin()),
               [&](MCPhysReg SR) { return PPC::CRRCRegClass.contains(SR); });
       }
     };
@@ -692,7 +693,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
                       return false;
                     return llvm::all_of(
                         TRI->superregs_inclusive(Reg), [&](MCPhysReg SR) {
-                          return !AdjacentAllocatedCRs.count(SR);
+                          return !NeighboringAllocatedCRs.count(SR);
                         });
                   });
   }
