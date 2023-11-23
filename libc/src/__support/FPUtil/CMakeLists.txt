@@ -26,7 +26,6 @@ add_header_library(
 add_header_library(
   float_properties
   HDRS
-    PlatformDefs.h
     FloatProperties.h
   DEPENDS
     libc.src.__support.uint128
