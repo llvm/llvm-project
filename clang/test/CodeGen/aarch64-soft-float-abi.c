@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +fp-armv8 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD
 // RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,SOFT
 
+// The va_list type does not change between the ABIs
+// CHECK: %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
+
 // Floats are passed in integer registers, this will be handled by the backend.
 // CHECK: define dso_local half @test0(half noundef %a)
 // CHECK: define dso_local bfloat @test1(bfloat noundef %a)
@@ -29,6 +32,21 @@ struct B {
 // SOFT: define dso_local [2 x i64] @test11([2 x i64] %a.coerce)
 // HARD: define dso_local %struct.B @test11([2 x double] alignstack(8) %a.coerce)
 struct B test11(struct B a) { return a; }
+
+#include <stdarg.h>
+
+// For variadic arguments, va_arg will always retreive 
+// CHECK-LABEL: define dso_local double @test20(i32 noundef %a, ...)
+// CHECK: %vl = alloca %struct.__va_list, align 8
+// SOFT: %gr_offs_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 3
+// SOFT: %reg_top_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 1
+// HARD: %vr_offs_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 4
+// HARD: %reg_top_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 2
+double test20(int a, ...) {
+  va_list vl;
+  va_start(vl, a);
+  return va_arg(vl, double);
+}
 
 // Vector types are only available for targets with the correct hardware, and
 // their calling-convention is left undefined by the soft-float ABI, so they

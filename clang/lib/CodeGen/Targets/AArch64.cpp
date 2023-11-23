@@ -53,8 +53,8 @@ private:
   Address EmitDarwinVAArg(Address VAListAddr, QualType Ty,
                           CodeGenFunction &CGF) const;
 
-  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                         CodeGenFunction &CGF) const;
+  Address EmitAAPCSVAArg(Address VAListAddr, QualType Ty, CodeGenFunction &CGF,
+                         AArch64ABIKind Kind) const;
 
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override {
@@ -65,7 +65,7 @@ private:
 
     return Kind == AArch64ABIKind::Win64 ? EmitMSVAArg(CGF, VAListAddr, Ty)
            : isDarwinPCS()               ? EmitDarwinVAArg(VAListAddr, Ty, CGF)
-                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF);
+                                         : EmitAAPCSVAArg(VAListAddr, Ty, CGF, Kind);
   }
 
   Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -516,7 +516,8 @@ bool AArch64ABIInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
 }
 
 Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
-                                       CodeGenFunction &CGF) const {
+                                       CodeGenFunction &CGF,
+                                       AArch64ABIKind Kind) const {
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
   // Empty records are ignored for parameter passing purposes.
@@ -541,7 +542,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     BaseTy = ArrTy->getElementType();
     NumRegs = ArrTy->getNumElements();
   }
-  bool IsFPR = BaseTy->isFloatingPointTy() || BaseTy->isVectorTy();
+  bool IsFPR = Kind == AArch64ABIKind::AAPCS &&
+               (BaseTy->isFloatingPointTy() || BaseTy->isVectorTy());
 
   // The AArch64 va_list type and handling is specified in the Procedure Call
   // Standard, section B.4:
