@@ -2813,75 +2813,29 @@ define i64 @fabs_v2f32_2() {
 
 declare <2 x float> @llvm.fabs.v2f32(<2 x float> %p)
 
-; PR70947 - TODO remove duplicate xmm/ymm constant loads
+; PR70947 - remove duplicate xmm/ymm constant loads
 define void @PR70947(ptr %src, ptr %dst) {
-; X86-AVX1-LABEL: PR70947:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX1-NEXT:    vmovups (%ecx), %ymm0
-; X86-AVX1-NEXT:    vmovups 32(%ecx), %xmm1
-; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vmovups %ymm0, (%eax)
-; X86-AVX1-NEXT:    vmovups %xmm1, 16(%eax)
-; X86-AVX1-NEXT:    vzeroupper
-; X86-AVX1-NEXT:    retl
+; X86-LABEL: PR70947:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-NEXT:    vandps (%ecx), %ymm0, %ymm1
+; X86-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vmovups %ymm1, (%eax)
+; X86-NEXT:    vmovups %xmm0, 16(%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
 ;
-; X86-AVX2-LABEL: PR70947:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
-; X86-AVX2-NEXT:    vandps (%ecx), %ymm0, %ymm1
-; X86-AVX2-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
-; X86-AVX2-NEXT:    vmovups %ymm1, (%eax)
-; X86-AVX2-NEXT:    vmovups %xmm0, 16(%eax)
-; X86-AVX2-NEXT:    vzeroupper
-; X86-AVX2-NEXT:    retl
-;
-; X86-AVX512-LABEL: PR70947:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
-; X86-AVX512-NEXT:    vandps (%ecx), %ymm0, %ymm1
-; X86-AVX512-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
-; X86-AVX512-NEXT:    vmovups %ymm1, (%eax)
-; X86-AVX512-NEXT:    vmovups %xmm0, 16(%eax)
-; X86-AVX512-NEXT:    vzeroupper
-; X86-AVX512-NEXT:    retl
-;
-; X64-AVX1-LABEL: PR70947:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
-; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vmovups %ymm0, (%rsi)
-; X64-AVX1-NEXT:    vmovups %xmm1, 16(%rsi)
-; X64-AVX1-NEXT:    vzeroupper
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: PR70947:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
-; X64-AVX2-NEXT:    vandps (%rdi), %ymm0, %ymm1
-; X64-AVX2-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovups %ymm1, (%rsi)
-; X64-AVX2-NEXT:    vmovups %xmm0, 16(%rsi)
-; X64-AVX2-NEXT:    vzeroupper
-; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512-LABEL: PR70947:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
-; X64-AVX512-NEXT:    vandps (%rdi), %ymm0, %ymm1
-; X64-AVX512-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
-; X64-AVX512-NEXT:    vmovups %ymm1, (%rsi)
-; X64-AVX512-NEXT:    vmovups %xmm0, 16(%rsi)
-; X64-AVX512-NEXT:    vzeroupper
-; X64-AVX512-NEXT:    retq
+; X64-LABEL: PR70947:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-NEXT:    vandps (%rdi), %ymm0, %ymm1
+; X64-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovups %ymm1, (%rsi)
+; X64-NEXT:    vmovups %xmm0, 16(%rsi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
   %src4 = getelementptr inbounds double, ptr %src, i64 4
   %dst4 = getelementptr inbounds i32, ptr %dst, i64 4
   %ld0 = load <4 x double>, ptr %src, align 8
