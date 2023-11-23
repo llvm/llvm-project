@@ -1117,6 +1117,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
       .libcall();
 
+  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
