@@ -2651,7 +2651,7 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 // ones can be allowed (see -z pauth-report).
 static void readSecurityNotes() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
-      config->emachine != EM_AARCH64)
+      config->emachine != EM_AARCH64 && config->emachine != EM_RISCV)
     return;
 
   config->andFeatures = -1;
