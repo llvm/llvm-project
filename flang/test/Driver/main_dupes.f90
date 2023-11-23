@@ -1,6 +1,8 @@
-! RUN: %clang -x c -o %t.c-part -c %s.c-part
+! UNSUPPORTED: system-windows
+
+! RUN: %clang -o %t.c-object -c %S/Inputs/main_dupes.c
 ! RUN: %flang -o %t -c %s
-! RUN: not %flang -o %t.exe %t %t.c-part 2>&1
+! RUN: not %flang -o %t.exe %t %t.c-object 2>&1
 
 ! TODO: potentially add further checks to ensure that proper
 !       linker error messages are detected and checked via
