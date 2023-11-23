@@ -24,19 +24,11 @@ add_header_library(
 )
 
 add_header_library(
-  platform_defs
-  HDRS
-    PlatformDefs.h
-  DEPENDS
-    libc.src.__support.common
-)
-
-add_header_library(
   float_properties
   HDRS
+    PlatformDefs.h
     FloatProperties.h
   DEPENDS
-    .platform_defs
     libc.src.__support.uint128
 )
 
@@ -46,7 +38,6 @@ add_header_library(
     FPBits.h
   DEPENDS
     .float_properties
-    .platform_defs
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
@@ -100,7 +91,6 @@ add_header_library(
     .fp_bits
     .nearest_integer_operations
     .normal_float
-    .platform_defs
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
