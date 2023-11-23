@@ -96,9 +96,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_ROTL, G_ROTR}).lower();
 
-  getActionDefinitionsBuilder({G_BSWAP, G_BITREVERSE})
-      .maxScalar(0, sXLen)
-      .lower();
+  getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
+
+  auto &BSwap = getActionDefinitionsBuilder(G_BSWAP);
+  if (ST.hasStdExtZbb())
+    BSwap.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
+  else
+    BSwap.maxScalar(0, sXLen).lower();
 
   getActionDefinitionsBuilder(
       {G_CTPOP, G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF})
