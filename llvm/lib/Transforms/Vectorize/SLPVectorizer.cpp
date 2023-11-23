@@ -19,7 +19,6 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
@@ -98,7 +97,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -3486,7 +3484,7 @@ private:
     BasicBlock *BB;
 
     /// Simple memory allocation for ScheduleData.
-    std::vector<std::unique_ptr<ScheduleData[]>> ScheduleDataChunks;
+    SmallVector<std::unique_ptr<ScheduleData[]>> ScheduleDataChunks;
 
     /// The size of a ScheduleData array in ScheduleDataChunks.
     int ChunkSize;
@@ -6949,20 +6947,35 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     // Improve gather cost for gather of loads, if we can group some of the
     // loads into vector loads.
     InstructionsState S = getSameOpcode(VL, *R.TLI);
-    if (VL.size() > 2 && S.getOpcode() == Instruction::Load &&
-        !S.isAltShuffle() &&
+    const unsigned Sz = R.DL->getTypeSizeInBits(VL.front()->getType());
+    unsigned MinVF = R.getMinVF(2 * Sz);
+    if (VL.size() > 2 &&
+        ((S.getOpcode() == Instruction::Load && !S.isAltShuffle()) ||
+         (InVectors.empty() &&
+          any_of(seq<unsigned>(0, VL.size() / MinVF),
+                 [&](unsigned Idx) {
+                   ArrayRef<Value *> SubVL = VL.slice(Idx * MinVF, MinVF);
+                   InstructionsState S = getSameOpcode(SubVL, *R.TLI);
+                   return S.getOpcode() == Instruction::Load &&
+                          !S.isAltShuffle();
+                 }))) &&
         !all_of(Gathers, [&](Value *V) { return R.getTreeEntry(V); }) &&
         !isSplat(Gathers)) {
-      BoUpSLP::ValueSet VectorizedLoads;
+      SetVector<Value *> VectorizedLoads;
+      SmallVector<LoadInst *> VectorizedStarts;
+      SmallVector<std::pair<unsigned, unsigned>> ScatterVectorized;
       unsigned StartIdx = 0;
       unsigned VF = VL.size() / 2;
-      unsigned VectorizedCnt = 0;
-      unsigned ScatterVectorizeCnt = 0;
-      const unsigned Sz = R.DL->getTypeSizeInBits(S.MainOp->getType());
-      for (unsigned MinVF = R.getMinVF(2 * Sz); VF >= MinVF; VF /= 2) {
+      for (; VF >= MinVF; VF /= 2) {
         for (unsigned Cnt = StartIdx, End = VL.size(); Cnt + VF <= End;
              Cnt += VF) {
           ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
+          if (S.getOpcode() != Instruction::Load || S.isAltShuffle()) {
+            InstructionsState SliceS = getSameOpcode(Slice, *R.TLI);
+            if (SliceS.getOpcode() != Instruction::Load ||
+                SliceS.isAltShuffle())
+              continue;
+          }
           if (!VectorizedLoads.count(Slice.front()) &&
               !VectorizedLoads.count(Slice.back()) && allSameBlock(Slice)) {
             SmallVector<Value *> PointerOps;
@@ -6976,10 +6989,11 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
             case LoadsState::PossibleStridedVectorize:
               // Mark the vectorized loads so that we don't vectorize them
               // again.
-              if (LS == LoadsState::Vectorize)
-                ++VectorizedCnt;
+              // TODO: better handling of loads with reorders.
+              if (LS == LoadsState::Vectorize && CurrentOrder.empty())
+                VectorizedStarts.push_back(cast<LoadInst>(Slice.front()));
               else
-                ++ScatterVectorizeCnt;
+                ScatterVectorized.emplace_back(Cnt, VF);
               VectorizedLoads.insert(Slice.begin(), Slice.end());
               // If we vectorized initial block, no need to try to vectorize
               // it again.
@@ -7010,8 +7024,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         // Exclude potentially vectorized loads from list of gathered
         // scalars.
-        auto *LI = cast<LoadInst>(S.MainOp);
-        Gathers.assign(Gathers.size(), PoisonValue::get(LI->getType()));
+        Gathers.assign(Gathers.size(), PoisonValue::get(VL.front()->getType()));
         // The cost for vectorized loads.
         InstructionCost ScalarsCost = 0;
         for (Value *V : VectorizedLoads) {
@@ -7021,17 +7034,24 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                   LI->getAlign(), LI->getPointerAddressSpace(),
                                   CostKind, TTI::OperandValueInfo(), LI);
         }
-        auto *LoadTy = FixedVectorType::get(LI->getType(), VF);
-        Align Alignment = LI->getAlign();
-        GatherCost +=
-            VectorizedCnt *
-            TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
-                                LI->getPointerAddressSpace(), CostKind,
-                                TTI::OperandValueInfo(), LI);
-        GatherCost += ScatterVectorizeCnt *
-                      TTI.getGatherScatterOpCost(
-                          Instruction::Load, LoadTy, LI->getPointerOperand(),
-                          /*VariableMask=*/false, Alignment, CostKind, LI);
+        auto *LoadTy = FixedVectorType::get(VL.front()->getType(), VF);
+        for (LoadInst *LI : VectorizedStarts) {
+          Align Alignment = LI->getAlign();
+          GatherCost +=
+              TTI.getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
+                                  LI->getPointerAddressSpace(), CostKind,
+                                  TTI::OperandValueInfo(), LI);
+        }
+        for (std::pair<unsigned, unsigned> P : ScatterVectorized) {
+          auto *LI0 = cast<LoadInst>(VL[P.first]);
+          Align CommonAlignment = LI0->getAlign();
+          for (Value *V : VL.slice(P.first + 1, VF - 1))
+            CommonAlignment =
+                std::min(CommonAlignment, cast<LoadInst>(V)->getAlign());
+          GatherCost += TTI.getGatherScatterOpCost(
+              Instruction::Load, LoadTy, LI0->getPointerOperand(),
+              /*VariableMask=*/false, CommonAlignment, CostKind, LI0);
+        }
         if (NeedInsertSubvectorAnalysis) {
           // Add the cost for the subvectors insert.
           for (int I = VF, E = VL.size(); I < E; I += VF)
@@ -11614,7 +11634,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
                           VecCallCosts.first <= VecCallCosts.second;
 
       Value *ScalarArg = nullptr;
-      std::vector<Value *> OpVecs;
+      SmallVector<Value *> OpVecs;
       SmallVector<Type *, 2> TysForDecl;
       // Add return type if intrinsic is overloaded on it.
       if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))

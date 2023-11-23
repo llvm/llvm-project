@@ -45,12 +45,12 @@ add_header_library(
   HDRS
     FPBits.h
   DEPENDS
-    .platform_defs
     .float_properties
-    libc.src.__support.builtin_wrappers
+    .platform_defs
+    libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
-    libc.src.__support.common
+    libc.src.__support.bit
 )
 
 add_header_library(
@@ -153,10 +153,10 @@ add_header_library(
     .fenv_impl
     .fp_bits
     .rounding_mode
-    libc.src.__support.builtin_wrappers
+    libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
-    libc.src.__support.common
+    libc.src.__support.bit
     libc.src.__support.uint128
 )
 

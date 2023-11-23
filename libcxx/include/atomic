@@ -514,6 +514,9 @@ typedef atomic<ptrdiff_t> atomic_ptrdiff_t;
 typedef atomic<intmax_t>  atomic_intmax_t;
 typedef atomic<uintmax_t> atomic_uintmax_t;
 
+typedef see-below         atomic_signed_lock_free;   // since C++20
+typedef see-below         atomic_unsigned_lock_free; // since C++20
+
 // flag type and operations
 
 typedef struct atomic_flag
