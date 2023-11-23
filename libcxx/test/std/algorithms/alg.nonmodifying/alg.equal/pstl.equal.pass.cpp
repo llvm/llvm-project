@@ -37,62 +37,118 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 
 #include "test_execution_policies.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 
-template <class Iter1, class Iter2>
+template <class It1, class It2>
 struct Test {
   template <class Policy>
   void operator()(Policy&& policy) {
     { // 3 iter overloads
-      int a[] = {1, 2, 3, 4, 5, 6, 7, 8};
-      int b[] = {1, 2, 3, 5, 6, 7, 8, 9};
+      // check with equal ranges
+      {
+        int a[] = {1, 2, 3, 4};
+        int b[] = {1, 2, 3, 4};
+        assert(std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b))));
+      }
 
-      // simple test
-      assert(std::equal(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(a))));
+      // check with an empty range
+      {
+        int a[] = {999};
+        int b[] = {1, 2, 3};
+        assert(std::equal(policy, It1(std::begin(a)), It1(std::begin(a)), It2(std::begin(b))));
+      }
 
-      // check that false is returned on different ranges
-      assert(!std::equal(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b))));
+      // check with different ranges
+      {
+        int a[] = {1, 2, 3};
+        int b[] = {3, 2, 1};
+        assert(!std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b))));
+      }
 
       // check that the predicate is used
-      assert(std::equal(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), [](int lhs, int rhs) {
-        return lhs == rhs || lhs + 1 == rhs || rhs + 1 == lhs;
-      }));
+      {
+        int a[] = {2, 4, 6, 8, 10};
+        int b[] = {12, 14, 16, 18, 20};
+        assert(std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), [](int lhs, int rhs) {
+          return lhs % 2 == rhs % 2;
+        }));
+      }
     }
 
     { // 4 iter overloads
-      int a[] = {1, 2, 3, 4, 5, 6, 7, 8};
-      int b[] = {1, 2, 3, 5, 6, 7, 8, 9};
+      // check with equal ranges of equal size
+      {
+        int a[] = {1, 2, 3, 4};
+        int b[] = {1, 2, 3, 4};
+        assert(std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), It2(std::end(b))));
+      }
 
-      // simple test
-      assert(std::equal(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(a)), Iter2(std::end(a))));
+      // check with unequal ranges of equal size
+      {
+        int a[] = {1, 2, 3, 4};
+        int b[] = {4, 3, 2, 1};
+        assert(!std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), It2(std::end(b))));
+      }
 
-      // check that false is returned on different ranges
-      assert(!std::equal(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b))));
+      // check with equal ranges of unequal size
+      {
+        {
+          int a[] = {1, 2, 3, 4};
+          int b[] = {1, 2, 3, 4, 5};
+          assert(!std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), It2(std::end(b))));
+        }
+        {
+          int a[] = {1, 2, 3, 4, 5};
+          int b[] = {1, 2, 3, 4};
+          assert(!std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), It2(std::end(b))));
+        }
+      }
 
-      // check that false is returned on different sized ranges
-      assert(
-          !std::equal(policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(a)), Iter2(std::end(a) - 1)));
+      // check empty ranges
+      {
+        // empty/empty
+        {
+          int a[] = {888};
+          int b[] = {999};
+          assert(std::equal(policy, It1(std::begin(a)), It1(std::begin(a)), It2(std::begin(b)), It2(std::begin(b))));
+        }
+        // empty/non-empty
+        {
+          int a[] = {999};
+          int b[] = {999};
+          assert(!std::equal(policy, It1(std::begin(a)), It1(std::begin(a)), It2(std::begin(b)), It2(std::end(b))));
+        }
+        // non-empty/empty
+        {
+          int a[] = {999};
+          int b[] = {999};
+          assert(!std::equal(policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), It2(std::begin(b))));
+        }
+      }
 
       // check that the predicate is used
-      assert(std::equal(
-          policy,
-          Iter1(std::begin(a)),
-          Iter1(std::end(a)),
-          Iter2(std::begin(b)),
-          Iter2(std::end(b)),
-          [](int lhs, int rhs) { return lhs == rhs || lhs + 1 == rhs || rhs + 1 == lhs; }));
+      {
+        int a[] = {2, 4, 6, 8, 10};
+        int b[] = {12, 14, 16, 18, 20};
+        assert(std::equal(
+            policy, It1(std::begin(a)), It1(std::end(a)), It2(std::begin(b)), It2(std::end(b)), [](int lhs, int rhs) {
+              return lhs % 2 == rhs % 2;
+            }));
+      }
     }
   }
 };
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, types::apply_type_identity{[](auto v) {
-                    using Iter1 = typename decltype(v)::type;
+                    using It1 = typename decltype(v)::type;
                     types::for_each(
                         types::forward_iterator_list<int*>{},
-                        TestIteratorWithPolicies<types::partial_instantiation<Test, Iter1>::template apply>{});
+                        TestIteratorWithPolicies<types::partial_instantiation<Test, It1>::template apply>{});
                   }});
+  return 0;
 }

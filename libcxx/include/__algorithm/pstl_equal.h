@@ -13,6 +13,7 @@
 #include <__config>
 #include <__functional/operations.h>
 #include <__numeric/pstl_transform_reduce.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,7 +39,7 @@ __equal(_ExecutionPolicy&& __policy,
         _ForwardIterator2&& __first2,
         _Pred&& __pred) noexcept {
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_equal),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_equal, _RawPolicy),
       [&__policy](
           _ForwardIterator1 __g_first1, _ForwardIterator1 __g_last1, _ForwardIterator2 __g_first2, _Pred __g_pred) {
         return std::__transform_reduce(
@@ -97,7 +98,7 @@ __equal(_ExecutionPolicy&& __policy,
         _ForwardIterator2&& __last2,
         _Pred&& __pred) noexcept {
   return std::__pstl_frontend_dispatch(
-      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_equal),
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_equal, _RawPolicy),
       [&__policy](_ForwardIterator1 __g_first1,
                   _ForwardIterator1 __g_last1,
                   _ForwardIterator2 __g_first2,
@@ -110,7 +111,7 @@ __equal(_ExecutionPolicy&& __policy,
           return std::__equal(
               __policy, std::move(__g_first1), std::move(__g_last1), std::move(__g_first2), std::move(__g_pred));
         } else {
-          (void)__policy; // Avoid unused lambda captue warning
+          (void)__policy; // Avoid unused lambda capture warning
           return std::equal(
               std::move(__g_first1),
               std::move(__g_last1),
