@@ -35,6 +35,7 @@
       "description": "Default preset for notchpeak",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
+      "installDir": "${sourceDir}/install",
       "cacheVariables": {
         "LLVM_ENABLE_PROJECTS": "mlir",
         "LLVM_TARGETS_TO_BUILD": "X86",

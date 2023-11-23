@@ -8,3 +8,4 @@ export CC=`which gcc`
 export CXX=`which g++`
 export CCACHE_DIR=/scratch/general/vast/u1290058/mlirWorkspace/ccache
 export PATH=`git rev-parse --show-toplevel`/llvm/build/bin:$PATH
+export MLIR_Workspace=$(readlink -f ${0:a:h}/../..)
