@@ -34,6 +34,7 @@ class Type;
 class Value;
 
 using ValueToValueMapTy = ValueMap<const Value *, WeakTrackingVH>;
+using DPValueIterator = simple_ilist<DPValue>::iterator;
 
 /// This is a class that can be implemented by clients to remap types when
 /// cloning constants and instructions.
@@ -180,7 +181,7 @@ public:
 
   void remapInstruction(Instruction &I);
   void remapDPValue(Module *M, DPValue &V);
-  void remapDPValueRange(Module *M, iterator_range<simple_ilist<DPValue>::iterator> Range);
+  void remapDPValueRange(Module *M, iterator_range<DPValueIterator> Range);
   void remapFunction(Function &F);
   void remapGlobalObjectMetadata(GlobalObject &GO);
 
@@ -275,7 +276,7 @@ inline void RemapDPValue(Module *M, DPValue *V, ValueToValueMapTy &VM,
 }
 
 /// Remap the Values used in the DPValue \a V using the value map \a VM.
-inline void RemapDPValueRange(Module *M, iterator_range<simple_ilist<DPValue>::iterator> Range, ValueToValueMapTy &VM,
+inline void RemapDPValueRange(Module *M, iterator_range<DPValueIterator> Range, ValueToValueMapTy &VM,
                   RemapFlags Flags = RF_None,
                   ValueMapTypeRemapper *TypeMapper = nullptr,
                   ValueMaterializer *Materializer = nullptr) {

@@ -3305,7 +3305,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
 
     // RemoveDIs: track instructions that we optimise away while folding, so
     // that we can copy DPValues from them later.
-    BasicBlock::iterator DbgInfoCursor = BB->begin();
+    BasicBlock::iterator SrcDbgCursor = BB->begin();
     for (BasicBlock::iterator BBI = BB->begin(); &*BBI != BI; ++BBI) {
       if (PHINode *PN = dyn_cast<PHINode>(BBI)) {
         TranslateMap[PN] = PN->getIncomingValueForBlock(EdgeBB);
@@ -3343,9 +3343,9 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
         // Copy all debug-info attached to instructions from the last we
         // successfully clone, up to this instruction (they might have been
         // folded away).
-        for (; DbgInfoCursor != BBI; ++DbgInfoCursor)
-          N->cloneDebugInfoFrom(&*DbgInfoCursor);
-        DbgInfoCursor = std::next(BBI);
+        for (; SrcDbgCursor != BBI; ++SrcDbgCursor)
+          N->cloneDebugInfoFrom(&*SrcDbgCursor);
+        SrcDbgCursor = std::next(BBI);
         // Clone debug-info on this instruction too.
         N->cloneDebugInfoFrom(&*BBI);
 
@@ -3356,8 +3356,8 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
       }
     }
 
-    for (; &*DbgInfoCursor != BI; ++DbgInfoCursor)
-      InsertPt->cloneDebugInfoFrom(&*DbgInfoCursor);
+    for (; &*SrcDbgCursor != BI; ++SrcDbgCursor)
+      InsertPt->cloneDebugInfoFrom(&*SrcDbgCursor);
     InsertPt->cloneDebugInfoFrom(BI);
 
     BB->removePredecessor(EdgeBB);
