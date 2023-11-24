@@ -604,8 +604,6 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
                .Case("vfrcz.ss", Intrinsic::x86_xop_vfrcz_ss)
                .Case("vfrcz.sd", Intrinsic::x86_xop_vfrcz_sd)
                .Default(Intrinsic::not_intrinsic);
-    else
-      ID = Intrinsic::not_intrinsic;
 
     if (ID != Intrinsic::not_intrinsic) {
       rename(F);
