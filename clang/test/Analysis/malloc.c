@@ -266,16 +266,19 @@ void CheckUseZeroAllocated1(void) {
 }
 
 char CheckUseZeroAllocated2(void) {
-  // FIXME: The return value of `alloca()` is modeled with `AllocaRegion`
-  // instead of `SymbolicRegion`, so the current implementation of
-  // `MallocChecker::checkUseZeroAllocated()` cannot handle it; and we get an
-  // unrelated, but suitable warning from core.uninitialized.UndefReturn.
+  // NOTE: The `AllocaRegion` that models the return value of `alloca()`
+  // doesn't have an associated symbol, so the current implementation of
+  // `MallocChecker::checkUseZeroAllocated()` cannot provide warnings for it.
+  // However, other checkers like core.uninitialized.UndefReturn (that
+  // activates in these TCs) or the array bound checkers provide more generic,
+  // but still sufficient warnings in these cases, so I think it isn't
+  // important to cover this in MallocChecker.
   char *p = alloca(0);
   return *p; // expected-warning {{Undefined or garbage value returned to caller}}
 }
 
 char CheckUseZeroWinAllocated2(void) {
-  // FIXME: Same situation as `CheckUseZeroAllocated2()`.
+  // Note: Same situation as `CheckUseZeroAllocated2()`.
   char *p = _alloca(0);
   return *p; // expected-warning {{Undefined or garbage value returned to caller}}
 }
