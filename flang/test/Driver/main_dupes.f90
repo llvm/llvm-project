@@ -1,6 +1,6 @@
 ! UNSUPPORTED: system-windows
 
-! RUN: %clang -o %t.c-object -c %S/Inputs/main_dupes.c
+! RUN: %flang -x ir -o %t.c-object -c %S/Inputs/main_dupes.ll
 ! RUN: %flang -o %t -c %s
 ! RUN: not %flang -o %t.exe %t %t.c-object 2>&1
 
