@@ -5191,16 +5191,16 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   for (const auto &ext : getFrontendOpts().ModuleFileExtensions)
     ext->hashExtension(HBuilder);
 
-  // Extend the signature with the SWift version for API notes.
-  const APINotesOptions &apiNotesOpts = getAPINotesOpts();
-  if (apiNotesOpts.SwiftVersion) {
-    HBuilder.add(apiNotesOpts.SwiftVersion.getMajor());
-    if (auto minor = apiNotesOpts.SwiftVersion.getMinor())
-      HBuilder.add(*minor);
-    if (auto subminor = apiNotesOpts.SwiftVersion.getSubminor())
-      HBuilder.add(*subminor);
-    if (auto build = apiNotesOpts.SwiftVersion.getBuild())
-      HBuilder.add(*build);
+  // Extend the signature with the Swift version for API notes.
+  const APINotesOptions &APINotesOpts = getAPINotesOpts();
+  if (!APINotesOpts.SwiftVersion.empty()) {
+    HBuilder.add(APINotesOpts.SwiftVersion.getMajor());
+    if (auto Minor = APINotesOpts.SwiftVersion.getMinor())
+      HBuilder.add(*Minor);
+    if (auto Subminor = APINotesOpts.SwiftVersion.getSubminor())
+      HBuilder.add(*Subminor);
+    if (auto Build = APINotesOpts.SwiftVersion.getBuild())
+      HBuilder.add(*Build);
   }
 
   // When compiling with -gmodules, also hash -fdebug-prefix-map as it
