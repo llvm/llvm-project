@@ -1970,7 +1970,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasVBMI2()) {
-      for (auto VT : { MVT::v32i16, MVT::v16i32, MVT::v8i64 }) {
+      for (auto VT : {MVT::v32i16, MVT::v16i32, MVT::v8i64}) {
         setOperationAction(ISD::FSHL, VT, Custom);
         setOperationAction(ISD::FSHR, VT, Custom);
       }
@@ -1981,13 +1981,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }// useAVX512Regs
 
   if (Subtarget.hasVBMI2()) {
-    for (auto VT : { MVT::v8i16, MVT::v4i32, MVT::v2i64,
-                     MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
+    for (auto VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v16i16, MVT::v8i32,
+                    MVT::v4i64}) {
       setOperationAction(ISD::FSHL, VT, Custom);
       setOperationAction(ISD::FSHR, VT, Custom);
     }
 
-    setOperationAction(ISD::ROTR, MVT::v8i16,  Custom);
+    setOperationAction(ISD::ROTR, MVT::v8i16, Custom);
     setOperationAction(ISD::ROTR, MVT::v16i16, Custom);
   }
 
