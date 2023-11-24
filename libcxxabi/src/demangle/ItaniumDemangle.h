@@ -901,13 +901,16 @@ class ExplicitObjectParameter final : public Node {
 
 public:
   ExplicitObjectParameter(Node *Base_)
-      : Node(KExplicitObjectParameter, Cache::Yes), Base(Base_) {
+      : Node(KExplicitObjectParameter), Base(Base_) {
     assert(Base != nullptr);
   }
 
   template <typename Fn> void match(Fn F) const { F(Base); }
 
-  void printLeft(OutputBuffer &OB) const override { OB += "this "; }
+  void printLeft(OutputBuffer &OB) const override {
+    OB += "this ";
+    Base->print(OB);
+  }
 
   void printRight(OutputBuffer &OB) const override { Base->print(OB); }
 };
@@ -5457,7 +5460,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
       if (Ty == nullptr)
         return nullptr;
 
-      const bool IsFirstParam = (Names.size() - ParamsBegin) == 0;
+      const bool IsFirstParam = ParamsBegin == Names.size();
       if (NameInfo.HasExplicitObjectParameter && IsFirstParam)
         Ty = make<ExplicitObjectParameter>(Ty);
 
