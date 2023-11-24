@@ -109,6 +109,7 @@ enum Kind {
   kw_nuw,
   kw_nsw,
   kw_exact,
+  kw_disjoint,
   kw_inbounds,
   kw_nneg,
   kw_inrange,
