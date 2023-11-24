@@ -9,9 +9,10 @@
 	.text
 	.syntax unified
 
-# Check that calls/jumps to external functions trigger the generation of stubs
-# and GOT entries. The GOT entry contains the absolute address of the external
-# function. The stub loads it and branches there.
+# Check that calls/jumps to external functions trigger the generation of
+# branch-range extension stubs. These stubs don't follow the default PLT model
+# where the branch-target address is loaded from a GOT entry. Instead, they
+# hard-code it in the immediate field.
 #
 # jitlink-check: decode_operand(test_external_call, 2) = stub_addr(elf_stubs.o, external_func) - next_pc(test_external_call)
 # jitlink-check: decode_operand(test_external_jump, 0) = stub_addr(elf_stubs.o, external_func) - next_pc(test_external_jump)

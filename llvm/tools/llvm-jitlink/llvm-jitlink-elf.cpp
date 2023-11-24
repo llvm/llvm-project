@@ -12,7 +12,6 @@
 
 #include "llvm-jitlink.h"
 
-#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
@@ -70,7 +69,7 @@ static Expected<Symbol &> getELFStubTarget(LinkGraph &G, Block &B) {
 }
 
 static Expected<std::string>
-getELFAArch32StubTargetName(LinkGraph &G, Block &B, orc::ExecutionSession &ES) {
+getELFAArch32StubTargetName(LinkGraph &G, Block &B) {
   auto E = getFirstRelocationEdge(G, B);
   if (!E)
     return E.takeError();
@@ -158,7 +157,7 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
           return make_error<StringError>("zero-fill atom in Stub section",
                                          inconvertibleErrorCode());
 
-        if (auto Name = getELFAArch32StubTargetName(G, Sym->getBlock(), S.ES))
+        if (auto Name = getELFAArch32StubTargetName(G, Sym->getBlock()))
           FileInfo.StubInfos[*Name] = {Sym->getSymbolContent(),
                                        Sym->getAddress().getValue(),
                                        Sym->getTargetFlags()};
