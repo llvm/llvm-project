@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
+#include "llvm/ADT/BitVector.h"
+
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
 
