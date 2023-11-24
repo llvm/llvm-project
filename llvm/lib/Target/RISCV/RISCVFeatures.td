@@ -444,8 +444,8 @@ def FeatureStdExtV
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32x),
-          "'V' (Vector Extension for Application Processors), 'Zve32x' or "
-          "'Zve64x' (Vector Extensions for Embedded Processors)">;
+          "'V' (Vector Extension for Application Processors), 'Zve32x' "
+          "(Vector Extensions for Embedded Processors)">;
 def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve64x),
@@ -454,8 +454,8 @@ def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
 def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32f),
-          "'V' (Vector Extension for Application Processors), 'Zve32f', "
-          "'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors)">;
+          "'V' (Vector Extension for Application Processors), 'Zve32f' "
+          "(Vector Extensions for Embedded Processors)">;
 
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 

@@ -804,3 +804,47 @@ define <16 x i8> @buildvec_not_vid_v16i8() {
 ; CHECK-NEXT:    ret
   ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 3, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 0>
 }
+
+define <8 x i32> @prefix_overwrite(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: prefix_overwrite:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vslideup.vi v8, v10, 1
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 3
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x i32> %vin, i32 %a, i32 0
+  %v1 = insertelement <8 x i32> %v0, i32 %b, i32 1
+  %v2 = insertelement <8 x i32> %v1, i32 %c, i32 2
+  %v3 = insertelement <8 x i32> %v2, i32 %d, i32 3
+  ret <8 x i32> %v3
+}
+
+define <8 x i32> @suffix_overwrite(<8 x i32> %vin, i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: suffix_overwrite:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 5
+; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 6
+; CHECK-NEXT:    vmv.s.x v10, a3
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 7
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x i32> %vin, i32 %a, i32 4
+  %v1 = insertelement <8 x i32> %v0, i32 %b, i32 5
+  %v2 = insertelement <8 x i32> %v1, i32 %c, i32 6
+  %v3 = insertelement <8 x i32> %v2, i32 %d, i32 7
+  ret <8 x i32> %v3
+}

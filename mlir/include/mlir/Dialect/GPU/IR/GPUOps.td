@@ -433,6 +433,32 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
   let hasVerifier = 1;
 }
 
+def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
+{
+  let summary = "Get the memref for dynamic shared memory";
+  
+  let description = [{
+    This operation provides a memref pointer to the start of dynamic shared 
+    memory, often referred to as workgroup memory. It's important to note that
+    this dynamic shared memory needs to be allocated at kernel launch. One can 
+    conveniently utilize `the dynamic_shared_memory_size` parameter of 
+    `gpu.launch` for this purpose.
+   
+    Examples: 
+    ```mlir        
+    %0 = gpu.dynamic.shared.memory : memref<?xi8, #gpu.address_space<workgroup>>
+    %1 = memref.view %0[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> 
+                            to memref<32x64xf32, #gpu.address_space<workgroup>>
+    %2 = memref.view %0[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> 
+                            to memref<32x64xf32, #gpu.address_space<workgroup>>
+    ```
+  }];  
+  let arguments = (ins);
+  let results = (outs Arg<MemRefRankOf<[I8], [1]>>:$resultMemref);
+  let assemblyFormat = [{ attr-dict `:` type($resultMemref) }];
+  let hasVerifier = 1;
+}
+
 def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [

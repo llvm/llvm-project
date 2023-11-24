@@ -34,7 +34,7 @@ static LogicalResult legalizeBlockArguments(Block &block, Operation *op,
                                             const TypeConverter &converter) {
   auto builder = OpBuilder::atBlockBegin(&block);
   for (unsigned i = 0; i < block.getNumArguments(); ++i) {
-    const auto arg = block.getArgument(i);
+    BlockArgument arg = block.getArgument(i);
     if (converter.isLegal(arg.getType()))
       continue;
     Type ty = arg.getType();

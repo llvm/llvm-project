@@ -197,6 +197,9 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
 
+  std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
+                                           Register Reg) const override;
+
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
@@ -221,9 +224,6 @@ public:
 
   MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
-  void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
-                             MachineInstr &NewMI1,
-                             MachineInstr &NewMI2) const override;
   bool
   getMachineCombinerPatterns(MachineInstr &Root,
                              SmallVectorImpl<MachineCombinerPattern> &Patterns,

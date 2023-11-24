@@ -767,7 +767,8 @@ Array serializeTargetInfo(const TargetList &ActiveTargets) {
   Array Targets;
   for (const auto Targ : ActiveTargets) {
     Object TargetInfo;
-    TargetInfo[Keys[TBDKey::Deployment]] = Targ.MinDeployment.getAsString();
+    if (!Targ.MinDeployment.empty())
+      TargetInfo[Keys[TBDKey::Deployment]] = Targ.MinDeployment.getAsString();
     TargetInfo[Keys[TBDKey::Target]] = getFormattedStr(Targ);
     Targets.emplace_back(std::move(TargetInfo));
   }

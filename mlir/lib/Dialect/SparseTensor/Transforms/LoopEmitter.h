@@ -113,12 +113,11 @@ public:
   /// to `LoopId`.
   void initialize(ValueRange tensors, StringAttr loopTag = nullptr,
                   bool hasOutput = false, bool isSparseOut = false,
-                  ArrayRef<LoopId> topSort = {},
-                  DependentLvlGetter getter = nullptr);
+                  unsigned numLoops = 0, DependentLvlGetter getter = nullptr);
 
   explicit LoopEmitter(ValueRange tensors, StringAttr loopTag = nullptr,
                        bool hasOutput = false, bool isSparseOut = false,
-                       ArrayRef<LoopId> topSort = {},
+                       unsigned numLoops = 0,
                        DependentLvlGetter getter = nullptr);
 
   /// Starts a loop emitting session by generating all the buffers needed
@@ -751,11 +750,6 @@ private:
   // TODO: maybe we should have a LoopSeqInfo
   std::vector<std::pair<Value, std::vector<std::tuple<TensorId, Level, bool>>>>
       loopSeqStack;
-
-  /// Maps `LoopId` (used by `AffineDimExpr`) to `LoopOrd` (in the `loopStack`).
-  /// TODO: We should probably use a callback function here to make it more
-  /// general.
-  std::vector<LoopOrd> loopIdToOrd;
 };
 
 } // namespace sparse_tensor

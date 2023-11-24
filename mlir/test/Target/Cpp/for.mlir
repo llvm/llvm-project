@@ -3,7 +3,7 @@
 
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
-    %0 = emitc.call "f"() : () -> i32
+    %0 = emitc.call_opaque "f"() : () -> i32
   }
   return
 }
@@ -35,8 +35,8 @@ func.func @test_for_yield() {
   emitc.assign %s0 : i32 to %2 : i32
   emitc.assign %p0 : f32 to %3 : f32
   emitc.for %iter = %start to %stop step %step {
-    %sn = emitc.call "add"(%2, %iter) : (i32, index) -> i32
-    %pn = emitc.call "mul"(%3, %iter) : (f32, index) -> f32
+    %sn = emitc.call_opaque "add"(%2, %iter) : (i32, index) -> i32
+    %pn = emitc.call_opaque "mul"(%3, %iter) : (f32, index) -> f32
     emitc.assign %sn : i32 to %2 : i32
     emitc.assign %pn : f32 to %3 : f32
     emitc.yield
@@ -116,8 +116,8 @@ func.func @test_for_yield_2() {
   emitc.assign %s0 : i32 to %2 : i32
   emitc.assign %p0 : f32 to %3 : f32
   emitc.for %iter = %start to %stop step %step {
-    %sn = emitc.call "add"(%2, %iter) : (i32, index) -> i32
-    %pn = emitc.call "mul"(%3, %iter) : (f32, index) -> f32
+    %sn = emitc.call_opaque "add"(%2, %iter) : (i32, index) -> i32
+    %pn = emitc.call_opaque "mul"(%3, %iter) : (f32, index) -> f32
     emitc.assign %sn : i32 to %2 : i32
     emitc.assign %pn : f32 to %3 : f32
     emitc.yield
