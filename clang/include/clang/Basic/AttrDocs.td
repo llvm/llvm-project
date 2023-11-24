@@ -7585,11 +7585,11 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a `coroutine return type (CRT) <https://clang.llvm.org/docs/AttributeReference.html#coro-return-type>` _ (i.e.
+to a `coroutine return type (`CRT`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
-All parameters of a function are considered to be lifetime bound. See documentation
-of ``[[clang::lifetimebound]]`` for more `details <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound> _`.
+All parameters of a function are considered to be lifetime bound. See `documentation`_
+of ``[[clang::lifetimebound]]`` for more details.
 if the function returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
@@ -7606,9 +7606,8 @@ For example,
     return coro(a);
   }
 
-`Lifetime bound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound> _` static analysis
-can be used to detect such instances when coroutines capture references which may die earlier than the
-coroutine frame itself. In the above example, if the CRT `task` is annotated with
+Lifetime bound static analysis can be used to detect such instances when coroutines capture references
+which may die earlier than the coroutine frame itself. In the above example, if the CRT `task` is annotated with
 ``[[clang::coro_lifetimebound]]``, then lifetime bound analysis would detect capturing reference to
 temporaries or return address of a local variable.
 
@@ -7635,5 +7634,8 @@ Both coroutines and coroutine wrappers are part of this analysis.
   [[clang::coro_wrapper]] Task<int> stack_reference(int a) {
     return coro(a); // warning: returning address of stack variable `a`.
   }
+
+.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
+.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }
