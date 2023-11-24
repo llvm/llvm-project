@@ -51,6 +51,7 @@ Implemented Papers
 - P2467R1 - Support exclusive mode for fstreams
 - P0020R6 - Floating Point Atomic
 - P2918R2 - Runtime format strings II
+- P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 
 
 Improvements and New Features
@@ -70,6 +71,10 @@ Improvements and New Features
   the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control which hardening mode is enabled
   on a per translation unit basis using the ``_LIBCPP_HARDENING_MODE`` macro. See :ref:`the hardening documentation
   <using-hardening-modes>` for more details.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT`` macro has been added to make
+  the declarations in ``<codecvt>`` available.
+
 
 Deprecations and Removals
 -------------------------
