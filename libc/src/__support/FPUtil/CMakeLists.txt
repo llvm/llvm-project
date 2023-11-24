@@ -28,6 +28,7 @@ add_header_library(
   HDRS
     FloatProperties.h
   DEPENDS
+    libc.src.__support.macros.properties.float
     libc.src.__support.uint128
 )
 
