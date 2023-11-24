@@ -22,7 +22,6 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
-
 namespace X86 {
 // Enums for memory operand decoding. Each memory operand is represented with
 // a 5 operand sequence in the form: [Base, Scale, Index, Disp, Segment]
@@ -373,168 +372,130 @@ namespace X86II {
 enum TOF {
   //===------------------------------------------------------------------===//
   // X86 Specific MachineOperand flags.
+  //
+  /// MO_NO_FLAG - No flag for the operand
   MO_NO_FLAG,
-
   /// MO_GOT_ABSOLUTE_ADDRESS - On a symbol operand, this represents a
   /// relocation of:
   ///    SYMBOL_LABEL + [. - PICBASELABEL]
   MO_GOT_ABSOLUTE_ADDRESS,
-
   /// MO_PIC_BASE_OFFSET - On a symbol operand this indicates that the
   /// immediate should get the value of the symbol minus the PIC base label:
   ///    SYMBOL_LABEL - PICBASELABEL
   MO_PIC_BASE_OFFSET,
-
   /// MO_GOT - On a symbol operand this indicates that the immediate is the
   /// offset to the GOT entry for the symbol name from the base of the GOT.
-  ///
   /// See the X86-64 ELF ABI supplement for more details.
   ///    SYMBOL_LABEL @GOT
   MO_GOT,
-
   /// MO_GOTOFF - On a symbol operand this indicates that the immediate is
   /// the offset to the location of the symbol name from the base of the GOT.
-  ///
   /// See the X86-64 ELF ABI supplement for more details.
   ///    SYMBOL_LABEL @GOTOFF
   MO_GOTOFF,
-
   /// MO_GOTPCREL - On a symbol operand this indicates that the immediate is
   /// offset to the GOT entry for the symbol name from the current code
   /// location.
-  ///
   /// See the X86-64 ELF ABI supplement for more details.
   ///    SYMBOL_LABEL @GOTPCREL
   MO_GOTPCREL,
-
   /// MO_GOTPCREL_NORELAX - Same as MO_GOTPCREL except that R_X86_64_GOTPCREL
   /// relocations are guaranteed to be emitted by the integrated assembler
   /// instead of the relaxable R_X86_64[_REX]_GOTPCRELX relocations.
   MO_GOTPCREL_NORELAX,
-
   /// MO_PLT - On a symbol operand this indicates that the immediate is
   /// offset to the PLT entry of symbol name from the current code location.
-  ///
   /// See the X86-64 ELF ABI supplement for more details.
   ///    SYMBOL_LABEL @PLT
   MO_PLT,
-
   /// MO_TLSGD - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the TLS index structure that contains
   /// the module number and variable offset for the symbol. Used in the
   /// general dynamic TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @TLSGD
   MO_TLSGD,
-
   /// MO_TLSLD - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the TLS index for the module that
   /// contains the symbol. When this index is passed to a call to
   /// __tls_get_addr, the function will return the base address of the TLS
   /// block for the symbol. Used in the x86-64 local dynamic TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @TLSLD
   MO_TLSLD,
-
   /// MO_TLSLDM - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the TLS index for the module that
   /// contains the symbol. When this index is passed to a call to
   /// ___tls_get_addr, the function will return the base address of the TLS
   /// block for the symbol. Used in the IA32 local dynamic TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @TLSLDM
   MO_TLSLDM,
-
   /// MO_GOTTPOFF - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the thread-pointer offset for the
   /// symbol. Used in the x86-64 initial exec TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @GOTTPOFF
   MO_GOTTPOFF,
-
   /// MO_INDNTPOFF - On a symbol operand this indicates that the immediate is
   /// the absolute address of the GOT entry with the negative thread-pointer
   /// offset for the symbol. Used in the non-PIC IA32 initial exec TLS access
   /// model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @INDNTPOFF
   MO_INDNTPOFF,
-
   /// MO_TPOFF - On a symbol operand this indicates that the immediate is
   /// the thread-pointer offset for the symbol. Used in the x86-64 local
   /// exec TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @TPOFF
   MO_TPOFF,
-
   /// MO_DTPOFF - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the TLS offset of the symbol. Used
   /// in the local dynamic TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @DTPOFF
   MO_DTPOFF,
-
   /// MO_NTPOFF - On a symbol operand this indicates that the immediate is
   /// the negative thread-pointer offset for the symbol. Used in the IA32
   /// local exec TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @NTPOFF
   MO_NTPOFF,
-
   /// MO_GOTNTPOFF - On a symbol operand this indicates that the immediate is
   /// the offset of the GOT entry with the negative thread-pointer offset for
   /// the symbol. Used in the PIC IA32 initial exec TLS access model.
-  ///
   /// See 'ELF Handling for Thread-Local Storage' for more details.
   ///    SYMBOL_LABEL @GOTNTPOFF
   MO_GOTNTPOFF,
-
   /// MO_DLLIMPORT - On a symbol operand "FOO", this indicates that the
   /// reference is actually to the "__imp_FOO" symbol.  This is used for
   /// dllimport linkage on windows.
   MO_DLLIMPORT,
-
   /// MO_DARWIN_NONLAZY - On a symbol operand "FOO", this indicates that the
   /// reference is actually to the "FOO$non_lazy_ptr" symbol, which is a
   /// non-PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
   MO_DARWIN_NONLAZY,
-
   /// MO_DARWIN_NONLAZY_PIC_BASE - On a symbol operand "FOO", this indicates
   /// that the reference is actually to "FOO$non_lazy_ptr - PICBASE", which is
   /// a PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
   MO_DARWIN_NONLAZY_PIC_BASE,
-
   /// MO_TLVP - On a symbol operand this indicates that the immediate is
   /// some TLS offset.
-  ///
   /// This is the TLS offset for the Darwin TLS mechanism.
   MO_TLVP,
-
   /// MO_TLVP_PIC_BASE - On a symbol operand this indicates that the immediate
   /// is some TLS offset from the picbase.
-  ///
   /// This is the 32-bit TLS offset for Darwin TLS in PIC mode.
   MO_TLVP_PIC_BASE,
-
   /// MO_SECREL - On a symbol operand this indicates that the immediate is
   /// the offset from beginning of section.
-  ///
   /// This is the TLS offset for the COFF/Windows TLS mechanism.
   MO_SECREL,
-
   /// MO_ABS8 - On a symbol operand this indicates that the symbol is known
   /// to be an absolute symbol in range [0,128), so we can use the @ABS8
   /// symbol modifier.
   MO_ABS8,
-
   /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
   /// reference is actually to the ".refptr.FOO" symbol.  This is used for
   /// stub symbols on windows.
@@ -546,9 +507,9 @@ enum : uint64_t {
   // Instruction encodings.  These are the standard/most common forms for X86
   // instructions.
   //
-  // PseudoFrm - This represents an instruction that is a pseudo instruction
-  // or one that has not been implemented yet.  It is illegal to code generate
-  // it, but tolerated for intermediate implementation stages.
+  /// PseudoFrm - This represents an instruction that is a pseudo instruction
+  /// or one that has not been implemented yet.  It is illegal to code generate
+  /// it, but tolerated for intermediate implementation stages.
   Pseudo = 0,
   /// Raw - This form is for instructions that don't have any operands, so
   /// they are just a fixed opcode value, like 'leave'.
@@ -620,7 +581,7 @@ enum : uint64_t {
   /// MRMXm - This form is used for instructions that use the Mod/RM byte
   /// to specify a memory source, but doesn't use the middle field.
   MRMXm = 31,
-  // Next, instructions that operate on a memory r/m operand...
+  /// MRM0m-MRM7m - Instructions that operate on a memory r/m operand.
   MRM0m = 32, // Format /0
   MRM1m = 33, // Format /1
   MRM2m = 34, // Format /2
@@ -651,7 +612,7 @@ enum : uint64_t {
   /// MRMXr - This form is used for instructions that use the Mod/RM byte
   /// to specify a register source, but doesn't use the middle field.
   MRMXr = 47,
-  // Instructions that operate on a register r/m operand...
+  /// MRM0r-MRM7r - Instructions that operate on a register r/m operand.
   MRM0r = 48, // Format /0
   MRM1r = 49, // Format /1
   MRM2r = 50, // Format /2
@@ -660,7 +621,8 @@ enum : uint64_t {
   MRM5r = 53, // Format /5
   MRM6r = 54, // Format /6
   MRM7r = 55, // Format /7
-  // Instructions that operate that have mod=11 and an opcode but ignore r/m.
+  /// MRM0X-MRM7X - Instructions that operate that have mod=11 and an opcode but
+  /// ignore r/m.
   MRM0X = 56, // Format /0
   MRM1X = 57, // Format /1
   MRM2X = 58, // Format /2
@@ -669,7 +631,7 @@ enum : uint64_t {
   MRM5X = 61, // Format /5
   MRM6X = 62, // Format /6
   MRM7X = 63, // Format /7
-  /// MRM_XX - A mod/rm byte of exactly 0xXX.
+  /// MRM_XX (XX: C0-FF)- A mod/rm byte of exactly 0xXX.
   MRM_C0 = 64,
   MRM_C1 = 65,
   MRM_C2 = 66,
@@ -807,10 +769,9 @@ enum : uint64_t {
   REXShift = OpMapShift + 4,
   REX_W = 1 << REXShift,
   //===------------------------------------------------------------------===//
-  // This three-bit field describes the size of an immediate operand. Zero is
+  // This 4-bit field describes the size of an immediate operand. Zero is
   // unused so that we can tell if we forgot to set a value.
   ImmShift = REXShift + 1,
-  ImmMask = 15 << ImmShift,
   Imm8 = 1 << ImmShift,
   Imm8PCRel = 2 << ImmShift,
   Imm8Reg = 3 << ImmShift,
@@ -820,6 +781,7 @@ enum : uint64_t {
   Imm32PCRel = 7 << ImmShift,
   Imm32S = 8 << ImmShift,
   Imm64 = 9 << ImmShift,
+  ImmMask = 15 << ImmShift,
   //===------------------------------------------------------------------===//
   /// FP Instruction Classification...  Zero is non-fp instruction.
   /// FPTypeMask - Mask for all of the FP types...
@@ -845,16 +807,16 @@ enum : uint64_t {
   CondMovFP = 6 << FPTypeShift,
   /// SpecialFP - Special instruction forms.  Dispatch by opcode explicitly.
   SpecialFP = 7 << FPTypeShift,
-  // Lock prefix
+  /// Lock prefix
   LOCKShift = FPTypeShift + 3,
   LOCK = 1 << LOCKShift,
-  // REP prefix
+  /// REP prefix
   REPShift = LOCKShift + 1,
   REP = 1 << REPShift,
   /// Execution domain for SSE instructions.
   /// 0 means normal, non-SSE instruction.
   SSEDomainShift = REPShift + 1,
-  // Encoding
+  /// Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
   /// VEX - encoding using 0xC4/0xC5
@@ -866,7 +828,7 @@ enum : uint64_t {
   /// mask operands as well as source operand data swizzling/memory operand
   /// conversion, eviction hint, and rounding mode.
   EVEX = 3 << EncodingShift,
-  // Opcode
+  /// Opcode
   OpcodeShift = EncodingShift + 2,
   /// VEX_4V - Used to specify an additional AVX/SSE register. Several 2
   /// address instructions in SSE are represented as 3 address ones in AVX
