@@ -2375,7 +2375,6 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "typedef int16_t poly16_t;\n";
   OS << "typedef int64_t poly64_t;\n";
   OS << "#endif\n";
-  OS << "#include <arm_neon_types.h>\n";
 
   emitNeonTypeDefs("cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPl", OS);
 
