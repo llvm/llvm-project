@@ -1837,12 +1837,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   int StackOffset = 2 * stackGrowth;
   MachineBasicBlock::iterator LastCSPush = MBBI;
   auto IsCSPush = [&](const MachineBasicBlock::iterator &MBBI) {
-    return MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup) &&
-           (MBBI->getOpcode() == X86::PUSH32r ||
-            MBBI->getOpcode() == X86::PUSH64r ||
-            MBBI->getOpcode() == X86::PUSHP64r ||
-            MBBI->getOpcode() == X86::PUSH2 ||
-            MBBI->getOpcode() == X86::PUSH2P);
+    if (MBBI == MBB.end() || !MBBI->getFlag(MachineInstr::FrameSetup))
+      return false;
+    unsigned Opc = MBBI->getOpcode();
+    return Opc == X86::PUSH32r || Opc == X86::PUSH64r || Opc == X86::PUSHP64r ||
+           Opc == X86::PUSH2 || Opc == X86::PUSH2P;
   };
 
   while (IsCSPush(MBBI)) {
@@ -1850,14 +1849,15 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     Register Reg = MBBI->getOperand(0).getReg();
     LastCSPush = MBBI;
     ++MBBI;
+    unsigned Opc = LastCSPush->getOpcode();
 
     if (!HasFP && NeedsDwarfCFI) {
       // Mark callee-saved push instruction.
       // Define the current CFA rule to use the provided offset.
       assert(StackSize);
-      // Compared to push, push2 introduces more stack offset (one more register).
-      if (LastCSPush->getOpcode() == X86::PUSH2 ||
-          LastCSPush->getOpcode() == X86::PUSH2P)
+      // Compared to push, push2 introduces more stack offset (one more
+      // register).
+      if (Opc == X86::PUSH2 || Opc == X86::PUSH2P)
         StackOffset += stackGrowth;
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::cfiDefCfaOffset(nullptr, -StackOffset),
@@ -1870,8 +1870,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
           .addImm(Reg)
           .setMIFlag(MachineInstr::FrameSetup);
-      if (LastCSPush->getOpcode() == X86::PUSH2 ||
-          LastCSPush->getOpcode() == X86::PUSH2P)
+      if (Opc == X86::PUSH2 || Opc == X86::PUSH2P)
         BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
             .addImm(LastCSPush->getOperand(1).getReg())
             .setMIFlag(MachineInstr::FrameSetup);
@@ -2392,16 +2391,11 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned Opc = PI->getOpcode();
 
     if (Opc != X86::DBG_VALUE && !PI->isTerminator()) {
-      if ((Opc != X86::POP32r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::BTR64ri8 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::ADD64ri32 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::POPP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::POP2 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::POP2P || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::LEA64r || !PI->getFlag(MachineInstr::FrameDestroy))
-
-      )
+      if (!PI->getFlag(MachineInstr::FrameDestroy) ||
+          (Opc != X86::POP32r && Opc != X86::POP64r &&
+           (Opc != X86::BTR64ri8 && Opc != X86::ADD64ri32 &&
+            Opc != X86::POPP64r && Opc != X86::POP2 && Opc != X86::POP2P &&
+            Opc != X86::LEA64r)))
         break;
       FirstCSPop = PI;
     }
@@ -2495,7 +2489,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       if (Opc == X86::POP32r || Opc == X86::POP64r || Opc == X86::POPP64r ||
           Opc == X86::POP2 || Opc == X86::POP2P) {
         Offset += SlotSize;
-        // Compared to pop, pop2 introduces more stack offset (one more register).
+        // Compared to pop, pop2 introduces more stack offset (one more
+        // register).
         if (Opc == X86::POP2 || Opc == X86::POP2P)
           Offset += SlotSize;
         BuildCFI(MBB, MBBI, DL,

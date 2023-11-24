@@ -172,7 +172,9 @@ public:
   const DenseMap<int, unsigned>& getWinEHXMMSlotInfo() const {
     return WinEHXMMSlotInfo; }
 
-  unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize + 8 * padForPush2Pop2(); }
+  unsigned getCalleeSavedFrameSize() const {
+    return CalleeSavedFrameSize + 8 * padForPush2Pop2();
+  }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
