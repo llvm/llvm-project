@@ -408,7 +408,7 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
       return failure();
 
     auto [resultType, extractedElements] = *reductionInfo;
-    mlir::Location loc = reduceOp->getLoc();
+    Location loc = reduceOp->getLoc();
     Value result = extractedElements.front();
     for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
@@ -442,9 +442,9 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
-    }
 #undef INT_AND_FLOAT_CASE
 #undef INT_OR_FLOAT_CASE
+    }
 
     rewriter.replaceOp(reduceOp, result);
     return success();
@@ -465,7 +465,7 @@ struct VectorReductionFloatMinMax final
       return failure();
 
     auto [resultType, extractedElements] = *reductionInfo;
-    mlir::Location loc = reduceOp->getLoc();
+    Location loc = reduceOp->getLoc();
     Value result = extractedElements.front();
     for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
@@ -483,8 +483,8 @@ struct VectorReductionFloatMinMax final
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
-    }
 #undef INT_OR_FLOAT_CASE
+    }
 
     rewriter.replaceOp(reduceOp, result);
     return success();
