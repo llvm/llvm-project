@@ -307,7 +307,7 @@ define float @constrained_log_nonegzero(float nofpclass(nzero) %arg) strictfp {
 
 define float @constrained_log_nozero(float nofpclass(zero) %arg) strictfp {
 ; CHECK-LABEL: define nofpclass(ninf) float @constrained_log_nozero
-; CHECK-SAME: (float nofpclass(zero) [[ARG:%.*]]) #[[ATTR9]] {
+; CHECK-SAME: (float nofpclass(ninf zero) [[ARG:%.*]]) #[[ATTR9]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = call nofpclass(ninf) float @llvm.experimental.constrained.log.f32(float [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR11]]
 ; CHECK-NEXT:    ret float [[VAL]]
 ;

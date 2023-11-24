@@ -53,6 +53,14 @@ define void @scalable_ext_loads() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %zext.nxv4i32to64 = zext <vscale x 4 x i32> %load.nxv4i32 to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load.nxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zext.nxv2i32to64 = zext <vscale x 2 x i32> %load.nxv2i32 to <vscale x 2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load.nxv4i8.2 = load <vscale x 4 x i8>, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zext.nxv4i8to64 = zext <vscale x 4 x i8> %load.nxv4i8.2 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load.nxv4i16.2 = load <vscale x 4 x i16>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zext.nxv4i16to64 = zext <vscale x 4 x i16> %load.nxv4i16.2 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load.nxv8i8.2 = load <vscale x 8 x i8>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %zext.nxv8i8to32 = zext <vscale x 8 x i8> %load.nxv8i8.2 to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load.nxv8i8.3 = load <vscale x 8 x i8>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %zext.nxv8i8to64 = zext <vscale x 8 x i8> %load.nxv8i8.3 to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext.nxv16i8to16 = sext <vscale x 16 x i8> %load2.nxv16i8 to <vscale x 16 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv8i8 = load <vscale x 8 x i8>, ptr undef, align 8
@@ -71,6 +79,14 @@ define void @scalable_ext_loads() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sext.nxv4i32to64 = sext <vscale x 4 x i32> %load2.nxv4i32 to <vscale x 4 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv2i32 = load <vscale x 2 x i32>, ptr undef, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %sext.nxv2i32to64 = sext <vscale x 2 x i32> %load2.nxv2i32 to <vscale x 2 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv4i8.2 = load <vscale x 4 x i8>, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext.nxv4i8to64 = sext <vscale x 4 x i8> %load2.nxv4i8.2 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv4i16.2 = load <vscale x 4 x i16>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext.nxv4i16to64 = sext <vscale x 4 x i16> %load2.nxv4i16.2 to <vscale x 4 x i64>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv8i8.2 = load <vscale x 8 x i8>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext.nxv8i8to32 = sext <vscale x 8 x i8> %load2.nxv8i8.2 to <vscale x 8 x i32>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load2.nxv8i8.3 = load <vscale x 8 x i8>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %sext.nxv8i8to64 = sext <vscale x 8 x i8> %load2.nxv8i8.3 to <vscale x 8 x i64>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 
@@ -93,6 +109,14 @@ define void @scalable_ext_loads() {
   %zext.nxv4i32to64 = zext <vscale x 4 x i32> %load.nxv4i32 to <vscale x 4 x i64>
   %load.nxv2i32 = load <vscale x 2 x i32>, ptr undef
   %zext.nxv2i32to64 = zext <vscale x 2 x i32> %load.nxv2i32 to <vscale x 2 x i64>
+  %load.nxv4i8.2 = load <vscale x 4 x i8>, ptr undef
+  %zext.nxv4i8to64 = zext <vscale x 4 x i8> %load.nxv4i8.2 to <vscale x 4 x i64>
+  %load.nxv4i16.2 = load <vscale x 4 x i16>, ptr undef
+  %zext.nxv4i16to64 = zext <vscale x 4 x i16> %load.nxv4i16.2 to <vscale x 4 x i64>
+  %load.nxv8i8.2 = load <vscale x 8 x i8>, ptr undef
+  %zext.nxv8i8to32 = zext <vscale x 8 x i8> %load.nxv8i8.2 to <vscale x 8 x i32>
+  %load.nxv8i8.3 = load <vscale x 8 x i8>, ptr undef
+  %zext.nxv8i8to64 = zext <vscale x 8 x i8> %load.nxv8i8.3 to <vscale x 8 x i64>
 
   %load2.nxv16i8 = load <vscale x 16 x i8>, ptr undef
   %sext.nxv16i8to16 = sext <vscale x 16 x i8> %load2.nxv16i8 to <vscale x 16 x i16>
@@ -112,6 +136,14 @@ define void @scalable_ext_loads() {
   %sext.nxv4i32to64 = sext <vscale x 4 x i32> %load2.nxv4i32 to <vscale x 4 x i64>
   %load2.nxv2i32 = load <vscale x 2 x i32>, ptr undef
   %sext.nxv2i32to64 = sext <vscale x 2 x i32> %load2.nxv2i32 to <vscale x 2 x i64>
+  %load2.nxv4i8.2 = load <vscale x 4 x i8>, ptr undef
+  %sext.nxv4i8to64 = sext <vscale x 4 x i8> %load2.nxv4i8.2 to <vscale x 4 x i64>
+  %load2.nxv4i16.2 = load <vscale x 4 x i16>, ptr undef
+  %sext.nxv4i16to64 = sext <vscale x 4 x i16> %load2.nxv4i16.2 to <vscale x 4 x i64>
+  %load2.nxv8i8.2 = load <vscale x 8 x i8>, ptr undef
+  %sext.nxv8i8to32 = sext <vscale x 8 x i8> %load2.nxv8i8.2 to <vscale x 8 x i32>
+  %load2.nxv8i8.3 = load <vscale x 8 x i8>, ptr undef
+  %sext.nxv8i8to64 = sext <vscale x 8 x i8> %load2.nxv8i8.3 to <vscale x 8 x i64>
 
   ret void
 }

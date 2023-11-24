@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMPasses
   CodeGen
   Core
   Coroutines
+  HipStdPar
   IPO
   InstCombine
   IRPrinter

@@ -1,4 +1,4 @@
-//===------- RISCVPushPopOptimizer.cpp - RISCV Push/Pop opt. pass ---------===//
+//===------- RISCVPushPopOptimizer.cpp - RISC-V Push/Pop opt. pass --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains a pass that modifies PUSH/POP instructions from Zca
-// standard to use their non prolog/epilog related functionalities
-// and generates POPRET instruction.
+// This file contains a pass that replaces Zcmp POP instructions with
+// POPRET[Z] where possible.
 //
 //===----------------------------------------------------------------------===//
 

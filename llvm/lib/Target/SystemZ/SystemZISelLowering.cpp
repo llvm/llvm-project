@@ -691,6 +691,19 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Default to having -disable-strictnode-mutation on
   IsStrictFPEnabled = true;
+
+  if (Subtarget.isTargetzOS()) {
+    struct RTLibCallMapping {
+      RTLIB::Libcall Code;
+      const char *Name;
+    };
+    static RTLibCallMapping RTLibCallCommon[] = {
+#define HANDLE_LIBCALL(code, name) {RTLIB::code, name},
+#include "ZOSLibcallNames.def"
+    };
+    for (auto &E : RTLibCallCommon)
+      setLibcallName(E.Code, E.Name);
+  }
 }
 
 bool SystemZTargetLowering::useSoftFloat() const {
@@ -857,6 +870,15 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
            "inline-asm";
   return false;
+}
+
+TargetLowering::AtomicExpansionKind
+SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  return (RMW->isFloatingPointOperation() ||
+          RMW->getOperation() == AtomicRMWInst::UIncWrap ||
+          RMW->getOperation() == AtomicRMWInst::UDecWrap)
+             ? AtomicExpansionKind::CmpXChg
+             : AtomicExpansionKind::None;
 }
 
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
@@ -1600,7 +1622,23 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
 
-  // FIXME: Add support for lowering varargs for XPLINK64 in a later patch.
+  if (IsVarArg && Subtarget.isTargetXPLINK64()) {
+    // Save the number of non-varargs registers for later use by va_start, etc.
+    FuncInfo->setVarArgsFirstGPR(NumFixedGPRs);
+    FuncInfo->setVarArgsFirstFPR(NumFixedFPRs);
+
+    auto *Regs = static_cast<SystemZXPLINK64Registers *>(
+        Subtarget.getSpecialRegisters());
+
+    // Likewise the address (in the form of a frame index) of where the
+    // first stack vararg would be.  The 1-byte size here is arbitrary.
+    // FIXME: Pre-include call frame size in the offset, should not
+    // need to manually add it here.
+    int64_t VarArgOffset = CCInfo.getStackSize() + Regs->getCallFrameSize();
+    int FI = MFI.CreateFixedObject(1, VarArgOffset, true);
+    FuncInfo->setVarArgsFrameIndex(FI);
+  }
+
   if (IsVarArg && Subtarget.isTargetELF()) {
     // Save the number of non-varargs registers for later use by va_start, etc.
     FuncInfo->setVarArgsFirstGPR(NumFixedGPRs);
@@ -1802,13 +1840,6 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getStackSize();
-
-  if (Subtarget.isTargetXPLINK64())
-    // Although the XPLINK specifications for AMODE64 state that minimum size
-    // of the param area is minimum 32 bytes and no rounding is otherwise
-    // specified, we round this area in 64 bytes increments to be compatible
-    // with existing compilers.
-    NumBytes = std::max(64U, (unsigned)alignTo(NumBytes, 64));
 
   // Mark the start of the call.
   if (!IsTailCall)
@@ -3598,9 +3629,17 @@ SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
   int BackChainIdx = TFL->getOrCreateFramePointerSaveIndex(MF);
   SDValue BackChain = DAG.getFrameIndex(BackChainIdx, PtrVT);
 
-  // FIXME The frontend should detect this case.
   if (Depth > 0) {
-    report_fatal_error("Unsupported stack frame traversal count");
+    // FIXME The frontend should detect this case.
+    if (!MF.getSubtarget<SystemZSubtarget>().hasBackChain())
+      report_fatal_error("Unsupported stack frame traversal count");
+
+    SDValue Offset = DAG.getConstant(TFL->getBackchainOffset(MF), DL, PtrVT);
+    while (Depth--) {
+      BackChain = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), BackChain,
+                              MachinePointerInfo());
+      BackChain = DAG.getNode(ISD::ADD, DL, PtrVT, BackChain, Offset);
+    }
   }
 
   return BackChain;
@@ -3619,9 +3658,19 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
   unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
-  // FIXME The frontend should detect this case.
   if (Depth > 0) {
-    report_fatal_error("Unsupported stack frame traversal count");
+    // FIXME The frontend should detect this case.
+    if (!MF.getSubtarget<SystemZSubtarget>().hasBackChain())
+      report_fatal_error("Unsupported stack frame traversal count");
+
+    SDValue FrameAddr = lowerFRAMEADDR(Op, DAG);
+    auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
+    int Offset = (TFL->usePackedStack(MF) ? -2 : 14) *
+                 getTargetMachine().getPointerSize(0);
+    SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
+                              DAG.getConstant(Offset, DL, PtrVT));
+    return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
+                       MachinePointerInfo());
   }
 
   // Return R14D, which has the return address. Mark it an implicit live-in.
@@ -3837,7 +3886,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_ELF(SDValue Op,
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   MachineFunction &MF = DAG.getMachineFunction();
   bool RealignOpt = !MF.getFunction().hasFnAttribute("no-realign-stack");
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
@@ -4514,7 +4563,7 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   auto *Regs = Subtarget.getSpecialRegisters();
-  bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+  bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "

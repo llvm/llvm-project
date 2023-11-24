@@ -126,12 +126,16 @@ public:
 
 FunctionSizeCheck::FunctionSizeCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      LineThreshold(Options.get("LineThreshold", -1U)),
-      StatementThreshold(Options.get("StatementThreshold", 800U)),
-      BranchThreshold(Options.get("BranchThreshold", -1U)),
-      ParameterThreshold(Options.get("ParameterThreshold", -1U)),
-      NestingThreshold(Options.get("NestingThreshold", -1U)),
-      VariableThreshold(Options.get("VariableThreshold", -1U)) {}
+      LineThreshold(Options.get("LineThreshold", DefaultLineThreshold)),
+      StatementThreshold(
+          Options.get("StatementThreshold", DefaultStatementThreshold)),
+      BranchThreshold(Options.get("BranchThreshold", DefaultBranchThreshold)),
+      ParameterThreshold(
+          Options.get("ParameterThreshold", DefaultParameterThreshold)),
+      NestingThreshold(
+          Options.get("NestingThreshold", DefaultNestingThreshold)),
+      VariableThreshold(
+          Options.get("VariableThreshold", DefaultVariableThreshold)) {}
 
 void FunctionSizeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LineThreshold", LineThreshold);
@@ -155,7 +159,7 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
   FunctionASTVisitor Visitor;
-  Visitor.Info.NestingThreshold = NestingThreshold;
+  Visitor.Info.NestingThreshold = NestingThreshold.value_or(-1);
   Visitor.TraverseDecl(const_cast<FunctionDecl *>(Func));
   auto &FI = Visitor.Info;
 
@@ -173,49 +177,51 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
 
   unsigned ActualNumberParameters = Func->getNumParams();
 
-  if (FI.Lines > LineThreshold || FI.Statements > StatementThreshold ||
-      FI.Branches > BranchThreshold ||
-      ActualNumberParameters > ParameterThreshold ||
-      !FI.NestingThresholders.empty() || FI.Variables > VariableThreshold) {
+  if ((LineThreshold && FI.Lines > LineThreshold) ||
+      (StatementThreshold && FI.Statements > StatementThreshold) ||
+      (BranchThreshold && FI.Branches > BranchThreshold) ||
+      (ParameterThreshold && ActualNumberParameters > ParameterThreshold) ||
+      !FI.NestingThresholders.empty() ||
+      (VariableThreshold && FI.Variables > VariableThreshold)) {
     diag(Func->getLocation(),
          "function %0 exceeds recommended size/complexity thresholds")
         << Func;
   }
 
-  if (FI.Lines > LineThreshold) {
+  if (LineThreshold && FI.Lines > LineThreshold) {
     diag(Func->getLocation(),
          "%0 lines including whitespace and comments (threshold %1)",
          DiagnosticIDs::Note)
-        << FI.Lines << LineThreshold;
+        << FI.Lines << LineThreshold.value();
   }
 
-  if (FI.Statements > StatementThreshold) {
+  if (StatementThreshold && FI.Statements > StatementThreshold) {
     diag(Func->getLocation(), "%0 statements (threshold %1)",
          DiagnosticIDs::Note)
-        << FI.Statements << StatementThreshold;
+        << FI.Statements << StatementThreshold.value();
   }
 
-  if (FI.Branches > BranchThreshold) {
+  if (BranchThreshold && FI.Branches > BranchThreshold) {
     diag(Func->getLocation(), "%0 branches (threshold %1)", DiagnosticIDs::Note)
-        << FI.Branches << BranchThreshold;
+        << FI.Branches << BranchThreshold.value();
   }
 
-  if (ActualNumberParameters > ParameterThreshold) {
+  if (ParameterThreshold && ActualNumberParameters > ParameterThreshold) {
     diag(Func->getLocation(), "%0 parameters (threshold %1)",
          DiagnosticIDs::Note)
-        << ActualNumberParameters << ParameterThreshold;
+        << ActualNumberParameters << ParameterThreshold.value();
   }
 
   for (const auto &CSPos : FI.NestingThresholders) {
     diag(CSPos, "nesting level %0 starts here (threshold %1)",
          DiagnosticIDs::Note)
-        << NestingThreshold + 1 << NestingThreshold;
+        << NestingThreshold.value() + 1 << NestingThreshold.value();
   }
 
-  if (FI.Variables > VariableThreshold) {
+  if (VariableThreshold && FI.Variables > VariableThreshold) {
     diag(Func->getLocation(), "%0 variables (threshold %1)",
          DiagnosticIDs::Note)
-        << FI.Variables << VariableThreshold;
+        << FI.Variables << VariableThreshold.value();
   }
 }
 

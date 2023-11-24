@@ -606,7 +606,7 @@ void ModuleSanitizerCoverage::instrumentFunction(
     return;
   if (F.getName().find(".module_ctor") != std::string::npos)
     return; // Should not instrument sanitizer init functions.
-  if (F.getName().startswith("__sanitizer_"))
+  if (F.getName().starts_with("__sanitizer_"))
     return; // Don't instrument __sanitizer_* callbacks.
   // Don't touch available_externally functions, their actual body is elewhere.
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
@@ -823,10 +823,9 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           Int64Ty->getScalarSizeInBits())
         Cond = IRB.CreateIntCast(Cond, Int64Ty, false);
       for (auto It : SI->cases()) {
-        Constant *C = It.getCaseValue();
-        if (C->getType()->getScalarSizeInBits() <
-            Int64Ty->getScalarSizeInBits())
-          C = ConstantExpr::getCast(CastInst::ZExt, It.getCaseValue(), Int64Ty);
+        ConstantInt *C = It.getCaseValue();
+        if (C->getType()->getScalarSizeInBits() < 64)
+          C = ConstantInt::get(C->getContext(), C->getValue().zext(64));
         Initializers.push_back(C);
       }
       llvm::sort(drop_begin(Initializers, 2),

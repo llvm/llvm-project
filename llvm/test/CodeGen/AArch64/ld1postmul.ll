@@ -81,8 +81,8 @@ define ptr @fmla_v4f16(ptr %p, ptr %ps, <4 x half> %t, <4 x half> %u) {
 ; CHECK-NOFP16:       // %bb.0:
 ; CHECK-NOFP16-NEXT:    ld1r { v2.4h }, [x0], #2
 ; CHECK-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-NOFP16-NEXT:    fmul v0.4s, v2.4s, v0.4s
 ; CHECK-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NOFP16-NEXT:    fcvtl v0.4s, v0.4h

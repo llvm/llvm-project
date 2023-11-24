@@ -1,6 +1,6 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-!CHECK: omp.critical.declare @help2 hint(none)
+!CHECK: omp.critical.declare @help2
 !CHECK: omp.critical.declare @help1 hint(contended)
 
 subroutine omp_critical()

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "Flang.h"
 #include "CommonArgs.h"
 
@@ -32,7 +31,7 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, {options::OPT_ffixed_form,
+  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
                             options::OPT_ffixed_line_length_EQ,
                             options::OPT_fopenmp,
@@ -57,7 +56,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_P, options::OPT_D, options::OPT_U,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
@@ -112,7 +111,7 @@ static bool shouldLoopVersion(const ArgList &Args) {
 }
 
 void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
@@ -143,10 +142,13 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Args.AddAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+  Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+                            options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
-                            options::OPT_fppc_native_vec_elem_order});
+                            options::OPT_fppc_native_vec_elem_order,
+                            options::OPT_falias_analysis,
+                            options::OPT_fno_alias_analysis});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -170,6 +172,91 @@ void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   }
 }
 
+void Flang::AddAArch64TargetArgs(const ArgList &Args,
+                                 ArgStringList &CmdArgs) const {
+  // Handle -msve_vector_bits=<bits>
+  if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
+    StringRef Val = A->getValue();
+    const Driver &D = getToolChain().getDriver();
+    if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
+        Val.equals("1024") || Val.equals("2048") || Val.equals("128+") ||
+        Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
+        Val.equals("2048+")) {
+      unsigned Bits = 0;
+      if (Val.endswith("+"))
+        Val = Val.substr(0, Val.size() - 1);
+      else {
+        [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
+        assert(!Invalid && "Failed to parse value");
+        CmdArgs.push_back(
+            Args.MakeArgString("-mvscale-max=" + llvm::Twine(Bits / 128)));
+      }
+
+      [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
+      assert(!Invalid && "Failed to parse value");
+      CmdArgs.push_back(
+          Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
+      // Silently drop requests for vector-length agnostic code as it's implied.
+    } else if (!Val.equals("scalable"))
+      // Handle the unsupported values passed to msve-vector-bits.
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Val;
+  }
+}
+
+static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
+         "can only add VS runtime library on Windows!");
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+  }
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("--dependent-lib=libcmt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("--dependent-lib=libcmtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
+    break;
+  }
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -186,13 +273,55 @@ void Flang::addTargetOptions(const ArgList &Args,
   switch (TC.getArch()) {
   default:
     break;
+  case llvm::Triple::aarch64:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAArch64TargetArgs(Args, CmdArgs);
+    break;
+
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-  case llvm::Triple::aarch64:
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef Name = A->getValue();
+    if (Name == "SVML") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "LIBMVEC-X86") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "SLEEF" || Name == "ArmPL") {
+      if (Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    }
+
+    if (Triple.isOSDarwin()) {
+      // flang doesn't currently suport nostdlib, nodefaultlibs. Adding these
+      // here incase they are added someday
+      if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+        if (A->getValue() == StringRef{"Accelerate"}) {
+          CmdArgs.push_back("-framework");
+          CmdArgs.push_back("Accelerate");
+          A->render(Args, CmdArgs);
+        }
+      }
+    } else {
+      A->render(Args, CmdArgs);
+    }
+  }
+
+  if (Triple.isKnownWindowsMSVCEnvironment()) {
+    processVSRuntimeLibrary(TC, Args, CmdArgs);
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.

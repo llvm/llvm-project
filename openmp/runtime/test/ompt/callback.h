@@ -228,6 +228,22 @@ ompt_label_##id:
   printf("%" PRIu64 ": current_address=%p or %p\n",                            \
          ompt_get_thread_data()->value, ((char *)addr) - 8,                    \
          ((char *)addr) - 8)
+#elif KMP_ARCH_S390X
+// On s390x the NOP instruction is 2 bytes long. For non-void runtime
+// functions Clang inserts a STY instruction (but only if compiling under
+// -fno-PIC which will be the default with Clang 8.0, another 6 bytes).
+//
+// Another possibility is:
+//
+//                brasl %r14,__kmpc_end_master@plt
+//   a7 f4 00 02  j 0f
+//   47 00 00 00  0: nop
+//   a7 f4 00 02  j addr
+//                addr:
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
+         ompt_get_thread_data()->value, ((char *)addr) - 2,                    \
+         ((char *)addr) - 8, ((char *)addr) - 12)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif

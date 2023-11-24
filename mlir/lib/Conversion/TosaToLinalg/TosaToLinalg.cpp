@@ -980,8 +980,6 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
     }
   }
 
-  Type reduceTy = RankedTensorType::get(reduceShape, resultTy.getElementType());
-
   // First fill the output buffer with the init value.
   auto emptyTensor =
       rewriter
@@ -1000,22 +998,9 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
                                                   ValueRange{emptyTensor})
                           .result();
 
-  SmallVector<AffineExpr, 2> srcExprs;
-  SmallVector<AffineExpr, 2> dstExprs;
-  SmallVector<utils::IteratorType, 4> iteratorTypes;
-  for (unsigned int i = 0, rank = inputTy.getRank(); i != rank; ++i) {
-    srcExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
-
-    iteratorTypes.push_back(axis == i ? utils::IteratorType::reduction
-                                      : utils::IteratorType::parallel);
-    if (axis != i)
-      dstExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
-  }
-
   bool didEncounterError = false;
-  auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs});
-  auto linalgOp = rewriter.create<linalg::GenericOp>(
-      loc, reduceTy, input, filledTensor, maps, iteratorTypes,
+  auto linalgOp = rewriter.create<linalg::ReduceOp>(
+      loc, input, filledTensor, axis,
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
         auto result = createLinalgBodyCalculationForReduceOp(
             op, blockArgs, elementTy, rewriter);
@@ -1087,12 +1072,11 @@ public:
 
     SmallVector<AffineExpr, 2> inputExprs;
     inputExprs.resize(resultTy.getRank());
-    auto operandTy = cast<ShapedType>(input.getType());
     for (const auto &permutation : llvm::enumerate(perms.getValues<APInt>())) {
       auto index = permutation.index();
       auto value = permutation.value().getZExtValue();
-      if (!operandTy.hasRank() || operandTy.isDynamicDim(index)) {
-        dynDims[value] = rewriter.create<tensor::DimOp>(loc, input, index);
+      if (!resultTy.hasRank() || resultTy.isDynamicDim(index)) {
+        dynDims[index] = rewriter.create<tensor::DimOp>(loc, input, value);
       }
       inputExprs[value] = rewriter.getAffineDimExpr(index);
     }

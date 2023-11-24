@@ -55,18 +55,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  ungetc
-  SRCS
-    ungetc.cpp
-  HDRS
-    ungetc.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   fopencookie
   SRCS
     fopencookie.cpp
@@ -286,6 +274,7 @@ add_stdio_entrypoint_object(getc_unlocked)
 add_stdio_entrypoint_object(getchar)
 add_stdio_entrypoint_object(getchar_unlocked)
 add_stdio_entrypoint_object(fgets)
+add_stdio_entrypoint_object(ungetc)
 add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)

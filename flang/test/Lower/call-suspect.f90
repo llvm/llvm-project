@@ -2,7 +2,7 @@
 ! are accepted regardless to maintain backwards compatibility with
 ! other Fortran implementations.
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPs1() {
 ! CHECK: %[[cast:.*]] = fir.convert %{{.*}} : (!fir.ref<f32>) -> !fir.ref<!fir.char<1,?>>

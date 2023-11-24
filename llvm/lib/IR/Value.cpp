@@ -330,8 +330,7 @@ void Value::setNameImpl(const Twine &NewName) {
 
   SmallString<256> NameData;
   StringRef NameRef = NeedNewName ? NewName.toStringRef(NameData) : "";
-  assert(NameRef.find_first_of(0) == StringRef::npos &&
-         "Null bytes are not allowed in names");
+  assert(!NameRef.contains(0) && "Null bytes are not allowed in names");
 
   // Name isn't changing?
   if (getName() == NameRef)
@@ -378,7 +377,7 @@ void Value::setNameImpl(const Twine &NewName) {
 void Value::setName(const Twine &NewName) {
   setNameImpl(NewName);
   if (Function *F = dyn_cast<Function>(this))
-    F->recalculateIntrinsicID();
+    F->updateAfterNameChange();
 }
 
 void Value::takeName(Value *V) {
@@ -575,10 +574,16 @@ void Value::replaceUsesWithIf(Value *New,
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
   SmallVector<DbgVariableIntrinsic *> DbgUsers;
-  findDbgUsers(DbgUsers, V);
+  SmallVector<DPValue *> DPUsers;
+  findDbgUsers(DbgUsers, V, &DPUsers);
   for (auto *DVI : DbgUsers) {
     if (DVI->getParent() != BB)
       DVI->replaceVariableLocationOp(V, New);
+  }
+  for (auto *DPV : DPUsers) {
+    DPMarker *Marker = DPV->getMarker();
+    if (Marker->getParent() != BB)
+      DPV->replaceVariableLocationOp(V, New);
   }
 }
 

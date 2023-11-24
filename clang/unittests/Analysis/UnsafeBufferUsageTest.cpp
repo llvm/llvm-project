@@ -25,7 +25,7 @@ protected:
 } // namespace
 
 TEST_F(UnsafeBufferUsageTest, FixItHintsConflict) {
-  const FileEntry *DummyFile = FileMgr.getVirtualFile("<virtual>", 100, 0);
+  FileEntryRef DummyFile = FileMgr.getVirtualFileRef("<virtual>", 100, 0);
   FileID DummyFileID = SourceMgr.getOrCreateFileID(DummyFile, SrcMgr::C_User);
   SourceLocation StartLoc = SourceMgr.getLocForStartOfFile(DummyFileID);
 

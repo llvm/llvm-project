@@ -935,31 +935,35 @@ public:
                                               ArrayRef<int> Mask,
                                               VectorType *Ty, int &Index,
                                               VectorType *&SubTy) const {
-    int Limit = Mask.size() * 2;
-    if (Mask.empty() ||
-        // Extra check required by isSingleSourceMaskImpl function (called by
-        // ShuffleVectorInst::isSingleSourceMask).
-        any_of(Mask, [Limit](int I) { return I >= Limit; }))
+    if (Mask.empty())
       return Kind;
+    int NumSrcElts = Ty->getElementCount().getKnownMinValue();
     switch (Kind) {
     case TTI::SK_PermuteSingleSrc:
-      if (ShuffleVectorInst::isReverseMask(Mask))
+      if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
         return TTI::SK_Reverse;
-      if (ShuffleVectorInst::isZeroEltSplatMask(Mask))
+      if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
         return TTI::SK_Broadcast;
+      if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
+          (Index + Mask.size()) <= (size_t)NumSrcElts) {
+        SubTy = FixedVectorType::get(Ty->getElementType(), Mask.size());
+        return TTI::SK_ExtractSubvector;
+      }
       break;
     case TTI::SK_PermuteTwoSrc: {
       int NumSubElts;
       if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
-                                 Mask, Mask.size(), NumSubElts, Index)) {
+                                 Mask, NumSrcElts, NumSubElts, Index)) {
+        if (Index + NumSubElts > NumSrcElts)
+          return Kind;
         SubTy = FixedVectorType::get(Ty->getElementType(), NumSubElts);
         return TTI::SK_InsertSubvector;
       }
-      if (ShuffleVectorInst::isSelectMask(Mask))
+      if (ShuffleVectorInst::isSelectMask(Mask, NumSrcElts))
         return TTI::SK_Select;
-      if (ShuffleVectorInst::isTransposeMask(Mask))
+      if (ShuffleVectorInst::isTransposeMask(Mask, NumSrcElts))
         return TTI::SK_Transpose;
-      if (ShuffleVectorInst::isSpliceMask(Mask, Index))
+      if (ShuffleVectorInst::isSpliceMask(Mask, NumSrcElts, Index))
         return TTI::SK_Splice;
       break;
     }
@@ -1687,7 +1691,69 @@ public:
     }
     }
 
-    // Assume that we need to scalarize this intrinsic.
+    // VP Intrinsics should have the same cost as their non-vp counterpart.
+    // TODO: Adjust the cost to make the vp intrinsic cheaper than its non-vp
+    // counterpart when the vector length argument is smaller than the maximum
+    // vector length.
+    // TODO: Support other kinds of VPIntrinsics
+    if (VPIntrinsic::isVPIntrinsic(ICA.getID())) {
+      std::optional<unsigned> FOp =
+          VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+      if (FOp) {
+        if (ICA.getID() == Intrinsic::vp_load) {
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgs().size() > 1)
+            if (auto *PtrTy =
+                    dyn_cast<PointerType>(ICA.getArgs()[0]->getType()))
+              AS = PtrTy->getAddressSpace();
+          return thisT()->getMemoryOpCost(*FOp, ICA.getReturnType(), Alignment,
+                                          AS, CostKind);
+        }
+        if (ICA.getID() == Intrinsic::vp_store) {
+          Align Alignment;
+          if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+            Alignment = VPI->getPointerAlignment().valueOrOne();
+          unsigned AS = 0;
+          if (ICA.getArgs().size() >= 2)
+            if (auto *PtrTy =
+                    dyn_cast<PointerType>(ICA.getArgs()[1]->getType()))
+              AS = PtrTy->getAddressSpace();
+          return thisT()->getMemoryOpCost(*FOp, Args[0]->getType(), Alignment,
+                                          AS, CostKind);
+        }
+        if (VPBinOpIntrinsic::isVPBinOp(ICA.getID())) {
+          return thisT()->getArithmeticInstrCost(*FOp, ICA.getReturnType(),
+                                                 CostKind);
+        }
+      }
+
+      std::optional<Intrinsic::ID> FID =
+          VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+      if (FID) {
+        // Non-vp version will have same Args/Tys except mask and vector length.
+        assert(ICA.getArgs().size() >= 2 && ICA.getArgTypes().size() >= 2 &&
+               "Expected VPIntrinsic to have Mask and Vector Length args and "
+               "types");
+        ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
+
+        // VPReduction intrinsics have a start value argument that their non-vp
+        // counterparts do not have, except for the fadd and fmul non-vp
+        // counterpart.
+        if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
+            *FID != Intrinsic::vector_reduce_fadd &&
+            *FID != Intrinsic::vector_reduce_fmul)
+          NewTys = NewTys.drop_front();
+
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
+                                       ICA.getFlags());
+        return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
+      }
+    }
+
+    // Assume that we need to scalarize this intrinsic.)
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
     InstructionCost ScalarizationCost = InstructionCost::getInvalid();
@@ -1842,6 +1908,12 @@ public:
       break;
     case Intrinsic::rint:
       ISD = ISD::FRINT;
+      break;
+    case Intrinsic::lrint:
+      ISD = ISD::LRINT;
+      break;
+    case Intrinsic::llrint:
+      ISD = ISD::LLRINT;
       break;
     case Intrinsic::round:
       ISD = ISD::FROUND;

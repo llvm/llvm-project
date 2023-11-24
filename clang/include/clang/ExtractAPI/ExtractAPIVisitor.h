@@ -172,7 +172,7 @@ private:
   SmallVector<SymbolReference> getBases(const CXXRecordDecl *Decl) {
     // FIXME: store AccessSpecifier given by inheritance
     SmallVector<SymbolReference> Bases;
-    for (const auto BaseSpecifier : Decl->bases()) {
+    for (const auto &BaseSpecifier : Decl->bases()) {
       // skip classes not inherited as public
       if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
         continue;

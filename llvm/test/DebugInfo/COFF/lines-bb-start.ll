@@ -90,6 +90,8 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK:         .cv_loc {{.*}} # t.c:4:5
 ; CHECK:         jmp     LBB{{.*}}
 ; CHECK: LBB2_{{.*}}:                                 # %if.end
+; CHECK-NEXT: L{{.*}}:
+; CHECK-NEXT: DEBUG_VALUE: lea_dbg_value:
 ; CHECK-NEXT:    .cv_loc {{.*}} # t.c:5:3
 ; CHECK:         leal 4(%esp), %[[reg:[^ ]*]]
 ; CHECK:         movl    %[[reg]], (%esp)

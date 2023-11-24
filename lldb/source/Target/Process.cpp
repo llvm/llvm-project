@@ -2404,16 +2404,7 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
       range_info.GetExecutable() == MemoryRegionInfo::eDontKnow) {
     return false;
   }
-
-  if (range_info.GetReadable() == MemoryRegionInfo::eYes)
-    permissions |= lldb::ePermissionsReadable;
-
-  if (range_info.GetWritable() == MemoryRegionInfo::eYes)
-    permissions |= lldb::ePermissionsWritable;
-
-  if (range_info.GetExecutable() == MemoryRegionInfo::eYes)
-    permissions |= lldb::ePermissionsExecutable;
-
+  permissions = range_info.GetLLDBPermissions();
   return true;
 }
 
@@ -6251,4 +6242,186 @@ Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
 
   return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),
                            *packed_tags);
+}
+
+// Create a CoreFileMemoryRange from a MemoryRegionInfo
+static Process::CoreFileMemoryRange
+CreateCoreFileMemoryRange(const MemoryRegionInfo &region) {
+  const addr_t addr = region.GetRange().GetRangeBase();
+  llvm::AddressRange range(addr, addr + region.GetRange().GetByteSize());
+  return {range, region.GetLLDBPermissions()};
+}
+
+// Add dirty pages to the core file ranges and return true if dirty pages
+// were added. Return false if the dirty page information is not valid or in
+// the region.
+static bool AddDirtyPages(const MemoryRegionInfo &region,
+                          Process::CoreFileMemoryRanges &ranges) {
+  const auto &dirty_page_list = region.GetDirtyPageList();
+  if (!dirty_page_list)
+    return false;
+  const uint32_t lldb_permissions = region.GetLLDBPermissions();
+  const addr_t page_size = region.GetPageSize();
+  if (page_size == 0)
+    return false;
+  llvm::AddressRange range(0, 0);
+  for (addr_t page_addr : *dirty_page_list) {
+    if (range.empty()) {
+      // No range yet, initialize the range with the current dirty page.
+      range = llvm::AddressRange(page_addr, page_addr + page_size);
+    } else {
+      if (range.end() == page_addr) {
+        // Combine consective ranges.
+        range = llvm::AddressRange(range.start(), page_addr + page_size);
+      } else {
+        // Add previous contiguous range and init the new range with the
+        // current dirty page.
+        ranges.push_back({range, lldb_permissions});
+        range = llvm::AddressRange(page_addr, page_addr + page_size);
+      }
+    }
+  }
+  // The last range
+  if (!range.empty())
+    ranges.push_back({range, lldb_permissions});
+  return true;
+}
+
+// Given a region, add the region to \a ranges.
+//
+// Only add the region if it isn't empty and if it has some permissions.
+// If \a try_dirty_pages is true, then try to add only the dirty pages for a
+// given region. If the region has dirty page information, only dirty pages
+// will be added to \a ranges, else the entire range will be added to \a
+// ranges.
+static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
+                      Process::CoreFileMemoryRanges &ranges) {
+  // Don't add empty ranges or ranges with no permissions.
+  if (region.GetRange().GetByteSize() == 0 || region.GetLLDBPermissions() == 0)
+    return;
+  if (try_dirty_pages && AddDirtyPages(region, ranges))
+    return;
+  ranges.push_back(CreateCoreFileMemoryRange(region));
+}
+
+// Save all memory regions that are not empty or have at least some permissions
+// for a full core file style.
+static void GetCoreFileSaveRangesFull(Process &process,
+                                      const MemoryRegionInfos &regions,
+                                      Process::CoreFileMemoryRanges &ranges) {
+
+  // Don't add only dirty pages, add full regions.
+const bool try_dirty_pages = false;
+  for (const auto &region : regions)
+    AddRegion(region, try_dirty_pages, ranges);
+}
+
+// Save only the dirty pages to the core file. Make sure the process has at
+// least some dirty pages, as some OS versions don't support reporting what
+// pages are dirty within an memory region. If no memory regions have dirty
+// page information fall back to saving out all ranges with write permissions.
+static void
+GetCoreFileSaveRangesDirtyOnly(Process &process,
+                               const MemoryRegionInfos &regions,
+                               Process::CoreFileMemoryRanges &ranges) {
+  // Iterate over the regions and find all dirty pages.
+  bool have_dirty_page_info = false;
+  for (const auto &region : regions) {
+    if (AddDirtyPages(region, ranges))
+      have_dirty_page_info = true;
+  }
+
+  if (!have_dirty_page_info) {
+    // We didn't find support for reporting dirty pages from the process
+    // plug-in so fall back to any region with write access permissions.
+    const bool try_dirty_pages = false;
+    for (const auto &region : regions)
+      if (region.GetWritable() == MemoryRegionInfo::eYes)
+        AddRegion(region, try_dirty_pages, ranges);
+  }
+}
+
+// Save all thread stacks to the core file. Some OS versions support reporting
+// when a memory region is stack related. We check on this information, but we
+// also use the stack pointers of each thread and add those in case the OS
+// doesn't support reporting stack memory. This function also attempts to only
+// emit dirty pages from the stack if the memory regions support reporting
+// dirty regions as this will make the core file smaller. If the process
+// doesn't support dirty regions, then it will fall back to adding the full
+// stack region.
+static void
+GetCoreFileSaveRangesStackOnly(Process &process,
+                               const MemoryRegionInfos &regions,
+                               Process::CoreFileMemoryRanges &ranges) {
+  // Some platforms support annotating the region information that tell us that
+  // it comes from a thread stack. So look for those regions first.
+
+  // Keep track of which stack regions we have added
+  std::set<addr_t> stack_bases;
+
+  const bool try_dirty_pages = true;
+  for (const auto &region : regions) {
+    if (region.IsStackMemory() == MemoryRegionInfo::eYes) {
+      stack_bases.insert(region.GetRange().GetRangeBase());
+      AddRegion(region, try_dirty_pages, ranges);
+    }
+  }
+
+  // Also check with our threads and get the regions for their stack pointers
+  // and add those regions if not already added above.
+  for (lldb::ThreadSP thread_sp : process.GetThreadList().Threads()) {
+    if (!thread_sp)
+      continue;
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
+    if (!frame_sp)
+      continue;
+    RegisterContextSP reg_ctx_sp = frame_sp->GetRegisterContext();
+    if (!reg_ctx_sp)
+      continue;
+    const addr_t sp = reg_ctx_sp->GetSP();
+    lldb_private::MemoryRegionInfo sp_region;
+    if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
+      // Only add this region if not already added above. If our stack pointer
+      // is pointing off in the weeds, we will want this range.
+      if (stack_bases.count(sp_region.GetRange().GetRangeBase()) == 0)
+        AddRegion(sp_region, try_dirty_pages, ranges);
+    }
+  }
+}
+
+Status Process::CalculateCoreFileSaveRanges(lldb::SaveCoreStyle core_style,
+                                            CoreFileMemoryRanges &ranges) {
+  lldb_private::MemoryRegionInfos regions;
+  Status err = GetMemoryRegions(regions);
+  if (err.Fail())
+    return err;
+  if (regions.empty())
+    return Status("failed to get any valid memory regions from the process");
+
+  switch (core_style) {
+  case eSaveCoreUnspecified:
+    err = Status("callers must set the core_style to something other than "
+                 "eSaveCoreUnspecified");
+    break;
+
+  case eSaveCoreFull:
+    GetCoreFileSaveRangesFull(*this, regions, ranges);
+    break;
+
+  case eSaveCoreDirtyOnly:
+    GetCoreFileSaveRangesDirtyOnly(*this, regions, ranges);
+    break;
+
+  case eSaveCoreStackOnly:
+    GetCoreFileSaveRangesStackOnly(*this, regions, ranges);
+    break;
+  }
+
+  if (err.Fail())
+    return err;
+
+  if (ranges.empty())
+    return Status("no valid address ranges found for core style");
+
+  return Status(); // Success!
 }

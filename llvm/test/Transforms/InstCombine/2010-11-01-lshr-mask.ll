@@ -8,7 +8,7 @@ define i32 @main(i32 %argc) {
 ; CHECK-NEXT:    [[T3163:%.*]] = xor i8 [[T3151]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[T3163]], 5
 ; CHECK-NEXT:    [[T4127:%.*]] = and i8 [[TMP1]], 64
-; CHECK-NEXT:    [[T4086:%.*]] = zext i8 [[T4127]] to i32
+; CHECK-NEXT:    [[T4086:%.*]] = zext nneg i8 [[T4127]] to i32
 ; CHECK-NEXT:    ret i32 [[T4086]]
 ;
   %t3151 = trunc i32 %argc to i8

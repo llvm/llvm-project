@@ -17,11 +17,11 @@
 
 #include <stdint.h>
 
+using LlvmLibcExp2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcExp2fTest, SpecialNumbers) {
+TEST_F(LlvmLibcExp2fTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2f(aNaN));
@@ -40,7 +40,7 @@ TEST(LlvmLibcExp2fTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcExp2fTest, Overflow) {
+TEST_F(LlvmLibcExp2fTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::exp2f(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
@@ -55,7 +55,7 @@ TEST(LlvmLibcExp2fTest, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExp2fTest, TrickyInputs) {
+TEST_F(LlvmLibcExp2fTest, TrickyInputs) {
   constexpr int N = 12;
   constexpr uint32_t INPUTS[N] = {
       0x3b429d37U, /*0x1.853a6ep-9f*/
@@ -80,7 +80,7 @@ TEST(LlvmLibcExp2fTest, TrickyInputs) {
   }
 }
 
-TEST(LlvmLibcExp2fTest, Underflow) {
+TEST_F(LlvmLibcExp2fTest, Underflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       0.0f, LIBC_NAMESPACE::exp2f(float(FPBits(0xff7fffffU))), FE_UNDERFLOW);
@@ -102,7 +102,7 @@ TEST(LlvmLibcExp2fTest, Underflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST(LlvmLibcExp2fTest, InFloatRange) {
+TEST_F(LlvmLibcExp2fTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {

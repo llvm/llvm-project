@@ -450,12 +450,15 @@ fir.global linkonce_odr @global_linkonce_odr : i32 {
   fir.has_value %0 : i32
 }
 
-// CHECK-LABEL: fir.dispatch_table @dispatch_tbl {
+// CHECK-LABEL: fir.type_info @dispatch_tbl : !fir.type<dispatch_tbl{i:i32}> dispatch_table {
 // CHECK: fir.dt_entry "method", @method_impl
 // CHECK: }
-fir.dispatch_table @dispatch_tbl {
+fir.type_info @dispatch_tbl : !fir.type<dispatch_tbl{i:i32}> dispatch_table {
   fir.dt_entry "method", @method_impl
 }
+
+// CHECK-LABEL: fir.type_info @test_type_info noinit nodestroy nofinal extends !fir.type<parent{i:i32}> : !fir.type<test_type_info{i:i32,j:f32}>
+fir.type_info @test_type_info noinit nodestroy nofinal extends !fir.type<parent{i:i32}> : !fir.type<test_type_info{i:i32,j:f32}>
 
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: !fir.complex<16>, [[VAL_152:%.*]]: !fir.complex<16>) {

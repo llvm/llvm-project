@@ -248,7 +248,7 @@ if (
     "lldb-repro-capture" in config.available_features
     or "lldb-repro-replay" in config.available_features
 ):
-    dotest_cmd += ["--skip-category=lldb-vscode", "--skip-category=std-module"]
+    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]

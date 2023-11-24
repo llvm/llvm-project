@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "config/linux/app.h"
+#include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/thread.h"
+#include "src/stdlib/abort.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -22,6 +24,11 @@
 #include <unistd.h>
 
 extern "C" int main(int, char **, char **);
+
+extern "C" void __stack_chk_fail() {
+  LIBC_NAMESPACE::write_to_stderr("stack smashing detected");
+  LIBC_NAMESPACE::abort();
+}
 
 namespace LIBC_NAMESPACE {
 
@@ -54,7 +61,9 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // Per the x86_64 TLS ABI, the entry pointed to by the thread pointer is the
   // address of the TLS block. So, we add more size to accomodate this address
   // entry.
-  uintptr_t tlsSizeWithAddr = tlsSize + sizeof(uintptr_t);
+  // We also need to include space for the stack canary. The canary is at
+  // offset 0x28 (40) and is of size uintptr_t.
+  uintptr_t tlsSizeWithAddr = tlsSize + sizeof(uintptr_t) + 40;
 
   // We cannot call the mmap function here as the functions set errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
@@ -76,6 +85,16 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   LIBC_NAMESPACE::inline_memcpy(reinterpret_cast<char *>(tlsAddr),
                                 reinterpret_cast<const char *>(app.tls.address),
                                 app.tls.init_size);
+  uintptr_t *stackGuardAddr = reinterpret_cast<uintptr_t *>(endPtr + 40);
+  // Setting the stack guard to a random value.
+  // We cannot call the get_random function here as the function sets errno on
+  // failure. Since errno is implemented via a thread local variable, we cannot
+  // use errno before TLS is setup.
+  ssize_t stackGuardRetVal = LIBC_NAMESPACE::syscall_impl<ssize_t>(
+      SYS_getrandom, reinterpret_cast<long>(stackGuardAddr), sizeof(uint64_t),
+      0);
+  if (stackGuardRetVal < 0)
+    LIBC_NAMESPACE::syscall_impl(SYS_exit, 1);
 
   tls_descriptor = {tlsSizeWithAddr, uintptr_t(tlsAddr), endPtr};
   return;

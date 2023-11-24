@@ -148,7 +148,7 @@ For example:
 
 .. code-block:: bash
 
-   $ darker -r HEAD^ $(git diff --name-only HEAD^)
+   $ darker -r HEAD^ $(git diff --name-only --diff-filter=d HEAD^)
 
 Mechanical Source Issues
 ========================
@@ -589,6 +589,19 @@ That said, LLVM does make extensive use of a hand-rolled form of RTTI that use
 templates like :ref:`isa\<>, cast\<>, and dyn_cast\<> <isa>`.
 This form of RTTI is opt-in and can be
 :doc:`added to any class <HowToSetUpLLVMStyleRTTI>`.
+
+Prefer C++-style casts
+^^^^^^^^^^^^^^^^^^^^^^
+
+When casting, use ``static_cast``, ``reinterpret_cast``, and ``const_cast``,
+rather than C-style casts. There are two exceptions to this:
+
+* When casting to ``void`` to suppress warnings about unused variables (as an
+  alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
+
+* When casting between integral types (including enums that are not strongly-
+  typed), functional-style casts are permitted as an alternative to
+  ``static_cast``.
 
 .. _static constructor:
 

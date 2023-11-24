@@ -151,8 +151,8 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   auto File = AU->getFileManager().getFileRef("Textual.h", false, false);
   ASSERT_TRUE(bool(File));
   // Verify that we do not crash here.
-  EXPECT_TRUE(AU->getPreprocessor().getHeaderSearchInfo().getExistingFileInfo(
-      &File->getFileEntry()));
+  EXPECT_TRUE(
+      AU->getPreprocessor().getHeaderSearchInfo().getExistingFileInfo(*File));
 }
 
 TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {

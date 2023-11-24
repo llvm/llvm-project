@@ -23,54 +23,6 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
-/// If the tensor is a sparse constant, generates and returns the pair of
-/// the constants for the coordinates and the values.
-static std::optional<std::pair<Value, Value>>
-genSplitSparseConstant(OpBuilder &builder, Location loc, Value tensor) {
-  if (auto constOp = tensor.getDefiningOp<arith::ConstantOp>()) {
-    if (auto a = dyn_cast<SparseElementsAttr>(constOp.getValue())) {
-      auto coordinates = builder.create<arith::ConstantOp>(loc, a.getIndices());
-      auto values = builder.create<arith::ConstantOp>(loc, a.getValues());
-      return std::make_pair(coordinates, values);
-    }
-  }
-  return {};
-}
-
-/// Reads `coordinates[k][0..rank-1]` and `value[k]`, appending the
-/// former onto `cvs` and returning the latter.
-// FIXME: Change the `rank` argument to `Dimension dimRank` or `Level lvlRank`,
-// to clarify its intended meaning.
-static Value genCoordsAndValueForSparse(OpBuilder &builder, Location loc,
-                                        Value coordinates, Value values,
-                                        SmallVectorImpl<Value> &cvs, Value k,
-                                        unsigned rank) {
-  for (unsigned d = 0; d < rank; d++) {
-    Value dim = constantIndex(builder, loc, d);
-    Value crd =
-        builder.create<tensor::ExtractOp>(loc, coordinates, ValueRange{k, dim});
-    crd = builder.create<arith::IndexCastOp>(loc, builder.getIndexType(), crd);
-    // builder.create<memref::StoreOp>(loc, crd, cvs, dim);
-    cvs.push_back(crd);
-  }
-  return builder.create<tensor::ExtractOp>(loc, values, k);
-}
-
-/// Generates code to read the value from `tensor[ivs]`, and open
-/// a conditional for whether the value is non-zero.  The generated code
-/// looks like the following and the insertion point after this routine
-/// is inside the then-branch.
-///    if (tensor[ivs] != 0)
-///      insert_point
-static Value genCoordsAndValueForDense(OpBuilder &builder, Location loc,
-                                       Value tensor,
-                                       SmallVectorImpl<Value> &cvs,
-                                       ValueRange ivs) {
-  Value val = genValueForDense(builder, loc, tensor, ivs);
-  cvs.append(ivs.begin(), ivs.end());
-  return val;
-}
-
 //===----------------------------------------------------------------------===//
 // ExecutionEngine/SparseTensorUtils helper functions.
 //===----------------------------------------------------------------------===//
@@ -99,8 +51,6 @@ OverheadType mlir::sparse_tensor::overheadTypeEncoding(Type tp) {
   llvm_unreachable("Unknown overhead type");
 }
 
-// TODO: should offer an overload of this that takes a `MLIRContext*`
-// instead of the builder, similar to `detail::getIntegerOrIndexType`.
 Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
   switch (ot) {
   case OverheadType::kIndex:
@@ -213,6 +163,17 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
   return mlir::convertScalarToDtype(builder, loc, value, dstTp, isUnsignedCast);
 }
 
+Value sparse_tensor::genScalarToTensor(OpBuilder &builder, Location loc,
+                                       Value elem, Type dstTp) {
+  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
+    // Scalars can only be converted to 0-ranked tensors.
+    assert(rtp.getRank() == 0);
+    elem = sparse_tensor::genCast(builder, loc, elem, rtp.getElementType());
+    return builder.create<tensor::FromElementsOp>(loc, rtp, elem);
+  }
+  return sparse_tensor::genCast(builder, loc, elem, dstTp);
+}
+
 Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
                                   Value s) {
   Value load = builder.create<memref::LoadOp>(loc, mem, s);
@@ -257,7 +218,7 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
 
 void mlir::sparse_tensor::genReshapeDstShape(
     OpBuilder &builder, Location loc, SmallVectorImpl<Value> &dstShape,
-    ArrayRef<Value> srcShape, ArrayRef<StaticSize> staticDstShape,
+    ArrayRef<Value> srcShape, ArrayRef<Size> staticDstShape,
     ArrayRef<ReassociationIndices> reassociation) {
   // Collapse shape.
   if (reassociation.size() < srcShape.size()) {
@@ -290,7 +251,7 @@ void mlir::sparse_tensor::genReshapeDstShape(
       if (staticDstShape[j] == ShapedType::kDynamic) {
         // The expanded dimension has dynamic size. We compute the dimension
         // by dividing srcDim by the product of the static dimensions.
-        StaticSize product = 1;
+        Size product = 1;
         for (unsigned k = start; k < start + map.size(); k++) {
           if (staticDstShape[k] != ShapedType::kDynamic) {
             product *= staticDstShape[k];
@@ -389,7 +350,7 @@ func::CallOp mlir::sparse_tensor::createFuncCall(
 }
 
 Type mlir::sparse_tensor::getOpaquePointerType(MLIRContext *ctx) {
-  return LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
+  return LLVM::LLVMPointerType::get(ctx);
 }
 
 Type mlir::sparse_tensor::getOpaquePointerType(Builder &builder) {
@@ -450,65 +411,6 @@ void mlir::sparse_tensor::deallocDenseTensor(OpBuilder &builder, Location loc,
   builder.create<memref::DeallocOp>(loc, buffer);
 }
 
-Value mlir::sparse_tensor::genValueForDense(OpBuilder &builder, Location loc,
-                                            Value tensor, ValueRange ivs) {
-  Value val = builder.create<tensor::ExtractOp>(loc, tensor, ivs);
-  Value cond = genIsNonzero(builder, loc, val);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else*/ false);
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-  return val;
-}
-
-// FIXME:
-// 1. Dense tensors loop should be generated by loop emitter.
-// 2. Support reduction variables to propagate SSA chains properly.
-// 3. Change the `rank` argument to `Dimension dimRank` or `Level lvlRank`,
-//    to clarify its meaning.
-void mlir::sparse_tensor::genDenseTensorOrSparseConstantIterLoop(
-    OpBuilder &builder, Location loc, Value src, unsigned rank,
-    function_ref<void(OpBuilder &, Location, Value, ValueRange)> bodyBuilder) {
-  // `cvs` is actually the flattened coordinates array for all elements,
-  // not just for one element (since we do not `SmallVector::clear` after
-  // each iteration of the body of the loopnest.
-  SmallVector<Value> cvs;
-  SmallVector<Value> lo;
-  SmallVector<Value> hi;
-  SmallVector<Value> st;
-  const Value zero = constantIndex(builder, loc, 0);
-  const Value one = constantIndex(builder, loc, 1);
-  const auto splitSrc = genSplitSparseConstant(builder, loc, src);
-  if (splitSrc.has_value()) {
-    const Value srcCoordinates = splitSrc->first;
-    const Value srcValues = splitSrc->second;
-    lo.push_back(zero);
-    hi.push_back(linalg::createOrFoldDimOp(builder, loc, srcValues, 0));
-    st.push_back(one);
-    scf::buildLoopNest(builder, loc, lo, hi, st, {},
-                       [&](OpBuilder &builder, Location loc, ValueRange ivs,
-                           ValueRange /*args*/) -> scf::ValueVector {
-                         Value val = genCoordsAndValueForSparse(
-                             builder, loc, srcCoordinates, srcValues, cvs,
-                             ivs[0], rank);
-                         bodyBuilder(builder, loc, val, cvs);
-                         return {};
-                       });
-  } else {
-    for (unsigned i = 0; i < rank; i++) {
-      lo.push_back(zero);
-      hi.push_back(linalg::createOrFoldDimOp(builder, loc, src, i));
-      st.push_back(one);
-    }
-    scf::buildLoopNest(builder, loc, lo, hi, st, {},
-                       [&](OpBuilder &builder, Location loc, ValueRange ivs,
-                           ValueRange /*args*/) -> scf::ValueVector {
-                         Value val = genCoordsAndValueForDense(builder, loc,
-                                                               src, cvs, ivs);
-                         bodyBuilder(builder, loc, val, cvs);
-                         return {};
-                       });
-  }
-}
-
 void mlir::sparse_tensor::sizesFromSrc(OpBuilder &builder,
                                        SmallVectorImpl<Value> &sizes,
                                        Location loc, Value src) {
@@ -530,7 +432,11 @@ Operation *mlir::sparse_tensor::getTop(Operation *op) {
 void sparse_tensor::foreachInSparseConstant(
     OpBuilder &builder, Location loc, SparseElementsAttr attr, AffineMap order,
     function_ref<void(ArrayRef<Value>, Value)> callback) {
-  const Dimension dimRank = getSparseTensorType(attr).getDimRank();
+  if (!order)
+    order = builder.getMultiDimIdentityMap(attr.getType().getRank());
+
+  auto stt = SparseTensorType(getRankedTensorType(attr));
+  const Dimension dimRank = stt.getDimRank();
   const auto coordinates = attr.getIndices().getValues<IntegerAttr>();
   const auto values = attr.getValues().getValues<Attribute>();
 
@@ -554,20 +460,23 @@ void sparse_tensor::foreachInSparseConstant(
 
   // Sorts the sparse element attribute based on coordinates.
   std::sort(elems.begin(), elems.end(),
-            [order, dimRank](const ElementAttr &lhs, const ElementAttr &rhs) {
-              const auto &lhsCoords = lhs.first;
-              const auto &rhsCoords = rhs.first;
-              for (Dimension d = 0; d < dimRank; d++) {
-                // FIXME: This only makes sense for permutations.
-                // And since we don't check that `order` is a permutation,
-                // it can also cause OOB errors when we use `l`.
-                const Level l = order ? order.getDimPosition(d) : d;
-                if (lhsCoords[l].getInt() == rhsCoords[l].getInt())
-                  continue;
-                return lhsCoords[l].getInt() < rhsCoords[l].getInt();
-              }
+            [order](const ElementAttr &lhs, const ElementAttr &rhs) {
               if (std::addressof(lhs) == std::addressof(rhs))
                 return false;
+
+              auto lhsCoords = llvm::map_to_vector(
+                  lhs.first, [](IntegerAttr i) { return i.getInt(); });
+              auto rhsCoords = llvm::map_to_vector(
+                  rhs.first, [](IntegerAttr i) { return i.getInt(); });
+
+              SmallVector<int64_t, 4> lhsLvlCrds = order.compose(lhsCoords);
+              SmallVector<int64_t, 4> rhsLvlCrds = order.compose(rhsCoords);
+              // Sort the element based on the lvl coordinates.
+              for (Level l = 0; l < order.getNumResults(); l++) {
+                if (lhsLvlCrds[l] == rhsLvlCrds[l])
+                  continue;
+                return lhsLvlCrds[l] < rhsLvlCrds[l];
+              }
               llvm_unreachable("no equal coordinate in sparse element attr");
             });
 
@@ -601,8 +510,8 @@ SmallVector<Value> sparse_tensor::loadAll(OpBuilder &builder, Location loc,
 #ifndef NDEBUG
   const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
-  const DynSize memSh = memTp.getDimSize(0);
-  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(size));
+  const Size memSh = memTp.getDimSize(0);
+  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<Size>(size));
   assert(offsetIdx == 0 || offsetIdx < size);
 #endif // NDEBUG
   SmallVector<Value> vs;
@@ -623,8 +532,8 @@ void sparse_tensor::storeAll(OpBuilder &builder, Location loc, Value mem,
   const size_t vsize = vs.size();
   const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
-  const DynSize memSh = memTp.getDimSize(0);
-  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(vsize));
+  const Size memSh = memTp.getDimSize(0);
+  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<Size>(vsize));
   assert(offsetIdx == 0 || offsetIdx < vsize);
 #endif // NDEBUG
   for (const auto &v : llvm::enumerate(vs)) {
@@ -653,11 +562,11 @@ Value sparse_tensor::reshapeValuesToLevels(OpBuilder &builder, Location loc,
   // The memref ReshapeOp requires the sizes buffer to have a static
   // shape.
   const auto iTp = builder.getIndexType();
-  const SmallVector<DynSize, 1> lvlSizesShape{static_cast<DynSize>(lvlRank)};
+  const SmallVector<Size, 1> lvlSizesShape{static_cast<Size>(lvlRank)};
   const auto lvlSizesTp = MemRefType::get(lvlSizesShape, iTp);
   lvlCoords = builder.create<memref::CastOp>(loc, lvlSizesTp, lvlCoords);
   // Finally, create the ReshapeOp.
-  const SmallVector<DynSize> resShape(lvlRank, ShapedType::kDynamic);
+  const SmallVector<Size> resShape(lvlRank, ShapedType::kDynamic);
   const Type elemTp = getMemRefType(valuesBuffer).getElementType();
   const auto resTp = MemRefType::get(resShape, elemTp);
   return builder.create<memref::ReshapeOp>(loc, resTp, valuesBuffer, lvlCoords);
@@ -728,4 +637,162 @@ Value sparse_tensor::createOrFoldSliceStrideOp(OpBuilder &builder, Location loc,
   if (stride.has_value())
     return constantIndex(builder, loc, *stride);
   return builder.create<ToSliceStrideOp>(loc, tensor, APInt(64, dim));
+}
+
+Value sparse_tensor::genReader(OpBuilder &builder, Location loc,
+                               SparseTensorType stt, Value tensor,
+                               /*out*/ SmallVectorImpl<Value> &dimSizesValues,
+                               /*out*/ Value &dimSizesBuffer) {
+  // Construct the dimension **shapes** buffer. The buffer contains the static
+  // size per dimension, or otherwise a zero for a dynamic size.
+  Dimension dimRank = stt.getDimRank();
+  dimSizesValues.clear();
+  dimSizesValues.reserve(dimRank);
+  for (const Size sz : stt.getDimShape()) {
+    const auto s = ShapedType::isDynamic(sz) ? 0 : sz;
+    dimSizesValues.push_back(constantIndex(builder, loc, s));
+  }
+  Value dimShapesBuffer = allocaBuffer(builder, loc, dimSizesValues);
+  // Create the `CheckedSparseTensorReader`. This reader performs a
+  // consistency check on the static sizes, but accepts any size
+  // of each dimension with a dynamic size.
+  Type opaqueTp = getOpaquePointerType(builder);
+  Type eltTp = stt.getElementType();
+  Value valTp = constantPrimaryTypeEncoding(builder, loc, eltTp);
+  Value reader =
+      createFuncCall(builder, loc, "createCheckedSparseTensorReader", opaqueTp,
+                     {tensor, dimShapesBuffer, valTp}, EmitCInterface::On)
+          .getResult(0);
+  // For static shapes, the shape buffer can be used right away. For dynamic
+  // shapes, use the information from the reader to construct a buffer that
+  // supplies the actual size for each dynamic dimension.
+  dimSizesBuffer = dimShapesBuffer;
+  if (stt.hasDynamicDimShape()) {
+    Type indexTp = builder.getIndexType();
+    auto memTp = MemRefType::get({ShapedType::kDynamic}, indexTp);
+    dimSizesBuffer =
+        createFuncCall(builder, loc, "getSparseTensorReaderDimSizes", memTp,
+                       reader, EmitCInterface::On)
+            .getResult(0);
+    // Also convert the dim shapes values into dim sizes values, just in case
+    // subsequent clients need the values (DCE will remove unused).
+    for (Dimension d = 0; d < dimRank; d++) {
+      if (stt.isDynamicDim(d))
+        dimSizesValues[d] = builder.create<memref::LoadOp>(
+            loc, dimSizesBuffer, constantIndex(builder, loc, d));
+    }
+  }
+  return reader;
+}
+
+Value sparse_tensor::genMapBuffers(
+    OpBuilder &builder, Location loc, SparseTensorType stt,
+    ArrayRef<Value> dimSizesValues, Value dimSizesBuffer,
+    /*out*/ SmallVectorImpl<Value> &lvlSizesValues,
+    /*out*/ Value &dim2lvlBuffer,
+    /*out*/ Value &lvl2dimBuffer) {
+  const Dimension dimRank = stt.getDimRank();
+  const Level lvlRank = stt.getLvlRank();
+  lvlSizesValues.clear();
+  lvlSizesValues.reserve(lvlRank);
+  // For an identity mapping, the dim2lvl and lvl2dim mappings are
+  // identical as are dimSizes and lvlSizes, so buffers are reused
+  // as much as possible.
+  if (stt.isIdentity()) {
+    assert(dimRank == lvlRank);
+    SmallVector<Value> iotaValues;
+    iotaValues.reserve(lvlRank);
+    for (Level l = 0; l < lvlRank; l++) {
+      iotaValues.push_back(constantIndex(builder, loc, l));
+      lvlSizesValues.push_back(dimSizesValues[l]);
+    }
+    dim2lvlBuffer = lvl2dimBuffer = allocaBuffer(builder, loc, iotaValues);
+    return dimSizesBuffer; // now lvlSizesBuffer
+  }
+  // Otherwise, some code needs to be generated to set up the buffers.
+  // This code deals with permutations as well as non-permutations that
+  // arise from rank changing blocking.
+  const auto dimToLvl = stt.getDimToLvl();
+  const auto lvlToDim = stt.getLvlToDim();
+  SmallVector<Value> dim2lvlValues(lvlRank); // for each lvl, expr in dim vars
+  SmallVector<Value> lvl2dimValues(dimRank); // for each dim, expr in lvl vars
+  // Generate dim2lvl.
+  assert(lvlRank == dimToLvl.getNumResults());
+  for (Level l = 0; l < lvlRank; l++) {
+    AffineExpr exp = dimToLvl.getResult(l);
+    // We expect:
+    //    (1) l = d
+    //    (2) l = d / c
+    //    (3) l = d % c
+    Dimension d = 0;
+    uint64_t cf = 0, cm = 0;
+    switch (exp.getKind()) {
+    case AffineExprKind::DimId: {
+      d = cast<AffineDimExpr>(exp).getPosition();
+      break;
+    }
+    case AffineExprKind::FloorDiv: {
+      auto floor = cast<AffineBinaryOpExpr>(exp);
+      d = cast<AffineDimExpr>(floor.getLHS()).getPosition();
+      cf = cast<AffineConstantExpr>(floor.getRHS()).getValue();
+      break;
+    }
+    case AffineExprKind::Mod: {
+      auto mod = cast<AffineBinaryOpExpr>(exp);
+      d = cast<AffineDimExpr>(mod.getLHS()).getPosition();
+      cm = cast<AffineConstantExpr>(mod.getRHS()).getValue();
+      break;
+    }
+    default:
+      llvm::report_fatal_error("unsupported dim2lvl in sparse tensor type");
+    }
+    dim2lvlValues[l] = constantIndex(builder, loc, encodeDim(d, cf, cm));
+    // Compute the level sizes.
+    //    (1) l = d        : size(d)
+    //    (2) l = d / c    : size(d) / c
+    //    (3) l = d % c    : c
+    Value lvlSz;
+    if (cm == 0) {
+      lvlSz = dimSizesValues[d];
+      if (cf != 0)
+        lvlSz = builder.create<arith::DivUIOp>(loc, lvlSz,
+                                               constantIndex(builder, loc, cf));
+    } else {
+      lvlSz = constantIndex(builder, loc, cm);
+    }
+    lvlSizesValues.push_back(lvlSz);
+  }
+  // Generate lvl2dim.
+  assert(dimRank == lvlToDim.getNumResults());
+  for (Dimension d = 0; d < dimRank; d++) {
+    AffineExpr exp = lvlToDim.getResult(d);
+    // We expect:
+    //    (1) d = l
+    //    (2) d = l' * c + l
+    Level l = 0, ll = 0;
+    uint64_t c = 0;
+    switch (exp.getKind()) {
+    case AffineExprKind::DimId: {
+      l = cast<AffineDimExpr>(exp).getPosition();
+      break;
+    }
+    case AffineExprKind::Add: {
+      // Always mul on lhs, symbol/constant on rhs.
+      auto add = cast<AffineBinaryOpExpr>(exp);
+      assert(add.getLHS().getKind() == AffineExprKind::Mul);
+      auto mul = cast<AffineBinaryOpExpr>(add.getLHS());
+      ll = cast<AffineDimExpr>(mul.getLHS()).getPosition();
+      c = cast<AffineConstantExpr>(mul.getRHS()).getValue();
+      l = cast<AffineDimExpr>(add.getRHS()).getPosition();
+      break;
+    }
+    default:
+      llvm::report_fatal_error("unsupported lvl2dim in sparse tensor type");
+    }
+    lvl2dimValues[d] = constantIndex(builder, loc, encodeLvl(l, c, ll));
+  }
+  // Return buffers.
+  dim2lvlBuffer = allocaBuffer(builder, loc, dim2lvlValues);
+  lvl2dimBuffer = allocaBuffer(builder, loc, lvl2dimValues);
+  return allocaBuffer(builder, loc, lvlSizesValues); // lvlSizesBuffer
 }

@@ -146,14 +146,23 @@ void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
   LI.setWeight(Weight);
 }
 
+static bool canMemFoldInlineAsm(LiveInterval &LI,
+                                const MachineRegisterInfo &MRI) {
+  for (const MachineOperand &MO : MRI.reg_operands(LI.reg())) {
+    const MachineInstr *MI = MO.getParent();
+    if (MI->isInlineAsm() && MI->mayFoldInlineAsmRegOp(MI->getOperandNo(&MO)))
+      return true;
+  }
+
+  return false;
+}
+
 float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
                                        SlotIndex *End) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineBasicBlock *MBB = nullptr;
-  MachineLoop *Loop = nullptr;
-  bool IsExiting = false;
   float TotalWeight = 0;
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
@@ -210,6 +219,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     }
   };
 
+  bool IsExiting = false;
   std::set<CopyHint> CopyHints;
   DenseMap<unsigned, float> Hint;
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
@@ -251,7 +261,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       // Get loop info for mi.
       if (MI->getParent() != MBB) {
         MBB = MI->getParent();
-        Loop = Loops.getLoopFor(MBB);
+        const MachineLoop *Loop = Loops.getLoopFor(MBB);
         IsExiting = Loop ? Loop->isLoopExiting(MBB) : false;
       }
 
@@ -315,7 +325,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // into instruction itself makes perfect sense.
   if (ShouldUpdateLI && LI.isZeroLength(LIS.getSlotIndexes()) &&
       !LI.isLiveAtIndexes(LIS.getRegMaskSlots()) &&
-      !isLiveAtStatepointVarArg(LI)) {
+      !isLiveAtStatepointVarArg(LI) && !canMemFoldInlineAsm(LI, MRI)) {
     LI.markNotSpillable();
     return -1.0;
   }

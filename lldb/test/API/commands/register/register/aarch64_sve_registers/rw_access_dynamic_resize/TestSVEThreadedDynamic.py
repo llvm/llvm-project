@@ -108,8 +108,11 @@ class RegisterCommandsTestCase(TestBase):
         if (mode == Mode.SVE) and not self.isAArch64SVE():
             self.skipTest("SVE registers must be supported.")
 
-        if (mode == Mode.SSVE) and not self.isAArch64SME():
-            self.skipTest("Streaming SVE registers must be supported.")
+        if (mode == Mode.SSVE) and not self.isAArch64SMEFA64():
+            self.skipTest(
+                "Streaming SVE registers must be supported and the "
+                "smefa64 extension must be present."
+            )
 
         self.build_for_mode(mode)
 
@@ -201,8 +204,11 @@ class RegisterCommandsTestCase(TestBase):
 
     def setup_svg_test(self, mode):
         # Even when running in SVE mode, we need access to SVG for these tests.
-        if not self.isAArch64SME():
-            self.skipTest("Streaming SVE registers must be present.")
+        if not self.isAArch64SMEFA64():
+            self.skipTest(
+                "Streaming SVE registers must be present and the "
+                "smefa64 extension must be present."
+            )
 
         self.build_for_mode(mode)
 

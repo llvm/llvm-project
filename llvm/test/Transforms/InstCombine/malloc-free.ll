@@ -26,9 +26,64 @@ define i32 @dead_aligned_alloc(i32 %size, i32 %alignment, i8 %value) {
   ret i32 0
 }
 
+define i1 @aligned_alloc_only_pointe(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @aligned_alloc_only_pointe(
+; CHECK-NEXT:    [[ALIGNED_ALLOCATION:%.*]] = tail call ptr @aligned_alloc(i32 [[ALIGNMENT:%.*]], i32 [[SIZE:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[ALIGNED_ALLOCATION]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %aligned_allocation = tail call ptr @aligned_alloc(i32 %alignment, i32 %size)
+  %cmp = icmp ne ptr %aligned_allocation, null
+  ret i1 %cmp
+}
+
+define i1 @aligned_alloc_pointer_only_used_by_cmp_alignment_and_value_known_ok(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @aligned_alloc_pointer_only_used_by_cmp_alignment_and_value_known_ok(
+; CHECK-NEXT:    ret i1 true
+;
+  %aligned_allocation = tail call ptr @aligned_alloc(i32 8, i32 32)
+  %cmp = icmp ne ptr %aligned_allocation, null
+  ret i1 %cmp
+}
+
+define i1 @aligned_alloc_pointer_only_used_by_cmp_alignment_no_power_of_2(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @aligned_alloc_pointer_only_used_by_cmp_alignment_no_power_of_2(
+; CHECK-NEXT:    [[ALIGNED_ALLOCATION:%.*]] = tail call dereferenceable_or_null(32) ptr @aligned_alloc(i32 3, i32 32)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[ALIGNED_ALLOCATION]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %aligned_allocation = tail call ptr @aligned_alloc(i32 3, i32 32)
+  %cmp = icmp ne ptr %aligned_allocation, null
+  ret i1 %cmp
+}
+
+define i1 @aligned_alloc_pointer_only_used_by_cmp_size_not_multiple_of_alignment(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @aligned_alloc_pointer_only_used_by_cmp_size_not_multiple_of_alignment(
+; CHECK-NEXT:    [[ALIGNED_ALLOCATION:%.*]] = tail call dereferenceable_or_null(31) ptr @aligned_alloc(i32 8, i32 31)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[ALIGNED_ALLOCATION]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %aligned_allocation = tail call ptr @aligned_alloc(i32 8, i32 31)
+  %cmp = icmp ne ptr %aligned_allocation, null
+  ret i1 %cmp
+}
+
+; This test uses a aligned allocation function different to @aligned_alloc,
+; and should be treated as having @aligned_alloc's constraints on alignment
+; and size operands.
+define i1 @other_aligned_allocation_function(i32 %size, i32 %alignment, i8 %value) {
+; CHECK-LABEL: @other_aligned_allocation_function(
+; CHECK-NEXT:    ret i1 true
+;
+  %aligned_allocation = tail call ptr @other_aligned_alloc(i32 %alignment, i32 %size)
+  %cmp = icmp ne ptr %aligned_allocation, null
+  ret i1 %cmp
+}
+
 declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 declare noalias ptr @aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
+declare noalias ptr @other_aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
 declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 
 define i1 @foo() {

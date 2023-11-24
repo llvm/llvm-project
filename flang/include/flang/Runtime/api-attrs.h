@@ -45,7 +45,7 @@
 /*
  * RT_OFFLOAD_API_GROUP_BEGIN/END pair is placed around definitions
  * of functions that can be referenced in other modules of Flang
- * runtime. For OpenMP offload these functions are made "declare target"
+ * runtime. For OpenMP offload, these functions are made "declare target"
  * making sure they are compiled for the target even though direct
  * references to them from other "declare target" functions may not
  * be seen. Host-only functions should not be put in between these
@@ -53,6 +53,15 @@
  */
 #define RT_OFFLOAD_API_GROUP_BEGIN RT_EXT_API_GROUP_BEGIN
 #define RT_OFFLOAD_API_GROUP_END RT_EXT_API_GROUP_END
+
+/*
+ * RT_OFFLOAD_VAR_GROUP_BEGIN/END pair is placed around definitions
+ * of variables (e.g. globals or static class members) that can be
+ * referenced in functions marked with RT_OFFLOAD_API_GROUP_BEGIN/END.
+ * For OpenMP offload, these variables are made "declare target".
+ */
+#define RT_OFFLOAD_VAR_GROUP_BEGIN RT_EXT_API_GROUP_BEGIN
+#define RT_OFFLOAD_VAR_GROUP_END RT_EXT_API_GROUP_END
 
 /*
  * RT_VAR_GROUP_BEGIN/END pair is placed around definitions

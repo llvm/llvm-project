@@ -514,8 +514,14 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *LocSrc =
-          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      RecordStorageLocation *LocSrc = nullptr;
+      if (Arg1->isPRValue()) {
+        if (auto *Val = cast_or_null<RecordValue>(Env.getValue(*Arg1)))
+          LocSrc = &Val->getLoc();
+      } else {
+        LocSrc =
+            cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
+      }
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
@@ -525,7 +531,9 @@ public:
       // The assignment operators are different from the type of the destination
       // in this model (i.e. in one of their base classes). This must be very
       // rare and we just bail.
-      if (Method->getThisObjectType().getCanonicalType().getUnqualifiedType() !=
+      if (Method->getFunctionObjectParameterType()
+              .getCanonicalType()
+              .getUnqualifiedType() !=
           LocDst->getType().getCanonicalType().getUnqualifiedType())
         return;
 
@@ -615,6 +623,10 @@ public:
     // FIXME: Revisit this once flow conditions are added to the framework. For
     // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
     // condition.
+    // When we do this, we will need to retrieve the values of the operands from
+    // the environments for the basic blocks they are computed in, in a similar
+    // way to how this is done for short-circuited logical operators in
+    // `getLogicOperatorSubExprValue()`.
     if (S->isGLValue())
       Env.setStorageLocation(*S, Env.createObject(S->getType()));
     else if (Value *Val = Env.createValue(S->getType()))
@@ -675,11 +687,11 @@ public:
       assert(
           // The types are same, or
           Field->getType().getCanonicalType().getUnqualifiedType() ==
-              Init->getType().getCanonicalType() ||
+              Init->getType().getCanonicalType().getUnqualifiedType() ||
           // The field's type is T&, and initializer is T
           (Field->getType()->isReferenceType() &&
-              Field->getType().getCanonicalType()->getPointeeType() ==
-              Init->getType().getCanonicalType()));
+           Field->getType().getCanonicalType()->getPointeeType() ==
+               Init->getType().getCanonicalType()));
       auto& Loc = Env.createObject(Field->getType(), Init);
       FieldLocs.insert({Field, &Loc});
     }

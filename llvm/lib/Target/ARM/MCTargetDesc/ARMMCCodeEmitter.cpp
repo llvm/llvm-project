@@ -1899,7 +1899,8 @@ void ARMMCCodeEmitter::encodeInstruction(const MCInst &MI,
   else
     llvm_unreachable("Unexpected instruction size!");
 
-  auto Endian = IsLittleEndian ? support::little : support::big;
+  auto Endian =
+      IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
   uint32_t Binary = getBinaryCodeForInstr(MI, Fixups, STI);
   if (Size == 2) {
     support::endian::write<uint16_t>(CB, Binary, Endian);

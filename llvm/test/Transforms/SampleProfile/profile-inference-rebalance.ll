@@ -148,26 +148,26 @@ b1:
   br i1 %cmp, label %b2, label %b3
 ; CHECK:  edge b1 -> b2 probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK:  edge b1 -> b3 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK2: - b1: float = {{.*}}, int = {{.*}}, count = 1973
+; CHECK2: - b1: float = {{.*}}, int = {{.*}}, count = 2000
 
 b2:
   call void @llvm.pseudoprobe(i64 2506109673213838996, i64 3, i32 0, i64 -1)
   br i1 %cmp, label %b3, label %b4
 ; CHECK:  edge b2 -> b3 probability is 0x40000000 / 0x80000000 = 50.00%
 ; CHECK:  edge b2 -> b4 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK2: - b2: float = {{.*}}, int = {{.*}}, count = 955
+; CHECK2: - b2: float = {{.*}}, int = {{.*}}, count = 1000
 
 b3:
   call void @llvm.pseudoprobe(i64 2506109673213838996, i64 4, i32 0, i64 -1)
   br label %b5
 ; CHECK:  edge b3 -> b5 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK2: - b3: float = {{.*}}, int = {{.*}}, count = 1527
+; CHECK2: - b3: float = {{.*}}, int = {{.*}}, count = 1500
 
 b4:
   call void @llvm.pseudoprobe(i64 2506109673213838996, i64 5, i32 0, i64 -1)
   br label %b5
 ; CHECK:  edge b4 -> b5 probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK2: - b4: float = {{.*}}, int = {{.*}}, count = 445
+; CHECK2: - b4: float = {{.*}}, int = {{.*}}, count = 500
 
 b5:
   call void @llvm.pseudoprobe(i64 2506109673213838996, i64 6, i32 0, i64 -1)

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 #define LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
 
-#include "src/__support/common.h"
+#include "src/__support/common.h" // LIBC_INLINE
 
 #include <stddef.h>
 #include <stdlib.h> // For allocation.

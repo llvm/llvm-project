@@ -165,24 +165,23 @@ define half @test_atomicrmw_fmin_f16_global_align4(ptr addrspace(1) %ptr, half %
 
 define half @test_atomicrmw_fmin_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fmin_f16_local(
-; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
-; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
-; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[TMP2]]
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to half
 ; GCN-NEXT:    [[TMP5:%.*]] = call half @llvm.minnum.f16(half [[TMP4]], half [[VALUE:%.*]])
 ; GCN-NEXT:    [[TMP6:%.*]] = bitcast half [[TMP5]] to i16
 ; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP6]] to i32
-; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
 ; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GCN-NEXT:    [[TMP7:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
@@ -190,7 +189,7 @@ define half @test_atomicrmw_fmin_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP7]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[TMP2]]
 ; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; GCN-NEXT:    [[TMP8:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GCN-NEXT:    ret half [[TMP8]]

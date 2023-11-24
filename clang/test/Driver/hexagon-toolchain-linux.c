@@ -58,6 +58,16 @@
 // CHECK004-NOT:   "-lclang_rt.builtins-hexagon"
 // CHECK004-NOT:   "-lc"
 // -----------------------------------------------------------------------------
+// Passing --musl -nolibc
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 --sysroot=%S/Inputs/basic_linux_libcxx_tree \
+// RUN:   -nolibc %s 2>&1 | FileCheck -check-prefix=CHECK-NOLIBC %s
+// CHECK-NOLIBC:       "-dynamic-linker={{/|\\\\}}lib{{/|\\\\}}ld-musl-hexagon.so.1"
+// CHECK-NOLIBC-SAME:  "{{.*}}basic_linux_libcxx_tree{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}crt1.o"
+// CHECK-NOLIBC-NOT:   "-lc"
+// -----------------------------------------------------------------------------
 // Not Passing -fno-use-init-array when musl is selected
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \

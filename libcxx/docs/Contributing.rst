@@ -8,22 +8,17 @@ This file contains notes about various tasks and processes specific to contribut
 to libc++. If this is your first time contributing, please also read `this document
 <https://www.llvm.org/docs/Contributing.html>`__ on general rules for contributing to LLVM.
 
-For libc++, please make sure you follow `these instructions <https://www.llvm.org/docs/Phabricator.html#requesting-a-review-via-the-command-line>`_
-for submitting a code review from the command-line using ``arc``, since we have some
-automation (e.g. CI) that depends on the review being submitted that way.
-
 If you plan on contributing to libc++, it can be useful to join the ``#libcxx`` channel
 on `LLVM's Discord server <https://discord.gg/jzUbyP26tQ>`__.
 
-Looking for pre-existing reviews
-================================
+Looking for pre-existing pull requests
+======================================
 
-Before you start working on any feature, please take a look at the open reviews
-to avoid duplicating someone else's work. You can do that by going to the website
-where code reviews are held, `Differential <https://reviews.llvm.org/differential>`__,
-and clicking on ``Libc++ Open Reviews`` in the sidebar to the left. If you see
-that your feature is already being worked on, please consider chiming in instead
-of duplicating work!
+Before you start working on any feature, please take a look at the open libc++ pull
+requests to avoid duplicating someone else's work. You can do that on GitHub by
+filtering pull requests `tagged with libc++ <https://github.com/llvm/llvm-project/pulls?q=is%3Apr+is%3Aopen+label%3Alibc%2B%2B>`__.
+If you see that your feature is already being worked on, please consider chiming in
+and helping review the code instead of duplicating work!
 
 RFCs for significant user-affecting changes
 ===========================================
@@ -212,14 +207,14 @@ Introduction
 
 Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. This
 CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__ and
-the build results are visible in the review on Phabricator. Please make sure
+the build results are visible in the review on GitHub. Please make sure
 the CI is green before committing a patch.
 
 The CI tests libc++ for all :ref:`supported platforms <SupportedPlatforms>`.
-The build is started for every diff uploaded to Phabricator. A complete CI run
-takes approximately one hour. To reduce the load:
+The build is started for every commit added to a Pull Request. A complete CI
+run takes approximately one hour. To reduce the load:
 
-* The build is cancelled when a new diff for the same revision is uploaded.
+* The build is cancelled when a new commit is pushed to a PR that is already running CI.
 * The build is done in several stages and cancelled when a stage fails.
 
 Typically, the libc++ jobs use a Ubuntu Docker image. This image contains

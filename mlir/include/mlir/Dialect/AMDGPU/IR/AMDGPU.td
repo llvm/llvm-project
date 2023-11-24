@@ -38,6 +38,85 @@ def AMDGPU_Dialect : Dialect {
 class AMDGPU_Op<string mnemonic, list<Trait> traits = []> :
   Op<AMDGPU_Dialect, mnemonic, traits> {}
 
+def AMDGPU_ExtPackedFp8Op :
+    AMDGPU_Op<"ext_packed_fp8", [Pure]>,
+    Arguments<(ins AnyTypeOf<[F8E5M2FNUZ, F8E4M3FNUZ,
+        VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2FNUZ, F8E4M3FNUZ]>]>:$source,
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$index)>,
+    Results<(outs F32:$res)> {
+  let summary = "Extend one of a vector of packed fp8 values to a float";
+  let description = [{
+    Extend the value `source[index]` to a 32-bit float and return it.
+
+    This rather unusual signature arises from the fact that AMD GPUs cannot
+    easily work with sub 32-bit quantities, so the compiler intrinsics for
+    extending 8-bit floats (which are, currently, the only way to work with
+    this operation) take packed vectors of 4 such floats.
+
+    If the passed-in vector has fewer than four elements, or the input is scalar,
+    the remaining values in the <4 x i8> will be filled with with
+    undefined values as needed.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `[` $index `]` `:` type($source) `to` type($res)
+  }];
+}
+
+def AMDGPU_PackedTrunc2xFp8Op :
+    AMDGPU_Op<"packed_trunc_2xfp8", [Pure, AttrSizedOperandSegments]>,
+    Arguments<(ins F32:$sourceA,
+      Optional<F32>:$sourceB,
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<1>]>:$wordIndex,
+      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>>:$existing)>,
+    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>:$res)> {
+  let summary = "Round two floats into a packed vector of 8-bit floats";
+  let description = [{
+    Round the inputs `sourceA` and `sourceB` (which is undefined if not
+    specified) into the low or high word (bottom two or top two) elements
+    of the returned vector, keeping the other two elements of `existing`
+    unchanged if present (or undefined if it was not passed in).
+
+    The reason for this odd signature is that AMD GPUs cannot easily work with
+    sub-registers, and so the conversion intrinsics (which are currently the
+    only way to work with 8-bit float types) take packed vectors of 4 8-bit
+    values.
+  }];
+  let assemblyFormat = [{
+    attr-dict $sourceA `,` ($sourceB^):(`undef`)?
+    `into` ($existing^):(`undef`)? `[` `word` $wordIndex `]`
+    `:` type($sourceA) `to` type($res) (`into` type($existing)^)?
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_PackedStochRoundFp8Op :
+    AMDGPU_Op<"packed_stoch_round_fp8", [Pure]>,
+    Arguments<(ins F32:$source,
+      I32:$stochiasticParam,
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$storeIndex,
+      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>>:$existing)>,
+    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>:$res)> {
+  let summary = "Round float stochiastically into a packed vector of 8-bit floats";
+  let description = [{
+    Round the input `source`, adding in `stochiasticParam`, and place it into
+    the `storeIndex`th element of `res`.
+
+    If `existing` is passed in, elements of `res` other than the one at `storeIndex`
+    are copied from `existing`.
+
+    The reason for this odd signature is that AMD GPUs cannot easily work with
+    sub-registers, and so the conversion intrinsics (which are currently the
+    only way to work with 8-bit float types) take packed vectors of 4 8-bit
+    values.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `+` $stochiasticParam
+    `into` ($existing^):(`undef`)? `[` $storeIndex `]`
+    `:` type($source) `to` type($res) (`into` type($existing)^)?
+  }];
+  let hasVerifier = 1;
+}
+
 /// Raw buffer load
 def AMDGPU_RawBufferLoadOp :
     AMDGPU_Op<"raw_buffer_load", [AllElementTypesMatch<["value", "memref"]>,

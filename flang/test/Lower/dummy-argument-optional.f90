@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fdefault-integer-8 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fdefault-integer-8 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! Test OPTIONAL lowering on caller/callee and PRESENT intrinsic.
 module opt
@@ -61,8 +61,7 @@ end subroutine
 subroutine call_character_scalar()
   ! CHECK: %[[addr:.*]] = fir.alloca !fir.char<1,10>
   character(10) :: x
-  ! CHECK: %[[addrCast:.*]] = fir.convert %[[addr]]
-  ! CHECK: %[[x:.*]] = fir.emboxchar %[[addrCast]], {{.*}}
+  ! CHECK: %[[x:.*]] = fir.emboxchar %[[addr]], {{.*}}
   ! CHECK: fir.call @_QMoptPcharacter_scalar(%[[x]]) {{.*}}: (!fir.boxchar<1>) -> ()
   call character_scalar(x)
   ! CHECK: %[[absent:.*]] = fir.absent !fir.boxchar<1>

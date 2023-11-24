@@ -113,6 +113,33 @@ define void @load_store() {
   ret void
 }
 
+; Test scalable vectors.
+define void @load_store_scalable(<vscale x 4 x i32> %x) {
+; CHECK-LABEL: define void @load_store_scalable
+; CHECK-SAME: (<vscale x 4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca <vscale x 4 x i32>, align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> [[X]], ptr [[SRC]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
+; CHECK-NEXT:    ret void
+;
+  %src = alloca <vscale x 4 x i32>
+  %dest = alloca <vscale x 4 x i32>
+  call void @llvm.lifetime.start.p0(i64 -1, ptr nocapture %src)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr nocapture %dest)
+  store <vscale x 4 x i32> %x, ptr %src
+  %1 = call i32 @use_nocapture(ptr nocapture %src)
+
+  %src.val = load <vscale x 4 x i32>, ptr %src
+  store <vscale x 4 x i32> %src.val, ptr %dest
+
+  %2 = call i32 @use_nocapture(ptr nocapture %dest)
+
+  call void @llvm.lifetime.end.p0(i64 -1, ptr nocapture %src)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr nocapture %dest)
+  ret void
+}
+
 ; Tests that merging two allocas shouldn't be more poisonous, smaller aligned src is valid.
 define void @align_up() {
 ; CHECK-LABEL: define void @align_up() {

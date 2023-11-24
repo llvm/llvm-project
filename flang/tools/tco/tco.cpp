@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -118,12 +119,13 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
       return mlir::failure();
   } else {
+    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
     if (codeGenLLVM) {
       // Run only CodeGen passes.
-      fir::createDefaultFIRCodeGenPassPipeline(pm);
+      fir::createDefaultFIRCodeGenPassPipeline(pm, config);
     } else {
       // Run tco with O2 by default.
-      fir::createMLIRToLLVMPassPipeline(pm, llvm::OptimizationLevel::O2);
+      fir::createMLIRToLLVMPassPipeline(pm, config);
     }
     fir::addLLVMDialectToLLVMPass(pm, out.os());
   }

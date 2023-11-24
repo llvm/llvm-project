@@ -20,11 +20,12 @@ Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
                    llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
                    llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
-                   bool HasThisPointer, bool HasRVO)
+                   bool HasThisPointer, bool HasRVO, bool UnevaluatedBuiltin)
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
       ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
-      HasRVO(HasRVO) {}
+      HasRVO(HasRVO), Variadic(F->isVariadic()),
+      IsUnevaluatedBuiltin(UnevaluatedBuiltin) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -47,10 +48,4 @@ bool Function::isVirtual() const {
   if (const auto *M = dyn_cast<CXXMethodDecl>(F))
     return M->isVirtual();
   return false;
-}
-
-bool Function::needsRuntimeArgPop(const ASTContext &Ctx) const {
-  if (!isBuiltin())
-    return false;
-  return Ctx.BuiltinInfo.hasCustomTypechecking(getBuiltinID());
 }

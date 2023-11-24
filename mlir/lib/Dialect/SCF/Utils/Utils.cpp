@@ -391,7 +391,6 @@ LogicalResult mlir::loopUnrollByFactor(
 
     int64_t tripCountEvenMultiple = tripCount - (tripCount % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
-    assert(upperBoundUnrolledCst <= ubCst);
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
     // Create constant for 'upperBoundUnrolled' and set epilogue loop flag.

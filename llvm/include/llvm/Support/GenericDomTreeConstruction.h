@@ -40,7 +40,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
@@ -120,7 +119,7 @@ struct SemiNCAInfo {
     SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
 
     // Remove nullptr children for clang.
-    llvm::erase_value(Res, nullptr);
+    llvm::erase(Res, nullptr);
     return Res;
   }
 
@@ -287,8 +286,8 @@ struct SemiNCAInfo {
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
       for (const auto &N : WInfo.ReverseChildren) {
-        if (NodeToInfo.count(N) == 0)  // Skip unreachable predecessors.
-          continue;
+        assert(NodeToInfo.contains(N) &&
+               "ReverseChildren should not contain unreachable predecessors");
 
         const TreeNodePtr TN = DT.getNode(N);
         // Skip predecessors whose level is above the subtree we are processing.

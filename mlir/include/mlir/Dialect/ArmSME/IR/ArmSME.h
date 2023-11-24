@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_ARMSME_IR_ARMSME_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -29,6 +30,9 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSMEDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/ArmSME/IR/ArmSME.h.inc"
+#include "mlir/Dialect/ArmSME/IR/ArmSMEOps.h.inc"
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.h.inc"
 
 #endif // MLIR_DIALECT_ARMSME_IR_ARMSME_H

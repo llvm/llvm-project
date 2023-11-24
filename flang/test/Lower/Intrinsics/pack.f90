@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: pack_test
 ! CHECK-SAME: %[[arg0:[^:]+]]: !fir.box<!fir.array<?xi32>>

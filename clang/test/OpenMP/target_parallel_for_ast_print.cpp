@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
     for (int j = 0; j < 10; ++j)
       foo();
-  // CHECK-NEXT: #pragma omp target parallel for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) ordered if(target: argc) num_threads(a) default(shared) shared(e) reduction(+: h) linear(a: -5)
+  // CHECK-NEXT: #pragma omp target parallel for private(argc,b) firstprivate(argv,c) lastprivate(d,f) collapse(2) schedule(auto) ordered if(target: argc) num_threads(a) default(shared) shared(e) reduction(+: h) linear(a: step(-5))
  // CHECK-NEXT: for (int i = 0; i < 10; ++i)
   // CHECK-NEXT: for (int j = 0; j < 10; ++j)
   // CHECK-NEXT: foo();

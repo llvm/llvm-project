@@ -16,6 +16,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 void DWARFCompileUnit::Dump(Stream *s) const {
   s->Format(

@@ -18,28 +18,29 @@ body:             |
   bb.1 (%ir-block.0):
     ; X32-LABEL: name: trunc_check
     ; X32: [[DEF:%[0-9]+]]:_(s32) = IMPLICIT_DEF
-    ; X32: [[DEF1:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; X32: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; X32: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
-    ; X32: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
-    ; X32: G_STORE [[AND]](s8), [[DEF1]](p0) :: (store (s1))
-    ; X32: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
-    ; X32: G_STORE [[TRUNC1]](s8), [[DEF1]](p0) :: (store (s8))
-    ; X32: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; X32: G_STORE [[TRUNC2]](s16), [[DEF1]](p0) :: (store (s16))
-    ; X32: RET 0
+    ; X32-NEXT: [[DEF1:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+    ; X32-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; X32-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
+    ; X32-NEXT: G_STORE [[AND]](s8), [[DEF1]](p0) :: (store (s1))
+    ; X32-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
+    ; X32-NEXT: G_STORE [[TRUNC1]](s8), [[DEF1]](p0) :: (store (s8))
+    ; X32-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; X32-NEXT: G_STORE [[TRUNC2]](s16), [[DEF1]](p0) :: (store (s16))
+    ; X32-NEXT: RET 0
+    ;
     ; X64-LABEL: name: trunc_check
     ; X64: [[DEF:%[0-9]+]]:_(s32) = IMPLICIT_DEF
-    ; X64: [[DEF1:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-    ; X64: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; X64: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
-    ; X64: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
-    ; X64: G_STORE [[AND]](s8), [[DEF1]](p0) :: (store (s1))
-    ; X64: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
-    ; X64: G_STORE [[TRUNC1]](s8), [[DEF1]](p0) :: (store (s8))
-    ; X64: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
-    ; X64: G_STORE [[TRUNC2]](s16), [[DEF1]](p0) :: (store (s16))
-    ; X64: RET 0
+    ; X64-NEXT: [[DEF1:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
+    ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; X64-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
+    ; X64-NEXT: G_STORE [[AND]](s8), [[DEF1]](p0) :: (store (s1))
+    ; X64-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[DEF]](s32)
+    ; X64-NEXT: G_STORE [[TRUNC1]](s8), [[DEF1]](p0) :: (store (s8))
+    ; X64-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[DEF]](s32)
+    ; X64-NEXT: G_STORE [[TRUNC2]](s16), [[DEF1]](p0) :: (store (s16))
+    ; X64-NEXT: RET 0
     %0(s32) = IMPLICIT_DEF
     %1(s1)  = G_TRUNC %0(s32)
     %4:_(p0) = G_IMPLICIT_DEF

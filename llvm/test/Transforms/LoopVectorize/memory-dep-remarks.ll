@@ -149,7 +149,7 @@ for.body:                                         ; preds = %entry, %for.body
 ;   }
 ; }
 
-; CHECK: remark: source.c:48:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:48:14: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Backward loop carried data dependence. Memory location is the same as accessed at source.c:47:5
 
 define void @test_backward_dep(i64 %n, ptr nocapture %A) {
@@ -194,7 +194,7 @@ for.body:                                         ; preds = %for.body.preheader,
 ;   }
 ; }
 
-; CHECK: remark: source.c:61:12: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:61:12: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT: Forward loop carried data dependence that prevents store-to-load forwarding. Memory location is the same as accessed at source.c:60:5
 
 define void @test_forwardButPreventsForwarding_dep(i64 %n, ptr nocapture %A, ptr nocapture %B) !dbg !166 {
@@ -232,7 +232,7 @@ for.body:                                         ; preds = %entry, %for.body
 ;   }
 ; }
 
-; CHECK: remark: source.c:74:5: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:74:5: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK: Backward loop carried data dependence that prevents store-to-load forwarding. Memory location is the same as accessed at source.c:74:21
 
 define void @test_backwardVectorizableButPreventsForwarding(i64 %n, ptr nocapture %A) !dbg !189 {
@@ -268,7 +268,7 @@ for.body:                                         ; preds = %entry, %for.body
 ;   }
 ; }
 
-; CHECK: remark: source.c:83:7: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK: remark: source.c:83:7: loop not vectorized: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK: Unknown data dependence. Memory location is the same as accessed at source.c:82:7
 
 define void @test_unknown_dep(i64 %n, ptr nocapture %A) !dbg !214 {
@@ -315,7 +315,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_backward_dep
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nBackward loop carried data dependence."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:47:5'
@@ -335,7 +335,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_forwardButPreventsForwarding_dep
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nForward loop carried data dependence that prevents store-to-load forwarding."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:60:5'
@@ -355,7 +355,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_backwardVectorizableButPreventsForwarding
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nBackward loop carried data dependence that prevents store-to-load forwarding."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:74:21'
@@ -375,7 +375,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; YAML-NEXT: Function:        test_unknown_dep
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
+; YAML-NEXT:   - String:          'unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop'
 ; YAML-NEXT:   - String:          "\nUnknown data dependence."
 ; YAML-NEXT:   - String:          ' Memory location is the same as accessed at '
 ; YAML-NEXT:   - Location:        'source.c:82:7'

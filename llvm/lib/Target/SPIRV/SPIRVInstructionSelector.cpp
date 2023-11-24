@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
@@ -173,6 +174,9 @@ private:
                      GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, const ExtInstList &ExtInsts) const;
+
+  bool selectLog10(Register ResVReg, const SPIRVType *ResType,
+                   MachineInstr &I) const;
 
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             const SPIRVType *ResType = nullptr) const;
@@ -362,7 +366,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FLOG2:
     return selectExtInst(ResVReg, ResType, I, CL::log2, GL::Log2);
   case TargetOpcode::G_FLOG10:
-    return selectExtInst(ResVReg, ResType, I, CL::log10);
+    return selectLog10(ResVReg, ResType, I);
 
   case TargetOpcode::G_FABS:
     return selectExtInst(ResVReg, ResType, I, CL::fabs, GL::FAbs);
@@ -1407,15 +1411,17 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_alloca:
     return selectFrameIndex(ResVReg, ResType, I);
   case Intrinsic::spv_assume:
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAssumeTrueKHR))
-        .addUse(I.getOperand(1).getReg());
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAssumeTrueKHR))
+          .addUse(I.getOperand(1).getReg());
     break;
   case Intrinsic::spv_expect:
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExpectKHR))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg())
-        .addUse(I.getOperand(3).getReg());
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExpectKHR))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(I.getOperand(2).getReg())
+          .addUse(I.getOperand(3).getReg());
     break;
   default:
     llvm_unreachable("Intrinsic selection not implemented");
@@ -1560,6 +1566,57 @@ bool SPIRVInstructionSelector::selectGlobalValue(
                                         Storage, Init, GlobalVar->isConstant(),
                                         HasLnkTy, LnkType, MIRBuilder, true);
   return Reg.isValid();
+}
+
+bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
+                                           const SPIRVType *ResType,
+                                           MachineInstr &I) const {
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
+    return selectExtInst(ResVReg, ResType, I, CL::log10);
+  }
+
+  // There is no log10 instruction in the GLSL Extended Instruction set, so it
+  // is implemented as:
+  // log10(x) = log2(x) * (1 / log2(10))
+  //          = log2(x) * 0.30103
+
+  MachineIRBuilder MIRBuilder(I);
+  MachineBasicBlock &BB = *I.getParent();
+
+  // Build log2(x).
+  Register VarReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  bool Result =
+      BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+          .addDef(VarReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+          .addImm(GL::Log2)
+          .add(I.getOperand(1))
+          .constrainAllUses(TII, TRI, RBI);
+
+  // Build 0.30103.
+  assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
+         ResType->getOpcode() == SPIRV::OpTypeFloat);
+  // TODO: Add matrix implementation once supported by the HLSL frontend.
+  const SPIRVType *SpirvScalarType =
+      ResType->getOpcode() == SPIRV::OpTypeVector
+          ? GR.getSPIRVTypeForVReg(ResType->getOperand(1).getReg())
+          : ResType;
+  Register ScaleReg =
+      GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
+
+  // Multiply log2(x) by 0.30103 to get log10(x) result.
+  auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
+                    ? SPIRV::OpVectorTimesScalar
+                    : SPIRV::OpFMulS;
+  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                .addDef(ResVReg)
+                .addUse(GR.getSPIRVTypeID(ResType))
+                .addUse(VarReg)
+                .addUse(ScaleReg)
+                .constrainAllUses(TII, TRI, RBI);
+
+  return Result;
 }
 
 namespace llvm {

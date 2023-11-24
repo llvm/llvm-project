@@ -1145,9 +1145,8 @@ define i128 @f20s128(double %x) nounwind strictfp {
 ;
 ; X86-SSE-LABEL: f20s128:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    subl $36, %esp
+; X86-SSE-NEXT:    subl $40, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
@@ -1155,18 +1154,11 @@ define i128 @f20s128(double %x) nounwind strictfp {
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll __fixdfti
 ; X86-SSE-NEXT:    subl $4, %esp
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
-; X86-SSE-NEXT:    movl %edx, 12(%esi)
-; X86-SSE-NEXT:    movl %eax, (%esi)
-; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    movaps %xmm0, (%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
-; X86-SSE-NEXT:    addl $36, %esp
+; X86-SSE-NEXT:    addl $40, %esp
 ; X86-SSE-NEXT:    popl %esi
-; X86-SSE-NEXT:    popl %edi
 ; X86-SSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: f20s128:
@@ -1490,9 +1482,8 @@ define i128 @f20u128(double %x) nounwind strictfp {
 ;
 ; X86-SSE-LABEL: f20u128:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    pushl %edi
 ; X86-SSE-NEXT:    pushl %esi
-; X86-SSE-NEXT:    subl $36, %esp
+; X86-SSE-NEXT:    subl $40, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
@@ -1500,18 +1491,11 @@ define i128 @f20u128(double %x) nounwind strictfp {
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll __fixunsdfti
 ; X86-SSE-NEXT:    subl $4, %esp
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
-; X86-SSE-NEXT:    movl %edx, 12(%esi)
-; X86-SSE-NEXT:    movl %eax, (%esi)
-; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movaps {{[0-9]+}}(%esp), %xmm0
+; X86-SSE-NEXT:    movaps %xmm0, (%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
-; X86-SSE-NEXT:    addl $36, %esp
+; X86-SSE-NEXT:    addl $40, %esp
 ; X86-SSE-NEXT:    popl %esi
-; X86-SSE-NEXT:    popl %edi
 ; X86-SSE-NEXT:    retl $4
 ;
 ; SSE-LABEL: f20u128:

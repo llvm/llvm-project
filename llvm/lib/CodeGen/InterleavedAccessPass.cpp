@@ -251,7 +251,7 @@ bool InterleavedAccess::lowerInterleavedLoad(
       continue;
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (all_of(BI->users(), [](auto *U) {
+      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
             auto *SVI = dyn_cast<ShuffleVectorInst>(U);
             return SVI && isa<UndefValue>(SVI->getOperand(1));
           })) {

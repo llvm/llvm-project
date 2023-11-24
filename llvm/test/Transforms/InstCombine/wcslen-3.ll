@@ -125,7 +125,7 @@ define i64 @test_simplify11(i16 %x) {
 ; CHECK-LABEL: @test_simplify11(
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
 ; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i16 9, [[AND]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = zext i16 [[NARROW]] to i64
+; CHECK-NEXT:    [[HELLO_L:%.*]] = zext nneg i16 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i16 %x, 7
@@ -164,7 +164,7 @@ define i64 @test_no_simplify2(i16 %x) {
 define i64 @test_no_simplify3(i16 %x) {
 ; CHECK-LABEL: @test_no_simplify3(
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[AND]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[AND]] to i64
 ; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i16], ptr @null_hello_mid, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]

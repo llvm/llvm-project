@@ -121,16 +121,16 @@ define void @test7(i32 %n.u) nounwind {
 ; CHECK-NEXT:    jmp (%a0)
 ; CHECK-NEXT:  .LBB6_12: ; %bb2
 ; CHECK-NEXT:    bra foo6@PLT ; TAILCALL
-; CHECK-NEXT:  .LBB6_3: ; %bb6
-; CHECK-NEXT:    bra foo1@PLT ; TAILCALL
-; CHECK-NEXT:  .LBB6_8: ; %bb1
-; CHECK-NEXT:    bra foo2@PLT ; TAILCALL
-; CHECK-NEXT:  .LBB6_9: ; %bb3
-; CHECK-NEXT:    bra foo3@PLT ; TAILCALL
-; CHECK-NEXT:  .LBB6_10: ; %bb4
-; CHECK-NEXT:    bra foo4@PLT ; TAILCALL
-; CHECK-NEXT:  .LBB6_14: ; %bb11
+; CHECK-NEXT:  .LBB6_3: ; %bb5
 ; CHECK-NEXT:    bra foo5@PLT ; TAILCALL
+; CHECK-NEXT:  .LBB6_5: ; %bb1
+; CHECK-NEXT:    bra foo2@PLT ; TAILCALL
+; CHECK-NEXT:  .LBB6_2: ; %bb
+; CHECK-NEXT:    bra foo1@PLT ; TAILCALL
+; CHECK-NEXT:  .LBB6_9: ; %bb4
+; CHECK-NEXT:    bra foo4@PLT ; TAILCALL
+; CHECK-NEXT:  .LBB6_8: ; %bb3
+; CHECK-NEXT:    bra foo3@PLT ; TAILCALL
 entry:
     switch i32 %n.u, label %bb12 [i32 1, label %bb i32 2, label %bb6 i32 4, label %bb7 i32 5, label %bb8 i32 6, label %bb10 i32 7, label %bb1 i32 8, label %bb3 i32 9, label %bb4 i32 10, label %bb9 i32 11, label %bb2 i32 12, label %bb5 i32 13, label %bb11 ]
 bb:

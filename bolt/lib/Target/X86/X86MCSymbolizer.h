@@ -20,6 +20,9 @@ protected:
   BinaryFunction &Function;
   bool CreateNewSymbols{true};
 
+  std::pair<MCSymbol *, uint64_t> handleGOTPC64(const Relocation &R,
+                                                uint64_t InstrAddr);
+
 public:
   X86MCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true)
       : MCSymbolizer(*Function.getBinaryContext().Ctx.get(), nullptr),

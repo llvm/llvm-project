@@ -21,7 +21,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -2026,16 +2025,30 @@ void erase_if(Container &C, UnaryPredicate P) {
 ///
 /// C.erase(remove(C.begin(), C.end(), V), C.end());
 template <typename Container, typename ValueType>
-void erase_value(Container &C, ValueType V) {
+void erase(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
-/// Wrapper function to append a range to a container.
+template <typename Container, typename ValueType>
+LLVM_DEPRECATED("Use erase instead", "erase")
+void erase_value(Container &C, ValueType V) {
+  erase(C, V);
+}
+
+/// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
-inline void append_range(Container &C, Range &&R) {
+void append_range(Container &C, Range &&R) {
   C.insert(C.end(), adl_begin(R), adl_end(R));
+}
+
+/// Appends all `Values` to container `C`.
+template <typename Container, typename... Args>
+void append_values(Container &C, Args &&...Values) {
+  C.reserve(range_size(C) + sizeof...(Args));
+  // Append all values one by one.
+  ((void)C.insert(C.end(), std::forward<Args>(Values)), ...);
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
@@ -2261,42 +2274,66 @@ private:
   mutable range_reference_tuple Storage;
 };
 
+struct index_iterator
+    : llvm::iterator_facade_base<index_iterator,
+                                 std::random_access_iterator_tag, std::size_t> {
+  index_iterator(std::size_t Index) : Index(Index) {}
+
+  index_iterator &operator+=(std::ptrdiff_t N) {
+    Index += N;
+    return *this;
+  }
+
+  index_iterator &operator-=(std::ptrdiff_t N) {
+    Index -= N;
+    return *this;
+  }
+
+  std::ptrdiff_t operator-(const index_iterator &R) const {
+    return Index - R.Index;
+  }
+
+  // Note: This dereference operator returns a value instead of a reference
+  // and does not strictly conform to the C++17's definition of forward
+  // iterator. However, it satisfies all the forward_iterator requirements
+  // that the `zip_common` depends on and fully conforms to the C++20
+  // definition of forward iterator.
+  std::size_t operator*() const { return Index; }
+
+  friend bool operator==(const index_iterator &Lhs, const index_iterator &Rhs) {
+    return Lhs.Index == Rhs.Index;
+  }
+
+  friend bool operator<(const index_iterator &Lhs, const index_iterator &Rhs) {
+    return Lhs.Index < Rhs.Index;
+  }
+
+private:
+  std::size_t Index;
+};
+
 /// Infinite stream of increasing 0-based `size_t` indices.
 struct index_stream {
-  struct iterator : iterator_facade_base<iterator, std::forward_iterator_tag,
-                                         const iterator> {
-    iterator &operator++() {
-      assert(Index != std::numeric_limits<std::size_t>::max() &&
-             "Attempting to increment end iterator");
-      ++Index;
-      return *this;
-    }
-
-    // Note: This dereference operator returns a value instead of a reference
-    // and does not strictly conform to the C++17's definition of forward
-    // iterator. However, it satisfies all the forward_iterator requirements
-    // that the `zip_common` depends on and fully conforms to the C++20
-    // definition of forward iterator.
-    std::size_t operator*() const { return Index; }
-
-    friend bool operator==(const iterator &Lhs, const iterator &Rhs) {
-      return Lhs.Index == Rhs.Index;
-    }
-
-    std::size_t Index = 0;
-  };
-
-  iterator begin() const { return {}; }
-  iterator end() const {
+  index_iterator begin() const { return {0}; }
+  index_iterator end() const {
     // We approximate 'infinity' with the max size_t value, which should be good
     // enough to index over any container.
-    iterator It;
-    It.Index = std::numeric_limits<std::size_t>::max();
-    return It;
+    return index_iterator{std::numeric_limits<std::size_t>::max()};
   }
 };
 
 } // end namespace detail
+
+/// Increasing range of `size_t` indices.
+class index_range {
+  std::size_t Begin;
+  std::size_t End;
+
+public:
+  index_range(std::size_t Begin, std::size_t End) : Begin(Begin), End(End) {}
+  detail::index_iterator begin() const { return {Begin}; }
+  detail::index_iterator end() const { return {End}; }
+};
 
 /// Given two or more input ranges, returns a new range whose values are are
 /// tuples (A, B, C, ...), such that A is the 0-based index of the item in the

@@ -801,6 +801,12 @@ std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
   case Symbol::Flag::OmpCopyPrivate:
     clauseName = "COPYPRIVATE";
     break;
+  case Symbol::Flag::OmpIsDevicePtr:
+    clauseName = "IS_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpHasDeviceAddr:
+    clauseName = "HAS_DEVICE_ADDR";
+    break;
   default:
     clauseName = "";
     break;

@@ -166,8 +166,13 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
           if (!this->visit(InitExpr))
             return false;
 
-          if (!this->emitInitThisField(*T, F->Offset, InitExpr))
-            return false;
+          if (F->isBitField()) {
+            if (!this->emitInitThisBitField(*T, F, InitExpr))
+              return false;
+          } else {
+            if (!this->emitInitThisField(*T, F->Offset, InitExpr))
+              return false;
+          }
         } else {
           // Non-primitive case. Get a pointer to the field-to-initialize
           // on the stack and call visitInitialzer() for it.
@@ -190,6 +195,14 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
           return false;
         if (!this->visitInitializer(InitExpr))
+          return false;
+        if (!this->emitInitPtrPop(InitExpr))
+          return false;
+      } else {
+        assert(Init->isDelegatingInitializer());
+        if (!this->emitThis(InitExpr))
+          return false;
+        if (!this->visitInitializer(Init->getInit()))
           return false;
         if (!this->emitPopPtr(InitExpr))
           return false;
@@ -242,6 +255,8 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitAsmStmt(cast<AsmStmt>(S));
   case Stmt::AttributedStmtClass:
     return visitAttributedStmt(cast<AttributedStmt>(S));
+  case Stmt::CXXTryStmtClass:
+    return visitCXXTryStmt(cast<CXXTryStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -628,6 +643,12 @@ template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
   // Ignore all attributes.
   return this->visitStmt(S->getSubStmt());
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
+  // Ignore all handlers.
+  return this->visitStmt(S->getTryBlock());
 }
 
 namespace clang {

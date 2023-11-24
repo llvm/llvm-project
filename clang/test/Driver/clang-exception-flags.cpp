@@ -27,3 +27,6 @@
 // RUN: %clang -### -target x86_64-scei-ps4 %s 2>&1 | FileCheck %s -check-prefix=PS-OFF
 // RUN: %clang -### -target x86_64-sie-ps5 %s 2>&1 | FileCheck %s -check-prefix=PS-OFF
 // PS-OFF-NOT: "-cc1" {{.*}} "-f{{(cxx-)?}}exceptions"
+
+// RUN: %clang -### -fexceptions -fno-assume-nothrow-exception-dtor -fassume-nothrow-exception-dtor %s 2>&1 | FileCheck %s --check-prefix=NOTHROW-DTOR
+// NOTHROW-DTOR: "-cc1"{{.*}} "-fcxx-exceptions" "-fassume-nothrow-exception-dtor"

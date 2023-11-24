@@ -39,7 +39,6 @@ protected:
   llvm::Type *PipeROTy;
   llvm::Type *PipeWOTy;
   llvm::Type *SamplerTy;
-  llvm::StringMap<llvm::PointerType *> CachedTys;
 
   /// Structure for enqueued block information.
   struct EnqueuedBlockInfo {
@@ -53,7 +52,7 @@ protected:
 
   virtual llvm::Type *getPipeType(const PipeType *T, StringRef Name,
                                   llvm::Type *&PipeTy);
-  llvm::PointerType *getPointerType(const Type *T, StringRef Name);
+  llvm::PointerType *getPointerType(const Type *T);
 
 public:
   CGOpenCLRuntime(CodeGenModule &CGM) : CGM(CGM),

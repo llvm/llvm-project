@@ -1,12 +1,13 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++11 -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -Wno-vla -verify=ref %s
+// RUN: %clang_cc1 -std=c++20 -fms-extensions -Wno-vla -verify=ref %s
 
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
 
 typedef __INTPTR_TYPE__ intptr_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 
 static_assert(true, "");
@@ -30,6 +31,42 @@ constexpr bool b = number;
 static_assert(b, "");
 constexpr int one = true;
 static_assert(one == 1, "");
+
+constexpr bool b2 = bool();
+static_assert(!b2, "");
+
+namespace ScalarTypes {
+  constexpr int ScalarInitInt = int();
+  static_assert(ScalarInitInt == 0, "");
+  constexpr float ScalarInitFloat = float();
+  static_assert(ScalarInitFloat == 0.0f, "");
+
+  static_assert(decltype(nullptr)() == nullptr, "");
+
+  template<typename T>
+  constexpr T getScalar() { return T(); }
+
+  static_assert(getScalar<const int>() == 0, "");
+  static_assert(getScalar<const double>() == 0.0, "");
+
+  static_assert(getScalar<void*>() == nullptr, "");
+  static_assert(getScalar<void(*)(void)>() == nullptr, "");
+
+  enum E {
+    First = 0,
+  };
+  static_assert(getScalar<E>() == First, "");
+  /// FIXME: Member pointers.
+
+#if __cplusplus >= 201402L
+  constexpr void Void(int n) {
+    void(n + 1);
+    void();
+  }
+  constexpr int void_test = (Void(0), 1);
+  static_assert(void_test == 1, "");
+#endif
+}
 
 namespace IntegralCasts {
   constexpr int i = 12;
@@ -162,6 +199,20 @@ namespace PointerComparison {
                                  // ref-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
 
   constexpr bool v7 = qv <= (void*)&s.b; // ok
+
+  constexpr ptrdiff_t m = &m - &m;
+  static_assert(m == 0, "");
+
+  constexpr ptrdiff_t m2 = (&m2 + 1) - (&m2 + 1);
+  static_assert(m2 == 0, "");
+
+  constexpr long m3 = (&m3 + 1) - (&m3);
+  static_assert(m3 == 1, "");
+
+  constexpr long m4 = &m4 + 2 - &m4; // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{cannot refer to element 2 of non-array object}} \
+                                     // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{cannot refer to element 2 of non-array object}}
 }
 
 namespace SizeOf {
@@ -225,15 +276,13 @@ namespace SizeOf {
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
   consteval int foo(int n) { // ref-error {{consteval function never produces a constant expression}}
-    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}} \
-                           // expected-note {{not valid in a constant expression}}
+    return sizeof(int[n]); // ref-note 3{{not valid in a constant expression}}
   }
   constinit int var = foo(5); // ref-error {{not a constant expression}} \
                               // ref-note 2{{in call to}} \
                               // ref-error {{does not have a constant initializer}} \
                               // ref-note {{required by 'constinit' specifier}} \
                               // expected-error  {{is not a constant expression}} \
-                              // expected-note {{in call to}} \
                               // expected-error {{does not have a constant initializer}} \
                               // expected-note {{required by 'constinit' specifier}} \
 
@@ -1025,6 +1074,14 @@ namespace DiscardExprs {
     return I;
   }
   static_assert(foo<3>() == 3, "");
+
+  struct ATemp {
+    consteval ATemp ret_a() const { return ATemp{}; }
+  };
+
+  void test() {
+    int k = (ATemp().ret_a(), 0);
+  }
 
 #pragma clang diagnostic pop
 }

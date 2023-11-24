@@ -18,6 +18,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace mlir {
 class DataLayout;
@@ -34,25 +35,25 @@ class ModuleOp;
 namespace detail {
 /// Default handler for the type size request. Computes results for built-in
 /// types and dispatches to the DataLayoutTypeInterface for other types.
-unsigned getDefaultTypeSize(Type type, const DataLayout &dataLayout,
-                            DataLayoutEntryListRef params);
+llvm::TypeSize getDefaultTypeSize(Type type, const DataLayout &dataLayout,
+                                  DataLayoutEntryListRef params);
 
 /// Default handler for the type size in bits request. Computes results for
 /// built-in types and dispatches to the DataLayoutTypeInterface for other
 /// types.
-unsigned getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
-                                  DataLayoutEntryListRef params);
+llvm::TypeSize getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
+                                        DataLayoutEntryListRef params);
 
-/// Default handler for the required alignemnt request. Computes results for
+/// Default handler for the required alignment request. Computes results for
 /// built-in types and dispatches to the DataLayoutTypeInterface for other
 /// types.
-unsigned getDefaultABIAlignment(Type type, const DataLayout &dataLayout,
+uint64_t getDefaultABIAlignment(Type type, const DataLayout &dataLayout,
                                 ArrayRef<DataLayoutEntryInterface> params);
 
-/// Default handler for the preferred alignemnt request. Computes results for
+/// Default handler for the preferred alignment request. Computes results for
 /// built-in types and dispatches to the DataLayoutTypeInterface for other
 /// types.
-unsigned
+uint64_t
 getDefaultPreferredAlignment(Type type, const DataLayout &dataLayout,
                              ArrayRef<DataLayoutEntryInterface> params);
 
@@ -62,7 +63,7 @@ Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
 
 /// Default handler for the stack alignment request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
-unsigned getDefaultStackAlignment(DataLayoutEntryInterface entry);
+uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
@@ -85,6 +86,10 @@ LogicalResult verifyDataLayoutOp(Operation *op);
 /// entry verifiers, and then to the verifiers implemented by the relevant type
 /// and dialect interfaces for type and identifier keys respectively.
 LogicalResult verifyDataLayoutSpec(DataLayoutSpecInterface spec, Location loc);
+
+/// Divides the known min value of the numerator by the denominator and rounds
+/// the result up to the next integer. Preserves the scalable flag.
+llvm::TypeSize divideCeil(llvm::TypeSize numerator, uint64_t denominator);
 } // namespace detail
 } // namespace mlir
 
@@ -156,16 +161,16 @@ public:
   static DataLayout closest(Operation *op);
 
   /// Returns the size of the given type in the current scope.
-  unsigned getTypeSize(Type t) const;
+  llvm::TypeSize getTypeSize(Type t) const;
 
   /// Returns the size in bits of the given type in the current scope.
-  unsigned getTypeSizeInBits(Type t) const;
+  llvm::TypeSize getTypeSizeInBits(Type t) const;
 
   /// Returns the required alignment of the given type in the current scope.
-  unsigned getTypeABIAlignment(Type t) const;
+  uint64_t getTypeABIAlignment(Type t) const;
 
   /// Returns the preferred of the given type in the current scope.
-  unsigned getTypePreferredAlignment(Type t) const;
+  uint64_t getTypePreferredAlignment(Type t) const;
 
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
@@ -174,7 +179,7 @@ public:
   /// stack variables should be limited to the natural stack alignment to
   /// prevent dynamic stack alignment. Returns zero if the stack alignment is
   /// unspecified.
-  unsigned getStackAlignment() const;
+  uint64_t getStackAlignment() const;
 
 private:
   /// Combined layout spec at the given scope.
@@ -193,16 +198,16 @@ private:
   Operation *scope;
 
   /// Caches for individual requests.
-  mutable DenseMap<Type, unsigned> sizes;
-  mutable DenseMap<Type, unsigned> bitsizes;
-  mutable DenseMap<Type, unsigned> abiAlignments;
-  mutable DenseMap<Type, unsigned> preferredAlignments;
+  mutable DenseMap<Type, llvm::TypeSize> sizes;
+  mutable DenseMap<Type, llvm::TypeSize> bitsizes;
+  mutable DenseMap<Type, uint64_t> abiAlignments;
+  mutable DenseMap<Type, uint64_t> preferredAlignments;
 
   /// Cache for alloca memory space.
   mutable std::optional<Attribute> allocaMemorySpace;
 
   /// Cache for stack alignment.
-  mutable std::optional<unsigned> stackAlignment;
+  mutable std::optional<uint64_t> stackAlignment;
 };
 
 } // namespace mlir

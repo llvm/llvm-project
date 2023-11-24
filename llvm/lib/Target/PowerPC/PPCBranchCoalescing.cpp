@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

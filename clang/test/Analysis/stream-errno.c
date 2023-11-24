@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.Errno,alpha.unix.StdCLibraryFunctions,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
 #include "Inputs/errno_func.h"
@@ -15,7 +15,7 @@ void check_fopen(void) {
     if (errno) {} // no-warning
     return;
   }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
 }
 
 void check_tmpfile(void) {
@@ -25,7 +25,7 @@ void check_tmpfile(void) {
     if (errno) {} // no-warning
     return;
   }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [alpha.unix.Errno]}}
+  if (errno) {} // expected-warning{{An undefined value may be read from 'errno' [unix.Errno]}}
 }
 
 void check_freopen(void) {

@@ -41,7 +41,6 @@
 #include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <limits>
-#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -773,6 +772,8 @@ public:
     typedef _Tp __node_value_type;
 
     __node_value_type __value_;
+
+    _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
 
 private:
   ~__tree_node() = delete;

@@ -13,8 +13,8 @@
 // CHECK: @_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
 // CHECK: @_ZTS1B ={{.*}} constant [3 x i8] c"1B\00", align 1
 // CHECK: @_ZTI1B ={{.*}} constant { ptr, ptr, ptr } { ptr getelementptr inbounds (i8, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i32 8), ptr @_ZTS1B, ptr @_ZTI1A }, align 8
-// CHECK: @_ZTI1A.rtti_proxy = hidden unnamed_addr constant ptr @_ZTI1A, comdat
-// CHECK: @_ZTI1B.rtti_proxy = hidden unnamed_addr constant ptr @_ZTI1B, comdat
+// CHECK: @_ZTI1A.rtti_proxy = linkonce_odr hidden unnamed_addr constant ptr @_ZTI1A, comdat
+// CHECK: @_ZTI1B.rtti_proxy = linkonce_odr hidden unnamed_addr constant ptr @_ZTI1B, comdat
 
 // CHECK:      define {{.*}}ptr @_Z11getTypeInfov() local_unnamed_addr
 // CHECK-NEXT: entry:

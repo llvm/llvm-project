@@ -254,6 +254,23 @@ namespace dr1330 { // dr1330: 4 c++11
 #endif
 }
 
+namespace dr1341 { // dr1341: sup P0683R1
+#if __cplusplus >= 202002L
+int a;
+const int b = 0; // #dr1341-b-decl
+struct S {
+  int x1 : 8 = 42;
+  int x2 : 8 { 42 };
+  int y1 : true ? 8 : a = 42;
+  int y2 : true ? 8 : b = 42;
+  // expected-error@-1            {{cannot assign to variable 'b' with const-qualified type 'const int'}}
+  // expected-note@#dr1341-b-decl {{variable 'b' declared const here}}
+  int y3 : (true ? 8 : b) = 42;
+  int z : 1 || new int { 0 };
+};
+#endif
+}
+
 namespace dr1346 { // dr1346: 3.5
   auto a(1); // expected-error 0-1{{extension}}
   auto b(1, 2); // expected-error {{multiple expressions}} expected-error 0-1{{extension}}
