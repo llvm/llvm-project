@@ -509,6 +509,76 @@ struct VectorShuffleOpConvert final
   }
 };
 
+struct VectorLoadOpConverter final
+    : public OpConversionPattern<vector::LoadOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto memrefType = loadOp.getMemRefType();
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+    if (!attr)
+      return rewriter.notifyMatchFailure(
+          loadOp, "expected spirv.storage_class memory space");
+
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto loc = loadOp.getLoc();
+    Value accessChain =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                             adaptor.getIndices(), loc, rewriter);
+    if (!accessChain)
+      return rewriter.notifyMatchFailure(
+          loadOp, "failed to get memref element pointer");
+
+    spirv::StorageClass storageClass = attr.getValue();
+    auto vectorType = loadOp.getVectorType();
+    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    Value castedAccessChain =
+        rewriter.create<spirv::BitcastOp>(loc, vectorPtrType, accessChain);
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, vectorType,
+                                               castedAccessChain);
+
+    return success();
+  }
+};
+
+struct VectorStoreOpConverter final
+    : public OpConversionPattern<vector::StoreOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto memrefType = storeOp.getMemRefType();
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+    if (!attr)
+      return rewriter.notifyMatchFailure(
+          storeOp, "expected spirv.storage_class memory space");
+
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto loc = storeOp.getLoc();
+    Value accessChain =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
+                             adaptor.getIndices(), loc, rewriter);
+    if (!accessChain)
+      return rewriter.notifyMatchFailure(
+          storeOp, "failed to get memref element pointer");
+
+    spirv::StorageClass storageClass = attr.getValue();
+    auto vectorType = storeOp.getVectorType();
+    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    Value castedAccessChain =
+        rewriter.create<spirv::BitcastOp>(loc, vectorPtrType, accessChain);
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
+                                                adaptor.getValueToStore());
+
+    return success();
+  }
+};
+
 struct VectorReductionToDotProd final : OpRewritePattern<vector::ReductionOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -614,15 +684,16 @@ private:
 
 void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                          RewritePatternSet &patterns) {
-  patterns.add<VectorBitcastConvert, VectorBroadcastConvert,
-               VectorExtractElementOpConvert, VectorExtractOpConvert,
-               VectorExtractStridedSliceOpConvert,
-               VectorFmaOpConvert<spirv::GLFmaOp>,
-               VectorFmaOpConvert<spirv::CLFmaOp>, VectorInsertElementOpConvert,
-               VectorInsertOpConvert, VectorReductionPattern<GL_MAX_MIN_OPS>,
-               VectorReductionPattern<CL_MAX_MIN_OPS>, VectorShapeCast,
-               VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
-               VectorSplatPattern>(typeConverter, patterns.getContext());
+  patterns.add<
+      VectorBitcastConvert, VectorBroadcastConvert,
+      VectorExtractElementOpConvert, VectorExtractOpConvert,
+      VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
+      VectorFmaOpConvert<spirv::CLFmaOp>, VectorInsertElementOpConvert,
+      VectorInsertOpConvert, VectorReductionPattern<GL_MAX_MIN_OPS>,
+      VectorReductionPattern<CL_MAX_MIN_OPS>, VectorShapeCast,
+      VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
+      VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter>(
+      typeConverter, patterns.getContext());
 }
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
