@@ -68,8 +68,8 @@ static Expected<Symbol &> getELFStubTarget(LinkGraph &G, Block &B) {
   return getELFGOTTarget(G, GOTSym.getBlock());
 }
 
-static Expected<std::string>
-getELFAArch32StubTargetName(LinkGraph &G, Block &B) {
+static Expected<std::string> getELFAArch32StubTargetName(LinkGraph &G,
+                                                         Block &B) {
   auto E = getFirstRelocationEdge(G, B);
   if (!E)
     return E.takeError();
