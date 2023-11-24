@@ -601,12 +601,11 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     /// The name of the kernel.
     StringAttr getKernelName();
 
-    /// Has cluster
+    /// Returns true if cluster size is specified.
     bool hasClusterSize() {
-      auto totalSize = getOperands().size();
-      totalSize -= getKernelOperands().size();
-      totalSize -= getAsyncDependencies().size();
-      return totalSize > 7;
+      if (getClusterSizeX() && getClusterSizeY() && getClusterSizeZ())
+        return true;
+      return false;
     }
 
     /// The number of operands passed to the kernel function.
@@ -616,6 +615,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     Value getKernelOperand(unsigned i);
 
     /// Get the SSA values passed as operands to specify the cluster size.
+    /// When the cluster sizes are not specified, it asserts.
     KernelDim3 getClusterSizeOperandValues();
 
     /// Get the SSA values passed as operands to specify the grid size.

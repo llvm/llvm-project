@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/StringSaver.h"
+#include <cassert>
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -1082,6 +1083,8 @@ KernelDim3 LaunchFuncOp::getBlockSizeOperandValues() {
 }
 
 KernelDim3 LaunchFuncOp::getClusterSizeOperandValues() {
+  assert(hasClusterSize() &&
+         "cluster size is not set, check hasClusterSize() first");
   auto operands = getOperands().drop_front(getAsyncDependencies().size());
   return KernelDim3{operands[6], operands[7], operands[8]};
 }
