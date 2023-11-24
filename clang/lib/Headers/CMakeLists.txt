@@ -49,7 +49,6 @@ set(arm_only_files
 set(aarch64_only_files
   arm64intr.h
   arm_neon_sve_bridge.h
-  arm_neon_types.h
   )
 
 set(cuda_files
