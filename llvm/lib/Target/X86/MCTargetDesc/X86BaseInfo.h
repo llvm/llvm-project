@@ -549,11 +549,7 @@ enum : uint64_t {
   /// byte to specify a destination which in this case is memory and operand 3
   /// with VEX.VVVV, and also encodes a condition code.
   MRMDestMem4VOp3CC = 20,
-  /// MRM[0-7][rm] - These forms are used to represent instructions that use
-  /// a Mod/RM byte, and use the middle field to hold extended opcode
-  /// information.  In the intel manual these are represented as /0, /1, ...
-  ///
-  // Instructions operate on a register Reg/Opcode operand not the r/m field.
+  /// Instructions operate on a register Reg/Opcode operand not the r/m field.
   MRMr0 = 21,
   /// MRMSrcMem - But force to use the SIB field.
   MRMSrcMemFSIB = 22,
@@ -581,7 +577,8 @@ enum : uint64_t {
   /// MRMXm - This form is used for instructions that use the Mod/RM byte
   /// to specify a memory source, but doesn't use the middle field.
   MRMXm = 31,
-  /// MRM0m-MRM7m - Instructions that operate on a memory r/m operand.
+  /// MRM0m-MRM7m - Instructions that operate on a memory r/m operand and use
+  /// reg field to hold extended opcode, which is represented as /0, /1, ...
   MRM0m = 32, // Format /0
   MRM1m = 33, // Format /1
   MRM2m = 34, // Format /2
@@ -612,7 +609,8 @@ enum : uint64_t {
   /// MRMXr - This form is used for instructions that use the Mod/RM byte
   /// to specify a register source, but doesn't use the middle field.
   MRMXr = 47,
-  /// MRM0r-MRM7r - Instructions that operate on a register r/m operand.
+  /// MRM0r-MRM7r - Instructions that operate on a register r/m operand and use
+  /// reg field to hold extended opcode, which is represented as /0, /1, ...
   MRM0r = 48, // Format /0
   MRM1r = 49, // Format /1
   MRM2r = 50, // Format /2
