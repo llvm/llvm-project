@@ -1207,23 +1207,30 @@ struct UnrollTransferWriteConversion
   /// accesses, and broadcasts and transposes in permutation maps.
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (xferOp.getVectorType().getRank() <= options.targetRank)
+    VectorType inputVectorTy = xferOp.getVectorType();
+
+    if (inputVectorTy.getRank() <= options.targetRank)
       return failure();
+
+    // When target-rank=0, unrolling would cause the vector input argument
+    // into `transfer_write` to become a scalar.
+    if (inputVectorTy.getRank() == 1)
+      return failure();
+
     if (isTensorOp(xferOp) && !options.lowerTensors)
       return failure();
     // Transfer ops that modify the element type are not supported atm.
-    if (xferOp.getVectorType().getElementType() !=
+    if (inputVectorTy.getElementType() !=
         xferOp.getShapedType().getElementType())
       return failure();
 
     auto vec = getDataVector(xferOp);
-    auto xferVecType = xferOp.getVectorType();
-    if (xferVecType.getScalableDims()[0]) {
+    if (inputVectorTy.getScalableDims()[0]) {
       // Cannot unroll a scalable dimension at compile time.
       return failure();
     }
 
-    int64_t dimSize = xferVecType.getShape()[0];
+    int64_t dimSize = inputVectorTy.getShape()[0];
     Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
