@@ -18,6 +18,7 @@ struct IntType {
   constexpr operator int() const noexcept { return val; }
   constexpr operator unsigned char() const { return val; }
   constexpr operator char() const noexcept { return val; }
+  constexpr operator signed char() const noexcept { return val; }
 };
 
 // only non-const convertible
