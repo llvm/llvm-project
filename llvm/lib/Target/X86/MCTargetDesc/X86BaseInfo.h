@@ -24,24 +24,20 @@
 namespace llvm {
 
 namespace X86 {
-// Enums for memory operand decoding.  Each memory operand is represented with
-// a 5 operand sequence in the form:
-//   [BaseReg, ScaleAmt, IndexReg, Disp, Segment]
-// These enums help decode this.
+// Enums for memory operand decoding. Each memory operand is represented with
+// a 5 operand sequence in the form: [Base, Scale, Index, Disp, Segment]
 enum {
   AddrBaseReg = 0,
   AddrScaleAmt = 1,
   AddrIndexReg = 2,
   AddrDisp = 3,
-
-  /// AddrSegmentReg - The operand # of the segment in the memory operand.
+  // The operand # of the segment in the memory operand.
   AddrSegmentReg = 4,
-
-  /// AddrNumOperands - Total number of operands in a memory reference.
+  // Total number of operands in a memory reference.
   AddrNumOperands = 5
 };
 
-/// AVX512 static rounding constants.  These need to match the values in
+/// AVX512 static rounding constants. These need to match the values in
 /// avx512fintrin.h.
 enum STATIC_ROUNDING {
   TO_NEAREST_INT = 0,
@@ -70,7 +66,7 @@ enum IPREFIXES {
 };
 
 enum OperandType : unsigned {
-  /// AVX512 embedded rounding control. This should only have values 0-3.
+  // AVX512 embedded rounding control. This should only have values 0-3.
   OPERAND_ROUNDING_CONTROL = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_COND_CODE,
 };
@@ -95,7 +91,6 @@ enum CondCode {
   COND_LE = 14,
   COND_G = 15,
   LAST_VALID_COND = COND_G,
-
   // Artificial condition codes. These are used by analyzeBranch
   // to indicate a block terminated with two conditional branches that together
   // form a compound condition. They occur in code using FCMP_OEQ or FCMP_UNE,
@@ -103,39 +98,29 @@ enum CondCode {
   // are never used in MachineInstrs and are inverses of one another.
   COND_NE_OR_P,
   COND_E_AND_NP,
-
   COND_INVALID
 };
 
 // The classification for the first instruction in macro fusion.
+// FIXME: Zen 3 support branch fusion for OR/XOR.
 enum class FirstMacroFusionInstKind {
-  // TEST
-  Test,
-  // CMP
-  Cmp,
-  // AND
-  And,
-  // FIXME: Zen 3 support branch fusion for OR/XOR.
-  // ADD, SUB
-  AddSub,
-  // INC, DEC
-  IncDec,
-  // Not valid as a first macro fusion instruction
-  Invalid
+  Test,   // TEST
+  Cmp,    // CMP
+  And,    // AND
+  AddSub, // ADD, SUB
+  IncDec, // INC, DEC
+  Invalid // Not valid as a first macro fusion instruction
 };
 
 enum class SecondMacroFusionInstKind {
-  // JA, JB and variants.
-  AB,
-  // JE, JL, JG and variants.
-  ELG,
-  // JS, JP, JO and variants
-  SPO,
-  // Not a fusible jump.
-  Invalid,
+  AB,      // JA, JB and variants
+  ELG,     // JE, JL, JG and variants
+  SPO,     // JS, JP, JO and variants
+  Invalid, // Not a fusible jump.
 };
 
 /// \returns the type of the first instruction in macro-fusion.
+// FIXME: Zen 3 support branch fusion for OR/XOR.
 inline FirstMacroFusionInstKind
 classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
   switch (Opcode) {
@@ -184,7 +169,6 @@ classifyFirstOpcodeInMacroFusion(unsigned Opcode) {
   case X86::AND8rr:
   case X86::AND8rr_REV:
     return FirstMacroFusionInstKind::And;
-  // FIXME: Zen 3 support branch fusion for OR/XOR.
   // CMP
   case X86::CMP16i16:
   case X86::CMP16mr:
@@ -289,44 +273,27 @@ inline SecondMacroFusionInstKind
 classifySecondCondCodeInMacroFusion(X86::CondCode CC) {
   if (CC == X86::COND_INVALID)
     return SecondMacroFusionInstKind::Invalid;
-
   switch (CC) {
   default:
     return SecondMacroFusionInstKind::Invalid;
-  // JE,JZ
-  case X86::COND_E:
-  // JNE,JNZ
-  case X86::COND_NE:
-  // JL,JNGE
-  case X86::COND_L:
-  // JLE,JNG
-  case X86::COND_LE:
-  // JG,JNLE
-  case X86::COND_G:
-  // JGE,JNL
-  case X86::COND_GE:
+  case X86::COND_E:  // JE,JZ
+  case X86::COND_NE: // JNE,JNZ
+  case X86::COND_L:  // JL,JNGE
+  case X86::COND_LE: // JLE,JNG
+  case X86::COND_G:  // JG,JNLE
+  case X86::COND_GE: // JGE,JNL
     return SecondMacroFusionInstKind::ELG;
-  // JB,JC
-  case X86::COND_B:
-  // JNA,JBE
-  case X86::COND_BE:
-  // JA,JNBE
-  case X86::COND_A:
-  // JAE,JNC,JNB
-  case X86::COND_AE:
+  case X86::COND_B:  // JB,JC
+  case X86::COND_BE: // JNA,JBE
+  case X86::COND_A:  // JA,JNBE
+  case X86::COND_AE: // JAE,JNC,JNB
     return SecondMacroFusionInstKind::AB;
-  // JS
-  case X86::COND_S:
-  // JNS
-  case X86::COND_NS:
-  // JP,JPE
-  case X86::COND_P:
-  // JNP,JPO
-  case X86::COND_NP:
-  // JO
-  case X86::COND_O:
-  // JNO
-  case X86::COND_NO:
+  case X86::COND_S:  // JS
+  case X86::COND_NS: // JNS
+  case X86::COND_P:  // JP,JPE
+  case X86::COND_NP: // JNP,JPO
+  case X86::COND_O:  // JO
+  case X86::COND_NO: // JNO
     return SecondMacroFusionInstKind::SPO;
   }
 }
@@ -406,7 +373,6 @@ namespace X86II {
 enum TOF {
   //===------------------------------------------------------------------===//
   // X86 Specific MachineOperand flags.
-
   MO_NO_FLAG,
 
   /// MO_GOT_ABSOLUTE_ADDRESS - On a symbol operand, this represents a
@@ -580,177 +546,129 @@ enum : uint64_t {
   // Instruction encodings.  These are the standard/most common forms for X86
   // instructions.
   //
-
   // PseudoFrm - This represents an instruction that is a pseudo instruction
   // or one that has not been implemented yet.  It is illegal to code generate
   // it, but tolerated for intermediate implementation stages.
   Pseudo = 0,
-
   /// Raw - This form is for instructions that don't have any operands, so
   /// they are just a fixed opcode value, like 'leave'.
   RawFrm = 1,
-
   /// AddRegFrm - This form is used for instructions like 'push r32' that have
   /// their one register operand added to their opcode.
   AddRegFrm = 2,
-
   /// RawFrmMemOffs - This form is for instructions that store an absolute
   /// memory offset as an immediate with a possible segment override.
   RawFrmMemOffs = 3,
-
   /// RawFrmSrc - This form is for instructions that use the source index
   /// register SI/ESI/RSI with a possible segment override.
   RawFrmSrc = 4,
-
   /// RawFrmDst - This form is for instructions that use the destination index
   /// register DI/EDI/RDI.
   RawFrmDst = 5,
-
   /// RawFrmDstSrc - This form is for instructions that use the source index
   /// register SI/ESI/RSI with a possible segment override, and also the
   /// destination index register DI/EDI/RDI.
   RawFrmDstSrc = 6,
-
   /// RawFrmImm8 - This is used for the ENTER instruction, which has two
   /// immediates, the first of which is a 16-bit immediate (specified by
   /// the imm encoding) and the second is a 8-bit fixed value.
   RawFrmImm8 = 7,
-
   /// RawFrmImm16 - This is used for CALL FAR instructions, which have two
   /// immediates, the first of which is a 16 or 32-bit immediate (specified by
   /// the imm encoding) and the second is a 16-bit fixed value.  In the AMD
   /// manual, this operand is described as pntr16:32 and pntr16:16
   RawFrmImm16 = 8,
-
   /// AddCCFrm - This form is used for Jcc that encode the condition code
   /// in the lower 4 bits of the opcode.
   AddCCFrm = 9,
-
   /// PrefixByte - This form is used for instructions that represent a prefix
   /// byte like data16 or rep.
   PrefixByte = 10,
-
   /// MRMDestMem4VOp3CC - This form is used for instructions that use the Mod/RM
   /// byte to specify a destination which in this case is memory and operand 3
   /// with VEX.VVVV, and also encodes a condition code.
   MRMDestMem4VOp3CC = 20,
-
   /// MRM[0-7][rm] - These forms are used to represent instructions that use
   /// a Mod/RM byte, and use the middle field to hold extended opcode
   /// information.  In the intel manual these are represented as /0, /1, ...
   ///
-
   // Instructions operate on a register Reg/Opcode operand not the r/m field.
   MRMr0 = 21,
-
   /// MRMSrcMem - But force to use the SIB field.
   MRMSrcMemFSIB = 22,
-
   /// MRMDestMem - But force to use the SIB field.
   MRMDestMemFSIB = 23,
-
   /// MRMDestMem - This form is used for instructions that use the Mod/RM byte
   /// to specify a destination, which in this case is memory.
-  ///
   MRMDestMem = 24,
-
   /// MRMSrcMem - This form is used for instructions that use the Mod/RM byte
   /// to specify a source, which in this case is memory.
-  ///
   MRMSrcMem = 25,
-
   /// MRMSrcMem4VOp3 - This form is used for instructions that encode
   /// operand 3 with VEX.VVVV and load from memory.
-  ///
   MRMSrcMem4VOp3 = 26,
-
   /// MRMSrcMemOp4 - This form is used for instructions that use the Mod/RM
   /// byte to specify the fourth source, which in this case is memory.
-  ///
   MRMSrcMemOp4 = 27,
-
   /// MRMSrcMemCC - This form is used for instructions that use the Mod/RM
   /// byte to specify the operands and also encodes a condition code.
-  ///
   MRMSrcMemCC = 28,
-
   /// MRMXm - This form is used for instructions that use the Mod/RM byte
   /// to specify a memory source, but doesn't use the middle field. And has
   /// a condition code.
-  ///
   MRMXmCC = 30,
-
   /// MRMXm - This form is used for instructions that use the Mod/RM byte
   /// to specify a memory source, but doesn't use the middle field.
-  ///
   MRMXm = 31,
-
   // Next, instructions that operate on a memory r/m operand...
-  MRM0m = 32,
-  MRM1m = 33,
-  MRM2m = 34,
-  MRM3m = 35, // Format /0 /1 /2 /3
-  MRM4m = 36,
-  MRM5m = 37,
-  MRM6m = 38,
-  MRM7m = 39, // Format /4 /5 /6 /7
-
+  MRM0m = 32, // Format /0
+  MRM1m = 33, // Format /1
+  MRM2m = 34, // Format /2
+  MRM3m = 35, // Format /3
+  MRM4m = 36, // Format /4
+  MRM5m = 37, // Format /5
+  MRM6m = 38, // Format /6
+  MRM7m = 39, // Format /7
   /// MRMDestReg - This form is used for instructions that use the Mod/RM byte
   /// to specify a destination, which in this case is a register.
-  ///
   MRMDestReg = 40,
-
   /// MRMSrcReg - This form is used for instructions that use the Mod/RM byte
   /// to specify a source, which in this case is a register.
-  ///
   MRMSrcReg = 41,
-
   /// MRMSrcReg4VOp3 - This form is used for instructions that encode
   /// operand 3 with VEX.VVVV and do not load from memory.
-  ///
   MRMSrcReg4VOp3 = 42,
-
   /// MRMSrcRegOp4 - This form is used for instructions that use the Mod/RM
   /// byte to specify the fourth source, which in this case is a register.
-  ///
   MRMSrcRegOp4 = 43,
-
   /// MRMSrcRegCC - This form is used for instructions that use the Mod/RM
   /// byte to specify the operands and also encodes a condition code
-  ///
   MRMSrcRegCC = 44,
-
   /// MRMXCCr - This form is used for instructions that use the Mod/RM byte
   /// to specify a register source, but doesn't use the middle field. And has
   /// a condition code.
-  ///
   MRMXrCC = 46,
-
   /// MRMXr - This form is used for instructions that use the Mod/RM byte
   /// to specify a register source, but doesn't use the middle field.
-  ///
   MRMXr = 47,
-
   // Instructions that operate on a register r/m operand...
-  MRM0r = 48,
-  MRM1r = 49,
-  MRM2r = 50,
-  MRM3r = 51, // Format /0 /1 /2 /3
-  MRM4r = 52,
-  MRM5r = 53,
-  MRM6r = 54,
-  MRM7r = 55, // Format /4 /5 /6 /7
-
+  MRM0r = 48, // Format /0
+  MRM1r = 49, // Format /1
+  MRM2r = 50, // Format /2
+  MRM3r = 51, // Format /3
+  MRM4r = 52, // Format /4
+  MRM5r = 53, // Format /5
+  MRM6r = 54, // Format /6
+  MRM7r = 55, // Format /7
   // Instructions that operate that have mod=11 and an opcode but ignore r/m.
-  MRM0X = 56,
-  MRM1X = 57,
-  MRM2X = 58,
-  MRM3X = 59, // Format /0 /1 /2 /3
-  MRM4X = 60,
-  MRM5X = 61,
-  MRM6X = 62,
-  MRM7X = 63, // Format /4 /5 /6 /7
-
+  MRM0X = 56, // Format /0
+  MRM1X = 57, // Format /1
+  MRM2X = 58, // Format /2
+  MRM3X = 59, // Format /3
+  MRM4X = 60, // Format /4
+  MRM5X = 61, // Format /5
+  MRM6X = 62, // Format /6
+  MRM7X = 63, // Format /7
   /// MRM_XX - A mod/rm byte of exactly 0xXX.
   MRM_C0 = 64,
   MRM_C1 = 65,
@@ -816,79 +734,60 @@ enum : uint64_t {
   MRM_FD = 125,
   MRM_FE = 126,
   MRM_FF = 127,
-
   FormMask = 127,
-
   //===------------------------------------------------------------------===//
   // Actual flags...
-
-  // OpSize - OpSizeFixed implies instruction never needs a 0x66 prefix.
-  // OpSize16 means this is a 16-bit instruction and needs 0x66 prefix in
-  // 32-bit mode. OpSize32 means this is a 32-bit instruction needs a 0x66
-  // prefix in 16-bit mode.
+  /// OpSize - OpSizeFixed implies instruction never needs a 0x66 prefix.
+  /// OpSize16 means this is a 16-bit instruction and needs 0x66 prefix in
+  /// 32-bit mode. OpSize32 means this is a 32-bit instruction needs a 0x66
+  /// prefix in 16-bit mode.
   OpSizeShift = 7,
   OpSizeMask = 0x3 << OpSizeShift,
-
   OpSizeFixed = 0 << OpSizeShift,
   OpSize16 = 1 << OpSizeShift,
   OpSize32 = 2 << OpSizeShift,
-
-  // AsSize - AdSizeX implies this instruction determines its need of 0x67
-  // prefix from a normal ModRM memory operand. The other types indicate that
-  // an operand is encoded with a specific width and a prefix is needed if
-  // it differs from the current mode.
+  /// AsSize - AdSizeX implies this instruction determines its need of 0x67
+  /// prefix from a normal ModRM memory operand. The other types indicate that
+  /// an operand is encoded with a specific width and a prefix is needed if
+  /// it differs from the current mode.
   AdSizeShift = OpSizeShift + 2,
   AdSizeMask = 0x3 << AdSizeShift,
-
   AdSizeX = 0 << AdSizeShift,
   AdSize16 = 1 << AdSizeShift,
   AdSize32 = 2 << AdSizeShift,
   AdSize64 = 3 << AdSizeShift,
-
   //===------------------------------------------------------------------===//
-  // OpPrefix - There are several prefix bytes that are used as opcode
-  // extensions. These are 0x66, 0xF3, and 0xF2. If this field is 0 there is
-  // no prefix.
-  //
+  /// OpPrefix - There are several prefix bytes that are used as opcode
+  /// extensions. These are 0x66, 0xF3, and 0xF2. If this field is 0 there is
+  /// no prefix.
   OpPrefixShift = AdSizeShift + 2,
   OpPrefixMask = 0x3 << OpPrefixShift,
-
-  // PD - Prefix code for packed double precision vector floating point
-  // operations performed in the SSE registers.
+  /// PD - Prefix code for packed double precision vector floating point
+  /// operations performed in the SSE registers.
   PD = 1 << OpPrefixShift,
-
-  // XS, XD - These prefix codes are for single and double precision scalar
-  // floating point operations performed in the SSE registers.
+  /// XS, XD - These prefix codes are for single and double precision scalar
+  /// floating point operations performed in the SSE registers.
   XS = 2 << OpPrefixShift,
   XD = 3 << OpPrefixShift,
-
   //===------------------------------------------------------------------===//
-  // OpMap - This field determines which opcode map this instruction
-  // belongs to. i.e. one-byte, two-byte, 0x0f 0x38, 0x0f 0x3a, etc.
-  //
+  /// OpMap - This field determines which opcode map this instruction
+  /// belongs to. i.e. one-byte, two-byte, 0x0f 0x38, 0x0f 0x3a, etc.
   OpMapShift = OpPrefixShift + 2,
   OpMapMask = 0xF << OpMapShift,
-
-  // OB - OneByte - Set if this instruction has a one byte opcode.
+  /// OB - OneByte - Set if this instruction has a one byte opcode.
   OB = 0 << OpMapShift,
-
-  // TB - TwoByte - Set if this instruction has a two byte opcode, which
-  // starts with a 0x0F byte before the real opcode.
+  /// TB - TwoByte - Set if this instruction has a two byte opcode, which
+  /// starts with a 0x0F byte before the real opcode.
   TB = 1 << OpMapShift,
-
-  // T8, TA - Prefix after the 0x0F prefix.
+  /// T8, TA - Prefix after the 0x0F prefix.
   T8 = 2 << OpMapShift,
   TA = 3 << OpMapShift,
-
-  // XOP8 - Prefix to include use of imm byte.
+  /// XOP8 - Prefix to include use of imm byte.
   XOP8 = 4 << OpMapShift,
-
-  // XOP9 - Prefix to exclude use of imm byte.
+  /// XOP9 - Prefix to exclude use of imm byte.
   XOP9 = 5 << OpMapShift,
-
-  // XOPA - Prefix to encode 0xA in VEX.MMMM of XOP instructions.
+  /// XOPA - Prefix to encode 0xA in VEX.MMMM of XOP instructions.
   XOPA = 6 << OpMapShift,
-
   /// ThreeDNow - This indicates that the instruction uses the
   /// wacky 0x0F 0x0F prefix for 3DNow! instructions.  The manual documents
   /// this as having a 0x0F prefix with a 0x0F opcode, and each instruction
@@ -896,23 +795,19 @@ enum : uint64_t {
   /// we handle this by storeing the classifier in the opcode field and using
   /// this flag to indicate that the encoder should do the wacky 3DNow! thing.
   ThreeDNow = 7 << OpMapShift,
-
-  // MAP5, MAP6, MAP7 - Prefix after the 0x0F prefix.
+  /// MAP5, MAP6, MAP7 - Prefix after the 0x0F prefix.
   T_MAP5 = 8 << OpMapShift,
   T_MAP6 = 9 << OpMapShift,
   T_MAP7 = 10 << OpMapShift,
-
   //===------------------------------------------------------------------===//
-  // REX_W - REX prefixes are instruction prefixes used in 64-bit mode.
-  // They are used to specify GPRs and SSE registers, 64-bit operand size,
-  // etc. We only cares about REX.W and REX.R bits and only the former is
-  // statically determined.
-  //
+  /// REX_W - REX prefixes are instruction prefixes used in 64-bit mode.
+  /// They are used to specify GPRs and SSE registers, 64-bit operand size,
+  /// etc. We only cares about REX.W and REX.R bits and only the former is
+  /// statically determined.
   REXShift = OpMapShift + 4,
   REX_W = 1 << REXShift,
-
   //===------------------------------------------------------------------===//
-  // This three-bit field describes the size of an immediate operand.  Zero is
+  // This three-bit field describes the size of an immediate operand. Zero is
   // unused so that we can tell if we forgot to set a value.
   ImmShift = REXShift + 1,
   ImmMask = 15 << ImmShift,
@@ -925,123 +820,94 @@ enum : uint64_t {
   Imm32PCRel = 7 << ImmShift,
   Imm32S = 8 << ImmShift,
   Imm64 = 9 << ImmShift,
-
   //===------------------------------------------------------------------===//
-  // FP Instruction Classification...  Zero is non-fp instruction.
-
-  // FPTypeMask - Mask for all of the FP types...
+  /// FP Instruction Classification...  Zero is non-fp instruction.
+  /// FPTypeMask - Mask for all of the FP types...
   FPTypeShift = ImmShift + 4,
   FPTypeMask = 7 << FPTypeShift,
-
-  // NotFP - The default, set for instructions that do not use FP registers.
+  /// NotFP - The default, set for instructions that do not use FP registers.
   NotFP = 0 << FPTypeShift,
-
-  // ZeroArgFP - 0 arg FP instruction which implicitly pushes ST(0), f.e. fld0
+  /// ZeroArgFP - 0 arg FP instruction which implicitly pushes ST(0), f.e. fld0
   ZeroArgFP = 1 << FPTypeShift,
-
-  // OneArgFP - 1 arg FP instructions which implicitly read ST(0), such as fst
+  /// OneArgFP - 1 arg FP instructions which implicitly read ST(0), such as fst
   OneArgFP = 2 << FPTypeShift,
-
-  // OneArgFPRW - 1 arg FP instruction which implicitly read ST(0) and write a
-  // result back to ST(0).  For example, fcos, fsqrt, etc.
-  //
+  /// OneArgFPRW - 1 arg FP instruction which implicitly read ST(0) and write a
+  /// result back to ST(0).  For example, fcos, fsqrt, etc.
   OneArgFPRW = 3 << FPTypeShift,
-
-  // TwoArgFP - 2 arg FP instructions which implicitly read ST(0), and an
-  // explicit argument, storing the result to either ST(0) or the implicit
-  // argument.  For example: fadd, fsub, fmul, etc...
+  /// TwoArgFP - 2 arg FP instructions which implicitly read ST(0), and an
+  /// explicit argument, storing the result to either ST(0) or the implicit
+  /// argument.  For example: fadd, fsub, fmul, etc...
   TwoArgFP = 4 << FPTypeShift,
-
-  // CompareFP - 2 arg FP instructions which implicitly read ST(0) and an
-  // explicit argument, but have no destination.  Example: fucom, fucomi, ...
+  /// CompareFP - 2 arg FP instructions which implicitly read ST(0) and an
+  /// explicit argument, but have no destination.  Example: fucom, fucomi, ...
   CompareFP = 5 << FPTypeShift,
-
-  // CondMovFP - "2 operand" floating point conditional move instructions.
+  /// CondMovFP - "2 operand" floating point conditional move instructions.
   CondMovFP = 6 << FPTypeShift,
-
-  // SpecialFP - Special instruction forms.  Dispatch by opcode explicitly.
+  /// SpecialFP - Special instruction forms.  Dispatch by opcode explicitly.
   SpecialFP = 7 << FPTypeShift,
-
   // Lock prefix
   LOCKShift = FPTypeShift + 3,
   LOCK = 1 << LOCKShift,
-
   // REP prefix
   REPShift = LOCKShift + 1,
   REP = 1 << REPShift,
-
-  // Execution domain for SSE instructions.
-  // 0 means normal, non-SSE instruction.
+  /// Execution domain for SSE instructions.
+  /// 0 means normal, non-SSE instruction.
   SSEDomainShift = REPShift + 1,
-
   // Encoding
   EncodingShift = SSEDomainShift + 2,
   EncodingMask = 0x3 << EncodingShift,
-
-  // VEX - encoding using 0xC4/0xC5
+  /// VEX - encoding using 0xC4/0xC5
   VEX = 1 << EncodingShift,
-
   /// XOP - Opcode prefix used by XOP instructions.
   XOP = 2 << EncodingShift,
-
-  // VEX_EVEX - Specifies that this instruction use EVEX form which provides
-  // syntax support up to 32 512-bit register operands and up to 7 16-bit
-  // mask operands as well as source operand data swizzling/memory operand
-  // conversion, eviction hint, and rounding mode.
+  /// EVEX - Specifies that this instruction use EVEX form which provides
+  /// syntax support up to 32 512-bit register operands and up to 7 16-bit
+  /// mask operands as well as source operand data swizzling/memory operand
+  /// conversion, eviction hint, and rounding mode.
   EVEX = 3 << EncodingShift,
-
   // Opcode
   OpcodeShift = EncodingShift + 2,
-
   /// VEX_4V - Used to specify an additional AVX/SSE register. Several 2
   /// address instructions in SSE are represented as 3 address ones in AVX
   /// and the additional register is encoded in VEX_VVVV prefix.
   VEX_4VShift = OpcodeShift + 8,
   VEX_4V = 1ULL << VEX_4VShift,
-
   /// VEX_L - Stands for a bit in the VEX opcode prefix meaning the current
   /// instruction uses 256-bit wide registers. This is usually auto detected
   /// if a VR256 register is used, but some AVX instructions also have this
   /// field marked when using a f256 memory references.
   VEX_LShift = VEX_4VShift + 1,
   VEX_L = 1ULL << VEX_LShift,
-
-  // EVEX_K - Set if this instruction requires masking
+  /// EVEX_K - Set if this instruction requires masking
   EVEX_KShift = VEX_LShift + 1,
   EVEX_K = 1ULL << EVEX_KShift,
-
-  // EVEX_Z - Set if this instruction has EVEX.Z field set.
+  /// EVEX_Z - Set if this instruction has EVEX.Z field set.
   EVEX_ZShift = EVEX_KShift + 1,
   EVEX_Z = 1ULL << EVEX_ZShift,
-
-  // EVEX_L2 - Set if this instruction has EVEX.L' field set.
+  /// EVEX_L2 - Set if this instruction has EVEX.L' field set.
   EVEX_L2Shift = EVEX_ZShift + 1,
   EVEX_L2 = 1ULL << EVEX_L2Shift,
-
-  // EVEX_B - Set if this instruction has EVEX.B field set.
+  /// EVEX_B - Set if this instruction has EVEX.B field set.
   EVEX_BShift = EVEX_L2Shift + 1,
   EVEX_B = 1ULL << EVEX_BShift,
-
-  // The scaling factor for the AVX512's 8-bit compressed displacement.
+  /// The scaling factor for the AVX512's 8-bit compressed displacement.
   CD8_Scale_Shift = EVEX_BShift + 1,
   CD8_Scale_Mask = 7ULL << CD8_Scale_Shift,
-
   /// Explicitly specified rounding control
   EVEX_RCShift = CD8_Scale_Shift + 3,
   EVEX_RC = 1ULL << EVEX_RCShift,
-
-  // NOTRACK prefix
+  /// NOTRACK prefix
   NoTrackShift = EVEX_RCShift + 1,
   NOTRACK = 1ULL << NoTrackShift,
-
-  // Force REX2/VEX/EVEX encoding
+  /// Force REX2/VEX/EVEX encoding
   ExplicitOpPrefixShift = NoTrackShift + 1,
-  // For instructions that require REX2 prefix even if EGPR is not used.
+  /// For instructions that require REX2 prefix even if EGPR is not used.
   ExplicitREX2Prefix = 1ULL << ExplicitOpPrefixShift,
-  // For instructions that use VEX encoding only when {vex}, {vex2} or {vex3}
-  // is present.
+  /// For instructions that use VEX encoding only when {vex}, {vex2} or {vex3}
+  /// is present.
   ExplicitVEXPrefix = 2ULL << ExplicitOpPrefixShift,
-  // For instructions that are promoted to EVEX space for EGPR.
+  /// For instructions that are promoted to EVEX space for EGPR.
   ExplicitEVEXPrefix = 3ULL << ExplicitOpPrefixShift,
   ExplicitOpPrefixMask = 3ULL << ExplicitOpPrefixShift
 };
@@ -1478,7 +1344,5 @@ inline bool isKMergeMasked(uint64_t TSFlags) {
   return isKMasked(TSFlags) && (TSFlags & X86II::EVEX_Z) == 0;
 }
 } // namespace X86II
-
 } // namespace llvm
-
 #endif
