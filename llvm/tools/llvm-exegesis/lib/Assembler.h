@@ -106,10 +106,11 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename);
 
 // Consumes an ObjectFile containing a `void foo(char*)` function and make it
 // executable.
-struct ExecutableFunction {
-  explicit ExecutableFunction(
-      std::unique_ptr<LLVMTargetMachine> TM,
-      object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
+class ExecutableFunction {
+public:
+  static Expected<ExecutableFunction>
+  create(std::unique_ptr<LLVMTargetMachine> TM,
+         object::OwningBinary<object::ObjectFile> &&ObjectFileHolder);
 
   // Retrieves the function as an array of bytes.
   StringRef getFunctionBytes() const { return FunctionBytes; }
@@ -119,9 +120,15 @@ struct ExecutableFunction {
     ((void (*)(char *))(intptr_t)FunctionBytes.data())(Memory);
   }
 
+  StringRef FunctionBytes;
+
+private:
+  ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
+                     std::unique_ptr<ExecutionEngine> EE,
+                     StringRef FunctionBytes);
+
   std::unique_ptr<LLVMContext> Context;
   std::unique_ptr<ExecutionEngine> ExecEngine;
-  StringRef FunctionBytes;
 };
 
 // Copies benchmark function's bytes from benchmark object.
