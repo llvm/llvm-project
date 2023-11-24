@@ -148,7 +148,8 @@ fir::factory::SimpleCopy::SimpleCopy(mlir::Location loc,
   if (source.isVariable())
     source = hlfir::Entity{builder.create<hlfir::AsExprOp>(loc, source)};
   copy = hlfir::genAssociateExpr(loc, builder, source,
-                                 source.getFortranElementType(), tempName);
+                                 source.getFortranElementType(), tempName,
+                                 std::nullopt);
 }
 
 void fir::factory::SimpleCopy::destroy(mlir::Location loc,

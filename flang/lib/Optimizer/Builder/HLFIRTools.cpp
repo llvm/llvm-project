@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Lower/ConvertExpr.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
@@ -232,11 +233,11 @@ hlfir::genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
   return mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());
 }
 
-hlfir::AssociateOp hlfir::genAssociateExpr(mlir::Location loc,
-                                           fir::FirOpBuilder &builder,
-                                           hlfir::Entity value,
-                                           mlir::Type variableType,
-                                           llvm::StringRef name) {
+hlfir::AssociateOp
+hlfir::genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
+                        hlfir::Entity value, mlir::Type variableType,
+                        llvm::StringRef name,
+                        std::optional<mlir::NamedAttribute> attr) {
   assert(value.isValue() && "must not be a variable");
   mlir::Value shape{};
   if (value.isArray())
@@ -259,8 +260,11 @@ hlfir::AssociateOp hlfir::genAssociateExpr(mlir::Location loc,
   }
   llvm::SmallVector<mlir::Value> lenParams;
   genLengthParameters(loc, builder, value, lenParams);
-  return builder.create<hlfir::AssociateOp>(loc, source, name, shape, lenParams,
-                                            fir::FortranVariableFlagsAttr{});
+  auto res = builder.create<hlfir::AssociateOp>(
+      loc, source, name, shape, lenParams, fir::FortranVariableFlagsAttr{});
+  if (attr)
+    res->setAttrs({*attr});
+  return res;
 }
 
 mlir::Value hlfir::genVariableRawAddress(mlir::Location loc,
@@ -914,8 +918,10 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   }
 
   if (entity.getType().isa<hlfir::ExprType>()) {
+    mlir::NamedAttribute byRefAttr =
+        Fortran::lower::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-        loc, builder, entity, entity.getType(), "adapt.valuebyref");
+        loc, builder, entity, entity.getType(), "", byRefAttr);
     auto *bldr = &builder;
     hlfir::CleanupFunction cleanup = [bldr, loc, associate]() -> void {
       bldr->create<hlfir::EndAssociateOp>(loc, associate);
@@ -1160,9 +1166,9 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                             /*isUnordered=*/true);
 
   if (preserveLowerBounds && source.hasNonDefaultLowerBounds()) {
-    hlfir::AssociateOp associate =
-        genAssociateExpr(loc, builder, hlfir::Entity{convertedRhs},
-                         convertedRhs.getType(), ".tmp.keeplbounds");
+    hlfir::AssociateOp associate = genAssociateExpr(
+        loc, builder, hlfir::Entity{convertedRhs}, convertedRhs.getType(),
+        ".tmp.keeplbounds", std::nullopt);
     fir::ShapeOp shapeOp = associate.getShape().getDefiningOp<fir::ShapeOp>();
     assert(shapeOp && "associate shape must be a fir.shape");
     const unsigned rank = shapeOp.getExtents().size();
@@ -1175,7 +1181,7 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
     mlir::Value shapeShift =
         builder.create<fir::ShapeShiftOp>(loc, shapeShiftType, lbAndExtents);
     auto declareOp = builder.create<hlfir::DeclareOp>(
-        loc, associate.getFirBase(), associate.getUniqName(), shapeShift,
+        loc, associate.getFirBase(), *associate.getUniqName(), shapeShift,
         associate.getTypeparams(), /*flags=*/fir::FortranVariableFlagsAttr{});
     hlfir::Entity castWithLbounds =
         mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation());

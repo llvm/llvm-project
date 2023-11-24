@@ -243,7 +243,8 @@ hlfir::AssociateOp genAssociateExpr(mlir::Location loc,
                                     fir::FirOpBuilder &builder,
                                     hlfir::Entity value,
                                     mlir::Type variableType,
-                                    llvm::StringRef name);
+                                    llvm::StringRef name,
+                                    std::optional<mlir::NamedAttribute> attr);
 
 /// Get the raw address of a variable (simple fir.ref/fir.ptr, or fir.heap
 /// value). The returned value should be used with care, it does not contain any

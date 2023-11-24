@@ -1212,7 +1212,9 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
                                llvm::StringRef uniq_name, mlir::Value shape,
                                mlir::ValueRange typeparams,
                                fir::FortranVariableFlagsAttr fortran_attrs) {
-  auto nameAttr = builder.getStringAttr(uniq_name);
+  mlir::StringAttr nameAttr;
+  if (!uniq_name.empty())
+    nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type dataType = getFortranElementOrSequenceType(source.getType());
 
   // Preserve polymorphism of polymorphic expr.

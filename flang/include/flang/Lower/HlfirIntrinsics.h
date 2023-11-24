@@ -76,8 +76,9 @@ struct PreparedActualArgument {
     if (auto *actualEntity = std::get_if<hlfir::Entity>(&actual)) {
       if (!actualEntity->isVariable() && actualEntity->isArray()) {
         mlir::Type storageType = actualEntity->getType();
-        hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-            loc, builder, *actualEntity, storageType, "adapt.impure_arg_eval");
+        hlfir::AssociateOp associate =
+            hlfir::genAssociateExpr(loc, builder, *actualEntity, storageType,
+                                    "adapt.impure_arg_eval", std::nullopt);
         actual = hlfir::Entity{associate};
         return associate;
       }

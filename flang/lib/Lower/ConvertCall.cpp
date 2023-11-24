@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
@@ -559,8 +560,9 @@ static hlfir::EntityWithAttributes genStmtFunctionRef(
       // Create an hlfir.associate to create a variable from a potential
       // value argument.
       mlir::Type argType = converter.genType(*arg);
-      auto associate = hlfir::genAssociateExpr(
-          loc, builder, loweredArg, argType, toStringRef(arg->name()));
+      auto associate =
+          hlfir::genAssociateExpr(loc, builder, loweredArg, argType,
+                                  toStringRef(arg->name()), std::nullopt);
       exprAssociations.push_back(associate);
       variableIface = associate;
     }
@@ -958,8 +960,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
       mlir::Type storageType = entity.getType();
+      mlir::NamedAttribute byRefAttr =
+          Fortran::lower::getAdaptToByRefAttr(builder);
       hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-          loc, builder, hlfir::Entity{copy}, storageType, "adapt.valuebyref");
+          loc, builder, hlfir::Entity{copy}, storageType, "", byRefAttr);
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
@@ -986,8 +990,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // The actual is an expression value, place it into a temporary
     // and register the temporary destruction after the call.
     mlir::Type storageType = converter.genType(expr);
+    mlir::NamedAttribute byRefAttr =
+        Fortran::lower::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-        loc, builder, entity, storageType, "adapt.valuebyref");
+        loc, builder, entity, storageType, "", byRefAttr);
     entity = hlfir::Entity{associate.getBase()};
     preparedDummy.pushExprAssociateCleanUp(associate);
     if (mustSetDynamicTypeToDummyType) {
@@ -1175,8 +1181,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // Pass-by-value argument of type(C_PTR/C_FUNPTR).
         // Load the __address component and pass it by value.
         if (value.isValue()) {
-          auto associate = hlfir::genAssociateExpr(loc, builder, value, eleTy,
-                                                   "adapt.cptrbyval");
+          auto associate = hlfir::genAssociateExpr(
+              loc, builder, value, eleTy, "adapt.cptrbyval", std::nullopt);
           value = hlfir::Entity{genRecordCPtrValueArg(
               builder, loc, associate.getFirBase(), eleTy)};
           builder.create<hlfir::EndAssociateOp>(loc, associate);
