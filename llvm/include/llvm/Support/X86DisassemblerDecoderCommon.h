@@ -408,22 +408,20 @@ enum ModRMDecisionType { MODRMTYPES MODRM_max };
   ENUM_ENTRY(ENCODING_IW, "2-byte")                                            \
   ENUM_ENTRY(ENCODING_ID, "4-byte")                                            \
   ENUM_ENTRY(ENCODING_IO, "8-byte")                                            \
-  ENUM_ENTRY(ENCODING_RB, "(AL..DIL, R8B..R15B) Register code added to "       \
-                          "the opcode byte")                                   \
+  ENUM_ENTRY(ENCODING_RB,                                                      \
+             "(AL..DIL, R8B..R15B) Register code added to the opcode byte")    \
   ENUM_ENTRY(ENCODING_RW, "(AX..DI, R8W..R15W)")                               \
   ENUM_ENTRY(ENCODING_RD, "(EAX..EDI, R8D..R15D)")                             \
   ENUM_ENTRY(ENCODING_RO, "(RAX..RDI, R8..R15)")                               \
-  ENUM_ENTRY(ENCODING_FP, "Position on floating-point stack in ModR/M "        \
-                          "byte.")                                             \
-                                                                               \
+  ENUM_ENTRY(ENCODING_FP, "Position on floating-point stack in ModR/M byte.")  \
   ENUM_ENTRY(ENCODING_Iv, "Immediate of operand size")                         \
   ENUM_ENTRY(ENCODING_Ia, "Immediate of address size")                         \
   ENUM_ENTRY(ENCODING_IRC, "Immediate for static rounding control")            \
-  ENUM_ENTRY(ENCODING_Rv, "Register code of operand size added to the "        \
-                          "opcode byte")                                       \
+  ENUM_ENTRY(ENCODING_Rv,                                                      \
+             "Register code of operand size added to the opcode byte")         \
   ENUM_ENTRY(ENCODING_CC, "Condition code encoded in opcode")                  \
-  ENUM_ENTRY(ENCODING_DUP, "Duplicate of another operand; ID is encoded "      \
-                           "in type")                                          \
+  ENUM_ENTRY(ENCODING_DUP,                                                     \
+             "Duplicate of another operand; ID is encoded in type")            \
   ENUM_ENTRY(ENCODING_SI, "Source index; encoded in OpSize/Adsize prefix")     \
   ENUM_ENTRY(ENCODING_DI, "Destination index; encoded in prefixes")
 
