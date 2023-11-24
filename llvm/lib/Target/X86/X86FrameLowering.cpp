@@ -140,6 +140,23 @@ static unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
   return X86::MOV32ri;
 }
 
+// Push-Pop Acceleration (PPX) hint is used to indicate that the POP reads the
+// value written by the PUSH from the stack. The processor tracks these marked
+// instructions internally and fast-forwards register data between matching PUSH
+// and POP instructions, without going through memory or through the training
+// loop of the Fast Store Forwarding Predictor (FSFP). Instead, a more efficient
+// memory-renaming optimization can be used.
+//
+// The PPX hint is purely a performance hint. Instructions with this hint have
+// the same functional semantics as those without. PPX hints set by the
+// compiler that violate the balancing rule may turn off the PPX optimization,
+// but they will not affect program semantics.
+//
+// Hence, PPX is used for balanced spill/reloads (Exceptions and setjmp/longjmp
+// are not considered).
+//
+// PUSH2 and POP2 are instructions for (respectively) pushing/popping 2
+// GPRs at a time to/from the stack.
 static unsigned getPUSHOpcode(const X86Subtarget &ST) {
   return ST.is64Bit() ? (ST.hasPPX() ? X86::PUSHP64r : X86::PUSH64r)
                       : X86::PUSH32r;
