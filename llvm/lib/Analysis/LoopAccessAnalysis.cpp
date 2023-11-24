@@ -1881,70 +1881,90 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
     const DenseMap<Value *, SmallVector<const Value *, 16>>
         &UnderlyingObjects) {
-  assert (AIdx < BIdx && "Must pass arguments in program order");
-
-  auto [APtr, AIsWrite] = A;
-  auto [BPtr, BIsWrite] = B;
-  Type *ATy = getLoadStoreType(InstMap[AIdx]);
-  Type *BTy = getLoadStoreType(InstMap[BIdx]);
-
-  // Two reads are independent.
-  if (!AIsWrite && !BIsWrite)
-    return Dependence::NoDep;
-
-  // We cannot check pointers in different address spaces.
-  if (APtr->getType()->getPointerAddressSpace() !=
-      BPtr->getType()->getPointerAddressSpace())
-    return Dependence::Unknown;
-
-  int64_t StrideAPtr =
-    getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
-  int64_t StrideBPtr =
-    getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true).value_or(0);
-
-  const SCEV *Src = PSE.getSCEV(APtr);
-  const SCEV *Sink = PSE.getSCEV(BPtr);
-
-  // If the induction step is negative we have to invert source and sink of the
-  // dependence.
-  if (StrideAPtr < 0) {
-    std::swap(APtr, BPtr);
-    std::swap(ATy, BTy);
-    std::swap(Src, Sink);
-    std::swap(AIsWrite, BIsWrite);
-    std::swap(AIdx, BIdx);
-    std::swap(StrideAPtr, StrideBPtr);
-  }
-
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *Dist = SE.getMinusSCEV(Sink, Src);
-
-  LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
-                    << "(Induction step: " << StrideAPtr << ")\n");
-  LLVM_DEBUG(dbgs() << "LAA: Distance for " << *InstMap[AIdx] << " to "
-                    << *InstMap[BIdx] << ": " << *Dist << "\n");
-
-  // Needs accesses where the addresses of the accessed underlying objects do
-  // not change within the loop.
-  if (isLoopVariantIndirectAddress(UnderlyingObjects.find(APtr)->second, SE,
-                                   InnermostLoop) ||
-      isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
-                                   InnermostLoop))
-    return Dependence::IndirectUnsafe;
-
-  // Need accesses with constant stride. We don't want to vectorize
-  // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap in
-  // the address space.
-  if (!StrideAPtr || !StrideBPtr || StrideAPtr != StrideBPtr){
-    LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
-    return Dependence::Unknown;
-  }
-
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
-  uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
-  bool HasSameSize =
-      DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
-  uint64_t Stride = std::abs(StrideAPtr);
+
+  // Get the dependence distance, stride, type size in whether i is a write for
+  // the dependence between A and B. Returns a DepType, if we can prove there's
+  // no dependence or the analysis fails. Outlined to lambda to limit he scope
+  // of various temporary variables, like A/BPtr, StrideA/BPtr and others.
+  auto Res =
+      [&]() -> std::variant<
+                MemoryDepChecker::Dependence::DepType,
+                std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>> {
+    auto [APtr, AIsWrite] = A;
+    auto [BPtr, BIsWrite] = B;
+
+    // Two reads are independent.
+    if (!AIsWrite && !BIsWrite)
+      return Dependence::NoDep;
+
+    assert(AIdx < BIdx && "Must pass arguments in program order");
+    Type *ATy = getLoadStoreType(InstMap[AIdx]);
+    Type *BTy = getLoadStoreType(InstMap[BIdx]);
+
+    // We cannot check pointers in different address spaces.
+    if (APtr->getType()->getPointerAddressSpace() !=
+        BPtr->getType()->getPointerAddressSpace())
+      return Dependence::Unknown;
+
+    int64_t StrideAPtr =
+        getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
+    int64_t StrideBPtr =
+        getPtrStride(PSE, BTy, BPtr, InnermostLoop, Strides, true).value_or(0);
+
+    const SCEV *Src = PSE.getSCEV(APtr);
+    const SCEV *Sink = PSE.getSCEV(BPtr);
+
+    // If the induction step is negative we have to invert source and sink of
+    // the dependence.
+    if (StrideAPtr < 0) {
+      std::swap(APtr, BPtr);
+      std::swap(ATy, BTy);
+      std::swap(Src, Sink);
+      std::swap(AIsWrite, BIsWrite);
+      std::swap(AIdx, BIdx);
+      std::swap(StrideAPtr, StrideBPtr);
+    }
+
+    const SCEV *Dist = SE.getMinusSCEV(Sink, Src);
+
+    LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
+                      << "(Induction step: " << StrideAPtr << ")\n");
+    LLVM_DEBUG(dbgs() << "LAA: Distance for " << *InstMap[AIdx] << " to "
+                      << *InstMap[BIdx] << ": " << *Dist << "\n");
+
+    // Needs accesses where the addresses of the accessed underlying objects do
+    // not change within the loop.
+    if (isLoopVariantIndirectAddress(UnderlyingObjects.find(APtr)->second, SE,
+                                     InnermostLoop) ||
+        isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
+                                     InnermostLoop))
+      return Dependence::IndirectUnsafe;
+
+    // Need accesses with constant stride. We don't want to vectorize
+    // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap
+    // in the address space.
+    if (!StrideAPtr || !StrideBPtr || StrideAPtr != StrideBPtr) {
+      LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
+      return Dependence::Unknown;
+    }
+
+    uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
+    bool HasSameSize =
+        DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
+    if (!HasSameSize)
+      TypeByteSize = 0;
+    uint64_t Stride = std::abs(StrideAPtr);
+    return std::make_tuple(Dist, Stride, TypeByteSize, AIsWrite, BIsWrite);
+  }();
+
+  if (std::holds_alternative<Dependence::DepType>(Res))
+    return std::get<Dependence::DepType>(Res);
+
+  const auto &[Dist, Stride, TypeByteSize, AIsWrite, BIsWrite] =
+      std::get<std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>(Res);
+  bool HasSameSize = TypeByteSize > 0;
 
   if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
