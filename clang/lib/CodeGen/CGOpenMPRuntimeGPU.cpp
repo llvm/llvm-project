@@ -3745,6 +3745,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1200:
+      case CudaArch::GFX1201:
       case CudaArch::Generic:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:
