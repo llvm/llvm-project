@@ -180,7 +180,20 @@ struct AssignTileIDsPattern
     getForwardSlice(tileOp.getOperation(), &dependantOps);
 
     // Set all operations to use the same tile ID.
-    // This is a navie tile allocation scheme, but works for common cases.
+    // This is a naive tile allocation scheme, but works for common cases. For
+    // example, as this only allocates tile IDs to existing ops, it can't solve
+    // cases like:
+    //
+    // %tile = scf.if %some_cond -> vector<[4]x[4]xi32> {
+    //   scf.yield %tileA {tile_id = 0} : vector<[4]x[4]xi32>
+    // } else {
+    //   scf.yield %tileB {tile_id = 1} : vector<[4]x[4]xi32>
+    // }
+    //
+    // Where %tileA and %tileB come from different root operations. This case
+    // would require allocating a new tile for the result of the scf.if, and
+    // moving the contents of %tileA or %tileB to result tile (based on the
+    // %some_cond).
     auto tileIDAttr = rewriter.getI32IntegerAttr(*tileId);
     tileOp.setTileId(tileIDAttr);
     for (auto *op : dependantOps) {
