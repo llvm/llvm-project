@@ -104,13 +104,13 @@ struct item {
   int a, b;
 } itemArray[20] = {0};
 
-int structOfArrays(void) {
+int arrayOfStructs(void) {
   return itemArray[35].a;
   // expected-warning@-1 {{Out of bound access to memory after the end of 'itemArray'}}
   // expected-note@-2 {{Access of 'itemArray' at index 35, while it holds only 20 'struct item' elements}}
 }
 
-int structOfArraysArrow(void) {
+int arrayOfStructsArrow(void) {
   return (itemArray + 35)->b;
   // expected-warning@-1 {{Out of bound access to memory after the end of 'itemArray'}}
   // expected-note@-2 {{Access of 'itemArray' at index 35, while it holds only 20 'struct item' elements}}
