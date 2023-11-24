@@ -641,8 +641,8 @@ bool PatFrag::handleUnboundInParam(StringRef ParamName, StringRef ArgName,
     auto &OT = Alt.OpTable;
     if (!OT.lookup(ParamName).Found) {
       llvm::PrintError(DiagLoc, "operand '" + ArgName + "' (for parameter '" +
-                                ParamName + "' of '" + getName() +
-                                "') cannot be unbound");
+                                    ParamName + "' of '" + getName() +
+                                    "') cannot be unbound");
       PrintNote(
           DiagLoc,
           "one or more alternatives of '" + getName() + "' do not bind '" +
@@ -821,8 +821,8 @@ BuiltinPattern::BuiltinInfo BuiltinPattern::getBuiltinInfo(const Record &Def) {
       return KBI;
   }
 
-  PrintFatalError(Def.getLoc(), "Unimplemented " + ClassName +
-                                    " def '" + Name + "'");
+  PrintFatalError(Def.getLoc(),
+                  "Unimplemented " + ClassName + " def '" + Name + "'");
 }
 
 bool BuiltinPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
