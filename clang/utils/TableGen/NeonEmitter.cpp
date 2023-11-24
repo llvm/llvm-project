@@ -2356,6 +2356,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#include <stdint.h>\n\n";
 
   OS << "#include <arm_bf16.h>\n";
+  OS << "#include <arm_vector_type.h>\n";
 
   // Emit NEON-specific scalar typedefs.
   OS << "typedef float float32_t;\n";
