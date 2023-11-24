@@ -193,11 +193,15 @@ static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
 
 static llvm::cl::opt<bool> useHLFIR("hlfir",
                                     llvm::cl::desc("Lower to high level FIR"),
-                                    llvm::cl::init(false));
+                                    llvm::cl::init(true));
 
 static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
+
+static llvm::cl::opt<bool> fixedForm("ffixed-form",
+                                     llvm::cl::desc("enable fixed form"),
+                                     llvm::cl::init(false));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
@@ -299,7 +303,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
-      kindMap, loweringOptions, {});
+      kindMap, loweringOptions, {}, semanticsContext.languageFeatures());
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
@@ -431,6 +435,10 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (fixedForm) {
+    options.isFixedForm = fixedForm;
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;

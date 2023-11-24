@@ -114,3 +114,35 @@ bb0:
   call void @foo()
   ret void
 }
+
+define i8 @common_pred(i8 noundef %arg, i1 %c1, i1 %c2) {
+; CHECK-LABEL: @common_pred(
+; CHECK-NEXT:  Pred:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COMMONPRED:%.*]], label [[SUCC:%.*]]
+; CHECK:       CommonPred:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2:%.*]], i8 4, i8 1
+; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       Succ:
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, [[PRED:%.*]] ], [ [[SPEC_SELECT]], [[COMMONPRED]] ]
+; CHECK-NEXT:    ret i8 [[PHI2]]
+;
+Pred:
+call void @dummy()
+  br i1 %c1, label %CommonPred, label %BB
+
+CommonPred:
+call void @dummy()
+  br i1 %c2, label %Succ, label %BB
+
+BB:
+  %phi1 = phi i8 [ 0, %Pred ], [1, %CommonPred]
+  br label %Succ
+
+Succ:
+  %phi2 = phi i8 [ %phi1, %BB ], [ 4, %CommonPred ]
+  ret i8 %phi2
+}
+
+declare void @dummy()

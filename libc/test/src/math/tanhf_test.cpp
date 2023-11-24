@@ -17,13 +17,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcTanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcTanhfTest, SpecialNumbers) {
+TEST_F(LlvmLibcTanhfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::tanhf(aNaN));
@@ -42,7 +40,7 @@ TEST(LlvmLibcTanhfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST(LlvmLibcTanhfTest, InFloatRange) {
+TEST_F(LlvmLibcTanhfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -54,7 +52,7 @@ TEST(LlvmLibcTanhfTest, InFloatRange) {
   }
 }
 
-TEST(LlvmLibcTanhfTest, ExceptionalValues) {
+TEST_F(LlvmLibcTanhfTest, ExceptionalValues) {
   constexpr int N = 4;
   constexpr uint32_t INPUTS[N] = {
       0x0040'0000,

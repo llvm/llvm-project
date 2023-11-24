@@ -14,6 +14,10 @@
 
 // XFAIL: win32-broken-printf-g-precision
 
+// Needs more investigation, but this is probably failing on Android M (API 23)
+// and up because the printf formatting of NAN changed.
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22}}
+
 #include <locale>
 #include <ios>
 #include <cassert>

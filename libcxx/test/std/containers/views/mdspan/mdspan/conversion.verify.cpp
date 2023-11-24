@@ -37,7 +37,7 @@
 
 #include <mdspan>
 #include "CustomTestAccessors.h"
-#include "CustomTestLayouts.h"
+#include "../CustomTestLayouts.h"
 
 void cant_construct_data_handle_type() {
   int data;

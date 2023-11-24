@@ -79,25 +79,15 @@ constexpr bool test() {
       static_assert(!std::is_constructible_v<std::pair<int, int>, std::tuple<int, int, int>>); // too large
     }
 
-    // Check from ranges::subrange
+    // Check that the constructor excludes ranges::subrange
     {
       int data[] = {1, 2, 3, 4, 5};
-      std::ranges::subrange a(data);
-      {
-        std::pair<int*, int*> p(a);
-        assert(p.first == data + 0);
-        assert(p.second == data + 5);
-      }
-      {
-        std::pair<int*, int*> p{a};
-        assert(p.first == data + 0);
-        assert(p.second == data + 5);
-      }
-      {
-        std::pair<int*, int*> p = a;
-        assert(p.first == data + 0);
-        assert(p.second == data + 5);
-      }
+      const std::ranges::subrange a(data);
+      // Note the expression below would be ambiguous if pair's
+      // constructor does not exclude subrange
+      std::pair<int*, int*> p = a;
+      assert(p.first == data + 0);
+      assert(p.second == data + 5);
     }
   }
 

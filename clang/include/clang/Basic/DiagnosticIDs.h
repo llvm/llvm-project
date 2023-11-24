@@ -31,7 +31,7 @@ namespace clang {
     // Size of each of the diagnostic categories.
     enum {
       DIAG_SIZE_COMMON        =  300,
-      DIAG_SIZE_DRIVER        =  300,
+      DIAG_SIZE_DRIVER        =  400,
       DIAG_SIZE_FRONTEND      =  150,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  400,
@@ -100,11 +100,17 @@ namespace clang {
   }
 
 class DiagnosticMapping {
+  LLVM_PREFERRED_TYPE(diag::Severity)
   unsigned Severity : 3;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUser : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPragma : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoWarningAsError : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoErrorAsFatal : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned WasUpgradedFromWarning : 1;
 
 public:

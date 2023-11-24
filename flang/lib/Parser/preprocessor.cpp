@@ -397,9 +397,9 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           (n + 1 == argStart.size() ? k : argStart[n + 1] - 1) - at};
       args.emplace_back(TokenSequence(input, at, count));
     }
+    TokenSequence applied{def->Apply(args, prescanner)};
     def->set_isDisabled(true);
-    TokenSequence replaced{
-        ReplaceMacros(def->Apply(args, prescanner), prescanner)};
+    TokenSequence replaced{ReplaceMacros(std::move(applied), prescanner)};
     def->set_isDisabled(false);
     if (!replaced.empty()) {
       ProvenanceRange from{def->replacement().GetProvenanceRange()};

@@ -202,10 +202,10 @@ TableGen has the following reserved keywords, which cannot be used as
 identifiers::
 
    assert     bit           bits          class         code
-   dag        def           else          false         foreach
-   defm       defset        defvar        field         if
-   in         include       int           let           list
-   multiclass string        then          true
+   dag        def           dump          else          false
+   foreach    defm          defset        defvar        field
+   if         in            include       int           let
+   list       multiclass    string        then          true
 
 .. warning::
   The ``field`` reserved word is deprecated, except when used with the
@@ -225,10 +225,10 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !getdagname  !getdagop    !gt          !head        !if
                : !interleave  !isa         !le          !listconcat  !listremove
                : !listsplat   !logtwo      !lt          !mul         !ne
-               : !not         !or          !range       !setdagarg   !setdagname
-               : !setdagop    !shl         !size        !sra         !srl
-               : !strconcat   !sub         !subst       !substr      !tail
-               : !tolower     !toupper     !xor
+               : !not         !or          !range       !repr        !setdagarg
+               : !setdagname  !setdagop    !shl         !size        !sra
+               : !srl         !strconcat   !sub         !subst       !substr
+               : !tail        !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -571,7 +571,7 @@ files.
    TableGenFile: (`Statement` | `IncludeDirective`
             :| `PreprocessorDirective`)*
    Statement: `Assert` | `Class` | `Def` | `Defm` | `Defset` | `Defvar`
-            :| `Foreach` | `If` | `Let` | `MultiClass`
+            :| `Dump`  | `Foreach` | `If` | `Let` | `MultiClass`
 
 The following sections describe each of these top-level statements.
 
@@ -1275,6 +1275,29 @@ be nested.
 This loop defines records named ``R0``, ``R1``, ``R2``, and ``R3``, along
 with ``F0``, ``F1``, ``F2``, and ``F3``.
 
+``dump`` --- print messages to stderr
+-------------------------------------
+
+A ``dump`` statement prints the input string to standard error
+output. It is intended for debugging purpose.
+
+* At top level, the message is printed immediately.
+
+* Within a record/class/multiclass, `dump` gets evaluated at each
+  instantiation point of the containing record.
+
+.. productionlist::
+   Dump: "dump"  `string` ";"
+
+For example, it can be used in combination with `!repr` to investigate
+the values passed to a multiclass:
+
+.. code-block:: text
+
+  multiclass MC<dag s> {
+    dump "s = " # !repr(s);
+  }
+
 
 ``if`` --- select statements based on a test
 --------------------------------------------
@@ -1849,6 +1872,10 @@ and non-0 as true.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
+
+``!repr(``\ *value*\ ``)``
+    Represents *value* as a string. String format for the value is not
+    guaranteed to be stable. Intended for debugging purposes only.
 
 ``!setdagarg(``\ *dag*\ ``,``\ *key*\ ``,``\ *arg*\ ``)``
     This operator produces a DAG node with the same operator and arguments as

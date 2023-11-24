@@ -65,14 +65,14 @@ CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)
 
 CommandObjectScript::~CommandObjectScript() = default;
 
-bool CommandObjectScript::DoExecute(llvm::StringRef command,
+void CommandObjectScript::DoExecute(llvm::StringRef command,
                                     CommandReturnObject &result) {
   // Try parsing the language option but when the command contains a raw part
   // separated by the -- delimiter.
   OptionsWithRaw raw_args(command);
   if (raw_args.HasArgs()) {
     if (!ParseOptions(raw_args.GetArgs(), result))
-      return false;
+      return;
     command = raw_args.GetRawPart();
   }
 
@@ -84,7 +84,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
   if (language == lldb::eScriptLanguageNone) {
     result.AppendError(
         "the script-lang setting is set to none - scripting not available");
-    return false;
+    return;
   }
 
   ScriptInterpreter *script_interpreter =
@@ -92,7 +92,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
 
   if (script_interpreter == nullptr) {
     result.AppendError("no script interpreter");
-    return false;
+    return;
   }
 
   // Script might change Python code we use for formatting. Make sure we keep
@@ -102,7 +102,7 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
   if (command.empty()) {
     script_interpreter->ExecuteInterpreterLoop();
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    return result.Succeeded();
+    return;
   }
 
   // We can do better when reporting the status of one-liner script execution.
@@ -110,6 +110,4 @@ bool CommandObjectScript::DoExecute(llvm::StringRef command,
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   else
     result.SetStatus(eReturnStatusFailed);
-
-  return result.Succeeded();
 }

@@ -44,9 +44,11 @@ private:
   /// [5] XOP9 map opcode
   /// [6] XOPA map opcode
   /// [7] 3dnow map opcode
-  /// [8] fixed length MAP5 opcode
-  /// [9] fixed length MAP6 opcode
-  std::unique_ptr<ContextDecision> Tables[10];
+  /// [8] fixed length MAP4 opcode
+  /// [9] fixed length MAP5 opcode
+  /// [10] fixed length MAP6 opcode
+  /// [11] fixed length MAP7 opcode
+  std::unique_ptr<ContextDecision> Tables[12];
 
   // Table of ModRM encodings.
   typedef std::map<std::vector<unsigned>, unsigned> ModRMMapTy;

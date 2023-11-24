@@ -841,6 +841,11 @@ bool MayRequireFinalization(const DerivedTypeSpec &derived) {
       FindPolymorphicAllocatableUltimateComponent(derived);
 }
 
+bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
+  DirectComponentIterator directs{derived};
+  return std::any_of(directs.begin(), directs.end(), IsAllocatable);
+}
+
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->category() == DeclTypeSpec::Character &&

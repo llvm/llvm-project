@@ -33,41 +33,23 @@ define void @bswap_v8i16(ptr %x, ptr %y) {
 declare <8 x i16> @llvm.bswap.v8i16(<8 x i16>)
 
 define void @bswap_v4i32(ptr %x, ptr %y) {
-; RV32-LABEL: bswap_v4i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    vsrl.vi v9, v8, 8
-; RV32-NEXT:    lui a1, 16
-; RV32-NEXT:    addi a1, a1, -256
-; RV32-NEXT:    vand.vx v9, v9, a1
-; RV32-NEXT:    vsrl.vi v10, v8, 24
-; RV32-NEXT:    vor.vv v9, v9, v10
-; RV32-NEXT:    vand.vx v10, v8, a1
-; RV32-NEXT:    vsll.vi v10, v10, 8
-; RV32-NEXT:    vsll.vi v8, v8, 24
-; RV32-NEXT:    vor.vv v8, v8, v10
-; RV32-NEXT:    vor.vv v8, v8, v9
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: bswap_v4i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    vsrl.vi v9, v8, 8
-; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -256
-; RV64-NEXT:    vand.vx v9, v9, a1
-; RV64-NEXT:    vsrl.vi v10, v8, 24
-; RV64-NEXT:    vor.vv v9, v9, v10
-; RV64-NEXT:    vand.vx v10, v8, a1
-; RV64-NEXT:    vsll.vi v10, v10, 8
-; RV64-NEXT:    vsll.vi v8, v8, 24
-; RV64-NEXT:    vor.vv v8, v8, v10
-; RV64-NEXT:    vor.vv v8, v8, v9
-; RV64-NEXT:    vse32.v v8, (a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: bswap_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsrl.vi v9, v8, 8
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    addi a1, a1, -256
+; CHECK-NEXT:    vand.vx v9, v9, a1
+; CHECK-NEXT:    vsrl.vi v10, v8, 24
+; CHECK-NEXT:    vor.vv v9, v9, v10
+; CHECK-NEXT:    vand.vx v10, v8, a1
+; CHECK-NEXT:    vsll.vi v10, v10, 8
+; CHECK-NEXT:    vsll.vi v8, v8, 24
+; CHECK-NEXT:    vor.vv v8, v8, v10
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    ret
 ;
 ; ZVKB-LABEL: bswap_v4i32:
 ; ZVKB:       # %bb.0:
@@ -269,7 +251,7 @@ define void @bswap_v8i32(ptr %x, ptr %y) {
 ; LMULMAX2-RV64-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v10, v8, 8
 ; LMULMAX2-RV64-NEXT:    lui a1, 16
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, -256
+; LMULMAX2-RV64-NEXT:    addi a1, a1, -256
 ; LMULMAX2-RV64-NEXT:    vand.vx v10, v10, a1
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v12, v8, 24
 ; LMULMAX2-RV64-NEXT:    vor.vv v10, v10, v12
@@ -319,7 +301,7 @@ define void @bswap_v8i32(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vle32.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v10, v8, 8
 ; LMULMAX1-RV64-NEXT:    lui a2, 16
-; LMULMAX1-RV64-NEXT:    addiw a2, a2, -256
+; LMULMAX1-RV64-NEXT:    addi a2, a2, -256
 ; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a2
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v11, v8, 24
 ; LMULMAX1-RV64-NEXT:    vor.vv v10, v10, v11

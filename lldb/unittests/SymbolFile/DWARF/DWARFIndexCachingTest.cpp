@@ -21,6 +21,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 static void EncodeDecode(const DIERef &object, ByteOrder byte_order) {
   const uint8_t addr_size = 8;

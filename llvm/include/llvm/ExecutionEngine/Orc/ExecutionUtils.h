@@ -343,7 +343,7 @@ private:
       : ES(ES), L(L) {}
 
   static Expected<unsigned> getTargetPointerSize(const Triple &TT);
-  static Expected<support::endianness> getTargetEndianness(const Triple &TT);
+  static Expected<llvm::endianness> getTargetEndianness(const Triple &TT);
   Expected<std::unique_ptr<jitlink::LinkGraph>>
   createStubsGraph(const SymbolMap &Resolved);
 

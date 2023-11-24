@@ -9,7 +9,6 @@
 #ifndef LLVM_DWARFLINKERPARALLEL_DWARFLINKER_H
 #define LLVM_DWARFLINKERPARALLEL_DWARFLINKER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DWARFLinkerParallel/DWARFFile.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"

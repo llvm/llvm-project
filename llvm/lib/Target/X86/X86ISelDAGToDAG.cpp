@@ -1699,10 +1699,28 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     if (AM.BaseType == X86ISelAddressMode::FrameIndexBase &&
         !isDispSafeForFrameIndex(Val))
       return true;
+    // In ILP32 (x32) mode, pointers are 32 bits and need to be zero-extended to
+    // 64 bits. Instructions with 32-bit register addresses perform this zero
+    // extension for us and we can safely ignore the high bits of Offset.
+    // Instructions with only a 32-bit immediate address do not, though: they
+    // sign extend instead. This means only address the low 2GB of address space
+    // is directly addressable, we need indirect addressing for the high 2GB of
+    // address space.
+    // TODO: Some of the earlier checks may be relaxed for ILP32 mode as the
+    // implicit zero extension of instructions would cover up any problem.
+    // However, we have asserts elsewhere that get triggered if we do, so keep
+    // the checks for now.
+    // TODO: We would actually be able to accept these, as well as the same
+    // addresses in LP64 mode, by adding the EIZ pseudo-register as an operand
+    // to get an address size override to be emitted. However, this
+    // pseudo-register is not part of any register class and therefore causes
+    // MIR verification to fail.
+    if (Subtarget->isTarget64BitILP32() && !isUInt<31>(Val) &&
+        !AM.hasBaseOrIndexReg())
+      return true;
   }
   AM.Disp = Val;
   return false;
-
 }
 
 bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,

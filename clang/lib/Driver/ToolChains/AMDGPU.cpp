@@ -951,7 +951,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
 
   AddBCLib(getOCMLPath());
-  AddBCLib(getOCKLPath());
+  if (!isOpenMP)
+    AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));

@@ -25,7 +25,7 @@ func.func @_QMpolymorphic_testPtest_allocate_unlimited_polymorphic_non_derived()
 func.func @_QMpolymorphic_testPtest_rebox() {
   %0 = fir.address_of(@_QFEx) : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
   %c-1_i32 = arith.constant -1 : i32
-  %9 = fir.address_of(@_QQcl.2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
+  %9 = fir.address_of(@_QQclX2E2F64756D6D792E66393000) : !fir.ref<!fir.char<1,12>>
   %10 = fir.convert %9 : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
   %c8_i32 = arith.constant 8 : i32
   %11 = fir.call @_FortranAioBeginExternalListOutput(%c-1_i32, %10, %c8_i32) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
@@ -119,7 +119,7 @@ fir.global internal @_QFEy target : !fir.array<1xi32> {
 func.func private @_FortranAioBeginExternalListOutput(i32, !fir.ref<i8>, i32) -> !fir.ref<i8> attributes {fir.io, fir.runtime}
 func.func private @_FortranAioOutputDescriptor(!fir.ref<i8>, !fir.box<none>) -> i1 attributes {fir.io, fir.runtime}
 func.func private @_FortranAioEndIoStatement(!fir.ref<i8>) -> i32 attributes {fir.io, fir.runtime}
-fir.global linkonce @_QQcl.2E2F64756D6D792E66393000 constant : !fir.char<1,12> {
+fir.global linkonce @_QQclX2E2F64756D6D792E66393000 constant : !fir.char<1,12> {
   %0 = fir.string_lit "./dummy.f90\00"(12) : !fir.char<1,12>
   fir.has_value %0 : !fir.char<1,12>
 }

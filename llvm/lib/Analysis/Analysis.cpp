@@ -18,7 +18,6 @@ using namespace llvm;
 
 /// initializeAnalysis - Initialize all passes linked into the Analysis library.
 void llvm::initializeAnalysis(PassRegistry &Registry) {
-  initializeAAEvalLegacyPassPass(Registry);
   initializeBasicAAWrapperPassPass(Registry);
   initializeBlockFrequencyInfoWrapperPassPass(Registry);
   initializeBranchProbabilityInfoWrapperPassPass(Registry);
@@ -26,14 +25,12 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeCallGraphDOTPrinterPass(Registry);
   initializeCallGraphPrinterLegacyPassPass(Registry);
   initializeCallGraphViewerPass(Registry);
-  initializeCostModelAnalysisPass(Registry);
   initializeCFGViewerLegacyPassPass(Registry);
   initializeCFGPrinterLegacyPassPass(Registry);
   initializeCFGOnlyViewerLegacyPassPass(Registry);
   initializeCFGOnlyPrinterLegacyPassPass(Registry);
   initializeCycleInfoWrapperPassPass(Registry);
   initializeDependenceAnalysisWrapperPassPass(Registry);
-  initializeDelinearizationPass(Registry);
   initializeDominanceFrontierWrapperPassPass(Registry);
   initializeDomViewerWrapperPassPass(Registry);
   initializeDomPrinterWrapperPassPass(Registry);
@@ -46,7 +43,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeAAResultsWrapperPassPass(Registry);
   initializeGlobalsAAWrapperPassPass(Registry);
   initializeIVUsersWrapperPassPass(Registry);
-  initializeInstCountLegacyPassPass(Registry);
   initializeIntervalPartitionPass(Registry);
   initializeIRSimilarityIdentifierWrapperPassPass(Registry);
   initializeLazyBranchProbabilityInfoPassPass(Registry);

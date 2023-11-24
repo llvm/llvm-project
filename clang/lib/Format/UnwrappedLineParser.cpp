@@ -213,7 +213,7 @@ void UnwrappedLineParser::parse() {
     }
 
     // Create line with eof token.
-    assert(FormatTok->is(tok::eof));
+    assert(eof());
     pushToken(FormatTok);
     addUnwrappedLine();
 
@@ -491,11 +491,18 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
   do {
-    // Get next non-comment token.
+    // Get next non-comment, non-preprocessor token.
     FormatToken *NextTok;
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
+    while (NextTok->is(tok::hash)) {
+      NextTok = Tokens->getNextToken();
+      do {
+        NextTok = Tokens->getNextToken();
+      } while (NextTok->is(tok::comment) ||
+               (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+    }
 
     switch (Tok->Tok.getKind()) {
     case tok::l_brace:
@@ -611,12 +618,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       if (Tok->isNot(TT_StatementMacro))
         break;
       [[fallthrough]];
-    case tok::kw_if:
-      if (PrevTok->is(tok::hash))
-        break;
-      [[fallthrough]];
     case tok::at:
     case tok::semi:
+    case tok::kw_if:
     case tok::kw_while:
     case tok::kw_for:
     case tok::kw_switch:
@@ -638,6 +642,14 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       Entry.Tok->setBlockKind(BK_Block);
 
   FormatTok = Tokens->setPosition(StoredPosition);
+}
+
+// Sets the token type of the directly previous right brace.
+void UnwrappedLineParser::setPreviousRBraceType(TokenType Type) {
+  if (auto Prev = FormatTok->getPreviousNonComment();
+      Prev && Prev->is(tok::r_brace)) {
+    Prev->setFinalizedType(Type);
+  }
 }
 
 template <class T>
@@ -1959,8 +1971,9 @@ void UnwrappedLineParser::parseStructuralElement(
         auto I = Line->Tokens.begin(), E = Line->Tokens.end();
         while (I != E && I->Tok->is(tok::comment))
           ++I;
-        while (I != E && Style.isVerilog() && I->Tok->is(tok::hash))
-          ++I;
+        if (Style.isVerilog())
+          while (I != E && I->Tok->is(tok::hash))
+            ++I;
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
@@ -2004,8 +2017,7 @@ void UnwrappedLineParser::parseStructuralElement(
       } else if (Style.Language == FormatStyle::LK_Proto &&
                  FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       break;
     case tok::l_square:
@@ -2218,9 +2230,6 @@ bool UnwrappedLineParser::tryToParseLambda() {
     // followed by an `a->b` expression, such as:
     // ([obj func:arg] + a->b)
     // Otherwise the code below would parse as a lambda.
-    //
-    // FIXME: This heuristic is incorrect for C++20 generic lambdas with
-    // explicit template lists: []<bool b = true && false>(U &&u){}
     case tok::plus:
     case tok::minus:
     case tok::exclaim:
@@ -2250,7 +2259,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_LambdaArrow);
+      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2260,6 +2269,11 @@ bool UnwrappedLineParser::tryToParseLambda() {
       parseRequiresClause(RequiresToken);
       break;
     }
+    case tok::equal:
+      if (!InTemplateParameterList)
+        return true;
+      nextToken();
+      break;
     default:
       return true;
     }
@@ -2364,9 +2378,7 @@ bool UnwrappedLineParser::tryToParseChildBlock() {
   return true;
 }
 
-bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
-                                          bool IsEnum,
-                                          tok::TokenKind ClosingBraceKind) {
+bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
@@ -2388,7 +2400,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         parseChildBlock();
       }
     }
-    if (FormatTok->Tok.getKind() == ClosingBraceKind) {
+    if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
       if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
         addUnwrappedLine();
       nextToken();
@@ -2419,14 +2431,9 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
       parseBracedList();
       break;
     case tok::less:
-      if (Style.Language == FormatStyle::LK_Proto ||
-          ClosingBraceKind == tok::greater) {
-        nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
-      } else {
-        nextToken();
-      }
+      nextToken();
+      if (IsAngleBracket)
+        parseBracedList(/*IsAngleBracket=*/true);
       break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
@@ -2438,8 +2445,8 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
         break;
       }
       HasError = true;
-      if (!ContinueOnSemicolons)
-        return !HasError;
+      if (!IsEnum)
+        return false;
       nextToken();
       break;
     case tok::comma:
@@ -2756,6 +2763,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                /*MunchSemi=*/true, KeepIfBraces, &IfBlockKind);
+    setPreviousRBraceType(TT_ControlStatementRBrace);
     if (Style.BraceWrapping.BeforeElse)
       addUnwrappedLine();
     else
@@ -2794,6 +2802,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       FormatToken *IfLBrace =
           parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                      /*MunchSemi=*/true, KeepElseBraces, &ElseBlockKind);
+      setPreviousRBraceType(TT_ElseRBrace);
       if (FormatTok->is(tok::kw_else)) {
         KeepElseBraces = KeepElseBraces ||
                          ElseBlockKind == IfStmtKind::IfOnly ||
@@ -3057,12 +3066,12 @@ void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
   keepAncestorBraces();
 
   if (isBlockBegin(*FormatTok)) {
-    if (!KeepBraces)
-      FormatTok->setFinalizedType(TT_ControlStatementLBrace);
+    FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     FormatToken *LeftBrace = FormatTok;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                /*MunchSemi=*/true, KeepBraces);
+    setPreviousRBraceType(TT_ControlStatementRBrace);
     if (!KeepBraces) {
       assert(!NestedTooDeep.empty());
       if (!NestedTooDeep.back())
@@ -3104,9 +3113,16 @@ void UnwrappedLineParser::parseForOrWhileLoop(bool HasParens) {
       FormatTok->setFinalizedType(TT_ConditionLParen);
     parseParens();
   }
-  // Event control.
-  if (Style.isVerilog())
+
+  if (Style.isVerilog()) {
+    // Event control.
     parseVerilogSensitivityList();
+  } else if (Style.AllowShortLoopsOnASingleLine && FormatTok->is(tok::semi) &&
+             Tokens->getPreviousToken()->is(tok::r_paren)) {
+    nextToken();
+    addUnwrappedLine();
+    return;
+  }
 
   handleAttributes();
   parseLoopBody(KeepBraces, /*WrapRightBrace=*/true);
@@ -3123,6 +3139,8 @@ void UnwrappedLineParser::parseDoWhile() {
     addUnwrappedLine();
     return;
   }
+
+  FormatTok->setFinalizedType(TT_DoWhile);
 
   // If in Whitesmiths mode, the line with the while() needs to be indented
   // to the same level as the block.
@@ -3196,7 +3214,9 @@ void UnwrappedLineParser::parseSwitch() {
 
   if (FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
+    FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     parseBlock();
+    setPreviousRBraceType(TT_ControlStatementRBrace);
     addUnwrappedLine();
   } else {
     addUnwrappedLine();
@@ -3590,8 +3610,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
         return;
 
       nextToken();
-      parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                      /*ClosingBraceKind=*/tok::greater);
+      parseBracedList(/*IsAngleBracket=*/true);
       break;
 
     default:
@@ -3622,8 +3641,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       nextToken();
       if (FormatTok->is(tok::less)) {
         nextToken();
-        parseBracedList(/*ContinueOnSemicolons=*/false, /*IsEnum=*/false,
-                        /*ClosingBraceKind=*/tok::greater);
+        parseBracedList(/*IsAngleBracket=*/true);
       }
       TopLevelParensAllowed = false;
       break;
@@ -3704,8 +3722,7 @@ bool UnwrappedLineParser::parseEnum() {
     addUnwrappedLine();
     Line->Level += 1;
   }
-  bool HasError = !parseBracedList(/*ContinueOnSemicolons=*/true,
-                                   /*IsEnum=*/true);
+  bool HasError = !parseBracedList(/*IsAngleBracket=*/false, /*IsEnum=*/true);
   if (!Style.AllowShortEnumsOnASingleLine)
     Line->Level -= 1;
   if (HasError) {
@@ -3713,6 +3730,7 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     addUnwrappedLine();
   }
+  setPreviousRBraceType(TT_EnumRBrace);
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a
@@ -3920,21 +3938,23 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     } while (!eof());
   }
 
-  auto GetBraceType = [](const FormatToken &RecordTok) {
+  auto GetBraceTypes =
+      [](const FormatToken &RecordTok) -> std::pair<TokenType, TokenType> {
     switch (RecordTok.Tok.getKind()) {
     case tok::kw_class:
-      return TT_ClassLBrace;
+      return {TT_ClassLBrace, TT_ClassRBrace};
     case tok::kw_struct:
-      return TT_StructLBrace;
+      return {TT_StructLBrace, TT_StructRBrace};
     case tok::kw_union:
-      return TT_UnionLBrace;
+      return {TT_UnionLBrace, TT_UnionRBrace};
     default:
       // Useful for e.g. interface.
-      return TT_RecordLBrace;
+      return {TT_RecordLBrace, TT_RecordRBrace};
     }
   };
   if (FormatTok->is(tok::l_brace)) {
-    FormatTok->setFinalizedType(GetBraceType(InitialToken));
+    auto [OpenBraceType, ClosingBraceType] = GetBraceTypes(InitialToken);
+    FormatTok->setFinalizedType(OpenBraceType);
     if (ParseAsExpr) {
       parseChildBlock();
     } else {
@@ -3944,6 +3964,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
     }
+    setPreviousRBraceType(ClosingBraceType);
   }
   // There is no addUnwrappedLine() here so that we fall through to parsing a
   // structural element afterwards. Thus, in "class A {} n, m;",

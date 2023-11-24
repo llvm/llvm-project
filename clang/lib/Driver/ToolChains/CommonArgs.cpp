@@ -598,7 +598,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld") {
+      llvm::sys::path::stem(Linker) != "ld.lld" &&
+      !ToolChain.getTriple().isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -693,6 +694,16 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (!Parallelism.empty())
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                          ParallelismOpt + Parallelism));
+
+  // Pass down GlobalISel options.
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    // Parsing -fno-global-isel explicitly gives architectures that enable GISel
+    // by default a chance to disable it.
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-global-isel=" +
+        (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
+  }
 
   // If an explicit debugger tuning argument appeared, pass it along.
   if (Arg *A =
@@ -968,11 +979,9 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
 
 void tools::addFortranRuntimeLibs(const ToolChain &TC,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back("Fortran_main.lib");
-    CmdArgs.push_back("FortranRuntime.lib");
-    CmdArgs.push_back("FortranDecimal.lib");
-  } else {
+  // These are handled earlier on Windows by telling the frontend driver to add
+  // the correct libraries to link against as dependents in the object file.
+  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back("-lFortran_main");
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
@@ -2041,10 +2050,11 @@ void tools::addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
 /// convention has been to use the prefix “lib”. To avoid confusion with host
 /// archive libraries, we use prefix "libbc-" for the bitcode SDL archives.
 ///
-bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+static bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                       llvm::opt::ArgStringList &CC1Args,
-                      SmallVector<std::string, 8> LibraryPaths, std::string Lib,
-                      StringRef Arch, StringRef Target, bool isBitCodeSDL) {
+                      const SmallVectorImpl<std::string> &LibraryPaths,
+                      StringRef Lib, StringRef Arch, StringRef Target,
+                      bool isBitCodeSDL) {
   SmallVector<std::string, 12> SDLs;
 
   std::string LibDeviceLoc = "/libdevice";
@@ -2118,15 +2128,16 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
 /// the library paths. If so, add a new command to clang-offload-bundler to
 /// unbundle this archive and create a temporary device specific archive. Name
 /// of this SDL is passed to the llvm-link tool.
-bool tools::GetSDLFromOffloadArchive(
+static void GetSDLFromOffloadArchive(
     Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args, SmallVector<std::string, 8> LibraryPaths,
-    StringRef Lib, StringRef Arch, StringRef Target, bool isBitCodeSDL) {
+    llvm::opt::ArgStringList &CC1Args,
+    const SmallVectorImpl<std::string> &LibraryPaths, StringRef Lib,
+    StringRef Arch, StringRef Target, bool isBitCodeSDL) {
 
   // We don't support bitcode archive bundles for nvptx
   if (isBitCodeSDL && Arch.contains("nvptx"))
-    return false;
+    return;
 
   bool FoundAOB = false;
   std::string ArchiveOfBundles;
@@ -2144,7 +2155,6 @@ bool tools::GetSDLFromOffloadArchive(
       Lib = Lib.drop_front(2);
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
-      SmallVector<std::string, 2> AOBFileNames;
       auto LibFile =
           (Lib.startswith(":") ? Lib.drop_front()
                                : IsMSVC ? Lib + Ext : "lib" + Lib + Ext)
@@ -2163,12 +2173,12 @@ bool tools::GetSDLFromOffloadArchive(
   }
 
   if (!FoundAOB)
-    return false;
+    return;
 
   llvm::file_magic Magic;
   auto EC = llvm::identify_magic(ArchiveOfBundles, Magic);
   if (EC || Magic != llvm::file_magic::archive)
-    return false;
+    return;
 
   StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
   std::string OutputLib =
@@ -2223,7 +2233,7 @@ bool tools::GetSDLFromOffloadArchive(
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
 
-  return true;
+  return;
 }
 
 // Wrapper function used by driver for adding SDLs during link phase.
@@ -2295,7 +2305,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
   static const StringRef HostOnlyArchives[] = {
       "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
   for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
-    if (!HostOnlyArchives->contains(SDLName)) {
+    if (!llvm::is_contained(HostOnlyArchives, SDLName)) {
       SDLNames.insert(std::string("-l") + SDLName);
     }
   }
@@ -2338,7 +2348,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
-  const unsigned MinCodeObjVer = 3;
+  const unsigned MinCodeObjVer = 4;
   const unsigned MaxCodeObjVer = 5;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {

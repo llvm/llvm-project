@@ -217,7 +217,7 @@ define i32 @add_mul_combine_reject_c1(i32 %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_c1:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 1000
+; RV64IMB-NEXT:    addi a0, a0, 1000
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    sext.w a0, a0
@@ -237,7 +237,7 @@ define signext i32 @add_mul_combine_reject_c2(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_c2:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 1000
+; RV64IMB-NEXT:    addi a0, a0, 1000
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    sext.w a0, a0
@@ -488,7 +488,7 @@ define i32 @add_mul_combine_reject_g1(i32 %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_g1:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 100
+; RV64IMB-NEXT:    addi a0, a0, 100
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    addiw a0, a0, 10
@@ -509,7 +509,7 @@ define signext i32 @add_mul_combine_reject_g2(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: add_mul_combine_reject_g2:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 100
+; RV64IMB-NEXT:    addi a0, a0, 100
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    sh3add a0, a1, a0
 ; RV64IMB-NEXT:    addiw a0, a0, 10
@@ -586,9 +586,9 @@ define i32 @mul3000_add8990_a(i32 %x) {
 ;
 ; RV64IMB-LABEL: mul3000_add8990_a:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 3
+; RV64IMB-NEXT:    addi a0, a0, 3
 ; RV64IMB-NEXT:    lui a1, 1
-; RV64IMB-NEXT:    addiw a1, a1, -1096
+; RV64IMB-NEXT:    addi a1, a1, -1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, -10
 ; RV64IMB-NEXT:    ret
@@ -609,9 +609,9 @@ define signext i32 @mul3000_add8990_b(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: mul3000_add8990_b:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 3
+; RV64IMB-NEXT:    addi a0, a0, 3
 ; RV64IMB-NEXT:    lui a1, 1
-; RV64IMB-NEXT:    addiw a1, a1, -1096
+; RV64IMB-NEXT:    addi a1, a1, -1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, -10
 ; RV64IMB-NEXT:    ret
@@ -661,9 +661,9 @@ define i32 @mul3000_sub8990_a(i32 %x) {
 ;
 ; RV64IMB-LABEL: mul3000_sub8990_a:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, -3
+; RV64IMB-NEXT:    addi a0, a0, -3
 ; RV64IMB-NEXT:    lui a1, 1
-; RV64IMB-NEXT:    addiw a1, a1, -1096
+; RV64IMB-NEXT:    addi a1, a1, -1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 10
 ; RV64IMB-NEXT:    ret
@@ -684,9 +684,9 @@ define signext i32 @mul3000_sub8990_b(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: mul3000_sub8990_b:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, -3
+; RV64IMB-NEXT:    addi a0, a0, -3
 ; RV64IMB-NEXT:    lui a1, 1
-; RV64IMB-NEXT:    addiw a1, a1, -1096
+; RV64IMB-NEXT:    addi a1, a1, -1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 10
 ; RV64IMB-NEXT:    ret
@@ -737,9 +737,9 @@ define i32 @mulneg3000_add8990_a(i32 %x) {
 ;
 ; RV64IMB-LABEL: mulneg3000_add8990_a:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, -3
+; RV64IMB-NEXT:    addi a0, a0, -3
 ; RV64IMB-NEXT:    lui a1, 1048575
-; RV64IMB-NEXT:    addiw a1, a1, 1096
+; RV64IMB-NEXT:    addi a1, a1, 1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, -10
 ; RV64IMB-NEXT:    ret
@@ -760,9 +760,9 @@ define signext i32 @mulneg3000_add8990_b(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: mulneg3000_add8990_b:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, -3
+; RV64IMB-NEXT:    addi a0, a0, -3
 ; RV64IMB-NEXT:    lui a1, 1048575
-; RV64IMB-NEXT:    addiw a1, a1, 1096
+; RV64IMB-NEXT:    addi a1, a1, 1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, -10
 ; RV64IMB-NEXT:    ret
@@ -813,9 +813,9 @@ define i32 @mulneg3000_sub8990_a(i32 %x) {
 ;
 ; RV64IMB-LABEL: mulneg3000_sub8990_a:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 3
+; RV64IMB-NEXT:    addi a0, a0, 3
 ; RV64IMB-NEXT:    lui a1, 1048575
-; RV64IMB-NEXT:    addiw a1, a1, 1096
+; RV64IMB-NEXT:    addi a1, a1, 1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 10
 ; RV64IMB-NEXT:    ret
@@ -836,9 +836,9 @@ define signext i32 @mulneg3000_sub8990_b(i32 signext %x) {
 ;
 ; RV64IMB-LABEL: mulneg3000_sub8990_b:
 ; RV64IMB:       # %bb.0:
-; RV64IMB-NEXT:    addiw a0, a0, 3
+; RV64IMB-NEXT:    addi a0, a0, 3
 ; RV64IMB-NEXT:    lui a1, 1048575
-; RV64IMB-NEXT:    addiw a1, a1, 1096
+; RV64IMB-NEXT:    addi a1, a1, 1096
 ; RV64IMB-NEXT:    mul a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 10
 ; RV64IMB-NEXT:    ret

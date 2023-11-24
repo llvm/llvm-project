@@ -56,7 +56,7 @@ static void getMangledSortHelperFuncName(llvm::raw_svector_ostream &nameOstream,
                                          uint64_t ny, ValueRange operands) {
   nameOstream << namePrefix;
   for (auto res : xPerm.getResults())
-    nameOstream << res.cast<AffineDimExpr>().getPosition() << "_";
+    nameOstream << cast<AffineDimExpr>(res).getPosition() << "_";
 
   nameOstream << getMemRefType(operands[xStartIdx]).getElementType();
   nameOstream << "_coo_" << ny;
@@ -114,7 +114,7 @@ static void forEachIJPairInXs(
   Value iOffset = builder.create<arith::MulIOp>(loc, args[0], cstep);
   Value jOffset = builder.create<arith::MulIOp>(loc, args[1], cstep);
   for (unsigned k = 0, e = xPerm.getNumResults(); k < e; k++) {
-    unsigned actualK = xPerm.getResult(k).cast<AffineDimExpr>().getPosition();
+    unsigned actualK = cast<AffineDimExpr>(xPerm.getResult(k)).getPosition();
     Value ak = constantIndex(builder, loc, actualK);
     Value i = builder.create<arith::AddIOp>(loc, ak, iOffset);
     Value j = builder.create<arith::AddIOp>(loc, ak, jOffset);
@@ -1398,11 +1398,11 @@ private:
 };
 
 /// Sparse rewriting rule for the sort_coo operator.
-struct SortCooRewriter : public OpRewritePattern<SortCooOp> {
+struct SortRewriter : public OpRewritePattern<SortOp> {
 public:
-  using OpRewritePattern<SortCooOp>::OpRewritePattern;
+  using OpRewritePattern<SortOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SortCooOp op,
+  LogicalResult matchAndRewrite(SortOp op,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> xys;
     xys.push_back(op.getXy());
@@ -1427,5 +1427,5 @@ void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns,
                                          bool enableBufferInitialization) {
   patterns.add<PushBackRewriter>(patterns.getContext(),
                                  enableBufferInitialization);
-  patterns.add<SortCooRewriter>(patterns.getContext());
+  patterns.add<SortRewriter>(patterns.getContext());
 }

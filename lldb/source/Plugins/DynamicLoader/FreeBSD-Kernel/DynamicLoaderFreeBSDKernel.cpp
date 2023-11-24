@@ -15,7 +15,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/RegisterContext.h"
@@ -345,7 +344,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       ModuleSpec module_spec(FileSpec(GetPath()), target.GetArchitecture());
       if (IsKernel()) {
         Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error, true)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                       true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec()))
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
@@ -536,7 +536,7 @@ bool DynamicLoaderFreeBSDKernel::ParseKmods(Address linker_files_head_addr) {
     return false;
   LLDB_LOGF(
       log,
-      "Kmod-changed breakpoint hit, there are %lu kernel modules currently.\n",
+      "Kmod-changed breakpoint hit, there are %zu kernel modules currently.\n",
       linker_files_list.size());
 
   ModuleList &modules = m_process->GetTarget().GetImages();

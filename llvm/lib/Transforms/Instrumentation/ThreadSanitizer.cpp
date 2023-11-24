@@ -360,7 +360,7 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
       StringRef SectionName = GV->getSection();
       // Check if the global is in the PGO counters section.
       auto OF = Triple(M->getTargetTriple()).getObjectFormat();
-      if (SectionName.endswith(
+      if (SectionName.ends_with(
               getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false)))
         return false;
     }

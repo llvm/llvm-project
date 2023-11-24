@@ -90,12 +90,7 @@ protected:
     PP.addPPCallbacks(std::move(C));
     PP.EnterMainSourceFile();
 
-    while (1) {
-      Token tok;
-      PP.Lex(tok);
-      if (tok.is(tok::eof))
-        break;
-    }
+    PP.LexTokensUntilEOF();
   }
 
   FileSystemOptions FileMgrOpts;

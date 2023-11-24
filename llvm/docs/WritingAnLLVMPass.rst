@@ -1020,8 +1020,7 @@ series of passes:
    instead of traversing the entire program.  It reduces the memory consumption
    of compiler, because, for example, only one `DominatorSet
    <https://llvm.org/doxygen/classllvm_1_1DominatorSet.html>`_ needs to be
-   calculated at a time.  This also makes it possible to implement some
-   :ref:`interesting enhancements <writing-an-llvm-pass-SMP>` in the future.
+   calculated at a time.
 
 The effectiveness of the ``PassManager`` is influenced directly by how much
 information it has about the behaviors of the passes it is scheduling.  For
@@ -1350,29 +1349,3 @@ some with solutions, some without.
 Hopefully these tips will help with common case debugging situations.  If you'd
 like to contribute some tips of your own, just contact `Chris
 <mailto:sabre@nondot.org>`_.
-
-Future extensions planned
--------------------------
-
-Although the LLVM Pass Infrastructure is very capable as it stands, and does
-some nifty stuff, there are things we'd like to add in the future.  Here is
-where we are going:
-
-.. _writing-an-llvm-pass-SMP:
-
-Multithreaded LLVM
-^^^^^^^^^^^^^^^^^^
-
-Multiple CPU machines are becoming more common and compilation can never be
-fast enough: obviously we should allow for a multithreaded compiler.  Because
-of the semantics defined for passes above (specifically they cannot maintain
-state across invocations of their ``run*`` methods), a nice clean way to
-implement a multithreaded compiler would be for the ``PassManager`` class to
-create multiple instances of each pass object, and allow the separate instances
-to be hacking on different parts of the program at the same time.
-
-This implementation would prevent each of the passes from having to implement
-multithreaded constructs, requiring only the LLVM core to have locking in a few
-places (for global resources).  Although this is a simple extension, we simply
-haven't had time (or multiprocessor machines, thus a reason) to implement this.
-Despite that, we have kept the LLVM passes SMP ready, and you should too.

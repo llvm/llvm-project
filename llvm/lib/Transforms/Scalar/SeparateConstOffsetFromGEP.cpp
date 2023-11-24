@@ -524,7 +524,7 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   // FIXME: this does not appear to be covered by any tests
   //        (with x86/aarch64 backends at least)
   if (BO->getOpcode() == Instruction::Or &&
-      !haveNoCommonBitsSet(LHS, RHS, DL, nullptr, BO, DT))
+      !haveNoCommonBitsSet(LHS, RHS, SimplifyQuery(DL, DT, /*AC*/ nullptr, BO)))
     return false;
 
   // FIXME: We don't currently support constants from the RHS of subs,
@@ -661,15 +661,16 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
   // in the reversed order.
   for (CastInst *I : llvm::reverse(ExtInsts)) {
     if (Constant *C = dyn_cast<Constant>(Current)) {
-      // If Current is a constant, apply s/zext using ConstantExpr::getCast.
-      // ConstantExpr::getCast emits a ConstantInt if C is a ConstantInt.
-      Current = ConstantExpr::getCast(I->getOpcode(), C, I->getType());
-    } else {
-      Instruction *Ext = I->clone();
-      Ext->setOperand(0, Current);
-      Ext->insertBefore(IP);
-      Current = Ext;
+      // Try to constant fold the cast.
+      Current = ConstantFoldCastOperand(I->getOpcode(), C, I->getType(), DL);
+      if (Current)
+        continue;
     }
+
+    Instruction *Ext = I->clone();
+    Ext->setOperand(0, Current);
+    Ext->insertBefore(IP);
+    Current = Ext;
   }
   return Current;
 }

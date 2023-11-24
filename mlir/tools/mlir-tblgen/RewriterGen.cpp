@@ -1743,10 +1743,15 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       "if (auto tmpAttr = {1}) {\n"
       "  tblgen_attrs.emplace_back(rewriter.getStringAttr(\"{0}\"), "
       "tmpAttr);\n}\n";
+  int numVariadic = 0;
+  bool hasOperandSegmentSizes = false;
+  std::vector<std::string> sizes;
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
     if (resultOp.getArg(argIndex).is<NamedAttribute *>()) {
       // The argument in the op definition.
       auto opArgName = resultOp.getArgName(argIndex);
+      hasOperandSegmentSizes =
+          hasOperandSegmentSizes || opArgName == "operandSegmentSizes";
       if (auto subTree = node.getArgAsNestedDag(argIndex)) {
         if (!subTree.isNativeCodeCall())
           PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
@@ -1766,6 +1771,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
         resultOp.getArg(argIndex).get<NamedTypeConstraint *>();
     std::string varName;
     if (operand->isVariadic()) {
+      ++numVariadic;
       std::string range;
       if (node.isNestedDagArg(argIndex)) {
         range = childNodeNames.lookup(argIndex);
@@ -1777,7 +1783,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       range = symbolInfoMap.getValueAndRangeUse(range);
       os << formatv("for (auto v: {0}) {{\n  tblgen_values.push_back(v);\n}\n",
                     range);
+      sizes.push_back(formatv("static_cast<int32_t>({0}.size())", range));
     } else {
+      sizes.push_back("1");
       os << formatv("tblgen_values.push_back(");
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(
@@ -1802,6 +1810,19 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
         }
       }
       os << ");\n";
+    }
+  }
+
+  if (numVariadic > 1 && !hasOperandSegmentSizes) {
+    // Only set size if it can't be computed.
+    const auto *sameVariadicSize =
+        resultOp.getTrait("::mlir::OpTrait::SameVariadicOperandSize");
+    if (!sameVariadicSize) {
+      const char *setSizes = R"(
+        tblgen_attrs.emplace_back(rewriter.getStringAttr("operandSegmentSizes"),
+          rewriter.getDenseI32ArrayAttr({{ {0} }));
+          )";
+      os.printReindented(formatv(setSizes, llvm::join(sizes, ", ")).str());
     }
   }
 }

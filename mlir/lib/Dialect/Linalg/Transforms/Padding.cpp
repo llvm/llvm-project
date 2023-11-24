@@ -248,8 +248,10 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                LinalgPaddingOptions::CopyBackOp::
                    BufferizationMaterializeInDestination) {
       replacements.push_back(
-          rewriter.create<bufferization::MaterializeInDestinationOp>(
-              loc, std::get<0>(it), std::get<1>(it).get()));
+          rewriter
+              .create<bufferization::MaterializeInDestinationOp>(
+                  loc, std::get<0>(it), std::get<1>(it).get())
+              ->getResult(0));
     } else {
       llvm_unreachable("unsupported copy back op");
     }

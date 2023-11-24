@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-MCAsmBackend::MCAsmBackend(support::endianness Endian, unsigned RelaxFixupKind)
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind)
     : Endian(Endian), RelaxFixupKind(RelaxFixupKind) {}
 
 MCAsmBackend::~MCAsmBackend() = default;
@@ -33,11 +33,11 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
   case Triple::ELF:
-    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)), OS,
-                                 Endian == support::little);
+    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)),
+                                 OS, Endian == llvm::endianness::little);
   case Triple::MachO:
     return createMachObjectWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                  OS, Endian == support::little);
+                                  OS, Endian == llvm::endianness::little);
   case Triple::COFF:
     return createWinCOFFObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
@@ -72,7 +72,7 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
   case Triple::ELF:
     return createELFDwoObjectWriter(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
-        Endian == support::little);
+        Endian == llvm::endianness::little);
   case Triple::Wasm:
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);
@@ -92,6 +92,7 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_Data_2", 0, 16, 0},
       {"FK_Data_4", 0, 32, 0},
       {"FK_Data_8", 0, 64, 0},
+      {"FK_Data_leb128", 0, 0, 0},
       {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},

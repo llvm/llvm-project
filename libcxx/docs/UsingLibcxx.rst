@@ -223,14 +223,8 @@ safety annotations.
   ``std::mutex`` and ``std::lock_guard``. By default, these annotations are
   disabled and must be manually enabled by the user.
 
-**_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
-
-**_LIBCPP_ENABLE_SAFE_MODE**:
-  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
-
-**_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
+**_LIBCPP_HARDENING_MODE**:
+  This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
@@ -361,142 +355,8 @@ The extended applications of ``[[nodiscard]]`` takes two forms:
    standard in newer dialects, but not in the present one.
 
 2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
-   applied to entities never declared as such by the standard.
-
-Entities declared with ``_LIBCPP_NODISCARD_EXT``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This section lists all extended applications of ``[[nodiscard]]`` to entities
-which no dialect declares as such (See the second form described above).
-
-* ``adjacent_find``
-* ``all_of``
-* ``any_of``
-* ``as_const``
-* ``binary_search``
-* ``bit_cast``
-* ``bit_ceil``
-* ``bit_floor``
-* ``bit_width``
-* ``byteswap``
-* ``cbrt``
-* ``ceil``
-* ``chrono::tzdb_list::begin``
-* ``chrono::tzdb_list::cbegin``
-* ``chrono::tzdb_list::cend``
-* ``chrono::tzdb_list::end``
-* ``chrono::get_tzdb_list``
-* ``chrono::get_tzdb``
-* ``chrono::remote_version``
-* ``clamp``
-* ``copysign``
-* ``count_if``
-* ``count``
-* ``countl_zero``
-* ``countl_one``
-* ``countr_zero``
-* ``countr_one``
-* ``equal_range``
-* ``equal``
-* ``fabs``
-* ``find_end``
-* ``find_first_of``
-* ``find_if_not``
-* ``find_if``
-* ``find``
-* ``floor``
-* ``fmax``
-* ``fmin``
-* ``forward``
-* ``fpclassify``
-* ``get_temporary_buffer``
-* ``has_single_bit``
-* ``identity::operator()``
-* ``includes``
-* ``is_heap_until``
-* ``is_heap``
-* ``is_partitioned``
-* ``is_permutation``
-* ``is_sorted_until``
-* ``is_sorted``
-* ``isfinite``
-* ``isgreater``
-* ``isgreaterequal``
-* ``isinf``
-* ``isless``
-* ``islessequal``
-* ``islessgreater``
-* ``isnan``
-* ``isnormal``
-* ``isunordered``
-* ``lexicographical_compare``
-* ``lock_guard``'s constructors
-* ``lower_bound``
-* ``make_format_args``
-* ``make_wformat_args``
-* ``max_element``
-* ``max``
-* ``min_element``
-* ``min``
-* ``minmax_element``
-* ``minmax``
-* ``mismatch``
-* ``move_if_noexcept``
-* ``move``
-* ``nearbyint``
-* ``none_of``
-* ``popcount``
-* ``ranges::adjacent_find``
-* ``ranges::all_of``
-* ``ranges::any_of``
-* ``ranges::binary_search``
-* ``ranges::clamp``
-* ``ranges::count_if``
-* ``ranges::count``
-* ``ranges::equal_range``
-* ``ranges::equal``
-* ``ranges::find_end``
-* ``ranges::find_first_of``
-* ``ranges::find_if_not``
-* ``ranges::find_if``
-* ``ranges::find``
-* ``ranges::get_temporary_buffer``
-* ``ranges::includes``
-* ``ranges::is_heap_until``
-* ``ranges::is_heap``
-* ``ranges::is_partitioned``
-* ``ranges::is_permutation``
-* ``ranges::is_sorted_until``
-* ``ranges::is_sorted``
-* ``ranges::lexicographical_compare``
-* ``ranges::lower_bound``
-* ``ranges::max_element``
-* ``ranges::max``
-* ``ranges::min_element``
-* ``ranges::min``
-* ``ranges::minmax_element``
-* ``ranges::minmax``
-* ``ranges::mismatch``
-* ``ranges::none_of``
-* ``ranges::remove_if``
-* ``ranges::remove``
-* ``ranges::search_n``
-* ``ranges::search``
-* ``ranges::unique``
-* ``ranges::upper_bound``
-* ``remove_if``
-* ``remove``
-* ``rint``
-* ``round``
-* ``search_n``
-* ``search``
-* ``signbit``
-* ``to_integer``
-* ``to_underlying``
-* ``trunc``
-* ``unique``
-* ``upper_bound``
-* ``vformat``
+   applied to entities never declared as such by the standard. You can find
+   all such applications by grepping for ``_LIBCPP_NODISCARD_EXT``.
 
 Extended integral type support
 ------------------------------
@@ -544,6 +404,30 @@ Extensions to the C++23 modules ``std`` and ``std.compat``
 
 Like other major implementations, libc++ provides C++23 modules ``std`` and
 ``std.compat`` in C++20 as an extension"
+
+Constant-initialized std::string
+--------------------------------
+
+As an implementation-specific optimization, ``std::basic_string`` (``std::string``,
+``std::wstring``, etc.) may either store the string data directly in the object, or else store a
+pointer to heap-allocated memory, depending on the length of the string.
+
+As of C++20, the constructors are now declared ``constexpr``, which permits strings to be used
+during constant-evaluation time. In libc++, as in other common implementations, it is also possible
+to constant-initialize a string object (e.g. via declaring a variable with ``constinit`` or
+``constexpr``), but, only if the string is short enough to not require a heap allocation. Reliance
+upon this should be discouraged in portable code, as the allowed length differs based on the
+standard-library implementation and also based on whether the platform uses 32-bit or 64-bit
+pointers.
+
+.. code-block:: cpp
+
+  // Non-portable: 11-char string works on 64-bit libc++, but not on 32-bit.
+  constinit std::string x = "hello world";
+
+  // Prefer to use string_view, or remove constinit/constexpr from the variable definition:
+  constinit std::string_view x = "hello world";
+  std::string_view y = "hello world";
 
 .. _turning-off-asan:
 

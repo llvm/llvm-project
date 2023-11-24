@@ -503,8 +503,7 @@ define void @test_11() {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[_TMP24:%.*]] = icmp slt i16 poison, 0
-; CHECK-NEXT:    br i1 [[_TMP24]], label [[BB5:%.*]], label [[BB5]]
+; CHECK-NEXT:    br i1 poison, label [[BB5:%.*]], label [[BB5]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br i1 false, label [[BB1]], label [[BB7:%.*]]
 ; CHECK:       bb7:
@@ -572,12 +571,11 @@ define void @test_13a(i32 %n) {
 ;
 ; CHECK-LABEL: @test_13a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 1024 to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -598,12 +596,11 @@ define void @test_13b(i32 %n) {
 ;
 ; CHECK-LABEL: @test_13b(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 1024 to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -624,12 +621,11 @@ define void @test_13c(i32 %n) {
 ;
 ; CHECK-LABEL: @test_13c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 1024 to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], [[ZEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -650,12 +646,11 @@ define void @test_13d(i32 %n) {
 ;
 ; CHECK-LABEL: @test_13d(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 1024 to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -20, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 [[IV]], [[SEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp slt i64 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

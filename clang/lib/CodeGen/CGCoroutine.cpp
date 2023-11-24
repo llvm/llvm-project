@@ -245,6 +245,15 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
                                          FPOptionsOverride(), Loc, Loc);
     TryStmt = CXXTryStmt::Create(CGF.getContext(), Loc, TryBody, Catch);
     CGF.EnterCXXTryStmt(*TryStmt);
+    CGF.EmitStmt(TryBody);
+    // We don't use EmitCXXTryStmt here. We need to store to ResumeEHVar that
+    // doesn't exist in the body.
+    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
+    CGF.ExitCXXTryStmt(*TryStmt);
+    LValueOrRValue Res;
+    // We are not supposed to obtain the value from init suspend await_resume().
+    Res.RV = RValue::getIgnored();
+    return Res;
   }
 
   LValueOrRValue Res;
@@ -252,11 +261,6 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     Res.LV = CGF.EmitLValue(S.getResumeExpr());
   else
     Res.RV = CGF.EmitAnyExpr(S.getResumeExpr(), aggSlot, ignoreResult);
-
-  if (TryStmt) {
-    Builder.CreateFlagStore(false, Coro.ResumeEHVar);
-    CGF.ExitCXXTryStmt(*TryStmt);
-  }
 
   return Res;
 }
@@ -777,6 +781,10 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();
+
+  if (CXXRecordDecl *RD = FnRetTy->getAsCXXRecordDecl();
+      RD && RD->hasAttr<CoroOnlyDestroyWhenCompleteAttr>())
+    CurFn->setCoroDestroyOnlyWhenComplete();
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.

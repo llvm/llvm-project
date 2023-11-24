@@ -15,7 +15,6 @@
 #include <__functional/unary_function.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/operation_traits.h>
-#include <__type_traits/predicate_traits.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -41,13 +40,13 @@ struct _LIBCPP_TEMPLATE_VIS plus
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
+// The non-transparent std::plus specialization is only equivalent to a raw plus
+// operator when we don't perform an implicit conversion when calling it.
 template <class _Tp>
-struct __is_trivial_plus_operation<plus<_Tp>, _Tp, _Tp> : true_type {};
+struct __desugars_to<__plus_tag, plus<_Tp>, _Tp, _Tp> : true_type {};
 
-#if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Up>
-struct __is_trivial_plus_operation<plus<>, _Tp, _Up> : true_type {};
-#endif
+struct __desugars_to<__plus_tag, plus<void>, _Tp, _Up> : true_type {};
 
 #if _LIBCPP_STD_VER >= 14
 template <>
@@ -352,13 +351,14 @@ struct _LIBCPP_TEMPLATE_VIS equal_to<void>
 };
 #endif
 
+// The non-transparent std::equal_to specialization is only equivalent to a raw equality
+// comparison when we don't perform an implicit conversion when calling it.
 template <class _Tp>
-struct __is_trivial_equality_predicate<equal_to<_Tp>, _Tp, _Tp> : true_type {};
+struct __desugars_to<__equal_tag, equal_to<_Tp>, _Tp, _Tp> : true_type {};
 
-#if _LIBCPP_STD_VER >= 14
-template <class _Tp>
-struct __is_trivial_equality_predicate<equal_to<>, _Tp, _Tp> : true_type {};
-#endif
+// In the transparent case, we do not enforce that
+template <class _Tp, class _Up>
+struct __desugars_to<__equal_tag, equal_to<void>, _Tp, _Up> : true_type {};
 
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp = void>

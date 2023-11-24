@@ -1,9 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -O0 -verify %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -pedantic-errors -DPE -O0 -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -O0 -verify -Wno-vla %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -pedantic-errors -O0 -verify=pe %s
 
-# ifndef PE
 // expected-no-diagnostics
-# endif
 
 extern "C" int printf(const char*, ...);
 
@@ -21,11 +19,7 @@ void print(int n, int a, int b, int c, int d) {
 }
 
 void test(int n) {
-  S array_t[n][n+1];
-# ifdef PE
-   // expected-error@-2 {{variable length arrays are a C99 feature}} expected-note@-2 {{parameter}} expected-note@-3 {{here}}
-   // expected-error@-3 {{variable length arrays are a C99 feature}} expected-note@-3 {{parameter}} expected-note@-4 {{here}}
-# endif
+  S array_t[n][n+1]; // pe-error 2{{variable length arrays in C++ are a Clang extension}} pe-note 2{{parameter}} pe-note@-1 2{{here}}
   int sizeof_S = sizeof(S);
   int sizeof_array_t_0_0 = sizeof(array_t[0][0]);
   int sizeof_array_t_0 = sizeof(array_t[0]);

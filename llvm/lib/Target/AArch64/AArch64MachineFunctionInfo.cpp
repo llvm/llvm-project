@@ -122,11 +122,27 @@ bool AArch64FunctionInfo::shouldSignReturnAddress(bool SpillsLR) const {
   return SpillsLR;
 }
 
+static bool isLRSpilled(const MachineFunction &MF) {
+  return llvm::any_of(
+      MF.getFrameInfo().getCalleeSavedInfo(),
+      [](const auto &Info) { return Info.getReg() == AArch64::LR; });
+}
+
 bool AArch64FunctionInfo::shouldSignReturnAddress(
     const MachineFunction &MF) const {
-  return shouldSignReturnAddress(llvm::any_of(
-      MF.getFrameInfo().getCalleeSavedInfo(),
-      [](const auto &Info) { return Info.getReg() == AArch64::LR; }));
+  return shouldSignReturnAddress(isLRSpilled(MF));
+}
+
+bool AArch64FunctionInfo::needsShadowCallStackPrologueEpilogue(
+    MachineFunction &MF) const {
+  if (!(isLRSpilled(MF) &&
+        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack)))
+    return false;
+
+  if (!MF.getSubtarget<AArch64Subtarget>().isXRegisterReserved(18))
+    report_fatal_error("Must reserve x18 to use shadow call stack");
+
+  return true;
 }
 
 bool AArch64FunctionInfo::needsDwarfUnwindInfo(

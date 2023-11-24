@@ -1994,8 +1994,16 @@ public:
     return CreateCast(Instruction::Trunc, V, DestTy, Name);
   }
 
-  Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "") {
-    return CreateCast(Instruction::ZExt, V, DestTy, Name);
+  Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "",
+                    bool IsNonNeg = false) {
+    if (V->getType() == DestTy)
+      return V;
+    if (Value *Folded = Folder.FoldCast(Instruction::ZExt, V, DestTy))
+      return Folded;
+    Instruction *I = Insert(new ZExtInst(V, DestTy), Name);
+    if (IsNonNeg)
+      I->setNonNeg();
+    return I;
   }
 
   Value *CreateSExt(Value *V, Type *DestTy, const Twine &Name = "") {
@@ -2138,6 +2146,9 @@ public:
     return Insert(CastInst::CreatePointerCast(V, DestTy), Name);
   }
 
+  // With opaque pointers enabled, this can be substituted with
+  // CreateAddrSpaceCast.
+  // TODO: Replace uses of this method and remove the method itself.
   Value *CreatePointerBitCastOrAddrSpaceCast(Value *V, Type *DestTy,
                                              const Twine &Name = "") {
     if (V->getType() == DestTy)

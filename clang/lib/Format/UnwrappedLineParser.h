@@ -22,7 +22,6 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Regex.h"
 #include <list>
 #include <stack>
@@ -151,8 +150,7 @@ private:
                               bool *HasDoWhile = nullptr,
                               bool *HasLabel = nullptr);
   bool tryToParseBracedList();
-  bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
-                       tok::TokenKind ClosingBraceKind = tok::r_brace);
+  bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
@@ -243,6 +241,7 @@ private:
   void flushComments(bool NewlineBeforeNext);
   void pushToken(FormatToken *Tok);
   void calculateBraceTypes(bool ExpectClassBody = false);
+  void setPreviousRBraceType(TokenType Type);
 
   // Marks a conditional compilation edge (for example, an '#if', '#ifdef',
   // '#else' or merge conflict marker). If 'Unreachable' is true, assumes

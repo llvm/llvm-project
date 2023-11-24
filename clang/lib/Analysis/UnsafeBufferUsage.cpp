@@ -8,7 +8,9 @@
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -21,6 +23,52 @@
 using namespace llvm;
 using namespace clang;
 using namespace ast_matchers;
+
+#ifndef NDEBUG
+namespace {
+class StmtDebugPrinter
+    : public ConstStmtVisitor<StmtDebugPrinter, std::string> {
+public:
+  std::string VisitStmt(const Stmt *S) { return S->getStmtClassName(); }
+
+  std::string VisitBinaryOperator(const BinaryOperator *BO) {
+    return "BinaryOperator(" + BO->getOpcodeStr().str() + ")";
+  }
+
+  std::string VisitUnaryOperator(const UnaryOperator *UO) {
+    return "UnaryOperator(" + UO->getOpcodeStr(UO->getOpcode()).str() + ")";
+  }
+
+  std::string VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
+    return "ImplicitCastExpr(" + std::string(ICE->getCastKindName()) + ")";
+  }
+};
+
+// Returns a string of ancestor `Stmt`s of the given `DRE` in such a form:
+// "DRE ==> parent-of-DRE ==> grandparent-of-DRE ==> ...".
+static std::string getDREAncestorString(const DeclRefExpr *DRE,
+                                        ASTContext &Ctx) {
+  std::stringstream SS;
+  const Stmt *St = DRE;
+  StmtDebugPrinter StmtPriner;
+
+  do {
+    SS << StmtPriner.Visit(St);
+
+    DynTypedNodeList StParents = Ctx.getParents(*St);
+
+    if (StParents.size() > 1)
+      return "unavailable due to multiple parents";
+    if (StParents.size() == 0)
+      break;
+    St = StParents.begin()->get<Stmt>();
+    if (St)
+      SS << " ==> ";
+  } while (St);
+  return SS.str();
+}
+} // namespace
+#endif /* NDEBUG */
 
 namespace clang::ast_matchers {
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
@@ -2589,11 +2637,15 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 #ifndef NDEBUG
         auto AllUnclaimed = Tracker.getUnclaimedUses(it->first);
         for (auto UnclaimedDRE : AllUnclaimed) {
-          Handler.addDebugNoteForVar(
-              it->first, UnclaimedDRE->getBeginLoc(),
-                                     ("failed to produce fixit for '" + it->first->getNameAsString() +
-                                      "' : has an unclaimed use"));
-          }
+        std::string UnclaimedUseTrace =
+            getDREAncestorString(UnclaimedDRE, D->getASTContext());
+
+        Handler.addDebugNoteForVar(
+            it->first, UnclaimedDRE->getBeginLoc(),
+            ("failed to produce fixit for '" + it->first->getNameAsString() +
+             "' : has an unclaimed use\nThe unclaimed DRE trace: " +
+             UnclaimedUseTrace));
+        }
 #endif
         it = FixablesForAllVars.byVar.erase(it);
       } else if (it->first->isInitCapture()) {

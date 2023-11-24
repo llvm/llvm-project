@@ -3022,6 +3022,19 @@ public:
   void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
                        QualType IndexType, bool Accessed);
 
+  // Find a struct's flexible array member. It may be embedded inside multiple
+  // sub-structs, but must still be the last field.
+  const ValueDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
+                                                const RecordDecl *RD);
+
+  /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
+  /// \p nullptr if either the attribute or the field doesn't exist.
+  const ValueDecl *FindCountedByField(const Expr *Base);
+
+  /// Build an expression accessing the "counted_by" field.
+  const Expr *BuildCountedByFieldExpr(const Expr *Base,
+                                      const ValueDecl *CountedByVD);
+
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
   ComplexPairTy EmitComplexPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -4274,7 +4287,6 @@ public:
   llvm::Value *EmitSVEMaskedStore(const CallExpr *,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned BuiltinID);
-  llvm::Value *EmitTileslice(llvm::Value *Offset, llvm::Value *Base);
   llvm::Value *EmitSVEPrefetchLoad(const SVETypeFlags &TypeFlags,
                                    SmallVectorImpl<llvm::Value *> &Ops,
                                    unsigned BuiltinID);
@@ -4287,6 +4299,12 @@ public:
   llvm::Value *EmitSVEStructStore(const SVETypeFlags &TypeFlags,
                                   SmallVectorImpl<llvm::Value *> &Ops,
                                   unsigned IntID);
+  /// FormSVEBuiltinResult - Returns the struct of scalable vectors as a wider
+  /// vector. It extracts the scalable vector from the struct and inserts into
+  /// the wider vector. This avoids the error when allocating space in llvm
+  /// for struct of scalable vectors if a function returns struct.
+  llvm::Value *FormSVEBuiltinResult(llvm::Value *Call);
+
   llvm::Value *EmitAArch64SVEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitSMELd1St1(const SVETypeFlags &TypeFlags,
@@ -4301,6 +4319,11 @@ public:
   llvm::Value *EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                              llvm::SmallVectorImpl<llvm::Value *> &Ops,
                              unsigned IntID);
+
+  void GetAArch64SVEProcessedOperands(unsigned BuiltinID, const CallExpr *E,
+                                      SmallVectorImpl<llvm::Value *> &Ops,
+                                      SVETypeFlags TypeFlags);
+
   llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
@@ -4311,6 +4334,8 @@ public:
   llvm::Value *EmitX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitPPCBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitAMDGPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+  llvm::Value *EmitScalarOrConstFoldImmArg(unsigned ICEArguments, unsigned Idx,
+                                           const CallExpr *E);
   llvm::Value *EmitSystemZBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
@@ -4510,6 +4535,11 @@ public:
   /// the given function.
   void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::FunctionCallee fn,
                                     llvm::Constant *addr);
+
+  /// Registers the dtor using 'llvm.global_dtors' for platforms that do not
+  /// support an 'atexit()' function.
+  void registerGlobalDtorWithLLVM(const VarDecl &D, llvm::FunctionCallee fn,
+                                  llvm::Constant *addr);
 
   /// Call atexit() with function dtorStub.
   void registerGlobalDtorWithAtExit(llvm::Constant *dtorStub);
@@ -4799,6 +4829,9 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
+
+  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
+                                           llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);

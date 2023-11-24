@@ -32,7 +32,7 @@ public:
     : MCDisassembler(STI, Ctx) {}
   ~SystemZDisassembler() override = default;
 
-  DecodeStatus getInstruction(MCInst &instr, uint64_t &Size,
+  DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
 };
@@ -45,6 +45,7 @@ static MCDisassembler *createSystemZDisassembler(const Target &T,
   return new SystemZDisassembler(STI, Ctx);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSystemZTarget(),
@@ -70,11 +71,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZDisassembler() {
 /// is done and if a symbol is found an MCExpr is created with that, else
 /// an MCExpr with the immediate Value is created.  This function returns true
 /// if it adds an operand to the MCInst and false otherwise.
-static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
+static bool tryAddingSymbolicOperand(int64_t Value, bool IsBranch,
                                      uint64_t Address, uint64_t Offset,
                                      uint64_t Width, MCInst &MI,
                                      const MCDisassembler *Decoder) {
-  return Decoder->tryAddingSymbolicOperand(MI, Value, Address, isBranch, Offset,
+  return Decoder->tryAddingSymbolicOperand(MI, Value, Address, IsBranch, Offset,
                                            Width, /*InstSize=*/0);
 }
 

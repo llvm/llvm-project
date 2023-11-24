@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -canonicalize --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -canonicalize --split-input-file | FileCheck %s
 
 // Check that we can tile softmax on tensors.
 // The tiling here is 2x3.
@@ -36,10 +36,12 @@ func.func @softmax(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256xf32> {
   return %1 : tensor<16x64x256xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loop:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }
 
 // -----
@@ -100,18 +102,20 @@ func.func @softmax_tile_n_fuse(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256
   return %1 : tensor<16x64x256xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
 
-  // Tile the root.
-  %tiled_op, %forall_op = transform.structured.tile_using_forall %0 num_threads [8, 16]
-       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    // Tile the root.
+    %tiled_op, %forall_op = transform.structured.tile_using_forall %0 num_threads [8, 16]
+         : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  // Fuse all producers.
-  %1 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.fuse_into_containing_op %1 into %forall_op
-    : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    // Fuse all producers.
+    %1 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.fuse_into_containing_op %1 into %forall_op
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+  }
 }
 // -----
 
@@ -142,8 +146,10 @@ func.func @softmax_memref(%arg0: memref<16x64x256xf32>, %arg1: memref<16x64x256x
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.softmax"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1, %loop:2 = transform.structured.tile_using_for %0 [2, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
 }

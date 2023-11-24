@@ -1133,6 +1133,13 @@ bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
   return TTIImpl->areInlineCompatible(Caller, Callee);
 }
 
+unsigned
+TargetTransformInfo::getInlineCallPenalty(const Function *F,
+                                          const CallBase &Call,
+                                          unsigned DefaultCallPenalty) const {
+  return TTIImpl->getInlineCallPenalty(F, Call, DefaultCallPenalty);
+}
+
 bool TargetTransformInfo::areTypesABICompatible(
     const Function *Caller, const Function *Callee,
     const ArrayRef<Type *> &Types) const {

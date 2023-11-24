@@ -37,6 +37,13 @@ static cl::opt<bool> DisableUnclusterHighRP(
     cl::desc("Disable unclustered high register pressure "
              "reduction scheduling stage."),
     cl::init(false));
+
+static cl::opt<bool> DisableClusteredLowOccupancy(
+    "amdgpu-disable-clustered-low-occupancy-reschedule", cl::Hidden,
+    cl::desc("Disable clustered low occupancy "
+             "rescheduling for ILP scheduling stage."),
+    cl::init(false));
+
 static cl::opt<unsigned> ScheduleMetricBias(
     "amdgpu-schedule-metric-bias", cl::Hidden,
     cl::desc(
@@ -706,7 +713,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation());
+  DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -726,6 +733,9 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
 }
 
 bool ClusteredLowOccStage::initGCNSchedStage() {
+  if (DisableClusteredLowOccupancy)
+    return false;
+
   if (!GCNSchedStage::initGCNSchedStage())
     return false;
 
@@ -843,7 +853,7 @@ bool GCNSchedStage::initGCNRegion() {
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule) {
     SavedMutations.clear();
     SavedMutations.swap(DAG.Mutations);
-    DAG.addMutation(createIGroupLPDAGMutation());
+    DAG.addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/false));
   }
 
   return true;
@@ -1557,7 +1567,7 @@ void GCNPostScheduleDAGMILive::schedule() {
   if (HasIGLPInstrs) {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
-    addMutation(createIGroupLPDAGMutation());
+    addMutation(createIGroupLPDAGMutation(/*IsPostRA=*/true));
   }
 
   ScheduleDAGMI::schedule();

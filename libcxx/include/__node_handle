@@ -209,7 +209,7 @@ struct __set_node_handle_specifics
     _LIBCPP_INLINE_VISIBILITY
     value_type& value() const
     {
-        return static_cast<_Derived const*>(this)->__ptr_->__value_;
+        return static_cast<_Derived const*>(this)->__ptr_->__get_value();
     }
 };
 
@@ -223,14 +223,14 @@ struct __map_node_handle_specifics
     key_type& key() const
     {
         return static_cast<_Derived const*>(this)->
-            __ptr_->__value_.__ref().first;
+            __ptr_->__get_value().__ref().first;
     }
 
     _LIBCPP_INLINE_VISIBILITY
     mapped_type& mapped() const
     {
         return static_cast<_Derived const*>(this)->
-            __ptr_->__value_.__ref().second;
+            __ptr_->__get_value().__ref().second;
     }
 };
 

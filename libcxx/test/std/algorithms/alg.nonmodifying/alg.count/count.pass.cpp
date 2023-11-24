@@ -13,35 +13,50 @@
 //   constexpr Iter::difference_type   // constexpr after C++17
 //   count(Iter first, Iter last, const T& value);
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=70000000
+
 #include <algorithm>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
-    int ib[] = {1, 2, 3, 4, 5, 6};
-    return    (std::count(std::begin(ia), std::end(ia), 2) == 3)
-           && (std::count(std::begin(ib), std::end(ib), 9) == 0)
-           ;
+struct Test {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    int ia[]          = {0, 1, 2, 2, 0, 1, 2, 3};
+    const unsigned sa = sizeof(ia) / sizeof(ia[0]);
+    assert(std::count(Iter(ia), Iter(ia + sa), 2) == 3);
+    assert(std::count(Iter(ia), Iter(ia + sa), 7) == 0);
+    assert(std::count(Iter(ia), Iter(ia), 2) == 0);
+  }
+};
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::cpp17_input_iterator_list<const int*>(), Test());
+
+  if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 20) {
+    std::vector<bool> vec(256 + 64);
+    for (ptrdiff_t i = 0; i != 256; ++i) {
+      for (size_t offset = 0; offset != 64; ++offset) {
+        std::fill(vec.begin(), vec.end(), false);
+        std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
+        assert(std::count(vec.begin() + offset, vec.begin() + offset + 256, true) == i);
+        assert(std::count(vec.begin() + offset, vec.begin() + offset + 256, false) == 256 - i);
+      }
     }
-#endif
+  }
 
-int main(int, char**)
-{
-    int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
-    const unsigned sa = sizeof(ia)/sizeof(ia[0]);
-    assert(std::count(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia + sa), 2) == 3);
-    assert(std::count(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia + sa), 7) == 0);
-    assert(std::count(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia), 2) == 0);
+  return true;
+}
 
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

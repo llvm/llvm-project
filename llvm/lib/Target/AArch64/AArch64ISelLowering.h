@@ -335,6 +335,8 @@ enum NodeType : unsigned {
   PTEST_ANY,
   PTRUE,
 
+  CTTZ_ELTS,
+
   BITREVERSE_MERGE_PASSTHRU,
   BSWAP_MERGE_PASSTHRU,
   REVH_MERGE_PASSTHRU,
@@ -373,6 +375,8 @@ enum NodeType : unsigned {
   GLD1_UXTW_SCALED_MERGE_ZERO,
   GLD1_SXTW_SCALED_MERGE_ZERO,
   GLD1_IMM_MERGE_ZERO,
+  GLD1Q_MERGE_ZERO,
+  GLD1Q_INDEX_MERGE_ZERO,
 
   // Signed gather loads
   GLD1S_MERGE_ZERO,
@@ -417,6 +421,8 @@ enum NodeType : unsigned {
   SST1_UXTW_SCALED_PRED,
   SST1_SXTW_SCALED_PRED,
   SST1_IMM_PRED,
+  SST1Q_PRED,
+  SST1Q_INDEX_PRED,
 
   // Non-temporal scatter store
   SSTNT1_PRED,
@@ -439,6 +445,10 @@ enum NodeType : unsigned {
   // Strict (exception-raising) floating point comparison
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,
+
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
 
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -927,6 +937,8 @@ public:
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
 
+  bool shouldExpandCttzElements(EVT VT) const override;
+
   /// If a change in streaming mode is required on entry to/return from a
   /// function call it emits and returns the corresponding SMSTART or SMSTOP node.
   /// \p Entry tells whether this is before/after the Call, which is necessary
@@ -1201,6 +1213,8 @@ private:
   bool getPostIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
                                   SDValue &Offset, ISD::MemIndexedMode &AM,
                                   SelectionDAG &DAG) const override;
+  bool isIndexingLegal(MachineInstr &MI, Register Base, Register Offset,
+                       bool IsPre, MachineRegisterInfo &MRI) const override;
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
@@ -1244,6 +1258,8 @@ private:
                       SDLoc DL, EVT VT) const;
 
   bool preferScalarizeSplat(SDNode *N) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace AArch64 {

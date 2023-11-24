@@ -60,7 +60,7 @@ func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{unexpected dimToLvl mapping from 2 to 1}}
+// expected-error@+1 {{failed to infer lvlToDim from dimToLvl}}
 #a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense)}>
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
@@ -119,7 +119,7 @@ func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{expected a permutation affine map for dimToLvl}}
+// expected-error@+1 {{failed to infer lvlToDim from dimToLvl}}
 #a = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d0 : compressed)}>
 func.func private @tensor_no_permutation(%arg0: tensor<16x32xf32, #a>) -> ()
 
@@ -249,5 +249,24 @@ func.func private @too_few_lvl_decl(%arg0: tensor<?x?xf64, #TooFewLvlDecl>) {
   map = {l1, l0} (d0, d1) -> (l0 = d0 : dense, l1 = d1 : compressed)
 }>
 func.func private @wrong_order_lvl_decl(%arg0: tensor<?x?xf64, #WrongOrderLvlDecl>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{expected lvlToDim to be an inverse of dimToLvl}}
+#BSR_explicit = #sparse_tensor.encoding<{
+  map =
+  {il, jl, ii, jj}
+  ( i = il * 3 + ii,
+    j = jl * 2 + jj
+  ) ->
+  ( il = i floordiv 2 : dense,
+    jl = j floordiv 3 : compressed,
+    ii = i mod 2      : dense,
+    jj = j mod 3      : dense
+  )
+}>
+func.func private @BSR_explicit(%arg0: tensor<?x?xf64, #BSR_explicit>) {
   return
 }

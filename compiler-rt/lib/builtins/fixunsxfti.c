@@ -25,8 +25,8 @@
 // eeee | 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
-COMPILER_RT_ABI tu_int __fixunsxfti(long double a) {
-  long_double_bits fb;
+COMPILER_RT_ABI tu_int __fixunsxfti(xf_float a) {
+  xf_bits fb;
   fb.f = a;
   int e = (fb.u.high.s.low & 0x00007FFF) - 16383;
   if (e < 0 || (fb.u.high.s.low & 0x00008000))

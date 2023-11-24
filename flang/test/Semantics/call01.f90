@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Confirm enforcement of constraints and restrictions in 15.6.2.1
 
 non_recursive function f01(n) result(res)
@@ -21,7 +21,7 @@ non_recursive function f02(n) result(res)
     res = nested()
   end if
  contains
-  integer function nested
+  integer function nested()
     !ERROR: NON_RECURSIVE procedure 'f02' cannot call itself
     nested = n * f02(n-1) ! 15.6.2.1(3)
   end function nested
@@ -111,7 +111,7 @@ function f14(n) result(res)
     res = nested()
   end if
  contains
-  character(1) function nested
+  character(1) function nested()
     !ERROR: Assumed-length CHARACTER(*) function 'f14' cannot call itself
     !ERROR: Assumed-length character function must be defined with a length to be called
     nested = f14(n-1) ! 15.6.2.1(3)

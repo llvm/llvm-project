@@ -465,10 +465,6 @@ void CodeGenFunction::generateThunk(llvm::Function *Fn,
 
   llvm::Constant *Callee = CGM.GetAddrOfFunction(GD, Ty, /*ForVTable=*/true);
 
-  // Fix up the function type for an unprototyped musttail call.
-  if (IsUnprototyped)
-    Callee = llvm::ConstantExpr::getBitCast(Callee, Fn->getType());
-
   // Make the call and return the result.
   EmitCallAndReturnForThunk(llvm::FunctionCallee(Fn->getFunctionType(), Callee),
                             &Thunk, IsUnprototyped);
@@ -537,11 +533,8 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
                                      Name.str(), &CGM.getModule());
     CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
 
-    // If needed, replace the old thunk with a bitcast.
     if (!OldThunkFn->use_empty()) {
-      llvm::Constant *NewPtrForOldDecl =
-          llvm::ConstantExpr::getBitCast(ThunkFn, OldThunkFn->getType());
-      OldThunkFn->replaceAllUsesWith(NewPtrForOldDecl);
+      OldThunkFn->replaceAllUsesWith(ThunkFn);
     }
 
     // Remove the old thunk.
@@ -640,8 +633,16 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
   // want the stub/proxy to be emitted for properly calculating the offset.
   // Examples where there would be no symbol emitted are available_externally
   // and private linkages.
-  auto stubLinkage = vtableHasLocalLinkage ? llvm::GlobalValue::InternalLinkage
-                                           : llvm::GlobalValue::ExternalLinkage;
+  //
+  // `internal` linkage results in STB_LOCAL Elf binding while still manifesting a
+  // local symbol.
+  //
+  // `linkonce_odr` linkage results in a STB_DEFAULT Elf binding but also allows for
+  // the rtti_proxy to be transparently replaced with a GOTPCREL reloc by a
+  // target that supports this replacement.
+  auto stubLinkage = vtableHasLocalLinkage
+                         ? llvm::GlobalValue::InternalLinkage
+                         : llvm::GlobalValue::LinkOnceODRLinkage;
 
   llvm::Constant *target;
   if (auto *func = dyn_cast<llvm::Function>(globalVal)) {
@@ -1304,7 +1305,10 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
 void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                            llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  if (!getCodeGenOpts().LTOUnit)
+  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // In IR instrumentation, the type metadata is used to find out vtable
+  // definitions (for type profiling) among all global variables.
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());

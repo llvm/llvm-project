@@ -17,7 +17,6 @@
 
 #include "LlvmState.h"
 #include "RegisterValue.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCInst.h"

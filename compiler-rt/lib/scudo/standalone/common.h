@@ -175,10 +175,6 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       MapPlatformData *Data = nullptr);
 
-// Internal map & unmap fatal error. This must not call map(). SizeIfOOM shall
-// hold the requested size on an out-of-memory error, 0 otherwise.
-void NORETURN dieOnMapUnmapError(uptr SizeIfOOM = 0);
-
 // Logging related functions.
 
 void setAbortMessage(const char *Message);

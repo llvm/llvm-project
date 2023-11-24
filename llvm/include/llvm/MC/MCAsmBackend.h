@@ -21,6 +21,7 @@ class MCAlignFragment;
 class MCDwarfCallFrameFragment;
 class MCDwarfLineAddrFragment;
 class MCFragment;
+class MCLEBFragment;
 class MCRelaxableFragment;
 class MCSymbol;
 class MCAsmLayout;
@@ -41,15 +42,14 @@ class raw_ostream;
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
 protected: // Can only create subclasses.
-  MCAsmBackend(support::endianness Endian,
-               unsigned RelaxFixupKind = MaxFixupKind);
+  MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind = MaxFixupKind);
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
   MCAsmBackend &operator=(const MCAsmBackend &) = delete;
   virtual ~MCAsmBackend();
 
-  const support::endianness Endian;
+  const llvm::endianness Endian;
 
   /// Fixup kind used for linker relaxation. Currently only used by RISC-V.
   const unsigned RelaxFixupKind;
@@ -191,6 +191,13 @@ public:
 
   virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
                              bool &WasRelaxed) const {
+    return false;
+  }
+
+  // Defined by linker relaxation targets to possibly emit LEB128 relocations
+  // and set Value at the relocated location.
+  virtual bool relaxLEB128(MCLEBFragment &LF, MCAsmLayout &Layout,
+                           int64_t &Value) const {
     return false;
   }
 

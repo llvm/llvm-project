@@ -743,12 +743,12 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    v_cvt_f32_u32_e32 v1, s5
 ; GFX1032-NEXT:    s_sub_u32 s9, 0, s4
 ; GFX1032-NEXT:    s_subb_u32 s10, 0, s5
-; GFX1032-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GFX1032-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GFX1032-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1032-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1032-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX1032-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1032-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GFX1032-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1032-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1032-NEXT:    v_readfirstlane_b32 s0, v1
@@ -905,12 +905,12 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    v_cvt_f32_u32_e32 v1, s5
 ; GFX1064-NEXT:    s_sub_u32 s9, 0, s4
 ; GFX1064-NEXT:    s_subb_u32 s10, 0, s5
-; GFX1064-NEXT:    v_mac_f32_e32 v0, 0x4f800000, v1
+; GFX1064-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; GFX1064-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX1064-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
 ; GFX1064-NEXT:    v_mul_f32_e32 v1, 0x2f800000, v0
 ; GFX1064-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX1064-NEXT:    v_mac_f32_e32 v0, 0xcf800000, v1
+; GFX1064-NEXT:    v_madmk_f32 v0, v1, 0xcf800000, v0
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX1064-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX1064-NEXT:    v_readfirstlane_b32 s8, v1
@@ -1885,8 +1885,9 @@ define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0,
 ; GFX1032-LABEL: test_wwm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1032-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1032-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1032-NEXT:    ; return to shader part epilog
@@ -1894,8 +1895,9 @@ define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0,
 ; GFX1064-LABEL: test_wwm1:
 ; GFX1064:       ; %bb.0: ; %main_body
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1064-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1064-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1064-NEXT:    ; return to shader part epilog
@@ -1970,8 +1972,9 @@ define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float
 ; GFX1032-LABEL: test_strict_wwm1:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    s_or_saveexec_b32 s0, -1
-; GFX1032-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1032-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1032-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1032-NEXT:    ; return to shader part epilog
@@ -1979,8 +1982,9 @@ define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float
 ; GFX1064-LABEL: test_strict_wwm1:
 ; GFX1064:       ; %bb.0: ; %main_body
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1064-NEXT:    v_mov_b32_e32 v2, v0
-; GFX1064-NEXT:    v_add_f32_e32 v2, v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v2, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v3, v0
+; GFX1064-NEXT:    v_add_f32_e32 v2, v3, v2
 ; GFX1064-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX1064-NEXT:    ; return to shader part epilog

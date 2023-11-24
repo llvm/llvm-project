@@ -306,8 +306,8 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $72, %esp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $80, %esp
 ; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 20(%ebp), %edx

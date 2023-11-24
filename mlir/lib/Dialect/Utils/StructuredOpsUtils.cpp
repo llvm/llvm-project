@@ -21,9 +21,9 @@ bool mlir::isRowMajorMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
@@ -47,9 +47,9 @@ bool mlir::isColumnMajorMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
@@ -73,9 +73,9 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
-  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
-  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 3 || map1.getNumResults() != 3 ||
       map2.getNumResults() != 3 || map0.getNumInputs() != 4 ||
@@ -92,6 +92,104 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   auto mapA = AffineMapAttr::get(AffineMap::get(4, 0, {b, m, k}, context));
   auto mapB = AffineMapAttr::get(AffineMap::get(4, 0, {b, k, n}, context));
   auto mapC = AffineMapAttr::get(AffineMap::get(4, 0, {b, m, n}, context));
+  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
+  return indexingMaps == maps;
+}
+
+bool mlir::isVecmat(ArrayAttr indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return false;
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+
+  if (map0.getNumResults() != 1 || map1.getNumResults() != 2 ||
+      map2.getNumResults() != 1 || map0.getNumInputs() != 2 ||
+      map1.getNumInputs() != 2 || map2.getNumInputs() != 2) {
+    return false;
+  }
+
+  // Extract dimensions for K * KxN -> N
+  AffineExpr k = map0.getResult(0);
+  AffineExpr n = map2.getResult(0);
+  auto *context = indexingMaps.getContext();
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k, n}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, context));
+  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
+  return indexingMaps == maps;
+}
+
+bool mlir::isBatchVecmat(ArrayAttr indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return false;
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+
+  if (map0.getNumResults() != 2 || map1.getNumResults() != 3 ||
+      map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
+      map1.getNumInputs() != 3 || map2.getNumInputs() != 3) {
+    return false;
+  }
+
+  // Extract dimensions for B*K * B*K*N -> B*N
+  AffineExpr b = map0.getResult(0);
+  AffineExpr k = map0.getResult(1);
+  AffineExpr n = map2.getResult(1);
+  auto *context = indexingMaps.getContext();
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {b, k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {b, k, n}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {b, n}, context));
+  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
+  return indexingMaps == maps;
+}
+
+bool mlir::isMatvec(ArrayAttr indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return false;
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+
+  if (map0.getNumResults() != 2 || map1.getNumResults() != 1 ||
+      map2.getNumResults() != 1 || map0.getNumInputs() != 2 ||
+      map1.getNumInputs() != 2 || map2.getNumInputs() != 2) {
+    return false;
+  }
+
+  // Extract dimensions for N*K * K -> N
+  AffineExpr k = map1.getResult(0);
+  AffineExpr n = map2.getResult(0);
+  auto *context = indexingMaps.getContext();
+  auto mapA = AffineMapAttr::get(AffineMap::get(2, 0, {n, k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(2, 0, {k}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(2, 0, {n}, context));
+  auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
+  return indexingMaps == maps;
+}
+
+bool mlir::isBatchMatvec(ArrayAttr indexingMaps) {
+  if (indexingMaps.size() != 3)
+    return false;
+  AffineMap map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  AffineMap map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  AffineMap map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
+
+  if (map0.getNumResults() != 3 || map1.getNumResults() != 2 ||
+      map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
+      map1.getNumInputs() != 3 || map2.getNumInputs() != 3) {
+    return false;
+  }
+
+  // Extract dimensions for B*N*K * B*K -> B*N
+  AffineExpr b = map0.getResult(0);
+  AffineExpr k = map1.getResult(1);
+  AffineExpr n = map2.getResult(1);
+  auto *context = indexingMaps.getContext();
+  auto mapA = AffineMapAttr::get(AffineMap::get(3, 0, {b, n, k}, context));
+  auto mapB = AffineMapAttr::get(AffineMap::get(3, 0, {b, k}, context));
+  auto mapC = AffineMapAttr::get(AffineMap::get(3, 0, {b, n}, context));
   auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
   return indexingMaps == maps;
 }

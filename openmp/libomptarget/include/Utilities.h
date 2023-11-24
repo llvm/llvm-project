@@ -14,7 +14,6 @@
 #ifndef OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
 #define OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -252,6 +251,11 @@ template <typename Ty> Ty *advanceVoidPtr(Ty *Ptr, int64_t Offset) {
 template <typename Ty> Ty *alignPtr(Ty *Ptr, int64_t Alignment) {
   size_t Space = std::numeric_limits<size_t>::max();
   return std::align(Alignment, sizeof(char), Ptr, Space);
+}
+
+/// Round up \p V to a \p Boundary.
+template <typename Ty> inline Ty roundUp(Ty V, Ty Boundary) {
+  return (V + Boundary - 1) / Boundary * Boundary;
 }
 
 } // namespace target

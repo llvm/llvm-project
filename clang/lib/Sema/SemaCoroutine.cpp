@@ -118,7 +118,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
     NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
                                       CoroTrait.getTypePtr());
-    return S.Context.getElaboratedType(ETK_None, NNS, PromiseType);
+    return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
+                                       PromiseType);
   };
 
   if (!PromiseType->getAsCXXRecordDecl()) {
@@ -1198,6 +1199,11 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   if (FD->hasAttr<AlwaysInlineAttr>())
     Diag(FD->getLocation(), diag::warn_always_inline_coroutine);
 
+  // The design of coroutines means we cannot allow use of VLAs within one, so
+  // diagnose if we've seen a VLA in the body of this function.
+  if (Fn->FirstVLALoc.isValid())
+    Diag(Fn->FirstVLALoc, diag::err_vla_in_coroutine_unsupported);
+
   // [stmt.return.coroutine]p1:
   //   A coroutine shall not enclose a return statement ([stmt.return]).
   if (Fn->FirstReturnLoc.isValid()) {
@@ -1959,9 +1965,15 @@ bool Sema::buildCoroutineParameterMoves(SourceLocation Loc) {
     if (PD->getType()->isDependentType())
       continue;
 
+    // Preserve the referenced state for unused parameter diagnostics.
+    bool DeclReferenced = PD->isReferenced();
+
     ExprResult PDRefExpr =
         BuildDeclRefExpr(PD, PD->getType().getNonReferenceType(),
                          ExprValueKind::VK_LValue, Loc); // FIXME: scope?
+
+    PD->setReferenced(DeclReferenced);
+
     if (PDRefExpr.isInvalid())
       return false;
 

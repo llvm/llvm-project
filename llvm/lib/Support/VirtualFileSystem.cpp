@@ -1385,7 +1385,7 @@ RedirectingFileSystem::makeAbsolute(StringRef WorkingDir,
 
   std::string Result = std::string(WorkingDir);
   StringRef Dir(Result);
-  if (!Dir.endswith(sys::path::get_separator(style))) {
+  if (!Dir.ends_with(sys::path::get_separator(style))) {
     Result += sys::path::get_separator(style);
   }
   // backslashes '\' are legit path charactors under POSIX. Windows APIs

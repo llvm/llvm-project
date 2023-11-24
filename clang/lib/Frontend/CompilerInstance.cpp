@@ -747,10 +747,22 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+
+  // Set up API notes.
+  TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);
+
   // Attach the external sema source if there is any.
   if (ExternalSemaSrc) {
     TheSema->addExternalSource(ExternalSemaSrc.get());
     ExternalSemaSrc->InitializeSema(*TheSema);
+  }
+
+  // If we're building a module and are supposed to load API notes,
+  // notify the API notes manager.
+  if (auto *currentModule = getPreprocessor().getCurrentModule()) {
+    (void)TheSema->APINotes.loadCurrentModuleAPINotes(
+        currentModule, getLangOpts().APINotesModules,
+        getAPINotesOpts().ModuleSearchPaths);
   }
 }
 
@@ -2116,7 +2128,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     // Check whether this module is available.
     if (Preprocessor::checkModuleIsAvailable(getLangOpts(), getTarget(),
-                                             getDiagnostics(), Module)) {
+                                             *Module, getDiagnostics())) {
       getDiagnostics().Report(ImportLoc, diag::note_module_import_here)
         << SourceRange(Path.front().second, Path.back().second);
       LastModuleImportLoc = ImportLoc;

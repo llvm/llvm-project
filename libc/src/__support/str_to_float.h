@@ -16,7 +16,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/builtin_wrappers.h"
+#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
@@ -1220,9 +1220,9 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
         tolower(src[index + 2]) == inf_string[2]) {
       seen_digit = true;
       if (result.get_sign())
-        result = result.neg_inf();
+        result = fputil::FPBits<T>(result.neg_inf());
       else
-        result = result.inf();
+        result = fputil::FPBits<T>(result.inf());
       if (tolower(src[index + 3]) == inf_string[3] &&
           tolower(src[index + 4]) == inf_string[4] &&
           tolower(src[index + 5]) == inf_string[5] &&

@@ -127,6 +127,34 @@ TEST_F(RegexTest, Substitution) {
 
   EXPECT_EQ("aber", Regex("a[0-9]+b").sub("a\\100b", "a1234ber", &Error));
   EXPECT_EQ(Error, "invalid backreference string '100'");
+
+  EXPECT_EQ("012345", Regex("a([0-9]+).*").sub("0\\g<1>5", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0a1234ber5",
+            Regex("a([0-9]+).*").sub("0\\g<0>5", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0A5", Regex("a(.)(.)(.)(.)(.)(.)(.)(.)(.)(.).*")
+                       .sub("0\\g<10>5", "a123456789Aber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<-1>5",
+            Regex("a([0-9]+).*").sub("0\\g<-1>5", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<15", Regex("a([0-9]+).*").sub("0\\g<15", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<>15", Regex("a([0-9]+).*").sub("0\\g<>15", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("0g<3e>1",
+            Regex("a([0-9]+).*").sub("0\\g<3e>1", "a1234ber", &Error));
+  EXPECT_EQ("", Error);
+
+  EXPECT_EQ("aber", Regex("a([0-9]+)b").sub("a\\g<100>b", "a1234ber", &Error));
+  EXPECT_EQ(Error, "invalid backreference string 'g<100>'");
 }
 
 TEST_F(RegexTest, IsLiteralERE) {

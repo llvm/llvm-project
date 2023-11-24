@@ -161,7 +161,7 @@ static StringRef NormalizeNameForSpellingComparison(StringRef Name) {
 // Normalize the spelling of a GNU attribute (i.e. "x" in "__attribute__((x))"),
 // removing "__" if it appears at the beginning and end of the attribute's name.
 static StringRef NormalizeGNUAttrSpelling(StringRef AttrSpelling) {
-  if (AttrSpelling.startswith("__") && AttrSpelling.endswith("__")) {
+  if (AttrSpelling.starts_with("__") && AttrSpelling.ends_with("__")) {
     AttrSpelling = AttrSpelling.substr(2, AttrSpelling.size() - 4);
   }
 
@@ -356,7 +356,7 @@ namespace {
     }
 
     void writeDump(raw_ostream &OS) const override {
-      if (StringRef(type).endswith("Decl *")) {
+      if (StringRef(type).ends_with("Decl *")) {
         OS << "    OS << \" \";\n";
         OS << "    dumpBareDeclRef(SA->get" << getUpperName() << "());\n";
       } else if (type == "IdentifierInfo *") {
@@ -898,15 +898,25 @@ namespace {
   }
 
   class EnumArgument : public Argument {
-    std::string type;
+    std::string fullType;
+    StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
+    bool isExternal;
 
   public:
     EnumArgument(const Record &Arg, StringRef Attr)
-        : Argument(Arg, Attr), type(std::string(Arg.getValueAsString("Type"))),
-          values(Arg.getValueAsListOfStrings("Values")),
+        : Argument(Arg, Attr), values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
-          uniques(uniqueEnumsInOrder(enums)) {
+          uniques(uniqueEnumsInOrder(enums)),
+          isExternal(Arg.getValueAsBit("IsExternalType")) {
+      StringRef Type = Arg.getValueAsString("Type");
+      shortType = isExternal ? Type.rsplit("::").second : Type;
+      // If shortType didn't contain :: at all rsplit will give us an empty
+      // string.
+      if (shortType.empty())
+        shortType = Type;
+      fullType = isExternal ? Type : (getAttrName() + "Attr::" + Type).str();
+
       // FIXME: Emit a proper error
       assert(!uniques.empty());
     }
@@ -914,7 +924,7 @@ namespace {
     bool isEnumArg() const override { return true; }
 
     void writeAccessors(raw_ostream &OS) const override {
-      OS << "  " << type << " get" << getUpperName() << "() const {\n";
+      OS << "  " << fullType << " get" << getUpperName() << "() const {\n";
       OS << "    return " << getLowerName() << ";\n";
       OS << "  }";
     }
@@ -930,30 +940,32 @@ namespace {
       OS << getLowerName() << "(" << getUpperName() << ")";
     }
     void writeCtorDefaultInitializers(raw_ostream &OS) const override {
-      OS << getLowerName() << "(" << type << "(0))";
+      OS << getLowerName() << "(" << fullType << "(0))";
     }
     void writeCtorParameters(raw_ostream &OS) const override {
-      OS << type << " " << getUpperName();
+      OS << fullType << " " << getUpperName();
     }
     void writeDeclarations(raw_ostream &OS) const override {
-      auto i = uniques.cbegin(), e = uniques.cend();
-      // The last one needs to not have a comma.
-      --e;
+      if (!isExternal) {
+        auto i = uniques.cbegin(), e = uniques.cend();
+        // The last one needs to not have a comma.
+        --e;
 
-      OS << "public:\n";
-      OS << "  enum " << type << " {\n";
-      for (; i != e; ++i)
-        OS << "    " << *i << ",\n";
-      OS << "    " << *e << "\n";
-      OS << "  };\n";
+        OS << "public:\n";
+        OS << "  enum " << shortType << " {\n";
+        for (; i != e; ++i)
+          OS << "    " << *i << ",\n";
+        OS << "    " << *e << "\n";
+        OS << "  };\n";
+      }
+
       OS << "private:\n";
-      OS << "  " << type << " " << getLowerName() << ";";
+      OS << "  " << fullType << " " << getLowerName() << ";";
     }
 
     void writePCHReadDecls(raw_ostream &OS) const override {
-      OS << "    " << getAttrName() << "Attr::" << type << " " << getLowerName()
-         << "(static_cast<" << getAttrName() << "Attr::" << type
-         << ">(Record.readInt()));\n";
+      OS << "    " << fullType << " " << getLowerName() << "(static_cast<"
+         << fullType << ">(Record.readInt()));\n";
     }
 
     void writePCHReadArgs(raw_ostream &OS) const override {
@@ -961,46 +973,50 @@ namespace {
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
-      OS << "Record.push_back(SA->get" << getUpperName() << "());\n";
+      OS << "Record.push_back(static_cast<uint64_t>(SA->get" << getUpperName()
+         << "()));\n";
     }
 
     void writeValue(raw_ostream &OS) const override {
       // FIXME: this isn't 100% correct -- some enum arguments require printing
       // as a string literal, while others require printing as an identifier.
       // Tablegen currently does not distinguish between the two forms.
-      OS << "\\\"\" << " << getAttrName() << "Attr::Convert" << type << "ToStr(get"
-         << getUpperName() << "()) << \"\\\"";
+      OS << "\\\"\" << " << getAttrName() << "Attr::Convert" << shortType
+         << "ToStr(get" << getUpperName() << "()) << \"\\\"";
     }
 
     void writeDump(raw_ostream &OS) const override {
       OS << "    switch(SA->get" << getUpperName() << "()) {\n";
       for (const auto &I : uniques) {
-        OS << "    case " << getAttrName() << "Attr::" << I << ":\n";
+        OS << "    case " << fullType << "::" << I << ":\n";
         OS << "      OS << \" " << I << "\";\n";
         OS << "      break;\n";
+      }
+      if (isExternal) {
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "    }\n";
     }
 
     void writeConversion(raw_ostream &OS, bool Header) const {
       if (Header) {
-        OS << "  static bool ConvertStrTo" << type << "(StringRef Val, " << type
-           << " &Out);\n";
-        OS << "  static const char *Convert" << type << "ToStr(" << type
-           << " Val);\n";
+        OS << "  static bool ConvertStrTo" << shortType << "(StringRef Val, "
+           << fullType << " &Out);\n";
+        OS << "  static const char *Convert" << shortType << "ToStr("
+           << fullType << " Val);\n";
         return;
       }
 
-      OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << type
-         << "(StringRef Val, " << type << " &Out) {\n";
-      OS << "  std::optional<" << type
-         << "> R = llvm::StringSwitch<std::optional<";
-      OS << type << ">>(Val)\n";
+      OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << shortType
+         << "(StringRef Val, " << fullType << " &Out) {\n";
+      OS << "  std::optional<" << fullType << "> "
+         << "R = llvm::StringSwitch<std::optional<" << fullType << ">>(Val)\n";
       for (size_t I = 0; I < enums.size(); ++I) {
         OS << "    .Case(\"" << values[I] << "\", ";
-        OS << getAttrName() << "Attr::" << enums[I] << ")\n";
+        OS << fullType << "::" << enums[I] << ")\n";
       }
-      OS << "    .Default(std::optional<" << type << ">());\n";
+      OS << "    .Default(std::optional<" << fullType << ">());\n";
       OS << "  if (R) {\n";
       OS << "    Out = *R;\n      return true;\n    }\n";
       OS << "  return false;\n";
@@ -1010,14 +1026,17 @@ namespace {
       // trivial because some enumeration values have multiple named
       // enumerators, such as type_visibility(internal) and
       // type_visibility(hidden) both mapping to TypeVisibilityAttr::Hidden.
-      OS << "const char *" << getAttrName() << "Attr::Convert" << type
-         << "ToStr(" << type << " Val) {\n"
+      OS << "const char *" << getAttrName() << "Attr::Convert" << shortType
+         << "ToStr(" << fullType << " Val) {\n"
          << "  switch(Val) {\n";
       SmallDenseSet<StringRef, 8> Uniques;
       for (size_t I = 0; I < enums.size(); ++I) {
         if (Uniques.insert(enums[I]).second)
-          OS << "  case " << getAttrName() << "Attr::" << enums[I]
-             << ": return \"" << values[I] << "\";\n";
+          OS << "  case " << fullType << "::" << enums[I] << ": return \""
+             << values[I] << "\";\n";
+      }
+      if (isExternal) {
+        OS << "  default: llvm_unreachable(\"Invalid attribute value\");\n";
       }
       OS << "  }\n"
          << "  llvm_unreachable(\"No enumerator with that value\");\n"
@@ -1026,27 +1045,36 @@ namespace {
   };
 
   class VariadicEnumArgument: public VariadicArgument {
-    std::string type, QualifiedTypeName;
+    std::string fullType;
+    StringRef shortType;
     std::vector<StringRef> values, enums, uniques;
+    bool isExternal;
 
   protected:
     void writeValueImpl(raw_ostream &OS) const override {
       // FIXME: this isn't 100% correct -- some enum arguments require printing
       // as a string literal, while others require printing as an identifier.
       // Tablegen currently does not distinguish between the two forms.
-      OS << "    OS << \"\\\"\" << " << getAttrName() << "Attr::Convert" << type
-         << "ToStr(Val)" << "<< \"\\\"\";\n";
+      OS << "    OS << \"\\\"\" << " << getAttrName() << "Attr::Convert"
+         << shortType << "ToStr(Val)"
+         << "<< \"\\\"\";\n";
     }
 
   public:
     VariadicEnumArgument(const Record &Arg, StringRef Attr)
         : VariadicArgument(Arg, Attr,
                            std::string(Arg.getValueAsString("Type"))),
-          type(std::string(Arg.getValueAsString("Type"))),
           values(Arg.getValueAsListOfStrings("Values")),
           enums(Arg.getValueAsListOfStrings("Enums")),
-          uniques(uniqueEnumsInOrder(enums)) {
-      QualifiedTypeName = getAttrName().str() + "Attr::" + type;
+          uniques(uniqueEnumsInOrder(enums)),
+          isExternal(Arg.getValueAsBit("IsExternalType")) {
+      StringRef Type = Arg.getValueAsString("Type");
+      shortType = isExternal ? Type.rsplit("::").second : Type;
+      // If shortType didn't contain :: at all rsplit will give us an empty
+      // string.
+      if (shortType.empty())
+        shortType = Type;
+      fullType = isExternal ? Type : (getAttrName() + "Attr::" + Type).str();
 
       // FIXME: Emit a proper error
       assert(!uniques.empty());
@@ -1055,16 +1083,18 @@ namespace {
     bool isVariadicEnumArg() const override { return true; }
 
     void writeDeclarations(raw_ostream &OS) const override {
-      auto i = uniques.cbegin(), e = uniques.cend();
-      // The last one needs to not have a comma.
-      --e;
+      if (!isExternal) {
+        auto i = uniques.cbegin(), e = uniques.cend();
+        // The last one needs to not have a comma.
+        --e;
 
-      OS << "public:\n";
-      OS << "  enum " << type << " {\n";
-      for (; i != e; ++i)
-        OS << "    " << *i << ",\n";
-      OS << "    " << *e << "\n";
-      OS << "  };\n";
+        OS << "public:\n";
+        OS << "  enum " << shortType << " {\n";
+        for (; i != e; ++i)
+          OS << "    " << *i << ",\n";
+        OS << "    " << *e << "\n";
+        OS << "  };\n";
+      }
       OS << "private:\n";
 
       VariadicArgument::writeDeclarations(OS);
@@ -1076,7 +1106,7 @@ namespace {
          << getLowerName() << "_end(); I != E; ++I) {\n";
       OS << "      switch(*I) {\n";
       for (const auto &UI : uniques) {
-        OS << "    case " << getAttrName() << "Attr::" << UI << ":\n";
+        OS << "    case " << fullType << "::" << UI << ":\n";
         OS << "      OS << \" " << UI << "\";\n";
         OS << "      break;\n";
       }
@@ -1086,13 +1116,13 @@ namespace {
 
     void writePCHReadDecls(raw_ostream &OS) const override {
       OS << "    unsigned " << getLowerName() << "Size = Record.readInt();\n";
-      OS << "    SmallVector<" << QualifiedTypeName << ", 4> " << getLowerName()
+      OS << "    SmallVector<" << fullType << ", 4> " << getLowerName()
          << ";\n";
       OS << "    " << getLowerName() << ".reserve(" << getLowerName()
          << "Size);\n";
       OS << "    for (unsigned i = " << getLowerName() << "Size; i; --i)\n";
-      OS << "      " << getLowerName() << ".push_back(" << "static_cast<"
-         << QualifiedTypeName << ">(Record.readInt()));\n";
+      OS << "      " << getLowerName() << ".push_back("
+         << "static_cast<" << fullType << ">(Record.readInt()));\n";
     }
 
     void writePCHWrite(raw_ostream &OS) const override {
@@ -1100,42 +1130,42 @@ namespace {
       OS << "    for (" << getAttrName() << "Attr::" << getLowerName()
          << "_iterator i = SA->" << getLowerName() << "_begin(), e = SA->"
          << getLowerName() << "_end(); i != e; ++i)\n";
-      OS << "      " << WritePCHRecord(QualifiedTypeName, "(*i)");
+      OS << "      " << WritePCHRecord(fullType, "(*i)");
     }
 
     void writeConversion(raw_ostream &OS, bool Header) const {
       if (Header) {
-        OS << "  static bool ConvertStrTo" << type << "(StringRef Val, " << type
-           << " &Out);\n";
-        OS << "  static const char *Convert" << type << "ToStr(" << type
-           << " Val);\n";
+        OS << "  static bool ConvertStrTo" << shortType << "(StringRef Val, "
+           << fullType << " &Out);\n";
+        OS << "  static const char *Convert" << shortType << "ToStr("
+           << fullType << " Val);\n";
         return;
       }
 
-      OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << type
+      OS << "bool " << getAttrName() << "Attr::ConvertStrTo" << shortType
          << "(StringRef Val, ";
-      OS << type << " &Out) {\n";
-      OS << "  std::optional<" << type
+      OS << fullType << " &Out) {\n";
+      OS << "  std::optional<" << fullType
          << "> R = llvm::StringSwitch<std::optional<";
-      OS << type << ">>(Val)\n";
+      OS << fullType << ">>(Val)\n";
       for (size_t I = 0; I < enums.size(); ++I) {
         OS << "    .Case(\"" << values[I] << "\", ";
-        OS << getAttrName() << "Attr::" << enums[I] << ")\n";
+        OS << fullType << "::" << enums[I] << ")\n";
       }
-      OS << "    .Default(std::optional<" << type << ">());\n";
+      OS << "    .Default(std::optional<" << fullType << ">());\n";
       OS << "  if (R) {\n";
       OS << "    Out = *R;\n      return true;\n    }\n";
       OS << "  return false;\n";
       OS << "}\n\n";
 
-      OS << "const char *" << getAttrName() << "Attr::Convert" << type
-         << "ToStr(" << type << " Val) {\n"
+      OS << "const char *" << getAttrName() << "Attr::Convert" << shortType
+         << "ToStr(" << fullType << " Val) {\n"
          << "  switch(Val) {\n";
       SmallDenseSet<StringRef, 8> Uniques;
       for (size_t I = 0; I < enums.size(); ++I) {
         if (Uniques.insert(enums[I]).second)
-          OS << "  case " << getAttrName() << "Attr::" << enums[I]
-             << ": return \"" << values[I] << "\";\n";
+          OS << "  case " << fullType << "::" << enums[I] << ": return \""
+             << values[I] << "\";\n";
       }
       OS << "  }\n"
          << "  llvm_unreachable(\"No enumerator with that value\");\n"
@@ -2690,7 +2720,8 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
         OS << ", ";
         emitFormInitializer(OS, Spellings[0], "0");
       } else {
-        OS << ", (\n";
+        OS << ", [&]() {\n";
+        OS << "    switch (S) {\n";
         std::set<std::string> Uniques;
         unsigned Idx = 0;
         for (auto I = Spellings.begin(), E = Spellings.end(); I != E;
@@ -2698,15 +2729,19 @@ static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
           const FlattenedSpelling &S = *I;
           const auto &Name = SemanticToSyntacticMap[Idx];
           if (Uniques.insert(Name).second) {
-            OS << "    S == " << Name << " ? AttributeCommonInfo::Form";
+            OS << "    case " << Name << ":\n";
+            OS << "      return AttributeCommonInfo::Form";
             emitFormInitializer(OS, S, Name);
-            OS << " :\n";
+            OS << ";\n";
           }
         }
-        OS << "    (llvm_unreachable(\"Unknown attribute spelling!\"), "
-           << " AttributeCommonInfo::Form";
+        OS << "    default:\n";
+        OS << "      llvm_unreachable(\"Unknown attribute spelling!\");\n"
+           << "      return AttributeCommonInfo::Form";
         emitFormInitializer(OS, Spellings[0], "0");
-        OS << "))";
+        OS << ";\n"
+           << "    }\n"
+           << "  }()";
       }
 
       OS << ");\n";
@@ -3429,9 +3464,10 @@ static bool GenerateTargetSpecificAttrChecks(const Record *R,
 }
 
 static void GenerateHasAttrSpellingStringSwitch(
-    const std::vector<Record *> &Attrs, raw_ostream &OS,
-    const std::string &Variety = "", const std::string &Scope = "") {
-  for (const auto *Attr : Attrs) {
+    const std::vector<std::pair<const Record *, FlattenedSpelling>> &Attrs,
+    raw_ostream &OS, const std::string &Variety,
+    const std::string &Scope = "") {
+  for (const auto &[Attr, Spelling] : Attrs) {
     // C++11-style attributes have specific version information associated with
     // them. If the attribute has no scope, the version information must not
     // have the default value (1), as that's incorrect. Instead, the unscoped
@@ -3450,26 +3486,22 @@ static void GenerateHasAttrSpellingStringSwitch(
     // a way that is impactful to the end user.
     int Version = 1;
 
-    std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(*Attr);
+    assert(Spelling.variety() == Variety);
     std::string Name = "";
-    for (const auto &Spelling : Spellings) {
-      if (Spelling.variety() == Variety &&
-          (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace())) {
-        Name = Spelling.name();
-        Version = static_cast<int>(
-            Spelling.getSpellingRecord().getValueAsInt("Version"));
-        // Verify that explicitly specified CXX11 and C23 spellings (i.e.
-        // not inferred from Clang/GCC spellings) have a version that's
-        // different than the default (1).
-        bool RequiresValidVersion =
-            (Variety == "CXX11" || Variety == "C23") &&
-            Spelling.getSpellingRecord().getValueAsString("Variety") == Variety;
-        if (RequiresValidVersion && Scope.empty() && Version == 1)
-          PrintError(Spelling.getSpellingRecord().getLoc(),
-                     "Standard attributes must have "
-                     "valid version information.");
-        break;
-      }
+    if (Spelling.nameSpace().empty() || Scope == Spelling.nameSpace()) {
+      Name = Spelling.name();
+      Version = static_cast<int>(
+          Spelling.getSpellingRecord().getValueAsInt("Version"));
+      // Verify that explicitly specified CXX11 and C23 spellings (i.e.
+      // not inferred from Clang/GCC spellings) have a version that's
+      // different from the default (1).
+      bool RequiresValidVersion =
+          (Variety == "CXX11" || Variety == "C23") &&
+          Spelling.getSpellingRecord().getValueAsString("Variety") == Variety;
+      if (RequiresValidVersion && Scope.empty() && Version == 1)
+        PrintError(Spelling.getSpellingRecord().getLoc(),
+                   "Standard attributes must have "
+                   "valid version information.");
     }
 
     std::string Test;
@@ -3509,10 +3541,8 @@ static void GenerateHasAttrSpellingStringSwitch(
     std::string TestStr = !Test.empty()
                               ? Test + " ? " + llvm::itostr(Version) + " : 0"
                               : llvm::itostr(Version);
-    for (const auto &S : Spellings)
-      if (Variety.empty() || (Variety == S.variety() &&
-                              (Scope.empty() || Scope == S.nameSpace())))
-        OS << "    .Case(\"" << S.name() << "\", " << TestStr << ")\n";
+    if (Scope.empty() || Scope == Spelling.nameSpace())
+      OS << "    .Case(\"" << Spelling.name() << "\", " << TestStr << ")\n";
   }
   OS << "    .Default(0);\n";
 }
@@ -3545,8 +3575,11 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // Separate all of the attributes out into four group: generic, C++11, GNU,
   // and declspecs. Then generate a big switch statement for each of them.
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> Declspec, Microsoft, GNU, Pragma, HLSLSemantic;
-  std::map<std::string, std::vector<Record *>> CXX, C23;
+  std::vector<std::pair<const Record *, FlattenedSpelling>> Declspec, Microsoft,
+      GNU, Pragma, HLSLSemantic;
+  std::map<std::string,
+           std::vector<std::pair<const Record *, FlattenedSpelling>>>
+      CXX, C23;
 
   // Walk over the list of all attributes, and split them out based on the
   // spelling variety.
@@ -3555,19 +3588,19 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto &SI : Spellings) {
       const std::string &Variety = SI.variety();
       if (Variety == "GNU")
-        GNU.push_back(R);
+        GNU.emplace_back(R, SI);
       else if (Variety == "Declspec")
-        Declspec.push_back(R);
+        Declspec.emplace_back(R, SI);
       else if (Variety == "Microsoft")
-        Microsoft.push_back(R);
+        Microsoft.emplace_back(R, SI);
       else if (Variety == "CXX11")
-        CXX[SI.nameSpace()].push_back(R);
+        CXX[SI.nameSpace()].emplace_back(R, SI);
       else if (Variety == "C23")
-        C23[SI.nameSpace()].push_back(R);
+        C23[SI.nameSpace()].emplace_back(R, SI);
       else if (Variety == "Pragma")
-        Pragma.push_back(R);
+        Pragma.emplace_back(R, SI);
       else if (Variety == "HLSLSemantic")
-        HLSLSemantic.push_back(R);
+        HLSLSemantic.emplace_back(R, SI);
     }
   }
 
@@ -3589,7 +3622,10 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(HLSLSemantic, OS, "HLSLSemantic");
   auto fn = [&OS](const char *Spelling,
-                  const std::map<std::string, std::vector<Record *>> &List) {
+                  const std::map<
+                      std::string,
+                      std::vector<std::pair<const Record *, FlattenedSpelling>>>
+                      &List) {
     OS << "case AttributeCommonInfo::Syntax::AS_" << Spelling << ": {\n";
     // C++11-style attributes are further split out based on the Scope.
     for (auto I = List.cbegin(), E = List.cend(); I != E; ++I) {
@@ -4501,7 +4537,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
         continue;
       ArgNames.push_back(Arg->getValueAsString("Name").str());
       for (const auto &Class : Arg->getSuperClasses()) {
-        if (Class.first->getName().startswith("Variadic")) {
+        if (Class.first->getName().starts_with("Variadic")) {
           ArgNames.back().append("...");
           break;
         }

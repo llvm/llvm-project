@@ -108,28 +108,23 @@ void addInstToMergeableList(
     if (IIList.front()->getType() != II->getType())
       continue;
 
-    // Check DMask.
-    Value *DMaskList = IIList.front()->getArgOperand(ImageDimIntr->DMaskIndex);
-    Value *DMask = II->getArgOperand(ImageDimIntr->DMaskIndex);
-    if (DMaskList != DMask)
-      continue;
-
-    // Check VAddr (except FragId).
-    int I = ImageDimIntr->VAddrStart;
-    for (; I < ImageDimIntr->VAddrEnd - 1; ++I) {
-      if (IIList.front()->getArgOperand(I) != II->getArgOperand(I))
-        break;
+    // Check all arguments (DMask, VAddr, RSrc etc).
+    bool AllEqual = true;
+    assert(IIList.front()->arg_size() == II->arg_size());
+    for (int I = 1, E = II->arg_size(); AllEqual && I != E; ++I) {
+      Value *ArgList = IIList.front()->getArgOperand(I);
+      Value *Arg = II->getArgOperand(I);
+      if (I == ImageDimIntr->VAddrEnd - 1) {
+        // Check FragId group.
+        auto FragIdList = cast<ConstantInt>(IIList.front()->getArgOperand(I));
+        auto FragId = cast<ConstantInt>(II->getArgOperand(I));
+        AllEqual = FragIdList->getValue().udiv(4) == FragId->getValue().udiv(4);
+      } else {
+        // Check all arguments except FragId.
+        AllEqual = ArgList == Arg;
+      }
     }
-
-    if (I != ImageDimIntr->VAddrEnd - 1)
-      continue;
-
-    // Check FragId group.
-    const uint8_t FragIdIndex = ImageDimIntr->VAddrEnd - 1;
-    Value *FragIdList = IIList.front()->getArgOperand(FragIdIndex);
-    auto IIListFragId = cast<ConstantInt>(FragIdList);
-    auto IIFragId = cast<ConstantInt>(II->getArgOperand(FragIdIndex));
-    if (IIListFragId->getValue().udiv(4) != IIFragId->getValue().udiv(4))
+    if (!AllEqual)
       continue;
 
     // Add to the list.

@@ -208,6 +208,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd03", "cortex-a53")
         .Case("0xd05", "cortex-a55")
         .Case("0xd46", "cortex-a510")
+        .Case("0xd80", "cortex-a520")
         .Case("0xd07", "cortex-a57")
         .Case("0xd08", "cortex-a72")
         .Case("0xd09", "cortex-a73")
@@ -217,10 +218,12 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd41", "cortex-a78")
         .Case("0xd47", "cortex-a710")
         .Case("0xd4d", "cortex-a715")
+        .Case("0xd81", "cortex-a720")
         .Case("0xd44", "cortex-x1")
         .Case("0xd4c", "cortex-x1c")
         .Case("0xd48", "cortex-x2")
         .Case("0xd4e", "cortex-x3")
+        .Case("0xd82", "cortex-x4")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
         .Case("0xd40", "neoverse-v1")
@@ -852,6 +855,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
       break;
 
+    // Pantherlake:
+    case 0xcc:
+      CPU = "pantherlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
@@ -930,6 +940,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0xb6:
       CPU = "grandridge";
       *Type = X86::INTEL_GRANDRIDGE;
+      break;
+
+    // Clearwaterforest:
+    case 0xdd:
+      CPU = "clearwaterforest";
+      *Type = X86::INTEL_CLEARWATERFOREST;
       break;
 
     // Xeon Phi (Knights Landing + Knights Mill):
@@ -1796,6 +1812,8 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
+  Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
+  Features["avx10.1-256"] = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
@@ -1813,6 +1831,11 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   bool HasLeaf19 =
       MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
   Features["widekl"] = HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1);
+
+  bool HasLeaf24 =
+      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  Features["avx10.1-512"] =
+      Features["avx10.1-256"] && HasLeaf24 && ((EBX >> 18) & 1);
 
   return true;
 }

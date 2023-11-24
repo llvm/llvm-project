@@ -483,7 +483,7 @@ run as part of a test suite.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test --filter <test>
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test --filter <test>
 
 
 Because lit automatically scans a directory for tests, it's also possible to
@@ -491,7 +491,7 @@ pass a subdirectory to run a specific subset of the tests.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test/Shell/Commands/CommandScriptImmediateOutput
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test/Shell/Commands/CommandScriptImmediateOutput
 
 
 For the SB API tests it is possible to forward arguments to ``dotest.py`` by
@@ -499,7 +499,7 @@ passing ``--param`` to lit and setting a value for ``dotest-args``.
 
 ::
 
-   $ ./bin/llvm-lit -sv tools/lldb/test --param dotest-args='-C gcc'
+   $ ./bin/llvm-lit -sv <llvm-project-root>/lldb/test --param dotest-args='-C gcc'
 
 
 Below is an overview of running individual test in the unit and API test suites
@@ -589,9 +589,9 @@ Running tests in QEMU System Emulation Environment
 ``````````````````````````````````````````````````
 
 QEMU can be used to test LLDB in an emulation environment in the absence of
-actual hardware. `QEMU based testing <https://lldb.llvm.org/use/qemu-testing.html>`_
-page describes how to setup an emulation environment using QEMU helper scripts
-found under llvm-project/lldb/scripts/lldb-test-qemu. These scripts currently
+actual hardware. :doc:`/use/qemu-testing` describes how to setup an
+emulation environment using QEMU helper scripts found in
+``llvm-project/lldb/scripts/lldb-test-qemu``. These scripts currently
 work with Arm or AArch64, but support for other architectures can be added easily.
 
 Debugging Test Failures

@@ -13,6 +13,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 TEST(DWARFUnitTest, NullUnitDie) {
   // Make sure we don't crash parsing a null unit DIE.

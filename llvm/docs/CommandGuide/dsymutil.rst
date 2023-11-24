@@ -32,10 +32,25 @@ OPTIONS
  architectures will be linked by default and any architectures that can't be
  properly linked will cause :program:`dsymutil` to return an error.
 
+.. option:: --build-variant-suffix <suffix=buildvariant>
+
+ Specify the build variant suffix used to build the executable file.
+ There can be multiple variants for the binary of a product, each built
+ slightly differently. The most common build variants are 'debug' and
+ 'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
+ cause dyld to load the specified variant at runtime.
+
 .. option:: --dump-debug-map
 
  Dump the *executable*'s debug-map (the list of the object files containing the
  debug information) in YAML format and exit. No DWARF link will take place.
+
+ .. option:: -D <path>
+
+ Specify a directory that contain dSYM files to search for.
+ This is used for mergeable libraries, so dsymutil knows where to look
+ for dSYM files with  debug information about symbols present in those
+ libraries.
 
 .. option:: --fat64
 

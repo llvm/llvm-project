@@ -10,6 +10,9 @@
 
 // template <class charT, class moneyT> T8 put_money(const moneyT& mon, bool intl = false);
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 
 #include <iomanip>

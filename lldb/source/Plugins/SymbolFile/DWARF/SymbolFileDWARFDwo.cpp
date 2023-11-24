@@ -21,6 +21,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 char SymbolFileDWARFDwo::ID;
 
@@ -98,14 +99,14 @@ SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
   return GetBaseSymbolFile().GetDIEToVariable();
 }
 
-SymbolFileDWARF::DIEToClangType &
-SymbolFileDWARFDwo::GetForwardDeclDieToClangType() {
-  return GetBaseSymbolFile().GetForwardDeclDieToClangType();
+SymbolFileDWARF::DIEToCompilerType &
+SymbolFileDWARFDwo::GetForwardDeclDIEToCompilerType() {
+  return GetBaseSymbolFile().GetForwardDeclDIEToCompilerType();
 }
 
-SymbolFileDWARF::ClangTypeToDIE &
-SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
-  return GetBaseSymbolFile().GetForwardDeclClangTypeToDie();
+SymbolFileDWARF::CompilerTypeToDIE &
+SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
+  return GetBaseSymbolFile().GetForwardDeclCompilerTypeToDIE();
 }
 
 void SymbolFileDWARFDwo::GetObjCMethods(
@@ -140,4 +141,11 @@ SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
   if (die_ref.file_index() == GetFileIndex())
     return DebugInfo().GetDIE(die_ref);
   return GetBaseSymbolFile().GetDIE(die_ref);
+}
+
+void SymbolFileDWARFDwo::FindGlobalVariables(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    uint32_t max_matches, VariableList &variables) {
+  GetBaseSymbolFile().FindGlobalVariables(name, parent_decl_ctx, max_matches,
+                                          variables);
 }

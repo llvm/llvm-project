@@ -123,9 +123,12 @@ static bool maySpeculateLanes(VPIntrinsic &VPI) {
   if (isa<VPReductionIntrinsic>(VPI))
     return false;
   // Fallback to whether the intrinsic is speculatable.
-  std::optional<unsigned> OpcOpt = VPI.getFunctionalOpcode();
-  unsigned FunctionalOpc = OpcOpt.value_or((unsigned)Instruction::Call);
-  return isSafeToSpeculativelyExecuteWithOpcode(FunctionalOpc, &VPI);
+  if (auto IntrID = VPI.getFunctionalIntrinsicID())
+    return Intrinsic::getAttributes(VPI.getContext(), *IntrID)
+        .hasFnAttr(Attribute::AttrKind::Speculatable);
+  if (auto Opc = VPI.getFunctionalOpcode())
+    return isSafeToSpeculativelyExecuteWithOpcode(*Opc, &VPI);
+  return false;
 }
 
 //// } Helpers
@@ -296,6 +299,15 @@ Value *CachingVPExpander::expandPredicationToIntCall(
     Function *Fn = Intrinsic::getDeclaration(
         VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
     Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
+  case Intrinsic::bswap:
+  case Intrinsic::bitreverse: {
+    Value *Op = VPI.getOperand(0);
+    Function *Fn = Intrinsic::getDeclaration(
+        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
+    Value *NewOp = Builder.CreateCall(Fn, {Op}, VPI.getName());
     replaceOperation(*NewOp, VPI);
     return NewOp;
   }
@@ -479,7 +491,7 @@ Value *CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
   Value *CastOp = nullptr;
   switch (VPI.getIntrinsicID()) {
   default:
-    llvm_unreachable("Not a VP memory intrinsic");
+    llvm_unreachable("Not a VP cast intrinsic");
   case Intrinsic::vp_sext:
     CastOp =
         Builder.CreateSExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
@@ -702,26 +714,23 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_fneg: {
     Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0), VPI.getName());
     replaceOperation(*NewNegOp, VPI);
-    return NewNegOp;  
+    return NewNegOp;
   }
   case Intrinsic::vp_abs:
-    return expandPredicationToIntCall(Builder, VPI, Intrinsic::abs);
   case Intrinsic::vp_smax:
-    return expandPredicationToIntCall(Builder, VPI, Intrinsic::smax);
   case Intrinsic::vp_smin:
-    return expandPredicationToIntCall(Builder, VPI, Intrinsic::smin);
   case Intrinsic::vp_umax:
-    return expandPredicationToIntCall(Builder, VPI, Intrinsic::umax);
   case Intrinsic::vp_umin:
-    return expandPredicationToIntCall(Builder, VPI, Intrinsic::umin);
+  case Intrinsic::vp_bswap:
+  case Intrinsic::vp_bitreverse:
+    return expandPredicationToIntCall(Builder, VPI,
+                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_fabs:
-    return expandPredicationToFPCall(Builder, VPI, Intrinsic::fabs);
   case Intrinsic::vp_sqrt:
-    return expandPredicationToFPCall(Builder, VPI, Intrinsic::sqrt);
   case Intrinsic::vp_maxnum:
-    return expandPredicationToFPCall(Builder, VPI, Intrinsic::maxnum);
   case Intrinsic::vp_minnum:
-    return expandPredicationToFPCall(Builder, VPI, Intrinsic::minnum);
+    return expandPredicationToFPCall(Builder, VPI,
+                                     VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:
   case Intrinsic::vp_store:
   case Intrinsic::vp_gather:

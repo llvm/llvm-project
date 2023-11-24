@@ -243,6 +243,22 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
   return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
 }
 
+RT_API_ATTRS void Descriptor::ApplyMold(const Descriptor &mold, int rank) {
+  raw_.elem_len = mold.raw_.elem_len;
+  raw_.rank = rank;
+  raw_.type = mold.raw_.type;
+  for (int j{0}; j < rank && j < mold.raw_.rank; ++j) {
+    GetDimension(j) = mold.GetDimension(j);
+  }
+  if (auto *addendum{Addendum()}) {
+    if (auto *moldAddendum{mold.Addendum()}) {
+      *addendum = *moldAddendum;
+    } else {
+      INTERNAL_CHECK(!addendum->derivedType());
+    }
+  }
+}
+
 RT_API_ATTRS void Descriptor::Check() const {
   // TODO
 }

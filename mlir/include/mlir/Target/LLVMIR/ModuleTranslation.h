@@ -380,9 +380,6 @@ namespace detail {
 /// to the results of preceding blocks.
 void connectPHINodes(Region &region, const ModuleTranslation &state);
 
-/// Get a topologically sorted list of blocks of the given region.
-SetVector<Block *> getTopologicallySortedBlocks(Region &region);
-
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
 /// attributes and combinations thereof. Also, an array attribute with two
@@ -397,6 +394,17 @@ llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
                                     llvm::Intrinsic::ID intrinsic,
                                     ArrayRef<llvm::Value *> args = {},
                                     ArrayRef<llvm::Type *> tys = {});
+
+/// Creates a call to a LLVM IR intrinsic defined by LLVM_IntrOpBase. This
+/// resolves the overloads, and maps mixed MLIR value and attribute arguments to
+/// LLVM values.
+llvm::CallInst *createIntrinsicCall(
+    llvm::IRBuilderBase &builder, ModuleTranslation &moduleTranslation,
+    Operation *intrOp, llvm::Intrinsic::ID intrinsic, unsigned numResults,
+    ArrayRef<unsigned> overloadedResults, ArrayRef<unsigned> overloadedOperands,
+    ArrayRef<unsigned> immArgPositions,
+    ArrayRef<StringLiteral> immArgAttrNames);
+
 } // namespace detail
 
 } // namespace LLVM

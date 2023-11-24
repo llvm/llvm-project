@@ -68,6 +68,23 @@ func.func @test_multiple_return_sites(%cond: i1, %a: i32, %ptr: memref<i32>) -> 
 
 // -----
 
+// CHECK-LABEL: test_tag: after_call
+// CHECK: operand #0
+// CHECK-NEXT: - write0
+func.func private @void_return(%ptr: memref<i32>) {
+  return
+}
+
+func.func @test_call_void_return() {
+  %ptr = memref.alloc() : memref<i32>
+  %c0 = arith.constant 0 : i32
+  memref.store %c0, %ptr[] {tag_name = "write0"} : memref<i32>
+  func.call @void_return(%ptr) : (memref<i32>) -> ()
+  memref.load %ptr[] {tag = "after_call"} : memref<i32>
+  return
+}
+
+// -----
 
 func.func private @callee(%arg0: memref<f32>) -> memref<f32> {
   %2 = arith.constant 2.0 : f32

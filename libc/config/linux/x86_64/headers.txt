@@ -4,6 +4,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dirent
     libc.include.errno
     libc.include.fcntl
+    libc.include.features
     libc.include.fenv
     libc.include.inttypes
     libc.include.math

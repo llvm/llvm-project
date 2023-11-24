@@ -20,11 +20,11 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; AUTO_VEC-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; AUTO_VEC:       for.body.preheader:
-; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
+; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[N]] to i64
 ; AUTO_VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 32
 ; AUTO_VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
 ; AUTO_VEC:       vector.ph:
-; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[ZEXT]], 4294967264
+; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[ZEXT]], 2147483616
 ; AUTO_VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[DOTCAST]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[IND_END:%.*]] = fadd fast float [[TMP0]], 1.000000e+00
@@ -103,12 +103,12 @@ define void @fp_iv_loop2(ptr noalias nocapture %A, i32 %N) {
 ; AUTO_VEC-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; AUTO_VEC-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; AUTO_VEC:       for.body.preheader:
-; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
+; AUTO_VEC-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[N]] to i64
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[ZEXT]], 7
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[N]], 8
 ; AUTO_VEC-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; AUTO_VEC:       for.body.preheader.new:
-; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[ZEXT]], 4294967288
+; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[ZEXT]], 2147483640
 ; AUTO_VEC-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY]] ]

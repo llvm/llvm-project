@@ -1641,8 +1641,16 @@ let isBranch = 1, isTerminator = 1, Size = 0 in {
 
 // System call.
 let PPC970_Unit = 7 in {
-  def SC     : SCForm<17, 1, (outs), (ins i32imm:$LEV),
+  def SC     : SCForm<17, 1, 0, (outs), (ins i32imm:$LEV),
                       "sc $LEV", IIC_BrB, [(PPCsc (i32 imm:$LEV))]>;
+}
+
+// We mark SCV as having no scheduling model since it is only meant to be used
+// as inline assembly. If we implement a builtin pattern for it we will need to
+// add it to the P9 and P10 scheduling models.
+let Predicates = [IsISA3_0], hasNoSchedulingInfo = 1 in {
+  def SCV : SCForm<17, 0, 1, (outs), (ins i32imm:$LEV),
+                   "scv $LEV", IIC_BrB, []>;
 }
 
 // Branch history rolling buffer.

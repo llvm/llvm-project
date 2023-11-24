@@ -1,3 +1,4 @@
+# REQUIRES: system-linux
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc --triple=powerpc64le-unknown-linux-gnu --filetype=obj -o \
 # RUN:   %t/elf_reloc.o --defsym LE=1 %s
@@ -8,6 +9,8 @@
 # RUN:              --abs external_addr14_func=0x0880 \
 # RUN:              --abs external_addr16_data=0x6000 \
 # RUN:              --abs external_addr32_data=0x36668840 \
+# RUN:              --abs pcrel_external_var=0x36668860 \
+# RUN:              --abs pcrel_external_tls=0x36668880 \
 # RUN:              --check %s %t/elf_reloc.o
 # RUN: llvm-mc --triple=powerpc64-unknown-linux-gnu --filetype=obj -o \
 # RUN:   %t/elf_reloc.o %s
@@ -18,6 +21,8 @@
 # RUN:              --abs external_addr14_func=0x0880 \
 # RUN:              --abs external_addr16_data=0x6000 \
 # RUN:              --abs external_addr32_data=0x36668840 \
+# RUN:              --abs pcrel_external_var=0x36668860 \
+# RUN:              --abs pcrel_external_tls=0x36668880 \
 # RUN:              --check %s %t/elf_reloc.o
 
 # jitlink-check: section_addr(elf_reloc.o, $__GOT) + 0x8000 = __TOC__
@@ -239,6 +244,35 @@ reloc_rel16:
   li 3, .TOC.-reloc_rel16@h
   blr
   .size reloc_rel16, .-reloc_rel16
+
+# Check R_PPC64_GOT_PCREL34
+# jitlink-check: (got_addr(elf_reloc.o, pcrel_external_var) - reloc_got_pcrel34)[33:0] = \
+# jitlink-check:   ((((*{4}(reloc_got_pcrel34)) & 0x3ffff) << 16) | ((*{4}(reloc_got_pcrel34 + 4)) & 0xffff))[33:0]
+  .global reloc_got_pcrel34
+  .p2align 4
+  .type reloc_got_pcrel34,@function
+reloc_got_pcrel34:
+  pld 3,pcrel_external_var@got@pcrel(0),1
+.Lpcrel0:
+  .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
+  blr
+  .size reloc_got_pcrel34,.-reloc_got_pcrel34
+
+  .global reloc_tlsgd_pcrel34
+  .p2align 4
+  .type reloc_tlsgd_pcrel34,@function
+reloc_tlsgd_pcrel34:
+  mflr 0
+  std 0, 16(1)
+  stdu 1, -32(1)
+  paddi 3, 0, pcrel_external_tls@got@tlsgd@pcrel, 1
+  bl __tls_get_addr@notoc(a@tlsgd)
+  lwa 3, 0(3)
+  addi 1, 1, 32
+  ld 0, 16(1)
+  mtlr 0
+  blr
+  .size reloc_tlsgd_pcrel34,.-reloc_tlsgd_pcrel34
 
   .type	.L.str,@object
 	.section	.rodata.str1.1,"aMS",@progbits,1

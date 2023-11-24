@@ -9,8 +9,8 @@
 #ifndef MLIR_DIALECT_TRANSFORM_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_TRANSFORM_TRANSFORMS_PASSES_H
 
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Pass/Pass.h"
-#include <memory>
 
 namespace mlir {
 class Pass;

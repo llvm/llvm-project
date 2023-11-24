@@ -14,8 +14,8 @@
 
 namespace LIBC_NAMESPACE {
 
-long LIBC_NAMESPACE_syscall(long number, long arg1, long arg2, long arg3,
-                            long arg4, long arg5, long arg6);
+long __llvm_libc_syscall(long number, long arg1, long arg2, long arg3,
+                         long arg4, long arg5, long arg6);
 
 } // namespace LIBC_NAMESPACE
 

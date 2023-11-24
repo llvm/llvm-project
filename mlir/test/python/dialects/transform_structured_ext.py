@@ -439,7 +439,7 @@ def testTileToForallCompact(target):
     structured.TileUsingForallOp(matmul, num_threads=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallCompact
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: num_threads [2, 3, 4]
     # CHECK-SAME: (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
 
@@ -454,7 +454,7 @@ def testTileToForallLoopsAndTileOpTypes(target):
     )
     # CHECK-LABEL: TEST: testTileToForallLoopsAndTileOpTypes
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: num_threads [2, 3, 4]
     # CHECK-SAME: (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.matmul">)
 
 
@@ -464,7 +464,7 @@ def testTileToForallTileSizes(target):
     structured.TileUsingForallOp(target, tile_sizes=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallTileSizes
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [] tile_sizes [2, 3, 4]
+    # CHECK-SAME: tile_sizes [2, 3, 4]
 
 
 @run

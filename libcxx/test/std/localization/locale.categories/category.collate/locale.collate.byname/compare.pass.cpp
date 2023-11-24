@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Bionic has minimal locale support, investigate this later.
+// XFAIL: LIBCXX-ANDROID-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 
 // <locale>

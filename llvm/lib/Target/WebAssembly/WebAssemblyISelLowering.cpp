@@ -2472,8 +2472,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   if (!N->getOperand(1).isUndef())
     return SDValue();
   SDValue CastOp = Bitcast.getOperand(0);
-  MVT SrcType = CastOp.getSimpleValueType();
-  MVT DstType = Bitcast.getSimpleValueType();
+  EVT SrcType = CastOp.getValueType();
+  EVT DstType = Bitcast.getValueType();
   if (!SrcType.is128BitVector() ||
       SrcType.getVectorNumElements() != DstType.getVectorNumElements())
     return SDValue();
@@ -2576,6 +2576,8 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     APInt SplatValue, SplatUndef;
     unsigned SplatBitSize;
     bool HasAnyUndefs;
+    // Endianness doesn't matter in this context because we are looking for
+    // an all-zero value.
     return Splat &&
            Splat->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
                                   HasAnyUndefs) &&

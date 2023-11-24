@@ -1,6 +1,5 @@
 llvm_canonicalize_cmake_booleans(
   BUILD_SHARED_LIBS
-  LLVM_HAVE_LIBXAR
   HAVE_OCAMLOPT
   LLVM_ENABLE_DIA_SDK
   LLVM_ENABLE_FFI

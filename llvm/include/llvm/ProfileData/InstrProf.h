@@ -26,7 +26,6 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -95,6 +94,9 @@ inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 
 /// Return the name prefix of profile counter variables.
 inline StringRef getInstrProfCountersVarPrefix() { return "__profc_"; }
+
+/// Return the name prefix of profile bitmap variables.
+inline StringRef getInstrProfBitmapVarPrefix() { return "__profbm_"; }
 
 /// Return the name prefix of value profile variables.
 inline StringRef getInstrProfValuesVarPrefix() { return "__profvp_"; }
@@ -220,27 +222,25 @@ StringRef getPGOFuncNameVarInitializer(GlobalVariable *NameVar);
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName,
                                    StringRef FileName = "<unknown>");
 
-/// Given a vector of strings (function PGO names) \c NameStrs, the
-/// method generates a combined string \c Result that is ready to be
-/// serialized.  The \c Result string is comprised of three fields:
-/// The first field is the length of the uncompressed strings, and the
-/// the second field is the length of the zlib-compressed string.
-/// Both fields are encoded in ULEB128.  If \c doCompress is false, the
+/// Given a vector of strings (names of global objects like functions or,
+/// virtual tables) \c NameStrs, the method generates a combined string \c
+/// Result that is ready to be serialized.  The \c Result string is comprised of
+/// three fields: The first field is the length of the uncompressed strings, and
+/// the the second field is the length of the zlib-compressed string. Both
+/// fields are encoded in ULEB128.  If \c doCompress is false, the
 ///  third field is the uncompressed strings; otherwise it is the
 /// compressed string. When the string compression is off, the
 /// second field will have value zero.
-Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
-                                bool doCompression, std::string &Result);
+Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
+                                     bool doCompression, std::string &Result);
 
 /// Produce \c Result string with the same format described above. The input
 /// is vector of PGO function name variables that are referenced.
+/// The global variable element in 'NameVars' is a string containing the pgo
+/// name of a function. See `createPGOFuncNameVar` that creates these global
+/// variables.
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
-
-/// \c NameStrings is a string composed of one of more sub-strings encoded in
-/// the format described above. The substrings are separated by 0 or more zero
-/// bytes. This method decodes the string and populates the \c Symtab.
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
 
 /// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
 /// set in IR PGO compilation.
@@ -335,13 +335,15 @@ enum class instrprof_error {
   invalid_prof,
   hash_mismatch,
   count_mismatch,
+  bitmap_mismatch,
   counter_overflow,
   value_site_count_mismatch,
   compress_failed,
   uncompress_failed,
   empty_raw_profile,
   zlib_unavailable,
-  raw_profile_version_mismatch
+  raw_profile_version_mismatch,
+  counter_value_too_large,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -462,14 +464,14 @@ public:
   /// until before it is used. See also \c create(StringRef) method.
   Error create(object::SectionRef &Section);
 
-  /// This interface is used by reader of CoverageMapping test
-  /// format.
-  inline Error create(StringRef D, uint64_t BaseAddr);
-
   /// \c NameStrings is a string composed of one of more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
   /// This method is a wrapper to \c readPGOFuncNameStrings method.
-  inline Error create(StringRef NameStrings);
+  Error create(StringRef NameStrings);
+
+  /// This interface is used by reader of CoverageMapping test
+  /// format.
+  inline Error create(StringRef D, uint64_t BaseAddr);
 
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
@@ -510,14 +512,14 @@ public:
   /// an empty string.
   StringRef getFuncName(uint64_t FuncNameAddress, size_t NameSize);
 
-  /// Return function's PGO name from the name's md5 hash value.
-  /// If not found, return an empty string.
-  inline StringRef getFuncName(uint64_t FuncMD5Hash);
+  /// Return name of functions or global variables from the name's md5 hash
+  /// value. If not found, return an empty string.
+  inline StringRef getFuncOrVarName(uint64_t ValMD5Hash);
 
-  /// Just like getFuncName, except that it will return a non-empty StringRef
-  /// if the function is external to this symbol table. All such cases
-  /// will be represented using the same StringRef value.
-  inline StringRef getFuncNameOrExternalSymbol(uint64_t FuncMD5Hash);
+  /// Just like getFuncOrVarName, except that it will return literal string
+  /// 'External Symbol' if the function or global variable is external to
+  /// this symbol table.
+  inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash);
 
   /// True if Symbol is the value used to represent external symbols.
   static bool isExternalSymbol(const StringRef &Symbol) {
@@ -538,10 +540,6 @@ Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
   Data = D;
   Address = BaseAddr;
   return Error::success();
-}
-
-Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readPGOFuncNameStrings(NameStrings, *this);
 }
 
 template <typename NameIterRange>
@@ -565,19 +563,19 @@ void InstrProfSymtab::finalizeSymtab() {
   Sorted = true;
 }
 
-StringRef InstrProfSymtab::getFuncNameOrExternalSymbol(uint64_t FuncMD5Hash) {
-  StringRef ret = getFuncName(FuncMD5Hash);
+StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) {
+  StringRef ret = getFuncOrVarName(MD5Hash);
   if (ret.empty())
     return InstrProfSymtab::getExternalSymbol();
   return ret;
 }
 
-StringRef InstrProfSymtab::getFuncName(uint64_t FuncMD5Hash) {
+StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   finalizeSymtab();
-  auto Result = llvm::lower_bound(MD5NameMap, FuncMD5Hash,
+  auto Result = llvm::lower_bound(MD5NameMap, MD5Hash,
                                   [](const std::pair<uint64_t, StringRef> &LHS,
                                      uint64_t RHS) { return LHS.first < RHS; });
-  if (Result != MD5NameMap.end() && Result->first == FuncMD5Hash)
+  if (Result != MD5NameMap.end() && Result->first == MD5Hash)
     return Result->second;
   return StringRef();
 }
@@ -690,18 +688,23 @@ struct InstrProfValueSiteRecord {
 /// Profiling information for a single function.
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
+  std::vector<uint8_t> BitmapBytes;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
+  InstrProfRecord(std::vector<uint64_t> Counts,
+                  std::vector<uint8_t> BitmapBytes)
+      : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
-      : Counts(RHS.Counts),
+      : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
+    BitmapBytes = RHS.BitmapBytes;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -880,6 +883,11 @@ struct NamedInstrProfRecord : InstrProfRecord {
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts)
       : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts,
+                       std::vector<uint8_t> BitmapBytes)
+      : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
+        Hash(Hash) {}
 
   static bool hasCSFlagInHash(uint64_t FuncHash) {
     return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
@@ -949,10 +957,6 @@ void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
   getOrCreateValueSitesForKind(ValueKind).reserve(NumValueSites);
 }
 
-inline support::endianness getHostEndianness() {
-  return sys::IsLittleEndianHost ? support::little : support::big;
-}
-
 // Include definitions for value profile data
 #define INSTR_PROF_VALUE_PROF_DATA
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -1015,7 +1019,9 @@ enum ProfVersion {
   Version9 = 9,
   // An additional (optional) temporal profile traces section is added.
   Version10 = 10,
-  // The current version is 10.
+  // An additional field is used for bitmap bytes.
+  Version11 = 11,
+  // The current version is 11.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1153,6 +1159,7 @@ namespace RawInstrProf {
 // Version 6: Added binary id.
 // Version 7: Reorder binary id and include version in signature.
 // Version 8: Use relative counter pointer.
+// Version 9: Added relative bitmap bytes pointer and count used by MC/DC.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();

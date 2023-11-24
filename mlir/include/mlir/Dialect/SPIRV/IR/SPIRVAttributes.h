@@ -17,6 +17,12 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 
+namespace mlir {
+namespace spirv {
+class VerCapExtAttr;
+}
+} // namespace mlir
+
 // Pull in TableGen'erated SPIR-V attribute definitions for target and ABI.
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h.inc"

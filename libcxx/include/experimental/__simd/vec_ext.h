@@ -11,6 +11,7 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
 
 #include <__bit/bit_ceil.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <experimental/__simd/internal_declaration.h>
 #include <experimental/__simd/utility.h>
@@ -55,6 +56,16 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
       __result.__set(__i, __v);
     }
     return __result;
+  }
+
+  template <class _Generator, size_t... _Is>
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate_init(_Generator&& __g, std::index_sequence<_Is...>) {
+    return _SimdStorage{{__g(std::integral_constant<size_t, _Is>())...}};
+  }
+
+  template <class _Generator>
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
+    return __generate_init(std::forward<_Generator>(__g), std::make_index_sequence<_Np>());
   }
 };
 

@@ -346,4 +346,14 @@ PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
+
+void SpeculativeExecutionPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<SpeculativeExecutionPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  if (OnlyIfDivergentTarget)
+    OS << "only-if-divergent-target";
+  OS << '>';
+}
 }  // namespace llvm

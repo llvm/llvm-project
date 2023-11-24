@@ -14,7 +14,6 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

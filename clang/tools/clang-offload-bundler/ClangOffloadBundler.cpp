@@ -19,7 +19,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -136,6 +135,11 @@ int main(int argc, const char **argv) {
     cl::desc("Treat hip and hipv4 offload kinds as "
              "compatible with openmp kind, and vice versa.\n"),
     cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> Compress("compress",
+                         cl::desc("Compress output file when bundling.\n"),
+                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> Verbose("verbose", cl::desc("Print debug information.\n"),
+                        cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -163,6 +167,11 @@ int main(int argc, const char **argv) {
   BundlerConfig.BundleAlignment = BundleAlignment;
   BundlerConfig.FilesType = FilesType;
   BundlerConfig.ObjcopyPath = "";
+  // Do not override the default value Compress and Verbose in BundlerConfig.
+  if (Compress.getNumOccurrences() > 0)
+    BundlerConfig.Compress = Compress;
+  if (Verbose.getNumOccurrences() > 0)
+    BundlerConfig.Verbose = Verbose;
 
   BundlerConfig.TargetNames = TargetNames;
   BundlerConfig.InputFileNames = InputFileNames;

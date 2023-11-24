@@ -9,5 +9,9 @@ unittest("RISCVTests") {
     "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "//llvm/lib/Target/RISCV" ]
-  sources = [ "MCInstrAnalysisTest.cpp" ]
+  sources = [
+    "MCInstrAnalysisTest.cpp",
+    "RISCVBaseInfoTest.cpp",
+    "RISCVInstrInfoTest.cpp",
+  ]
 }

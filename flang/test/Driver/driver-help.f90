@@ -17,9 +17,12 @@
 ! HELP-NEXT: -###                    Print (but do not run) the commands to run for this compilation
 ! HELP-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! HELP-NEXT: -dumpmachine            Display the compiler's target processor
+! HELP-NEXT: -dumpversion            Display the version of the compiler
 ! HELP-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-NEXT: -E                      Only run the preprocessor
+! HELP-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! HELP-NEXT: -falternative-parameter-statement
 ! HELP-NEXT:                         Enable the old style PARAMETER statement
 ! HELP-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -48,6 +51,9 @@
 ! HELP-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! HELP-NEXT: -flto=<value>           Set LTO mode
 ! HELP-NEXT: -flto                   Enable LTO in 'full' mode
+! HELP-NEXT: -fms-runtime-lib=<value>
+! HELP-NEXT:                         Select Windows run-time library
+! HELP-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
@@ -82,6 +88,7 @@
 ! HELP-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-NEXT: -fversion-loops-for-stride
 ! HELP-NEXT:                         Create unit-strided versions of loops
 ! HELP-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
@@ -134,6 +141,7 @@
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                    Enable predefined and command line preprocessor macros
+! HELP-FC1-NEXT: --dependent-lib=<value> Add dependent library
 ! HELP-FC1-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-fir               Build the parse tree, then lower it to FIR
 ! HELP-FC1-NEXT: -emit-hlfir             Build the parse tree, then lower it to HLFIR
@@ -141,6 +149,7 @@
 ! HELP-FC1-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! HELP-FC1-NEXT: -emit-obj               Emit native object files
 ! HELP-FC1-NEXT: -E                      Only run the preprocessor
+! HELP-FC1-NEXT: -falias-analysis        Pass alias information on to LLVM (default when optimizing for speed)
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT:                         Enable the old style PARAMETER statement
 ! HELP-FC1-NEXT: -fapprox-func           Allow certain math function calls to be replaced with an approximately equivalent calculation
@@ -187,6 +196,7 @@
 ! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-FC1-NEXT: -flto=<value>           Set LTO mode
 ! HELP-FC1-NEXT: -flto                   Enable LTO in 'full' mode
+! HELP-FC1-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! HELP-FC1-NEXT: -fno-analyzed-objects-for-unparse
 ! HELP-FC1-NEXT:                         Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
@@ -214,6 +224,7 @@
 ! HELP-FC1-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -funderscoring          Appends one trailing underscore to external names
+! HELP-FC1-NEXT: -fveclib=<value>        Use the given vector functions library
 ! HELP-FC1-NEXT: -fversion-loops-for-stride
 ! HELP-FC1-NEXT:                         Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.

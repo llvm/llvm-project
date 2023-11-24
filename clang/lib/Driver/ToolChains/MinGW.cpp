@@ -201,7 +201,6 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_s);
   Args.AddLastArg(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_u_Group);
-  Args.AddLastArg(CmdArgs, options::OPT_Z_Flag);
 
   // Add asan_dynamic as the first import lib before other libs. This allows
   // asan to be initialized as early as possible to increase its instrumentation
@@ -708,6 +707,8 @@ void toolchains::MinGW::addClangTargetOptions(
           << A->getSpelling() << GuardArgs;
     }
   }
+
+  CC1Args.push_back("-fno-use-init-array");
 
   for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
                    options::OPT_mconsole, options::OPT_mdll}) {

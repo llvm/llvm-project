@@ -13,6 +13,8 @@
 #include <cstddef>
 #include <optional>
 
+namespace lldb_private::plugin {
+namespace dwarf {
 class DWARFUnit;
 class SymbolFileDWARF;
 class DWARFDIE;
@@ -51,9 +53,8 @@ public:
   ValueType &ValueRef() { return m_value; }
   void SetValue(const ValueType &val) { m_value = val; }
 
-  void Dump(lldb_private::Stream &s) const;
-  bool ExtractValue(const lldb_private::DWARFDataExtractor &data,
-                    lldb::offset_t *offset_ptr);
+  void Dump(Stream &s) const;
+  bool ExtractValue(const DWARFDataExtractor &data, lldb::offset_t *offset_ptr);
   const uint8_t *BlockData() const;
   static std::optional<uint8_t> GetFixedSize(dw_form_t form,
                                              const DWARFUnit *u);
@@ -68,10 +69,10 @@ public:
   const char *AsCString() const;
   dw_addr_t Address() const;
   bool IsValid() const { return m_form != 0; }
-  bool SkipValue(const lldb_private::DWARFDataExtractor &debug_info_data,
+  bool SkipValue(const DWARFDataExtractor &debug_info_data,
                  lldb::offset_t *offset_ptr) const;
   static bool SkipValue(const dw_form_t form,
-                        const lldb_private::DWARFDataExtractor &debug_info_data,
+                        const DWARFDataExtractor &debug_info_data,
                         lldb::offset_t *offset_ptr, const DWARFUnit *unit);
   static bool IsBlockForm(const dw_form_t form);
   static bool IsDataForm(const dw_form_t form);
@@ -84,7 +85,9 @@ protected:
   // It may be different from compile unit where m_value refers to.
   const DWARFUnit *m_unit = nullptr; // Unit for this form
   dw_form_t m_form = dw_form_t(0);   // Form for this value
-  ValueType m_value;            // Contains all data for the form
+  ValueType m_value;                 // Contains all data for the form
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H

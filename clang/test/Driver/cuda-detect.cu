@@ -29,7 +29,7 @@
 // RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 // RUN: %clang -v --target=x86_64-unknown-linux \
 // RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
-// RUN: %clang -v --target=x84_64-apple-macosx \
+// RUN: %clang -v --target=x86_64-apple-macosx \
 // RUN:   --sysroot=%S/Inputs/CUDA-nolibdevice --cuda-path-ignore-env 2>&1 | FileCheck %s -check-prefix NOCUDA
 
 // ... unless the user doesn't need libdevice

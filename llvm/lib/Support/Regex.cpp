@@ -163,6 +163,25 @@ std::string Regex::sub(StringRef Repl, StringRef String,
 
     // FIXME: We should have a StringExtras function for mapping C99 escapes.
     switch (Repl[0]) {
+
+      // Backreference with the "\g<ref>" syntax
+    case 'g':
+      if (Repl.size() >= 4 && Repl[1] == '<') {
+        size_t End = Repl.find('>');
+        StringRef Ref = Repl.slice(2, End);
+        unsigned RefValue;
+        if (End != StringRef::npos && !Ref.getAsInteger(10, RefValue)) {
+          Repl = Repl.substr(End + 1);
+          if (RefValue < Matches.size())
+            Res += Matches[RefValue];
+          else if (Error && Error->empty())
+            *Error =
+                ("invalid backreference string 'g<" + Twine(Ref) + ">'").str();
+          break;
+        }
+      }
+      [[fallthrough]];
+
       // Treat all unrecognized characters as self-quoting.
     default:
       Res += Repl[0];

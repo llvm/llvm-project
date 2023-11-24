@@ -388,6 +388,11 @@ TEST_F(OnlyValidArguments, GetCommandShortLength) {
   CheckDescriptorEqInt<short>(length.get(), 51);
 }
 
+TEST_F(ZeroArguments, GetPID) {
+  // pid should always greater than 0, in both linux and windows
+  EXPECT_GT(RTNAME(GetPID)(), 0);
+}
+
 class EnvironmentVariables : public CommandFixture {
 protected:
   EnvironmentVariables() : CommandFixture(0, nullptr) {

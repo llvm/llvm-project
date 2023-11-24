@@ -295,16 +295,16 @@ def : InstRW<[CortexA510WriteVLD2], (instregex "LD1Threev(16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA510WriteVLD2], (instregex "LD1Fourv(8b|4h|2s|1d)$")>;
 def : InstRW<[CortexA510WriteVLD2], (instregex "LD1Fourv(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA510WriteVLD1, WriteAdr], (instregex "LD1i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVLD1, WriteAdr], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD1, WriteAdr], (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Twov(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Twov(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Threev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Threev(16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Fourv(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD1Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD1], (instregex "LD1i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD1], (instregex "LD1Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD1], (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD1Fourv(16b|8h|4s|2d)_POST$")>;
 
 //    2-element structures
 def : InstRW<[CortexA510WriteVLD2], (instregex "LD2i(8|16|32|64)$")>;
@@ -312,10 +312,10 @@ def : InstRW<[CortexA510WriteVLD2], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)$
 def : InstRW<[CortexA510WriteVLD2], (instregex "LD2Twov(8b|4h|2s)$")>;
 def : InstRW<[CortexA510WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD2i(8|16|32|64)(_POST)?$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)(_POST)?$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD2Twov(8b|4h|2s)(_POST)?$")>;
-def : InstRW<[CortexA510WriteVLD4, WriteAdr], (instregex "LD2Twov(16b|8h|4s|2d)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD2i(8|16|32|64)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD2Rv(8b|4h|2s|1d|16b|8h|4s|2d)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD2Twov(8b|4h|2s)(_POST)?$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD4], (instregex "LD2Twov(16b|8h|4s|2d)(_POST)?$")>;
 
 //    3-element structures
 def : InstRW<[CortexA510WriteVLD2], (instregex "LD3i(8|16|32|64)$")>;
@@ -323,10 +323,10 @@ def : InstRW<[CortexA510WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)$
 def : InstRW<[CortexA510WriteVLD3], (instregex "LD3Threev(8b|4h|2s|1d)$")>;
 def : InstRW<[CortexA510WriteVLD6], (instregex "LD3Threev(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD3i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD3, WriteAdr], (instregex "LD3Threev(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD6, WriteAdr], (instregex "LD3Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD3i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD3Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD3], (instregex "LD3Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD6], (instregex "LD3Threev(16b|8h|4s|2d)_POST$")>;
 
 //    4-element structures
 def : InstRW<[CortexA510WriteVLD2], (instregex "LD4i(8|16|32|64)$")>;                // load single 4-el structure to one lane of 4 regs.
@@ -334,10 +334,10 @@ def : InstRW<[CortexA510WriteVLD2], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)$
 def : InstRW<[CortexA510WriteVLD4], (instregex "LD4Fourv(8b|4h|2s|1d)$")>;           // load multiple 4-el structures to 4 regs.
 def : InstRW<[CortexA510WriteVLD8], (instregex "LD4Fourv(16b|8h|4s|2d)$")>;
 
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD4i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVLD2, WriteAdr], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD4, WriteAdr], (instregex "LD4Fourv(8b|4h|2s|1d)_POST$")>;
-def : InstRW<[CortexA510WriteVLD8, WriteAdr], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD4i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD2], (instregex "LD4Rv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD4], (instregex "LD4Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVLD8], (instregex "LD4Fourv(16b|8h|4s|2d)_POST$")>;
 
 //---
 // Vector Stores
@@ -347,28 +347,28 @@ def : InstRW<[CortexA510WriteVST1], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d
 def : InstRW<[CortexA510WriteVST1], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA510WriteVST2], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
 def : InstRW<[CortexA510WriteVST4], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA510WriteVST1, WriteAdr], (instregex "ST1i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVST1, WriteAdr], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVST1, WriteAdr], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVST2, WriteAdr], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
-def : InstRW<[CortexA510WriteVST4, WriteAdr], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST1], (instregex "ST1i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST1], (instregex "ST1Onev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST1], (instregex "ST1Twov(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST2], (instregex "ST1Threev(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST4], (instregex "ST1Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[CortexA510WriteVST2], (instregex "ST2i(8|16|32|64)$")>;
 def : InstRW<[CortexA510WriteVST2], (instregex "ST2Twov(8b|4h|2s)$")>;
 def : InstRW<[CortexA510WriteVST4], (instregex "ST2Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA510WriteVST2, WriteAdr], (instregex "ST2i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVST2, WriteAdr], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
-def : InstRW<[CortexA510WriteVST4, WriteAdr], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST2], (instregex "ST2i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST2], (instregex "ST2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST4], (instregex "ST2Twov(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[CortexA510WriteVST2], (instregex "ST3i(8|16|32|64)$")>;
 def : InstRW<[CortexA510WriteVST4], (instregex "ST3Threev(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA510WriteVST2, WriteAdr], (instregex "ST3i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVST4, WriteAdr], (instregex "ST3Threev(8b|4h|2s|1d|2d|16b|8h|4s|4d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST2], (instregex "ST3i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST4], (instregex "ST3Threev(8b|4h|2s|1d|2d|16b|8h|4s|4d)_POST$")>;
 
 def : InstRW<[CortexA510WriteVST2], (instregex "ST4i(8|16|32|64)$")>;
 def : InstRW<[CortexA510WriteVST4], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s|2d)$")>;
-def : InstRW<[CortexA510WriteVST2, WriteAdr], (instregex "ST4i(8|16|32|64)_POST$")>;
-def : InstRW<[CortexA510WriteVST4, WriteAdr], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST2], (instregex "ST4i(8|16|32|64)_POST$")>;
+def : InstRW<[WriteAdr, CortexA510WriteVST4], (instregex "ST4Fourv(8b|4h|2s|1d|16b|8h|4s|2d)_POST$")>;
 
 //---
 // Floating Point Conversions, MAC, DIV, SQRT

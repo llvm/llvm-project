@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
@@ -25,9 +24,11 @@
 
 using namespace llvm;
 
+namespace llvm {
 extern cl::opt<bool> EnableDetailedFunctionProperties;
 extern cl::opt<bool> BigBasicBlockInstructionThreshold;
 extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
+} // namespace llvm
 
 namespace {
 

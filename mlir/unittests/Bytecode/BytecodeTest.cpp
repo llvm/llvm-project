@@ -21,8 +21,6 @@
 using namespace llvm;
 using namespace mlir;
 
-using ::testing::StartsWith;
-
 StringLiteral IRWithResources = R"(
 module @TestDialectResources attributes {
   bytecode.test = dense_resource<resource> : tensor<4xi32>
@@ -66,8 +64,7 @@ TEST(Bytecode, MultiModuleWithResource) {
 
   // FIXME: Parsing external resources does not work on big-endian
   // platforms currently.
-  if (llvm::support::endian::system_endianness() ==
-      llvm::support::endianness::big)
+  if (llvm::endianness::native == llvm::endianness::big)
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.

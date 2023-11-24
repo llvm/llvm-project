@@ -20,6 +20,13 @@
 using namespace llvm;
 using namespace bolt;
 
+namespace ELFReserved {
+enum {
+  R_RISCV_TPREL_I = 49,
+  R_RISCV_TPREL_S = 50,
+};
+} // namespace ELFReserved
+
 Triple::ArchType Relocation::Arch;
 
 static bool isSupportedX86(uint64_t Type) {
@@ -111,6 +118,13 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_LO12_I:
   case ELF::R_RISCV_LO12_S:
   case ELF::R_RISCV_64:
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELFReserved::R_RISCV_TPREL_I:
+  case ELFReserved::R_RISCV_TPREL_S:
     return true;
   }
 }
@@ -214,6 +228,7 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
     return 4;
   case ELF::R_RISCV_64:
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     // See extractValueRISCV for why this is necessary.
     return 8;
   }
@@ -280,7 +295,7 @@ static bool skipRelocationProcessAArch64(uint64_t &Type, uint64_t Contents) {
   // changed TLS access model (e.g. changed global dynamic model
   // to initial exec), thus changing the instructions. The static
   // relocations might be invalid at this point and we might no
-  // need to proccess these relocations anymore.
+  // need to process these relocations anymore.
   // More information could be found by searching
   // elfNN_aarch64_tls_relax in bfd
   switch (Type) {
@@ -350,7 +365,9 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
   switch (Type) {
   default:
     llvm_unreachable("unsupported relocation");
+  case ELF::R_AARCH64_ABS16:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_ABS64:
     break;
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
@@ -486,7 +503,7 @@ static uint64_t extractValueAArch64(uint64_t Type, uint64_t Contents,
   case ELF::R_AARCH64_MOVW_UABS_G1:
   case ELF::R_AARCH64_MOVW_UABS_G0_NC:
   case ELF::R_AARCH64_MOVW_UABS_G0:
-    // The shift goest in bits 22:21 of MOV* instructions
+    // The shift goes in bits 22:21 of MOV* instructions
     uint8_t Shift = (Contents >> 21) & 0x3;
     // Immediate goes in bits 20:5
     Contents = (Contents >> 5) & 0xffff;
@@ -532,6 +549,7 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
   case ELF::R_RISCV_BRANCH:
     return extractBImmRISCV(Contents);
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     // We need to know the exact address of the GOT entry so we extract the
     // value from both the AUIPC and L[D|W]. We cannot rely on the symbol in the
     // relocation for this since it simply refers to the object that is stored
@@ -600,6 +618,7 @@ static bool isGOTRISCV(uint64_t Type) {
   default:
     return false;
   case ELF::R_RISCV_GOT_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return true;
   }
 }
@@ -636,6 +655,14 @@ static bool isTLSRISCV(uint64_t Type) {
   switch (Type) {
   default:
     return false;
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELFReserved::R_RISCV_TPREL_I:
+  case ELFReserved::R_RISCV_TPREL_S:
+    return true;
   }
 }
 
@@ -733,6 +760,7 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_RVC_JUMP:
   case ELF::R_RISCV_RVC_BRANCH:
   case ELF::R_RISCV_32_PCREL:
+  case ELF::R_RISCV_TLS_GOT_HI20:
     return true;
   }
 }
@@ -830,6 +858,19 @@ bool Relocation::isTLS(uint64_t Type) {
   if (Arch == Triple::riscv64)
     return isTLSRISCV(Type);
   return isTLSX86(Type);
+}
+
+bool Relocation::isInstructionReference(uint64_t Type) {
+  if (Arch != Triple::riscv64)
+    return false;
+
+  switch (Type) {
+  default:
+    return false;
+  case ELF::R_RISCV_PCREL_LO12_I:
+  case ELF::R_RISCV_PCREL_LO12_S:
+    return true;
+  }
 }
 
 uint64_t Relocation::getNone() {

@@ -74,9 +74,6 @@ class counted_iterator
   , public __counted_iterator_value_type<_Iter>
 {
 public:
-  _LIBCPP_NO_UNIQUE_ADDRESS _Iter __current_ = _Iter();
-  iter_difference_t<_Iter> __count_ = 0;
-
   using iterator_type = _Iter;
   using difference_type = iter_difference_t<_Iter>;
 
@@ -297,6 +294,12 @@ public:
                                  "Iterators must not be past end of range.");
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
+
+private:
+  _LIBCPP_NO_UNIQUE_ADDRESS _Iter __current_ = _Iter();
+  iter_difference_t<_Iter> __count_ = 0;
+  template<input_or_output_iterator _OtherIter>
+  friend class counted_iterator;
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(counted_iterator);
 
