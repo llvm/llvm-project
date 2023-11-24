@@ -139,8 +139,9 @@ define void @llvm_cos_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_cos_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_cos(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_cos(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.cos.f64(double [[CONV:%.*]]) #[[ATTR4:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -168,8 +169,9 @@ define void @llvm_cos_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_cos_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_cosf(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_cosf(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.cos.f32(float [[CONV:%.*]]) #[[ATTR5:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -200,8 +202,9 @@ define void @llvm_exp_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_exp_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_exp(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_exp(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.exp.f64(double [[CONV:%.*]]) #[[ATTR6:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -229,8 +232,9 @@ define void @llvm_exp_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_exp_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_expf(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_expf(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.exp.f32(float [[CONV:%.*]]) #[[ATTR7:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -261,8 +265,9 @@ define void @llvm_exp2_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_exp2_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_exp2(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_exp2(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.exp2.f64(double [[CONV:%.*]]) #[[ATTR8:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -290,8 +295,9 @@ define void @llvm_exp2_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_exp2_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_exp2f(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_exp2f(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.exp2.f32(float [[CONV:%.*]]) #[[ATTR9:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -322,8 +328,9 @@ define void @llvm_exp10_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_exp10_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_exp10(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_exp10(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.exp10.f64(double [[CONV:%.*]]) #[[ATTR10:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -351,8 +358,9 @@ define void @llvm_exp10_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_exp10_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_exp10f(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_exp10f(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.exp10.f32(float [[CONV:%.*]]) #[[ATTR11:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -383,8 +391,9 @@ define void @llvm_fabs_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_fabs_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.fabs.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.fabs.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -413,8 +422,9 @@ define void @llvm_fabs_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_fabs_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.fabs.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -445,8 +455,9 @@ define void @llvm_floor_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_floor_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.floor.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.floor.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -474,8 +485,9 @@ define void @llvm_floor_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_floor_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.floor.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.floor.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -506,8 +518,9 @@ define void @llvm_fma_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_fma_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x double> [[TMP17]], <vscale x 2 x double> [[TMP17]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x double> [[TMP11]], <vscale x 2 x double> [[TMP11]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.fma.f64(double [[CONV:%.*]], double [[CONV]], double [[CONV]])
 ; SVE:    ret void
 ;
   entry:
@@ -535,8 +548,9 @@ define void @llvm_fma_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_fma_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x float> [[TMP17]], <vscale x 4 x float> [[TMP17]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x float> [[TMP11]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.fma.f32(float [[CONV:%.*]], float [[CONV]], float [[CONV]])
 ; SVE:    ret void
 ;
   entry:
@@ -567,8 +581,9 @@ define void @llvm_log_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_log_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.log.f64(double [[CONV:%.*]]) #[[ATTR12:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -596,8 +611,9 @@ define void @llvm_log_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_log_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_logf(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_logf(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.log.f32(float [[CONV:%.*]]) #[[ATTR13:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -628,8 +644,9 @@ define void @llvm_log10_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_log10_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log10(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log10(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.log10.f64(double [[CONV:%.*]]) #[[ATTR14:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -657,8 +674,9 @@ define void @llvm_log10_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_log10_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_log10f(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.log10.f32(float [[CONV:%.*]]) #[[ATTR15:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -689,8 +707,9 @@ define void @llvm_log2_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_log2_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log2(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log2(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.log2.f64(double [[CONV:%.*]]) #[[ATTR16:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -718,8 +737,9 @@ define void @llvm_log2_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_log2_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_log2f(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_log2f(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.log2.f32(float [[CONV:%.*]]) #[[ATTR17:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -750,8 +770,9 @@ define void @llvm_maxnum_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_maxnum_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x double> [[TMP17]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x double> [[TMP11]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.maxnum.f64(double [[CONV:%.*]], double [[CONV]])
 ; SVE:    ret void
 ;
   entry:
@@ -779,8 +800,9 @@ define void @llvm_maxnum_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_maxnum_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x float> [[TMP17]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x float> [[TMP11]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.maxnum.f32(float [[CONV:%.*]], float [[CONV]])
 ; SVE:    ret void
 ;
   entry:
@@ -811,8 +833,9 @@ define void @llvm_minnum_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_minnum_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x double> [[TMP17]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x double> [[TMP11]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.minnum.f64(double [[CONV:%.*]], double [[CONV]])
 ; SVE:    ret void
 ;
   entry:
@@ -840,8 +863,9 @@ define void @llvm_minnum_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_minnum_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x float> [[TMP17]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x float> [[TMP11]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.minnum.f32(float [[CONV:%.*]], float [[CONV]])
 ; SVE:    ret void
 ;
   entry:
@@ -872,8 +896,9 @@ define void @llvm_nearbyint_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_nearbyint_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.nearbyint.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.nearbyint.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -901,8 +926,9 @@ define void @llvm_nearbyint_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_nearbyint_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.nearbyint.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.nearbyint.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -933,8 +959,9 @@ define void @llvm_pow_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_pow_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x double> [[TMP17]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x double> [[TMP11]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.pow.f64(double [[CONV:%.*]], double [[CONV]]) #[[ATTR18:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -962,8 +989,9 @@ define void @llvm_pow_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_pow_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x float> [[TMP17]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x float> [[TMP11]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.pow.f32(float [[CONV:%.*]], float [[CONV]]) #[[ATTR19:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -994,8 +1022,9 @@ define void @llvm_rint_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_rint_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.rint.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.rint.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1023,8 +1052,9 @@ define void @llvm_rint_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_rint_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.rint.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.rint.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1055,8 +1085,9 @@ define void @llvm_round_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_round_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.round.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.round.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1084,8 +1115,9 @@ define void @llvm_round_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_round_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.round.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.round.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1116,8 +1148,9 @@ define void @llvm_sin_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_sin_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_sin(<vscale x 2 x double> [[TMP17:%.*]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_sin(<vscale x 2 x double> [[TMP11:%.*]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call double @llvm.sin.f64(double [[CONV:%.*]]) #[[ATTR20:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -1145,8 +1178,9 @@ define void @llvm_sin_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_sin_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_sinf(<vscale x 4 x float> [[TMP17:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_sinf(<vscale x 4 x float> [[TMP11:%.*]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; SVE:    [[CALL:%.*]] = tail call float @llvm.sin.f32(float [[CONV:%.*]]) #[[ATTR21:[0-9]+]]
 ; SVE:    ret void
 ;
   entry:
@@ -1177,8 +1211,9 @@ define void @llvm_sqrt_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_sqrt_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.sqrt.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1206,8 +1241,9 @@ define void @llvm_sqrt_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_sqrt_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.sqrt.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1238,8 +1274,9 @@ define void @llvm_trunc_f64(double* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_trunc_f64
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 2 x double> @llvm.trunc.nxv2f64(<vscale x 2 x double> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call double @llvm.trunc.f64(double [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
@@ -1267,8 +1304,9 @@ define void @llvm_trunc_f32(float* %varray) {
 ; NEON:    ret void
 ;
 ; SVE-LABEL: define void @llvm_trunc_f32
-; SVE-SAME: (ptr [[VARRAY:%.*]]) #[[ATTR1]] {
-; SVE:    [[TMP18:%.*]] = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> [[TMP17:%.*]])
+; SVE-SAME: (ptr nocapture [[VARRAY:%.*]]) #[[ATTR1]] {
+; SVE:    [[TMP12:%.*]] = call <vscale x 4 x float> @llvm.trunc.nxv4f32(<vscale x 4 x float> [[TMP11:%.*]])
+; SVE:    [[CALL:%.*]] = tail call float @llvm.trunc.f32(float [[CONV:%.*]])
 ; SVE:    ret void
 ;
   entry:
