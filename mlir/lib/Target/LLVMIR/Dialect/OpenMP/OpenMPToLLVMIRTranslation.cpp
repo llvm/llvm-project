@@ -2197,16 +2197,11 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
       ompBuilder.M.getDataLayout().getProgramAddressSpace();
 
   // Create the alloca for the argument the current point.
-  llvm::Value *v =
-      builder.CreateAlloca(arg.getType()->isPointerTy()
-                               ? arg.getType()
-                               : llvm::Type::getInt64Ty(builder.getContext()),
-                           ompBuilder.M.getDataLayout().getAllocaAddrSpace());
+  llvm::Value *v = builder.CreateAlloca(arg.getType(), allocaAS);
 
-  if (allocaAS != defaultAS && arg.getType()->isPointerTy()) {
+  if (allocaAS != defaultAS && arg.getType()->isPointerTy())
     v = builder.CreatePointerBitCastOrAddrSpaceCast(
         v, arg.getType()->getPointerTo(defaultAS));
-  }
 
   builder.CreateStore(&arg, v);
 
@@ -2214,15 +2209,7 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 
   switch (capture) {
   case mlir::omp::VariableCaptureKind::ByCopy: {
-    // RHS of || aims to ignore conversions like int -> uint, but further
-    // extension of this path must be implemented for the moment it'll fall
-    // through to the assert.
-    if (inputType->isPointerTy() || v->getType() == inputType->getPointerTo()) {
-      retVal = v;
-      return builder.saveIP();
-    }
-
-    assert(false && "Currently unsupported OMPTargetVarCaptureByCopy Type");
+    retVal = v;
     break;
   }
   case mlir::omp::VariableCaptureKind::ByRef: {
