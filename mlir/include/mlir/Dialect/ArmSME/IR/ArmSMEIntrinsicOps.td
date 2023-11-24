@@ -75,17 +75,18 @@ class ArmSME_IntrOp<string mnemonic,
           /*list<string> immArgAttrNames=*/immArgAttrNames>;
 
 // Zero
-def LLVM_aarch64_sme_zero : ArmSME_IntrOp<"zero",
-                            /*immArgPositions=*/[0],
-                            /*immArgAttrNames=*/["tile_mask"]>,
-                            Arguments<(ins Arg<I32Attr, "Tile mask">:$tile_mask)>;
+def LLVM_aarch64_sme_zero
+   : ArmSME_IntrOp<"zero",
+                   /*immArgPositions=*/[0],
+                   /*immArgAttrNames=*/["tile_mask"]>,
+     Arguments<(ins Arg<I32Attr, "Tile mask">:$tile_mask)>;
 
 // MOP's
 class ArmSME_IntrMopOverloadedOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic,
-      /*immArgPositions=*/[0],
-      /*immArgAttrNames=*/["tile_id"],
-      /*overloadedOperands=*/[4]>,
+                    /*immArgPositions=*/[0],
+                    /*immArgAttrNames=*/["tile_id"],
+                    /*overloadedOperands=*/[4]>,
       Arguments<(ins Arg<I32Attr, "Virtual tile ID">:$tile_id,
                  Arg<MOPPredicate, "LHS predicate">:$lhs_predicate,
                  Arg<MOPPredicate, "RHS predicate">:$rhs_predicate,
@@ -107,8 +108,8 @@ def LLVM_aarch64_sme_usmops_wide : ArmSME_IntrMopOverloadedOp<"usmops.wide">;
 
 class ArmSME_IntrLoadStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic,
-      /*immArgPositions=*/[2],
-      /*immArgAttrNames=*/["tile_id"]>;
+                    /*immArgPositions=*/[2],
+                    /*immArgAttrNames=*/["tile_id"]>;
 
 // Loads
 class ArmSME_IntrLoadOp<string mnemonic>

@@ -2,8 +2,8 @@
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
 // RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-scf -allocate-arm-sme-tiles -cse -arm-sve-legalize-vector-storage \
+// RUN:   -convert-vector-to-arm-sme -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
+// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
 // RUN:   -convert-arm-sme-to-llvm \
 // RUN:   -convert-vector-to-llvm=enable-arm-sve \
 // RUN:   -cse -canonicalize -test-lower-to-llvm | \
