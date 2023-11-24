@@ -889,6 +889,27 @@ public:
   }
 };
 
+/// Represents the explicitly named object parameter.
+/// E.g.,
+/// \code{.cpp}
+///   struct Foo {
+///     void bar(this Foo && self);
+///   };
+/// \endcode
+class ExplicitObjectParameter final : public Node {
+  Node *Base;
+
+public:
+  ExplicitObjectParameter(Node *Base_)
+      : Node(KExplicitObjectParameter, Cache::Yes), Base(Base_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Base); }
+
+  void printLeft(OutputBuffer &OB) const override { OB += "this "; }
+
+  void printRight(OutputBuffer &OB) const override { Base->print(OB); }
+};
+
 class FunctionEncoding final : public Node {
   const Node *Ret;
   const Node *Name;
@@ -5433,11 +5454,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
       Node *Ty = getDerived().parseType();
       if (Ty == nullptr)
         return nullptr;
+
+      const bool IsFirstParam = (Names.size() - ParamsBegin) == 0;
+      if (NameInfo.HasExplicitObjectParameter && IsFirstParam)
+        Ty = make<ExplicitObjectParameter>(Ty);
+
+      if (Ty == nullptr)
+        return nullptr;
+
       Names.push_back(Ty);
     } while (!IsEndOfEncoding() && look() != 'Q');
-    // Ignore the explicit 'this' parameter.
-    if (NameInfo.HasExplicitObjectParameter)
-      ++ParamsBegin;
     Params = popTrailingNodeArray(ParamsBegin);
   }
 
