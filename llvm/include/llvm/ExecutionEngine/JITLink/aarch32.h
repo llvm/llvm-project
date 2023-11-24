@@ -295,7 +295,7 @@ public:
   StubsManager() = default;
 
   /// Name of the object file section that will contain all our stubs.
-  static StringRef getSectionName() { return "__llvm_jitlink_STUBS"; }
+  static StringRef getSectionName();
 
   /// Implements link-graph traversal via visitExistingEdges().
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
@@ -344,6 +344,10 @@ private:
 /// Create a branch range extension stub with Thumb encoding for v7 CPUs.
 template <>
 Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target);
+
+template <> inline StringRef StubsManager<Thumbv7>::getSectionName() {
+  return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
+}
 
 } // namespace aarch32
 } // namespace jitlink
