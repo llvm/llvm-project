@@ -27,7 +27,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -66,6 +65,8 @@ namespace llvm {
 class AssumptionCache;
 class CCState;
 class CCValAssign;
+enum class ComplexDeinterleavingOperation;
+enum class ComplexDeinterleavingRotation;
 class Constant;
 class FastISel;
 class FunctionLoweringInfo;

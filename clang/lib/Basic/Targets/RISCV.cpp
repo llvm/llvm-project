@@ -269,7 +269,7 @@ resolveTargetAttrOverride(const std::vector<std::string> &FeaturesVec,
   std::vector<std::string> NonISAExtFeature =
       collectNonISAExtFeature(FeaturesNeedOverride, XLen);
 
-  auto ResolvedFeature = std::vector(++I, FeaturesVec.end());
+  auto ResolvedFeature = std::vector<std::string>(++I, FeaturesVec.end());
   ResolvedFeature.insert(ResolvedFeature.end(), NonISAExtFeature.begin(),
                          NonISAExtFeature.end());
 
