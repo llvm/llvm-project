@@ -127,6 +127,10 @@ private:
     class __imp;
     __imp* __locale_;
 
+    template <class> friend struct __no_destroy;
+    struct __private_tag { };
+    _LIBCPP_HIDE_FROM_ABI explicit locale(__private_tag, __imp* __loc) : __locale_(__loc) {}
+
     void __install_ctor(const locale&, facet*, long);
     static locale& __global();
     bool has_facet(id&) const;

@@ -101,6 +101,28 @@ void error_fwrite(void) {
   Ret = fwrite(0, 1, 10, F); // expected-warning {{Stream might be already closed}}
 }
 
+void error_fgetc(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fgetc(F);
+  if (0 <= Ret && Ret <= 255) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(Ret == EOF);           // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{TRUE}}
+    if (feof(F)) {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+      fgetc(F);                       // expected-warning {{Read function called when stream is in EOF state}}
+    } else {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+      fgetc(F);                       // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+  fgetc(F); // expected-warning {{Stream might be already closed}}
+}
+
 void error_fputc(void) {
   FILE *F = tmpfile();
   if (!F)
@@ -254,23 +276,6 @@ void error_indeterminate_clearerr(void) {
     } else {
       clearerr(F);
       fwrite(Buf, 1, 10, F); // expected-warning {{might be 'indeterminate'}}
-    }
-  }
-  fclose(F);
-}
-
-void error_indeterminate_fputc(void) {
-  FILE *F = fopen("file", "r+");
-  if (!F)
-    return;
-  int rc = fseek(F, 0, SEEK_SET);
-  if (rc) {
-    if (feof(F)) {
-      fputc('X', F); // no warning
-    } else if (ferror(F)) {
-      fputc('C', F); // expected-warning {{might be 'indeterminate'}}
-    } else {
-      fputc('E', F); // expected-warning {{might be 'indeterminate'}}
     }
   }
   fclose(F);

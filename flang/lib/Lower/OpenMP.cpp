@@ -564,6 +564,8 @@ public:
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
+  processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool
   processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
             mlir::Value &result) const;
   bool
@@ -754,7 +756,7 @@ static mlir::Value getReductionInitValue(mlir::Location loc, mlir::Type type,
     if (auto ty = type.dyn_cast<mlir::FloatType>()) {
       const llvm::fltSemantics &sem = ty.getFloatSemantics();
       return builder.createRealConstant(
-          loc, type, llvm::APFloat::getSmallest(sem, /*Negative=*/true));
+          loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/false));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
     int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
@@ -1851,6 +1853,18 @@ bool ClauseProcessor::processTo(
       });
 }
 
+bool ClauseProcessor::processEnter(
+    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+  return findRepeatableClause<ClauseTy::Enter>(
+      [&](const ClauseTy::Enter *enterClause,
+          const Fortran::parser::CharBlock &) {
+        // Case: declare target enter(func, var1, var2)...
+        gatherFuncAndVarSyms(enterClause->v,
+                             mlir::omp::DeclareTargetCaptureClause::enter,
+                             result);
+      });
+}
+
 bool ClauseProcessor::processUseDeviceAddr(
     llvm::SmallVectorImpl<mlir::Value> &operands,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
@@ -2792,6 +2806,7 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
 
     ClauseProcessor cp(converter, *clauseList);
     cp.processTo(symbolAndClause);
+    cp.processEnter(symbolAndClause);
     cp.processLink(symbolAndClause);
     cp.processDeviceType(deviceType);
     cp.processTODO<Fortran::parser::OmpClause::Indirect>(

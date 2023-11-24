@@ -65,7 +65,7 @@ bool DimSpec::isValid(Ranks const &ranks) const {
 LvlSpec::LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type)
     : var(var), expr(expr), type(type) {
   assert(expr);
-  assert(isValidDLT(type) && !isUndefDLT(type));
+  assert(isValidLT(type) && !isUndefLT(type));
 }
 
 bool LvlSpec::isValid(Ranks const &ranks) const {

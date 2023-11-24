@@ -334,6 +334,10 @@ Attribute Changes in Clang
         [[clang::code_align(A)]] for(;;) { }
       }
 
+- Clang now introduced ``[[clang::coro_lifetimebound]]`` attribute.
+  All parameters of a function are considered to be lifetime bound if the function
+  returns a type annotated with ``[[clang::coro_lifetimebound]]`` and ``[[clang::coro_return_type]]``.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
@@ -610,6 +614,9 @@ Bug Fixes in This Version
   inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 - Fix crash during instantiation of some class template specializations within class
   templates. Fixes (`#70375 <https://github.com/llvm/llvm-project/issues/70375>`_)
+- Fix crash during code generation of C++ coroutine initial suspend when the return
+  type of await_resume is not trivially destructible.
+  Fixes (`#63803 <https://github.com/llvm/llvm-project/issues/63803>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -938,6 +945,10 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- Move checker ``alpha.unix.Errno`` out of the ``alpha`` package
+  to ``unix.Errno``.
+
 - Move checker ``alpha.unix.StdCLibraryFunctions`` out of the ``alpha`` package
   to ``unix.StdCLibraryFunctions``.
 

@@ -111,7 +111,7 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::Fixed(Size);
+    return TypeSize::getFixed(Size);
   return std::nullopt;
 }
 
@@ -177,7 +177,7 @@ static TypeSize getMinimalExtentFrom(const Value &V,
   // accessed, thus valid.
   if (LocSize.isPrecise())
     DerefBytes = std::max(DerefBytes, LocSize.getValue().getKnownMinValue());
-  return TypeSize::Fixed(DerefBytes);
+  return TypeSize::getFixed(DerefBytes);
 }
 
 /// Returns true if we can prove that the object specified by V has size Size.
@@ -457,10 +457,13 @@ static LinearExpression GetLinearExpression(
 /// an issue, for example, in particular for 32b pointers with negative indices
 /// that rely on two's complement wrap-arounds for precise alias information
 /// where the maximum index size is 64b.
-static APInt adjustToIndexSize(const APInt &Offset, unsigned IndexSize) {
+static void adjustToIndexSize(APInt &Offset, unsigned IndexSize) {
   assert(IndexSize <= Offset.getBitWidth() && "Invalid IndexSize!");
   unsigned ShiftBits = Offset.getBitWidth() - IndexSize;
-  return (Offset << ShiftBits).ashr(ShiftBits);
+  if (ShiftBits != 0) {
+    Offset <<= ShiftBits;
+    Offset.ashrInPlace(ShiftBits);
+  }
 }
 
 namespace {
@@ -685,7 +688,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       // Make sure that we have a scale that makes sense for this target's
       // index size.
-      Scale = adjustToIndexSize(Scale, IndexSize);
+      adjustToIndexSize(Scale, IndexSize);
 
       if (!!Scale) {
         VariableGEPIndex Entry = {LE.Val, Scale, CxtI, LE.IsNSW,
@@ -696,7 +699,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     // Take care of wrap-arounds
     if (GepHasConstantOffset)
-      Decomposed.Offset = adjustToIndexSize(Decomposed.Offset, IndexSize);
+      adjustToIndexSize(Decomposed.Offset, IndexSize);
 
     // Analyze the base pointer next.
     V = GEPOp->getOperand(0);
@@ -1230,9 +1233,6 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
         isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-      // If V != 0, then abs(VarIndex) > 0.
-      MinAbsVarIndex = APInt(Var.Scale.getBitWidth(), 1);
-
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
       auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
