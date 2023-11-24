@@ -356,10 +356,11 @@ struct VectorInsertStridedSliceOpConvert final
 static SmallVector<Value> extractAllElements(
     vector::ReductionOp reduceOp, vector::ReductionOp::Adaptor adaptor,
     VectorType srcVectorType, ConversionPatternRewriter &rewriter) {
-  int numElements = srcVectorType.getDimSize(0);
+  int numElements = static_cast<int>(srcVectorType.getDimSize(0));
   SmallVector<Value> values;
-  values.reserve(numElements + (adaptor.getAcc() != nullptr));
+  values.reserve(numElements + (adaptor.getAcc() ? 1 : 0));
   Location loc = reduceOp.getLoc();
+
   for (int i = 0; i < numElements; ++i) {
     values.push_back(rewriter.create<spirv::CompositeExtractOp>(
         loc, srcVectorType.getElementType(), adaptor.getVector(),
