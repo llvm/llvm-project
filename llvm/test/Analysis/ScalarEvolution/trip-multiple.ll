@@ -29,7 +29,7 @@ define void @trip_multiple_3(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 3
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 3
 ;
 entry:
   %rem = urem i32 %num, 3
@@ -65,7 +65,7 @@ define void @trip_multiple_4(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %rem = urem i32 %num, 4
@@ -102,7 +102,7 @@ define void @trip_multiple_5(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 5
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 5
 ;
 entry:
   %rem = urem i32 %num, 5
@@ -139,7 +139,7 @@ define void @trip_multiple_6(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 6
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 6
 ;
 entry:
   %rem = urem i32 %num, 6
@@ -176,7 +176,7 @@ define void @trip_multiple_7(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 7
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 7
 ;
 entry:
   %rem = urem i32 %num, 7
@@ -213,7 +213,7 @@ define void @trip_multiple_8(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 8
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 8
 ;
 entry:
   %rem = urem i32 %num, 8
@@ -249,7 +249,7 @@ define void @trip_multiple_9(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 9
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 9
 ;
 entry:
   %rem = urem i32 %num, 9
@@ -285,7 +285,7 @@ define void @trip_multiple_10(i32 noundef %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 10
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 10
 ;
 entry:
   %rem = urem i32 %num, 10

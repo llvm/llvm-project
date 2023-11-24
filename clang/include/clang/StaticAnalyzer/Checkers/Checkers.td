@@ -71,9 +71,11 @@ def InsecureAPI : Package<"insecureAPI">, ParentPackage<Security>;
 def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 def Taint : Package<"taint">, ParentPackage<SecurityAlpha>;
 
-def CERT : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POS : Package<"pos">, ParentPackage<CERT>;
+def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
+
+def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
+def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
 
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
@@ -993,15 +995,6 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
 
 } // end "security"
 
-let ParentPackage = POS in {
-
-  def PutenvWithAuto : Checker<"34c">,
-  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
-           "an automatic variable as the argument.">,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.cert.pos"
-
 let ParentPackage = ENV in {
 
   def InvalidPtrChecker : Checker<"InvalidPtr">,
@@ -1013,11 +1006,20 @@ let ParentPackage = ENV in {
                   "standard), which can lead to false positives depending on "
                   "implementation.",
                   "false",
-                  InAlpha>,
+                  Released>,
   ]>,
   Documentation<HasDocumentation>;
 
-} // end "alpha.cert.env"
+} // end "security.cert.env"
+
+let ParentPackage = POSAlpha in {
+
+  def PutenvWithAuto : Checker<"34c">,
+  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
+           "an automatic variable as the argument.">,
+  Documentation<HasDocumentation>;
+
+} // end "alpha.cert.pos"
 
 let ParentPackage = SecurityAlpha in {
 
