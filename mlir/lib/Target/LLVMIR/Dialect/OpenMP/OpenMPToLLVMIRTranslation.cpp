@@ -1733,13 +1733,13 @@ void collectMapDataFromMapOperands(MapInfoData &mapData,
            "missing map info operation or incorrect map info operation type");
     if (auto mapOp = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
             mapValue.getDefiningOp())) {
-      mapData.OriginalValue.push_back(moduleTranslation.lookupValue(
-          mapOp.getVarPtr() ? mapOp.getVarPtr() : mapOp.getVal()));
+      mapData.OriginalValue.push_back(
+          moduleTranslation.lookupValue(mapOp.getVarPtr()));
       mapData.Pointers.push_back(mapData.OriginalValue.back());
 
-      if (llvm::Value *refPtr = getRefPtrIfDeclareTarget(
-              mapOp.getVarPtr() ? mapOp.getVarPtr() : mapOp.getVal(),
-              moduleTranslation)) { // declare target
+      if (llvm::Value *refPtr =
+              getRefPtrIfDeclareTarget(mapOp.getVarPtr(),
+                                       moduleTranslation)) { // declare target
         mapData.IsDeclareTarget.push_back(true);
         mapData.BasePointers.push_back(refPtr);
       } else { // regular mapped variable
@@ -1747,14 +1747,10 @@ void collectMapDataFromMapOperands(MapInfoData &mapData,
         mapData.BasePointers.push_back(mapData.OriginalValue.back());
       }
 
-      mapData.Sizes.push_back(
-          getSizeInBytes(dl,
-                         mapOp.getVal() ? mapOp.getVal().getType()
-                                        : mapOp.getVarType().value(),
-                         mapOp, builder, moduleTranslation));
-      mapData.BaseType.push_back(moduleTranslation.convertType(
-          mapOp.getVal() ? mapOp.getVal().getType()
-                         : mapOp.getVarType().value()));
+      mapData.Sizes.push_back(getSizeInBytes(dl, mapOp.getVarType(), mapOp,
+                                             builder, moduleTranslation));
+      mapData.BaseType.push_back(
+          moduleTranslation.convertType(mapOp.getVarType()));
       mapData.MapClause.push_back(mapOp.getOperation());
       mapData.Types.push_back(
           llvm::omp::OpenMPOffloadMappingFlags(mapOp.getMapType().value()));
@@ -1804,8 +1800,7 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
     if (auto mapInfoOp = dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[i]))
       if (mapInfoOp.getMapCaptureType().value() ==
               mlir::omp::VariableCaptureKind::ByCopy &&
-          !(mapInfoOp.getVarType().has_value() &&
-            mapInfoOp.getVarType()->isa<LLVM::LLVMPointerType>()))
+          !mapInfoOp.getVarType().isa<LLVM::LLVMPointerType>())
         mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
 
     combinedInfo.BasePointers.emplace_back(mapData.BasePointers[i]);
@@ -2337,19 +2332,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapOperands = targetOp.getMapOperands();
 
-  // Remove mapOperands/blockArgs that have no use inside the region.
-  assert(mapOperands.size() == targetRegion.getNumArguments() &&
-         "Number of mapOperands must be same as block_arguments");
-  for (size_t i = 0; i < mapOperands.size(); i++) {
-    if (targetRegion.getArgument(i).use_empty()) {
-      targetRegion.eraseArgument(i);
-      mapOperands.erase(&mapOperands[i]);
-      i--;
-    }
-  }
-
   LogicalResult bodyGenStatus = success();
-
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codeGenIP) -> InsertPointTy {
@@ -2358,8 +2341,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     for (auto &mapOp : mapOperands) {
       auto mapInfoOp =
           mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp());
-      llvm::Value *mapOpValue = moduleTranslation.lookupValue(
-          mapInfoOp.getVarPtr() ? mapInfoOp.getVarPtr() : mapInfoOp.getVal());
+      llvm::Value *mapOpValue =
+          moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
       const auto &arg = targetRegion.front().getArgument(argIndex);
       moduleTranslation.mapValue(arg, mapOpValue);
       argIndex++;

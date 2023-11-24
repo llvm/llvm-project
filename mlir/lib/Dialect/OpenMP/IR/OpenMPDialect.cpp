@@ -890,15 +890,6 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapOperands) {
     if (auto MapInfoOp =
             mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
 
-      if (MapInfoOp.getVal() && MapInfoOp.getVarPtr())
-        emitError(op->getLoc(), "only one of val or var_ptr must be used");
-
-      if (!MapInfoOp.getVal() && !MapInfoOp.getVarPtr())
-        emitError(op->getLoc(), "missing val or var_ptr");
-
-      if (!MapInfoOp.getVarPtr() && MapInfoOp.getVarType().has_value())
-        emitError(op->getLoc(), "var_type supplied without var_ptr");
-
       if (!MapInfoOp.getMapType().has_value())
         emitError(op->getLoc(), "missing map type for map operand");
 
