@@ -2246,7 +2246,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   Value *StartVal = ConstantInt::get(LCTy, 10);
   Value *StopVal = ConstantInt::get(LCTy, 52);
   Value *StepVal = ConstantInt::get(LCTy, 2);
-  auto LoopBodyGen = [&](InsertPointTy, llvm::Value *) {};
+  auto LoopBodyGen = [&](InsertPointTy, Value *) {};
 
   CanonicalLoopInfo *CLI = OMPBuilder.createCanonicalLoop(
       Loc, LoopBodyGen, StartVal, StopVal, StepVal, false, false);

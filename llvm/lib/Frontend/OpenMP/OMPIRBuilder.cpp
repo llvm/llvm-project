@@ -2917,8 +2917,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoop(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    bool NeedsBarrier, llvm::omp::ScheduleKind SchedKind,
-    llvm::Value *ChunkSize, bool HasSimdModifier, bool HasMonotonicModifier,
+    bool NeedsBarrier, omp::ScheduleKind SchedKind, Value *ChunkSize,
+    bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
     OpenMPIRBuilder::WorksharingLoopType LoopType) {
   if (Config.isTargetDevice())
