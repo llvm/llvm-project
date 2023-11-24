@@ -41,6 +41,7 @@
 STATISTIC(NumFrameLoopProbe, "Number of loop stack probes used in prologue");
 STATISTIC(NumFrameExtraProbe,
           "Number of extra stack probes generated in prologue");
+STATISTIC(NumFunctionUsingPush2Pop2, "Number of funtions using push2/pop2");
 
 using namespace llvm;
 
@@ -137,6 +138,21 @@ static unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
     return X86::MOV64ri;
   }
   return X86::MOV32ri;
+}
+
+static unsigned getPUSHOpcode(const X86Subtarget &ST) {
+  return ST.is64Bit() ? (ST.hasPPX() ? X86::PUSHP64r : X86::PUSH64r)
+                      : X86::PUSH32r;
+}
+static unsigned getPOPOpcode(const X86Subtarget &ST) {
+  return ST.is64Bit() ? (ST.hasPPX() ? X86::POPP64r : X86::POP64r)
+                      : X86::POP32r;
+}
+static unsigned getPUSH2Opcode(const X86Subtarget &ST) {
+  return ST.hasPPX() ? X86::PUSH2P : X86::PUSH2;
+}
+static unsigned getPOP2Opcode(const X86Subtarget &ST) {
+  return ST.hasPPX() ? X86::POP2P : X86::POP2;
 }
 
 static bool isEAXLiveIn(MachineBasicBlock &MBB) {
@@ -1679,7 +1695,8 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       NumBytes = alignTo(NumBytes, MaxAlign);
 
     // Save EBP/RBP into the appropriate stack slot.
-    BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::PUSH64r : X86::PUSH32r))
+    BuildMI(MBB, MBBI, DL,
+            TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
         .addReg(MachineFramePtr, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
 
@@ -1818,18 +1835,30 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // Skip the callee-saved push instructions.
   bool PushedRegs = false;
   int StackOffset = 2 * stackGrowth;
+  MachineBasicBlock::iterator LastCSPush = MBBI;
+  auto IsCSPush = [&](const MachineBasicBlock::iterator &MBBI) {
+    return MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup) &&
+           (MBBI->getOpcode() == X86::PUSH32r ||
+            MBBI->getOpcode() == X86::PUSH64r ||
+            MBBI->getOpcode() == X86::PUSHP64r ||
+            MBBI->getOpcode() == X86::PUSH2 ||
+            MBBI->getOpcode() == X86::PUSH2P);
+  };
 
-  while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup) &&
-         (MBBI->getOpcode() == X86::PUSH32r ||
-          MBBI->getOpcode() == X86::PUSH64r)) {
+  while (IsCSPush(MBBI)) {
     PushedRegs = true;
     Register Reg = MBBI->getOperand(0).getReg();
+    LastCSPush = MBBI;
     ++MBBI;
 
     if (!HasFP && NeedsDwarfCFI) {
       // Mark callee-saved push instruction.
       // Define the current CFA rule to use the provided offset.
       assert(StackSize);
+      // Compared to push, push2 introduces more stack offset (one more register).
+      if (LastCSPush->getOpcode() == X86::PUSH2 ||
+          LastCSPush->getOpcode() == X86::PUSH2P)
+        StackOffset += stackGrowth;
       BuildCFI(MBB, MBBI, DL,
                MCCFIInstruction::cfiDefCfaOffset(nullptr, -StackOffset),
                MachineInstr::FrameSetup);
@@ -1841,6 +1870,11 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
           .addImm(Reg)
           .setMIFlag(MachineInstr::FrameSetup);
+      if (LastCSPush->getOpcode() == X86::PUSH2 ||
+          LastCSPush->getOpcode() == X86::PUSH2P)
+        BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
+            .addImm(LastCSPush->getOperand(1).getReg())
+            .setMIFlag(MachineInstr::FrameSetup);
     }
   }
 
@@ -2317,7 +2351,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       emitSPUpdate(MBB, MBBI, DL, Offset, /*InEpilogue*/ true);
     }
     // Pop EBP.
-    BuildMI(MBB, MBBI, DL, TII.get(Is64Bit ? X86::POP64r : X86::POP32r),
+    BuildMI(MBB, MBBI, DL,
+            TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())),
             MachineFramePtr)
         .setMIFlag(MachineInstr::FrameDestroy);
 
@@ -2360,7 +2395,13 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       if ((Opc != X86::POP32r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
           (Opc != X86::POP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
           (Opc != X86::BTR64ri8 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
-          (Opc != X86::ADD64ri32 || !PI->getFlag(MachineInstr::FrameDestroy)))
+          (Opc != X86::ADD64ri32 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::POPP64r || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::POP2 || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::POP2P || !PI->getFlag(MachineInstr::FrameDestroy)) &&
+          (Opc != X86::LEA64r || !PI->getFlag(MachineInstr::FrameDestroy))
+
+      )
         break;
       FirstCSPop = PI;
     }
@@ -2451,8 +2492,12 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
       MachineBasicBlock::iterator PI = MBBI;
       unsigned Opc = PI->getOpcode();
       ++MBBI;
-      if (Opc == X86::POP32r || Opc == X86::POP64r) {
+      if (Opc == X86::POP32r || Opc == X86::POP64r || Opc == X86::POPP64r ||
+          Opc == X86::POP2 || Opc == X86::POP2P) {
         Offset += SlotSize;
+        // Compared to pop, pop2 introduces more stack offset (one more register).
+        if (Opc == X86::POP2 || Opc == X86::POP2P)
+          Offset += SlotSize;
         BuildCFI(MBB, MBBI, DL,
                  MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
                  MachineInstr::FrameDestroy);
@@ -2735,12 +2780,41 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     }
   }
 
+  // Strategy:
+  // 1. Not use push2 when there are less than 2 pushs.
+  // 2. When the number of CSR push is odd
+  //    a. Start to use push2 from the 1st push if stack is 16B aligned.
+  //    b. Start to use push2 from the 2nd push if stack is not 16B aligned.
+  // 3. When the number of CSR push is even, start to use push2 from the 1st
+  //    push and make the stack 16B aligned before the push
+  unsigned NumRegsForPush2 = 0;
+  if (STI.hasPush2Pop2()) {
+    unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
+      return X86::GR64RegClass.contains(I.getReg());
+    });
+    bool UsePush2Pop2 = NumCSGPR > 1;
+    X86FI->setPadForPush2Pop2(UsePush2Pop2 && NumCSGPR % 2 == 0 &&
+                              SpillSlotOffset % 16 != 0);
+    NumRegsForPush2 = UsePush2Pop2 ? alignDown(NumCSGPR, 2) : 0;
+    if (X86FI->padForPush2Pop2()) {
+      SpillSlotOffset -= SlotSize;
+      MFI.CreateFixedSpillStackObject(SlotSize, SpillSlotOffset);
+    }
+  }
+
   // Assign slots for GPRs. It increases frame size.
   for (CalleeSavedInfo &I : llvm::reverse(CSI)) {
     Register Reg = I.getReg();
 
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
+
+    // A CSR is a candidate for push2/pop2 when it's slot offset is 16B aligned
+    // or only an odd number of registers in the candidates.
+    if (X86FI->getNumCandidatesForPush2Pop2() < NumRegsForPush2 &&
+        (SpillSlotOffset % 16 == 0 ||
+         X86FI->getNumCandidatesForPush2Pop2() % 2))
+      X86FI->addCandidateForPush2Pop2(Reg);
 
     SpillSlotOffset -= SlotSize;
     CalleeSavedFrameSize += SlotSize;
@@ -2759,6 +2833,10 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     // TODO: saving the slot index is better?
     X86FI->setRestoreBasePointer(CalleeSavedFrameSize);
   }
+  assert(X86FI->getNumCandidatesForPush2Pop2() % 2 == 0 &&
+         "Expect even candidates for push2/pop2");
+  if (X86FI->getNumCandidatesForPush2Pop2())
+    ++NumFunctionUsingPush2Pop2;
   X86FI->setCalleeSavedFrameSize(CalleeSavedFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(CalleeSavedFrameSize);
 
@@ -2808,7 +2886,13 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
 
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
-  unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
+  unsigned Opc = getPUSHOpcode(STI);
+  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  MachineInstrBuilder MIB;
+  bool IncompletePush2 = false;
+  if (X86FI->padForPush2Pop2())
+    emitSPUpdate(MBB, MI, DL, -(int64_t)SlotSize, /*InEpilogue=*/false);
+
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     Register Reg = I.getReg();
 
@@ -2832,17 +2916,28 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
       }
     }
 
-    // Do not set a kill flag on values that are also marked as live-in. This
-    // happens with the @llvm-returnaddress intrinsic and with arguments
-    // passed in callee saved registers.
-    // Omitting the kill flags is conservatively correct even if the live-in
-    // is not used after all.
-    BuildMI(MBB, MI, DL, TII.get(Opc))
-        .addReg(Reg, getKillRegState(CanKill))
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (X86FI->isCandidateForPush2Pop2(Reg)) {
+      if (MIB.getInstr() && IncompletePush2) {
+        MIB.addReg(Reg, getKillRegState(CanKill));
+        IncompletePush2 = false;
+      } else {
+        MIB = BuildMI(MBB, MI, DL, TII.get(getPUSH2Opcode(STI)))
+                  .addReg(Reg, getKillRegState(CanKill))
+                  .setMIFlag(MachineInstr::FrameSetup);
+        IncompletePush2 = true;
+      }
+    } else {
+      // Do not set a kill flag on values that are also marked as live-in. This
+      // happens with the @llvm-returnaddress intrinsic and with arguments
+      // passed in callee saved registers.
+      // Omitting the kill flags is conservatively correct even if the live-in
+      // is not used after all.
+      BuildMI(MBB, MI, DL, TII.get(Opc))
+          .addReg(Reg, getKillRegState(CanKill))
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 
-  const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   if (X86FI->getRestoreBasePointer()) {
     unsigned Opc = STI.is64Bit() ? X86::PUSH64r : X86::PUSH32r;
     Register BaseReg = this->TRI->getBaseRegister();
@@ -2958,15 +3053,30 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
   }
 
   // POP GPRs.
-  unsigned Opc = STI.is64Bit() ? X86::POP64r : X86::POP32r;
+  MachineInstrBuilder MIB;
+  bool IncompletePop2 = false;
+  unsigned Opc = getPOPOpcode(STI);
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
-
-    BuildMI(MBB, MI, DL, TII.get(Opc), Reg)
-        .setMIFlag(MachineInstr::FrameDestroy);
+    if (X86FI->isCandidateForPush2Pop2(Reg)) {
+      if (MIB.getInstr() && IncompletePop2) {
+        MIB.addReg(Reg, RegState::Define);
+        IncompletePop2 = false;
+      } else {
+        MIB = BuildMI(MBB, MI, DL, TII.get(getPOP2Opcode(STI)), Reg)
+                  .setMIFlag(MachineInstr::FrameDestroy);
+        IncompletePop2 = true;
+      }
+    } else {
+      BuildMI(MBB, MI, DL, TII.get(Opc), Reg)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
   }
+  if (X86FI->padForPush2Pop2())
+    emitSPUpdate(MBB, MI, DL, SlotSize, /*InEpilogue=*/true);
+
   return true;
 }
 
