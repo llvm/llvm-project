@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <cassert>
 
