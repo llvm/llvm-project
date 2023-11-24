@@ -2283,14 +2283,6 @@ public:
   ~BoUpSLP();
 
 private:
-  /// Determine if a vectorized value \p V in can be demoted to
-  /// a smaller type with a truncation. We collect the values that will be
-  /// demoted in ToDemote and additional roots that require investigating in
-  /// Roots.
-  bool collectValuesToDemote(Value *V, SmallVectorImpl<Value *> &ToDemote,
-                             SmallVectorImpl<Value *> &Roots,
-                             DenseSet<Value *> &Visited) const;
-
   /// Check if the operands on the edges \p Edges of the \p UserTE allows
   /// reordering (i.e. the operands can be reordered because they have only one
   /// user and reordarable).
@@ -9052,7 +9044,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     // for the extract and the added cost of the sign extend if needed.
     auto *VecTy = FixedVectorType::get(EU.Scalar->getType(), BundleWidth);
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    auto It = MinBWs.find(EU.Scalar);
+    auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
+    auto It = MinBWs.find(ScalarRoot);
     if (It != MinBWs.end()) {
       auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
       unsigned Extend =
@@ -13081,20 +13074,19 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
 // Determine if a value V in a vectorizable expression Expr can be demoted to a
 // smaller type with a truncation. We collect the values that will be demoted
 // in ToDemote and additional roots that require investigating in Roots.
-bool BoUpSLP::collectValuesToDemote(Value *V,
-                                    SmallVectorImpl<Value *> &ToDemote,
-                                    SmallVectorImpl<Value *> &Roots,
-                                    DenseSet<Value *> &Visited) const {
+static bool collectValuesToDemote(Value *V, SmallPtrSetImpl<Value *> &Expr,
+                                  SmallVectorImpl<Value *> &ToDemote,
+                                  SmallVectorImpl<Value *> &Roots) {
   // We can always demote constants.
   if (isa<Constant>(V)) {
     ToDemote.push_back(V);
     return true;
   }
 
-  // If the value is not a vectorized instruction in the expression with only
-  // one use, it cannot be demoted.
+  // If the value is not an instruction in the expression with only one use, it
+  // cannot be demoted.
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !I->hasOneUse() || !getTreeEntry(I) || !Visited.insert(I).second)
+  if (!I || !I->hasOneUse() || !Expr.count(I))
     return false;
 
   switch (I->getOpcode()) {
@@ -13118,16 +13110,16 @@ bool BoUpSLP::collectValuesToDemote(Value *V,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-    if (!collectValuesToDemote(I->getOperand(0), ToDemote, Roots, Visited) ||
-        !collectValuesToDemote(I->getOperand(1), ToDemote, Roots, Visited))
+    if (!collectValuesToDemote(I->getOperand(0), Expr, ToDemote, Roots) ||
+        !collectValuesToDemote(I->getOperand(1), Expr, ToDemote, Roots))
       return false;
     break;
 
   // We can demote selects if we can demote their true and false values.
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
-    if (!collectValuesToDemote(SI->getTrueValue(), ToDemote, Roots, Visited) ||
-        !collectValuesToDemote(SI->getFalseValue(), ToDemote, Roots, Visited))
+    if (!collectValuesToDemote(SI->getTrueValue(), Expr, ToDemote, Roots) ||
+        !collectValuesToDemote(SI->getFalseValue(), Expr, ToDemote, Roots))
       return false;
     break;
   }
@@ -13137,7 +13129,7 @@ bool BoUpSLP::collectValuesToDemote(Value *V,
   case Instruction::PHI: {
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!collectValuesToDemote(IncValue, ToDemote, Roots, Visited))
+      if (!collectValuesToDemote(IncValue, Expr, ToDemote, Roots))
         return false;
     break;
   }
@@ -13164,16 +13156,36 @@ void BoUpSLP::computeMinimumValueSizes() {
   if (!TreeRootIT)
     return;
 
+  // If the expression is not rooted by a store, these roots should have
+  // external uses.
+  // TOSO: investigate if this can be relaxed.
+  SmallPtrSet<Value *, 32> Expr(TreeRoot.begin(), TreeRoot.end());
+  for (auto &EU : ExternalUses)
+    if (!Expr.erase(EU.Scalar))
+      return;
+  if (!Expr.empty())
+    return;
+
+  // Collect the scalar values of the vectorizable expression. We will use this
+  // context to determine which values can be demoted. If we see a truncation,
+  // we mark it as seeding another demotion.
+  for (auto &EntryPtr : VectorizableTree)
+    Expr.insert(EntryPtr->Scalars.begin(), EntryPtr->Scalars.end());
+
+  // Ensure the roots of the vectorizable tree don't form a cycle. They must
+  // have a single external user that is not in the vectorizable tree.
+  for (auto *Root : TreeRoot)
+    if (!Root->hasOneUse() || Expr.count(*Root->user_begin()))
+      return;
+
   // Conservatively determine if we can actually truncate the roots of the
   // expression. Collect the values that can be demoted in ToDemote and
   // additional roots that require investigating in Roots.
   SmallVector<Value *, 32> ToDemote;
   SmallVector<Value *, 4> Roots;
-  for (auto *Root : TreeRoot) {
-    DenseSet<Value *> Visited;
-    if (!collectValuesToDemote(Root, ToDemote, Roots, Visited))
+  for (auto *Root : TreeRoot)
+    if (!collectValuesToDemote(Root, Expr, ToDemote, Roots))
       return;
-  }
 
   // The maximum bit width required to represent all the values that can be
   // demoted without loss of precision. It would be safe to truncate the roots
@@ -13203,9 +13215,9 @@ void BoUpSLP::computeMinimumValueSizes() {
   // maximum bit width required to store the scalar by using ValueTracking to
   // compute the number of high-order bits we can truncate.
   if (MaxBitWidth == DL->getTypeSizeInBits(TreeRoot[0]->getType()) &&
-      all_of(TreeRoot, [](Value *V) {
-        return all_of(V->users(),
-                      [](User *U) { return isa<GetElementPtrInst>(U); });
+      llvm::all_of(TreeRoot, [](Value *R) {
+        assert(R->hasOneUse() && "Root should have only one use!");
+        return isa<GetElementPtrInst>(R->user_back());
       })) {
     MaxBitWidth = 8u;
 
@@ -13254,10 +13266,8 @@ void BoUpSLP::computeMinimumValueSizes() {
   // If we can truncate the root, we must collect additional values that might
   // be demoted as a result. That is, those seeded by truncations we will
   // modify.
-  while (!Roots.empty()) {
-    DenseSet<Value *> Visited;
-    collectValuesToDemote(Roots.pop_back_val(), ToDemote, Roots, Visited);
-  }
+  while (!Roots.empty())
+    collectValuesToDemote(Roots.pop_back_val(), Expr, ToDemote, Roots);
 
   // Finally, map the values we can demote to the maximum bit with we computed.
   DenseMap<const TreeEntry *, bool> Signendness;
