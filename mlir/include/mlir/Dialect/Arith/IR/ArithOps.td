@@ -838,12 +838,6 @@ def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
 def Arith_MaximumFOp : Arith_FloatBinaryOp<"maximumf", [Commutative]> {
   let summary = "floating-point maximum operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `arith.maximumf` ssa-use `,` ssa-use `:` type
-    ```
-
     Returns the maximum of the two arguments, treating -0.0 as less than +0.0.
     If one of the arguments is NaN, then the result is also NaN.
 
@@ -864,12 +858,6 @@ def Arith_MaximumFOp : Arith_FloatBinaryOp<"maximumf", [Commutative]> {
 def Arith_MaxNumFOp : Arith_FloatBinaryOp<"maxnumf", [Commutative]> {
   let summary = "floating-point maximum operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `arith.maxnumf` ssa-use `,` ssa-use `:` type
-    ```
-
     Returns the maximum of the two arguments.
     If the arguments are -0.0 and +0.0, then the result is either of them.
     If one of the arguments is NaN, then the result is the other argument.
@@ -910,12 +898,6 @@ def Arith_MaxUIOp : Arith_TotalIntBinaryOp<"maxui", [Commutative]> {
 def Arith_MinimumFOp : Arith_FloatBinaryOp<"minimumf", [Commutative]> {
   let summary = "floating-point minimum operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `arith.minimumf` ssa-use `,` ssa-use `:` type
-    ```
-
     Returns the minimum of the two arguments, treating -0.0 as less than +0.0.
     If one of the arguments is NaN, then the result is also NaN.
 
@@ -936,12 +918,6 @@ def Arith_MinimumFOp : Arith_FloatBinaryOp<"minimumf", [Commutative]> {
 def Arith_MinNumFOp : Arith_FloatBinaryOp<"minnumf", [Commutative]> {
   let summary = "floating-point minimum operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `arith.minnumf` ssa-use `,` ssa-use `:` type
-    ```
-
     Returns the minimum of the two arguments.
     If the arguments are -0.0 and +0.0, then the result is either of them.
     If one of the arguments is NaN, then the result is the other argument.
