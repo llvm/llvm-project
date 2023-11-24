@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -55,6 +56,8 @@ class ArrayBoundCheckerV2 : public Checker<check::PostStmt<ArraySubscriptExpr>,
                  NonLoc Offset, Messages Msgs) const;
 
   static bool isFromCtypeMacro(const Stmt *S, ASTContext &AC);
+
+  static bool isInAddressOf(const Stmt *S, ASTContext &AC);
 
 public:
   void checkPostStmt(const ArraySubscriptExpr *E, CheckerContext &C) const {
@@ -171,9 +174,11 @@ getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
 // where the first one corresponds to "value below threshold" and the second
 // corresponds to "value at or above threshold". Returns {nullptr, nullptr} in
 // the case when the evaluation fails.
+// If the optional argument CheckEquality is true, then use BO_EQ instead of
+// the default BO_LT after consistently applying the same simplification steps.
 static std::pair<ProgramStateRef, ProgramStateRef>
 compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
-                        SValBuilder &SVB) {
+                        SValBuilder &SVB, bool CheckEquality = false) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
     std::tie(Value, Threshold) = getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
   }
@@ -189,8 +194,10 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
       return {nullptr, State};
     }
   }
+  const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
   auto BelowThreshold =
-      SVB.evalBinOpNN(State, BO_LT, Value, Threshold, SVB.getConditionType()).getAs<NonLoc>();
+      SVB.evalBinOpNN(State, OpKind, Value, Threshold, SVB.getConditionType())
+          .getAs<NonLoc>();
 
   if (BelowThreshold)
     return State->assume(*BelowThreshold);
@@ -374,6 +381,19 @@ void ArrayBoundCheckerV2::performCheck(const Expr *E, CheckerContext &C) const {
     if (ExceedsUpperBound) {
       if (!WithinUpperBound) {
         // We know that the index definitely exceeds the upper bound.
+        if (isa<ArraySubscriptExpr>(E) && isInAddressOf(E, C.getASTContext())) {
+          // ...but this is within an addressof expression, so we need to check
+          // for the exceptional case that `&array[size]` is valid.
+          auto [EqualsToThreshold, NotEqualToThreshold] =
+              compareValueToThreshold(ExceedsUpperBound, ByteOffset, *KnownSize,
+                                      SVB, /*CheckEquality=*/true);
+          if (EqualsToThreshold && !NotEqualToThreshold) {
+            // We are definitely in the exceptional case, so return early
+            // instead of reporting a bug.
+            C.addTransition(EqualsToThreshold);
+            return;
+          }
+        }
         Messages Msgs = getExceedsMsgs(C.getASTContext(), Reg, ByteOffset,
                                        *KnownSize, Location);
         reportOOB(C, ExceedsUpperBound, OOB_Exceeds, ByteOffset, Msgs);
@@ -440,6 +460,19 @@ bool ArrayBoundCheckerV2::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
           (MacroName == "isnctrl") || (MacroName == "isprint") ||
           (MacroName == "ispunct") || (MacroName == "isspace") ||
           (MacroName == "isupper") || (MacroName == "isxdigit"));
+}
+
+bool ArrayBoundCheckerV2::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
+  ParentMapContext &ParentCtx = ACtx.getParentMapContext();
+  do {
+    const DynTypedNodeList Parents = ParentCtx.getParents(*S);
+    if (Parents.empty())
+      return false;
+    S = Parents[0].get<Stmt>();
+  } while (isa_and_nonnull<ParenExpr, ImplicitCastExpr>(S));
+  if (const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(S))
+    return UnaryOp->getOpcode() == UO_AddrOf;
+  return false;
 }
 
 void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
