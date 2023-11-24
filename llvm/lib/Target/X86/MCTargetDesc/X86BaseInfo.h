@@ -993,14 +993,11 @@ inline unsigned getOperandBias(const MCInstrDesc &Desc) {
   }
 }
 
-/// The function returns the MCInst operand # for the first field of the
-/// memory operand.  If the instruction doesn't have a
-/// memory operand, this returns -1.
-///
-/// Note that this ignores tied operands.  If there is a tied register which
-/// is duplicated in the MCInst (e.g. "EAX = addl EAX, [mem]") it is only
-/// counted as one operand.
-///
+/// \returns operand # for the first field of the memory operand or -1 if no
+/// memory operands.
+/// NOTE: This ignores tied operands.  If there is a tied register which is
+/// duplicated in the MCInst (e.g. "EAX = addl EAX, [mem]") it is only counted
+/// as one operand.
 inline int getMemoryOperandNo(uint64_t TSFlags) {
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
   bool HasEVEX_K = TSFlags & X86II::EVEX_K;
