@@ -28,6 +28,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
@@ -352,67 +353,64 @@ struct VectorInsertStridedSliceOpConvert final
   }
 };
 
-template <typename Derived>
-struct VectorReductionPatternBase : OpConversionPattern<vector::ReductionOp> {
+static SmallVector<Value> extractAllElements(vector::ReductionOp reduceOp,
+                                      vector::ReductionOp::Adaptor adaptor,
+                                      VectorType srcVectorType,
+                                      ConversionPatternRewriter &rewriter) {
+  int numElements = srcVectorType.getDimSize(0);
+  SmallVector<Value> values;
+  values.reserve(numElements + (adaptor.getAcc() != nullptr));
+  Location loc = reduceOp.getLoc();
+  for (int i = 0; i < numElements; ++i) {
+    values.push_back(rewriter.create<spirv::CompositeExtractOp>(
+        loc, srcVectorType.getElementType(), adaptor.getVector(),
+        rewriter.getI32ArrayAttr({i})));
+  }
+  if (Value acc = adaptor.getAcc())
+    values.push_back(acc);
+
+  return values;
+}
+
+struct ReductionRewriteInfo {
+  Type resultType;
+  SmallVector<Value> extractedElements;
+};
+
+FailureOr<ReductionRewriteInfo> static getReductionInfo(
+    vector::ReductionOp op, vector::ReductionOp::Adaptor adaptor,
+    ConversionPatternRewriter &rewriter, const TypeConverter &typeConverter) {
+  Type resultType = typeConverter.convertType(op.getType());
+  if (!resultType)
+    return failure();
+
+  auto srcVectorType = dyn_cast<VectorType>(adaptor.getVector().getType());
+  if (!srcVectorType || srcVectorType.getRank() != 1)
+    return rewriter.notifyMatchFailure(op, "not a 1-D vector source");
+
+  SmallVector<Value> extractedElements =
+      extractAllElements(op, adaptor, srcVectorType, rewriter);
+
+  return ReductionRewriteInfo{resultType, std::move(extractedElements)};
+}
+
+template <typename SPIRVUMaxOp, typename SPIRVUMinOp, typename SPIRVSMaxOp,
+          typename SPIRVSMinOp>
+struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(vector::ReductionOp reduceOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    Type resultType = typeConverter->convertType(reduceOp.getType());
-    if (!resultType)
+                  ConversionPatternRewriter &rewriter) const override {
+    auto reductionInfo =
+        getReductionInfo(reduceOp, adaptor, rewriter, *getTypeConverter());
+    if (failed(reductionInfo))
       return failure();
 
-    auto srcVectorType = dyn_cast<VectorType>(adaptor.getVector().getType());
-    if (!srcVectorType || srcVectorType.getRank() != 1)
-      return rewriter.notifyMatchFailure(reduceOp, "not 1-D vector source");
-
-    SmallVector<Value> extractedElements =
-        extractAllElements(reduceOp, adaptor, srcVectorType, rewriter);
-
-    const auto &self = static_cast<const Derived &>(*this);
-
-    return self.reduceExtracted(reduceOp, extractedElements, resultType,
-                                rewriter);
-  }
-
-private:
-  SmallVector<Value>
-  extractAllElements(vector::ReductionOp reduceOp, OpAdaptor adaptor,
-                     VectorType srcVectorType,
-                     ConversionPatternRewriter &rewriter) const {
-    int numElements = srcVectorType.getDimSize(0);
-    SmallVector<Value> values;
-    values.reserve(numElements + (adaptor.getAcc() != nullptr));
-    Location loc = reduceOp.getLoc();
-    for (int i = 0; i < numElements; ++i) {
-      values.push_back(rewriter.create<spirv::CompositeExtractOp>(
-          loc, srcVectorType.getElementType(), adaptor.getVector(),
-          rewriter.getI32ArrayAttr({i})));
-    }
-    if (Value acc = adaptor.getAcc())
-      values.push_back(acc);
-
-    return values;
-  }
-};
-
-#define VECTOR_REDUCTION_BASE                                                  \
-  VectorReductionPatternBase<VectorReductionPattern<SPIRVUMaxOp, SPIRVUMinOp,  \
-                                                    SPIRVSMaxOp, SPIRVSMinOp>>
-template <typename SPIRVUMaxOp, typename SPIRVUMinOp, typename SPIRVSMaxOp,
-          typename SPIRVSMinOp>
-struct VectorReductionPattern final : VECTOR_REDUCTION_BASE {
-  using Base = VECTOR_REDUCTION_BASE;
-  using Base::Base;
-
-  LogicalResult reduceExtracted(vector::ReductionOp reduceOp,
-                                ArrayRef<Value> extractedElements,
-                                Type resultType,
-                                ConversionPatternRewriter &rewriter) const {
+    auto [resultType, extractedElements] = *reductionInfo;
     mlir::Location loc = reduceOp->getLoc();
     Value result = extractedElements.front();
-    for (Value next : llvm::ArrayRef(extractedElements).drop_front()) {
+    for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
 
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
@@ -445,27 +443,27 @@ struct VectorReductionPattern final : VECTOR_REDUCTION_BASE {
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
     }
+#undef INT_AND_FLOAT_CASE
+#undef INT_OR_FLOAT_CASE
 
     rewriter.replaceOp(reduceOp, result);
     return success();
   }
 };
-#undef VECTOR_REDUCTION_BASE
-#undef INT_AND_FLOAT_CASE
-#undef INT_OR_FLOAT_CASE
 
-#define MIN_MAX_PATTERN_BASE                                                   \
-  VectorReductionPatternBase<                                                  \
-      VectorReductionFloatMinMax<SPIRVFMaxOp, SPIRVFMinOp>>
-template <class SPIRVFMaxOp, class SPIRVFMinOp>
-struct VectorReductionFloatMinMax final : MIN_MAX_PATTERN_BASE {
-  using Base = MIN_MAX_PATTERN_BASE;
-  using Base::Base;
+template <typename SPIRVFMaxOp, typename SPIRVFMinOp>
+struct VectorReductionFloatMinMax final : OpConversionPattern<vector::ReductionOp> {
+  using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult reduceExtracted(vector::ReductionOp reduceOp,
-                                ArrayRef<Value> extractedElements,
-                                Type resultType,
-                                ConversionPatternRewriter &rewriter) const {
+  LogicalResult
+  matchAndRewrite(vector::ReductionOp reduceOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto reductionInfo =
+        getReductionInfo(reduceOp, adaptor, rewriter, *getTypeConverter());
+    if (failed(reductionInfo))
+      return failure();
+
+    auto [resultType, extractedElements] = *reductionInfo;
     mlir::Location loc = reduceOp->getLoc();
     Value result = extractedElements.front();
     for (Value next : llvm::ArrayRef(extractedElements).drop_front()) {
@@ -485,13 +483,12 @@ struct VectorReductionFloatMinMax final : MIN_MAX_PATTERN_BASE {
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
     }
+#undef INT_OR_FLOAT_CASE
 
     rewriter.replaceOp(reduceOp, result);
     return success();
   }
 };
-#undef MIN_MAX_PATTERN_BASE
-#undef INT_OR_FLOAT_CASE
 
 class VectorSplatPattern final : public OpConversionPattern<vector::SplatOp> {
 public:
