@@ -481,12 +481,14 @@ Improvements to Clang's diagnostics
 - Clang will now print ``static_assert`` failure details for arithmetic binary operators.
   Example:
 
-  .. code-block:: c++
+  .. code-block:: cpp
+
     static_assert(1 << 4 == 15);
 
   will now print:
 
   .. code-block:: text
+
     error: static assertion failed due to requirement '1 << 4 == 15'
        48 | static_assert(1 << 4 == 15);
           |               ^~~~~~~~~~~~
