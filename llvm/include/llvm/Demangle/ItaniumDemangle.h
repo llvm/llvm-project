@@ -911,8 +911,6 @@ public:
     OB += "this ";
     Base->print(OB);
   }
-
-  void printRight(OutputBuffer &OB) const override { Base->print(OB); }
 };
 
 class FunctionEncoding final : public Node {
