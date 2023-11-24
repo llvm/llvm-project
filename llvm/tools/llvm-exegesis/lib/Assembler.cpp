@@ -332,7 +332,11 @@ Expected<ExecutableFunction> ExecutableFunction::create(
   std::unique_ptr<LLVMContext> Ctx = std::make_unique<LLVMContext>();
 
   auto SymbolSizes = object::computeSymbolSizes(*ObjectFileHolder.getBinary());
+  // Get the size of the function that we want to call into (with the name of
+  // FunctionID). This should always be the third symbol returned by
+  // calculateSymbolSizes.
   assert(SymbolSizes.size() == 3);
+  assert(cantFail(std::get<0>(SymbolSizes[2]).getName()) == FunctionID);
   uintptr_t CodeSize = std::get<1>(SymbolSizes[2]);
 
   auto EJITOrErr = orc::LLJITBuilder().create();
