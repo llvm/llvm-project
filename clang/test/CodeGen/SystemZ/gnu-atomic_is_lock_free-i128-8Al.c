@@ -9,20 +9,20 @@
 
 __int128 Int128_Al8 __attribute__((aligned(8)));
 
-// CHECK-LABEL: @fun_PtrAl16_is_lock_free(
+// CHECK-LABEL: @fun0
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @__atomic_is_lock_free(i64 noundef 16, ptr noundef nonnull @Int128_Al16) #[[ATTR2]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @__atomic_is_lock_free(i64 noundef 16, ptr noundef nonnull @Int128_Al8) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret i1 [[CALL]]
 //
-_Bool fun_PtrAl8_is_lock_free() {
+_Bool fun0() {
   return __atomic_is_lock_free(16, &Int128_Al8);
 }
 
-// CHECK-LABEL: @fun_PtrAl16_always_lock_free(
+// CHECK-LABEL: @fun1
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i1 false
 //
-_Bool fun_PtrAl8_always_lock_free() {
+_Bool fun1() {
   return __atomic_always_lock_free(16, &Int128_Al8);
 }
 
