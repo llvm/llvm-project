@@ -51,6 +51,7 @@
 
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
 using float16 = _Float16;
+#define LIBC_HAS_FLOAT16
 #endif
 
 // float128 support.
