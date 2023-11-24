@@ -51,7 +51,7 @@ define i32 @test_step_1_flags(i32 %n) {
 ; DEFAULT-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
 ; DEFAULT-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %n)
 ; DEFAULT-NEXT:   Predicates:
-; DEFAULT:       Loop %loop: Trip multiple is 1
+; DEFAULT-NEXT:  Loop %loop: Trip multiple is 1
 ;
 ; EXPENSIVE_SHARPENING-LABEL: 'test_step_1_flags'
 ; EXPENSIVE_SHARPENING-NEXT:  Classifying expressions for: @test_step_1_flags
@@ -77,7 +77,7 @@ define i32 @test_step_1_flags(i32 %n) {
 ; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %n)
 ; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %n)
 ; EXPENSIVE_SHARPENING-NEXT:   Predicates:
-; EXPENSIVE_SHARPENING:       Loop %loop: Trip multiple is 1
+; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   %n.minus.1 = sub nsw i32 %n, 1
