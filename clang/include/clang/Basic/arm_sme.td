@@ -300,7 +300,7 @@ defm SVADD : ZAAddSub<"add">;
 defm SVSUB : ZAAddSub<"sub">;
 
 //
-// Outer produce and accumulate/subtract
+// Outer product and accumulate/subtract
 //
 
 let TargetGuard = "sme2" in {
