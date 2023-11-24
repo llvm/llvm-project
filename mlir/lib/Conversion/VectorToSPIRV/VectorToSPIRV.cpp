@@ -353,10 +353,9 @@ struct VectorInsertStridedSliceOpConvert final
   }
 };
 
-static SmallVector<Value> extractAllElements(vector::ReductionOp reduceOp,
-                                      vector::ReductionOp::Adaptor adaptor,
-                                      VectorType srcVectorType,
-                                      ConversionPatternRewriter &rewriter) {
+static SmallVector<Value> extractAllElements(
+    vector::ReductionOp reduceOp, vector::ReductionOp::Adaptor adaptor,
+    VectorType srcVectorType, ConversionPatternRewriter &rewriter) {
   int numElements = srcVectorType.getDimSize(0);
   SmallVector<Value> values;
   values.reserve(numElements + (adaptor.getAcc() != nullptr));
@@ -452,7 +451,8 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 };
 
 template <typename SPIRVFMaxOp, typename SPIRVFMinOp>
-struct VectorReductionFloatMinMax final : OpConversionPattern<vector::ReductionOp> {
+struct VectorReductionFloatMinMax final
+    : OpConversionPattern<vector::ReductionOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -466,7 +466,7 @@ struct VectorReductionFloatMinMax final : OpConversionPattern<vector::ReductionO
     auto [resultType, extractedElements] = *reductionInfo;
     mlir::Location loc = reduceOp->getLoc();
     Value result = extractedElements.front();
-    for (Value next : llvm::ArrayRef(extractedElements).drop_front()) {
+    for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
