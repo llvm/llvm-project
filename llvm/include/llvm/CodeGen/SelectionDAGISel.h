@@ -190,10 +190,7 @@ public:
     OPC_EmitInteger64,
     OPC_EmitStringInteger,
     // Space-optimized forms that implicitly encode integer VT.
-    OPC_EmitStringInteger8,
-    OPC_EmitStringInteger16,
     OPC_EmitStringInteger32,
-    OPC_EmitStringInteger64,
     OPC_EmitRegister,
     OPC_EmitRegister2,
     OPC_EmitConvertToTarget,

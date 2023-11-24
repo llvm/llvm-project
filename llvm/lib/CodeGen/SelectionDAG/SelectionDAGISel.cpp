@@ -3457,18 +3457,13 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitInteger32:
     case OPC_EmitInteger64:
     case OPC_EmitStringInteger:
-    case OPC_EmitStringInteger8:
-    case OPC_EmitStringInteger16:
-    case OPC_EmitStringInteger32:
-    case OPC_EmitStringInteger64: {
+    case OPC_EmitStringInteger32: {
       MVT::SimpleValueType VT;
       switch (Opcode) {
       case OPC_EmitInteger8:
-      case OPC_EmitStringInteger8:
         VT = MVT::i8;
         break;
       case OPC_EmitInteger16:
-      case OPC_EmitStringInteger16:
         VT = MVT::i16;
         break;
       case OPC_EmitInteger32:
@@ -3476,7 +3471,6 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i32;
         break;
       case OPC_EmitInteger64:
-      case OPC_EmitStringInteger64:
         VT = MVT::i64;
         break;
       default:

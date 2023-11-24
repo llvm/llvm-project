@@ -694,10 +694,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     // These should always fit into 7 bits.
     unsigned OpBytes;
     switch (VT) {
-    case MVT::i8:
-    case MVT::i16:
     case MVT::i32:
-    case MVT::i64:
       OpBytes = 1;
       OS << "OPC_EmitStringInteger" << MVT(VT).getScalarSizeInBits() << ", ";
       break;
