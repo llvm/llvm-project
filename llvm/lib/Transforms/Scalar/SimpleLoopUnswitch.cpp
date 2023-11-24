@@ -3575,7 +3575,10 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
   if (Trivial && unswitchAllTrivialConditions(L, DT, LI, SE, MSSAU)) {
     // If we unswitched successfully we will want to clean up the loop before
     // processing it further so just mark it as unswitched and return.
-    postUnswitch(L, LoopUpdater, L.getName(), true, false, false, {});
+    postUnswitch(/*Loop*/ L, /*LoopUpdater*/ LoopUpdater,
+                 /*LoopName*/ L.getName(),
+                 /*CurrentLoopValid*/ true, /*PartiallyInvariant*/ false,
+                 /*InjectedCondition*/ false, /*NewLoops*/ {});
     return true;
   }
 
