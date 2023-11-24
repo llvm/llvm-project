@@ -14,7 +14,9 @@
 #include "CodeGenFunction.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
@@ -220,7 +222,23 @@ RValue CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E) {
   auto PFK = CGM.getTarget().getTargetOpts().AMDGPUPrintfKindVal;
   bool isBuffered =
        (PFK == clang::TargetOptions::AMDGPUPrintfKind::Buffered);
-  auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, isBuffered);
+
+  StringRef FmtStr;
+  if (llvm::getConstantStringInfo(Args[0], FmtStr)) {
+    if (FmtStr.empty())
+      FmtStr = StringRef("", 1);
+  } else {
+    if (CGM.getLangOpts().OpenCL) {
+      llvm::DiagnosticInfoUnsupported UnsupportedFormatStr(
+          *IRB.GetInsertBlock()->getParent(),
+          "printf format string must be a trivially resolved constant string "
+          "global variable",
+          IRB.getCurrentDebugLocation());
+      IRB.getContext().diagnose(UnsupportedFormatStr);
+    }
+  }
+
+  auto Printf = llvm::emitAMDGPUPrintfCall(IRB, Args, FmtStr, isBuffered);
   Builder.SetInsertPoint(IRB.GetInsertBlock(), IRB.GetInsertPoint());
   return RValue::get(Printf);
 }

@@ -173,24 +173,21 @@ static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
 
 static Value *appendVectorArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                               bool IsLast, bool IsBuffered) {
-  assert(Arg->getType()->isVectorTy() && "incorrent append* function");
-  auto VectorTy = dyn_cast<FixedVectorType>(Arg->getType());
+  assert(Arg->getType()->isVectorTy() && "incorrect append* function");
+  auto VectorTy = cast<FixedVectorType>(Arg->getType());
   auto Zero = Builder.getInt64(0);
-  if (VectorTy) {
-    for (unsigned int i = 0; i < VectorTy->getNumElements() - 1; i++) {
-      auto Val = Builder.CreateExtractElement(Arg, i);
-      Desc = callAppendArgs(Builder, Desc, 1,
-                            fitArgInto64Bits(Builder, Val, IsBuffered), Zero,
-                            Zero, Zero, Zero, Zero, Zero, false);
-    }
-
-    Value* Val =
-        Builder.CreateExtractElement(Arg, VectorTy->getNumElements() - 1);
-    return callAppendArgs(Builder, Desc, 1,
+  for (unsigned int i = 0; i < VectorTy->getNumElements() - 1; i++) {
+    auto Val = Builder.CreateExtractElement(Arg, i);
+    Desc = callAppendArgs(Builder, Desc, 1,
                           fitArgInto64Bits(Builder, Val, IsBuffered), Zero,
-                          Zero, Zero, Zero, Zero, Zero, IsLast);
+                          Zero, Zero, Zero, Zero, Zero, false);
   }
-  return nullptr;
+
+  Value *Val =
+      Builder.CreateExtractElement(Arg, VectorTy->getNumElements() - 1);
+  return callAppendArgs(Builder, Desc, 1,
+                        fitArgInto64Bits(Builder, Val, IsBuffered), Zero, Zero,
+                        Zero, Zero, Zero, Zero, IsLast);
 }
 
 static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
@@ -210,8 +207,10 @@ static Value *processArg(IRBuilder<> &Builder, Value *Desc, Value *Arg,
   return appendArg(Builder, Desc, Arg, IsLast, IsBuffered);
 }
 
-// Scan the format string to locate all specifiers, and mark the ones that
-// specify a string, i.e, the "%s" specifier with optional '*' characters.
+// Scan the format string to locate all specifiers and OCL vectors,
+// and mark the ones that specify a string/vector,
+// i.e, the "%s" specifier with optional '*' characters
+// or "%v" specifier.
 static void locateCStringsAndVectors(SparseBitVector<8> &BV,
                                      SparseBitVector<8> &OV, StringRef Str) {
   static const char ConvSpecifiers[] = "diouxXfFeEgGaAcspn";
@@ -224,12 +223,14 @@ static void locateCStringsAndVectors(SparseBitVector<8> &BV,
       SpecPos += 2;
       continue;
     }
-    if (Str.find_first_of("v", SpecPos) != StringRef::npos)
-      OV.set(ArgIdx);
     auto SpecEnd = Str.find_first_of(ConvSpecifiers, SpecPos);
     if (SpecEnd == StringRef::npos)
       return;
     auto Spec = Str.slice(SpecPos, SpecEnd + 1);
+
+    if ((Spec.find_first_of("v")) != StringRef::npos)
+      OV.set(ArgIdx);
+
     ArgIdx += Spec.count('*');
     if (Str[SpecEnd] == 's') {
       BV.set(ArgIdx);
@@ -426,8 +427,8 @@ static void callBufferedPrintfArgPush(
       }
     } else {
       if (OCLVectors.test(i)) {
-        auto VectorTy = dyn_cast<FixedVectorType>(Args[i]->getType());
-        auto VecArg = Args[i];
+        auto VectorTy = cast<FixedVectorType>(Args[i]->getType());
+        Value *VecArg = Args[i];
         for (unsigned int Num = 0; Num < VectorTy->getNumElements(); Num++) {
           auto Val = Builder.CreateExtractElement(VecArg, Num);
           WhatToStore.push_back(
@@ -456,16 +457,16 @@ static void callBufferedPrintfArgPush(
 }
 
 Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
-                                  bool IsBuffered) {
+                                  StringRef FmtStr, bool IsBuffered) {
   auto NumOps = Args.size();
   assert(NumOps >= 1);
 
   auto Fmt = Args[0];
   SparseBitVector<8> SpecIsCString;
   SparseBitVector<8> OCLVectors;
-  StringRef FmtStr;
+  bool IsConstFmtStr = !FmtStr.empty();
 
-  if (getConstantStringInfo(Fmt, FmtStr))
+  if (IsConstFmtStr)
     locateCStringsAndVectors(SpecIsCString, OCLVectors, FmtStr);
 
   if (IsBuffered) {
@@ -474,7 +475,6 @@ Value *llvm::emitAMDGPUPrintfCall(IRBuilder<> &Builder, ArrayRef<Value *> Args,
     LLVMContext &Ctx = Builder.getContext();
     auto Int8Ty = Builder.getInt8Ty();
     auto Int32Ty = Builder.getInt32Ty();
-    bool IsConstFmtStr = !FmtStr.empty();
 
     Value *ArgSize = nullptr;
     Value *Ptr = callBufferedPrintfStart(Builder, Args, Fmt, IsConstFmtStr,

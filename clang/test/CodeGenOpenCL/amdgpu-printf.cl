@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -cl-std=CL1.2 -triple amdgcn-amd-amdhsa -mprintf-kind=buffered -disable-llvm-passes -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_BUFFERED %s
 // RUN: %clang_cc1 -cl-std=CL1.2 -triple amdgcn-amd-amdhsa -mprintf-kind=hostcall -disable-llvm-passes -emit-llvm -o - %s | FileCheck --check-prefix=CHECK_HOSTCALL %s
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
 
 // CHECK-LABEL: @test_printf_noargs(
@@ -10,37 +12,18 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 // CHECK-NEXT:    ret void
 // CHECK_BUFFERED-LABEL: @test_printf_noargs(
 // CHECK_BUFFERED-NEXT:  entry:
-// CHECK_BUFFERED-NEXT:    br i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @.str to ptr), ptr null), label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
-// CHECK_BUFFERED:       strlen.while:
-// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str to ptr), [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[STRLEN_WHILE]] ]
-// CHECK_BUFFERED-NEXT:    [[TMP1]] = getelementptr i8, ptr [[TMP0]], i64 1
-// CHECK_BUFFERED-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK_BUFFERED-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP2]], 0
-// CHECK_BUFFERED-NEXT:    br i1 [[TMP3]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
-// CHECK_BUFFERED:       strlen.while.done:
-// CHECK_BUFFERED-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK_BUFFERED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str to ptr) to i64)
-// CHECK_BUFFERED-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
-// CHECK_BUFFERED-NEXT:    br label [[STRLEN_JOIN]]
-// CHECK_BUFFERED:       strlen.join:
-// CHECK_BUFFERED-NEXT:    [[TMP7:%.*]] = phi i64 [ [[TMP6]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
-// CHECK_BUFFERED-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 7
-// CHECK_BUFFERED-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 4294967288
-// CHECK_BUFFERED-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 4
-// CHECK_BUFFERED-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 [[TMP11]])
-// CHECK_BUFFERED-NEXT:    [[TMP12:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
-// CHECK_BUFFERED-NEXT:    br i1 [[TMP12]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 12)
+// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK_BUFFERED-NEXT:    br i1 [[TMP0]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
 // CHECK_BUFFERED:       end.block:
-// CHECK_BUFFERED-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
-// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP13]] to i32
+// CHECK_BUFFERED-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
+// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP1]] to i32
 // CHECK_BUFFERED-NEXT:    ret void
 // CHECK_BUFFERED:       argpush.block:
-// CHECK_BUFFERED-NEXT:    [[TMP14:%.*]] = shl i32 [[TMP11]], 2
-// CHECK_BUFFERED-NEXT:    store i32 [[TMP14]], ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
-// CHECK_BUFFERED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
-// CHECK_BUFFERED-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP15]], ptr align 1 addrspacecast (ptr addrspace(4) @.str to ptr), i64 [[TMP7]], i1 false)
-// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP15]], i64 [[TMP9]]
+// CHECK_BUFFERED-NEXT:    store i32 50, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_BUFFERED-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK_BUFFERED-NEXT:    store i64 -8529802306755643245, ptr addrspace(1) [[TMP2]], align 8
+// CHECK_BUFFERED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP2]], i32 8
 // CHECK_BUFFERED-NEXT:    br label [[END_BLOCK]]
 //
 // CHECK_HOSTCALL-LABEL: @test_printf_noargs(
@@ -78,8 +61,8 @@ __kernel void test_printf_noargs() {
 // CHECK_BUFFERED-LABEL: @test_printf_int(
 // CHECK_BUFFERED-NEXT:  entry:
 // CHECK_BUFFERED-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK_BUFFERED-NEXT:    store i32 [[I:%.*]], ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA12:![0-9]+]]
-// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA12]]
+// CHECK_BUFFERED-NEXT:    store i32 [[I:%.*]], ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA16:![0-9]+]]
+// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA16]]
 // CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
 // CHECK_BUFFERED-NEXT:    [[TMP1:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
 // CHECK_BUFFERED-NEXT:    br i1 [[TMP1]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
@@ -150,11 +133,11 @@ __kernel void test_printf_int(int i) {
 // CHECK_BUFFERED-NEXT:  entry:
 // CHECK_BUFFERED-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK_BUFFERED-NEXT:    [[S:%.*]] = alloca [4 x i8], align 1, addrspace(5)
-// CHECK_BUFFERED-NEXT:    store i32 [[I:%.*]], ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA12]]
+// CHECK_BUFFERED-NEXT:    store i32 [[I:%.*]], ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA16]]
 // CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[S]]) #[[ATTR1:[0-9]+]]
 // CHECK_BUFFERED-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 1 [[S]], ptr addrspace(4) align 1 @__const.test_printf_str_int.s, i64 4, i1 false)
 // CHECK_BUFFERED-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(5) [[S]], i64 0, i64 0
-// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA12]]
+// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[I_ADDR]], align 4, !tbaa [[TBAA16]]
 // CHECK_BUFFERED-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(5) [[ARRAYDECAY]] to ptr
 // CHECK_BUFFERED-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
 // CHECK_BUFFERED-NEXT:    br i1 [[TMP2]], label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
@@ -250,4 +233,573 @@ __kernel void test_printf_int(int i) {
 __kernel void test_printf_str_int(int i) {
     char s[] = "foo";
     printf("%s:%d", s, i);
+}
+
+// CHECK_BUFFERED-LABEL: @test_half(
+// CHECK_BUFFERED-NEXT:  entry:
+// CHECK_BUFFERED-NEXT:    [[VAR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[VAR2:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 2, ptr addrspace(5) [[VAR]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    store half 0xH2E66, ptr addrspace(5) [[VAR]], align 2, !tbaa [[TBAA20:![0-9]+]]
+// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load half, ptr addrspace(5) [[VAR]], align 2, !tbaa [[TBAA20]]
+// CHECK_BUFFERED-NEXT:    [[CONV:%.*]] = fpext half [[TMP0]] to double
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
+// CHECK_BUFFERED-NEXT:    [[TMP1:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK_BUFFERED-NEXT:    br i1 [[TMP1]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK_BUFFERED:       end.block:
+// CHECK_BUFFERED-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], true
+// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP2]] to i32
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 2, ptr addrspace(5) [[VAR2]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    store half 0xH3266, ptr addrspace(5) [[VAR2]], align 2, !tbaa [[TBAA22:![0-9]+]]
+// CHECK_BUFFERED-NEXT:    [[TMP3:%.*]] = load half, ptr addrspace(5) [[VAR2]], align 2, !tbaa [[TBAA22]]
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN1:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 20)
+// CHECK_BUFFERED-NEXT:    [[TMP4:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN1]], null
+// CHECK_BUFFERED-NEXT:    br i1 [[TMP4]], label [[ARGPUSH_BLOCK3:%.*]], label [[END_BLOCK2:%.*]]
+// CHECK_BUFFERED:       argpush.block:
+// CHECK_BUFFERED-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_BUFFERED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK_BUFFERED-NEXT:    store i64 5482945341418147321, ptr addrspace(1) [[TMP5]], align 8
+// CHECK_BUFFERED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[CONV]], ptr addrspace(1) [[TMP6]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP6]], i32 8
+// CHECK_BUFFERED-NEXT:    br label [[END_BLOCK]]
+// CHECK_BUFFERED:       end.block2:
+// CHECK_BUFFERED-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP4]], true
+// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT5:%.*]] = sext i1 [[TMP7]] to i32
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 2, ptr addrspace(5) [[VAR2]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 2, ptr addrspace(5) [[VAR]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    ret void
+// CHECK_BUFFERED:       argpush.block3:
+// CHECK_BUFFERED-NEXT:    store i32 82, ptr addrspace(1) [[PRINTF_ALLOC_FN1]], align 4
+// CHECK_BUFFERED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN1]], i32 4
+// CHECK_BUFFERED-NEXT:    store i64 5482945341418147321, ptr addrspace(1) [[TMP8]], align 8
+// CHECK_BUFFERED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP8]], i32 8
+// CHECK_BUFFERED-NEXT:    [[TMP10:%.*]] = fpext half [[TMP3]] to double
+// CHECK_BUFFERED-NEXT:    store double [[TMP10]], ptr addrspace(1) [[TMP9]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP9]], i32 8
+// CHECK_BUFFERED-NEXT:    br label [[END_BLOCK2]]
+//
+// CHECK_HOSTCALL-LABEL: @test_half(
+// CHECK_HOSTCALL-NEXT:  entry:
+// CHECK_HOSTCALL-NEXT:    [[VAR:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[VAR2:%.*]] = alloca half, align 2, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 2, ptr addrspace(5) [[VAR]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    store half 0xH2E66, ptr addrspace(5) [[VAR]], align 2, !tbaa [[TBAA13:![0-9]+]]
+// CHECK_HOSTCALL-NEXT:    [[TMP0:%.*]] = load half, ptr addrspace(5) [[VAR]], align 2, !tbaa [[TBAA13]]
+// CHECK_HOSTCALL-NEXT:    [[CONV:%.*]] = fpext half [[TMP0]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP1:%.*]] = call i64 @__ockl_printf_begin(i64 0)
+// CHECK_HOSTCALL-NEXT:    br i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @.str.3 to ptr), ptr null), label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
+// CHECK_HOSTCALL:       strlen.while:
+// CHECK_HOSTCALL-NEXT:    [[TMP2:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str.3 to ptr), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[STRLEN_WHILE]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP3]] = getelementptr i8, ptr [[TMP2]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
+// CHECK_HOSTCALL-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
+// CHECK_HOSTCALL-NEXT:    br i1 [[TMP5]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
+// CHECK_HOSTCALL:       strlen.while.done:
+// CHECK_HOSTCALL-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP2]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.3 to ptr) to i64)
+// CHECK_HOSTCALL-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 1
+// CHECK_HOSTCALL-NEXT:    br label [[STRLEN_JOIN]]
+// CHECK_HOSTCALL:       strlen.join:
+// CHECK_HOSTCALL-NEXT:    [[TMP9:%.*]] = phi i64 [ [[TMP8]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP10:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP1]], ptr addrspacecast (ptr addrspace(4) @.str.3 to ptr), i64 [[TMP9]], i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP11:%.*]] = bitcast double [[CONV]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP12:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP10]], i32 1, i64 [[TMP11]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// CHECK_HOSTCALL-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i32
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 2, ptr addrspace(5) [[VAR2]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    store half 0xH3266, ptr addrspace(5) [[VAR2]], align 2, !tbaa [[TBAA15:![0-9]+]]
+// CHECK_HOSTCALL-NEXT:    [[TMP14:%.*]] = load half, ptr addrspace(5) [[VAR2]], align 2, !tbaa [[TBAA15]]
+// CHECK_HOSTCALL-NEXT:    [[TMP15:%.*]] = call i64 @__ockl_printf_begin(i64 0)
+// CHECK_HOSTCALL-NEXT:    br i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @.str.3 to ptr), ptr null), label [[STRLEN_JOIN1:%.*]], label [[STRLEN_WHILE2:%.*]]
+// CHECK_HOSTCALL:       strlen.while2:
+// CHECK_HOSTCALL-NEXT:    [[TMP16:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str.3 to ptr), [[STRLEN_JOIN]] ], [ [[TMP17:%.*]], [[STRLEN_WHILE2]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP17]] = getelementptr i8, ptr [[TMP16]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP18:%.*]] = load i8, ptr [[TMP16]], align 1
+// CHECK_HOSTCALL-NEXT:    [[TMP19:%.*]] = icmp eq i8 [[TMP18]], 0
+// CHECK_HOSTCALL-NEXT:    br i1 [[TMP19]], label [[STRLEN_WHILE_DONE3:%.*]], label [[STRLEN_WHILE2]]
+// CHECK_HOSTCALL:       strlen.while.done3:
+// CHECK_HOSTCALL-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[TMP16]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP21:%.*]] = sub i64 [[TMP20]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.3 to ptr) to i64)
+// CHECK_HOSTCALL-NEXT:    [[TMP22:%.*]] = add i64 [[TMP21]], 1
+// CHECK_HOSTCALL-NEXT:    br label [[STRLEN_JOIN1]]
+// CHECK_HOSTCALL:       strlen.join1:
+// CHECK_HOSTCALL-NEXT:    [[TMP23:%.*]] = phi i64 [ [[TMP22]], [[STRLEN_WHILE_DONE3]] ], [ 0, [[STRLEN_JOIN]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP24:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP15]], ptr addrspacecast (ptr addrspace(4) @.str.3 to ptr), i64 [[TMP23]], i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP25:%.*]] = fpext half [[TMP14]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP26:%.*]] = bitcast double [[TMP25]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP27:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP24]], i32 1, i64 [[TMP26]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// CHECK_HOSTCALL-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 2, ptr addrspace(5) [[VAR2]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 2, ptr addrspace(5) [[VAR]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    ret void
+//
+__kernel void test_half() {
+    half var = 0.1f;
+    printf("%f", var);
+    _Float16 var2 = 0.2f;
+    printf("%f", var2);
+}
+
+typedef __attribute__((ext_vector_type(3))) int int3;
+typedef __attribute__((ext_vector_type(4)))  int int4;
+typedef __attribute__((ext_vector_type(2))) float float2;
+typedef __attribute__((ext_vector_type(8)))  float float8;
+typedef __attribute__((ext_vector_type(16))) float float16;
+
+// CHECK_BUFFERED-LABEL: @test_vector(
+// CHECK_BUFFERED-NEXT:  entry:
+// CHECK_BUFFERED-NEXT:    [[A:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[B:%.*]] = alloca <3 x i32>, align 16, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[DOTCOMPOUNDLITERAL4:%.*]] = alloca <3 x i32>, align 16, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[VAR3:%.*]] = alloca <2 x float>, align 8, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[DOTCOMPOUNDLITERAL17:%.*]] = alloca <2 x float>, align 8, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[VAR4:%.*]] = alloca <8 x float>, align 32, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[VAR5:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK_BUFFERED-NEXT:    [[DOTCOMPOUNDLITERAL18:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 16, ptr addrspace(5) [[A]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 16, !tbaa [[TBAA24:![0-9]+]]
+// CHECK_BUFFERED-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 16, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 44)
+// CHECK_BUFFERED-NEXT:    [[TMP2:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK_BUFFERED-NEXT:    br i1 [[TMP2]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK_BUFFERED:       end.block:
+// CHECK_BUFFERED-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP3]] to i32
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 16, ptr addrspace(5) [[B]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
+// CHECK_BUFFERED-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> <i32 1, i32 undef, i32 undef>, i32 [[VECEXT]], i32 1
+// CHECK_BUFFERED-NEXT:    [[VECINIT5:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 3, i32 2
+// CHECK_BUFFERED-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[VECINIT5]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK_BUFFERED-NEXT:    store <4 x i32> [[EXTRACTVEC]], ptr addrspace(5) [[DOTCOMPOUNDLITERAL4]], align 16, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[LOADVEC4:%.*]] = load <4 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL4]], align 16
+// CHECK_BUFFERED-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <4 x i32> [[LOADVEC4]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK_BUFFERED-NEXT:    [[EXTRACTVEC7:%.*]] = shufflevector <3 x i32> [[EXTRACTVEC6]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK_BUFFERED-NEXT:    store <4 x i32> [[EXTRACTVEC7]], ptr addrspace(5) [[B]], align 16, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[LOADVEC48:%.*]] = load <4 x i32>, ptr addrspace(5) [[B]], align 16
+// CHECK_BUFFERED-NEXT:    [[EXTRACTVEC9:%.*]] = shufflevector <4 x i32> [[LOADVEC48]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN10:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 36)
+// CHECK_BUFFERED-NEXT:    [[TMP5:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN10]], null
+// CHECK_BUFFERED-NEXT:    br i1 [[TMP5]], label [[ARGPUSH_BLOCK12:%.*]], label [[END_BLOCK11:%.*]]
+// CHECK_BUFFERED:       argpush.block:
+// CHECK_BUFFERED-NEXT:    store i32 178, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_BUFFERED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK_BUFFERED-NEXT:    store i64 157641626367533276, ptr addrspace(1) [[TMP6]], align 8
+// CHECK_BUFFERED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP6]], i32 8
+// CHECK_BUFFERED-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+// CHECK_BUFFERED-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+// CHECK_BUFFERED-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+// CHECK_BUFFERED-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
+// CHECK_BUFFERED-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+// CHECK_BUFFERED-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
+// CHECK_BUFFERED-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
+// CHECK_BUFFERED-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP9]], ptr addrspace(1) [[TMP7]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP7]], i32 8
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP11]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP13]], ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP15]], ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
+// CHECK_BUFFERED-NEXT:    br label [[END_BLOCK]]
+// CHECK_BUFFERED:       end.block11:
+// CHECK_BUFFERED-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP5]], true
+// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT16:%.*]] = sext i1 [[TMP16]] to i32
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[VAR3]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    store <2 x float> <float 0x4008F5C280000000, float 0x4003D70A40000000>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL17]], align 8, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[TMP17:%.*]] = load <2 x float>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL17]], align 8, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    store <2 x float> [[TMP17]], ptr addrspace(5) [[VAR3]], align 8, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 32, ptr addrspace(5) [[VAR4]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    store <8 x float> <float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000>, ptr addrspace(5) [[VAR4]], align 32, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.start.p5(i64 64, ptr addrspace(5) [[VAR5]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    store <16 x float> <float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL18]], align 64, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[TMP18:%.*]] = load <16 x float>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL18]], align 64, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    store <16 x float> [[TMP18]], ptr addrspace(5) [[VAR5]], align 64, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[TMP19:%.*]] = load <2 x float>, ptr addrspace(5) [[VAR3]], align 8, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[TMP20:%.*]] = load <8 x float>, ptr addrspace(5) [[VAR4]], align 32, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[TMP21:%.*]] = load <16 x float>, ptr addrspace(5) [[VAR5]], align 64, !tbaa [[TBAA24]]
+// CHECK_BUFFERED-NEXT:    [[PRINTF_ALLOC_FN19:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 220)
+// CHECK_BUFFERED-NEXT:    [[TMP22:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN19]], null
+// CHECK_BUFFERED-NEXT:    br i1 [[TMP22]], label [[ARGPUSH_BLOCK21:%.*]], label [[END_BLOCK20:%.*]]
+// CHECK_BUFFERED:       argpush.block12:
+// CHECK_BUFFERED-NEXT:    store i32 146, ptr addrspace(1) [[PRINTF_ALLOC_FN10]], align 4
+// CHECK_BUFFERED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN10]], i32 4
+// CHECK_BUFFERED-NEXT:    store i64 8349377361424904666, ptr addrspace(1) [[TMP23]], align 8
+// CHECK_BUFFERED-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP23]], i32 8
+// CHECK_BUFFERED-NEXT:    [[TMP25:%.*]] = extractelement <3 x i32> [[EXTRACTVEC9]], i64 0
+// CHECK_BUFFERED-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
+// CHECK_BUFFERED-NEXT:    [[TMP27:%.*]] = extractelement <3 x i32> [[EXTRACTVEC9]], i64 1
+// CHECK_BUFFERED-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP27]] to i64
+// CHECK_BUFFERED-NEXT:    [[TMP29:%.*]] = extractelement <3 x i32> [[EXTRACTVEC9]], i64 2
+// CHECK_BUFFERED-NEXT:    [[TMP30:%.*]] = zext i32 [[TMP29]] to i64
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP26]], ptr addrspace(1) [[TMP24]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP24]], i32 8
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP28]], ptr addrspace(1) [[PRINTBUFFNEXTPTR13]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR13]], i32 8
+// CHECK_BUFFERED-NEXT:    store i64 [[TMP30]], ptr addrspace(1) [[PRINTBUFFNEXTPTR14]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR15:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR14]], i32 8
+// CHECK_BUFFERED-NEXT:    br label [[END_BLOCK11]]
+// CHECK_BUFFERED:       end.block20:
+// CHECK_BUFFERED-NEXT:    [[TMP31:%.*]] = xor i1 [[TMP22]], true
+// CHECK_BUFFERED-NEXT:    [[PRINTF_RESULT48:%.*]] = sext i1 [[TMP31]] to i32
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 64, ptr addrspace(5) [[VAR5]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 32, ptr addrspace(5) [[VAR4]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[VAR3]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 16, ptr addrspace(5) [[B]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    call void @llvm.lifetime.end.p5(i64 16, ptr addrspace(5) [[A]]) #[[ATTR1]]
+// CHECK_BUFFERED-NEXT:    ret void
+// CHECK_BUFFERED:       argpush.block21:
+// CHECK_BUFFERED-NEXT:    store i32 882, ptr addrspace(1) [[PRINTF_ALLOC_FN19]], align 4
+// CHECK_BUFFERED-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN19]], i32 4
+// CHECK_BUFFERED-NEXT:    store i64 -7312483467425511358, ptr addrspace(1) [[TMP32]], align 8
+// CHECK_BUFFERED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP32]], i32 8
+// CHECK_BUFFERED-NEXT:    [[TMP34:%.*]] = extractelement <2 x float> [[TMP19]], i64 0
+// CHECK_BUFFERED-NEXT:    [[TMP35:%.*]] = fpext float [[TMP34]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP36:%.*]] = extractelement <2 x float> [[TMP19]], i64 1
+// CHECK_BUFFERED-NEXT:    [[TMP37:%.*]] = fpext float [[TMP36]] to double
+// CHECK_BUFFERED-NEXT:    store double [[TMP35]], ptr addrspace(1) [[TMP33]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR22:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP33]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP37]], ptr addrspace(1) [[PRINTBUFFNEXTPTR22]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR22]], i32 8
+// CHECK_BUFFERED-NEXT:    [[TMP38:%.*]] = extractelement <8 x float> [[TMP20]], i64 0
+// CHECK_BUFFERED-NEXT:    [[TMP39:%.*]] = fpext float [[TMP38]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP40:%.*]] = extractelement <8 x float> [[TMP20]], i64 1
+// CHECK_BUFFERED-NEXT:    [[TMP41:%.*]] = fpext float [[TMP40]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP42:%.*]] = extractelement <8 x float> [[TMP20]], i64 2
+// CHECK_BUFFERED-NEXT:    [[TMP43:%.*]] = fpext float [[TMP42]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP44:%.*]] = extractelement <8 x float> [[TMP20]], i64 3
+// CHECK_BUFFERED-NEXT:    [[TMP45:%.*]] = fpext float [[TMP44]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP46:%.*]] = extractelement <8 x float> [[TMP20]], i64 4
+// CHECK_BUFFERED-NEXT:    [[TMP47:%.*]] = fpext float [[TMP46]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP48:%.*]] = extractelement <8 x float> [[TMP20]], i64 5
+// CHECK_BUFFERED-NEXT:    [[TMP49:%.*]] = fpext float [[TMP48]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP50:%.*]] = extractelement <8 x float> [[TMP20]], i64 6
+// CHECK_BUFFERED-NEXT:    [[TMP51:%.*]] = fpext float [[TMP50]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP52:%.*]] = extractelement <8 x float> [[TMP20]], i64 7
+// CHECK_BUFFERED-NEXT:    [[TMP53:%.*]] = fpext float [[TMP52]] to double
+// CHECK_BUFFERED-NEXT:    store double [[TMP39]], ptr addrspace(1) [[PRINTBUFFNEXTPTR23]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR24:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR23]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP41]], ptr addrspace(1) [[PRINTBUFFNEXTPTR24]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR25:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR24]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP43]], ptr addrspace(1) [[PRINTBUFFNEXTPTR25]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR26:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR25]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP45]], ptr addrspace(1) [[PRINTBUFFNEXTPTR26]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR26]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP47]], ptr addrspace(1) [[PRINTBUFFNEXTPTR27]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR28:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR27]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP49]], ptr addrspace(1) [[PRINTBUFFNEXTPTR28]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR28]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP51]], ptr addrspace(1) [[PRINTBUFFNEXTPTR29]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR30:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR29]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP53]], ptr addrspace(1) [[PRINTBUFFNEXTPTR30]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR31:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR30]], i32 8
+// CHECK_BUFFERED-NEXT:    [[TMP54:%.*]] = extractelement <16 x float> [[TMP21]], i64 0
+// CHECK_BUFFERED-NEXT:    [[TMP55:%.*]] = fpext float [[TMP54]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP56:%.*]] = extractelement <16 x float> [[TMP21]], i64 1
+// CHECK_BUFFERED-NEXT:    [[TMP57:%.*]] = fpext float [[TMP56]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP58:%.*]] = extractelement <16 x float> [[TMP21]], i64 2
+// CHECK_BUFFERED-NEXT:    [[TMP59:%.*]] = fpext float [[TMP58]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP60:%.*]] = extractelement <16 x float> [[TMP21]], i64 3
+// CHECK_BUFFERED-NEXT:    [[TMP61:%.*]] = fpext float [[TMP60]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP62:%.*]] = extractelement <16 x float> [[TMP21]], i64 4
+// CHECK_BUFFERED-NEXT:    [[TMP63:%.*]] = fpext float [[TMP62]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP64:%.*]] = extractelement <16 x float> [[TMP21]], i64 5
+// CHECK_BUFFERED-NEXT:    [[TMP65:%.*]] = fpext float [[TMP64]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP66:%.*]] = extractelement <16 x float> [[TMP21]], i64 6
+// CHECK_BUFFERED-NEXT:    [[TMP67:%.*]] = fpext float [[TMP66]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP68:%.*]] = extractelement <16 x float> [[TMP21]], i64 7
+// CHECK_BUFFERED-NEXT:    [[TMP69:%.*]] = fpext float [[TMP68]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP70:%.*]] = extractelement <16 x float> [[TMP21]], i64 8
+// CHECK_BUFFERED-NEXT:    [[TMP71:%.*]] = fpext float [[TMP70]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP72:%.*]] = extractelement <16 x float> [[TMP21]], i64 9
+// CHECK_BUFFERED-NEXT:    [[TMP73:%.*]] = fpext float [[TMP72]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP74:%.*]] = extractelement <16 x float> [[TMP21]], i64 10
+// CHECK_BUFFERED-NEXT:    [[TMP75:%.*]] = fpext float [[TMP74]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP76:%.*]] = extractelement <16 x float> [[TMP21]], i64 11
+// CHECK_BUFFERED-NEXT:    [[TMP77:%.*]] = fpext float [[TMP76]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP78:%.*]] = extractelement <16 x float> [[TMP21]], i64 12
+// CHECK_BUFFERED-NEXT:    [[TMP79:%.*]] = fpext float [[TMP78]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP80:%.*]] = extractelement <16 x float> [[TMP21]], i64 13
+// CHECK_BUFFERED-NEXT:    [[TMP81:%.*]] = fpext float [[TMP80]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP82:%.*]] = extractelement <16 x float> [[TMP21]], i64 14
+// CHECK_BUFFERED-NEXT:    [[TMP83:%.*]] = fpext float [[TMP82]] to double
+// CHECK_BUFFERED-NEXT:    [[TMP84:%.*]] = extractelement <16 x float> [[TMP21]], i64 15
+// CHECK_BUFFERED-NEXT:    [[TMP85:%.*]] = fpext float [[TMP84]] to double
+// CHECK_BUFFERED-NEXT:    store double [[TMP55]], ptr addrspace(1) [[PRINTBUFFNEXTPTR31]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR32:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR31]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP57]], ptr addrspace(1) [[PRINTBUFFNEXTPTR32]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR33:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR32]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP59]], ptr addrspace(1) [[PRINTBUFFNEXTPTR33]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR34:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR33]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP61]], ptr addrspace(1) [[PRINTBUFFNEXTPTR34]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR35:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR34]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP63]], ptr addrspace(1) [[PRINTBUFFNEXTPTR35]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR36:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR35]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP65]], ptr addrspace(1) [[PRINTBUFFNEXTPTR36]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR37:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR36]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP67]], ptr addrspace(1) [[PRINTBUFFNEXTPTR37]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR38:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR37]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP69]], ptr addrspace(1) [[PRINTBUFFNEXTPTR38]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR39:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR38]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP71]], ptr addrspace(1) [[PRINTBUFFNEXTPTR39]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR40:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR39]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP73]], ptr addrspace(1) [[PRINTBUFFNEXTPTR40]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR41:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR40]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP75]], ptr addrspace(1) [[PRINTBUFFNEXTPTR41]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR42:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR41]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP77]], ptr addrspace(1) [[PRINTBUFFNEXTPTR42]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR43:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR42]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP79]], ptr addrspace(1) [[PRINTBUFFNEXTPTR43]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR44:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR43]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP81]], ptr addrspace(1) [[PRINTBUFFNEXTPTR44]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR45:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR44]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP83]], ptr addrspace(1) [[PRINTBUFFNEXTPTR45]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR46:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR45]], i32 8
+// CHECK_BUFFERED-NEXT:    store double [[TMP85]], ptr addrspace(1) [[PRINTBUFFNEXTPTR46]], align 8
+// CHECK_BUFFERED-NEXT:    [[PRINTBUFFNEXTPTR47:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR46]], i32 8
+// CHECK_BUFFERED-NEXT:    br label [[END_BLOCK20]]
+//
+// CHECK_HOSTCALL-LABEL: @test_vector(
+// CHECK_HOSTCALL-NEXT:  entry:
+// CHECK_HOSTCALL-NEXT:    [[A:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[B:%.*]] = alloca <3 x i32>, align 16, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[DOTCOMPOUNDLITERAL1:%.*]] = alloca <3 x i32>, align 16, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[VAR3:%.*]] = alloca <2 x float>, align 8, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[DOTCOMPOUNDLITERAL10:%.*]] = alloca <2 x float>, align 8, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[VAR4:%.*]] = alloca <8 x float>, align 32, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[VAR5:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    [[DOTCOMPOUNDLITERAL11:%.*]] = alloca <16 x float>, align 64, addrspace(5)
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 16, ptr addrspace(5) [[A]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 16, !tbaa [[TBAA17:![0-9]+]]
+// CHECK_HOSTCALL-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 16, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP2:%.*]] = call i64 @__ockl_printf_begin(i64 0)
+// CHECK_HOSTCALL-NEXT:    br i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr), ptr null), label [[STRLEN_JOIN:%.*]], label [[STRLEN_WHILE:%.*]]
+// CHECK_HOSTCALL:       strlen.while:
+// CHECK_HOSTCALL-NEXT:    [[TMP3:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str.4 to ptr), [[ENTRY:%.*]] ], [ [[TMP4:%.*]], [[STRLEN_WHILE]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP4]] = getelementptr i8, ptr [[TMP3]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
+// CHECK_HOSTCALL-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 0
+// CHECK_HOSTCALL-NEXT:    br i1 [[TMP6]], label [[STRLEN_WHILE_DONE:%.*]], label [[STRLEN_WHILE]]
+// CHECK_HOSTCALL:       strlen.while.done:
+// CHECK_HOSTCALL-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[TMP3]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr) to i64)
+// CHECK_HOSTCALL-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 1
+// CHECK_HOSTCALL-NEXT:    br label [[STRLEN_JOIN]]
+// CHECK_HOSTCALL:       strlen.join:
+// CHECK_HOSTCALL-NEXT:    [[TMP10:%.*]] = phi i64 [ [[TMP9]], [[STRLEN_WHILE_DONE]] ], [ 0, [[ENTRY]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP11:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP2]], ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr), i64 [[TMP10]], i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+// CHECK_HOSTCALL-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP14:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP11]], i32 1, i64 [[TMP13]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP17:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP14]], i32 1, i64 [[TMP16]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+// CHECK_HOSTCALL-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP20:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP17]], i32 1, i64 [[TMP19]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
+// CHECK_HOSTCALL-NEXT:    [[TMP22:%.*]] = zext i32 [[TMP21]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP23:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP20]], i32 1, i64 [[TMP22]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// CHECK_HOSTCALL-NEXT:    [[TMP24:%.*]] = trunc i64 [[TMP23]] to i32
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 16, ptr addrspace(5) [[B]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    [[TMP25:%.*]] = load <4 x i32>, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[VECEXT:%.*]] = extractelement <4 x i32> [[TMP25]], i32 2
+// CHECK_HOSTCALL-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> <i32 1, i32 undef, i32 undef>, i32 [[VECEXT]], i32 1
+// CHECK_HOSTCALL-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 3, i32 2
+// CHECK_HOSTCALL-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[VECINIT2]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK_HOSTCALL-NEXT:    store <4 x i32> [[EXTRACTVEC]], ptr addrspace(5) [[DOTCOMPOUNDLITERAL1]], align 16, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[LOADVEC4:%.*]] = load <4 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL1]], align 16
+// CHECK_HOSTCALL-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i32> [[LOADVEC4]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK_HOSTCALL-NEXT:    [[EXTRACTVEC4:%.*]] = shufflevector <3 x i32> [[EXTRACTVEC3]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK_HOSTCALL-NEXT:    store <4 x i32> [[EXTRACTVEC4]], ptr addrspace(5) [[B]], align 16, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[LOADVEC45:%.*]] = load <4 x i32>, ptr addrspace(5) [[B]], align 16
+// CHECK_HOSTCALL-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <4 x i32> [[LOADVEC45]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// CHECK_HOSTCALL-NEXT:    [[TMP26:%.*]] = call i64 @__ockl_printf_begin(i64 0)
+// CHECK_HOSTCALL-NEXT:    br i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @.str.5 to ptr), ptr null), label [[STRLEN_JOIN7:%.*]], label [[STRLEN_WHILE8:%.*]]
+// CHECK_HOSTCALL:       strlen.while8:
+// CHECK_HOSTCALL-NEXT:    [[TMP27:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str.5 to ptr), [[STRLEN_JOIN]] ], [ [[TMP28:%.*]], [[STRLEN_WHILE8]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP28]] = getelementptr i8, ptr [[TMP27]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP29:%.*]] = load i8, ptr [[TMP27]], align 1
+// CHECK_HOSTCALL-NEXT:    [[TMP30:%.*]] = icmp eq i8 [[TMP29]], 0
+// CHECK_HOSTCALL-NEXT:    br i1 [[TMP30]], label [[STRLEN_WHILE_DONE9:%.*]], label [[STRLEN_WHILE8]]
+// CHECK_HOSTCALL:       strlen.while.done9:
+// CHECK_HOSTCALL-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[TMP27]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP32:%.*]] = sub i64 [[TMP31]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.5 to ptr) to i64)
+// CHECK_HOSTCALL-NEXT:    [[TMP33:%.*]] = add i64 [[TMP32]], 1
+// CHECK_HOSTCALL-NEXT:    br label [[STRLEN_JOIN7]]
+// CHECK_HOSTCALL:       strlen.join7:
+// CHECK_HOSTCALL-NEXT:    [[TMP34:%.*]] = phi i64 [ [[TMP33]], [[STRLEN_WHILE_DONE9]] ], [ 0, [[STRLEN_JOIN]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP35:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP26]], ptr addrspacecast (ptr addrspace(4) @.str.5 to ptr), i64 [[TMP34]], i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP36:%.*]] = extractelement <3 x i32> [[EXTRACTVEC6]], i64 0
+// CHECK_HOSTCALL-NEXT:    [[TMP37:%.*]] = zext i32 [[TMP36]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP38:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP35]], i32 1, i64 [[TMP37]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP39:%.*]] = extractelement <3 x i32> [[EXTRACTVEC6]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP40:%.*]] = zext i32 [[TMP39]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP41:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP38]], i32 1, i64 [[TMP40]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP42:%.*]] = extractelement <3 x i32> [[EXTRACTVEC6]], i64 2
+// CHECK_HOSTCALL-NEXT:    [[TMP43:%.*]] = zext i32 [[TMP42]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP44:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP41]], i32 1, i64 [[TMP43]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// CHECK_HOSTCALL-NEXT:    [[TMP45:%.*]] = trunc i64 [[TMP44]] to i32
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[VAR3]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    store <2 x float> <float 0x4008F5C280000000, float 0x4003D70A40000000>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL10]], align 8, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP46:%.*]] = load <2 x float>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL10]], align 8, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    store <2 x float> [[TMP46]], ptr addrspace(5) [[VAR3]], align 8, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 32, ptr addrspace(5) [[VAR4]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    store <8 x float> <float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000, float 0x40091EB860000000>, ptr addrspace(5) [[VAR4]], align 32, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.start.p5(i64 64, ptr addrspace(5) [[VAR5]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    store <16 x float> <float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x4008F5C280000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000, float 0x40028F5C20000000>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL11]], align 64, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP47:%.*]] = load <16 x float>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL11]], align 64, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    store <16 x float> [[TMP47]], ptr addrspace(5) [[VAR5]], align 64, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP48:%.*]] = load <2 x float>, ptr addrspace(5) [[VAR3]], align 8, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP49:%.*]] = load <8 x float>, ptr addrspace(5) [[VAR4]], align 32, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP50:%.*]] = load <16 x float>, ptr addrspace(5) [[VAR5]], align 64, !tbaa [[TBAA17]]
+// CHECK_HOSTCALL-NEXT:    [[TMP51:%.*]] = call i64 @__ockl_printf_begin(i64 0)
+// CHECK_HOSTCALL-NEXT:    br i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @.str.6 to ptr), ptr null), label [[STRLEN_JOIN12:%.*]], label [[STRLEN_WHILE13:%.*]]
+// CHECK_HOSTCALL:       strlen.while13:
+// CHECK_HOSTCALL-NEXT:    [[TMP52:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str.6 to ptr), [[STRLEN_JOIN7]] ], [ [[TMP53:%.*]], [[STRLEN_WHILE13]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP53]] = getelementptr i8, ptr [[TMP52]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP54:%.*]] = load i8, ptr [[TMP52]], align 1
+// CHECK_HOSTCALL-NEXT:    [[TMP55:%.*]] = icmp eq i8 [[TMP54]], 0
+// CHECK_HOSTCALL-NEXT:    br i1 [[TMP55]], label [[STRLEN_WHILE_DONE14:%.*]], label [[STRLEN_WHILE13]]
+// CHECK_HOSTCALL:       strlen.while.done14:
+// CHECK_HOSTCALL-NEXT:    [[TMP56:%.*]] = ptrtoint ptr [[TMP52]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP57:%.*]] = sub i64 [[TMP56]], ptrtoint (ptr addrspacecast (ptr addrspace(4) @.str.6 to ptr) to i64)
+// CHECK_HOSTCALL-NEXT:    [[TMP58:%.*]] = add i64 [[TMP57]], 1
+// CHECK_HOSTCALL-NEXT:    br label [[STRLEN_JOIN12]]
+// CHECK_HOSTCALL:       strlen.join12:
+// CHECK_HOSTCALL-NEXT:    [[TMP59:%.*]] = phi i64 [ [[TMP58]], [[STRLEN_WHILE_DONE14]] ], [ 0, [[STRLEN_JOIN7]] ]
+// CHECK_HOSTCALL-NEXT:    [[TMP60:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP51]], ptr addrspacecast (ptr addrspace(4) @.str.6 to ptr), i64 [[TMP59]], i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP61:%.*]] = extractelement <2 x float> [[TMP48]], i64 0
+// CHECK_HOSTCALL-NEXT:    [[TMP62:%.*]] = fpext float [[TMP61]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP63:%.*]] = bitcast double [[TMP62]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP64:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP60]], i32 1, i64 [[TMP63]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP65:%.*]] = extractelement <2 x float> [[TMP48]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP66:%.*]] = fpext float [[TMP65]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP67:%.*]] = bitcast double [[TMP66]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP68:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP64]], i32 1, i64 [[TMP67]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP69:%.*]] = extractelement <8 x float> [[TMP49]], i64 0
+// CHECK_HOSTCALL-NEXT:    [[TMP70:%.*]] = fpext float [[TMP69]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP71:%.*]] = bitcast double [[TMP70]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP72:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP68]], i32 1, i64 [[TMP71]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP73:%.*]] = extractelement <8 x float> [[TMP49]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP74:%.*]] = fpext float [[TMP73]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP75:%.*]] = bitcast double [[TMP74]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP76:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP72]], i32 1, i64 [[TMP75]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP77:%.*]] = extractelement <8 x float> [[TMP49]], i64 2
+// CHECK_HOSTCALL-NEXT:    [[TMP78:%.*]] = fpext float [[TMP77]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP79:%.*]] = bitcast double [[TMP78]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP80:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP76]], i32 1, i64 [[TMP79]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP81:%.*]] = extractelement <8 x float> [[TMP49]], i64 3
+// CHECK_HOSTCALL-NEXT:    [[TMP82:%.*]] = fpext float [[TMP81]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP83:%.*]] = bitcast double [[TMP82]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP84:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP80]], i32 1, i64 [[TMP83]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP85:%.*]] = extractelement <8 x float> [[TMP49]], i64 4
+// CHECK_HOSTCALL-NEXT:    [[TMP86:%.*]] = fpext float [[TMP85]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP87:%.*]] = bitcast double [[TMP86]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP88:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP84]], i32 1, i64 [[TMP87]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP89:%.*]] = extractelement <8 x float> [[TMP49]], i64 5
+// CHECK_HOSTCALL-NEXT:    [[TMP90:%.*]] = fpext float [[TMP89]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP91:%.*]] = bitcast double [[TMP90]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP92:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP88]], i32 1, i64 [[TMP91]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP93:%.*]] = extractelement <8 x float> [[TMP49]], i64 6
+// CHECK_HOSTCALL-NEXT:    [[TMP94:%.*]] = fpext float [[TMP93]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP95:%.*]] = bitcast double [[TMP94]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP96:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP92]], i32 1, i64 [[TMP95]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP97:%.*]] = extractelement <8 x float> [[TMP49]], i64 7
+// CHECK_HOSTCALL-NEXT:    [[TMP98:%.*]] = fpext float [[TMP97]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP99:%.*]] = bitcast double [[TMP98]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP100:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP96]], i32 1, i64 [[TMP99]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP101:%.*]] = extractelement <16 x float> [[TMP50]], i64 0
+// CHECK_HOSTCALL-NEXT:    [[TMP102:%.*]] = fpext float [[TMP101]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP103:%.*]] = bitcast double [[TMP102]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP104:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP100]], i32 1, i64 [[TMP103]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP105:%.*]] = extractelement <16 x float> [[TMP50]], i64 1
+// CHECK_HOSTCALL-NEXT:    [[TMP106:%.*]] = fpext float [[TMP105]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP107:%.*]] = bitcast double [[TMP106]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP108:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP104]], i32 1, i64 [[TMP107]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP109:%.*]] = extractelement <16 x float> [[TMP50]], i64 2
+// CHECK_HOSTCALL-NEXT:    [[TMP110:%.*]] = fpext float [[TMP109]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP111:%.*]] = bitcast double [[TMP110]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP112:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP108]], i32 1, i64 [[TMP111]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP113:%.*]] = extractelement <16 x float> [[TMP50]], i64 3
+// CHECK_HOSTCALL-NEXT:    [[TMP114:%.*]] = fpext float [[TMP113]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP115:%.*]] = bitcast double [[TMP114]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP116:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP112]], i32 1, i64 [[TMP115]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP117:%.*]] = extractelement <16 x float> [[TMP50]], i64 4
+// CHECK_HOSTCALL-NEXT:    [[TMP118:%.*]] = fpext float [[TMP117]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP119:%.*]] = bitcast double [[TMP118]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP120:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP116]], i32 1, i64 [[TMP119]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP121:%.*]] = extractelement <16 x float> [[TMP50]], i64 5
+// CHECK_HOSTCALL-NEXT:    [[TMP122:%.*]] = fpext float [[TMP121]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP123:%.*]] = bitcast double [[TMP122]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP124:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP120]], i32 1, i64 [[TMP123]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP125:%.*]] = extractelement <16 x float> [[TMP50]], i64 6
+// CHECK_HOSTCALL-NEXT:    [[TMP126:%.*]] = fpext float [[TMP125]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP127:%.*]] = bitcast double [[TMP126]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP128:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP124]], i32 1, i64 [[TMP127]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP129:%.*]] = extractelement <16 x float> [[TMP50]], i64 7
+// CHECK_HOSTCALL-NEXT:    [[TMP130:%.*]] = fpext float [[TMP129]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP131:%.*]] = bitcast double [[TMP130]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP132:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP128]], i32 1, i64 [[TMP131]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP133:%.*]] = extractelement <16 x float> [[TMP50]], i64 8
+// CHECK_HOSTCALL-NEXT:    [[TMP134:%.*]] = fpext float [[TMP133]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP135:%.*]] = bitcast double [[TMP134]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP136:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP132]], i32 1, i64 [[TMP135]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP137:%.*]] = extractelement <16 x float> [[TMP50]], i64 9
+// CHECK_HOSTCALL-NEXT:    [[TMP138:%.*]] = fpext float [[TMP137]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP139:%.*]] = bitcast double [[TMP138]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP140:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP136]], i32 1, i64 [[TMP139]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP141:%.*]] = extractelement <16 x float> [[TMP50]], i64 10
+// CHECK_HOSTCALL-NEXT:    [[TMP142:%.*]] = fpext float [[TMP141]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP143:%.*]] = bitcast double [[TMP142]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP144:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP140]], i32 1, i64 [[TMP143]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP145:%.*]] = extractelement <16 x float> [[TMP50]], i64 11
+// CHECK_HOSTCALL-NEXT:    [[TMP146:%.*]] = fpext float [[TMP145]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP147:%.*]] = bitcast double [[TMP146]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP148:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP144]], i32 1, i64 [[TMP147]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP149:%.*]] = extractelement <16 x float> [[TMP50]], i64 12
+// CHECK_HOSTCALL-NEXT:    [[TMP150:%.*]] = fpext float [[TMP149]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP151:%.*]] = bitcast double [[TMP150]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP152:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP148]], i32 1, i64 [[TMP151]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP153:%.*]] = extractelement <16 x float> [[TMP50]], i64 13
+// CHECK_HOSTCALL-NEXT:    [[TMP154:%.*]] = fpext float [[TMP153]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP155:%.*]] = bitcast double [[TMP154]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP156:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP152]], i32 1, i64 [[TMP155]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP157:%.*]] = extractelement <16 x float> [[TMP50]], i64 14
+// CHECK_HOSTCALL-NEXT:    [[TMP158:%.*]] = fpext float [[TMP157]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP159:%.*]] = bitcast double [[TMP158]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP160:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP156]], i32 1, i64 [[TMP159]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
+// CHECK_HOSTCALL-NEXT:    [[TMP161:%.*]] = extractelement <16 x float> [[TMP50]], i64 15
+// CHECK_HOSTCALL-NEXT:    [[TMP162:%.*]] = fpext float [[TMP161]] to double
+// CHECK_HOSTCALL-NEXT:    [[TMP163:%.*]] = bitcast double [[TMP162]] to i64
+// CHECK_HOSTCALL-NEXT:    [[TMP164:%.*]] = call i64 @__ockl_printf_append_args(i64 [[TMP160]], i32 1, i64 [[TMP163]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
+// CHECK_HOSTCALL-NEXT:    [[TMP165:%.*]] = trunc i64 [[TMP164]] to i32
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 64, ptr addrspace(5) [[VAR5]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 32, ptr addrspace(5) [[VAR4]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[VAR3]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 16, ptr addrspace(5) [[B]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    call void @llvm.lifetime.end.p5(i64 16, ptr addrspace(5) [[A]]) #[[ATTR3]]
+// CHECK_HOSTCALL-NEXT:    ret void
+//
+__kernel void test_vector() {
+
+int4 a = (int4)(1, 2, 3, 4);
+printf("%v4d", a);
+
+int3 b = (int3)(1, a[2], 3);
+printf("%v3d", b);
+
+float2 var3 = (float2)(3.12, 2.48);
+float8 var4 = (float8)(3.14);
+float16 var5 = (float16)((float8)(3.12), (float8)(2.32));
+
+printf("%v2hlf, %v8hlf, %v16hlf", var3, var4, var5);
+
 }
