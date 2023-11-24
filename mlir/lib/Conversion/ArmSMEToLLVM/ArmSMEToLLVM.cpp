@@ -32,7 +32,7 @@ using namespace mlir;
 
 namespace {
 
-IntegerAttr getTileIdOrError(ArmSMETileOpInterface op) {
+IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
   auto tileId = op.getTileId();
   if (!tileId)
     op.emitOpError(
@@ -40,13 +40,13 @@ IntegerAttr getTileIdOrError(ArmSMETileOpInterface op) {
   return tileId;
 }
 
-struct GetTileConversion : public ConvertOpToLLVMPattern<arm_sme::GetTile> {
-  using ConvertOpToLLVMPattern<arm_sme::GetTile>::ConvertOpToLLVMPattern;
+struct GetTileConversion : public ConvertOpToLLVMPattern<arm_sme::GetTileOp> {
+  using ConvertOpToLLVMPattern<arm_sme::GetTileOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arm_sme::GetTile getTile, OpAdaptor,
+  matchAndRewrite(arm_sme::GetTileOp getTile, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATile>(
+    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATileOp>(
         getTile, getTile.getTileType());
     return success();
   }
@@ -140,7 +140,7 @@ struct ZeroOpConversion : public ConvertOpToLLVMPattern<arm_sme::ZeroOp> {
         loc, rewriter.getI32IntegerAttr(zeroMask));
 
     // Create a placeholder op to preserve dataflow.
-    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATile>(
+    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATileOp>(
         zero, zero.getVectorType());
 
     return success();
@@ -558,7 +558,7 @@ struct ConvertArmSMEToLLVMPass
 void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
   target.addIllegalDialect<arm_sme::ArmSMEDialect>();
   target.addLegalOp<
-      arm_sme::MaterializeSSATile, arm_sme::aarch64_sme_zero,
+      arm_sme::MaterializeSSATileOp, arm_sme::aarch64_sme_zero,
       arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_ld1b_horiz,
       arm_sme::aarch64_sme_ld1h_horiz, arm_sme::aarch64_sme_ld1w_horiz,
       arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_ld1q_horiz,

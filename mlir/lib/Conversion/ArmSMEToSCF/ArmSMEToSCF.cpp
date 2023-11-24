@@ -89,7 +89,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
     auto tileElementType = tileType.getElementType();
 
     // Allocate a new SME tile.
-    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTile>(
+    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTileOp>(
         rewriter, loc, tileType);
 
     // Create a loop that loads each ZA tile slice from memory.
@@ -299,7 +299,7 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
         loc, rewriter.getI32Type(), numCols);
 
     // Allocate a new SME tile.
-    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTile>(
+    auto tile = tileLoadOp.createOpAndForwardTileId<arm_sme::GetTileOp>(
         rewriter, loc, tileType);
 
     // Create a loop that loads each ZA tile slice from memory.

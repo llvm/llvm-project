@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
+#include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 
 namespace mlir::arm_sme {
 
@@ -57,6 +58,19 @@ std::optional<ArmSMETileType> getSMETileType(VectorType type) {
   default:
     llvm_unreachable("unknown SME tile type");
   }
+}
+
+LogicalResult verifyOperationHasValidTileId(Operation *op) {
+  auto tileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op);
+  if (!tileOp)
+    return success(); // Not a tile op (no need to check).
+  auto tileId = tileOp.getTileId();
+  if (!tileId)
+    return success(); // Not having a tile ID (yet) is okay.
+  if (!tileId.getType().isSignlessInteger(32))
+    return tileOp.emitOpError("tile ID should be a 32-bit signless integer");
+  // TODO: Verify value of tile ID is in range.
+  return success();
 }
 
 } // namespace mlir::arm_sme

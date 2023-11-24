@@ -24,7 +24,9 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+namespace mlir::arm_sme {
 #include "mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h.inc"
+}
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/ArmSME/IR/ArmSMEAttrDefs.h.inc"

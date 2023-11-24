@@ -21,9 +21,9 @@
 using namespace mlir;
 
 // This is needed because these matchers are defined as overloaded functions.
-using HasOpAttrName = mlir::detail::AttrOpMatcher(StringRef);
-using HasOpName = mlir::detail::NameOpMatcher(StringRef);
-using IsConstantOp = mlir::detail::constant_op_matcher();
+using HasOpAttrName = detail::AttrOpMatcher(StringRef);
+using HasOpName = detail::NameOpMatcher(StringRef);
+using IsConstantOp = detail::constant_op_matcher();
 
 namespace test {
 #ifdef MLIR_INCLUDE_TESTS

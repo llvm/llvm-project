@@ -40,7 +40,7 @@ def ArmSMETileType : I32EnumAttr<"ArmSMETileType", "Arm SME tile type",
 def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
   let description = [{
     An interface for operations that use or allocate Arm SME tiles. These
-    operations need to be assigned a tile ID an i32 attribute, which specifies
+    operations need to be assigned a tile ID, an i32 attribute, which specifies
     which virtual tile within the ZA storage to use. The number of tiles
     available depends on the type of the tile. This is summarized below:
 
@@ -52,7 +52,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
     | `vector<[2]x[2]xi64>` or `vector<[2]x[2]xf64>`                          | 0 to 7 (inclusive)  |
     | `vector<[1]x[1]xi128>`                                                  | 0 to 15 (inclusive) |
 
-    Operations that allocate a new tiles (such as arm_sme.get_tile), are used as
+    Operations that allocate a new tile (such as arm_sme.get_tile), are used as
     the roots for tile allocation, with all operations that (transitively)
     depend on a root being assigned the same tile ID.
   }];
@@ -71,7 +71,10 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      "Returns the (possibly null) tile ID assigned to this operation.",
+      [{
+        Returns the tile ID assigned to this operation. This will be null before
+        tile allocation.
+      }],
       /*returnType=*/"mlir::IntegerAttr",
       /*methodName=*/"getTileId",
       /*arguments=*/(ins),
@@ -82,13 +85,16 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      "The type of tile this operation allocates (or none)",
+      [{
+        The type of tile this operation allocates. Returns none (std::nullopt)
+        if this operation does not allocate a tile.
+      }],
       /*returnType=*/"std::optional<::mlir::arm_sme::ArmSMETileType>",
       /*methodName=*/"getAllocatedTileType",
       /*arguments=*/(ins),
       /*methodBody=*/[{}],
       /*defaultImpl=*/ [{
-        // Do not allocate a new tile.
+        // This operation does not allocate a tile.
         return std::nullopt;
       }]
     >
@@ -104,7 +110,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       return op;
     }
 
-    // A helper to replace this operation and forward any tile ID.
+    // A helper to replace this operation and forward its tile ID (if present).
     template<typename T, typename... Args>
     T replaceWithAndForwardTileId(::mlir::RewriterBase& rewriter, Args &&...args) {
       auto newOp = createOpAndForwardTileId<T>(rewriter, $_op.getLoc(), std::forward<Args>(args)...);
@@ -112,6 +118,8 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       return newOp;
     }
   }];
+
+  let verify = [{ return ::mlir::arm_sme::verifyOperationHasValidTileId($_op); }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -222,11 +230,11 @@ def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
 class ArmSME_Op<string mnemonic, list<Trait> traits = []> :
   Op<ArmSME_Dialect, mnemonic, traits> {}
 
-def GetTile : ArmSME_Op<"get_tile", [ArmSMETileOpInterface]> {
+def GetTileOp : ArmSME_Op<"get_tile", [ArmSMETileOpInterface]> {
   let summary = "Returns a SME virtual tile";
   let description = [{
     Allocates a new SME "virtual tile" within a function. The contents of the
-    tile returned from this operation undefined.
+    tile returned from this operation are undefined.
 
     Example 1:
 
@@ -264,12 +272,12 @@ def GetTile : ArmSME_Op<"get_tile", [ArmSMETileOpInterface]> {
   }];
 }
 
-def MaterializeSSATile : ArmSME_Op<"materialize_ssa_tile", [Pure]> {
+def MaterializeSSATileOp : ArmSME_Op<"materialize_ssa_tile", [Pure]> {
   let summary = "SME tile placeholder";
   let description = [{
     A placeholder to preserve dataflow while lowering to SME intrinsics (which
-    do not take or return tile values). This operation is intended to be DCE'd
-    once all ArmSME operations have been lowered.
+    do not take or return SME virtual tile values). This operation is intended
+    to be DCE'd once all ArmSME operations have been lowered.
 
     This operation is not intended to be used outside of the ArmSME -> LLVM
     conversion.

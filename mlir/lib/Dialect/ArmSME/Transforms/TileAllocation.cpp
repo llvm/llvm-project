@@ -136,9 +136,10 @@ static ArrayRef<TileMask> getMasks(ArmSMETileType type) {
   }
 }
 
-/// Allocates a tile to 'tileId' or returns an error if there are no tiles left.
-static FailureOr<unsigned> getTile(ArmSMETileType tileType,
-                                   TileMask &tilesInUse) {
+/// Allocates and returns a tile ID. Returns an error if there are no tiles
+/// left.
+static FailureOr<unsigned> allocateTileId(ArmSMETileType tileType,
+                                          TileMask &tilesInUse) {
   auto masks = getMasks(tileType);
   for (auto [tileId, tileMask] : llvm::enumerate(masks)) {
     if ((tilesInUse & tileMask) == TileMask::kNone) {
@@ -168,7 +169,7 @@ struct AssignTileIDsPattern
     else
       tilesInUse = TileMask::kNone;
 
-    auto tileId = getTile(*tileType, tilesInUse);
+    auto tileId = allocateTileId(*tileType, tilesInUse);
     if (failed(tileId))
       return tileOp.emitError("ran out of SME virtual tiles!");
 

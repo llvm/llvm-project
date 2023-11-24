@@ -35,7 +35,11 @@ bool isValidSMETileElementType(Type type);
 /// otherwise.
 bool isValidSMETileVectorType(VectorType vType);
 
+/// Returns the type of SME tile this vector type corresponds to or none.
 std::optional<ArmSMETileType> getSMETileType(VectorType);
+
+/// Verifies the tile ID (if set) on this tile operation is valid.
+LogicalResult verifyOperationHasValidTileId(Operation *);
 
 } // namespace mlir::arm_sme
 
