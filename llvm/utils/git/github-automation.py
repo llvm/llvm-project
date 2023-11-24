@@ -78,12 +78,13 @@ class IssueSubscriber:
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
+
         comment = ""
         if team.slug == "issue-subscribers-good-first-issue":
             comment = "{}\n".format(beginner_comment)
+            self.issue.create_comment(comment)
 
         body = escape_description(self.issue.body)
-
         comment = f"""
 @llvm/{team.slug}
 
