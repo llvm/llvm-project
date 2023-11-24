@@ -307,9 +307,9 @@ private:
   std::array<std::unique_ptr<FixupInfoBase>, Items> Data;
 };
 
-} // namespace
-
 ManagedStatic<FixupInfoTable> DynFixupInfos;
+
+} // namespace
 
 static Error checkOpcode(LinkGraph &G, const ArmRelocation &R,
                          Edge::Kind Kind) {
