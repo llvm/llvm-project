@@ -658,27 +658,27 @@ void check_match_co_return() {
   co_return 1;
 }
 )cpp";
-  EXPECT_TRUE(matchesConditionally(CoReturnCode, 
-                                   coreturnStmt(isExpansionInMainFile()), 
-                                   true, {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoReturnCode,
+                                   coreturnStmt(isExpansionInMainFile()), true,
+                                   {"-std=c++20", "-I/"}, M));
   StringRef CoAwaitCode = R"cpp(
 #include <coro_header>
 void check_match_co_await() {
   co_await a;
 }
 )cpp";
-  EXPECT_TRUE(matchesConditionally(CoAwaitCode, 
-                                   coawaitExpr(isExpansionInMainFile()), 
-                                   true, {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoAwaitCode,
+                                   coawaitExpr(isExpansionInMainFile()), true,
+                                   {"-std=c++20", "-I/"}, M));
   StringRef CoYieldCode = R"cpp(
 #include <coro_header>
 void check_match_co_yield() {
   co_yield 1.0;
 }
 )cpp";
-  EXPECT_TRUE(matchesConditionally(CoYieldCode, 
-                                   coyieldExpr(isExpansionInMainFile()), 
-                                   true, {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoYieldCode,
+                                   coyieldExpr(isExpansionInMainFile()), true,
+                                   {"-std=c++20", "-I/"}, M));
 
   StringRef NonCoroCode = R"cpp(
 #include <coro_header>
@@ -2073,6 +2073,57 @@ TEST_P(ASTMatchersTest, HasLHSAndHasRHS) {
   EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
                        "return (args + ...); };",
                        cxxFoldExpr(hasRHS(expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasEitherOperandAndHasOperands) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasEitherOperand(integerLiteral()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasEitherOperand(integerLiteral()))));
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(hasEitherOperand(
+                          declRefExpr(to(namedDecl(hasName("args"))))))));
+
+  EXPECT_TRUE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (0 + ... + args); }",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+  EXPECT_TRUE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (args + ... + 0); }",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+  EXPECT_FALSE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (... + args); };",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
+  EXPECT_FALSE(matches(
+      "template <typename... Args> auto sum(Args... args) { "
+      "return (args + ...); };",
+      cxxFoldExpr(hasOperands(declRefExpr(to(namedDecl(hasName("args")))),
+                              integerLiteral()))));
 }
 
 TEST_P(ASTMatchersTest, Callee) {
