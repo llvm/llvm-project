@@ -31,6 +31,7 @@ namespace X86Disassembler {
 #define XOP9_MAP_SYM x86DisassemblerXOP9Opcodes
 #define XOPA_MAP_SYM x86DisassemblerXOPAOpcodes
 #define THREEDNOW_MAP_SYM x86Disassembler3DNowOpcodes
+#define MAP4_SYM x86DisassemblerMap4Opcodes
 #define MAP5_SYM x86DisassemblerMap5Opcodes
 #define MAP6_SYM x86DisassemblerMap6Opcodes
 #define MAP7_SYM x86DisassemblerMap7Opcodes
@@ -45,6 +46,7 @@ namespace X86Disassembler {
 #define XOP9_MAP_STR "x86DisassemblerXOP9Opcodes"
 #define XOPA_MAP_STR "x86DisassemblerXOPAOpcodes"
 #define THREEDNOW_MAP_STR "x86Disassembler3DNowOpcodes"
+#define MAP4_STR "x86DisassemblerMap4Opcodes"
 #define MAP5_STR "x86DisassemblerMap5Opcodes"
 #define MAP6_STR "x86DisassemblerMap6Opcodes"
 #define MAP7_STR "x86DisassemblerMap7Opcodes"
@@ -324,9 +326,10 @@ enum OpcodeType {
   XOP9_MAP = 5,
   XOPA_MAP = 6,
   THREEDNOW_MAP = 7,
-  MAP5 = 8,
-  MAP6 = 9,
-  MAP7 = 10
+  MAP4 = 8,
+  MAP5 = 9,
+  MAP6 = 10,
+  MAP7 = 11
 };
 
 // The following structs are used for the hierarchical decode table.  After
