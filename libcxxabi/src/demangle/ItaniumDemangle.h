@@ -901,7 +901,9 @@ class ExplicitObjectParameter final : public Node {
 
 public:
   ExplicitObjectParameter(Node *Base_)
-      : Node(KExplicitObjectParameter, Cache::Yes), Base(Base_) {}
+      : Node(KExplicitObjectParameter, Cache::Yes), Base(Base_) {
+    assert(Base != nullptr);
+  }
 
   template <typename Fn> void match(Fn F) const { F(Base); }
 
