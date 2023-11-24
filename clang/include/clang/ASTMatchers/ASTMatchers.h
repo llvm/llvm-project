@@ -4605,7 +4605,8 @@ AST_MATCHER_P(CXXFoldExpr, hasFoldInit, ast_matchers::internal::Matcher<Expr>,
 /// \endcode
 AST_MATCHER_P(CXXFoldExpr, hasPattern, ast_matchers::internal::Matcher<Expr>,
               InnerMacher) {
-  return InnerMacher.matches(*Node.getPattern(), Finder, Builder);
+  const Expr *const Pattern = Node.getPattern();
+  return Pattern && InnerMacher.matches(*Pattern, Finder, Builder);
 }
 
 /// Matches right-folding fold expressions.
