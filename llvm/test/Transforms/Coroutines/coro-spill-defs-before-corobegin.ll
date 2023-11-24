@@ -51,7 +51,7 @@ lpad:
 ; CHECK-LABEL: @f(
 ; CHECK:       %alloc = call ptr @malloc(i32 32)
 ; CHECK-NEXT:  %flag = call i1 @check(ptr %alloc)
-; CHECK-NEXT:  %spec.select = select i1 %flag, i32 0, i32 1
+; CHECK-NEXT:  %value_phi = select i1 %flag, i32 0, i32 1
 ; CHECK-NEXT:  %value_invoke = call i32 @calc()
 ; CHECK-NEXT:  %hdl = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
@@ -59,7 +59,7 @@ lpad:
 ; CHECK-NEXT:  %value_invoke.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 3
 ; CHECK-NEXT:  store i32 %value_invoke, ptr %value_invoke.spill.addr
 ; CHECK-NEXT:  %value_phi.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
-; CHECK-NEXT:  store i32 %spec.select, ptr %value_phi.spill.addr
+; CHECK-NEXT:  store i32 %value_phi, ptr %value_phi.spill.addr
 
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
