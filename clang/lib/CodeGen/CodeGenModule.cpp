@@ -991,11 +991,6 @@ void CodeGenModule::Release() {
 #else
     ProductId = "clang";
 #endif
-    // Remove - from Product Id, which makes it consistent with legacy.
-    std::size_t DashFound = ProductId.find("-");
-    if (DashFound != std::string::npos)
-      ProductId.erase(ProductId.begin() + DashFound);
-
     getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
                               llvm::MDString::get(VMContext, ProductId));
 

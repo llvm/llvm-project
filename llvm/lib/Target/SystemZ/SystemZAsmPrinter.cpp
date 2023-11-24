@@ -1064,7 +1064,7 @@ static time_t getTranslationTime(Module &M) {
   std::time_t Time = 0;
   if (auto *Val = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("zos_translation_time"))) {
-    long SecondsSinceEpoch =  Val->getSExtValue();
+    long SecondsSinceEpoch = Val->getSExtValue();
     Time = static_cast<time_t>(SecondsSinceEpoch);
   }
   return Time;
@@ -1083,9 +1083,9 @@ void SystemZAsmPrinter::emitIDRLSection(Module &M) {
 
   SmallString<IDRLDataLength + 1> TempStr;
   raw_svector_ostream O(TempStr);
-  O << formatv("{0}{1,0-2:d}{2,0-2:d}{3:%Y-%m-%d %H:%M:%S}",
+  O << formatv("{0,-10}{1,0-2:d}{2,0-2:d}{3:%Y%m%d%H%M%S}{4,0-2}",
                ProductID.substr(0, 10).c_str(), ProductVersion, ProductRelease,
-               llvm::sys::toUtcTime(Time));
+               llvm::sys::toUtcTime(Time), "0");
   SmallString<IDRLDataLength> Data;
   ConverterEBCDIC::convertToEBCDIC(TempStr, Data);
 
