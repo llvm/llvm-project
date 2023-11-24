@@ -496,6 +496,8 @@ struct TileVectorPrintOpConversion : public OpRewritePattern<vector::PrintOp> {
       // Extract the current row from the tile.
       Value rowIndex = forOp.getInductionVar();
       // FIXME: Forward tile IDs.
+      // For now, if you vector.print a SME tile you need to do
+      // -allocate-arm-sme-tiles after -convert-arm-sme-to-scf.
       auto tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
           loc, printOp.getSource(), rowIndex);
       // Print the row with a 1D vector.print.
