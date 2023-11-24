@@ -76,27 +76,29 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   return true;
 }
 
-// We ignore the format argument to __sanitizer_symbolize_global.
-void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
-                                            const char *format,
-                                            const DataInfo *DI,
-                                            const char *strip_path_prefix) {
-  buffer->AppendF(kFormatData, DI->start);
-}
+class MarkupStackTracePrinter : public StackTracePrinter {
+  // We ignore the format argument to __sanitizer_symbolize_global.
+  void RenderData(InternalScopedString *buffer, const char *format,
+                  const DataInfo *DI, const char *strip_path_prefix) override {
+    buffer->AppendF(kFormatData, DI->start);
+  }
 
-bool FormattedStackTracePrinter::RenderNeedsSymbolization(const char *format) {
-  return false;
-}
+  bool RenderNeedsSymbolization(const char *format) override { return false; }
 
-// We don't support the stack_trace_format flag at all.
-void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
-                                             const char *format, int frame_no,
-                                             uptr address,
-                                             const AddressInfo *info,
-                                             bool vs_style,
-                                             const char *strip_path_prefix) {
-  CHECK(!RenderNeedsSymbolization(format));
-  buffer->AppendF(kFormatFrame, frame_no, address);
+  // We don't support the stack_trace_format flag at all.
+  void RenderFrame(InternalScopedString *buffer, const char *format,
+                   int frame_no, uptr address, const AddressInfo *info,
+                   bool vs_style, const char *strip_path_prefix) override {
+    CHECK(!RenderNeedsSymbolization(format));
+    buffer->AppendF(kFormatFrame, frame_no, address);
+  }
+
+ protected:
+  ~MarkupStackTracePrinter();
+};
+
+StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
+  return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
 }
 
 Symbolizer *Symbolizer::PlatformInit() {

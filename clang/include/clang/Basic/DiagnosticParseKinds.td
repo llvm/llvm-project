@@ -299,6 +299,12 @@ def note_missing_selector_name : Note<
 def note_force_empty_selector_name : Note<
   "or insert whitespace before ':' to use %0 as parameter name "
   "and have an empty entry in the selector">;
+def ext_c_label_followed_by_declaration : ExtWarn<
+  "label followed by a declaration is a C23 extension">,
+  InGroup<C23>;
+def warn_c23_compat_label_followed_by_declaration : Warning<
+  "label followed by a declaration is incompatible with C standards before "
+  "C23">, InGroup<CPre23Compat>, DefaultIgnore;
 def ext_c_label_end_of_compound_statement : ExtWarn<
   "label at end of compound statement is a C23 extension">,
    InGroup<C23>;
@@ -1356,7 +1362,7 @@ def warn_pragma_acc_unimplemented_clause_parsing
     : Warning<"OpenACC clause parsing not yet implemented">,
       InGroup<SourceUsesOpenACC>;
 def err_acc_invalid_directive
-    : Error<"invalid OpenACC directive '%0'">;
+    : Error<"invalid OpenACC directive '%select{%1|%1 %2}0'">;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 
 // OpenMP support.

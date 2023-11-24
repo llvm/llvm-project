@@ -1950,7 +1950,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    if (CFIStartProcLoc && Sym->isExternal())
+    if (MAI.hasSubsectionsViaSymbols() && CFIStartProcLoc && Sym->isExternal())
       return Error(StartTokLoc, "non-private labels cannot appear between "
                                 ".cfi_startproc / .cfi_endproc pairs") &&
              Error(*CFIStartProcLoc, "previous .cfi_startproc was here");

@@ -61,12 +61,22 @@ contains
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive
     !WARNING: The entity with PARAMETER attribute is used in a DECLARE TARGET directive
     !$omp declare target (foo, N, M)
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target to(Q, S) link(R)
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !$omp declare target enter(Q, S) link(R)
+    !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
-    !$omp declare target map(from:Q)
+    !$omp declare target to(Q) map(from:Q)
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
+    !$omp declare target enter(Q) map(from:Q)
     integer, parameter :: N=10000, M=1024
     integer :: i
     real :: Q(N, N), R(N,M), S(M,M)
