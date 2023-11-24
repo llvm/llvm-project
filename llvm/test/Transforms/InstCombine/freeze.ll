@@ -1127,6 +1127,17 @@ define i32 @freeze_zext_nneg(i8 %x) {
   ret i32 %fr
 }
 
+define i32 @propagate_drop_flags_or(i32 %arg) {
+; CHECK-LABEL: @propagate_drop_flags_or(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze i32 [[ARG:%.*]]
+; CHECK-NEXT:    [[V1:%.*]] = or i32 [[ARG_FR]], 2
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v1 = or disjoint i32 %arg, 2
+  %v1.fr = freeze i32 %v1
+  ret i32 %v1.fr
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}
