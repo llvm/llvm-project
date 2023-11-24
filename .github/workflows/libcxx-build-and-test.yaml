@@ -29,7 +29,7 @@ concurrency:
 
 
 env:
-  CMAKE: "/opt/bin/cmake"
+  CMAKE: "/opt/cmake-3.28/bin/cmake"
   # LLVM POST-BRANCH bump version
   # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
   # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
