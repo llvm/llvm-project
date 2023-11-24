@@ -1797,20 +1797,6 @@ def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
   HelpText<"Specify the Swift version to use when filtering API notes">;
-
-defm apinotes : BoolOption<"f", "apinotes",
-  LangOpts<"APINotes">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option], " external API notes support">>,
-  Group<f_clang_Group>;
-defm apinotes_modules : BoolOption<"f", "apinotes-modules",
-  LangOpts<"APINotesModules">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " module-based external API notes support">>,
-  Group<f_clang_Group>;
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
   Group<i_Group>, Flags<[NoXarchOption]>, MetaVarName<"<directory>">,
   HelpText<"Does nothing; API notes are no longer cached separately from modules">;
