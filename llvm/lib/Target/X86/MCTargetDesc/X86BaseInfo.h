@@ -757,10 +757,11 @@ enum : uint64_t {
   /// we handle this by storeing the classifier in the opcode field and using
   /// this flag to indicate that the encoder should do the wacky 3DNow! thing.
   ThreeDNow = 7 << OpMapShift,
-  /// MAP5, MAP6, MAP7 - Prefix after the 0x0F prefix.
-  T_MAP5 = 8 << OpMapShift,
-  T_MAP6 = 9 << OpMapShift,
-  T_MAP7 = 10 << OpMapShift,
+  /// MAP4, MAP5, MAP6, MAP7 - Prefix after the 0x0F prefix.
+  T_MAP4 = 8 << OpMapShift,
+  T_MAP5 = 9 << OpMapShift,
+  T_MAP6 = 10 << OpMapShift,
+  T_MAP7 = 11 << OpMapShift,
   //===------------------------------------------------------------------===//
   /// REX_W - REX prefixes are instruction prefixes used in 64-bit mode.
   /// They are used to specify GPRs and SSE registers, 64-bit operand size,
