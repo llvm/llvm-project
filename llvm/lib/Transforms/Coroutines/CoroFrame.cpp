@@ -2886,13 +2886,20 @@ void coro::salvageDebugInfo(
   // dbg.value since it does not have the same function wide guarantees that
   // dbg.declare does.
   if (isa<DbgDeclareInst>(DVI)) {
-    std::optional<BasicBlock::iterator> InsertPt;
-    if (auto *I = dyn_cast<Instruction>(Storage))
+    BasicBlock::iterator InsertPt;
+    BasicBlock *InsertBB = nullptr;
+    if (auto *I = dyn_cast<Instruction>(Storage)) {
       InsertPt = I->getInsertionPointAfterDef();
-    else if (isa<Argument>(Storage))
+      // There might not be anywhere to insert.
+      if (InsertPt == I->getParent()->end())
+        return;
+      InsertBB = InsertPt->getParent();
+    } else if (isa<Argument>(Storage)) {
       InsertPt = F->getEntryBlock().begin();
-    if (InsertPt)
-      DVI->moveBefore(*(*InsertPt)->getParent(), *InsertPt);
+      InsertBB = &F->getEntryBlock();
+    } else
+      return;
+    DVI->moveBefore(*InsertBB, InsertPt);
   }
 }
 
