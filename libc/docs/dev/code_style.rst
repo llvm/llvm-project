@@ -43,13 +43,13 @@ We define two kinds of macros:
 
      * ``architectures.h`` - Target architecture properties.
        e.g., ``LIBC_TARGET_ARCH_IS_ARM``.
-     * ``os.h`` - Target architecture properties.
+     * ``os.h`` - Target os properties.
        e.g., ``LIBC_TARGET_OS_IS_LINUX``.
      * ``cpu_features.h`` - Target cpu feature availability.
        e.g., ``LIBC_TARGET_CPU_HAS_AVX2``.
      * ``compiler.h`` - Host compiler properties.
        e.g., ``LIBC_COMPILER_IS_CLANG``.
-     * ``float.h`` - Float type compiler support.
+     * ``float.h`` - Floating point type properties and availability.
        e.g., ``LIBC_COMPILER_HAS_FLOAT128``.
 
    * ``src/__support/macros/config.h`` - Important compiler and platform
