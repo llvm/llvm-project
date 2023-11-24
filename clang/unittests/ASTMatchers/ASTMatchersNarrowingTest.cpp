@@ -4186,19 +4186,19 @@ TEST_P(ASTMatchersTest, hasOperator) {
 
   EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
                       "return (0 + ... + args); }",
-                      cxxFoldExpr(hasOperator(BO_Add))));
+                      cxxFoldExpr(hasOperatorName("+"))));
   EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
                       "return (... + args); };",
-                      cxxFoldExpr(hasOperator(BO_Add))));
+                      cxxFoldExpr(hasOperatorName("+"))));
 
   EXPECT_FALSE(
       matches("template <typename... Args> auto multiply(Args... args) { "
               "return (0 * ... * args); }",
-              cxxFoldExpr(hasOperator(BO_Add))));
+              cxxFoldExpr(hasOperatorName("+"))));
   EXPECT_FALSE(
       matches("template <typename... Args> auto multiply(Args... args) { "
               "return (... * args); };",
-              cxxFoldExpr(hasOperator(BO_Add))));
+              cxxFoldExpr(hasOperatorName("+"))));
 }
 
 TEST_P(ASTMatchersTest, IsMain) {

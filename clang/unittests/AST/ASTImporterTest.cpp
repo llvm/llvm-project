@@ -817,14 +817,14 @@ TEST_P(ImportExpr, ImportSizeOfPackExpr) {
 }
 
 TEST_P(ImportExpr, ImportCXXFoldExpr) {
-  auto Match1 = cxxFoldExpr(hasOperator(BO_Add), isLeftFold(),
+  auto Match1 = cxxFoldExpr(hasOperatorName("+"), isLeftFold(),
                             unless(hasFoldInit(expr())));
   auto Match2 =
-      cxxFoldExpr(hasOperator(BO_Sub), isLeftFold(), hasFoldInit(expr()));
-  auto Match3 = cxxFoldExpr(hasOperator(BO_Mul), isRightFold(),
+      cxxFoldExpr(hasOperatorName("-"), isLeftFold(), hasFoldInit(expr()));
+  auto Match3 = cxxFoldExpr(hasOperatorName("*"), isRightFold(),
                             unless(hasFoldInit(expr())));
   auto Match4 =
-      cxxFoldExpr(hasOperator(BO_Div), isRightFold(), hasFoldInit(expr()));
+      cxxFoldExpr(hasOperatorName("/"), isRightFold(), hasFoldInit(expr()));
 
   MatchVerifier<Decl> Verifier;
   testImport("template <typename... Ts>"

@@ -2976,11 +2976,18 @@ specified names.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1BinaryOperator.html">BinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName0')"><a name="hasOperatorName0Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
-<tr><td colspan="4" class="doc" id="hasOperatorName0"><pre>Matches the operator Name of operator expressions (binary or
-unary).
+<tr><td colspan="4" class="doc" id="hasOperatorName0"><pre>Matches the operator Name of operator expressions and fold expressions
+(binary or unary).
 
 Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
   !(a || b)
+
+Example matches `(0 + ... + args)`
+    (matcher = cxxFoldExpr(hasOperatorName("+")))
+  template &lt;typename... Args&gt;
+  auto sum(Args... args) {
+      return (0 + ... + args);
+  }
 </pre></td></tr>
 
 
@@ -3441,19 +3448,18 @@ compares its name to the usage in @c s.mem() in the @c x function template
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFoldExpr.html">CXXFoldExpr</a>&gt;</td><td class="name" onclick="toggle('hasOperator0')"><a name="hasOperator0Anchor">hasOperator</a></td><td>BinaryOperatorKind Op</td></tr>
-<tr><td colspan="4" class="doc" id="hasOperator0"><pre>Matches the operator kind of the fold expression.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXFoldExpr.html">CXXFoldExpr</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName3')"><a name="hasOperatorName3Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
+<tr><td colspan="4" class="doc" id="hasOperatorName3"><pre>Matches the operator Name of operator expressions and fold expressions
+(binary or unary).
+
+Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
+  !(a || b)
 
 Example matches `(0 + ... + args)`
-    (matcher = cxxFoldExpr(hasOperator(BO_Add)))
+    (matcher = cxxFoldExpr(hasOperatorName("+")))
   template &lt;typename... Args&gt;
   auto sum(Args... args) {
       return (0 + ... + args);
-  }
-
-  template &lt;typename... Args&gt;
-  auto multiply(Args... args) {
-      return (args * ... * 1);
   }
 </pre></td></tr>
 
@@ -3696,11 +3702,18 @@ Is equivalent to
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXOperatorCallExpr.html">CXXOperatorCallExpr</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName1')"><a name="hasOperatorName1Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
-<tr><td colspan="4" class="doc" id="hasOperatorName1"><pre>Matches the operator Name of operator expressions (binary or
-unary).
+<tr><td colspan="4" class="doc" id="hasOperatorName1"><pre>Matches the operator Name of operator expressions and fold expressions
+(binary or unary).
 
 Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
   !(a || b)
+
+Example matches `(0 + ... + args)`
+    (matcher = cxxFoldExpr(hasOperatorName("+")))
+  template &lt;typename... Args&gt;
+  auto sum(Args... args) {
+      return (0 + ... + args);
+  }
 </pre></td></tr>
 
 
@@ -3854,11 +3867,18 @@ specified names.
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRewrittenBinaryOperator.html">CXXRewrittenBinaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName2')"><a name="hasOperatorName2Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
-<tr><td colspan="4" class="doc" id="hasOperatorName2"><pre>Matches the operator Name of operator expressions (binary or
-unary).
+<tr><td colspan="4" class="doc" id="hasOperatorName2"><pre>Matches the operator Name of operator expressions and fold expressions
+(binary or unary).
 
 Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
   !(a || b)
+
+Example matches `(0 + ... + args)`
+    (matcher = cxxFoldExpr(hasOperatorName("+")))
+  template &lt;typename... Args&gt;
+  auto sum(Args... args) {
+      return (0 + ... + args);
+  }
 </pre></td></tr>
 
 
@@ -5808,12 +5828,19 @@ specified names.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName3')"><a name="hasOperatorName3Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
-<tr><td colspan="4" class="doc" id="hasOperatorName3"><pre>Matches the operator Name of operator expressions (binary or
-unary).
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnaryOperator.html">UnaryOperator</a>&gt;</td><td class="name" onclick="toggle('hasOperatorName4')"><a name="hasOperatorName4Anchor">hasOperatorName</a></td><td>std::string Name</td></tr>
+<tr><td colspan="4" class="doc" id="hasOperatorName4"><pre>Matches the operator Name of operator expressions and fold expressions
+(binary or unary).
 
 Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
   !(a || b)
+
+Example matches `(0 + ... + args)`
+    (matcher = cxxFoldExpr(hasOperatorName("+")))
+  template &lt;typename... Args&gt;
+  auto sum(Args... args) {
+      return (0 + ... + args);
+  }
 </pre></td></tr>
 
 

@@ -4678,25 +4678,6 @@ AST_MATCHER(CXXFoldExpr, isUnaryFold) { return Node.getInit() == nullptr; }
 /// \endcode
 AST_MATCHER(CXXFoldExpr, isBinaryFold) { return Node.getInit() != nullptr; }
 
-/// Matches the operator kind of the fold expression.
-///
-/// Example matches `(0 + ... + args)`
-///     (matcher = cxxFoldExpr(hasOperator(BO_Add)))
-/// \code
-///   template <typename... Args>
-///   auto sum(Args... args) {
-///       return (0 + ... + args);
-///   }
-///
-///   template <typename... Args>
-///   auto multiply(Args... args) {
-///       return (args * ... * 1);
-///   }
-/// \endcode
-AST_MATCHER_P(CXXFoldExpr, hasOperator, BinaryOperatorKind, Op) {
-  return Node.getOperator() == Op;
-}
-
 /// Matches the n'th item of an initializer list expression.
 ///
 /// Example matches y.
@@ -5874,17 +5855,27 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(equals,
     .matchesNode(Node);
 }
 
-/// Matches the operator Name of operator expressions (binary or
-/// unary).
+/// Matches the operator Name of operator expressions and fold expressions
+/// (binary or unary).
 ///
 /// Example matches a || b (matcher = binaryOperator(hasOperatorName("||")))
 /// \code
 ///   !(a || b)
 /// \endcode
+///
+/// Example matches `(0 + ... + args)`
+///     (matcher = cxxFoldExpr(hasOperatorName("+")))
+/// \code
+///   template <typename... Args>
+///   auto sum(Args... args) {
+///       return (0 + ... + args);
+///   }
+/// \endcode
 AST_POLYMORPHIC_MATCHER_P(
     hasOperatorName,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BinaryOperator, CXXOperatorCallExpr,
-                                    CXXRewrittenBinaryOperator, UnaryOperator),
+                                    CXXRewrittenBinaryOperator, CXXFoldExpr,
+                                    UnaryOperator),
     std::string, Name) {
   if (std::optional<StringRef> OpName = internal::getOpName(Node))
     return *OpName == Name;
