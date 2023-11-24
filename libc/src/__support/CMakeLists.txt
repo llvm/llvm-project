@@ -42,7 +42,7 @@ add_header_library(
     .named_pair
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.config
 )
 
 add_header_library(
