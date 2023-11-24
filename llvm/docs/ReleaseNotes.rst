@@ -130,6 +130,7 @@ Changes to the RISC-V Backend
 
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
 
 Changes to the WebAssembly Backend
 ----------------------------------
