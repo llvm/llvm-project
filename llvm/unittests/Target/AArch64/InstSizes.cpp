@@ -196,7 +196,7 @@ TEST(InstSizes, StoreSwiftAsyncContext) {
 
   runChecks(
       TM.get(), II.get(), "",
-      "    StoreSwiftAsyncContext $x0, $x1, 12, implicit-def $x16, "
+      "    StoreSwiftAsyncContext $x0, $x1, 12, $x2, $x3, implicit-def $x16, "
       "implicit-def $x17\n",
       [](AArch64InstrInfo &II, MachineFunction &MF) {
         auto I = MF.begin()->begin();

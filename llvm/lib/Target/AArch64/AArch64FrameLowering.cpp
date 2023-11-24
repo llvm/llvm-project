@@ -296,7 +296,8 @@ static int64_t getArgumentStackToRestore(MachineFunction &MF,
 static bool produceCompactUnwindFrame(MachineFunction &MF);
 static bool needsWinCFI(const MachineFunction &MF);
 static StackOffset getSVEStackSize(const MachineFunction &MF);
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB);
+static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                                 unsigned FirstScratchReg = 0);
 
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
@@ -870,17 +871,24 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 // but we would then have to make sure that we were in fact saving at least one
 // callee-save register in the prologue, which is additional complexity that
 // doesn't seem worth the benefit.
-static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
+//
+// If \p FirstScratchReg is not 0, it specifies the register that was chosen as
+// first scratch register and indicates that it should return another scratch
+// register, if possible.
+static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                                 unsigned FirstScratchReg) {
   MachineFunction *MF = MBB->getParent();
 
   // If MBB is an entry block, use X9 as the scratch register
-  if (&MF->front() == MBB)
+  if (&MF->front() == MBB && !FirstScratchReg)
     return AArch64::X9;
 
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   LivePhysRegs LiveRegs(TRI);
   LiveRegs.addLiveIns(*MBB);
+  if (FirstScratchReg)
+    LiveRegs.addReg(FirstScratchReg);
 
   // Mark callee saved registers as used so we will not choose them.
   const MCPhysReg *CSRegs = MF->getRegInfo().getCalleeSavedRegs();
@@ -905,6 +913,17 @@ bool AArch64FrameLowering::canUseAsPrologue(
   MachineBasicBlock *TmpMBB = const_cast<MachineBasicBlock *>(&MBB);
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
+
+  if (AFI->hasSwiftAsyncContext()) {
+    // Expanding StoreSwiftAsyncContext requires 2 scratch registers.
+    unsigned FirstScratchReg = findScratchNonCalleeSaveRegister(TmpMBB);
+    unsigned SecondScratchReg =
+        findScratchNonCalleeSaveRegister(TmpMBB, FirstScratchReg);
+    if (FirstScratchReg == AArch64::NoRegister ||
+        SecondScratchReg == AArch64::NoRegister)
+      return false;
+  }
 
   // Don't need a scratch register if we're not going to re-align the stack.
   if (!RegInfo->hasStackRealignment(*MF))
@@ -1681,11 +1700,16 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       bool HaveInitialContext = Attrs.hasAttrSomewhere(Attribute::SwiftAsync);
       if (HaveInitialContext)
         MBB.addLiveIn(AArch64::X22);
+      unsigned FirstScratchReg = findScratchNonCalleeSaveRegister(&MBB);
+      unsigned SecondScratchReg =
+          findScratchNonCalleeSaveRegister(&MBB, FirstScratchReg);
       Register Reg = HaveInitialContext ? AArch64::X22 : AArch64::XZR;
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::StoreSwiftAsyncContext))
           .addUse(Reg)
           .addUse(AArch64::SP)
           .addImm(FPOffset - 8)
+          .addDef(FirstScratchReg, RegState::Implicit)
+          .addDef(SecondScratchReg, RegState::Implicit)
           .setMIFlags(MachineInstr::FrameSetup);
       if (NeedsWinCFI) {
         // WinCFI and arm64e, where StoreSwiftAsyncContext is expanded

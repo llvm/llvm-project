@@ -857,6 +857,8 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
   Register CtxReg = MBBI->getOperand(0).getReg();
   Register BaseReg = MBBI->getOperand(1).getReg();
   int Offset = MBBI->getOperand(2).getImm();
+  Register ScratchReg1 = MBBI->getOperand(3).getReg();
+  Register ScratchReg2 = MBBI->getOperand(4).getReg();
   DebugLoc DL(MBBI->getDebugLoc());
   auto &STI = MBB.getParent()->getSubtarget<AArch64Subtarget>();
 
@@ -872,35 +874,35 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
 
   // We need to sign the context in an address-discriminated way. 0xc31a is a
   // fixed random value, chosen as part of the ABI.
-  //     add x16, xBase, #Offset
-  //     movk x16, #0xc31a, lsl #48
-  //     mov x17, x22/xzr
-  //     pacdb x17, x16
-  //     str x17, [xBase, #Offset]
+  //     add ScratchReg1, xBase, #Offset
+  //     movk ScratchReg1, #0xc31a, lsl #48
+  //     mov ScratchReg2, x22/xzr
+  //     pacdb ScratchReg2, ScratchReg1
+  //     str ScratchReg2, [xBase, #Offset]
   unsigned Opc = Offset >= 0 ? AArch64::ADDXri : AArch64::SUBXri;
-  BuildMI(MBB, MBBI, DL, TII->get(Opc), AArch64::X16)
+  BuildMI(MBB, MBBI, DL, TII->get(Opc), ScratchReg1)
       .addUse(BaseReg)
       .addImm(abs(Offset))
       .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), AArch64::X16)
-      .addUse(AArch64::X16)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVKXi), ScratchReg1)
+      .addUse(ScratchReg1)
       .addImm(0xc31a)
       .addImm(48)
       .setMIFlag(MachineInstr::FrameSetup);
   // We're not allowed to clobber X22 (and couldn't clobber XZR if we tried), so
   // move it somewhere before signing.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), ScratchReg2)
       .addUse(AArch64::XZR)
       .addUse(CtxReg)
       .addImm(0)
       .setMIFlag(MachineInstr::FrameSetup);
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACDB), AArch64::X17)
-      .addUse(AArch64::X17)
-      .addUse(AArch64::X16)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACDB), ScratchReg2)
+      .addUse(ScratchReg2)
+      .addUse(ScratchReg1)
       .setMIFlag(MachineInstr::FrameSetup);
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXui))
-      .addUse(AArch64::X17)
+      .addUse(ScratchReg2)
       .addUse(BaseReg)
       .addImm(Offset / 8)
       .setMIFlag(MachineInstr::FrameSetup);

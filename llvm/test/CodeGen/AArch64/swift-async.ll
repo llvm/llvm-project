@@ -12,11 +12,11 @@ define swifttailcc void @simple(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: stp x29, x30, [sp, #16]
 
 ; CHECK-NOAUTH-DAG: str x22, [sp, #8]
-; CHECK-AUTH: add x16, sp, #8
-; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, x22
-; CHECK-AUTH: pacdb x17, x16
-; CHECK-AUTH: str x17, [sp, #8]
+; CHECK-AUTH: add x9, sp, #8
+; CHECK-AUTH: movk x9, #49946, lsl #48
+; CHECK-AUTH: mov x0, x22
+; CHECK-AUTH: pacdb x0, x9
+; CHECK-AUTH: str x0, [sp, #8]
 
 ; CHECK-DAG: add x29, sp, #16
 ; CHECK: .cfi_def_cfa w29, 16
@@ -39,11 +39,11 @@ define swifttailcc void @more_csrs(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: stp x29, x30, [sp, #16]
 
 ; CHECK-NOAUTH-DAG: str x22, [sp, #8]
-; CHECK-AUTH: add x16, sp, #8
-; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, x22
-; CHECK-AUTH: pacdb x17, x16
-; CHECK-AUTH: str x17, [sp, #8]
+; CHECK-AUTH: add x9, sp, #8
+; CHECK-AUTH: movk x9, #49946, lsl #48
+; CHECK-AUTH: mov x0, x22
+; CHECK-AUTH: pacdb x0, x9
+; CHECK-AUTH: str x0, [sp, #8]
 
 ; CHECK-DAG: add x29, sp, #16
 ; CHECK: .cfi_def_cfa w29, 16
@@ -67,11 +67,11 @@ define swifttailcc void @locals(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: stp x29, x30, [sp, #48]
 
 ; CHECK-NOAUTH-DAG: str x22, [sp, #40]
-; CHECK-AUTH: add x16, sp, #40
-; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, x22
-; CHECK-AUTH: pacdb x17, x16
-; CHECK-AUTH: str x17, [sp, #40]
+; CHECK-AUTH: add x9, sp, #40
+; CHECK-AUTH: movk x9, #49946, lsl #48
+; CHECK-AUTH: mov x0, x22
+; CHECK-AUTH: pacdb x0, x9
+; CHECK-AUTH: str x0, [sp, #40]
 
 ; CHECK-DAG: add x29, sp, #48
 ; CHECK: .cfi_def_cfa w29, 16
@@ -95,7 +95,7 @@ define swifttailcc void @use_input_context(ptr swiftasync %ctx, ptr %ptr) "frame
 ; CHECK-LABEL: use_input_context:
 
 ; CHECK-NOAUTH: str x22, [sp
-; CHECK-AUTH: mov x17, x22
+; CHECK-AUTH: mov x1, x22
 
 ; CHECK-NOT: x22
 ; CHECK: str x22, [x0]
@@ -108,11 +108,11 @@ define swifttailcc ptr @context_in_func() "frame-pointer"="non-leaf" {
 ; CHECK-LABEL: context_in_func:
 
 ; CHECK-NOAUTH: str xzr, [sp, #8]
-; CHECK-AUTH: add x16, sp, #8
-; CHECK-AUTH: movk x16, #49946, lsl #48
-; CHECK-AUTH: mov x17, xzr
-; CHECK-AUTH: pacdb x17, x16
-; CHECK-AUTH: str x17, [sp, #8]
+; CHECK-AUTH: add x9, sp, #8
+; CHECK-AUTH: movk x9, #49946, lsl #48
+; CHECK-AUTH: mov x0, xzr
+; CHECK-AUTH: pacdb x0, x9
+; CHECK-AUTH: str x0, [sp, #8]
 
   %ptr = call ptr @llvm.swift.async.context.addr()
   ret ptr %ptr

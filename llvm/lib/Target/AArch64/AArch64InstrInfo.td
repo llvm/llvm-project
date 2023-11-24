@@ -9163,9 +9163,10 @@ def : Pat<(int_ptrauth_blend GPR64:$Rd, GPR64:$Rn),
 //-----------------------------------------------------------------------------
 
 // This gets lowered into an instruction sequence of 20 bytes
-let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1, Size = 20 in
+let mayStore = 1, isCodeGenOnly = 1, Size = 20 in
 def StoreSwiftAsyncContext
-      : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
+      : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset,
+                            GPR64:$scratch1, GPR64sp:$scratch2),
                []>, Sched<[]>;
 
 def AArch64AssertZExtBool : SDNode<"AArch64ISD::ASSERT_ZEXT_BOOL", SDT_assert>;
