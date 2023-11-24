@@ -38,6 +38,11 @@ struct Messages {
   std::string Short, Full;
 };
 
+// NOTE: This is a `PostStmt` checker because the implementation passes the
+// whole subscript or unary operator expression to `CheckerContext::getSVal()`,
+// so those two callback wouldn't work as `PreStmt` (unless this checker
+// duplicated the code evaluating those expressions). The `MemberExpr` callback
+// would work as `PreStmt`, but it's `PostStmt` for the sake of consistency.
 class ArrayBoundCheckerV2 : public Checker<check::PostStmt<ArraySubscriptExpr>,
                                            check::PostStmt<UnaryOperator>,
                                            check::PostStmt<MemberExpr>> {
