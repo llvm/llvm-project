@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !non-lockfree-atomics
 
 //   static constexpr bool is_always_lock_free = implementation-defined;
 //   bool is_lock_free() const volatile noexcept;

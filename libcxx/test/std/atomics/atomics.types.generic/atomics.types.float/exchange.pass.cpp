@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
 // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
+// XFAIL: target={{x86_64-.*}} && tsan
 // XFAIL: target={{x86_64-.*}} && msan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !non-lockfree-atomics
 
 //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;
 //  T exchange(T, memory_order = memory_order::seq_cst) noexcept;

@@ -8,7 +8,7 @@
 // UNSUPPORTED: no-threads
 // XFAIL: availability-synchronization_library-missing
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !non-lockfree-atomics
 
 //  void notify_one() volatile noexcept;
 //  void notify_one() noexcept;

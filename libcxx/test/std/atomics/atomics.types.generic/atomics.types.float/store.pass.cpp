@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: target={{x86_64-.*}} && tsan
+// XFAIL: !non-lockfree-atomics
 
 // void store(floating-point-type, memory_order = memory_order::seq_cst) volatile noexcept;
 // void store(floating-point-type, memory_order = memory_order::seq_cst) noexcept;
