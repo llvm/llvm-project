@@ -758,7 +758,7 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
     unsigned Slot = C2RMatcher->getSrcSlot();
     if (Reg->EnumValue > 255) {
       assert(isUInt<16>(Reg->EnumValue) && "not handled");
-      OS << "OPC_EmitCopyToRegHalf, " << Slot << ", " << "TARGET_VAL("
+      OS << "OPC_EmitCopyToRegTwoByte, " << Slot << ", " << "TARGET_VAL("
          << getQualifiedName(Reg->TheDef) << "),\n";
       ++Bytes;
     } else {

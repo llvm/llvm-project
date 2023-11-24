@@ -3618,14 +3618,14 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitCopyToReg5:
     case OPC_EmitCopyToReg6:
     case OPC_EmitCopyToReg7:
-    case OPC_EmitCopyToRegHalf: {
+    case OPC_EmitCopyToRegTwoByte: {
       unsigned RecNo =
           Opcode >= OPC_EmitCopyToReg0 && Opcode <= OPC_EmitCopyToReg7
               ? Opcode - OPC_EmitCopyToReg0
               : MatcherTable[MatcherIndex++];
       assert(RecNo < RecordedNodes.size() && "Invalid EmitCopyToReg");
       unsigned DestPhysReg = MatcherTable[MatcherIndex++];
-      if (Opcode == OPC_EmitCopyToRegHalf)
+      if (Opcode == OPC_EmitCopyToRegTwoByte)
         DestPhysReg |= MatcherTable[MatcherIndex++] << 8;
 
       if (!InputChain.getNode())

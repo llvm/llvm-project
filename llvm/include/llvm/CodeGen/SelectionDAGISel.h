@@ -207,7 +207,7 @@ public:
     OPC_EmitCopyToReg5,
     OPC_EmitCopyToReg6,
     OPC_EmitCopyToReg7,
-    OPC_EmitCopyToRegHalf,
+    OPC_EmitCopyToRegTwoByte,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
     // Space-optimized forms that implicitly encode number of result VTs.
