@@ -11,5 +11,4 @@
 program main_dupes
     ! Irrelevant what to do in here.
     ! Test is supposed to fail at link time.
-    print '(A)', 'Hello from Fortran'
 end program main_dupes
