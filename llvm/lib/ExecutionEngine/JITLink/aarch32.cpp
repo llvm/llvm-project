@@ -257,12 +257,6 @@ template <EdgeKind_aarch32 K> constexpr bool isThumb() {
   return FirstThumbRelocation <= K && K <= LastThumbRelocation;
 }
 
-template <EdgeKind_aarch32 K> constexpr bool hasOpcode(...) { return false; }
-template <EdgeKind_aarch32 K, auto _ = FixupInfo<K>::Opcode>
-constexpr bool hasOpcode(int) { return true; }
-template <EdgeKind_aarch32 K, auto _ = FixupInfo<K>::Opcode.Lo>
-constexpr bool hasOpcode(unsigned) { return true; }
-
 template <EdgeKind_aarch32 K> static bool checkOpcodeArm(uint32_t Wd) {
   return (Wd & FixupInfo<K>::OpcodeMask) == FixupInfo<K>::Opcode;
 }
@@ -288,8 +282,7 @@ public:
   }
 
 private:
-  template <EdgeKind_aarch32 K, EdgeKind_aarch32 LastK>
-  void populateEntries() {
+  template <EdgeKind_aarch32 K, EdgeKind_aarch32 LastK> void populateEntries() {
     assert(K < Data.size() && "Index out of range");
     assert(Data.at(K) == nullptr && "Initialized entries are immutable");
     Data[K] = initEntry<K>();
@@ -302,13 +295,11 @@ private:
   template <EdgeKind_aarch32 K>
   static std::unique_ptr<FixupInfoBase> initEntry() {
     auto Entry = std::make_unique<FixupInfo<K>>();
-    if constexpr (hasOpcode<K>(0)) {
-      static_assert(isArm<K>() != isThumb<K>(), "Classes are mutually exclusive");
-      if constexpr (isArm<K>())
-        Entry->checkOpcode = checkOpcodeArm<K>;
-      if constexpr (isThumb<K>())
-        Entry->checkOpcode = checkOpcodeThumb<K>;
-    }
+    static_assert(isArm<K>() != isThumb<K>(), "Classes are mutually exclusive");
+    if constexpr (isArm<K>())
+      Entry->checkOpcode = checkOpcodeArm<K>;
+    if constexpr (isThumb<K>())
+      Entry->checkOpcode = checkOpcodeThumb<K>;
     return Entry;
   }
 
@@ -320,8 +311,8 @@ private:
 
 ManagedStatic<FixupInfoTable> DynFixupInfos;
 
-static Error
-checkOpcode(LinkGraph &G, const ArmRelocation &R, Edge::Kind Kind) {
+static Error checkOpcode(LinkGraph &G, const ArmRelocation &R,
+                         Edge::Kind Kind) {
   assert(Kind >= FirstArmRelocation && Kind <= LastArmRelocation &&
          "Edge kind must be Arm relocation");
   const FixupInfoBase *Entry = DynFixupInfos->getEntry(Kind);
@@ -333,8 +324,8 @@ checkOpcode(LinkGraph &G, const ArmRelocation &R, Edge::Kind Kind) {
   return Error::success();
 }
 
-static Error
-checkOpcode(LinkGraph &G, const ThumbRelocation &R, Edge::Kind Kind) {
+static Error checkOpcode(LinkGraph &G, const ThumbRelocation &R,
+                         Edge::Kind Kind) {
   assert(Kind >= FirstThumbRelocation && Kind <= LastThumbRelocation &&
          "Edge kind must be Thumb relocation");
   const FixupInfoBase *Entry = DynFixupInfos->getEntry(Kind);
