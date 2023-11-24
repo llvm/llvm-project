@@ -445,7 +445,6 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP) {
 void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
                                   bool IsHIP) {
   LLVMContext &C = M.getContext();
-  auto *PtrTy = PointerType::getUnqual(C);
   auto *CtorFuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *CtorFunc =
       Function::Create(CtorFuncTy, GlobalValue::InternalLinkage,
@@ -458,25 +457,27 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
                        IsHIP ? ".hip.fatbin_unreg" : ".cuda.fatbin_unreg", &M);
   DtorFunc->setSection(".text.startup");
 
+  auto *PtrTy = PointerType::getUnqual(C);
+
   // Get the __cudaRegisterFatBinary function declaration.
   auto *RegFatTy = FunctionType::get(PtrTy, PtrTy,
-                                     /*isVarArg*/ false);
+                                     /*isVarArg=*/ false);
   FunctionCallee RegFatbin = M.getOrInsertFunction(
       IsHIP ? "__hipRegisterFatBinary" : "__cudaRegisterFatBinary", RegFatTy);
   // Get the __cudaRegisterFatBinaryEnd function declaration.
   auto *RegFatEndTy = FunctionType::get(Type::getVoidTy(C), PtrTy,
-                                        /*isVarArg*/ false);
+                                        /*isVarArg=*/ false);
   FunctionCallee RegFatbinEnd =
       M.getOrInsertFunction("__cudaRegisterFatBinaryEnd", RegFatEndTy);
   // Get the __cudaUnregisterFatBinary function declaration.
   auto *UnregFatTy = FunctionType::get(Type::getVoidTy(C), PtrTy,
-                                       /*isVarArg*/ false);
+                                       /*isVarArg=*/ false);
   FunctionCallee UnregFatbin = M.getOrInsertFunction(
       IsHIP ? "__hipUnregisterFatBinary" : "__cudaUnregisterFatBinary",
       UnregFatTy);
 
   auto *AtExitTy = FunctionType::get(Type::getInt32Ty(C), PtrTy,
-                                     /*isVarArg*/ false);
+                                     /*isVarArg=*/ false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
   auto *BinaryHandleGlobal = new llvm::GlobalVariable(
