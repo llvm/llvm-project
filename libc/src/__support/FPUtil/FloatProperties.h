@@ -218,24 +218,6 @@ template <> struct FloatProperties<float128> {
 };
 #endif // LIBC_COMPILER_HAS_FLOAT128
 
-// Define the float type corresponding to the BitsType.
-template <typename BitsType> struct FloatType;
-
-template <> struct FloatType<uint32_t> {
-  static_assert(sizeof(uint32_t) == sizeof(float),
-                "Unexpected size of 'float' type.");
-  typedef float Type;
-};
-
-template <> struct FloatType<uint64_t> {
-  static_assert(sizeof(uint64_t) == sizeof(double),
-                "Unexpected size of 'double' type.");
-  typedef double Type;
-};
-
-template <typename BitsType>
-using FloatTypeT = typename FloatType<BitsType>::Type;
-
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 

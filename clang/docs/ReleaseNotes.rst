@@ -225,8 +225,8 @@ Non-comprehensive list of changes in this release
   determined at runtime.
 * The ``__datasizeof`` keyword has been added. It is similar to ``sizeof``
   except that it returns the size of a type ignoring tail padding.
-* ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``,
-  to match GCC 14's behavior.
+* ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``
+  and vector types as return value ``19``, to match GCC 14's behavior.
 
 New Compiler Flags
 ------------------
