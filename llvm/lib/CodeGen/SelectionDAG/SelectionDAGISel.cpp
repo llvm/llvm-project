@@ -2885,11 +2885,39 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
   case SelectionDAGISel::OPC_CheckChild4Type:
   case SelectionDAGISel::OPC_CheckChild5Type:
   case SelectionDAGISel::OPC_CheckChild6Type:
-  case SelectionDAGISel::OPC_CheckChild7Type: {
-    Result =
-        !::CheckChildType(static_cast<MVT::SimpleValueType>(Table[Index++]), N,
-                          SDISel.TLI, SDISel.CurDAG->getDataLayout(),
-                          Opcode - SelectionDAGISel::OPC_CheckChild0Type);
+  case SelectionDAGISel::OPC_CheckChild7Type:
+  case SelectionDAGISel::OPC_CheckChild0TypeI32:
+  case SelectionDAGISel::OPC_CheckChild1TypeI32:
+  case SelectionDAGISel::OPC_CheckChild2TypeI32:
+  case SelectionDAGISel::OPC_CheckChild3TypeI32:
+  case SelectionDAGISel::OPC_CheckChild4TypeI32:
+  case SelectionDAGISel::OPC_CheckChild5TypeI32:
+  case SelectionDAGISel::OPC_CheckChild6TypeI32:
+  case SelectionDAGISel::OPC_CheckChild7TypeI32:
+  case SelectionDAGISel::OPC_CheckChild0TypeI64:
+  case SelectionDAGISel::OPC_CheckChild1TypeI64:
+  case SelectionDAGISel::OPC_CheckChild2TypeI64:
+  case SelectionDAGISel::OPC_CheckChild3TypeI64:
+  case SelectionDAGISel::OPC_CheckChild4TypeI64:
+  case SelectionDAGISel::OPC_CheckChild5TypeI64:
+  case SelectionDAGISel::OPC_CheckChild6TypeI64:
+  case SelectionDAGISel::OPC_CheckChild7TypeI64: {
+    MVT::SimpleValueType VT;
+    unsigned ChildNo;
+    if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeI32 &&
+        Opcode <= SelectionDAGISel::OPC_CheckChild7TypeI32) {
+      VT = MVT::i32;
+      ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI32;
+    } else if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeI64 &&
+               Opcode <= SelectionDAGISel::OPC_CheckChild7TypeI64) {
+      VT = MVT::i64;
+      ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI64;
+    } else {
+      VT = static_cast<MVT::SimpleValueType>(Table[Index++]);
+      ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
+    }
+    Result = !::CheckChildType(VT, N, SDISel.TLI,
+                               SDISel.CurDAG->getDataLayout(), ChildNo);
     return Index;
   }
   case SelectionDAGISel::OPC_CheckCondCode:
@@ -3412,15 +3440,48 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                         << '\n');
       continue;
     }
-    case OPC_CheckChild0Type: case OPC_CheckChild1Type:
-    case OPC_CheckChild2Type: case OPC_CheckChild3Type:
-    case OPC_CheckChild4Type: case OPC_CheckChild5Type:
-    case OPC_CheckChild6Type: case OPC_CheckChild7Type:
-      if (!::CheckChildType(
-              static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]),
-              N, TLI, CurDAG->getDataLayout(), Opcode - OPC_CheckChild0Type))
+    case OPC_CheckChild0Type:
+    case OPC_CheckChild1Type:
+    case OPC_CheckChild2Type:
+    case OPC_CheckChild3Type:
+    case OPC_CheckChild4Type:
+    case OPC_CheckChild5Type:
+    case OPC_CheckChild6Type:
+    case OPC_CheckChild7Type:
+    case OPC_CheckChild0TypeI32:
+    case OPC_CheckChild1TypeI32:
+    case OPC_CheckChild2TypeI32:
+    case OPC_CheckChild3TypeI32:
+    case OPC_CheckChild4TypeI32:
+    case OPC_CheckChild5TypeI32:
+    case OPC_CheckChild6TypeI32:
+    case OPC_CheckChild7TypeI32:
+    case OPC_CheckChild0TypeI64:
+    case OPC_CheckChild1TypeI64:
+    case OPC_CheckChild2TypeI64:
+    case OPC_CheckChild3TypeI64:
+    case OPC_CheckChild4TypeI64:
+    case OPC_CheckChild5TypeI64:
+    case OPC_CheckChild6TypeI64:
+    case OPC_CheckChild7TypeI64: {
+      MVT::SimpleValueType VT;
+      unsigned ChildNo;
+      if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeI32 &&
+          Opcode <= SelectionDAGISel::OPC_CheckChild7TypeI32) {
+        VT = MVT::i32;
+        ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI32;
+      } else if (Opcode >= SelectionDAGISel::OPC_CheckChild0TypeI64 &&
+                 Opcode <= SelectionDAGISel::OPC_CheckChild7TypeI64) {
+        VT = MVT::i64;
+        ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0TypeI64;
+      } else {
+        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+        ChildNo = Opcode - SelectionDAGISel::OPC_CheckChild0Type;
+      }
+      if (!::CheckChildType(VT, N, TLI, CurDAG->getDataLayout(), ChildNo))
         break;
       continue;
+    }
     case OPC_CheckCondCode:
       if (!::CheckCondCode(MatcherTable, MatcherIndex, N)) break;
       continue;

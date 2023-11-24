@@ -593,11 +593,20 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
        << ", " << getEnumName(cast<CheckTypeMatcher>(N)->getType()) << ",\n";
     return 3;
 
-  case Matcher::CheckChildType:
-    OS << "OPC_CheckChild"
-       << cast<CheckChildTypeMatcher>(N)->getChildNo() << "Type, "
-       << getEnumName(cast<CheckChildTypeMatcher>(N)->getType()) << ",\n";
-    return 2;
+ case Matcher::CheckChildType: {
+   MVT::SimpleValueType VT = cast<CheckChildTypeMatcher>(N)->getType();
+   switch (VT) {
+   case MVT::i32:
+   case MVT::i64:
+     OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+        << "TypeI" << MVT(VT).getScalarSizeInBits() << ",\n";
+     return 1;
+   default:
+     OS << "OPC_CheckChild" << cast<CheckChildTypeMatcher>(N)->getChildNo()
+        << "Type, " << getEnumName(VT) << ",\n";
+     return 2;
+   }
+ }
 
   case Matcher::CheckInteger: {
     OS << "OPC_CheckInteger, ";
