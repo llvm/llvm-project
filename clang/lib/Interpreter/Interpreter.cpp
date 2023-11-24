@@ -319,10 +319,6 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
   return IncrParser->getCI();
 }
 
-CompilerInstance *Interpreter::getCompilerInstance() {
-  return IncrParser->getCI();
-}
-
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {
     if (auto Err = CreateExecutor())
