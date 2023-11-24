@@ -164,11 +164,9 @@ struct HalfWords {
   const uint16_t Lo; // Second halfword
 };
 
-/// Initialize the lookup table for dynamic FixupInfo checks, e.g. checkOpcode()
-void populateFixupInfos();
-
 /// FixupInfo base class is required for dynamic lookups.
 struct FixupInfoBase {
+  static const FixupInfoBase *getDynFixupInfo(Edge::Kind K);
   virtual ~FixupInfoBase() {}
 };
 
