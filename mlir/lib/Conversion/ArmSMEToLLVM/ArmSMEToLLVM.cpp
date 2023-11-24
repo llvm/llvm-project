@@ -56,20 +56,17 @@ struct GetTileConversion : public ConvertOpToLLVMPattern<arm_sme::GetTileOp> {
 ///
 ///  BEFORE:
 ///  ```mlir
-///     %v = arm_sme.zero : vector<[4]x[4]xi32>
+///     %v = arm_sme.zero {tile_id = 0 : i32} : vector<[4]x[4]xi32>
 ///  ```
 ///
 ///  AFTER:
 ///  ```mlir
-///     %tile_id = arm_sme.get_tile_id : i32
-///     %zero_mask = arith.shli %c17_i32, %tile_id : i32
-///     "arm_sme.intr.zero"(%zero_mask) : (i32) -> ()
-///     %v = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
+///     "arm_sme.intr.zero"() <{tile_mask = 17 : i32}> : () -> ()
+///     %v = arm_sme.materialize_ssa_tile : vector<[4]x[4]xi32>
 ///  ```
 ///
-///  The 'arm_sme.cast_tile_to_vector' (which models the return) and the
-///  'arith.shli' (which generates the mask) will be folded away after tile
-///  allocation and canonization.
+///  The 'arm_sme.materialize_ssa_tile' (which models the return) will fold away
+///  once all ArmSME ops have been converted to LLVM intrinsics.
 struct ZeroOpConversion : public ConvertOpToLLVMPattern<arm_sme::ZeroOp> {
   using ConvertOpToLLVMPattern<arm_sme::ZeroOp>::ConvertOpToLLVMPattern;
 
@@ -443,8 +440,8 @@ struct MoveTileSliceToVectorConversion
 ///
 /// is converted to:
 ///
-///   "arm_sme.intr.mopa"(%tile_id, %ptrue_s, %ptrue_s, %lhs, %rhs)
-///     : (i32, vector<[4]xi1>, vector<[4]xi1>, vector<[4]xf32>,
+///   "arm_sme.intr.mopa"(%ptrue_s, %ptrue_s, %lhs, %rhs) <{tile_id = 0 : i32}>
+///     : (vector<[4]xi1>, vector<[4]xi1>, vector<[4]xf32>,
 ///        vector<[4]xf32>) -> ()
 ///
 /// Currently only supports FMOPA and BFMOPA (non-widening).

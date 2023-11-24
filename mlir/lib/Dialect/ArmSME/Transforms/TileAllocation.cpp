@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass allocates SME tiles at the 'func.func' op level for
-// 'arm_sme.get_tile_id' ops. It does this using a 16-bit tile mask that has a
-// bit for each 128-bit element tile (ZA0.Q-ZA15.Q), the smallest ZA tile
-// granule.
+// This pass allocates SME tiles at the 'func.func' op level for ArmSME
+// operations. It does this using a 16-bit tile mask that has a bit for each
+// 128-bit element tile (ZA0.Q-ZA15.Q), the smallest ZA tile granule.
 //
 // The 128-bit tiles overlap with other element tiles as follows (see section
 // B2.3.2 of SME spec [1]):
@@ -34,8 +33,8 @@
 //   ZA7.D   ZA7.Q, ZA15.Q
 //
 // The tiles in use are tracked via a function attribute 'arm_sme.tiles_in_use'
-// that is initalized during the first 'arm_sme.get_tile_id' rewrite and
-// updated on each subsequent rewrite.
+// that is initalized during the first tile allocation within a function and
+// updated on each subsequent allocation.
 //
 // [1] https://developer.arm.com/documentation/ddi0616/aa
 //
