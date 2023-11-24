@@ -460,24 +460,23 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   auto *PtrTy = PointerType::getUnqual(C);
 
   // Get the __cudaRegisterFatBinary function declaration.
-  auto *RegFatTy = FunctionType::get(PtrTy, PtrTy,
-                                     /*isVarArg=*/ false);
+  auto *RegFatTy = FunctionType::get(PtrTy, PtrTy, /*isVarArg=*/false);
   FunctionCallee RegFatbin = M.getOrInsertFunction(
       IsHIP ? "__hipRegisterFatBinary" : "__cudaRegisterFatBinary", RegFatTy);
   // Get the __cudaRegisterFatBinaryEnd function declaration.
-  auto *RegFatEndTy = FunctionType::get(Type::getVoidTy(C), PtrTy,
-                                        /*isVarArg=*/ false);
+  auto *RegFatEndTy =
+      FunctionType::get(Type::getVoidTy(C), PtrTy, /*isVarArg=*/false);
   FunctionCallee RegFatbinEnd =
       M.getOrInsertFunction("__cudaRegisterFatBinaryEnd", RegFatEndTy);
   // Get the __cudaUnregisterFatBinary function declaration.
-  auto *UnregFatTy = FunctionType::get(Type::getVoidTy(C), PtrTy,
-                                       /*isVarArg=*/ false);
+  auto *UnregFatTy =
+      FunctionType::get(Type::getVoidTy(C), PtrTy, /*isVarArg=*/false);
   FunctionCallee UnregFatbin = M.getOrInsertFunction(
       IsHIP ? "__hipUnregisterFatBinary" : "__cudaUnregisterFatBinary",
       UnregFatTy);
 
-  auto *AtExitTy = FunctionType::get(Type::getInt32Ty(C), PtrTy,
-                                     /*isVarArg=*/ false);
+  auto *AtExitTy =
+      FunctionType::get(Type::getInt32Ty(C), PtrTy, /*isVarArg=*/false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
   auto *BinaryHandleGlobal = new llvm::GlobalVariable(
