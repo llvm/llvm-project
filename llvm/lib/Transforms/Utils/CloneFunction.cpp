@@ -59,7 +59,10 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     Instruction *NewInst = I.clone();
     if (I.hasName())
       NewInst->setName(I.getName() + NameSuffix);
-    NewInst->insertInto(NewBB, NewBB->end());
+
+    NewInst->insertBefore(*NewBB, NewBB->end());
+    NewInst->cloneDebugInfoFrom(&I);
+
     VMap[&I] = NewInst; // Add instruction map to value.
 
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
