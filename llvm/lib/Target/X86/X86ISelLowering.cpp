@@ -1986,9 +1986,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSHL, VT, Custom);
       setOperationAction(ISD::FSHR, VT, Custom);
     }
-
-    setOperationAction(ISD::ROTR, MVT::v8i16, Custom);
-    setOperationAction(ISD::ROTR, MVT::v16i16, Custom);
   }
 
   // This block controls legalization for operations that don't have
