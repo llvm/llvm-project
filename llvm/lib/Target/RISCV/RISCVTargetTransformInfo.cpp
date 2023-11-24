@@ -529,7 +529,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         2 + getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
-    return LT.first * (LenCost + GatherCost + ExtendCost);
+    return LT.first * TLI->getLMULCost(LT.second) *
+           (LenCost + GatherCost + ExtendCost);
   }
   }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
@@ -740,7 +741,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // These all use the same code.
     auto LT = getTypeLegalizationCost(RetTy);
     if (!LT.second.isVector() && TLI->isOperationCustom(ISD::FCEIL, LT.second))
-      return LT.first * 8;
+      return LT.first * TLI->getLMULCost(LT.second) * 8;
     break;
   }
   case Intrinsic::umin:
@@ -750,7 +751,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto LT = getTypeLegalizationCost(RetTy);
     if ((ST->hasVInstructions() && LT.second.isVector()) ||
         (LT.second.isScalarInteger() && ST->hasStdExtZbb()))
-      return LT.first;
+      return LT.first * TLI->getLMULCost(LT.second);
     break;
   }
   case Intrinsic::sadd_sat:
@@ -761,7 +762,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector())
-      return LT.first;
+      return LT.first * TLI->getLMULCost(LT.second);
     break;
   }
   case Intrinsic::ctpop: {
@@ -775,7 +776,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ST->hasVInstructions() && LT.second.isVector()) {
       // vrsub.vi v10, v8, 0
       // vmax.vv v8, v8, v10
-      return LT.first * 2;
+      return LT.first * TLI->getLMULCost(LT.second) * 2;
     }
     break;
   }
@@ -783,14 +784,14 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::experimental_stepvector: {
     unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
-    return Cost + (LT.first - 1);
+    return Cost + (LT.first - 1) * TLI->getLMULCost(LT.second);
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
     unsigned Cost = 5;
     auto LT = getTypeLegalizationCost(RetTy);
     if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
-      return Cost * LT.first;
+      return Cost * LT.first * TLI->getLMULCost(LT.second);
     break;
   }
   case Intrinsic::vp_nearbyint: {
@@ -798,7 +799,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned Cost = 7;
     auto LT = getTypeLegalizationCost(RetTy);
     if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
-      return Cost * LT.first;
+      return Cost * LT.first * TLI->getLMULCost(LT.second);
     break;
   }
   case Intrinsic::vp_ceil:
@@ -812,7 +813,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto LT = getTypeLegalizationCost(RetTy);
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
-      return Cost * LT.first;
+      return Cost * LT.first * TLI->getLMULCost(LT.second);
     break;
   }
   }
@@ -823,7 +824,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       MVT EltTy = LT.second.getVectorElementType();
       if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
                                               ICA.getID(), EltTy))
-        return LT.first * Entry->Cost;
+        return LT.first * TLI->getLMULCost(LT.second) * Entry->Cost;
     }
   }
 
@@ -1078,10 +1079,10 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         // vmandn.mm v8, v8, v9
         // vmand.mm v9, v0, v9
         // vmor.mm v0, v9, v8
-        return LT.first * 3;
+        return LT.first * TLI->getLMULCost(LT.second) * 3;
       }
       // vselect and max/min are supported natively.
-      return LT.first * 1;
+      return LT.first * TLI->getLMULCost(LT.second) * 1;
     }
 
     if (ValTy->getScalarSizeInBits() == 1) {
@@ -1090,13 +1091,13 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       //  vmandn.mm v8, v8, v9
       //  vmand.mm v9, v0, v9
       //  vmor.mm v0, v9, v8
-      return LT.first * 5;
+      return LT.first * TLI->getLMULCost(LT.second) * 5;
     }
 
     // vmv.v.x v10, a0
     // vmsne.vi v0, v10, 0
     // vmerge.vvm v8, v9, v8, v0
-    return LT.first * 3;
+    return LT.first * TLI->getLMULCost(LT.second) * 3;
   }
 
   if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
@@ -1105,7 +1106,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 
     // Support natively.
     if (CmpInst::isIntPredicate(VecPred))
-      return LT.first * 1;
+      return LT.first * TLI->getLMULCost(LT.second) * 1;
 
     // If we do not support the input floating point vector type, use the base
     // one which will calculate as:
@@ -1124,7 +1125,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     case CmpInst::FCMP_OLT:
     case CmpInst::FCMP_OLE:
     case CmpInst::FCMP_UNE:
-      return LT.first * 1;
+      return LT.first * TLI->getLMULCost(LT.second) * 1;
     // TODO: Other comparisons?
     default:
       break;
