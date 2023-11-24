@@ -13,14 +13,13 @@ program main
     integer :: i = 1
     integer :: j = 11
 
-  !$omp target map(tofrom:x, i, j)
-     do while (i <= j)
+  !$omp target
+     do i = 1, j
         x(i) = i;
-        i = i + 1
-    end do
+     end do
   !$omp end target
 
    PRINT *, x(:)
 end program main
-  
+
 ! CHECK: 1 2 3 4 5 6 7 8 9 10
