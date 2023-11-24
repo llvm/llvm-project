@@ -83,11 +83,7 @@ static Align getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
                              const SCEV *OffSCEV, Value *Ptr,
                              ScalarEvolution *SE) {
   const SCEV *PtrSCEV = SE->getSCEV(Ptr);
-  // On a platform with 32-bit allocas, but 64-bit flat/global pointer sizes
-  // (*cough* AMDGPU), the effective SCEV type of AASCEV and PtrSCEV
-  // may disagree. Trunc/extend so they agree.
-  PtrSCEV = SE->getTruncateOrZeroExtend(
-      PtrSCEV, SE->getEffectiveSCEVType(AASCEV->getType()));
+
   const SCEV *DiffSCEV = SE->getMinusSCEV(PtrSCEV, AASCEV);
   if (isa<SCEVCouldNotCompute>(DiffSCEV))
     return Align(1);
@@ -216,6 +212,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
   }
 
   while (!WorkList.empty()) {
+    bool AddUsers = true;
     Instruction *J = WorkList.pop_back_val();
     if (LoadInst *LI = dyn_cast<LoadInst>(J)) {
       if (!isValidAssumeForContext(ACall, J, DT))
@@ -226,6 +223,8 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
         LI->setAlignment(NewAlignment);
         ++NumLoadAlignChanged;
       }
+      // The user of a Load uses data - not a pointer!
+      AddUsers = false;
     } else if (StoreInst *SI = dyn_cast<StoreInst>(J)) {
       if (!isValidAssumeForContext(ACall, J, DT))
         continue;
@@ -267,11 +266,12 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
     // Now that we've updated that use of the pointer, look for other uses of
     // the pointer to update.
     Visited.insert(J);
-    for (User *UJ : J->users()) {
-      Instruction *K = cast<Instruction>(UJ);
-      if (!Visited.count(K))
-        WorkList.push_back(K);
-    }
+    if (AddUsers)
+      for (User *UJ : J->users()) {
+        Instruction *K = cast<Instruction>(UJ);
+        if (!Visited.count(K))
+          WorkList.push_back(K);
+      }
   }
 
   return true;
