@@ -356,7 +356,7 @@ static unsigned scanFromBlock(const CFGBlock *Start,
       if (!B) {
         const CFGBlock *UB = I->getPossiblyUnreachableBlock();
         if (!UB)
-          break;
+          continue;
 
         if (TreatAllSuccessorsAsReachable) {
           B = UB;
