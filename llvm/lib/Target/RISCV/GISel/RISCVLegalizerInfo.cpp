@@ -98,17 +98,35 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
-  auto &BSwap = getActionDefinitionsBuilder(G_BSWAP);
+  auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
   if (ST.hasStdExtZbb())
-    BSwap.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
+    BSWAPActions.legalFor({sXLen}).clampScalar(0, sXLen, sXLen);
   else
-    BSwap.maxScalar(0, sXLen).lower();
+    BSWAPActions.maxScalar(0, sXLen).lower();
 
-  getActionDefinitionsBuilder(
-      {G_CTPOP, G_CTLZ, G_CTLZ_ZERO_UNDEF, G_CTTZ, G_CTTZ_ZERO_UNDEF})
-      .maxScalar(0, sXLen)
-      .scalarSameSizeAs(1, 0)
-      .lower();
+  auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
+  auto &CountZerosUndefActions =
+      getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
+  if (ST.hasStdExtZbb()) {
+    CountZerosActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+    CountZerosUndefActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+  }
+  CountZerosUndefActions.lower();
+
+  auto &CTPOPActions = getActionDefinitionsBuilder(G_CTPOP);
+  if (ST.hasStdExtZbb()) {
+    CTPOPActions.legalFor({{s32, s32}, {sXLen, sXLen}})
+        .clampScalar(0, s32, sXLen)
+        .widenScalarToNextPow2(0)
+        .scalarSameSizeAs(1, 0);
+  } else {
+    CTPOPActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
+  }
 
   getActionDefinitionsBuilder({G_CONSTANT, G_IMPLICIT_DEF})
       .legalFor({s32, sXLen, p0})
@@ -216,10 +234,11 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_ABS).lower();
 
-  auto &MinMax = getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
+  auto &MinMaxActions =
+      getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
   if (ST.hasStdExtZbb())
-    MinMax.legalFor({sXLen}).minScalar(0, sXLen);
-  MinMax.lower();
+    MinMaxActions.legalFor({sXLen}).minScalar(0, sXLen);
+  MinMaxActions.lower();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
