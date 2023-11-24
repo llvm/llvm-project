@@ -2793,7 +2793,9 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   }
 
   // Strategy:
-  // 1. Not use push2 when there are less than 2 pushs.
+  // 1. Use push2 when
+  //       a) number of CSR > 1 if no need padding
+  //       b) number of CSR > 2 if need padding
   // 2. When the number of CSR push is odd
   //    a. Start to use push2 from the 1st push if stack is 16B aligned.
   //    b. Start to use push2 from the 2nd push if stack is not 16B aligned.
@@ -2804,9 +2806,9 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });
-    bool UsePush2Pop2 = NumCSGPR > 1;
-    X86FI->setPadForPush2Pop2(UsePush2Pop2 && NumCSGPR % 2 == 0 &&
-                              SpillSlotOffset % 16 != 0);
+    bool NeedPadding = (SpillSlotOffset % 16 != 0) && (NumCSGPR % 2 == 0);
+    bool UsePush2Pop2 = NeedPadding ? NumCSGPR > 2 : NumCSGPR > 1;
+    X86FI->setPadForPush2Pop2(NeedPadding && UsePush2Pop2);
     NumRegsForPush2 = UsePush2Pop2 ? alignDown(NumCSGPR, 2) : 0;
     if (X86FI->padForPush2Pop2()) {
       SpillSlotOffset -= SlotSize;

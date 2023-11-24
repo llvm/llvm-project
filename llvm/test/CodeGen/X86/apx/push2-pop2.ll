@@ -36,22 +36,22 @@ entry:
 define void @csr2() nounwind {
 ; CHECK-LABEL: csr2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    push2 %r15, %rbp
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    pop2 %rbp, %r15
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 ;
 ; PPX-LABEL: csr2:
 ; PPX:       # %bb.0: # %entry
-; PPX-NEXT:    pushq %rax
-; PPX-NEXT:    push2p %r15, %rbp
+; PPX-NEXT:    pushp %rbp
+; PPX-NEXT:    pushp %r15
 ; PPX-NEXT:    #APP
 ; PPX-NEXT:    #NO_APP
-; PPX-NEXT:    pop2p %rbp, %r15
-; PPX-NEXT:    popq %rax
+; PPX-NEXT:    popp %r15
+; PPX-NEXT:    popp %rbp
 ; PPX-NEXT:    retq
 ;
 ; FRAME-LABEL: csr2:
