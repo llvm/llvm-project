@@ -7776,10 +7776,10 @@ public:
   /// \param MLoc Location of the modifier
   OMPOrderClause(OpenMPOrderClauseKind A, SourceLocation ALoc,
                  SourceLocation StartLoc, SourceLocation LParenLoc,
-                 SourceLocation EndLoc, OpenMPOrderClauseModifier M,
+                 SourceLocation EndLoc, OpenMPOrderClauseModifier Modifier,
                  SourceLocation MLoc)
       : OMPClause(llvm::omp::OMPC_order, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc), Modifier(M),
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc), Modifier(Modifier),
         ModifierKwLoc(MLoc) {}
 
   /// Build an empty clause.
