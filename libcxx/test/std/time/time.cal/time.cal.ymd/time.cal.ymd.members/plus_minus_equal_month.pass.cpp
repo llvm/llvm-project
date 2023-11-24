@@ -42,6 +42,40 @@ constexpr bool test() {
     assert(static_cast<unsigned>((ymd).month()) == i + 1);
   }
 
+  { // Validate the ok status when the day is not present in the new month.
+    year_month_day ymd{year{2020}, month{3}, day{31}};
+    ymd += months{1};
+    assert((ymd == year_month_day{year{2020}, month{4}, day{31}}));
+    assert(!ymd.ok());
+
+    ymd -= months{1};
+    assert((ymd == year_month_day{year{2020}, month{3}, day{31}}));
+    assert(ymd.ok());
+  }
+
+  { // Validate the ok status when the day becomes present in the new month.
+    year_month_day ymd{year{2020}, month{4}, day{31}};
+    assert(!ymd.ok());
+
+    ymd += months{1};
+    assert((ymd == year_month_day{year{2020}, month{5}, day{31}}));
+    assert(ymd.ok());
+
+    ymd -= months{2};
+    assert((ymd == year_month_day{year{2020}, month{3}, day{31}}));
+    assert(ymd.ok());
+  }
+
+  { // Test year wrapping
+    year_month_day ymd{year{2020}, month{4}, day{31}};
+
+    ymd += months{12};
+    assert((ymd == year_month_day{year{2021}, month{4}, day{31}}));
+
+    ymd -= months{12};
+    assert((ymd == year_month_day{year{2020}, month{4}, day{31}}));
+  }
+
   return true;
 }
 

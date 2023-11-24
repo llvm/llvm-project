@@ -31,25 +31,34 @@ constexpr bool test() {
 
   for (unsigned i = 0; i <= 10; ++i) {
     year y{1234};
-    year_month_weekday_last ymwd(y, month{i}, weekday_last{Tuesday});
+    year_month_weekday_last ymwdl(y, month{i}, weekday_last{Tuesday});
 
-    assert(static_cast<unsigned>((ymwd += months{2}).month()) == i + 2);
-    assert(ymwd.year() == y);
-    assert(ymwd.weekday() == Tuesday);
+    assert(static_cast<unsigned>((ymwdl += months{2}).month()) == i + 2);
+    assert(ymwdl.year() == y);
+    assert(ymwdl.weekday() == Tuesday);
 
-    assert(static_cast<unsigned>((ymwd).month()) == i + 2);
-    assert(ymwd.year() == y);
-    assert(ymwd.weekday() == Tuesday);
+    assert(static_cast<unsigned>((ymwdl).month()) == i + 2);
+    assert(ymwdl.year() == y);
+    assert(ymwdl.weekday() == Tuesday);
 
-    assert(static_cast<unsigned>((ymwd -= months{1}).month()) == i + 1);
-    assert(ymwd.year() == y);
-    assert(ymwd.weekday() == Tuesday);
+    assert(static_cast<unsigned>((ymwdl -= months{1}).month()) == i + 1);
+    assert(ymwdl.year() == y);
+    assert(ymwdl.weekday() == Tuesday);
 
-    assert(static_cast<unsigned>((ymwd).month()) == i + 1);
-    assert(ymwd.year() == y);
-    assert(ymwd.weekday() == Tuesday);
+    assert(static_cast<unsigned>((ymwdl).month()) == i + 1);
+    assert(ymwdl.year() == y);
+    assert(ymwdl.weekday() == Tuesday);
   }
 
+  { // Test year wrapping
+    year_month_weekday_last ymwdl{year{2020}, month{4}, weekday_last{Tuesday}};
+
+    ymwdl += months{12};
+    assert((ymwdl == year_month_weekday_last{year{2021}, month{4}, weekday_last{Tuesday}}));
+
+    ymwdl -= months{12};
+    assert((ymwdl == year_month_weekday_last{year{2020}, month{4}, weekday_last{Tuesday}}));
+  }
   return true;
 }
 
