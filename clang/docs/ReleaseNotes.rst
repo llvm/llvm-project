@@ -938,6 +938,8 @@ libclang
 --------
 
 - Exposed arguments of ``clang::annotate``.
+- ``clang::getCursorKindForDecl`` now recognizes linkage specifications such as
+  ``extern "C"`` and reports them as ``CXCursor_LinkageSpec``.
 
 Static Analyzer
 ---------------
