@@ -35,7 +35,7 @@
 // - is_strided and is_unique are true if all extents are smaller than Wrap
 // - not default constructible
 // - not extents constructible
-// - not trivally copyable
+// - not trivially copyable
 // - does not check dynamic to static extent conversion in converting ctor
 // - check via side-effects that mdspan::swap calls mappings swap via ADL
 

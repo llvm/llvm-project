@@ -18,7 +18,7 @@
 //     ranges::transform(R1&& r1, R2&& r2, O result,
 //                       F binary_op, Proj1 proj1 = {}, Proj2 proj2 = {});
 
-// The iterator overloads are tested in ranges.tranform.binary.iterator.pass.cpp.
+// The iterator overloads are tested in ranges.transform.binary.iterator.pass.cpp.
 
 #include <algorithm>
 #include <array>

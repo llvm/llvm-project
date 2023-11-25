@@ -361,7 +361,7 @@ constexpr void test_ordered_set_spaceship_with_type(Compare comp) {
     }
   }
   if constexpr (std::is_same_v< Container<Elem>, std::set<PartialOrder>>) {
-    // Unodered values are not supported for `set`
+    // Unordered values are not supported for `set`
     if constexpr (std::is_same_v<Elem, PartialOrder> && std::is_same_v<Compare, decltype(std::less{})>) {
       Container<Elem, Compare> l1{{1, std::numeric_limits<int>::min()}, comp};
       Container<Elem, Compare> l2{{1, 2}, comp};
