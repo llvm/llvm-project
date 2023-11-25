@@ -52,6 +52,7 @@ Implemented Papers
 - P0020R6 - Floating Point Atomic
 - P2918R2 - Runtime format strings II
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
+- P2870R3 - Remove basic_string::reserve()
 
 
 Improvements and New Features
@@ -74,6 +75,9 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT`` macro has been added to make
   the declarations in ``<codecvt>`` available.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
+  the function ``std::basic_string<...>::reserve()`` available.
 
 
 Deprecations and Removals
