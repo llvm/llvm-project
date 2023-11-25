@@ -902,7 +902,9 @@ class ExplicitObjectParameter final : public Node {
 public:
   ExplicitObjectParameter(Node *Base_)
       : Node(KExplicitObjectParameter), Base(Base_) {
-    assert(Base != nullptr);
+    DEMANGLE_ASSERT(
+        Base != nullptr,
+        "Creating an ExplicitObjectParameter without a valid Base Node.");
   }
 
   template <typename Fn> void match(Fn F) const { F(Base); }
