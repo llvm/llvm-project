@@ -1362,6 +1362,10 @@ bool AArch64TargetInfo::validateAsmConstraint(
 bool AArch64TargetInfo::validateConstraintModifier(
     StringRef Constraint, char Modifier, unsigned Size,
     std::string &SuggestedModifier) const {
+  // Ignore in ILP32 since width of pointer type is 32 bits
+  // while memory instruction shall 'x' registers.
+  if (getTriple().getEnvironment() == llvm::Triple::GNUILP32)
+    return true;
   // Strip off constraint modifiers.
   while (Constraint[0] == '=' || Constraint[0] == '+' || Constraint[0] == '&')
     Constraint = Constraint.substr(1);
