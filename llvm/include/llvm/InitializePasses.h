@@ -76,7 +76,6 @@ void initializeCFIFixupPass(PassRegistry&);
 void initializeCFIInstrInserterPass(PassRegistry&);
 void initializeCallBrPreparePass(PassRegistry &);
 void initializeCallGraphDOTPrinterPass(PassRegistry&);
-void initializeCallGraphPrinterLegacyPassPass(PassRegistry&);
 void initializeCallGraphViewerPass(PassRegistry&);
 void initializeCallGraphWrapperPassPass(PassRegistry&);
 void initializeCheckDebugMachineModulePass(PassRegistry &);
