@@ -78,8 +78,8 @@ void f5(int j)
     TEST_THROW(j);
 }
 
-template <class Ret, class CheckLamdba, class ...Args>
-void test(CheckLamdba&& getAndCheckFn, bool IsDeferred, Args&&... args) {
+template <class Ret, class CheckLambda, class ...Args>
+void test(CheckLambda&& getAndCheckFn, bool IsDeferred, Args&&... args) {
     // Reset global state.
     invoked = false;
 
