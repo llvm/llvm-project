@@ -41,6 +41,38 @@ func.func @transfer_read_dims_mismatch_contiguous(
 
 // -----
 
+func.func @transfer_read_dims_mismatch_non_zero_indices(
+                     %idx_1: index,
+                     %idx_2: index,
+                     %m_in: memref<1x43x4x6xi32>,
+                     %m_out: memref<1x2x6xi32>) {
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %2 = vector.transfer_read %m_in[%c0, %idx_1, %idx_2, %c0], %c0_i32 {in_bounds = [true, true, true]} : 
+    memref<1x43x4x6xi32>, vector<1x2x6xi32>
+  vector.transfer_write %2, %m_out[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<1x2x6xi32>, memref<1x2x6xi32>
+  return
+}
+
+// CHECK-LABEL:   func.func @transfer_read_dims_mismatch_non_zero_indices(
+// CHECK-SAME:      %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index,
+// CHECK-SAME:      %[[VAL_2:.*]]: memref<1x43x4x6xi32>,
+// CHECK-SAME:      %[[VAL_3:.*]]: memref<1x2x6xi32>) {
+// CHECK:           %[[VAL_4:.*]] = arith.constant 43 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_8:.*]] = memref.collapse_shape %[[VAL_2]] {{\[\[}}0], [1, 2, 3]] : memref<1x43x4x6xi32> into memref<1x1032xi32>
+// CHECK:           %[[VAL_9:.*]] = arith.muli %[[VAL_0]], %[[VAL_4]] : index
+// CHECK:           %[[VAL_10:.*]] = arith.muli %[[VAL_1]], %[[VAL_5]] : index
+// CHECK:           %[[VAL_11:.*]] = arith.addi %[[VAL_10]], %[[VAL_9]] : index
+// CHECK:           %[[VAL_12:.*]] = vector.transfer_read %[[VAL_8]]{{\[}}%[[VAL_7]], %[[VAL_11]]], %[[VAL_6]] {in_bounds = [true]} : memref<1x1032xi32>, vector<12xi32>
+// CHECK:           %[[VAL_13:.*]] = memref.collapse_shape %[[VAL_3]] {{\[\[}}0, 1, 2]] : memref<1x2x6xi32> into memref<12xi32>
+// CHECK:           vector.transfer_write %[[VAL_12]], %[[VAL_13]]{{\[}}%[[VAL_7]]] {in_bounds = [true]} : vector<12xi32>, memref<12xi32>
+
+// -----
+
 func.func @transfer_read_dims_mismatch_non_contiguous(
     %arg : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<2x1x2x2xi8> {
     %c0 = arith.constant 0 : index
