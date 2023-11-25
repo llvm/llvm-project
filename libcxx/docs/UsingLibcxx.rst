@@ -335,6 +335,9 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
   This macro is used to re-enable all named declarations in ``<codecvt>``.
 
+**_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**
+  This macro is used to re-enable the function
+  ``std::basic_string<...>::reserve()``.
 
 Libc++ Extensions
 =================
