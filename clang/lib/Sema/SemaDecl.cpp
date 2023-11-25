@@ -16115,7 +16115,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
               FD->setInvalidDecl();
           }
         }
-      } else if (getLangOpts().CPlusPlus11 && isLambdaCallOperator(FD)) {
+      } else if (getLangOpts().CPlusPlus && isLambdaCallOperator(FD)) {
         // In C++11, we don't use 'auto' deduction rules for lambda call
         // operators because we don't support return type deduction.
         auto *LSI = getCurLambda();

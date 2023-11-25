@@ -177,6 +177,8 @@ Non-comprehensive list of changes in this release
   the previous builtins, this new builtin is constexpr and may be used in
   constant expressions.
 
+- Lambda expressions are now accepted in C++03 mode as an extension.
+
 New Compiler Flags
 ------------------
 
