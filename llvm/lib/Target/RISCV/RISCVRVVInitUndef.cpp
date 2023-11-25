@@ -42,6 +42,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;
@@ -59,6 +60,8 @@ class RISCVInitUndef : public MachineFunctionPass {
 
   // Newly added vregs, assumed to be fully rewritten
   SmallSet<Register, 8> NewRegs;
+  SmallVector<MachineInstr *, 8> DeadInsts;
+
 public:
   static char ID;
 
@@ -174,7 +177,7 @@ bool RISCVInitUndef::handleImplicitDef(MachineBasicBlock &MBB,
   BuildMI(MBB, Inst, Inst->getDebugLoc(), TII->get(Opcode), NewDest);
 
   if (!HasOtherUse)
-    Inst = MBB.erase(Inst);
+    DeadInsts.push_back(&(*Inst));
 
   for (auto MO : UseMOs) {
     MO->setReg(NewDest);
@@ -297,6 +300,10 @@ bool RISCVInitUndef::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &BB : MF)
     Changed |= processBasicBlock(MF, BB, DLD);
+
+  for (auto *DeadMI : DeadInsts)
+    DeadMI->eraseFromParent();
+  DeadInsts.clear();
 
   return Changed;
 }

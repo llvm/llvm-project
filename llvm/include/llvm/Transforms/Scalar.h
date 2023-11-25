@@ -39,26 +39,6 @@ Pass *createRedundantDbgInstEliminationPass();
 //
 FunctionPass *createDeadCodeEliminationPass();
 
-
-//===----------------------------------------------------------------------===//
-//
-// GuardWidening - An optimization over the @llvm.experimental.guard intrinsic
-// that (optimistically) combines multiple guards into one to have fewer checks
-// at runtime.
-//
-FunctionPass *createGuardWideningPass();
-
-
-//===----------------------------------------------------------------------===//
-//
-// LoopGuardWidening - Analogous to the GuardWidening pass, but restricted to a
-// single loop at a time for use within a LoopPassManager.  Desired effect is
-// to widen guards into preheader or a single guard within loop if that's not
-// possible.
-//
-Pass *createLoopGuardWideningPass();
-
-
 //===----------------------------------------------------------------------===//
 //
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
@@ -73,29 +53,10 @@ Pass *createLICMPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LoopSink - This pass sinks invariants from preheader to loop body where
-// frequency is lower than loop preheader.
-//
-Pass *createLoopSinkPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopPredication - This pass does loop predication on guards.
-//
-Pass *createLoopPredicationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LoopStrengthReduce - This pass is strength reduces GEP instructions that use
 // a loop's canonical induction variable as one of their indices.
 //
 Pass *createLoopStrengthReducePass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopInstSimplify - This pass simplifies instructions in a loop's body.
-//
-Pass *createLoopInstSimplifyPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -172,13 +133,6 @@ FunctionPass *createEarlyCSEPass(bool UseMemorySSA = false);
 
 //===----------------------------------------------------------------------===//
 //
-// MergedLoadStoreMotion - This pass merges loads and stores in diamonds. Loads
-// are hoisted into the header, while stores sink into the footer.
-//
-FunctionPass *createMergedLoadStoreMotionPass(bool SplitFooterBB = false);
-
-//===----------------------------------------------------------------------===//
-//
 // ConstantHoisting - This pass prepares a function for expensive constants.
 //
 FunctionPass *createConstantHoistingPass();
@@ -194,12 +148,6 @@ FunctionPass *createSinkingPass();
 // LowerAtomic - Lower atomic intrinsics to non-atomic form
 //
 Pass *createLowerAtomicPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LowerWidenableCondition - Lower widenable condition to i1 true.
-//
-Pass *createLowerWidenableConditionPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -272,13 +220,6 @@ FunctionPass *createNaryReassociatePass();
 // LoopDataPrefetch - Perform data prefetching in loops.
 //
 FunctionPass *createLoopDataPrefetchPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LoopSimplifyCFG - This pass performs basic CFG simplification on loops,
-// primarily to help other loop passes.
-//
-Pass *createLoopSimplifyCFGPass();
 
 //===----------------------------------------------------------------------===//
 //

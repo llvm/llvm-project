@@ -4501,6 +4501,8 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_openmp:
     case tok::annot_pragma_openmp_end:
     case tok::annot_pragma_unused:
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");

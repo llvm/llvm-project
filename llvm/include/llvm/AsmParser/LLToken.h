@@ -109,6 +109,7 @@ enum Kind {
   kw_nuw,
   kw_nsw,
   kw_exact,
+  kw_disjoint,
   kw_inbounds,
   kw_nneg,
   kw_inrange,
@@ -176,6 +177,7 @@ enum Kind {
   kw_amdgpu_gfx,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_graalcc,
 
   // Attributes:
   kw_attributes,

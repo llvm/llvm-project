@@ -15,6 +15,9 @@ on:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang/include/clang/Basic/AttrDocs.td'
+      - 'clang/include/clang/Driver/ClangOptionDocs.td'
+      - 'clang/include/clang/Basic/DiagnosticDocs.td'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
       - 'libunwind/docs/**'
@@ -24,10 +27,14 @@ on:
       - 'openmp/docs/**'
       - 'polly/docs/**'
       - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
   pull_request:
     paths:
       - 'llvm/docs/**'
       - 'clang/docs/**'
+      - 'clang/include/clang/Basic/AttrDocs.td'
+      - 'clang/include/clang/Driver/ClangOptionDocs.td'
+      - 'clang/include/clang/Basic/DiagnosticDocs.td'
       - 'clang-tools-extra/docs/**'
       - 'lldb/docs/**'
       - 'libunwind/docs/**'
@@ -37,6 +44,7 @@ on:
       - 'openmp/docs/**'
       - 'polly/docs/**'
       - 'flang/docs/**'
+      - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
 
 jobs:
   check-docs-build:
@@ -62,6 +70,9 @@ jobs:
               - 'llvm/docs/**'
             clang:
               - 'clang/docs/**'
+              - 'clang/include/clang/Basic/AttrDocs.td'
+              - 'clang/include/clang/Driver/ClangOptionDocs.td'
+              - 'clang/include/clang/Basic/DiagnosticDocs.td'
             clang-tools-extra:
               - 'clang-tools-extra/docs/**'
             lldb:
@@ -80,6 +91,7 @@ jobs:
               - 'polly/docs/**'
             flang:
               - 'flang/docs/**'
+              - 'flang/include/flang/Optimizer/Dialect/FIROps.td'
       - name: Fetch LLVM sources (PR)
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4

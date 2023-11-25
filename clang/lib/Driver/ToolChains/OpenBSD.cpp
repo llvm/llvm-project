@@ -33,9 +33,9 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &ToolChain = static_cast<const OpenBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
+  ArgStringList CmdArgs;
 
   claimNoWarnArgs(Args);
-  ArgStringList CmdArgs;
 
   switch (ToolChain.getArch()) {
   case llvm::Triple::x86:
@@ -112,13 +112,13 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const auto &ToolChain = static_cast<const OpenBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
-  ArgStringList CmdArgs;
-  bool Static = Args.hasArg(options::OPT_static);
-  bool Shared = Args.hasArg(options::OPT_shared);
-  bool Profiling = Args.hasArg(options::OPT_pg);
-  bool Pie = Args.hasArg(options::OPT_pie);
-  bool Nopie = Args.hasArg(options::OPT_nopie);
+  const bool Static = Args.hasArg(options::OPT_static);
+  const bool Shared = Args.hasArg(options::OPT_shared);
+  const bool Profiling = Args.hasArg(options::OPT_pg);
+  const bool Pie = Args.hasArg(options::OPT_pie);
+  const bool Nopie = Args.hasArg(options::OPT_no_pie, options::OPT_nopie);
   const bool Relocatable = Args.hasArg(options::OPT_r);
+  ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
   Args.ClaimAllArgs(options::OPT_g_Group);
@@ -237,7 +237,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else

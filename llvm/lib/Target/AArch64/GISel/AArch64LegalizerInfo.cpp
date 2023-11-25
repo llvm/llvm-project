@@ -930,11 +930,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
       .legalFor({{v4s32, v2s32}, {v8s16, v4s16}, {v16s8, v8s8}});
 
-  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({{p0}, {s64}});
+  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 
-  getActionDefinitionsBuilder(G_BRJT).legalIf([=](const LegalityQuery &Query) {
-    return Query.Types[0] == p0 && Query.Types[1] == s64;
-  });
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, s64}});
 
   getActionDefinitionsBuilder({G_DYN_STACKALLOC,
                                G_STACKSAVE,
@@ -1118,6 +1116,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // Access to floating-point environment.
   getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
       .libcall();
+
+  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

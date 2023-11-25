@@ -1610,15 +1610,6 @@ MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
   return ForceMachineCombinerStrategy;
 }
 
-void RISCVInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
-                                           MachineInstr &OldMI2,
-                                           MachineInstr &NewMI1,
-                                           MachineInstr &NewMI2) const {
-  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
-  NewMI1.setFlags(IntersectedFlags);
-  NewMI2.setFlags(IntersectedFlags);
-}
-
 void RISCVInstrInfo::finalizeInsInstrs(
     MachineInstr &Root, MachineCombinerPattern &P,
     SmallVectorImpl<MachineInstr *> &InsInstrs) const {

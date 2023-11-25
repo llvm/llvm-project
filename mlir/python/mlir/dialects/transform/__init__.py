@@ -52,28 +52,28 @@ class ApplyPatternsOp(ApplyPatternsOp):
 
 @_ods_cext.register_operation(_Dialect, replace=True)
 class GetParentOp(GetParentOp):
-  def __init__(
-      self,
-      result_type: Type,
-      target: Union[Operation, Value],
-      *,
-      isolated_from_above: bool = False,
-      op_name: Optional[str] = None,
-      deduplicate: bool = False,
-      nth_parent: int = 1,
-      loc=None,
-      ip=None,
-  ):
-    super().__init__(
-        result_type,
-        _get_op_result_or_value(target),
-        isolated_from_above=isolated_from_above,
-        op_name=op_name,
-        deduplicate=deduplicate,
-        nth_parent=nth_parent,
-        loc=loc,
-        ip=ip,
-    )
+    def __init__(
+        self,
+        result_type: Type,
+        target: Union[Operation, Value],
+        *,
+        isolated_from_above: bool = False,
+        op_name: Optional[str] = None,
+        deduplicate: bool = False,
+        nth_parent: int = 1,
+        loc=None,
+        ip=None,
+    ):
+        super().__init__(
+            result_type,
+            _get_op_result_or_value(target),
+            isolated_from_above=isolated_from_above,
+            op_name=op_name,
+            deduplicate=deduplicate,
+            nth_parent=nth_parent,
+            loc=loc,
+            ip=ip,
+        )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)

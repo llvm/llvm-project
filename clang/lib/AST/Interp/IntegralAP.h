@@ -102,7 +102,12 @@ public:
 
   template <bool InputSigned>
   static IntegralAP from(IntegralAP<InputSigned> V, unsigned NumBits = 0) {
-    return IntegralAP<Signed>(V.V);
+    if (NumBits == 0)
+      NumBits = V.bitWidth();
+
+    if constexpr (InputSigned)
+      return IntegralAP<Signed>(V.V.sextOrTrunc(NumBits));
+    return IntegralAP<Signed>(V.V.zextOrTrunc(NumBits));
   }
 
   template <unsigned Bits, bool InputSigned>

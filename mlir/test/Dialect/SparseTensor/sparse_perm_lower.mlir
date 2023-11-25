@@ -16,16 +16,16 @@
 }
 
 // CHECK-HIR-LABEL:   func @sparse_dynamic_dims(
-// CHECK-HIR-SAME:      %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-HIR-SAME:      %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse{{[0-9]*}}>,
 // CHECK-HIR-SAME:      %[[VAL_1:.*]]: tensor<f32>) -> tensor<f32> {
 // CHECK-HIR-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
 // CHECK-HIR:           %[[DEMAP:. *]] = sparse_tensor.reinterpret_map %[[VAL_0]]
-// CHECK-HIR-DAG:       %[[VAL_5:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR-DAG:       %[[VAL_5:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
+// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
+// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
+// CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
 // CHECK-HIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
 // CHECK-HIR:           %[[VAL_11:.*]] = tensor.extract %[[VAL_1]][] : tensor<f32>
 // CHECK-HIR:           %[[VAL_12:.*]] = scf.for %[[VAL_13:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_2]] iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (f32) {

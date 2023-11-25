@@ -67,6 +67,29 @@ TEST(AArch32_ELF, EdgeKinds) {
   }
 }
 
+TEST(AArch32_ELF, DynFixupInfos) {
+  // We can do an opcode check for all Arm edges
+  for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
+    const auto *Info = FixupInfoBase::getDynFixupInfo(K);
+    EXPECT_NE(Info, nullptr);
+    const auto *InfoArm = static_cast<const FixupInfoArm *>(Info);
+    EXPECT_NE(InfoArm->checkOpcode, nullptr);
+    EXPECT_FALSE(InfoArm->checkOpcode(0x00000000));
+  }
+  // We can do an opcode check for all Thumb edges
+  for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
+    const auto *Info = FixupInfoBase::getDynFixupInfo(K);
+    EXPECT_NE(Info, nullptr);
+    const auto *InfoThumb = static_cast<const FixupInfoThumb *>(Info);
+    EXPECT_NE(InfoThumb->checkOpcode, nullptr);
+    EXPECT_FALSE(InfoThumb->checkOpcode(0x0000, 0x0000));
+  }
+  // We cannot do it for Data and generic edges
+  EXPECT_EQ(FixupInfoBase::getDynFixupInfo(FirstDataRelocation), nullptr);
+  EXPECT_EQ(FixupInfoBase::getDynFixupInfo(Edge::GenericEdgeKind::Invalid),
+            nullptr);
+}
+
 namespace llvm {
 namespace jitlink {
 namespace aarch32 {

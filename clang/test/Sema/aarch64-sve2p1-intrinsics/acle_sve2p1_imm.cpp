@@ -116,3 +116,54 @@ void test_svdot_lane_2way(svint32_t s32, svuint32_t u32, svint16_t s16, svuint16
   svdot_lane_u32_u16_u16(u32, u16, u16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
   svdot_lane_f32_f16_f16(f32, f16, f16, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
+
+
+__attribute__((target("+sve2p1+b16b16")))
+void test_svbfml_lane(svbfloat16_t zda, svbfloat16_t zn, svbfloat16_t zm, uint64_t idx){
+  svmla_lane_bf16(zda, zn, zm, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmla_lane_bf16(zda, zn, zm, 8);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmls_lane_bf16(zda, zn, zm, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmls_lane_bf16(zda, zn, zm, 8);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmla_lane_bf16(zda, zn, zm, idx); // expected-errcor {{argument to 'svmla_lane_bf16' must be a constant integer}}
+  svmls_lane_bf16(zda, zn, zm, idx);  // expected-error {{argument to 'svmla_lane_bf16' must be a constant integer}}
+}
+
+__attribute__((target("+sve2p1+b16b16")))
+void test_svbfmul_lane(svbfloat16_t zn, svbfloat16_t zm, uint64_t idx){
+  svmul_lane_bf16(zn, zm, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svmul_lane_bf16(zn, zm, 8);  // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svmul_lane_bf16(zn, zm, idx);  // expected-error {{argument to 'svmul_lane_bf16' must be a constant integer}}
+
+__attribute__((target("+sve2p1")))
+void test_svextq_lane(svint16_t zn_i16, svint16_t zm_i16, svfloat16_t zn_f16, svfloat16_t zm_f16){
+  svextq_lane_s16(zn_i16, zm_i16, -1); // expected-error {{argument value -1 is outside the valid range [0, 15]}}
+  svextq_lane_f16(zn_f16, zm_f16, 16);  // expected-error {{argument value 16 is outside the valid range [0, 15]}}
+}
+
+__attribute__((target("+sve2p1")))
+void test_svpmov_lane(){
+  svuint8_t zn_u8;
+  svuint16_t zn_u16;
+  svuint32_t zn_u32;
+  svuint64_t zn_u64;
+  svbool_t pn;
+
+  svpmov_lane_u8(zn_u8, -1); // expected-error {{argument value -1 is outside the valid range [0, 0]}}
+  svpmov_lane_u16(zn_u16, -1); // expected-error {{argument value -1 is outside the valid range [0, 1]}}
+  svpmov_lane_u32(zn_u32, -1); // expected-error {{argument value -1 is outside the valid range [0, 3]}}
+  svpmov_lane_u64(zn_u64, -1); // expected-error {{argument value -1 is outside the valid range [0, 7]}}
+
+  svpmov_lane_u8(zn_u8, 1); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  svpmov_lane_u16(zn_u16, 3); // expected-error {{argument value 3 is outside the valid range [0, 1]}}
+  svpmov_lane_u32(zn_u32, 5); // expected-error {{argument value 5 is outside the valid range [0, 3]}}
+  svpmov_lane_u64(zn_u64, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+
+
+  zn_u16 = svpmov_lane_u16_m(zn_u16, pn, 0); // expected-error {{argument value 0 is outside the valid range [1, 1]}}
+  zn_u32 = svpmov_lane_u32_m(zn_u32, pn, 0); // expected-error {{argument value 0 is outside the valid range [1, 3]}}
+  zn_u64 = svpmov_lane_u64_m(zn_u64, pn, 0); // expected-error {{argument value 0 is outside the valid range [1, 7]}}
+
+  zn_u16 = svpmov_lane_u16_m(zn_u16, pn, 3); // expected-error {{argument value 3 is outside the valid range [1, 1]}}
+  zn_u32 = svpmov_lane_u32_m(zn_u32, pn, 5); // expected-error {{argument value 5 is outside the valid range [1, 3]}}
+  zn_u64 = svpmov_lane_u64_m(zn_u64, pn, 8); // expected-error {{argument value 8 is outside the valid range [1, 7]}}
+}

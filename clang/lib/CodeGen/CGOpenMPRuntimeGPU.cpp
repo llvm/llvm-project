@@ -1418,9 +1418,7 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
     return CGF.Builder.CreateIntCast(Val, LLVMCastTy,
                                      CastTy->hasSignedIntegerRepresentation());
   Address CastItem = CGF.CreateMemTemp(CastTy);
-  Address ValCastItem = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      CastItem, Val->getType()->getPointerTo(CastItem.getAddressSpace()),
-      Val->getType());
+  Address ValCastItem = CastItem.withElementType(Val->getType());
   CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy,
                         LValueBaseInfo(AlignmentSource::Type),
                         TBAAAccessInfo());
@@ -3542,6 +3540,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1200:
+      case CudaArch::GFX1201:
       case CudaArch::Generic:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:

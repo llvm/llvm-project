@@ -14,7 +14,7 @@
 }
 
 // CHECK-LABEL:   func @sparse_static_dims(
-// CHECK-SAME:                          %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:                          %[[VAL_0:.*]]: tensor<10x20x30xf32, #sparse{{[0-9]*}}>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<20x30x10xf32>) -> tensor<20x30x10xf32> {
 // CHECK-DAG:       %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 20 : index
@@ -23,7 +23,7 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[DEMAP:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]]
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<30x10x20xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<30x10x20xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<20x30x10xf32>
 // CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_9]] : memref<20x30x10xf32>)
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
@@ -53,17 +53,17 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 }
 
 // CHECK-LABEL:   func @sparse_dynamic_dims(
-// CHECK-SAME:                          %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:                          %[[VAL_0:.*]]: tensor<?x?x?xf32, #sparse{{[0-9]*}}>,
 // CHECK-SAME:                          %[[VAL_1:.*]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
 // CHECK-DAG:       %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[DEMAP:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]]
-// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.values %[[DEMAP]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.lvl %[[DEMAP]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse{{[0-9]*}}>
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?x?xf32>
 // CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_10]] : memref<?x?x?xf32>)
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
