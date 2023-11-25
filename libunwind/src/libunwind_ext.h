@@ -32,6 +32,16 @@ extern int __unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t);
 extern int __unw_set_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t);
 extern int __unw_resume(unw_cursor_t *);
 
+#ifdef LIBUNWIND_HAVE_MSAN
+// See comment above unw_getcontext (libunwind.h) for why this is needed.
+#define __unw_getcontext(context)                                              \
+  ({                                                                           \
+    int _result = (__unw_getcontext)(context);                                 \
+    __msan_unpoison((context), sizeof(unw_context_t));                         \
+    _result;                                                                   \
+  })
+#endif
+
 #ifdef __arm__
 /* Save VFP registers in FSTMX format (instead of FSTMD). */
 extern void __unw_save_vfp_as_X(unw_cursor_t *);

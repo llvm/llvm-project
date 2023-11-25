@@ -10,9 +10,6 @@
 // Ensure that unw_resume() resumes execution at the stack frame identified by
 // cursor.
 
-// TODO: Figure out why this fails with Memory Sanitizer.
-// XFAIL: msan
-
 #include <libunwind.h>
 
 void test_unw_resume() {

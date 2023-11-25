@@ -10,9 +10,6 @@
 // Ensure that leaf function can be unwund.
 // REQUIRES: target={{(aarch64|riscv64|s390x|x86_64)-.+linux.*}}
 
-// TODO: Figure out why this fails with Memory Sanitizer.
-// XFAIL: msan
-
 #undef NDEBUG
 #include <assert.h>
 #include <dlfcn.h>

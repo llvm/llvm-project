@@ -8,9 +8,6 @@
 
 # REQUIRES: target={{x86_64-.+-linux-gnu}}
 
-# Inline assembly isn't supported by Memory Sanitizer
-# UNSUPPORTED: msan
-
 # RUN: %{build} -no-pie
 # RUN: %{run}
 
