@@ -1175,7 +1175,6 @@ void UnwrappedLineParser::parsePPDefine() {
       Tokens->peekNextToken()->is(tok::colon)) {
     nextToken();
     nextToken();
-    addUnwrappedLine();
   }
 
   // Errors during a preprocessor directive can only affect the layout of the
