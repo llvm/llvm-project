@@ -237,7 +237,7 @@ public:
   }
 
   std::optional<std::tuple<Intrinsic::ID, SmallVector<Value *, 3>>>
-  convertShlOrLShrToFShlOrFShr(Instruction &Or); 
+  convertShlOrLShrToFShlOrFShr(Instruction &Or);
 
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
