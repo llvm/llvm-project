@@ -1406,10 +1406,8 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   Value *XLo, *YLo;
   Value *CrossSum;
   
-  // Checking the operands of I is used in no more than one place,
-  // which can not be deleted, cause a mul instruction has far more weight than
-  // add and shl instruction in IR, thus this method cannot achieve the goal of
-  // simplifying instructions, just return null.
+  // Require one-use on the multiply to avoid increasing the number of
+  // multiplications.
   if (!match(&I, m_c_Add(m_Shl(m_Value(CrossSum), m_SpecificInt(HalfBits)),
                          m_OneUse(m_Mul(m_Value(YLo), m_Value(XLo))))))
     return nullptr;
