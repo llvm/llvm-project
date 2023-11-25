@@ -945,30 +945,33 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       return true;
 
     if (Name.consume_front("amdgcn.")) {
-
-      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
-                             .Case("alignbit", Intrinsic::fshr)
-                             .StartsWith("ldexp.", Intrinsic::ldexp)
-                             .Default(Intrinsic::not_intrinsic);
-      if (ID != Intrinsic::not_intrinsic) {
-        // Some target-specific intrinsics became redundant.
-        SmallVector<Type *, 2> Tys;
-        Tys.push_back(F->getReturnType());
-        if (ID == Intrinsic::ldexp)
-          Tys.push_back(F->getArg(1)->getType());
-        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+      if (Name == "alignbit") {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
+                                          {F->getReturnType()});
         return true;
       }
 
-      if (Name.consume_front("atomic."))
+      if (Name.consume_front("atomic.")) {
         if (Name.starts_with("inc") || Name.starts_with("dec")) {
           // These were replaced with atomicrmw uinc_wrap and udec_wrap, so
           // there's no new declaration.
           NewFn = nullptr;
           return true;
         }
+        break; // No other 'amdgcn.atomic.*'
+      }
+
+      if (Name.starts_with("ldexp.")) {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ldexp,
+          {F->getReturnType(), F->getArg(1)->getType()});
+        return true;
+      }
       break; // No other 'amdgcn.*'
     }
+
     break;
   }
   case 'c': {
