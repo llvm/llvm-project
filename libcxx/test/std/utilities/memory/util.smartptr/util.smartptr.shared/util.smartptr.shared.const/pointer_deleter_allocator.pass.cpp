@@ -53,7 +53,7 @@ class MoveDeleter
     MoveDeleter();
     MoveDeleter(MoveDeleter const&);
 public:
-    MoveDeleter(MoveDeleter&&) {};
+    MoveDeleter(MoveDeleter&&) {}
 
     explicit MoveDeleter(int) {}
 

@@ -30,7 +30,7 @@ bool g(int i)
 }
 
 struct PredLWG526 {
-    PredLWG526 (int i) : i_(i) {};
+    PredLWG526 (int i) : i_(i) {}
     ~PredLWG526() { i_ = -32767; }
     bool operator() (const PredLWG526 &p) const { return p.i_ == i_; }
 

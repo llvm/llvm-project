@@ -76,7 +76,7 @@ private:
 
 public:
   constexpr mapping() noexcept = delete;
-  constexpr mapping(const mapping& other) noexcept : extents_(other.extents()){};
+  constexpr mapping(const mapping& other) noexcept : extents_(other.extents()){}
   constexpr mapping(extents_type&& ext) noexcept
     requires(Wrap == 8)
       : extents_(ext) {}
@@ -240,9 +240,9 @@ private:
 public:
   constexpr mapping() noexcept = delete;
   constexpr mapping(const mapping& other) noexcept
-      : extents_(other.extents_), offset_(other.offset_), scaling_(other.scaling_){};
+      : extents_(other.extents_), offset_(other.offset_), scaling_(other.scaling_){}
   constexpr mapping(const extents_type& ext, index_type offset = 0, index_type scaling = 1) noexcept
-      : extents_(ext), offset_(offset), scaling_(scaling){};
+      : extents_(ext), offset_(offset), scaling_(scaling){}
 
   template <class OtherExtents>
   constexpr mapping(const mapping<OtherExtents>& other) noexcept {
