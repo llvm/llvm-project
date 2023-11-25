@@ -307,6 +307,25 @@ RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
     }};
   }
 
+  if (isBaseWithConstantOffset(Root, MRI)) {
+    MachineOperand &LHS = RootDef->getOperand(1);
+    MachineOperand &RHS = RootDef->getOperand(2);
+    MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
+    MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
+
+    int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
+    if (isInt<12>(RHSC)) {
+      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+        return {{
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+            [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
+        }};
+
+      return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
+    }
+  }
+
   // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
   // the combiner?
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
