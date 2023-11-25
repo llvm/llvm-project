@@ -19,7 +19,7 @@ using namespace llvm::support::endian;
 
 constexpr unsigned PointerSize = 4;
 auto G = std::make_unique<LinkGraph>("foo", Triple("armv7-linux-gnueabi"),
-                                     PointerSize, llvm::endianness::little,
+                                     PointerSize, endianness::little,
                                      getGenericEdgeKindName);
 auto &Sec =
     G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
