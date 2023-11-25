@@ -76,15 +76,6 @@ Pass *createLoopRotatePass(int MaxHeaderSize = -1, bool PrepareForLTO = false);
 
 //===----------------------------------------------------------------------===//
 //
-// DemoteRegisterToMemoryPass - This pass is used to demote registers to memory
-// references. In basically undoes the PromoteMemoryToRegister pass to make cfg
-// hacking easier.
-//
-FunctionPass *createDemoteRegisterToMemoryPass();
-extern char &DemoteRegisterToMemoryID;
-
-//===----------------------------------------------------------------------===//
-//
 // Reassociate - This pass reassociates commutative expressions in an order that
 // is designed to promote better constant propagation, GCSE, LICM, PRE...
 //
