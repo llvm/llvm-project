@@ -1951,8 +1951,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
           Builder.SetInsertPoint(II);
           Function *IFn =
               Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-          Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-          Builder.CreateCall(IFn, BC, "");
+          Builder.CreateCall(IFn, RetOpnd, "");
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -1987,8 +1986,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // to objc_retain.
       Builder.SetInsertPoint(RI);
       Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
-      Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-      Builder.CreateCall(IFn, BC, "");
+      Builder.CreateCall(IFn, RetOpnd, "");
     }
   }
 }
