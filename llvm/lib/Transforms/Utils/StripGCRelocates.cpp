@@ -18,8 +18,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Statepoint.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 
 using namespace llvm;
 
