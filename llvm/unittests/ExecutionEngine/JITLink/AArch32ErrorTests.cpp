@@ -26,7 +26,6 @@ auto &Sec =
 
 auto ArmCfg = getArmConfigForCPUArch(ARMBuildAttrs::v7);
 
-constexpr uint64_t DataAlignment = 4;
 constexpr uint64_t ArmAlignment = 4;
 constexpr uint64_t ThumbAlignment = 2;
 constexpr uint64_t AlignmentOffset = 0;
@@ -34,18 +33,40 @@ constexpr uint64_t AlignmentOffset = 0;
 constexpr orc::ExecutorAddrDiff SymbolOffset = 0;
 constexpr orc::ExecutorAddrDiff SymbolSize = 4;
 
-template <size_t sizeOfArray>
-ArrayRef<char> toArrayRefChar(const uint8_t (&Zeros)[sizeOfArray]) {
-  return ArrayRef<char>(reinterpret_cast<const char *>(&Zeros), sizeof(Zeros));
-}
+class AArch32Errors_ELF : public testing::Test {
+protected:
+  ArmConfig ArmCfg = getArmConfigForCPUArch(ARMBuildAttrs::v7);
+  std::unique_ptr<LinkGraph> G;
+  Section *S = nullptr;
 
-TEST(AArch32_ELF, readAddendDataErrors) {
+  const uint8_t Zeros[4]{0x00, 0x00, 0x00, 0x00};
+
+public:
+  static void SetUpTestCase() {}
+
+  void SetUp() override {
+    G = std::make_unique<LinkGraph>("foo", Triple("armv7-linux-gnueabi"),
+                                    PointerSize, endianness::little,
+                                    aarch32::getEdgeKindName);
+    S = &G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+  }
+
+  void TearDown() override {}
+
+protected:
+  template <size_t Size>
+  Block &createBlock(const uint8_t (&Content)[Size], uint64_t Addr,
+                     uint64_t Alignment = 4) {
+    ArrayRef<char> CharContent{reinterpret_cast<const char *>(&Content),
+                               sizeof(Content)};
+    return G->createContentBlock(*S, CharContent, orc::ExecutorAddr(Addr),
+                                 Alignment, AlignmentOffset);
+  }
+};
+
+TEST_F(AArch32Errors_ELF, readAddendDataErrors) {
+  Block &ZerosBlock = createBlock(Zeros, 0x1000);
   constexpr uint64_t ZerosOffset = 0;
-  const uint8_t Zeros[] = {0x00, 0x00, 0x00, 0x00};
-  constexpr orc::ExecutorAddr ZerosBlockAddr(0x0000);
-  auto &ZerosBlock =
-      G->createContentBlock(Sec, toArrayRefChar(Zeros), ZerosBlockAddr,
-                            DataAlignment, AlignmentOffset);
 
   // Invalid edge kind is the only error we can raise here right now.
   Edge::Kind Invalid = Edge::GenericEdgeKind::Invalid;
