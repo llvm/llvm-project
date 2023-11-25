@@ -25,13 +25,6 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// RedundantDbgInstElimination - This pass removes redundant dbg intrinsics
-// without modifying the CFG of the function.  It is a FunctionPass.
-//
-Pass *createRedundantDbgInstEliminationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // DeadCodeElimination - This pass is more powerful than DeadInstElimination,
 // because it is worklist driven that can potentially revisit instructions when
 // their other instructions become dead, to eliminate chains of dead
