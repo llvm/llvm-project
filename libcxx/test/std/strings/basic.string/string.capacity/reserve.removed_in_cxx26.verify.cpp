@@ -16,5 +16,5 @@
 
 void f() {
   std::string s;
-  s.reserve(); // expected-error {{too few arguments to function call, single argument '__requested_capacity' was not specified}}
+  s.reserve(); // expected-error {{too few arguments to function call}}
 }
