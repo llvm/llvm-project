@@ -53,14 +53,6 @@ def SPIRV_GroupNonUniformBallotOp : SPIRV_Op<"GroupNonUniformBallot", []> {
 
     Predicate must be a Boolean type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    non-uniform-ballot-op ::= ssa-id `=` `spirv.GroupNonUniformBallot` scope
-                              ssa-use `:` `vector` `<` 4 `x` `integer-type` `>`
-    ```
-
     #### Example:
 
     ```mlir
@@ -104,7 +96,7 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
 
     Execution must be Workgroup or Subgroup Scope.
 
-     The type of Value must be the same as Result Type.
+    The type of Value must be the same as Result Type.
 
     Id  must be a scalar of integer type, whose Signedness operand is 0.
 
@@ -113,18 +105,6 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
 
     The resulting value is undefined if Id is an inactive invocation, or is
     greater than or equal to the size of the group.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    integer-float-scalar-vector-type ::= integer-type | float-type |
-                               `vector<` integer-literal `x` integer-type `>` |
-                               `vector<` integer-literal `x` float-type `>`
-    group-non-uniform-broadcast-op ::= ssa-id `=`
-        `spirv.GroupNonUniformBroadcast` scope ssa_use, ssa_use
-        `:` integer-float-scalar-vector-type `,` integer-type
-    ```
 
     #### Example:
 
@@ -172,14 +152,6 @@ def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", []> {
     Result Type must be a Boolean type.
 
     Execution must be Workgroup or Subgroup Scope.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    non-uniform-elect-op ::= ssa-id `=` `spirv.GroupNonUniformElect` scope
-                             `:` `i1`
-    ```
 
     #### Example:
 
