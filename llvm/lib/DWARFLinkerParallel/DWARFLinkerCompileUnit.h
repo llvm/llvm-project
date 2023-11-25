@@ -47,7 +47,9 @@ enum ResolveInterCUReferencesMode : bool {
 
 /// Stores all information related to a compile unit, be it in its original
 /// instance of the object file or its brand new cloned and generated DIE tree.
-class CompileUnit : public DwarfUnit {
+/// NOTE: we need alignment of at least 8 bytes as we use
+///       PointerIntPair<CompileUnit *, 3> in the DependencyTracker.h
+class alignas(8) CompileUnit : public DwarfUnit {
 public:
   /// The stages of new compile unit processing.
   enum class Stage : uint8_t {
