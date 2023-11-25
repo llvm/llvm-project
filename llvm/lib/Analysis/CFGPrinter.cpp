@@ -19,8 +19,6 @@
 
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
@@ -111,37 +109,6 @@ PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-namespace {
-struct CFGPrinterLegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  CFGPrinterLegacyPass() : FunctionPass(ID) {
-    initializeCFGPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-      return false;
-    auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
-    return false;
-  }
-
-  void print(raw_ostream &OS, const Module * = nullptr) const override {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char CFGPrinterLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
-                "Print CFG of function to 'dot' file", false, true)
-
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
@@ -187,10 +154,6 @@ void Function::viewCFGOnly() const { viewCFGOnly(nullptr, nullptr); }
 void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
                            const BranchProbabilityInfo *BPI) const {
   viewCFG(true, BFI, BPI);
-}
-
-FunctionPass *llvm::createCFGPrinterLegacyPassPass() {
-  return new CFGPrinterLegacyPass();
 }
 
 /// Find all blocks on the paths which terminate with a deoptimize or 
