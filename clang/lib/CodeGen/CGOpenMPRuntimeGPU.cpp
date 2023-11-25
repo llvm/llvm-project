@@ -1837,12 +1837,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           {llvm::Constant::getNullValue(CGM.Int64Ty), WarpID});
       // Casting to actual data type.
       // MediumPtr = (CopyType*)MediumPtrAddr;
-      Address MediumPtr(
-          Bld.CreateBitCast(
-              MediumPtrVal,
-              CopyType->getPointerTo(
-                  MediumPtrVal->getType()->getPointerAddressSpace())),
-          CopyType, Align);
+      Address MediumPtr(MediumPtrVal, CopyType, Align);
 
       // elem = *elemptr
       //*MediumPtr = elem
@@ -1889,12 +1884,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           TransferMedium->getValueType(), TransferMedium,
           {llvm::Constant::getNullValue(CGM.Int64Ty), ThreadID});
       // SrcMediumVal = *SrcMediumPtr;
-      Address SrcMediumPtr(
-          Bld.CreateBitCast(
-              SrcMediumPtrVal,
-              CopyType->getPointerTo(
-                  SrcMediumPtrVal->getType()->getPointerAddressSpace())),
-          CopyType, Align);
+      Address SrcMediumPtr(SrcMediumPtrVal, CopyType, Align);
 
       // TargetElemPtr = (CopyType*)(SrcDataAddr[i]) + I
       Address TargetElemPtrPtr = Bld.CreateConstArrayGEP(LocalReduceList, Idx);
