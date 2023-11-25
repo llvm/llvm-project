@@ -92,37 +92,6 @@ static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
   ViewGraph(&CFGInfo, "cfg." + F.getName(), CFGOnly);
 }
 
-namespace {
-struct CFGViewerLegacyPass : public FunctionPass {
-  static char ID; // Pass identifcation, replacement for typeid
-  CFGViewerLegacyPass() : FunctionPass(ID) {
-    initializeCFGViewerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-      return false;
-    auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
-    return false;
-  }
-
-  void print(raw_ostream &OS, const Module * = nullptr) const override {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char CFGViewerLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGViewerLegacyPass, "view-cfg", "View CFG of function", false,
-                true)
-
 PreservedAnalyses CFGViewerPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
     return PreservedAnalyses::all();
