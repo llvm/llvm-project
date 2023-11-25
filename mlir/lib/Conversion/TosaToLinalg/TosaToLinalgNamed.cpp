@@ -540,21 +540,18 @@ public:
     auto outputTy = cast<ShapedType>(op.getType());
     auto outputElementTy = outputTy.getElementType();
 
-    auto firstOperandTy = cast<ShapedType>(op->getOperand(0).getType());
-    auto secondOperandTy = cast<ShapedType>(op->getOperand(1).getType());
-
     SmallVector<Value> dynDims;
     dynDims.resize(cast<ShapedType>(op->getResult(0).getType()).getRank());
 
-    if (!firstOperandTy.hasRank() || firstOperandTy.isDynamicDim(0)) {
+    if (!outputTy.hasRank() || outputTy.isDynamicDim(0)) {
       dynDims[0] = rewriter.create<tensor::DimOp>(loc, op->getOperand(0), 0);
     }
 
-    if (!firstOperandTy.hasRank() || firstOperandTy.isDynamicDim(1)) {
+    if (!outputTy.hasRank() || outputTy.isDynamicDim(1)) {
       dynDims[1] = rewriter.create<tensor::DimOp>(loc, op->getOperand(0), 1);
     }
 
-    if (!secondOperandTy.hasRank() || secondOperandTy.isDynamicDim(2)) {
+    if (!outputTy.hasRank() || outputTy.isDynamicDim(2)) {
       dynDims[2] = rewriter.create<tensor::DimOp>(loc, op->getOperand(1), 2);
     }
 

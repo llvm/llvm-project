@@ -21,29 +21,20 @@ using namespace llvm;
 void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeConstantHoistingLegacyPassPass(Registry);
   initializeDCELegacyPassPass(Registry);
-  initializeScalarizerLegacyPassPass(Registry);
-  initializeGuardWideningLegacyPassPass(Registry);
-  initializeLoopGuardWideningLegacyPassPass(Registry);
   initializeGVNLegacyPassPass(Registry);
   initializeEarlyCSELegacyPassPass(Registry);
   initializeEarlyCSEMemSSALegacyPassPass(Registry);
-  initializeMakeGuardsExplicitLegacyPassPass(Registry);
   initializeFlattenCFGLegacyPassPass(Registry);
   initializeInferAddressSpacesPass(Registry);
   initializeInstSimplifyLegacyPassPass(Registry);
   initializeLegacyLICMPassPass(Registry);
-  initializeLegacyLoopSinkPassPass(Registry);
   initializeLoopDataPrefetchLegacyPassPass(Registry);
-  initializeLoopInstSimplifyLegacyPassPass(Registry);
-  initializeLoopPredicationLegacyPassPass(Registry);
   initializeLoopRotateLegacyPassPass(Registry);
   initializeLoopStrengthReducePass(Registry);
   initializeLoopUnrollPass(Registry);
   initializeLowerAtomicLegacyPassPass(Registry);
   initializeLowerConstantIntrinsicsPass(Registry);
-  initializeLowerWidenableConditionLegacyPassPass(Registry);
   initializeMergeICmpsLegacyPassPass(Registry);
-  initializeMergedLoadStoreMotionLegacyPassPass(Registry);
   initializeNaryReassociateLegacyPassPass(Registry);
   initializePartiallyInlineLibCallsLegacyPassPass(Registry);
   initializeReassociateLegacyPassPass(Registry);
@@ -53,7 +44,6 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeSROALegacyPassPass(Registry);
   initializeCFGSimplifyPassPass(Registry);
   initializeStructurizeCFGLegacyPassPass(Registry);
-  initializeSimpleLoopUnswitchLegacyPassPass(Registry);
   initializeSinkingLegacyPassPass(Registry);
   initializeTailCallElimPass(Registry);
   initializeTLSVariableHoistLegacyPassPass(Registry);
@@ -61,5 +51,4 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeSpeculativeExecutionLegacyPassPass(Registry);
   initializeStraightLineStrengthReduceLegacyPassPass(Registry);
   initializePlaceBackedgeSafepointsLegacyPassPass(Registry);
-  initializeLoopSimplifyCFGLegacyPassPass(Registry);
 }

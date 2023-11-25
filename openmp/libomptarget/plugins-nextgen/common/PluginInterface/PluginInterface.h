@@ -864,6 +864,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return 0;
   }
 
+  virtual Error getDeviceStackSize(uint64_t &V) = 0;
+
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -882,7 +884,6 @@ private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
   /// value to zero for the getters.
-  virtual Error getDeviceStackSize(uint64_t &V) = 0;
   virtual Error setDeviceStackSize(uint64_t V) = 0;
   virtual Error getDeviceHeapSize(uint64_t &V) = 0;
   virtual Error setDeviceHeapSize(uint64_t V) = 0;

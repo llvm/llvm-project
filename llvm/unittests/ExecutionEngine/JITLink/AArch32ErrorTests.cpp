@@ -19,19 +19,41 @@ using namespace llvm::support::endian;
 
 constexpr unsigned PointerSize = 4;
 auto G = std::make_unique<LinkGraph>("foo", Triple("armv7-linux-gnueabi"),
-                                     PointerSize, llvm::endianness::little,
-                                     getGenericEdgeKindName);
+                                     PointerSize, endianness::little,
+                                     aarch32::getEdgeKindName);
 auto &Sec =
     G->createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
 auto ArmCfg = getArmConfigForCPUArch(ARMBuildAttrs::v7);
 
+constexpr uint64_t DataAlignment = 4;
 constexpr uint64_t ArmAlignment = 4;
 constexpr uint64_t ThumbAlignment = 2;
 constexpr uint64_t AlignmentOffset = 0;
 
 constexpr orc::ExecutorAddrDiff SymbolOffset = 0;
 constexpr orc::ExecutorAddrDiff SymbolSize = 4;
+
+template <size_t sizeOfArray>
+ArrayRef<char> toArrayRefChar(const uint8_t (&Zeros)[sizeOfArray]) {
+  return ArrayRef<char>(reinterpret_cast<const char *>(&Zeros), sizeof(Zeros));
+}
+
+TEST(AArch32_ELF, readAddendDataErrors) {
+  constexpr uint64_t ZerosOffset = 0;
+  const uint8_t Zeros[] = {0x00, 0x00, 0x00, 0x00};
+  constexpr orc::ExecutorAddr ZerosBlockAddr(0x0000);
+  auto &ZerosBlock =
+      G->createContentBlock(Sec, toArrayRefChar(Zeros), ZerosBlockAddr,
+                            DataAlignment, AlignmentOffset);
+
+  // Invalid edge kind is the only error we can raise here right now.
+  Edge::Kind Invalid = Edge::GenericEdgeKind::Invalid;
+  EXPECT_THAT_EXPECTED(readAddend(*G, ZerosBlock, ZerosOffset, Invalid, ArmCfg),
+                       FailedWithMessage(testing::HasSubstr(
+                           "can not read implicit addend for aarch32 edge kind "
+                           "INVALID RELOCATION")));
+}
 
 TEST(AArch32_ELF, readAddendArmErrors) {
 
@@ -44,17 +66,12 @@ TEST(AArch32_ELF, readAddendArmErrors) {
                             sizeof(ArmWord));
   auto &BArm = G->createContentBlock(Sec, ArmContent, B1DummyAddr, ArmAlignment,
                                      AlignmentOffset);
-  Edge::Kind Invalid = Edge::GenericEdgeKind::Invalid;
-
-  EXPECT_THAT_EXPECTED(readAddend(*G, BArm, SymbolOffset, Invalid, ArmCfg),
-                       FailedWithMessage(testing::HasSubstr(
-                           "can not read implicit addend for aarch32 edge kind "
-                           "INVALID RELOCATION")));
 
   for (Edge::Kind K = FirstArmRelocation; K < LastArmRelocation; K += 1) {
-    EXPECT_THAT_EXPECTED(
-        readAddend(*G, BArm, SymbolOffset, K, ArmCfg),
-        FailedWithMessage(testing::StartsWith("Invalid opcode")));
+    EXPECT_THAT_EXPECTED(readAddend(*G, BArm, SymbolOffset, K, ArmCfg),
+                         FailedWithMessage(testing::AllOf(
+                             testing::StartsWith("Invalid opcode"),
+                             testing::EndsWith(aarch32::getEdgeKindName(K)))));
   }
 }
 
@@ -76,9 +93,10 @@ TEST(AArch32_ELF, readAddendThumbErrors) {
                                        ThumbAlignment, AlignmentOffset);
 
   for (Edge::Kind K = FirstThumbRelocation; K < LastThumbRelocation; K += 1) {
-    EXPECT_THAT_EXPECTED(
-        readAddend(*G, BThumb, SymbolOffset, K, ArmCfg),
-        FailedWithMessage(testing::StartsWith("Invalid opcode")));
+    EXPECT_THAT_EXPECTED(readAddend(*G, BThumb, SymbolOffset, K, ArmCfg),
+                         FailedWithMessage(testing::AllOf(
+                             testing::StartsWith("Invalid opcode"),
+                             testing::EndsWith(aarch32::getEdgeKindName(K)))));
   }
 }
 
@@ -108,7 +126,7 @@ TEST(AArch32_ELF, applyFixupArmErrors) {
     EXPECT_THAT_ERROR(applyFixup(*G, BArm, E, ArmCfg),
                       FailedWithMessage(testing::AllOf(
                           testing::StartsWith("Invalid opcode"),
-                          testing::EndsWith(G->getEdgeKindName(K)))));
+                          testing::EndsWith(aarch32::getEdgeKindName(K)))));
   }
 }
 
@@ -149,6 +167,6 @@ TEST(AArch32_ELF, applyFixupThumbErrors) {
     EXPECT_THAT_ERROR(applyFixup(*G, BThumb, E, ArmCfg),
                       FailedWithMessage(testing::AllOf(
                           testing::StartsWith("Invalid opcode"),
-                          testing::EndsWith(G->getEdgeKindName(K)))));
+                          testing::EndsWith(aarch32::getEdgeKindName(K)))));
   }
 }

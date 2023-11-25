@@ -202,7 +202,7 @@ private:
     // Determine if every row in the array
     // has the same number of columns.
     bool isRectangular() const {
-      if (CellCounts.empty())
+      if (CellCounts.size() < 2)
         return false;
 
       for (auto NumberOfColumns : CellCounts)

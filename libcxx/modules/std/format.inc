@@ -28,6 +28,9 @@ export namespace std {
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::wformat_string;
 #endif
+#if _LIBCPP_STD_VER >= 26
+  using std::runtime_format;
+#endif //_LIBCPP_STD_VER >= 26
 
   // [format.functions], formatting functions
   using std::format;
