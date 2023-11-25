@@ -109,9 +109,15 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
 } // namespace opts
 
 namespace {
+bool hasFullProfile(const BinaryFunction &BF) {
+  return llvm::all_of(BF.blocks(), [](const BinaryBasicBlock &BB) {
+    return BB.getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE;
+  });
+}
+
 struct SplitProfile2 final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override {
-    return BF.hasValidProfile() && BF.hasFullProfile() && !BF.allBlocksCold();
+    return BF.hasValidProfile() && hasFullProfile(BF) && !BF.allBlocksCold();
   }
 
   bool keepEmpty() override { return false; }

@@ -1272,13 +1272,6 @@ public:
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
 
-  /// Return true if every block in the function has a valid execution count.
-  bool hasFullProfile() const {
-    return llvm::all_of(blocks(), [](const BinaryBasicBlock &BB) {
-      return BB.getExecutionCount() != BinaryBasicBlock::COUNT_NO_PROFILE;
-    });
-  }
-
   /// Return true if every block in the function has a zero execution count.
   bool allBlocksCold() const {
     return llvm::all_of(blocks(), [](const BinaryBasicBlock &BB) {
