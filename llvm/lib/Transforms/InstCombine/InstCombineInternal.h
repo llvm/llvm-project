@@ -236,6 +236,9 @@ public:
     return getLosslessTrunc(C, TruncTy, Instruction::SExt);
   }
 
+  std::optional<std::tuple<Intrinsic::ID, SmallVector<Value *, 3>>>
+  convertShlOrLShrToFShlOrFShr(Instruction &Or); 
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
