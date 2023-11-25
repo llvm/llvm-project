@@ -157,10 +157,9 @@ uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
   //     result = page(dest) - page(pc) + 0x1000
   uint64_t result = getLoongArchPage(dest) - getLoongArchPage(pc);
   bool negativeA = lo12(dest) > 0x7ff;
-  bool negativeB = (result & 0x8000'0000) != 0;
-
   if (negativeA)
     result += 0x1000;
+  bool negativeB = (result & 0x8000'0000) != 0;
   if (negativeA && !negativeB)
     result -= 0x10000'0000;
   else if (!negativeA && negativeB)
