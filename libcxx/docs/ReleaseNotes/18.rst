@@ -53,6 +53,7 @@ Implemented Papers
 - P2918R2 - Runtime format strings II
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()
+- P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
 
 
 Improvements and New Features
