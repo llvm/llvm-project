@@ -791,11 +791,15 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       VectorInsertOpConvert, VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
-      VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>,
-      VectorReductionToFPDotProd, VectorShapeCast,
+      VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
       VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
       VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter>(
-      typeConverter, patterns.getContext());
+      typeConverter, patterns.getContext(), PatternBenefit(1));
+
+  // Make sure that the more specialized dot produce pattern has higher benefit
+  // than the generic one that extracts all elements.
+  patterns.add<VectorReductionToFPDotProd>(typeConverter, patterns.getContext(),
+                                           PatternBenefit(2));
 }
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
