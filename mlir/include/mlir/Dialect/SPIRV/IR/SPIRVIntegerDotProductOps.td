@@ -26,10 +26,6 @@ class SPIRV_IntegerDotProductOp<string mnemonic,
     SPIRV_Integer:$result
   );
 
-  let assemblyFormat = [{
-    operands attr-dict `:` `(` type(operands) `)` `->` type($result)
-  }];
-
   // These ops require dynamic availability specification based on operand and
   // result types.
   bit autogenAvailability = 0;
@@ -40,23 +36,36 @@ class SPIRV_IntegerDotProductOp<string mnemonic,
 
 class SPIRV_IntegerDotProductBinaryOp<string mnemonic,
                                       list<Trait> traits = []> :
-      SPIRV_IntegerDotProductOp<mnemonic, traits> {
+      SPIRV_IntegerDotProductOp<mnemonic,
+        !listconcat(traits, [AllTypesMatch<["vector1", "vector2"]>])> {
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector1,
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector2,
     OptionalAttr<SPIRV_PackedVectorFormatAttr>:$format
   );
+
+  let assemblyFormat = [{
+    $vector1 `,` $vector2 ( `,` $format^ )? attr-dict `:`
+      type($vector1) `->` type($result)
+  }];
 }
 
 class SPIRV_IntegerDotProductTernaryOp<string mnemonic,
                                        list<Trait> traits = []> :
-      SPIRV_IntegerDotProductOp<mnemonic, traits> {
+      SPIRV_IntegerDotProductOp<mnemonic,
+        !listconcat(traits, [AllTypesMatch<["vector1", "vector2"]>,
+                             AllTypesMatch<["accumulator", "result"]>])> {
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector1,
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector2,
     SPIRV_Integer:$accumulator,
     OptionalAttr<SPIRV_PackedVectorFormatAttr>:$format
   );
+
+  let assemblyFormat = [{
+    $vector1 `,` $vector2 `,` $accumulator ( `,` $format^ )? attr-dict `:`
+      type($vector1) `->` type($result)
+  }];
 }
 
 // -----
