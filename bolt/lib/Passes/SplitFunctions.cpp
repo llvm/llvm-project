@@ -109,6 +109,11 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
         "fragment contains exactly a single basic block")),
     cl::desc("strategy used to partition blocks into fragments"),
     cl::cat(BoltOptCategory));
+
+static cl::opt<double> CallScale(
+    "call-scale",
+    cl::desc("Call score scale coefficient (when --split-strategy=cdsplit)"),
+    cl::init(0.95), cl::ReallyHidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
@@ -140,10 +145,16 @@ struct SplitProfile2 final : public SplitStrategy {
 };
 
 struct SplitCacheDirected final : public SplitStrategy {
+  BinaryContext &BC;
   using BasicBlockOrder = BinaryFunction::BasicBlockOrderType;
 
   bool canSplit(const BinaryFunction &BF) override {
     return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
+  }
+
+  explicit SplitCacheDirected(BinaryContext &BC) : BC(BC) {
+    initializeAuxiliaryVariables();
+    buildCallGraph();
   }
 
   // When some functions are hot-warm split and others are hot-warm-cold split,
@@ -173,6 +184,260 @@ struct SplitCacheDirected final : public SplitStrategy {
   }
 
 private:
+  struct JumpInfo {
+    bool HasUncondBranch = false;
+    BinaryBasicBlock *CondSuccessor = nullptr;
+    BinaryBasicBlock *UncondSuccessor = nullptr;
+  };
+
+  struct CallInfo {
+    size_t Length;
+    size_t Count;
+  };
+
+  // Auxiliary variables used by the algorithm.
+  size_t TotalNumBlocks{0};
+  size_t OrigHotSectionSize{0};
+  DenseMap<const BinaryBasicBlock *, size_t> GlobalIndices;
+  DenseMap<const BinaryBasicBlock *, size_t> BBSizes;
+  DenseMap<const BinaryBasicBlock *, size_t> BBOffsets;
+  DenseMap<const BinaryBasicBlock *, JumpInfo> JumpInfos;
+
+  // Sizes of branch instructions used to approximate block size increase
+  // due to hot-warm splitting. Initialized to be 0. These values are updated
+  // if the architecture is X86.
+  uint8_t BRANCH_SIZE = 0;
+  uint8_t LONG_UNCOND_BRANCH_SIZE_DELTA = 0;
+  uint8_t LONG_COND_BRANCH_SIZE_DELTA = 0;
+
+  // Call graph.
+  std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
+  std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callees;
+
+  bool shouldConsiderForCallGraph(const BinaryFunction &BF) {
+    // Only a subset of the functions in the binary will be considered
+    // for initializing auxiliary variables and building call graph.
+    return BF.hasValidIndex() && BF.hasValidProfile() && !BF.empty();
+  }
+
+  void initializeAuxiliaryVariables() {
+    // In X86, long branch instructions take more bytes than short branches.
+    // Adjust sizes of branch instructions used to approximate block size
+    // increase due to hot-warm splitting.
+    if (BC.isX86()) {
+      // a short branch takes 2 bytes.
+      BRANCH_SIZE = 2;
+      // a long unconditional branch takes BRANCH_SIZE + 3 bytes.
+      LONG_UNCOND_BRANCH_SIZE_DELTA = 3;
+      // a long conditional branch takes BRANCH_SIZE + 4 bytes.
+      LONG_COND_BRANCH_SIZE_DELTA = 4;
+    }
+
+    // Gather information about conditional and unconditional successors of
+    // each basic block; this information will be used to estimate block size
+    // increase due to hot-warm splitting.
+    auto analyzeBranches = [&](BinaryBasicBlock &BB) {
+      JumpInfo BBJumpInfo;
+      const MCSymbol *TBB = nullptr;
+      const MCSymbol *FBB = nullptr;
+      MCInst *CondBranch = nullptr;
+      MCInst *UncondBranch = nullptr;
+      if (BB.analyzeBranch(TBB, FBB, CondBranch, UncondBranch)) {
+        BBJumpInfo.HasUncondBranch = UncondBranch != nullptr;
+        if (BB.succ_size() == 1) {
+          BBJumpInfo.UncondSuccessor = BB.getSuccessor();
+        } else if (BB.succ_size() == 2) {
+          BBJumpInfo.CondSuccessor = BB.getConditionalSuccessor(true);
+          BBJumpInfo.UncondSuccessor = BB.getConditionalSuccessor(false);
+        }
+      }
+      return BBJumpInfo;
+    };
+
+    for (BinaryFunction *BF : BC.getSortedFunctions()) {
+      if (!shouldConsiderForCallGraph(*BF))
+        continue;
+
+      // Calculate the size of each BB after hot-cold splitting.
+      // This populates BinaryBasicBlock::OutputAddressRange which
+      // can be used to compute the size of each BB.
+      BC.calculateEmittedSize(*BF, /*FixBranches=*/true);
+
+      for (BinaryBasicBlock *BB : BF->getLayout().blocks()) {
+        // Unique global index.
+        GlobalIndices[BB] = TotalNumBlocks;
+        TotalNumBlocks++;
+
+        // Block size after hot-cold splitting.
+        BBSizes[BB] = BB->getOutputSize();
+
+        // Hot block offset after hot-cold splitting.
+        BBOffsets[BB] = OrigHotSectionSize;
+        if (!BB->isSplit())
+          OrigHotSectionSize += BBSizes[BB];
+
+        // (Un)Conditional branch instruction information.
+        JumpInfos[BB] = analyzeBranches(*BB);
+      }
+    }
+  }
+
+  void buildCallGraph() {
+    Callers.resize(TotalNumBlocks);
+    Callees.resize(TotalNumBlocks);
+    for (BinaryFunction *SrcFunction : BC.getSortedFunctions()) {
+      if (!shouldConsiderForCallGraph(*SrcFunction))
+        continue;
+
+      for (BinaryBasicBlock &SrcBB : SrcFunction->blocks()) {
+        // Skip blocks that are not executed
+        if (SrcBB.getKnownExecutionCount() == 0)
+          continue;
+
+        // Find call instructions and extract target symbols from each one
+        for (const MCInst &Inst : SrcBB) {
+          if (!BC.MIB->isCall(Inst))
+            continue;
+
+          // Call info
+          const MCSymbol *DstSym = BC.MIB->getTargetSymbol(Inst);
+          // Ignore calls w/o information
+          if (!DstSym)
+            continue;
+
+          const BinaryFunction *DstFunction = BC.getFunctionForSymbol(DstSym);
+          // Ignore calls that do not have a valid target, but do not ignore
+          // recursive calls, because caller block could be moved to warm.
+          if (!DstFunction || DstFunction->getLayout().block_empty())
+            continue;
+
+          const BinaryBasicBlock *DstBB = &(DstFunction->front());
+
+          // Record the call only if DstBB is also in functions to consider for
+          // call graph.
+          if (GlobalIndices.contains(DstBB)) {
+            Callers[GlobalIndices[DstBB]].push_back(&SrcBB);
+            Callees[GlobalIndices[&SrcBB]].push_back(DstBB);
+          }
+        }
+      }
+    }
+  }
+
+  /// Populate BinaryBasicBlock::OutputAddressRange with estimated basic block
+  /// start and end addresses for hot and warm basic blocks, assuming hot-warm
+  /// splitting happens at \p SplitIndex. Also return estimated end addresses
+  /// of the hot fragment before and after splitting.
+  /// The estimations take into account the potential addition of branch
+  /// instructions due to split fall through branches as well as the need to
+  /// use longer branch instructions for split (un)conditional branches.
+  std::pair<size_t, size_t>
+  estimatePostSplitBBAddress(const BasicBlockOrder &BlockOrder,
+                             const size_t SplitIndex) {
+    assert(SplitIndex < BlockOrder.size() && "Invalid split index");
+    // Helper function estimating if a branch needs a longer branch instruction.
+    // The function returns true if the following two conditions are satisfied:
+    // condition 1. One of SrcBB and DstBB is in hot, the other is in warm.
+    // condition 2. The pre-split branch distance is within 8 bits.
+    auto needNewLongBranch = [&](const BinaryBasicBlock *SrcBB,
+                                 const BinaryBasicBlock *DstBB) {
+      if (!SrcBB || !DstBB)
+        return false;
+      // The following checks for condition 1.
+      if (SrcBB->isSplit() || DstBB->isSplit())
+        return false;
+      if ((SrcBB->getLayoutIndex() <= SplitIndex) ==
+          (DstBB->getLayoutIndex() <= SplitIndex))
+        return false;
+      // The following checks for condition 2.
+      return (AbsoluteDifference(BBOffsets[DstBB],
+                                 BBOffsets[SrcBB] + BBSizes[SrcBB]) <=
+              std::numeric_limits<int8_t>::max());
+    };
+
+    // Populate BB.OutputAddressRange with estimated new start and end addresses
+    // and compute the old end address of the hot section and the new end
+    // address of the hot section.
+    size_t OldHotEndAddr;
+    size_t NewHotEndAddr;
+    size_t CurrentAddr = BBOffsets[BlockOrder[0]];
+    for (BinaryBasicBlock *BB : BlockOrder) {
+      // We only care about new addresses of blocks in hot/warm.
+      if (BB->isSplit())
+        break;
+      size_t NewSize = BBSizes[BB];
+      // Need to add a new branch instruction if a fall-through branch is split.
+      bool NeedNewUncondBranch =
+          (JumpInfos[BB].UncondSuccessor && !JumpInfos[BB].HasUncondBranch &&
+           BB->getLayoutIndex() == SplitIndex);
+
+      NewSize += BRANCH_SIZE * NeedNewUncondBranch +
+                 LONG_UNCOND_BRANCH_SIZE_DELTA *
+                     needNewLongBranch(BB, JumpInfos[BB].UncondSuccessor) +
+                 LONG_COND_BRANCH_SIZE_DELTA *
+                     needNewLongBranch(BB, JumpInfos[BB].CondSuccessor);
+      BB->setOutputStartAddress(CurrentAddr);
+      CurrentAddr += NewSize;
+      BB->setOutputEndAddress(CurrentAddr);
+      if (BB->getLayoutIndex() == SplitIndex) {
+        NewHotEndAddr = CurrentAddr;
+        // Approximate the start address of the warm fragment of the current
+        // function using the original hot section size.
+        CurrentAddr = OrigHotSectionSize;
+      }
+      OldHotEndAddr = BBOffsets[BB] + BBSizes[BB];
+    }
+
+    return std::make_pair(OldHotEndAddr, NewHotEndAddr);
+  }
+
+  /// Get a collection of "shortenable" calls, that is, calls of type X->Y
+  /// when the function order is [... X ... BF ... Y ...].
+  /// If the hot fragment size of BF is reduced, then such calls are guaranteed
+  /// to get shorter by the reduced hot fragment size.
+  std::vector<CallInfo> extractCoverCalls(const BinaryFunction &BF) {
+    // Record the length and the count of the calls that can be shortened
+    std::vector<CallInfo> CoverCalls;
+    if (opts::CallScale == 0)
+      return CoverCalls;
+
+    const BinaryFunction *ThisBF = &BF;
+    const BinaryBasicBlock *ThisBB = &(ThisBF->front());
+    size_t ThisGI = GlobalIndices[ThisBB];
+
+    for (BinaryFunction *DstBF : BC.getSortedFunctions()) {
+      if (!shouldConsiderForCallGraph(*DstBF))
+        continue;
+
+      const BinaryBasicBlock *DstBB = &(DstBF->front());
+      if (DstBB->getKnownExecutionCount() == 0)
+        continue;
+
+      size_t DstGI = GlobalIndices[DstBB];
+      for (const BinaryBasicBlock *SrcBB : Callers[DstGI]) {
+        const BinaryFunction *SrcBF = SrcBB->getFunction();
+        if (ThisBF == SrcBF)
+          continue;
+
+        const size_t CallCount = SrcBB->getKnownExecutionCount();
+
+        size_t SrcGI = GlobalIndices[SrcBB];
+
+        bool IsCoverCall = (SrcGI < ThisGI && ThisGI < DstGI) ||
+                           (DstGI <= ThisGI && ThisGI < SrcGI);
+        if (!IsCoverCall)
+          continue;
+
+        size_t SrcBBEndAddr = BBOffsets[SrcBB] + BBSizes[SrcBB];
+        size_t DstBBStartAddr = BBOffsets[DstBB];
+        size_t CallLength = AbsoluteDifference(SrcBBEndAddr, DstBBStartAddr);
+        CallInfo CI{CallLength, CallCount};
+        CoverCalls.emplace_back(CI);
+      }
+    }
+    return CoverCalls;
+  }
+
   /// Find the best index for splitting. The returned value is the index of the
   /// last hot basic block. Hence, "no splitting" is equivalent to returning the
   /// value which is one less than the size of the function.
@@ -308,7 +573,7 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
     // before function reordering and hot-warm-cold splitting
     // (SplitCacheDirected) after function reordering.
     if (BC.HasFinalizedFunctionOrder)
-      Strategy = std::make_unique<SplitCacheDirected>();
+      Strategy = std::make_unique<SplitCacheDirected>(BC);
     else
       Strategy = std::make_unique<SplitProfile2>();
     opts::AggressiveSplitting = true;
