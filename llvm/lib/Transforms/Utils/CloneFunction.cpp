@@ -273,8 +273,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     // attached debug-info records.
     for (Instruction &II : *BB) {
       RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer);
-      RemapDPValueRange(II.getModule(), II.getDbgValueRange(), VMap,
-                         RemapFlag, TypeMapper, Materializer);
+      RemapDPValueRange(II.getModule(), II.getDbgValueRange(), VMap, RemapFlag,
+                        TypeMapper, Materializer);
     }
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
@@ -501,18 +501,19 @@ void PruningFunctionCloner::CloneBlock(
 
   // Keep a cursor pointing at the last place we cloned debug-info records from.
   BasicBlock::const_iterator DbgCursor = StartingInst;
-  auto CloneDbgRecordsToHere = [NewBB,&DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
-    if (!NewBB->IsNewDbgInfoFormat)
-      return;
+  auto CloneDbgRecordsToHere =
+      [NewBB, &DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
+        if (!NewBB->IsNewDbgInfoFormat)
+          return;
 
-    // Clone debug-info records onto this instruction. Iterate through any
-    // source-instructions we've cloned and then subsequently optimised away,
-    // so that their debug-info doesn't go missing.
-    for (; DbgCursor != II; ++DbgCursor)
-      NewInst->cloneDebugInfoFrom(&*DbgCursor, std::nullopt, false);
-    NewInst->cloneDebugInfoFrom(&*II);
-    DbgCursor = std::next(II);
-  };
+        // Clone debug-info records onto this instruction. Iterate through any
+        // source-instructions we've cloned and then subsequently optimised
+        // away, so that their debug-info doesn't go missing.
+        for (; DbgCursor != II; ++DbgCursor)
+          NewInst->cloneDebugInfoFrom(&*DbgCursor, std::nullopt, false);
+        NewInst->cloneDebugInfoFrom(&*II);
+        DbgCursor = std::next(II);
+      };
 
   // Loop over all instructions, and copy them over, DCE'ing as we go.  This
   // loop doesn't include the terminator.
@@ -886,8 +887,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   for (BasicBlock &BB : make_range(Begin, NewFunc->end())) {
     for (Instruction &I : BB) {
       RemapDPValueRange(I.getModule(), I.getDbgValueRange(), VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                       TypeMapper, Materializer);
+                        ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
+                        TypeMapper, Materializer);
     }
   }
 
@@ -988,7 +989,7 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
     Module *M = BB->getModule();
     for (auto &Inst : *BB) {
       RemapDPValueRange(Inst.getModule(), Inst.getDbgValueRange(), VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&Inst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }

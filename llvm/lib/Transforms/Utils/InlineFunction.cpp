@@ -1718,14 +1718,15 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     }
     DebugLoc DL = DPV->getDebugLoc();
     DebugLoc IDL =
-        inlineDebugLoc(DL, InlinedAtNode, DPV->getMarker()->getParent()->getContext(), IANodes);
+        inlineDebugLoc(DL, InlinedAtNode,
+                       DPV->getMarker()->getParent()->getContext(), IANodes);
     DPV->setDebugLoc(IDL);
   };
 
   // Iterate over all instructions, updating metadata and debug-info records.
   for (; FI != Fn->end(); ++FI) {
-    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end();
-         BI != BE; ++BI) {
+    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
+         ++BI) {
       UpdateInst(*BI);
       for (DPValue &DPV : BI->getDbgValueRange()) {
         UpdateDPV(&DPV);
@@ -1745,7 +1746,6 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
         ++BI;
       }
     }
-
   }
 }
 
