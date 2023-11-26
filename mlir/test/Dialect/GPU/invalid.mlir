@@ -210,6 +210,14 @@ module attributes {gpu.container_module} {
 
 // -----
 
+func.func @reduce_bad_type(%arg0 : vector<4xf32>) {
+  // expected-error@+1 {{'gpu.all_reduce' op operand #0 must be Integer or Float}}
+  %res = gpu.all_reduce add %arg0 {} : (vector<4xf32>) -> vector<4xf32>
+  return
+}
+
+// -----
+
 func.func @reduce_no_op_no_body(%arg0 : f32) {
   // expected-error@+1 {{expected either an op attribute or a non-empty body}}
   %res = "gpu.all_reduce"(%arg0) ({}) : (f32) -> (f32)
@@ -320,6 +328,14 @@ func.func @reduce_invalid_op_type_minimumf(%arg0 : i32) {
 func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
   // expected-error@+1 {{`maximumf` reduction operation is not compatible with type 'i32'}}
   %res = gpu.all_reduce maximumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_bad_type(%arg0 : vector<2xf32>) {
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float}}
+  %res = gpu.subgroup_reduce add %arg0 : (vector<2xf32>) -> vector<2xf32>
   return
 }
 
