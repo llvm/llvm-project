@@ -646,7 +646,8 @@ struct VectorStoreOpConverter final
   }
 };
 
-struct VectorReductionToDotProd final : OpRewritePattern<vector::ReductionOp> {
+struct VectorReductionToIntDotProd final
+    : OpRewritePattern<vector::ReductionOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
@@ -740,6 +741,36 @@ private:
   }
 };
 
+struct VectorReductionToFPDotProd final
+    : OpConversionPattern<vector::ReductionOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(op, "combining kind is not 'add'");
+
+    auto resultType = getTypeConverter()->convertType<FloatType>(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op, "result is not a float");
+
+    auto mul = adaptor.getVector().getDefiningOp<arith::MulFOp>();
+    if (!mul)
+      return rewriter.notifyMatchFailure(
+          op, "reduction operand is not 'arith.mulf'");
+
+    Location loc = op.getLoc();
+    Value res = rewriter.create<spirv::DotOp>(loc, resultType, mul.getLhs(),
+                                              mul.getRhs());
+    if (op.getAcc())
+      res = rewriter.create<spirv::FAddOp>(loc, adaptor.getAcc(), res);
+
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+};
+
 } // namespace
 #define CL_INT_MAX_MIN_OPS                                                     \
   spirv::CLUMaxOp, spirv::CLUMinOp, spirv::CLSMaxOp, spirv::CLSMinOp
@@ -760,7 +791,8 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       VectorInsertOpConvert, VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
-      VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
+      VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>,
+      VectorReductionToFPDotProd, VectorShapeCast,
       VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
       VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter>(
       typeConverter, patterns.getContext());
@@ -768,5 +800,5 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<VectorReductionToDotProd>(patterns.getContext());
+  patterns.add<VectorReductionToIntDotProd>(patterns.getContext());
 }
