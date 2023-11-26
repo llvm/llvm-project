@@ -1,9 +1,8 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @llvm.global_ctors
+// CHECK: @llvm.global_dtors
 // CHECK-SAME: i32 101, ptr @_Z18template_dependentILi101EEvv
 // CHECK-SAME: i32 108, ptr @_Z18template_dependentILi108EEvv
-// CHECK-SAME: i32 111, ptr @_Z19template_dependent2ILi111EEvv
 
 // PR6521
 void bar();
@@ -15,12 +14,7 @@ struct Foo {
 };
 
 template <int P>
-[[gnu::constructor(P)]] void template_dependent() {}
+[[gnu::destructor(P)]] void template_dependent() {}
 
 template void template_dependent<101>();
 template void template_dependent<100 + 8>();
-
-template <int P>
-__attribute__((constructor(P))) void template_dependent2() {}
-
-template void template_dependent2<111>();

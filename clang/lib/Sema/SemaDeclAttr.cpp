@@ -2352,26 +2352,37 @@ static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UnusedAttr(S.Context, AL));
 }
 
+template <typename Attr>
+static void handleCtorDtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  uint32_t priority = Attr::DefaultPriority;
+  Expr *E = nullptr;
+  if (AL.getNumArgs()) {
+    E = AL.getArgAsExpr(0);
+    if (E->isValueDependent()) {
+      if (!E->isTypeDependent() && !E->getType()->isIntegerType()) {
+        S.Diag(getAttrLoc(AL), diag::err_attribute_argument_type)
+            << &AL << AANT_ArgumentIntegerConstant << E->getSourceRange();
+        return;
+      }
+    } else if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority)) {
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) Attr(S.Context, AL, E));
+}
+
 static void handleConstructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t priority = ConstructorAttr::DefaultPriority;
   if (S.getLangOpts().HLSL && AL.getNumArgs()) {
     S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
   }
-  if (AL.getNumArgs() &&
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
-    return;
 
-  D->addAttr(::new (S.Context) ConstructorAttr(S.Context, AL, priority));
+  handleCtorDtorAttr<ConstructorAttr>(S, D, AL);
 }
 
 static void handleDestructorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t priority = DestructorAttr::DefaultPriority;
-  if (AL.getNumArgs() &&
-      !checkUInt32Argument(S, AL, AL.getArgAsExpr(0), priority))
-    return;
-
-  D->addAttr(::new (S.Context) DestructorAttr(S.Context, AL, priority));
+  return handleCtorDtorAttr<DestructorAttr>(S, D, AL);
 }
 
 template <typename AttrTy>
