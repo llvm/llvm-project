@@ -1972,12 +1972,77 @@ bool llvm::LowerDbgDeclare(Function &F) {
   return Changed;
 }
 
+// RemoveDIs: re-implementation of insertDebugValuesForPHIs, but which pulls the
+// debug-info out of the block's DPValues rather than dbg.value intrinsics.
+static void insertDPValuesForPHIs(BasicBlock *BB,
+                                  SmallVectorImpl<PHINode *> &InsertedPHIs) {
+  assert(BB && "No BasicBlock to clone DPValue(s) from.");
+  if (InsertedPHIs.size() == 0)
+    return;
+
+  // Map existing PHI nodes to their DPValues.
+  DenseMap<Value *, DPValue *> DbgValueMap;
+  for (auto &I : *BB) {
+    for (auto &DPV : I.getDbgValueRange()) {
+      for (Value *V : DPV.location_ops())
+        if (auto *Loc = dyn_cast_or_null<PHINode>(V))
+          DbgValueMap.insert({Loc, &DPV});
+    }
+  }
+  if (DbgValueMap.size() == 0)
+    return;
+
+  // Map a pair of the destination BB and old DPValue to the new DPValue,
+  // so that if a DPValue is being rewritten to use more than one of the
+  // inserted PHIs in the same destination BB, we can update the same DPValue
+  // with all the new PHIs instead of creating one copy for each.
+  MapVector<std::pair<BasicBlock *, DPValue *>, DPValue *> NewDbgValueMap;
+  // Then iterate through the new PHIs and look to see if they use one of the
+  // previously mapped PHIs. If so, create a new DPValue that will propagate
+  // the info through the new PHI. If we use more than one new PHI in a single
+  // destination BB with the same old dbg.value, merge the updates so that we
+  // get a single new DPValue with all the new PHIs.
+  for (auto PHI : InsertedPHIs) {
+    BasicBlock *Parent = PHI->getParent();
+    // Avoid inserting a debug-info record into an EH block.
+    if (Parent->getFirstNonPHI()->isEHPad())
+      continue;
+    for (auto VI : PHI->operand_values()) {
+      auto V = DbgValueMap.find(VI);
+      if (V != DbgValueMap.end()) {
+        DPValue *DbgII = cast<DPValue>(V->second);
+        auto NewDI = NewDbgValueMap.find({Parent, DbgII});
+        if (NewDI == NewDbgValueMap.end()) {
+          DPValue *NewDbgII = DbgII->clone();
+          NewDI = NewDbgValueMap.insert({{Parent, DbgII}, NewDbgII}).first;
+        }
+        DPValue *NewDbgII = NewDI->second;
+        // If PHI contains VI as an operand more than once, we may
+        // replaced it in NewDbgII; confirm that it is present.
+        if (is_contained(NewDbgII->location_ops(), VI))
+          NewDbgII->replaceVariableLocationOp(VI, PHI);
+      }
+    }
+  }
+  // Insert the new DPValues into their destination blocks.
+  for (auto DI : NewDbgValueMap) {
+    BasicBlock *Parent = DI.first.first;
+    DPValue *NewDbgII = DI.second;
+    auto InsertionPt = Parent->getFirstInsertionPt();
+    assert(InsertionPt != Parent->end() && "Ill-formed basic block");
+
+    InsertionPt->DbgMarker->insertDPValue(NewDbgII, true);
+  }
+}
+
 /// Propagate dbg.value intrinsics through the newly inserted PHIs.
 void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
                                     SmallVectorImpl<PHINode *> &InsertedPHIs) {
   assert(BB && "No BasicBlock to clone dbg.value(s) from.");
   if (InsertedPHIs.size() == 0)
     return;
+
+  insertDPValuesForPHIs(BB, InsertedPHIs);
 
   // Map existing PHI nodes to their dbg.values.
   ValueToValueMapTy DbgValueMap;
