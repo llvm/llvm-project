@@ -503,9 +503,10 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
     return std::nullopt;
   }
 
-  // TODO: The SPIR-V spec does not specify how -0.0 / +0.0 and NaN values are
-  // handled in *FMin/*FMax reduction ops. We should double account for this not
-  // being defined in this conversion.
+  // TODO(https://github.com/llvm/llvm-project/issues/73459): The SPIR-V spec
+  // does not specify how -0.0 / +0.0 and NaN values are handled in *FMin/*FMax
+  // reduction ops. We should account possible precision requirements in this
+  // conversion.
 
   using ReduceType = gpu::AllReduceOperation;
   const OpHandler handlers[] = {
