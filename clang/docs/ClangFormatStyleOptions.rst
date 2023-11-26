@@ -2761,6 +2761,21 @@ the configuration (without a prefix: ``Auto``).
          firstValue :
          SecondValueVeryVeryVeryVeryLong;
 
+.. _BreakConcatenatedStrings:
+
+**BreakConcatenatedStrings** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <BreakConcatenatedStrings>`
+  Break between concatenated string literals in C, C++, and Objective-C.
+
+  .. code-block:: c++
+
+     true:
+     return "Code"
+            "\0\52\26\55\55\0"
+            "x013"
+            "\02\xBA";
+     false:
+     return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+
 .. _BreakConstructorInitializers:
 
 **BreakConstructorInitializers** (``BreakConstructorInitializersStyle``) :versionbadge:`clang-format 5` :ref:`¶ <BreakConstructorInitializers>`
