@@ -60,6 +60,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
+#include <algorithm>
+
 using namespace llvm;
 
 namespace {
@@ -445,20 +447,17 @@ std::string VarLenCodeEmitterGen::getInstructionCases(Record *R,
 std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
     Record *R, AltEncodingTy Mode, const VarLenInst &VLI, CodeGenTarget &Target,
     int I) {
-  size_t BitWidth = VLI.size();
 
   CodeGenInstruction &CGI = Target.getInstruction(R);
 
   std::string Case;
   raw_string_ostream SS(Case);
-  // Resize the scratch buffer.
-  if (BitWidth && !VLI.isFixedValueOnly())
-    SS.indent(I) << "Scratch = Scratch.zext(" << BitWidth << ");\n";
   // Populate based value.
   SS.indent(I) << "Inst = getInstBits" << Modes[Mode] << "(opcode);\n";
 
   // Process each segment in VLI.
   size_t Offset = 0U;
+  unsigned HighScratchAccess = 0U;
   for (const auto &ES : VLI) {
     unsigned NumBits = ES.BitWidth;
     const Init *Val = ES.Value;
@@ -497,6 +496,8 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
                    << "Scratch.extractBits(" << utostr(NumBits) << ", "
                    << utostr(LoBit) << ")"
                    << ", " << Offset << ");\n";
+
+      HighScratchAccess = std::max(HighScratchAccess, NumBits + LoBit);
     }
     Offset += NumBits;
   }
@@ -505,7 +506,16 @@ std::string VarLenCodeEmitterGen::getInstructionCaseForEncoding(
   if (!PostEmitter.empty())
     SS.indent(I) << "Inst = " << PostEmitter << "(MI, Inst, STI);\n";
 
-  return Case;
+  // Resize the scratch buffer if it's to small.
+  std::string ScratchResizeStr;
+  if (VLI.size() && !VLI.isFixedValueOnly()) {
+    raw_string_ostream RS(ScratchResizeStr);
+    RS.indent(I) << "if (Scratch.getBitWidth() < " << HighScratchAccess
+                 << ") { Scratch = Scratch.zext(" << HighScratchAccess
+                 << "); }\n";
+  }
+
+  return ScratchResizeStr + Case;
 }
 
 namespace llvm {

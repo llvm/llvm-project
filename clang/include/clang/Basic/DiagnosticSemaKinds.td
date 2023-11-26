@@ -141,9 +141,9 @@ def ext_vla : Extension<"variable length arrays are a C99 feature">,
 // language modes, we warn as an extension but add the warning group to -Wall.
 def ext_vla_cxx : ExtWarn<
   "variable length arrays in C++ are a Clang extension">,
-  InGroup<VLAExtension>;
+  InGroup<VLACxxExtension>;
 def ext_vla_cxx_in_gnu_mode : Extension<ext_vla_cxx.Summary>,
-  InGroup<VLAExtension>;
+  InGroup<VLACxxExtension>;
 def ext_vla_cxx_static_assert : ExtWarn<
   "variable length arrays in C++ are a Clang extension; did you mean to use "
   "'static_assert'?">, InGroup<VLAUseStaticAssert>;
@@ -166,6 +166,8 @@ def ext_vla_folded_to_constant : ExtWarn<
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
   "variable length arrays are not supported for %select{the current target|'%1'}0">;
+def err_vla_in_coroutine_unsupported : Error<
+  "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
   "variable length arrays are not supported for the current target">;
 
@@ -3175,6 +3177,10 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_duplicate_target_attribute
+    : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
+              " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
+              "attribute string; ">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -5653,9 +5659,9 @@ def err_unexpanded_parameter_pack : Error<
   "%select{expression|base type|declaration type|data member type|bit-field "
   "size|static assertion|fixed underlying type|enumerator value|"
   "using declaration|friend declaration|qualifier|initializer|default argument|"
-  "non-type template parameter type|exception type|partial specialization|"
-  "__if_exists name|__if_not_exists name|lambda|block|type constraint|"
-  "requirement|requires clause}0 "
+  "non-type template parameter type|exception type|explicit specialization|"
+  "partial specialization|__if_exists name|__if_not_exists name|lambda|block|"
+  "type constraint|requirement|requires clause}0 "
   "contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
@@ -6191,9 +6197,6 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
-def warn_bitfield_too_small_for_integral_type : Warning<
-  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
-  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 
@@ -6413,7 +6416,7 @@ def warn_superclass_variable_sized_type_not_at_end : Warning<
   " in superclass %3">, InGroup<ObjCFlexibleArray>;
 
 def err_counted_by_attr_not_on_flexible_array_member : Error<
-  "'counted_by' only applies to flexible array members">;
+  "'counted_by' only applies to C99 flexible array members">;
 def err_counted_by_attr_refers_to_flexible_array : Error<
   "'counted_by' cannot refer to the flexible array %0">;
 def err_counted_by_must_be_in_structure : Error<
@@ -7978,6 +7981,8 @@ def err_return_in_constructor_handler : Error<
 def warn_cdtor_function_try_handler_mem_expr : Warning<
   "cannot refer to a non-static member from the handler of a "
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
+def err_throw_object_throwing_dtor : Error<
+  "cannot throw object of type %0 with a potentially-throwing destructor">;
 
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
@@ -9481,6 +9486,9 @@ def err_defaulted_special_member_return_type : Error<
 def err_defaulted_special_member_quals : Error<
   "an explicitly-defaulted %select{copy|move}0 assignment operator may not "
   "have 'const'%select{, 'constexpr'|}1 or 'volatile' qualifiers">;
+def err_defaulted_special_member_explicit_object_mismatch : Error<
+  "the type of the explicit object parameter of an explicitly-defaulted "
+  "%select{copy|move}0 assignment operator should match the type of the class %1">;
 def err_defaulted_special_member_volatile_param : Error<
   "the parameter for an explicitly-defaulted %sub{select_special_member_kind}0 "
   "may not be volatile">;
@@ -10021,6 +10029,11 @@ def err_duplicate_case_differing_expr : Error<
 def warn_case_empty_range : Warning<"empty case range specified">;
 def warn_missing_case_for_condition :
   Warning<"no case matching constant switch condition '%0'">;
+def err_loop_attr_conflict : Error<
+  "conflicting loop attribute %0">;
+def err_attribute_power_of_two_in_range : Error<
+  "%0 attribute requires an integer argument which is a constant power of two "
+  "between %1 and %2 inclusive; provided argument was %3">;
 
 def warn_def_missing_case : Warning<"%plural{"
   "1:enumeration value %1 not explicitly handled in switch|"
@@ -11028,6 +11041,8 @@ def err_omp_wrong_linear_modifier : Error<
   "expected %select{'val' modifier|one of 'ref', val' or 'uval' modifiers}0">;
 def err_omp_wrong_linear_modifier_non_reference : Error<
   "variable of non-reference type %0 can be used only with 'val' modifier, but used with '%1'">;
+def err_omp_step_simple_modifier_exclusive : Error<
+  "step simple modifier is exclusive and can't be use with 'val', 'uval' or 'ref' modifier">;
 def err_omp_wrong_simdlen_safelen_values : Error<
   "the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter">;
 def err_omp_wrong_if_directive_name_modifier : Error<
@@ -11584,6 +11599,10 @@ def err_conflicting_aligned_options : Error <
 >;
 def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines."
+>;
+def err_coroutine_return_type : Error<
+  "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
+  "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
 } // end of coroutines issue category
 

@@ -13,8 +13,8 @@
 #include <__config>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
+#include <cmath>
 #include <iosfwd>
-#include <numeric>
 #include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

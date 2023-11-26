@@ -420,6 +420,25 @@ struct TestVectorReduceToContractPatternsPatterns
   }
 };
 
+struct TestVectorChainedReductionFoldingPatterns
+    : public PassWrapper<TestVectorChainedReductionFoldingPatterns,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorChainedReductionFoldingPatterns)
+
+  StringRef getArgument() const final {
+    return "test-vector-chained-reduction-folding-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test patterns to fold chained vector reductions";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateChainedVectorReductionFoldingPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct TestFlattenVectorTransferPatterns
     : public PassWrapper<TestFlattenVectorTransferPatterns,
                          OperationPass<func::FuncOp>> {
@@ -594,12 +613,19 @@ struct TestVectorDistribution
                          .getResult(0);
       return result;
     };
-    if (distributeTransferWriteOps) {
+    if (distributeTransferWriteOps && propagateDistribution) {
+      RewritePatternSet patterns(ctx);
+      vector::populatePropagateWarpVectorDistributionPatterns(
+          patterns, distributionFn, shuffleFn, /*benefit=*/1,
+          /*readBenefit=*/0);
+      vector::populateDistributeReduction(patterns, warpReduction, 1);
+      populateDistributeTransferWriteOpPatterns(patterns, distributionFn, 2);
+      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    } else if (distributeTransferWriteOps) {
       RewritePatternSet patterns(ctx);
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-    }
-    if (propagateDistribution) {
+    } else if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
       vector::populatePropagateWarpVectorDistributionPatterns(
           patterns, distributionFn, shuffleFn);
@@ -765,6 +791,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestSinkVectorBroadcast>();
 
   PassRegistration<TestVectorReduceToContractPatternsPatterns>();
+
+  PassRegistration<TestVectorChainedReductionFoldingPatterns>();
 
   PassRegistration<TestFlattenVectorTransferPatterns>();
 

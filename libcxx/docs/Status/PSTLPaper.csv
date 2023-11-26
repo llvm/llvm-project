@@ -55,7 +55,7 @@ Section,Description,Assignee,Complete
 | `[alg.reverse] <https://wg21.link/alg.reverse>`_,std::reverse,Nikolas Klauser,|Not Started|
 | `[alg.reverse] <https://wg21.link/alg.reverse>`_,std::reverse_copy,Nikolas Klauser,|Not Started|
 | `[alg.rotate] <https://wg21.link/alg.rotate>`_,std::rotate,Nikolas Klauser,|Not Started|
-| `[alg.rotate] <https://wg21.link/alg.rotate>`_,std::rotate_copy,Nikolas Klauser,|Not Started|
+| `[alg.rotate] <https://wg21.link/alg.rotate>`_,std::rotate_copy,Nikolas Klauser,|Complete|
 | `[alg.search] <https://wg21.link/alg.search>`_,std::search,Nikolas Klauser,|Not Started|
 | `[alg.search] <https://wg21.link/alg.search>`_,std::search_n,Nikolas Klauser,|Not Started|
 | `[alg.set.operations] <https://wg21.link/alg.set.operations>`_,std::set_difference,Nikolas Klauser,|Not Started|

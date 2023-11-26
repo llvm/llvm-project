@@ -1076,27 +1076,30 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .lower();
 
-  // Lower roundeven into G_FRINT
-  getActionDefinitionsBuilder({G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
-    .scalarize(0)
-    .lower();
+  // Lower G_FNEARBYINT and G_FRINT into G_INTRINSIC_ROUNDEVEN
+  getActionDefinitionsBuilder({G_INTRINSIC_ROUND, G_FRINT, G_FNEARBYINT})
+      .scalarize(0)
+      .lower();
 
   if (ST.has16BitInsts()) {
-    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
-      .legalFor({S16, S32, S64})
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+    getActionDefinitionsBuilder(
+        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
+        .legalFor({S16, S32, S64})
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
   } else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
-    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
-      .legalFor({S32, S64})
-      .clampScalar(0, S32, S64)
-      .scalarize(0);
+    getActionDefinitionsBuilder(
+        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
+        .legalFor({S32, S64})
+        .clampScalar(0, S32, S64)
+        .scalarize(0);
   } else {
-    getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
-      .legalFor({S32})
-      .customFor({S64})
-      .clampScalar(0, S32, S64)
-      .scalarize(0);
+    getActionDefinitionsBuilder(
+        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
+        .legalFor({S32})
+        .customFor({S64})
+        .clampScalar(0, S32, S64)
+        .scalarize(0);
   }
 
   getActionDefinitionsBuilder(G_PTR_ADD)
@@ -1980,8 +1983,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
     return legalizeAddrSpaceCast(MI, MRI, B);
-  case TargetOpcode::G_FRINT:
-    return legalizeFrint(MI, MRI, B);
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    return legalizeFroundeven(MI, MRI, B);
   case TargetOpcode::G_FCEIL:
     return legalizeFceil(MI, MRI, B);
   case TargetOpcode::G_FREM:
@@ -2286,9 +2289,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFrint(
-  MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFroundeven(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             MachineIRBuilder &B) const {
   Register Src = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Src);
   assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
@@ -2736,15 +2739,6 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   //   $symbol@*@hi with lower 32 bits and higher 32 bits of a literal constant,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
-  //
-  // What we want here is an offset from the value returned by s_getpc
-  // (which is the address of the s_add_u32 instruction) to the global
-  // variable, but since the encoding of $symbol starts 4 bytes after the start
-  // of the s_add_u32 instruction, we end up with an offset that is 4 bytes too
-  // small. This requires us to add 4 to the global variable offset in order to
-  // compute the correct address. Similarly for the s_addc_u32 instruction, the
-  // encoding of $symbol starts 12 bytes after the start of the s_add_u32
-  // instruction.
 
   LLT ConstPtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
@@ -2754,11 +2748,11 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   MachineInstrBuilder MIB = B.buildInstr(AMDGPU::SI_PC_ADD_REL_OFFSET)
     .addDef(PCReg);
 
-  MIB.addGlobalAddress(GV, Offset + 4, GAFlags);
+  MIB.addGlobalAddress(GV, Offset, GAFlags);
   if (GAFlags == SIInstrInfo::MO_NONE)
     MIB.addImm(0);
   else
-    MIB.addGlobalAddress(GV, Offset + 12, GAFlags + 1);
+    MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
     B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
@@ -3567,7 +3561,7 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
     PL = getMad(B, Ty, XH.getReg(0), CL.getReg(0), Mad0, Flags);
   }
 
-  auto E = B.buildFRint(Ty, PH, Flags);
+  auto E = B.buildIntrinsicRoundeven(Ty, PH, Flags);
 
   // It is unsafe to contract this fsub into the PH multiply.
   auto PHSubE = B.buildFSub(Ty, PH, E, FlagsNoContract);
@@ -6477,11 +6471,6 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
-
-  const Module *M = B.getMF().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return legalizeTrapHsaQueuePtr(MI, MRI, B);
 
   return ST.supportsGetDoorbellID() ?
          legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);

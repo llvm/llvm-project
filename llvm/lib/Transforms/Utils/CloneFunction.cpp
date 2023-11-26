@@ -44,6 +44,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   ClonedCodeInfo *CodeInfo,
                                   DebugInfoFinder *DIFinder) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
+  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
@@ -58,7 +59,10 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     Instruction *NewInst = I.clone();
     if (I.hasName())
       NewInst->setName(I.getName() + NameSuffix);
-    NewInst->insertInto(NewBB, NewBB->end());
+
+    NewInst->insertBefore(*NewBB, NewBB->end());
+    NewInst->cloneDebugInfoFrom(&I);
+
     VMap[&I] = NewInst; // Add instruction map to value.
 
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
@@ -472,6 +476,7 @@ void PruningFunctionCloner::CloneBlock(
   BasicBlock *NewBB;
   Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
   BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
+  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we

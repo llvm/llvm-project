@@ -230,7 +230,7 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV32-NEXT:    vmv.x.s a4, v9
 ; RV32-NEXT:    vmv.x.s a5, v8
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vslide1down.vx v8, v8, a5
+; RV32-NEXT:    vmv.v.x v8, a5
 ; RV32-NEXT:    vslide1down.vx v8, v8, a4
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
@@ -246,7 +246,7 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV64-NEXT:    vmv.x.s a1, v9
 ; RV64-NEXT:    vmv.x.s a2, v8
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslide1down.vx v8, v8, a2
+; RV64-NEXT:    vmv.v.x v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
@@ -550,9 +550,9 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    li a2, 6
-; CHECK-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v12, (a1)
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vse64.v v8, (a0)

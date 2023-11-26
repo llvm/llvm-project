@@ -111,6 +111,16 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
     Feature(
+        name="has-latomic",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) { return 0; }
+          """,
+            ["-latomic"],
+        ),
+    ),
+    Feature(
         name="non-lockfree-atomics",
         when=lambda cfg: sourceBuilds(
             cfg,
@@ -134,24 +144,6 @@ DEFAULT_FEATURES = [
             std::atomic<Large> x;
             int main(int, char**) { return x.is_lock_free(); }
           """,
-        ),
-    ),
-    # Some tests rely on creating shared libraries which link in the C++ Standard Library. In some
-    # cases, this doesn't work (e.g. if the library was built as a static archive and wasn't compiled
-    # as position independent). This feature informs the test suite of whether it's possible to create
-    # a shared library in a shell test by using the '-shared' compiler flag.
-    #
-    # Note: To implement this check properly, we need to make sure that we use something inside the
-    # compiled library, not only in the headers. It should be safe to assume that all implementations
-    # define `operator new` in the compiled library.
-    Feature(
-        name="cant-build-shared-library",
-        when=lambda cfg: not sourceBuilds(
-            cfg,
-            """
-            void f() { new int(3); }
-          """,
-            ["-shared"],
         ),
     ),
     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
@@ -314,6 +306,7 @@ macros = {
     "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
@@ -497,7 +490,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-fp_to_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -505,7 +498,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-char8_t_support-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -513,31 +506,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-verbose_abort-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::bad_variant_access in the built library
-    Feature(
-        name="availability-bad_variant_access-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::bad_optional_access in the built library
-    Feature(
-        name="availability-bad_optional_access-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require std::bad_any_cast in the built library
-    Feature(
-        name="availability-bad_any_cast-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -545,7 +514,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-pmr-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -553,7 +522,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-filesystem-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12|13|14)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -561,24 +530,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-synchronization_library-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12|13|14|15)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require support for std::shared_mutex and std::shared_timed_mutex in the built library
-    Feature(
-        name="availability-shared_mutex-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11)(.0)?}}",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require support for aligned allocation in the built library. This is about `operator new(..., std::align_val_t, ...)` specifically,
-    # not other forms of aligned allocation.
-    Feature(
-        name="availability-aligned_allocation-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(9|10|11|12)(.0)?}}",
+            "stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14|15)(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -587,7 +539,7 @@ DEFAULT_FEATURES += [
         name="availability-tzdb-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             # TODO(ldionne) Please provide the correct value.
-            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
+            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
             cfg.available_features,
         ),
     ),

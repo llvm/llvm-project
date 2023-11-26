@@ -14,9 +14,11 @@
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
+#include <__fwd/ostream.h>
 #include <__iterator/access.h>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
@@ -49,9 +51,7 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <cstddef>
-#include <iosfwd>
 #include <new>
-#include <stdexcept>
 #include <typeinfo>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <__atomic/memory_order.h>
@@ -1985,8 +1985,7 @@ private:
     friend _LIBCPP_EXPORTED_FROM_ABI __sp_mut& __get_sp_mut(const void*);
 };
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-__sp_mut& __get_sp_mut(const void*);
+_LIBCPP_EXPORTED_FROM_ABI __sp_mut& __get_sp_mut(const void*);
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1997,7 +1996,6 @@ atomic_is_lock_free(const shared_ptr<_Tp>*)
 }
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_load(const shared_ptr<_Tp>* __p)
 {
@@ -2010,7 +2008,6 @@ atomic_load(const shared_ptr<_Tp>* __p)
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 shared_ptr<_Tp>
 atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order)
 {
@@ -2018,7 +2015,6 @@ atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order)
 }
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI void
 atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 {
@@ -2030,7 +2026,6 @@ atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 void
 atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order)
 {
@@ -2038,7 +2033,6 @@ atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order)
 }
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 {
@@ -2051,7 +2045,6 @@ atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 shared_ptr<_Tp>
 atomic_exchange_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order)
 {
@@ -2059,7 +2052,6 @@ atomic_exchange_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order
 }
 
 template <class _Tp>
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 _LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w)
 {
@@ -2081,7 +2073,6 @@ atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, share
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 bool
 atomic_compare_exchange_weak(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w)
 {
@@ -2090,7 +2081,6 @@ atomic_compare_exchange_weak(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 bool
 atomic_compare_exchange_strong_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v,
                                         shared_ptr<_Tp> __w, memory_order, memory_order)
@@ -2100,7 +2090,6 @@ atomic_compare_exchange_strong_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* _
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 bool
 atomic_compare_exchange_weak_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v,
                                       shared_ptr<_Tp> __w, memory_order, memory_order)

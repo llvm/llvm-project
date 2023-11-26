@@ -308,8 +308,8 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
     Vector 1 and Vector 2 must both have vector types, with the same
     Component Type as Result Type. They do not have to have the same number
     of components as Result Type or with each other. They are logically
-    concatenated, forming a single vector with Vector 1’s components
-    appearing before Vector 2’s. The components of this logical vector are
+    concatenated, forming a single vector with Vector 1's components
+    appearing before Vector 2's. The components of this logical vector are
     logically numbered with a single consecutive set of numbers from 0 to N
     - 1, where N is the total number of components.
 
@@ -331,9 +331,8 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
     #### Example:
 
     ```mlir
-    %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32]
-                           %vector1: vector<4xf32>, %vector2: vector<2xf32>
-                        -> vector<3xf32>
+    %0 = spirv.VectorShuffle [1: i32, 3: i32, 5: i32] %vector1, %vector2 :
+      vector<4xf32>, vector<2xf32> -> vector<3xf32>
     ```
   }];
 
@@ -348,8 +347,8 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
   );
 
   let assemblyFormat = [{
-    attr-dict $components $vector1 `:` type($vector1) `,`
-                          $vector2 `:` type($vector2) `->` type($result)
+    attr-dict $components $vector1 `,` $vector2 `:`
+      type($vector1) `,` type($vector2) `->` type($result)
   }];
 }
 

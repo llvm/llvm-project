@@ -418,6 +418,126 @@ vdivps            %ymm16, %ymm17, %ymm19 {z}{k1}
 vdivps            (%rax), %ymm17, %ymm19 {z}{k1}
 vdivps            (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
+vfmadd132pd       %xmm16, %xmm17, %xmm19
+vfmadd132pd       (%rax), %xmm17, %xmm19
+vfmadd132pd       (%rax){1to2}, %xmm17, %xmm19
+vfmadd132pd       %xmm16, %xmm17, %xmm19 {k1}
+vfmadd132pd       (%rax), %xmm17, %xmm19 {k1}
+vfmadd132pd       (%rax){1to2}, %xmm17, %xmm19 {k1}
+vfmadd132pd       %xmm16, %xmm17, %xmm19 {z}{k1}
+vfmadd132pd       (%rax), %xmm17, %xmm19 {z}{k1}
+vfmadd132pd       (%rax){1to2}, %xmm17, %xmm19 {z}{k1}
+
+vfmadd132pd       %ymm16, %ymm17, %ymm19
+vfmadd132pd       (%rax), %ymm17, %ymm19
+vfmadd132pd       (%rax){1to4}, %ymm17, %ymm19
+vfmadd132pd       %ymm16, %ymm17, %ymm19 {k1}
+vfmadd132pd       (%rax), %ymm17, %ymm19 {k1}
+vfmadd132pd       (%rax){1to4}, %ymm17, %ymm19 {k1}
+vfmadd132pd       %ymm16, %ymm17, %ymm19 {z}{k1}
+vfmadd132pd       (%rax), %ymm17, %ymm19 {z}{k1}
+vfmadd132pd       (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vfmadd213pd       %xmm16, %xmm17, %xmm19
+vfmadd213pd       (%rax), %xmm17, %xmm19
+vfmadd213pd       (%rax){1to2}, %xmm17, %xmm19
+vfmadd213pd       %xmm16, %xmm17, %xmm19 {k1}
+vfmadd213pd       (%rax), %xmm17, %xmm19 {k1}
+vfmadd213pd       (%rax){1to2}, %xmm17, %xmm19 {k1}
+vfmadd213pd       %xmm16, %xmm17, %xmm19 {z}{k1}
+vfmadd213pd       (%rax), %xmm17, %xmm19 {z}{k1}
+vfmadd213pd       (%rax){1to2}, %xmm17, %xmm19 {z}{k1}
+
+vfmadd213pd       %ymm16, %ymm17, %ymm19
+vfmadd213pd       (%rax), %ymm17, %ymm19
+vfmadd213pd       (%rax){1to4}, %ymm17, %ymm19
+vfmadd213pd       %ymm16, %ymm17, %ymm19 {k1}
+vfmadd213pd       (%rax), %ymm17, %ymm19 {k1}
+vfmadd213pd       (%rax){1to4}, %ymm17, %ymm19 {k1}
+vfmadd213pd       %ymm16, %ymm17, %ymm19 {z}{k1}
+vfmadd213pd       (%rax), %ymm17, %ymm19 {z}{k1}
+vfmadd213pd       (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vfmadd231pd       %xmm16, %xmm17, %xmm19
+vfmadd231pd       (%rax), %xmm17, %xmm19
+vfmadd231pd       (%rax){1to2}, %xmm17, %xmm19
+vfmadd231pd       %xmm16, %xmm17, %xmm19 {k1}
+vfmadd231pd       (%rax), %xmm17, %xmm19 {k1}
+vfmadd231pd       (%rax){1to2}, %xmm17, %xmm19 {k1}
+vfmadd231pd       %xmm16, %xmm17, %xmm19 {z}{k1}
+vfmadd231pd       (%rax), %xmm17, %xmm19 {z}{k1}
+vfmadd231pd       (%rax){1to2}, %xmm17, %xmm19 {z}{k1}
+
+vfmadd231pd       %ymm16, %ymm17, %ymm19
+vfmadd231pd       (%rax), %ymm17, %ymm19
+vfmadd231pd       (%rax){1to4}, %ymm17, %ymm19
+vfmadd231pd       %ymm16, %ymm17, %ymm19 {k1}
+vfmadd231pd       (%rax), %ymm17, %ymm19 {k1}
+vfmadd231pd       (%rax){1to4}, %ymm17, %ymm19 {k1}
+vfmadd231pd       %ymm16, %ymm17, %ymm19 {z}{k1}
+vfmadd231pd       (%rax), %ymm17, %ymm19 {z}{k1}
+vfmadd231pd       (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vfmadd132ps       %xmm16, %xmm17, %xmm19
+vfmadd132ps       (%rax), %xmm17, %xmm19
+vfmadd132ps       (%rax){1to4}, %xmm17, %xmm19
+vfmadd132ps       %xmm16, %xmm17, %xmm19 {k1}
+vfmadd132ps       (%rax), %xmm17, %xmm19 {k1}
+vfmadd132ps       (%rax){1to4}, %xmm17, %xmm19 {k1}
+vfmadd132ps       %xmm16, %xmm17, %xmm19 {z}{k1}
+vfmadd132ps       (%rax), %xmm17, %xmm19 {z}{k1}
+vfmadd132ps       (%rax){1to4}, %xmm17, %xmm19 {z}{k1}
+
+vfmadd132ps       %ymm16, %ymm17, %ymm19
+vfmadd132ps       (%rax), %ymm17, %ymm19
+vfmadd132ps       (%rax){1to8}, %ymm17, %ymm19
+vfmadd132ps       %ymm16, %ymm17, %ymm19 {k1}
+vfmadd132ps       (%rax), %ymm17, %ymm19 {k1}
+vfmadd132ps       (%rax){1to8}, %ymm17, %ymm19 {k1}
+vfmadd132ps       %ymm16, %ymm17, %ymm19 {z}{k1}
+vfmadd132ps       (%rax), %ymm17, %ymm19 {z}{k1}
+vfmadd132ps       (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
+vfmadd213ps       %xmm16, %xmm17, %xmm19
+vfmadd213ps       (%rax), %xmm17, %xmm19
+vfmadd213ps       (%rax){1to4}, %xmm17, %xmm19
+vfmadd213ps       %xmm16, %xmm17, %xmm19 {k1}
+vfmadd213ps       (%rax), %xmm17, %xmm19 {k1}
+vfmadd213ps       (%rax){1to4}, %xmm17, %xmm19 {k1}
+vfmadd213ps       %xmm16, %xmm17, %xmm19 {z}{k1}
+vfmadd213ps       (%rax), %xmm17, %xmm19 {z}{k1}
+vfmadd213ps       (%rax){1to4}, %xmm17, %xmm19 {z}{k1}
+
+vfmadd213ps       %ymm16, %ymm17, %ymm19
+vfmadd213ps       (%rax), %ymm17, %ymm19
+vfmadd213ps       (%rax){1to8}, %ymm17, %ymm19
+vfmadd213ps       %ymm16, %ymm17, %ymm19 {k1}
+vfmadd213ps       (%rax), %ymm17, %ymm19 {k1}
+vfmadd213ps       (%rax){1to8}, %ymm17, %ymm19 {k1}
+vfmadd213ps       %ymm16, %ymm17, %ymm19 {z}{k1}
+vfmadd213ps       (%rax), %ymm17, %ymm19 {z}{k1}
+vfmadd213ps       (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
+vfmadd231ps       %xmm16, %xmm17, %xmm19
+vfmadd231ps       (%rax), %xmm17, %xmm19
+vfmadd231ps       (%rax){1to4}, %xmm17, %xmm19
+vfmadd231ps       %xmm16, %xmm17, %xmm19 {k1}
+vfmadd231ps       (%rax), %xmm17, %xmm19 {k1}
+vfmadd231ps       (%rax){1to4}, %xmm17, %xmm19 {k1}
+vfmadd231ps       %xmm16, %xmm17, %xmm19 {z}{k1}
+vfmadd231ps       (%rax), %xmm17, %xmm19 {z}{k1}
+vfmadd231ps       (%rax){1to4}, %xmm17, %xmm19 {z}{k1}
+
+vfmadd231ps       %ymm16, %ymm17, %ymm19
+vfmadd231ps       (%rax), %ymm17, %ymm19
+vfmadd231ps       (%rax){1to8}, %ymm17, %ymm19
+vfmadd231ps       %ymm16, %ymm17, %ymm19 {k1}
+vfmadd231ps       (%rax), %ymm17, %ymm19 {k1}
+vfmadd231ps       (%rax){1to8}, %ymm17, %ymm19 {k1}
+vfmadd231ps       %ymm16, %ymm17, %ymm19 {z}{k1}
+vfmadd231ps       (%rax), %ymm17, %ymm19 {z}{k1}
+vfmadd231ps       (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
 vgatherdpd        (%rax,%xmm1,2), %ymm2 {k1}
 vgatherdps        (%rax,%ymm1,2), %ymm2 {k1}
 vgatherqpd        (%rax,%ymm1,2), %ymm2 {k1}
@@ -1961,6 +2081,114 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      11    1.00                        vdivps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      19    1.00    *                   vdivps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      19    1.00    *                   vdivps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132pd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132pd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132pd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132pd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132pd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132pd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132pd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132pd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213pd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213pd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213pd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd213pd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213pd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213pd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213pd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213pd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213pd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213pd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213pd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213pd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd213pd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213pd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213pd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213pd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213pd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213pd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231pd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231pd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231pd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd231pd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231pd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231pd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231pd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231pd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231pd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231pd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231pd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231pd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd231pd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231pd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231pd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231pd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231pd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231pd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132ps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132ps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132ps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd132ps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132ps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132ps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132ps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132ps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd132ps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132ps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132ps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132ps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd132ps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132ps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132ps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd132ps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132ps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd132ps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213ps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213ps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213ps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd213ps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213ps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213ps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213ps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213ps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd213ps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213ps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213ps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213ps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd213ps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213ps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213ps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd213ps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213ps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd213ps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231ps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231ps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231ps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd231ps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231ps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231ps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231ps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231ps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    0.50    *                   vfmadd231ps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231ps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231ps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231ps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  1      4     0.50                        vfmadd231ps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231ps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231ps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      4     0.50                        vfmadd231ps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231ps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      12    0.50    *                   vfmadd231ps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  7      28    1.33    *                   vgatherdpd	(%rax,%xmm1,2), %ymm2 {%k1}
 # CHECK-NEXT:  11     29    2.67    *                   vgatherdps	(%rax,%ymm1,2), %ymm2 {%k1}
 # CHECK-NEXT:  7      28    1.33    *                   vgatherqpd	(%rax,%ymm1,2), %ymm2 {%k1}
@@ -3005,7 +3233,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 323.33 347.33 304.33 304.33 16.00  794.33  -     16.00  16.00  16.00   -     304.33  -
+# CHECK-NEXT: 377.33 401.33 328.33 328.33 16.00  794.33  -     16.00  16.00  16.00   -     328.33  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -3381,6 +3609,114 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     vdivps	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vdivps	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT: 1.00    -     0.33   0.33    -      -      -      -      -      -      -     0.33    -     vdivps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132pd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132pd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132pd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132pd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132pd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132pd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132pd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213pd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213pd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213pd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213pd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213pd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213pd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213pd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231pd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231pd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231pd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231pd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231pd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231pd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231pd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132ps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132ps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132ps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132ps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132ps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd132ps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd132ps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213ps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213ps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213ps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213ps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213ps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd213ps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd213ps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231ps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231ps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231ps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231ps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231ps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     vfmadd231ps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT: 0.50   0.50   0.33   0.33    -      -      -      -      -      -      -     0.33    -     vfmadd231ps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT: 1.00   1.00   1.33   1.33    -     1.00    -      -      -      -      -     1.33    -     vgatherdpd	(%rax,%xmm1,2), %ymm2 {%k1}
 # CHECK-NEXT: 1.00   1.00   2.67   2.67    -     1.00    -      -      -      -      -     2.67    -     vgatherdps	(%rax,%ymm1,2), %ymm2 {%k1}
 # CHECK-NEXT: 1.00   1.00   1.33   1.33    -     1.00    -      -      -      -      -     1.33    -     vgatherqpd	(%rax,%ymm1,2), %ymm2 {%k1}

@@ -1,12 +1,14 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 
 void xxx(int argc) {
-  int i, lin, step; // expected-note {{initialize the variable 'lin' to silence this warning}} expected-note {{initialize the variable 'step' to silence this warning}}
-#pragma omp parallel for linear(lin : step) // expected-warning {{variable 'lin' is uninitialized when used here}} expected-warning {{variable 'step' is uninitialized when used here}}
+  int i, lin, step_sz; // expected-note {{initialize the variable 'lin' to silence this warning}} expected-note {{initialize the variable 'step_sz' to silence this warning}}
+#pragma omp parallel for linear(lin : step_sz) // expected-warning {{variable 'lin' is uninitialized when used here}} expected-warning {{variable 'step_sz' is uninitialized when used here}}
   for (i = 0; i < 10; ++i)
     ;
 }
@@ -261,16 +263,28 @@ int main(int argc, char **argv) {
 #pragma omp parallel for linear(i)
     for (int k = 0; k < argc; ++k)
       ++k;
+#ifdef OMP52
+#pragma omp parallel for linear(i : step(4))
+#else
 #pragma omp parallel for linear(i : 4)
+#endif
     for (int k = 0; k < argc; ++k) {
       ++k;
       i += 4;
     }
   }
-#pragma omp parallel for linear(j)
+#ifdef OMP52
+#pragma omp for linear(j: step() //omp52-error 2 {{expected expression}} omp52-error{{expected ')'}} omp52-note{{to match this '('}}
+#else
+#pragma omp for linear(j)
+#endif
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp parallel for linear(i)
+#ifdef OMP52
+  #pragma omp for linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
+#else
+  #pragma omp for linear(i)
+#endif
   for (int k = 0; k < argc; ++k)
     ++k;
 

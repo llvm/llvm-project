@@ -48,6 +48,11 @@ def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
 
 
 def escape_description(str):
+    # If the description of an issue/pull request is empty, the Github API
+    # library returns None instead of an empty string. Handle this here to
+    # avoid failures from trying to manipulate None.
+    if str is None:
+        return ""
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
     # '@' followed by alphanum is a user name
@@ -73,12 +78,13 @@ class IssueSubscriber:
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
+
         comment = ""
         if team.slug == "issue-subscribers-good-first-issue":
             comment = "{}\n".format(beginner_comment)
+            self.issue.create_comment(comment)
 
         body = escape_description(self.issue.body)
-
         comment = f"""
 @llvm/{team.slug}
 

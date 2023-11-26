@@ -305,7 +305,7 @@ TEST(DiagnosticsTest, ClangTidy) {
     int $main[[main]]() {
       int y = 4;
       return SQUARE($macroarg[[++]]y);
-      return $doubled[[sizeof]](sizeof(int));
+      return $doubled[[sizeof(sizeof(int))]];
     }
 
     // misc-no-recursion uses a custom traversal from the TUDecl

@@ -8,6 +8,7 @@
 
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_pnr() #1 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_virtreg_pnr() #1 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2strided() #0 { entry: unreachable }
@@ -103,6 +104,51 @@ body:             |
     $pn15 = IMPLICIT_DEF
 
     $pn0 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_virtreg_pnr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: pnr_p8to15 }
+stack:
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: spills_fills_stack_id_virtreg_pnr
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
+    ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
+    ; EXPAND: $p0 = ORR_PPzPP $p8, $p8, killed $p8
+    ; EXPAND: STR_PXI killed renamable $p0, $sp, 7
+    ;
+    ; EXPAND: renamable $p0 = LDR_PXI $sp, 7
+    ; EXPAND: $p8 = ORR_PPzPP $p0, $p0, killed $p0, implicit-def $pn8
+    ; EXPAND: $p0 = PEXT_PCI_B killed renamable $pn8, 0
+
+
+    %0:pnr_p8to15 = WHILEGE_CXX_B undef $x0, undef $x0, 0, implicit-def dead $nzcv
+
+    $pn0 = IMPLICIT_DEF
+    $pn1 = IMPLICIT_DEF
+    $pn2 = IMPLICIT_DEF
+    $pn3 = IMPLICIT_DEF
+    $pn4 = IMPLICIT_DEF
+    $pn5 = IMPLICIT_DEF
+    $pn6 = IMPLICIT_DEF
+    $pn7 = IMPLICIT_DEF
+    $pn8 = IMPLICIT_DEF
+    $pn9 = IMPLICIT_DEF
+    $pn10 = IMPLICIT_DEF
+    $pn11 = IMPLICIT_DEF
+    $pn12 = IMPLICIT_DEF
+    $pn13 = IMPLICIT_DEF
+    $pn14 = IMPLICIT_DEF
+    $pn15 = IMPLICIT_DEF
+
+    $p0 = PEXT_PCI_B %0, 0
     RET_ReallyLR
 ...
 ---

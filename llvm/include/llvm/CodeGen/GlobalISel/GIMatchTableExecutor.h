@@ -266,6 +266,13 @@ enum {
   /// - NewOpIdx
   GIM_CheckCanReplaceReg,
 
+  /// Check that a matched instruction has, or doesn't have a MIFlag.
+  ///
+  /// - InsnID  - Instruction to check.
+  /// - Flag(s) - (can be one or more flags OR'd together)
+  GIM_MIFlags,
+  GIM_MIFlagsNot,
+
   /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
   /// named operands that will be recorded in RecordedOperands. Names of these
   /// operands are referenced in predicate argument list. Emitter determines
@@ -274,6 +281,12 @@ enum {
   /// - OpIdx - Operand index
   /// - StoreIdx - Store location in RecordedOperands.
   GIM_RecordNamedOperand,
+
+  /// Records an operand's register type into the set of temporary types.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - TempTypeIdx - Temp Type Index, always negative.
+  GIM_RecordRegType,
 
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
@@ -337,6 +350,20 @@ enum {
   ///
   /// OpIdx starts at 0 for the first implicit def.
   GIR_SetImplicitDefDead,
+
+  /// Set or unset a MIFlag on an instruction.
+  ///
+  /// - InsnID  - Instruction to modify.
+  /// - Flag(s) - (can be one or more flags OR'd together)
+  GIR_SetMIFlags,
+  GIR_UnsetMIFlags,
+
+  /// Copy the MIFlags of a matched instruction into an
+  /// output instruction. The flags are OR'd together.
+  ///
+  /// - InsnID     - Instruction to modify.
+  /// - OldInsnID  - Matched instruction to copy flags from.
+  GIR_CopyMIFlags,
 
   /// Add a temporary register to the specified instruction
   /// - InsnID - Instruction ID to modify
@@ -521,6 +548,10 @@ protected:
     /// emitter, it corresponds to the order in which names appear in argument
     /// list. Currently such predicates don't have more then 3 arguments.
     std::array<const MachineOperand *, 3> RecordedOperands;
+
+    /// Types extracted from an instruction's operand.
+    /// Whenever a type index is negative, we look here instead.
+    SmallVector<LLT, 4> RecordedTypes;
 
     MatcherState(unsigned MaxRenderers);
   };

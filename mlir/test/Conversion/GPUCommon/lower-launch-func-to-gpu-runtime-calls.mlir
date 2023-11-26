@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin use-opaque-pointers=1" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco use-opaque-pointers=1" -split-input-file | FileCheck %s --check-prefix=ROCDL
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco" -split-input-file | FileCheck %s --check-prefix=ROCDL
 
 module attributes {gpu.container_module} {
 
@@ -10,8 +10,8 @@ module attributes {gpu.container_module} {
   gpu.module @kernel_module attributes {
       nvvm.cubin = "CUBIN", rocdl.hsaco = "HSACO"
   } {
-    llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr<f32>,
-        %arg2: !llvm.ptr<f32>, %arg3: i64, %arg4: i64,
+    llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr,
+        %arg2: !llvm.ptr, %arg3: i64, %arg4: i64,
         %arg5: i64) attributes {gpu.kernel} {
       llvm.return
     }
@@ -69,8 +69,8 @@ module attributes {gpu.container_module} {
   // CHECK: gpu.module
   // ROCDL: gpu.module
   gpu.module @kernel_module [#nvvm.target] {
-    llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr<f32>,
-        %arg2: !llvm.ptr<f32>, %arg3: i64, %arg4: i64,
+    llvm.func @kernel(%arg0: i32, %arg1: !llvm.ptr,
+        %arg2: !llvm.ptr, %arg3: i64, %arg4: i64,
         %arg5: i64) attributes {gpu.kernel} {
       llvm.return
     }

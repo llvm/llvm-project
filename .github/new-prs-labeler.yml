@@ -1,5 +1,9 @@
 clang:dataflow:
-  - clang/**/Analysis/**/*
+  - clang/include/clang/Analysis/FlowSensitive/**/*
+  - clang/lib/Analysis/FlowSensitive/**/*
+  - clang/unittests/Analysis/FlowSensitive/**/*
+  - clang/docs/DataFlowAnalysisIntro.md
+  - clang/docs/DataFlowAnalysisIntroImages/**/*
 
 clang:frontend:
   - clang/lib/AST/**/*

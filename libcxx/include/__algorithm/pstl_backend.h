@@ -170,6 +170,10 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
                                            _Pred __pred,
                                            const _Tp& __new_value);
 
+  template <class _ExecutionPolicy, class _Iterator, class _OutIterator>
+  optional<_Iterator> __pstl_rotate_copy(
+      _Backend, _Iterator __first, _Iterator __middle, _Iterator __last, _OutIterator __result);
+
   template <class _ExecutionPolicy, class _Iterator, class _Comp>
   optional<__empty> __pstl_sort(_Backend, _Iterator __first, _Iterator __last, _Comp __comp);
 

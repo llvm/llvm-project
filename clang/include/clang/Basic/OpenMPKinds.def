@@ -131,6 +131,7 @@ OPENMP_DEPEND_KIND(inoutallmemory)
 OPENMP_LINEAR_KIND(val)
 OPENMP_LINEAR_KIND(ref)
 OPENMP_LINEAR_KIND(uval)
+OPENMP_LINEAR_KIND(step)
 
 // Modifiers for 'atomic_default_mem_order' clause.
 OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(seq_cst)

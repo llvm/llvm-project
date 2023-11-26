@@ -129,8 +129,19 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
     DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
   uint64_t cu_offset = cu.GetOffset();
   bool found_entry_for_cu = false;
-  for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
-    for (DebugNames::NameTableEntry nte: ni) {
+  for (const DebugNames::NameIndex &ni : *m_debug_names_up) {
+    // Check if this name index contains an entry for the given CU.
+    bool cu_matches = false;
+    for (uint32_t i = 0; i < ni.getCUCount(); ++i) {
+      if (ni.getCUOffset(i) == cu_offset) {
+        cu_matches = true;
+        break;
+      }
+    }
+    if (!cu_matches)
+      continue;
+
+    for (DebugNames::NameTableEntry nte : ni) {
       uint64_t entry_offset = nte.getEntryOffset();
       llvm::Expected<DebugNames::Entry> entry_or = ni.getEntry(&entry_offset);
       for (; entry_or; entry_or = ni.getEntry(&entry_offset)) {

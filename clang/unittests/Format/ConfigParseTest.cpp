@@ -63,6 +63,13 @@ TEST(ConfigParseTest, GetsPredefinedStyleByName) {
   EXPECT_TRUE(getPredefinedStyle("gnU", FormatStyle::LK_Cpp, &Styles[2]));
   EXPECT_ALL_STYLES_EQUAL(Styles);
 
+  Styles[0] = getClangFormatStyle();
+  EXPECT_TRUE(
+      getPredefinedStyle("clang-format", FormatStyle::LK_Cpp, &Styles[1]));
+  EXPECT_TRUE(
+      getPredefinedStyle("Clang-format", FormatStyle::LK_Cpp, &Styles[2]));
+  EXPECT_ALL_STYLES_EQUAL(Styles);
+
   EXPECT_FALSE(getPredefinedStyle("qwerty", FormatStyle::LK_Cpp, &Styles[0]));
 }
 
@@ -147,6 +154,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
+  CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
@@ -841,7 +849,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "    Priority: 2\n"
               "  - Regex: .*\n"
               "    Priority: 1\n"
-              "    CaseSensitive: true\n",
+              "    CaseSensitive: true",
               IncludeStyle.IncludeCategories, ExpectedCategories);
   CHECK_PARSE("IncludeIsMainRegex: 'abc$'", IncludeStyle.IncludeIsMainRegex,
               "abc$");

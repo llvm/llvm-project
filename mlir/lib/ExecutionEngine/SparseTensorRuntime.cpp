@@ -496,17 +496,6 @@ void endLexInsert(void *tensor) {
   return static_cast<SparseTensorStorageBase *>(tensor)->endLexInsert();
 }
 
-#define IMPL_OUTSPARSETENSOR(VNAME, V)                                         \
-  void outSparseTensor##VNAME(void *coo, void *dest, bool sort) {              \
-    assert(coo);                                                               \
-    auto &coo_ = *static_cast<SparseTensorCOO<V> *>(coo);                      \
-    if (sort)                                                                  \
-      coo_.sort();                                                             \
-    return writeExtFROSTT(coo_, static_cast<char *>(dest));                    \
-  }
-MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTSPARSETENSOR)
-#undef IMPL_OUTSPARSETENSOR
-
 void delSparseTensor(void *tensor) {
   delete static_cast<SparseTensorStorageBase *>(tensor);
 }

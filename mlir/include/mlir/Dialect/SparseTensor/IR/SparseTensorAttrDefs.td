@@ -303,10 +303,13 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
   let builders = [
     AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
-                     "AffineMap":$dimToLvl,
-                     "AffineMap":$lvlToDim,
-                     "unsigned":$posWidth,
-                     "unsigned":$crdWidth), [{
+                     CArg<"AffineMap", "{}">:$dimToLvl,
+                     CArg<"AffineMap", "{}">:$lvlToDim,
+                     CArg<"unsigned", "0">:$posWidth,
+                     CArg<"unsigned", "0">:$crdWidth), [{
+      if (!dimToLvl) {
+        dimToLvl = ::mlir::AffineMap::getMultiDimIdentityMap(lvlTypes.size(), $_ctxt);
+      }
       if (!lvlToDim) {
         lvlToDim = ::mlir::sparse_tensor::inferLvlToDim(dimToLvl, $_ctxt);
       }
@@ -367,13 +370,13 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// are always all-dense.)
     ::mlir::sparse_tensor::DimLevelType getLvlType(::mlir::sparse_tensor::Level l) const;
 
-    bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseDLT(getLvlType(l)); }
-    bool isTwoOutOfFourLvl(::mlir::sparse_tensor::Level l) const { return isTwoOutOfFourDLT(getLvlType(l)); }
-    bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedDLT(getLvlType(l)); }
-    bool isLooseCompressedLvl(::mlir::sparse_tensor::Level l) const { return isLooseCompressedDLT(getLvlType(l)); }
-    bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonDLT(getLvlType(l)); }
-    bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedDLT(getLvlType(l)); }
-    bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueDLT(getLvlType(l)); }
+    bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseLT(getLvlType(l)); }
+    bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedLT(getLvlType(l)); }
+    bool isSingletonLvl(::mlir::sparse_tensor::Level l) const { return isSingletonLT(getLvlType(l)); }
+    bool isLooseCompressedLvl(::mlir::sparse_tensor::Level l) const { return isLooseCompressedLT(getLvlType(l)); }
+    bool isTwoOutOfFourLvl(::mlir::sparse_tensor::Level l) const { return is2OutOf4LT(getLvlType(l)); }
+    bool isOrderedLvl(::mlir::sparse_tensor::Level l) const { return isOrderedLT(getLvlType(l)); }
+    bool isUniqueLvl(::mlir::sparse_tensor::Level l) const { return isUniqueLT(getLvlType(l)); }
 
     /// Returns true if every level is dense.  Also returns true for
     /// the null encoding (since dense-tensors are always all-dense).
@@ -401,20 +404,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isPermutation() const;
 
     //
-    // posWidth/crdWidth methods.
-    //
-
-    /// Returns the type for position storage based on posWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getPosType() const;
-
-    /// Returns the type for coordinate storage based on crdWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getCrdType() const;
-
-    //
     // dimSlices methods.
     //
 
@@ -423,15 +412,14 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ::mlir::sparse_tensor::SparseTensorDimSliceAttr getDimSlice(::mlir::sparse_tensor::Dimension dim) const;
 
     std::optional<uint64_t> getStaticDimSliceOffset(::mlir::sparse_tensor::Dimension dim) const;
-    std::optional<uint64_t> getStaticDimSliceSize(::mlir::sparse_tensor::Dimension dim) const;
     std::optional<uint64_t> getStaticDimSliceStride(::mlir::sparse_tensor::Dimension dim) const;
     std::optional<uint64_t> getStaticLvlSliceOffset(::mlir::sparse_tensor::Level lvl) const;
-    std::optional<uint64_t> getStaticLvlSliceSize(::mlir::sparse_tensor::Level lvl) const;
     std::optional<uint64_t> getStaticLvlSliceStride(::mlir::sparse_tensor::Level lvl) const;
 
     //
-    // Helper function to build IR related to the encoding.
+    // Helper function to translate between level/dimension space.
     //
+    SmallVector<int64_t> tranlateShape(::mlir::ArrayRef<int64_t> srcShape, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
     ValueRange translateCrds(::mlir::OpBuilder &builder, ::mlir::Location loc, ::mlir::ValueRange crds, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
 
     //
@@ -566,6 +554,5 @@ def SparseTensorCrdTransDirectionAttr
     : EnumAttr<SparseTensor_Dialect, SparseTensorCrdTransDirectionEnum,
                "CrdTransDirection"> {
 }
-
 
 #endif // SPARSETENSOR_ATTRDEFS

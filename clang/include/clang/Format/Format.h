@@ -539,6 +539,10 @@ struct FormatStyle {
 
   /// Control of trailing comments.
   ///
+  /// The alignment stops at closing braces after a line break, and only
+  /// followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  /// a semicolon.
+  ///
   /// \note
   ///  As of clang-format 16 this option is not a bool but can be set
   ///  to the options. Conventional bool options still can be parsed as before.
@@ -680,6 +684,25 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.6
   bool AllowShortCaseLabelsOnASingleLine;
+
+  /// Allow short compound requirement on a single line.
+  /// \code
+  ///   true:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     { x + 1 } -> std::same_as<int>;
+  ///   };
+  ///
+  ///   false:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     {
+  ///       x + 1
+  ///     } -> std::same_as<int>;
+  ///   };
+  /// \endcode
+  /// \version 18
+  bool AllowShortCompoundRequirementOnASingleLine;
 
   /// Allow short enums on a single line.
   /// \code
@@ -1405,29 +1428,86 @@ struct FormatStyle {
   enum AttributeBreakingStyle : int8_t {
     /// Always break after attributes.
     /// \code
+    ///   [[maybe_unused]]
+    ///   const int i;
+    ///   [[gnu::const]] [[maybe_unused]]
+    ///   int j;
+    ///
     ///   [[nodiscard]]
     ///   inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
+    ///
+    ///   [[likely]]
+    ///   if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]]
+    ///   case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]]
+    ///   default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Always,
     /// Leave the line breaking after attributes as is.
     /// \code
+    ///   [[maybe_unused]] const int i;
+    ///   [[gnu::const]] [[maybe_unused]]
+    ///   int j;
+    ///
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]]
     ///   int g();
+    ///
+    ///   [[likely]] if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]] case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]]
+    ///   default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Leave,
     /// Never break after attributes.
     /// \code
+    ///   [[maybe_unused]] const int i;
+    ///   [[gnu::const]] [[maybe_unused]] int j;
+    ///
     ///   [[nodiscard]] inline int f();
     ///   [[gnu::const]] [[nodiscard]] int g();
+    ///
+    ///   [[likely]] if (a)
+    ///     f();
+    ///   else
+    ///     g();
+    ///
+    ///   switch (b) {
+    ///   [[unlikely]] case 1:
+    ///     ++b;
+    ///     break;
+    ///   [[likely]] default:
+    ///     return;
+    ///   }
     /// \endcode
     ABS_Never,
   };
 
-  /// Break after a group of C++11 attributes before a function
-  /// declaration/definition name.
+  /// Break after a group of C++11 attributes before variable or function
+  /// (including constructor/destructor) declaration/definition names or before
+  /// control statements, i.e. ``if``, ``switch`` (including ``case`` and
+  /// ``default`` labels), ``for``, and ``while`` statements.
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
@@ -4646,6 +4726,8 @@ struct FormatStyle {
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
+           AllowShortCompoundRequirementOnASingleLine ==
+               R.AllowShortCompoundRequirementOnASingleLine &&
            AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortFunctionsOnASingleLine ==
                R.AllowShortFunctionsOnASingleLine &&
@@ -4860,6 +4942,8 @@ FormatStyle getGNUStyle();
 /// Returns a format style complying with Microsoft style guide:
 /// https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference?view=vs-2017
 FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language);
+
+FormatStyle getClangFormatStyle();
 
 /// Returns style indicating formatting should be not applied at all.
 FormatStyle getNoStyle();

@@ -60,19 +60,18 @@ private:
   void syncCTAThreads(CodeGenFunction &CGF);
 
   /// Helper for target directive initialization.
-  void emitKernelInit(CodeGenFunction &CGF, EntryFunctionState &EST,
-                      bool IsSPMD);
+  void emitKernelInit(const OMPExecutableDirective &D, CodeGenFunction &CGF,
+                      EntryFunctionState &EST, bool IsSPMD);
 
   /// Helper for target directive finalization.
   void emitKernelDeinit(CodeGenFunction &CGF, EntryFunctionState &EST,
                         bool IsSPMD);
 
   /// Helper for generic variables globalization prolog.
-  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc,
-                             bool WithSPMDCheck = false);
+  void emitGenericVarsProlog(CodeGenFunction &CGF, SourceLocation Loc);
 
   /// Helper for generic variables globalization epilog.
-  void emitGenericVarsEpilog(CodeGenFunction &CGF, bool WithSPMDCheck = false);
+  void emitGenericVarsEpilog(CodeGenFunction &CGF);
 
   //
   // Base class overrides.
@@ -131,7 +130,6 @@ protected:
 
 public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
-  void clear() override;
 
   bool isGPU() const override { return true; };
 
@@ -387,7 +385,6 @@ private:
   /// Maps the function to the list of the globalized variables with their
   /// addresses.
   llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
-  llvm::GlobalVariable *KernelTeamsReductionPtr = nullptr;
   /// List of the records with the list of fields for the reductions across the
   /// teams. Used to build the intermediate buffer for the fast teams
   /// reductions.

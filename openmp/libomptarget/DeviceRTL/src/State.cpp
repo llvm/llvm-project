@@ -36,6 +36,10 @@ using namespace ompx;
 /// The kernel environment passed to the init method by the compiler.
 static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
 
+/// The kernel launch environment passed as argument to the kernel by the
+/// runtime.
+static KernelLaunchEnvironmentTy *SHARED(KernelLaunchEnvironmentPtr);
+
 ///}
 
 namespace {
@@ -238,17 +242,23 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 
 } // namespace
 
-void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
+void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                 KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   SharedMemorySmartStack.init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
     ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
+    KernelLaunchEnvironmentPtr = &KernelLaunchEnvironment;
   }
 }
 
 KernelEnvironmentTy &state::getKernelEnvironment() {
   return *KernelEnvironmentPtr;
+}
+
+KernelLaunchEnvironmentTy &state::getKernelLaunchEnvironment() {
+  return *KernelLaunchEnvironmentPtr;
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {
@@ -262,10 +272,11 @@ void state::enterDataEnvironment(IdentTy *Ident) {
       memory::allocGlobal(sizeof(ThreadStateTy), "ThreadStates alloc"));
   uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
-    uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getMaxTeamThreads();
+    uint32_t Bytes =
+        sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
-    memset(ThreadStatesPtr, '0', Bytes);
+    memset(ThreadStatesPtr, 0, Bytes);
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))

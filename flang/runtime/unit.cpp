@@ -90,7 +90,7 @@ ExternalFileUnit &ExternalFileUnit::NewUnit(
   return unit;
 }
 
-void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
+bool ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
     std::optional<Action> action, Position position, OwningPtr<char> &&newPath,
     std::size_t newPathLength, Convert convert, IoErrorHandler &handler) {
   if (convert == Convert::Unknown) {
@@ -99,24 +99,26 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
   swapEndianness_ = convert == Convert::Swap ||
       (convert == Convert::LittleEndian && !isHostLittleEndian) ||
       (convert == Convert::BigEndian && isHostLittleEndian);
+  bool impliedClose{false};
   if (IsConnected()) {
     bool isSamePath{newPath.get() && path() && pathLength() == newPathLength &&
         std::memcmp(path(), newPath.get(), newPathLength) == 0};
     if (status && *status != OpenStatus::Old && isSamePath) {
       handler.SignalError("OPEN statement for connected unit may not have "
                           "explicit STATUS= other than 'OLD'");
-      return;
+      return impliedClose;
     }
     if (!newPath.get() || isSamePath) {
       // OPEN of existing unit, STATUS='OLD' or unspecified, not new FILE=
       newPath.reset();
-      return;
+      return impliedClose;
     }
     // Otherwise, OPEN on open unit with new FILE= implies CLOSE
     DoImpliedEndfile(handler);
     FlushOutput(handler);
     TruncateFrame(0, handler);
     Close(CloseStatus::Keep, handler);
+    impliedClose = true;
   }
   if (newPath.get() && newPathLength > 0) {
     if (const auto *already{
@@ -125,7 +127,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
           "OPEN(UNIT=%d,FILE='%.*s'): file is already connected to unit %d",
           unitNumber_, static_cast<int>(newPathLength), newPath.get(),
           already->unitNumber_);
-      return;
+      return impliedClose;
     }
   }
   set_path(std::move(newPath), newPathLength);
@@ -166,6 +168,7 @@ void ExternalFileUnit::OpenUnit(std::optional<OpenStatus> status,
       currentRecordNumber = *endfileRecordNumber;
     }
   }
+  return impliedClose;
 }
 
 void ExternalFileUnit::OpenAnonymousUnit(std::optional<OpenStatus> status,

@@ -55,4 +55,4 @@ id TestCompoundLiteral(id a) {
 // CHECK:     FunctionDecl{{.*}}TestCompoundLiteral
 // CHECK:       ExprWithCleanups
 // CHECK-NEXT:    cleanup CompoundLiteralExpr
-// CHECK:           CompoundLiteralExpr{{.*}}'S':'S' lvalue
+// CHECK:           CompoundLiteralExpr{{.*}}'S' lvalue

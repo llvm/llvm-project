@@ -212,9 +212,10 @@ getEEWAndEMULForUnitStrideLoadStore(unsigned Opcode, RISCVII::VLMUL LMUL,
     llvm_unreachable("Opcode is not a vector unit stride load nor store");
   }
 
-  uint8_t EMUL =
-      static_cast<uint8_t>(RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW));
-  return std::make_pair(EEW, EMUL);
+  auto EMUL = RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW);
+  if (!EEW)
+    llvm_unreachable("Invalid SEW or LMUL for new ratio");
+  return std::make_pair(EEW, *EMUL);
 }
 
 unsigned RISCVInstrumentManager::getSchedClassID(

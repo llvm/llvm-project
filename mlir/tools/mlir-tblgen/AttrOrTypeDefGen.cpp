@@ -587,7 +587,12 @@ protected:
   DefGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os,
                StringRef defType, StringRef valueType, bool isAttrGenerator)
       : defRecords(std::move(defs)), os(os), defType(defType),
-        valueType(valueType), isAttrGenerator(isAttrGenerator) {}
+        valueType(valueType), isAttrGenerator(isAttrGenerator) {
+    // Sort by occurrence in file.
+    llvm::sort(defRecords, [](llvm::Record *lhs, llvm::Record *rhs) {
+      return lhs->getID() < rhs->getID();
+    });
+  }
 
   /// Emit the list of def type names.
   void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);

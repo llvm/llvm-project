@@ -14,9 +14,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "llvm/ADT/PointerUnion.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <memory>
 
 using namespace mlir;
 

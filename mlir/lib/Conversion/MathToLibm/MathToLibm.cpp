@@ -50,8 +50,8 @@ template <typename Op>
 struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
-  ScalarOpToLibmCall<Op>(MLIRContext *context, StringRef floatFunc,
-                         StringRef doubleFunc)
+  ScalarOpToLibmCall(MLIRContext *context, StringRef floatFunc,
+                     StringRef doubleFunc)
       : OpRewritePattern<Op>(context), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 

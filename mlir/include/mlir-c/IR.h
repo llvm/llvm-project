@@ -667,6 +667,13 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
+/// Same as mlirOperationPrint but accepts AsmState controlling the printing
+/// behavior as well as caching computed names.
+MLIR_CAPI_EXPORTED void mlirOperationPrintWithState(MlirOperation op,
+                                                    MlirAsmState state,
+                                                    MlirStringCallback callback,
+                                                    void *userData);
+
 /// Same as mlirOperationPrint but writing the bytecode format.
 MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
                                                    MlirStringCallback callback,
@@ -705,12 +712,12 @@ typedef enum MlirWalkOrder {
 } MlirWalkOrder;
 
 /// Operation walker type. The handler is passed an (opaque) reference to an
-/// operation a pointer to a `userData`.
+/// operation and a pointer to a `userData`.
 typedef void (*MlirOperationWalkCallback)(MlirOperation, void *userData);
 
 /// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
 /// `*userData` is passed to the callback as well and can be used to tunnel some
-/// some context or other data into the callback.
+/// context or other data into the callback.
 MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);

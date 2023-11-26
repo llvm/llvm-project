@@ -417,7 +417,7 @@ func.func @test_upoly_expr_assignment(%arg0: !fir.class<!fir.array<?xnone>> {fir
 // CHECK:             %[[VAL_21:.*]] = fir.array_coor %[[VAL_8]](%[[VAL_20]]) %[[VAL_17]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.shift<1>, index) -> !fir.ref<none>
 // CHECK:             %[[VAL_22:.*]] = fir.embox %[[VAL_21]] source_box %[[VAL_8]] : (!fir.ref<none>, !fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<none>
 // CHECK:             fir.store %[[VAL_22]] to %[[VAL_1]] : !fir.ref<!fir.class<none>>
-// CHECK:             %[[VAL_23:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:             %[[VAL_23:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:             %[[VAL_24:.*]] = arith.constant {{.*}} : index
 // CHECK:             %[[VAL_25:.*]] = arith.constant {{.*}} : i32
 // CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.class<none>>) -> !fir.ref<!fir.box<none>>

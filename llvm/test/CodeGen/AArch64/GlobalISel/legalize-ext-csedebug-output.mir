@@ -10,11 +10,11 @@ body:             |
     ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s32) = G_ZEXT
     ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s8) = G_TRUNC
     ; CHECK: CSEInfo::Add MI: %{{[0-9]+}}:_(s32) = G_ZEXT
-    ; CHECK: CSEInfo::Recording new MI G_CONSTANT
     ; CHECK: CSEInfo::Recording new MI G_TRUNC
+    ; CHECK: CSEInfo::Recording new MI G_CONSTANT
     ; CHECK: CSEInfo::Recording new MI G_AND
-    ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_CONSTANT
     ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_TRUNC
+    ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_CONSTANT
     ; CHECK: CSEInfo::Found Instr %{{[0-9]+}}:_(s32) = G_AND
     ; CHECK: CSEInfo::CSE Hit for Opc {{[0-9]+}} : 1
     ; CHECK: CSEInfo::CSE Hit for Opc {{[0-9]+}} : 1

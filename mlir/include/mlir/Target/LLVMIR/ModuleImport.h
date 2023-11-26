@@ -177,6 +177,10 @@ public:
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
+  /// Converts !llvm.linker.options metadata to the llvm.linker.options
+  /// LLVM dialect operation.
+  LogicalResult convertLinkerOptionsMetadata();
+
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
   /// metadata nodes to the converted attributes.
@@ -209,6 +213,18 @@ public:
   /// Adds a debug intrinsics to the list of intrinsics that should be converted
   /// after the function conversion has finished.
   void addDebugIntrinsic(llvm::CallInst *intrinsic);
+
+  /// Converts the LLVM values for an intrinsic to mixed MLIR values and
+  /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
+  /// list `immArgPositions` contains the positions of immargs on the LLVM
+  /// intrinsic, and `immArgAttrNames` list (of the same length) contains the
+  /// corresponding MLIR attribute names.
+  LogicalResult
+  convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
+                            ArrayRef<unsigned> immArgPositions,
+                            ArrayRef<StringLiteral> immArgAttrNames,
+                            SmallVectorImpl<Value> &valuesOut,
+                            SmallVectorImpl<NamedAttribute> &attrsOut);
 
 private:
   /// Clears the accumulated state before processing a new region.

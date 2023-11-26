@@ -525,6 +525,10 @@ public:
   }
 };
 
+/// Parses a list of formulas, separated by newlines, and returns them.
+/// On parse errors, calls `ADD_FAILURE()` to fail the current test.
+std::vector<const Formula *> parseFormulas(Arena &A, StringRef Lines);
+
 } // namespace test
 } // namespace dataflow
 } // namespace clang

@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 #define LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {

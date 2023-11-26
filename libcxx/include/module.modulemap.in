@@ -533,6 +533,10 @@ module std_experimental [system] {
     header "experimental/map"
     export *
   }
+  module memory {
+    header "experimental/memory"
+    export *
+  }
   module memory_resource {
     header "experimental/memory_resource"
     export *
@@ -2009,7 +2013,6 @@ module std_private_type_traits_nat                                       [system
 module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
 module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
 module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
-module std_private_type_traits_predicate_traits                          [system] { header "__type_traits/predicate_traits.h" }
 module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
 module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
 module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }
@@ -2079,6 +2082,7 @@ module std_private_utility_pair_fwd               [system] { header "__fwd/pair.
 module std_private_utility_piecewise_construct    [system] { header "__utility/piecewise_construct.h" }
 module std_private_utility_priority_tag           [system] { header "__utility/priority_tag.h" }
 module std_private_utility_rel_ops                [system] { header "__utility/rel_ops.h" }
+module std_private_utility_small_buffer           [system] { header "__utility/small_buffer.h" }
 module std_private_utility_swap                   [system] {
   header "__utility/swap.h"
   export std_private_type_traits_is_swappable

@@ -2083,7 +2083,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; IND:       for.body:
 ; IND-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[IF_END:%.*]] ]
 ; IND-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR4:%.*]], [[IF_END]] ]
-; IND-NEXT:    [[TMP16:%.*]] = zext i32 [[I]] to i64
+; IND-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[I]] to i64
 ; IND-NEXT:    [[VAR0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP16]]
 ; IND-NEXT:    [[VAR1:%.*]] = load i32, ptr [[VAR0]], align 4
 ; IND-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_END]]
@@ -2173,7 +2173,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL:       for.body:
 ; UNROLL-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[IF_END:%.*]] ]
 ; UNROLL-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR4:%.*]], [[IF_END]] ]
-; UNROLL-NEXT:    [[TMP26:%.*]] = zext i32 [[I]] to i64
+; UNROLL-NEXT:    [[TMP26:%.*]] = zext nneg i32 [[I]] to i64
 ; UNROLL-NEXT:    [[VAR0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP26]]
 ; UNROLL-NEXT:    [[VAR1:%.*]] = load i32, ptr [[VAR0]], align 4
 ; UNROLL-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_END]]
@@ -2397,7 +2397,7 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; INTERLEAVE:       for.body:
 ; INTERLEAVE-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[IF_END:%.*]] ]
 ; INTERLEAVE-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR4:%.*]], [[IF_END]] ]
-; INTERLEAVE-NEXT:    [[TMP46:%.*]] = zext i32 [[I]] to i64
+; INTERLEAVE-NEXT:    [[TMP46:%.*]] = zext nneg i32 [[I]] to i64
 ; INTERLEAVE-NEXT:    [[VAR0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP46]]
 ; INTERLEAVE-NEXT:    [[VAR1:%.*]] = load i32, ptr [[VAR0]], align 4
 ; INTERLEAVE-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_END]]

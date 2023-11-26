@@ -119,25 +119,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           [](PyPassManager &passManager, PyOperationBase &op,
              bool invalidateOps) {
             if (invalidateOps) {
-              typedef struct {
-                PyOperation &rootOp;
-                bool rootSeen;
-              } callBackData;
-              callBackData data{op.getOperation(), false};
-              // Mark all ops below the op that the passmanager will be rooted
-              // at (but not op itself - note the preorder) as invalid.
-              MlirOperationWalkCallback invalidatingCallback =
-                  [](MlirOperation op, void *userData) {
-                    callBackData *data = static_cast<callBackData *>(userData);
-                    if (LLVM_LIKELY(data->rootSeen))
-                      data->rootOp.getOperation()
-                          .getContext()
-                          ->setOperationInvalid(op);
-                    else
-                      data->rootSeen = true;
-                  };
-              mlirOperationWalk(op.getOperation(), invalidatingCallback,
-                                static_cast<void *>(&data), MlirWalkPreOrder);
+              op.getOperation().getContext()->clearOperationsInside(op);
             }
             // Actually run the pass manager.
             PyMlirContext::ErrorCapture errors(op.getOperation().getContext());

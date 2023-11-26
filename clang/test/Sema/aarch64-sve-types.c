@@ -34,8 +34,8 @@ void f(void) {
   int size_f64[sizeof(__SVFloat64_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVFloat64_t'}}
   int align_f64[__alignof__(__SVFloat64_t) == 16 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVFloat64_t'}}
 
-  int size_bf16[sizeof(__SVBFloat16_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVBFloat16_t'}}
-  int align_bf16[__alignof__(__SVBFloat16_t) == 16 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVBFloat16_t'}}
+  int size_bf16[sizeof(__SVBfloat16_t) == 0 ? 1 : -1];        // expected-error {{invalid application of 'sizeof' to sizeless type '__SVBfloat16_t'}}
+  int align_bf16[__alignof__(__SVBfloat16_t) == 16 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVBfloat16_t'}}
 
   int size_b8[sizeof(__SVBool_t) == 0 ? 1 : -1];       // expected-error {{invalid application of 'sizeof' to sizeless type '__SVBool_t'}}
   int align_b8[__alignof__(__SVBool_t) == 2 ? 1 : -1]; // expected-error {{invalid application of '__alignof' to sizeless type '__SVBool_t'}}

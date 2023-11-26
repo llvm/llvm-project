@@ -21,6 +21,8 @@
 ! CHECK-NEXT: -ccc-print-phases       Dump list of actions to perform
 ! CHECK-NEXT: -cpp                    Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c                      Only run preprocess, compile, and assemble steps
+! CHECK-NEXT: -dumpmachine            Display the compiler's target processor
+! CHECK-NEXT: -dumpversion            Display the version of the compiler
 ! CHECK-NEXT: -D <macro>=<value>      Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -emit-llvm              Use the LLVM representation for assembler and object files
 ! CHECK-NEXT: -E                      Only run the preprocessor
@@ -47,6 +49,8 @@
 ! CHECK-NEXT: -fintegrated-as         Enable the integrated assembler
 ! CHECK-NEXT: -fintrinsic-modules-path <dir>
 ! CHECK-NEXT:                         Specify where to find the compiled intrinsic modules
+! CHECK-NEXT: -flang-deprecated-no-hlfir
+! CHECK-NEXT:                         Do not use HLFIR lowering (deprecated)
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                         Use HLFIR lowering (experimental)
 ! CHECK-NEXT: -flang-experimental-polymorphism
@@ -57,6 +61,8 @@
 ! CHECK-NEXT: -flto=jobserver         Enable LTO in 'full' mode
 ! CHECK-NEXT: -flto=<value>           Set LTO mode
 ! CHECK-NEXT: -flto                   Enable LTO in 'full' mode
+! CHECK-NEXT: -fms-runtime-lib=<value>
+! CHECK-NEXT:                         Select Windows run-time library
 ! CHECK-NEXT: -fno-alias-analysis     Do not pass alias information on to LLVM (default for unoptimized builds)
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
@@ -96,6 +102,7 @@
 ! CHECK-NEXT: -fstack-arrays          Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -funderscoring          Appends one trailing underscore to external names
+! CHECK-NEXT: -fveclib=<value>        Use the given vector functions library
 ! CHECK-NEXT: -fversion-loops-for-stride
 ! CHECK-NEXT:                         Create unit-strided versions of loops
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.

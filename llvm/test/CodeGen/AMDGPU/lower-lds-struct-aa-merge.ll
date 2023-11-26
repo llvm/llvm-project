@@ -42,7 +42,7 @@ bb:
 !8 = !{!"omnipotent char", !9, i64 0}
 !9 = !{!"Simple C++ TBAA"}
 
-; CHECK:!0 = !{i64 0, i64 1}
+; CHECK:!0 = !{i32 0, i32 1}
 ; CHECK:!1 = !{!2, !3, i64 0}
 ; CHECK:!2 = !{!"no_clobber_ds_load_stores_x2_preexisting_aa", !3, i64 0}
 ; CHECK:!3 = !{!"int", !4, i64 0}

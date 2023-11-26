@@ -78,7 +78,7 @@ public:
     class _LIBCPP_EXPORTED_FROM_ABI id;
 
     typedef int category;
-    _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
+
     static const category // values assigned here are for exposition only
         none     = 0,
         collate  = LC_COLLATE_MASK,
@@ -126,6 +126,10 @@ public:
 private:
     class __imp;
     __imp* __locale_;
+
+    template <class> friend struct __no_destroy;
+    struct __private_tag { };
+    _LIBCPP_HIDE_FROM_ABI explicit locale(__private_tag, __imp* __loc) : __locale_(__loc) {}
 
     void __install_ctor(const locale&, facet*, long);
     static locale& __global();

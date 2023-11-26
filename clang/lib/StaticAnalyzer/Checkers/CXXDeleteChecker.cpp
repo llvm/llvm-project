@@ -114,6 +114,9 @@ void DeleteWithNonVirtualDtorChecker::checkTypedDeleteExpr(
   if (!BaseClass || !DerivedClass)
     return;
 
+  if (!BaseClass->hasDefinition() || !DerivedClass->hasDefinition())
+    return;
+
   if (BaseClass->getDestructor()->isVirtual())
     return;
 
@@ -146,6 +149,9 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
   const auto *DerivedClass =
       DerivedClassRegion->getSymbol()->getType()->getPointeeCXXRecordDecl();
   if (!BaseClass || !DerivedClass)
+    return;
+
+  if (!BaseClass->hasDefinition() || !DerivedClass->hasDefinition())
     return;
 
   if (DE->getOperatorDelete()->getOverloadedOperator() != OO_Array_Delete)

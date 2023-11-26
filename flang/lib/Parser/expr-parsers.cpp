@@ -77,10 +77,8 @@ constexpr auto primary{instrumented("primary"_en_US,
         construct<Expr>(Parser<StructureConstructor>{}),
         construct<Expr>(Parser<ArrayConstructor>{}),
         // PGI/XLF extension: COMPLEX constructor (x,y)
-        extension<LanguageFeature::ComplexConstructor>(
-            "nonstandard usage: generalized COMPLEX constructor"_port_en_US,
-            construct<Expr>(parenthesized(
-                construct<Expr::ComplexConstructor>(expr, "," >> expr)))),
+        construct<Expr>(parenthesized(
+            construct<Expr::ComplexConstructor>(expr, "," >> expr))),
         extension<LanguageFeature::PercentLOC>(
             "nonstandard usage: %LOC"_port_en_US,
             construct<Expr>("%LOC" >> parenthesized(construct<Expr::PercentLoc>(

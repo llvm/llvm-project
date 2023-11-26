@@ -183,7 +183,7 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
       &buffer_for_conversion, buffer_end, &codepoint, llvm::strictConversion);
   assert(result == llvm::conversionOK &&
          "Failed to convert legal utf8 sequence");
-  (void)result;
+  UNUSED_IF_ASSERT_DISABLED(result);
 
   // The UTF8 helper always advances by the utf8 encoded length.
   const unsigned utf8_encoded_len = buffer_for_conversion - buffer;

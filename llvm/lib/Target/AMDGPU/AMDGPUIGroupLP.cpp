@@ -1121,8 +1121,8 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   unsigned MFMACount = 0;
   unsigned DSRCount = 0;
 
-  assert((IsPostRA ||
-          DSWCount == DSWWithPermCount == DSWWithSharedVMEMCount == 0) &&
+  assert((IsPostRA || (DSWCount == 0 && DSWWithPermCount == 0 &&
+                       DSWWithSharedVMEMCount == 0)) &&
          "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {

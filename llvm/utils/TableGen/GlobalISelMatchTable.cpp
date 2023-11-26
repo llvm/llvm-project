@@ -822,6 +822,15 @@ const OperandMatcher &RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
   return *I->second;
 }
 
+OperandMatcher &RuleMatcher::getOperandMatcher(StringRef Name) {
+  const auto &I = DefinedOperands.find(Name);
+
+  if (I == DefinedOperands.end())
+    PrintFatalError(SrcLoc, "Operand " + Name + " was not declared in matcher");
+
+  return *I->second;
+}
+
 const OperandMatcher &RuleMatcher::getOperandMatcher(StringRef Name) const {
   const auto &I = DefinedOperands.find(Name);
 
@@ -1081,6 +1090,17 @@ void RecordNamedOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::Comment("Name : " + Name) << MatchTable::LineBreak;
 }
 
+//===- RecordRegisterType ------------------------------------------===//
+
+void RecordRegisterType::emitPredicateOpcodes(MatchTable &Table,
+                                              RuleMatcher &Rule) const {
+  assert(Idx < 0 && "Temp types always have negative indexes!");
+  Table << MatchTable::Opcode("GIM_RecordRegType") << MatchTable::Comment("MI")
+        << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Op")
+        << MatchTable::IntValue(OpIdx) << MatchTable::Comment("TempTypeIdx")
+        << MatchTable::IntValue(Idx) << MatchTable::LineBreak;
+}
+
 //===- ComplexPatternOperandMatcher ---------------------------------------===//
 
 void ComplexPatternOperandMatcher::emitPredicateOpcodes(
@@ -1195,6 +1215,18 @@ std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
 }
 
 unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
+
+TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
+  if (TTIdx >= 0) {
+    // Temp type index not assigned yet, so assign one and add the necessary
+    // predicate.
+    TTIdx = Rule.getNextTempTypeIdx();
+    assert(TTIdx < 0);
+    addPredicate<RecordRegisterType>(TTIdx);
+    return TTIdx;
+  }
+  return TTIdx;
+}
 
 void OperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                           RuleMatcher &Rule) {
@@ -1507,6 +1539,24 @@ void GenericInstructionPredicateMatcher::emitPredicateOpcodes(
         << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
         << MatchTable::Comment("FnId") << MatchTable::NamedValue(EnumVal)
         << MatchTable::LineBreak;
+}
+
+//===- MIFlagsInstructionPredicateMatcher ---------------------------------===//
+
+bool MIFlagsInstructionPredicateMatcher::isIdentical(
+    const PredicateMatcher &B) const {
+  if (!InstructionPredicateMatcher::isIdentical(B))
+    return false;
+  const auto &Other =
+      static_cast<const MIFlagsInstructionPredicateMatcher &>(B);
+  return Flags == Other.Flags && CheckNot == Other.CheckNot;
+}
+
+void MIFlagsInstructionPredicateMatcher::emitPredicateOpcodes(
+    MatchTable &Table, RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode(CheckNot ? "GIM_MIFlagsNot" : "GIM_MIFlags")
+        << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
+        << MatchTable::NamedValue(join(Flags, " | ")) << MatchTable::LineBreak;
 }
 
 //===- InstructionMatcher -------------------------------------------------===//
@@ -1924,6 +1974,30 @@ void BuildMIAction::chooseInsnToMutate(RuleMatcher &Rule) {
 
 void BuildMIAction::emitActionOpcodes(MatchTable &Table,
                                       RuleMatcher &Rule) const {
+  const auto AddMIFlags = [&]() {
+    for (const InstructionMatcher *IM : CopiedFlags) {
+      Table << MatchTable::Opcode("GIR_CopyMIFlags")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::Comment("OldInsnID")
+            << MatchTable::IntValue(IM->getInsnVarID())
+            << MatchTable::LineBreak;
+    }
+
+    if (!SetFlags.empty()) {
+      Table << MatchTable::Opcode("GIR_SetMIFlags")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::NamedValue(join(SetFlags, " | "))
+            << MatchTable::LineBreak;
+    }
+
+    if (!UnsetFlags.empty()) {
+      Table << MatchTable::Opcode("GIR_UnsetMIFlags")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::NamedValue(join(UnsetFlags, " | "))
+            << MatchTable::LineBreak;
+    }
+  };
+
   if (Matched) {
     assert(canMutate(Rule, Matched) &&
            "Arranged to mutate an insn that isn't mutatable");
@@ -1960,6 +2034,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
               << MatchTable::LineBreak;
       }
     }
+
+    AddMIFlags();
     return;
   }
 
@@ -2006,6 +2082,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
     Table << MatchTable::NamedValue("GIU_MergeMemOperands_EndOfList")
           << MatchTable::LineBreak;
   }
+
+  AddMIFlags();
 
   // FIXME: This is a hack but it's sufficient for ISel. We'll need to do
   //        better for combines. Particularly when there are multiple match
@@ -2092,9 +2170,7 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
                                                RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_MakeTempReg")
         << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
-        << MatchTable::Comment("TypeID")
-        << MatchTable::NamedValue(Ty.getCxxEnumValue())
-        << MatchTable::LineBreak;
+        << MatchTable::Comment("TypeID") << Ty << MatchTable::LineBreak;
 }
 
 } // namespace gi

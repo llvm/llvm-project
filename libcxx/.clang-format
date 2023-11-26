@@ -40,7 +40,6 @@ AttributeMacros: [
                   '_LIBCPP_INLINE_VISIBILITY',
                   '_LIBCPP_INTERNAL_LINKAGE',
                   '_LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS',
-                  '_LIBCPP_NO_DESTROY',
                   '_LIBCPP_NO_SANITIZE',
                   '_LIBCPP_NO_UNIQUE_ADDRESS',
                   '_LIBCPP_NOALIAS',

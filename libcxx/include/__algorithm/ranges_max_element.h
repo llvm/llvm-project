@@ -37,7 +37,7 @@ struct __fn {
             indirect_strict_weak_order<projected<_Ip, _Proj>> _Comp = ranges::less>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Ip
   operator()(_Ip __first, _Sp __last, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __comp_lhs_rhs_swapped = [&](auto&& __lhs, auto&& __rhs) { return std::invoke(__comp, __rhs, __lhs); };
+    auto __comp_lhs_rhs_swapped = [&](auto&& __lhs, auto&& __rhs) -> bool { return std::invoke(__comp, __rhs, __lhs); };
     return ranges::__min_element_impl(__first, __last, __comp_lhs_rhs_swapped, __proj);
   }
 
@@ -46,7 +46,7 @@ struct __fn {
             indirect_strict_weak_order<projected<iterator_t<_Rp>, _Proj>> _Comp = ranges::less>
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Rp>
   operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
-    auto __comp_lhs_rhs_swapped = [&](auto&& __lhs, auto&& __rhs) { return std::invoke(__comp, __rhs, __lhs); };
+    auto __comp_lhs_rhs_swapped = [&](auto&& __lhs, auto&& __rhs) -> bool { return std::invoke(__comp, __rhs, __lhs); };
     return ranges::__min_element_impl(ranges::begin(__r), ranges::end(__r), __comp_lhs_rhs_swapped, __proj);
   }
 };

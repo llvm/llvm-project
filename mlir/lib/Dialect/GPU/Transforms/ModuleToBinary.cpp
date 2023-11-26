@@ -18,6 +18,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -53,6 +54,7 @@ void GpuModuleToBinaryPass::getDependentDialects(
 #if MLIR_ROCM_CONVERSIONS_ENABLED == 1
   registry.insert<ROCDL::ROCDLDialect>();
 #endif
+  registry.insert<spirv::SPIRVDialect>();
 }
 
 void GpuModuleToBinaryPass::runOnOperation() {

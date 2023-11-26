@@ -229,7 +229,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         << D.getOpts().getOptionName(LVIOpt);
   }
 
-  bool HasAVX10 = false;
   for (const Arg *A : Args.filtered(options::OPT_m_x86_AVX10_Features_Group)) {
     StringRef Name = A->getOption().getName();
     A->claim();
@@ -251,7 +250,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 #endif
 
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-    HasAVX10 = true;
   }
 
   // Now add any that the user explicitly requested on the command line,
@@ -271,14 +269,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       continue;
     }
 
-    StringRef AVX512Name = Name;
     bool IsNegative = Name.startswith("no-");
     if (IsNegative)
       Name = Name.substr(3);
-    if (HasAVX10 && (Name.startswith("avx512") || Name == "evex512")) {
-      D.Diag(diag::warn_drv_unused_argument) << AVX512Name;
-      continue;
-    }
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
   }
 

@@ -165,6 +165,20 @@ class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
 def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
 def u16imm : ImmOperand<i16, "U16Imm", 0, "printU16ImmOperand">;
 
+class ValuePredicatedOperand<CustomOperand op, string valuePredicate,
+                             bit optional = 0>
+    : CustomOperand<op.Type, optional> {
+  let ImmTy = op.ImmTy;
+  defvar OpPredicate = op.ParserMatchClass.PredicateMethod;
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op."#OpPredicate#"() && "#valuePredicate#"; })";
+  let ParserMethod = op.ParserMatchClass.ParserMethod;
+  let DefaultValue = op.DefaultValue;
+  let DefaultMethod = op.DefaultMethod;
+  let PrintMethod = op.PrintMethod;
+}
+
 //===--------------------------------------------------------------------===//
 // Custom Operands
 //===--------------------------------------------------------------------===//

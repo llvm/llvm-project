@@ -7,33 +7,29 @@ define hidden void @julia_tryparse_internal_45896() #0 {
 ; CHECK:       # %bb.0: # %top
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    cmpldi r3, 0
-; CHECK-NEXT:    beq cr0, .LBB0_3
+; CHECK-NEXT:    beq cr0, .LBB0_6
 ; CHECK-NEXT:  # %bb.1: # %top
 ; CHECK-NEXT:    cmpldi r3, 10
-; CHECK-NEXT:    beq cr0, .LBB0_4
+; CHECK-NEXT:    beq cr0, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %top
-; CHECK-NEXT:  .LBB0_3: # %fail194
-; CHECK-NEXT:  .LBB0_4: # %L294
-; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_6
-; CHECK-NEXT:  # %bb.5: # %L294
+; CHECK-NEXT:  .LBB0_3: # %L294
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_5
+; CHECK-NEXT:  # %bb.4: # %L294
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_7
-; CHECK-NEXT:  .LBB0_6: # %L1057.preheader
+; CHECK-NEXT:  .LBB0_5: # %L1057.preheader
+; CHECK-NEXT:  .LBB0_6: # %fail194
 ; CHECK-NEXT:  .LBB0_7: # %L670
 ; CHECK-NEXT:    li r5, -3
-; CHECK-NEXT:    cmpdi r3, 0
 ; CHECK-NEXT:    sradi r4, r3, 63
 ; CHECK-NEXT:    rldic r5, r5, 4, 32
-; CHECK-NEXT:    crnot 4*cr5+lt, eq
 ; CHECK-NEXT:    mulhdu r3, r3, r5
 ; CHECK-NEXT:    maddld r6, r4, r5, r3
 ; CHECK-NEXT:    cmpld cr1, r6, r3
 ; CHECK-NEXT:    mulhdu. r3, r4, r5
-; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_10
-; CHECK-NEXT:  # %bb.8: # %L670
 ; CHECK-NEXT:    crorc 4*cr5+lt, 4*cr1+lt, eq
-; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_10
-; CHECK-NEXT:  # %bb.9: # %L917
-; CHECK-NEXT:  .LBB0_10: # %L994
+; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_9
+; CHECK-NEXT:  # %bb.8: # %L917
+; CHECK-NEXT:  .LBB0_9: # %L994
 top:
   %0 = load i64, ptr undef, align 8
   %1 = icmp ne i64 %0, 0

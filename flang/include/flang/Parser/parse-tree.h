@@ -262,6 +262,7 @@ struct PauseStmt;
 struct OpenACCConstruct;
 struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
+struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
@@ -412,7 +413,8 @@ struct ImplicitPartStmt {
       Statement<common::Indirection<OldParameterStmt>>,
       Statement<common::Indirection<FormatStmt>>,
       Statement<common::Indirection<EntryStmt>>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>,
+      common::Indirection<OpenACCDeclarativeConstruct>>
       u;
 };
 
@@ -558,7 +560,8 @@ struct ProgramUnit {
       common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>, common::Indirection<Module>,
       common::Indirection<Submodule>, common::Indirection<BlockData>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>,
+      common::Indirection<OpenACCRoutineConstruct>>
       u;
 };
 
@@ -4059,9 +4062,9 @@ struct AccWaitArgument {
 };
 
 struct AccDeviceTypeExpr {
-  TUPLE_CLASS_BOILERPLATE(AccDeviceTypeExpr);
+  ENUM_CLASS(Device, Star, Default, Nvidia, Radeon, Host, Multicore)
+  WRAPPER_CLASS_BOILERPLATE(AccDeviceTypeExpr, Device);
   CharBlock source;
-  std::tuple<std::optional<ScalarIntExpr>> t; // if null then *
 };
 
 struct AccDeviceTypeExprList {

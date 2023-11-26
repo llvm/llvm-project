@@ -304,7 +304,7 @@ void LVScope::addMissingElements(LVScope *Reference) {
   if (getSymbols())
     for (const LVSymbol *Symbol : *getSymbols())
       if (Symbol->getHasReferenceAbstract())
-        llvm::erase_value(References, Symbol->getReference());
+        llvm::erase(References, Symbol->getReference());
 
   // If we have elements left in 'References', those are the elements that
   // need to be inserted in the current scope.

@@ -2263,9 +2263,9 @@ void VarDefInit::Profile(FoldingSetNodeID &ID) const {
 DefInit *VarDefInit::instantiate() {
   if (!Def) {
     RecordKeeper &Records = Class->getRecords();
-    auto NewRecOwner = std::make_unique<Record>(Records.getNewAnonymousName(),
-                                           Class->getLoc(), Records,
-                                           /*IsAnonymous=*/true);
+    auto NewRecOwner =
+        std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
+                                 Records, Record::RK_AnonymousDef);
     Record *NewRec = NewRecOwner.get();
 
     // Copy values from class to instance

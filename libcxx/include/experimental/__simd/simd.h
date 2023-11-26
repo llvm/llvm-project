@@ -40,17 +40,31 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
 
+  _LIBCPP_HIDE_FROM_ABI simd() noexcept = default;
+
   // broadcast constructor
   template <class _Up, enable_if_t<__can_broadcast_v<value_type, __remove_cvref_t<_Up>>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI simd(_Up&& __v) noexcept : __s_(_Impl::__broadcast(static_cast<value_type>(__v))) {}
 
+  // implicit type conversion constructor
+  template <class _Up,
+            enable_if_t<!is_same_v<_Up, _Tp> && is_same_v<abi_type, simd_abi::fixed_size<size()>> &&
+                            __is_non_narrowing_convertible_v<_Up, value_type>,
+                        int> = 0>
+  _LIBCPP_HIDE_FROM_ABI simd(const simd<_Up, simd_abi::fixed_size<size()>>& __v) noexcept {
+    for (size_t __i = 0; __i < size(); __i++) {
+      (*this)[__i] = static_cast<value_type>(__v[__i]);
+    }
+  }
+
   // generator constructor
   template <class _Generator, enable_if_t<__can_generate_v<value_type, _Generator, size()>, int> = 0>
-  explicit _LIBCPP_HIDE_FROM_ABI simd(_Generator&& __g) : __s_(_Impl::__generate(std::forward<_Generator>(__g))) {}
+  explicit _LIBCPP_HIDE_FROM_ABI simd(_Generator&& __g) noexcept
+      : __s_(_Impl::__generate(std::forward<_Generator>(__g))) {}
 
   // scalar access [simd.subscr]
-  // Add operator[] temporarily to test braodcast. Add test for it in later patch.
-  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const { return __s_.__get(__i); }
+  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
+  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
 };
 
 template <class _Tp>

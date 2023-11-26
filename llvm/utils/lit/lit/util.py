@@ -6,6 +6,7 @@ import math
 import numbers
 import os
 import platform
+import re
 import signal
 import subprocess
 import sys
@@ -427,6 +428,22 @@ def executeCommand(
         raise KeyboardInterrupt
 
     return out, err, exitCode
+
+
+def isAIXTriple(target_triple):
+    """Whether the given target triple is for AIX,
+    e.g. powerpc64-ibm-aix
+    """
+    return "aix" in target_triple
+
+
+def addAIXVersion(target_triple):
+    """Add the AIX version to the given target triple,
+    e.g. powerpc64-ibm-aix7.2.5.6
+    """
+    os_cmd = "oslevel -s | awk -F\'-\' \'{printf \"%.1f.%d.%d\", $1/1000, $2, $3}\'"
+    os_version = subprocess.run(os_cmd, capture_output=True, shell=True).stdout.decode()
+    return re.sub("aix", "aix" + os_version, target_triple)
 
 
 def isMacOSTriple(target_triple):

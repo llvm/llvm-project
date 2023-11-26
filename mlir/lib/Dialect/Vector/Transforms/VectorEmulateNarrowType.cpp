@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/NarrowTypeEmulationConverter.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -32,6 +33,71 @@ using namespace mlir;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 namespace {
+
+//===----------------------------------------------------------------------===//
+// ConvertVectorStore
+//===----------------------------------------------------------------------===//
+
+struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
+    Type oldElementType = op.getValueToStore().getType().getElementType();
+    Type newElementType = convertedType.getElementType();
+    int srcBits = oldElementType.getIntOrFloatBitWidth();
+    int dstBits = newElementType.getIntOrFloatBitWidth();
+
+    if (dstBits % srcBits != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "only dstBits % srcBits == 0 supported");
+    }
+    int scale = dstBits / srcBits;
+
+    // Adjust the number of elements to store when emulating narrow types.
+    // Here only the 1-D vector store is considered, and the N-D memref types
+    // should be linearized.
+    // For example, to emulate i4 to i8, the following op:
+    //
+    // vector.store %arg1, %0[%arg2, %arg3] : memref<4x8xi4>, vector<8xi4>
+    //
+    // can be replaced with
+    //
+    // %bitcast = vector.bitcast %arg1 : vector<8xi4> to vector<4xi8>
+    // vector.store %bitcast, %alloc[%linear_index] : memref<16xi8>,
+    // vector<4xi8>
+
+    auto origElements = op.getValueToStore().getType().getNumElements();
+    if (origElements % scale != 0)
+      return failure();
+
+    auto stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
+
+    OpFoldResult linearizedIndices;
+    std::tie(std::ignore, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits,
+            stridedMetadata.getConstifiedMixedOffset(),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides(),
+            getAsOpFoldResult(adaptor.getIndices()));
+
+    auto numElements = origElements / scale;
+    auto bitCast = rewriter.create<vector::BitCastOp>(
+        loc, VectorType::get(numElements, newElementType),
+        op.getValueToStore());
+
+    rewriter.replaceOpWithNewOp<vector::StoreOp>(
+        op, bitCast.getResult(), adaptor.getBase(),
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // ConvertVectorLoad
@@ -99,6 +165,172 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
         rewriter.create<vector::BitCastOp>(loc, op.getType(), newLoad);
 
     rewriter.replaceOp(op, bitCast->getResult(0));
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ConvertVectorMaskedLoad
+//===----------------------------------------------------------------------===//
+
+struct ConvertVectorMaskedLoad final
+    : OpConversionPattern<vector::MaskedLoadOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
+    Type oldElementType = op.getType().getElementType();
+    Type newElementType = convertedType.getElementType();
+    int srcBits = oldElementType.getIntOrFloatBitWidth();
+    int dstBits = newElementType.getIntOrFloatBitWidth();
+
+    if (dstBits % srcBits != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "only dstBits % srcBits == 0 supported");
+    }
+    int scale = dstBits / srcBits;
+
+    // Adjust the number of elements to load when emulating narrow types,
+    // and then cast back to the original type with vector.bitcast op.
+    // For example, to emulate i4 to i8, the following op:
+    //
+    //   %mask = vector.constant_mask [3] : vector<6xi1>
+    //   %1 = vector.maskedload %0[%c0, %c0], %mask, %pass_thru :
+    //        memref<3x6xi4>, vector<6xi1>, vector<6xi4> into vector<6xi4>
+    //
+    // can be replaced with
+    //
+    //   %new_mask = vector.constant_mask [2] : vector<3xi1>
+    //   %new_pass_thru = vector.bitcast %pass_thru :
+    //        vector<6xi4> to vector<3xi8>
+    //   %1 = vector.maskedload %0[%linear_index], %new_mask, %new_pass_thru :
+    //        memref<9xi8>, vector<3xi1>, vector<3xi8> into vector<3xi8>
+    //   %2 = vector.bitcast %1 : vector<3xi8> to vector<6xi4>
+    //
+    // Since we are effectively loading 16 bits (2xi8) from the memref with the
+    // new mask, while originally we only wanted to effectively load 12 bits
+    // (3xi4) from the memref, we need to set the second half of the last i8
+    // that was effectively loaded (i.e. the second i8) to %pass_thru.
+    //
+    //   %3 = arith.select %mask, %2, %pass_thru : vector<6xi1>, vector<6xi4>
+    //
+    // Given these input values:
+    //   %mask = [1, 1, 1, 0, 0, 0]
+    //   %0[%c0, %c0] contains [0x1, 0x2, 0x3, 0x4, 0x5, 0x6]
+    //   %pass_thru = [0x7, 0x8, 0x9, 0xA, 0xB, 0xC]
+    //
+    // we'll have:
+    //
+    //   expected output: [0x1, 0x2, 0x3, 0xA, 0xB, 0xC]
+    //
+    //   %new_mask = [1, 1, 0]
+    //   %new_pass_thru = [0x78, 0x9A, 0xBC]
+    //   %1 = [0x12, 0x34, 0xBC]
+    //   %2 = [0x1, 0x2, 0x3, 0x4, 0xB, 0xC]
+    //   %3 = [0x1, 0x2, 0x3, 0xA, 0xB, 0xC]
+    //
+    // TODO: Currently, only the even number of elements loading is supported.
+    // To deal with the odd number of elements, one has to extract the
+    // subvector at the proper offset after bit-casting.
+
+    auto origType = op.getVectorType();
+    auto origElements = origType.getNumElements();
+    if (origElements % scale != 0)
+      return failure();
+
+    auto stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
+
+    OpFoldResult linearizedIndices;
+    std::tie(std::ignore, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, srcBits, dstBits,
+            stridedMetadata.getConstifiedMixedOffset(),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides(),
+            getAsOpFoldResult(adaptor.getIndices()));
+
+    auto numElements = (origElements + scale - 1) / scale;
+    auto newType = VectorType::get(numElements, newElementType);
+
+    auto maskOp = op.getMask().getDefiningOp();
+    SmallVector<vector::ExtractOp, 2> extractOps;
+    // Finding the mask creation operation.
+    while (maskOp &&
+           !isa<vector::CreateMaskOp, vector::ConstantMaskOp>(maskOp)) {
+      if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
+        maskOp = extractOp.getVector().getDefiningOp();
+        extractOps.push_back(extractOp);
+      }
+    }
+    auto createMaskOp = dyn_cast_or_null<vector::CreateMaskOp>(maskOp);
+    auto constantMaskOp = dyn_cast_or_null<vector::ConstantMaskOp>(maskOp);
+    if (!createMaskOp && !constantMaskOp)
+      return failure();
+
+    // Computing the "compressed" mask. All the emulation logic (i.e. computing
+    // new mask index) only happens on the last dimension of the vectors.
+    Operation *newMask = nullptr;
+    auto shape = llvm::to_vector(
+        maskOp->getResultTypes()[0].cast<VectorType>().getShape().drop_back());
+    shape.push_back(numElements);
+    auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
+    if (createMaskOp) {
+      auto maskOperands = createMaskOp.getOperands();
+      auto numMaskOperands = maskOperands.size();
+      AffineExpr s0;
+      bindSymbols(rewriter.getContext(), s0);
+      s0 = s0 + scale - 1;
+      s0 = s0.floorDiv(scale);
+      OpFoldResult origIndex =
+          getAsOpFoldResult(maskOperands[numMaskOperands - 1]);
+      OpFoldResult maskIndex =
+          affine::makeComposedFoldedAffineApply(rewriter, loc, s0, origIndex);
+      auto newMaskOperands = llvm::to_vector(maskOperands.drop_back());
+      newMaskOperands.push_back(
+          getValueOrCreateConstantIndexOp(rewriter, loc, maskIndex));
+      newMask = rewriter.create<vector::CreateMaskOp>(loc, newMaskType,
+                                                      newMaskOperands);
+    } else if (constantMaskOp) {
+      auto maskDimSizes = constantMaskOp.getMaskDimSizes().getValue();
+      auto numMaskOperands = maskDimSizes.size();
+      auto origIndex =
+          cast<IntegerAttr>(maskDimSizes[numMaskOperands - 1]).getInt();
+      auto maskIndex =
+          rewriter.getI64IntegerAttr((origIndex + scale - 1) / scale);
+      auto newMaskDimSizes = llvm::to_vector(maskDimSizes.drop_back());
+      newMaskDimSizes.push_back(maskIndex);
+      newMask = rewriter.create<vector::ConstantMaskOp>(
+          loc, newMaskType, rewriter.getArrayAttr(newMaskDimSizes));
+    }
+
+    while (!extractOps.empty()) {
+      newMask = rewriter.create<vector::ExtractOp>(
+          loc, newMask->getResults()[0], extractOps.back().getMixedPosition());
+      extractOps.pop_back();
+    }
+
+    auto newPassThru =
+        rewriter.create<vector::BitCastOp>(loc, newType, op.getPassThru());
+
+    // Generating the new masked load.
+    auto newLoad = rewriter.create<vector::MaskedLoadOp>(
+        loc, newType, adaptor.getBase(),
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices),
+        newMask->getResult(0), newPassThru);
+
+    // Setting the part that originally was not effectively loaded from memory
+    // to pass through.
+    auto bitCast =
+        rewriter.create<vector::BitCastOp>(loc, op.getType(), newLoad);
+    auto select = rewriter.create<arith::SelectOp>(loc, op.getMask(), bitCast,
+                                                   op.getPassThru());
+    rewriter.replaceOp(op, select->getResult(0));
+
     return success();
   }
 };
@@ -588,8 +820,8 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
     RewritePatternSet &patterns) {
 
   // Populate `vector.*` conversion patterns.
-  patterns.add<ConvertVectorLoad, ConvertVectorTransferRead>(
-      typeConverter, patterns.getContext());
+  patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad, ConvertVectorStore,
+               ConvertVectorTransferRead>(typeConverter, patterns.getContext());
 }
 
 void vector::populateVectorNarrowTypeRewritePatterns(

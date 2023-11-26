@@ -515,6 +515,16 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasExtVOP3DPP = 0;
 }
 
+def IsPow2Plus1: PatLeaf<(i32 imm), [{
+  uint32_t V = N->getZExtValue();
+  return isPowerOf2_32(V - 1);
+}]>;
+
+def Log2_32: SDNodeXForm<imm, [{
+  uint32_t V = N->getZExtValue();
+  return CurDAG->getTargetConstant(Log2_32(V - 1), SDLoc(N), MVT::i32);
+}]>;
+
 let SubtargetPredicate = isGFX9Plus in {
 let isCommutable = 1, isReMaterializable = 1 in {
   defm V_ADD3_U32 : VOP3Inst <"v_add3_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
@@ -611,6 +621,10 @@ def : ThreeOp_i32_Pats<cshl_32, or, V_LSHL_OR_B32_e64>;
 def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
+
+def : GCNPat<
+ (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
+ (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
 
 let SubtargetPredicate = isGFX940Plus in
 def : GCNPat<

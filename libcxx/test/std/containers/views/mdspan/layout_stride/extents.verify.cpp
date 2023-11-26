@@ -23,11 +23,11 @@
 #include <mdspan>
 
 void not_extents() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}layout_stride::mapping template argument must be a specialization of extents}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}layout_stride::mapping template argument must be a specialization of extents}}
   [[maybe_unused]] std::layout_stride::mapping<void> mapping;
 }
 
 void representable() {
-  // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed {{.*}}layout_stride::mapping product of static extents must be representable as index_type.}}
+  // expected-error-re@*:* {{static assertion failed {{.*}}layout_stride::mapping product of static extents must be representable as index_type.}}
   [[maybe_unused]] std::layout_stride::mapping<std::extents<char, 20, 20>> mapping;
 }
