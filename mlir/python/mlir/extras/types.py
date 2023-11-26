@@ -5,11 +5,10 @@
 from functools import partial
 from typing import Optional, List
 
-from .ir import (
+from ..ir import (
     Attribute,
     BF16Type,
     ComplexType,
-    Context,
     F16Type,
     F32Type,
     F64Type,
@@ -32,55 +31,54 @@ from .ir import (
     VectorType,
 )
 
-__all__ = []
-
-_index = lambda: IndexType.get()
-_bool = lambda: IntegerType.get_signless(1)
-
-_i8 = lambda: IntegerType.get_signless(8)
-_i16 = lambda: IntegerType.get_signless(16)
-_i32 = lambda: IntegerType.get_signless(32)
-_i64 = lambda: IntegerType.get_signless(64)
-
-_si8 = lambda: IntegerType.get_signed(8)
-_si16 = lambda: IntegerType.get_signed(16)
-_si32 = lambda: IntegerType.get_signed(32)
-_si64 = lambda: IntegerType.get_signed(64)
-
-_ui8 = lambda: IntegerType.get_unsigned(8)
-_ui16 = lambda: IntegerType.get_unsigned(16)
-_ui32 = lambda: IntegerType.get_unsigned(32)
-_ui64 = lambda: IntegerType.get_unsigned(64)
-
-_f16 = lambda: F16Type.get()
-_f32 = lambda: F32Type.get()
-_f64 = lambda: F64Type.get()
-_bf16 = lambda: BF16Type.get()
-
-_f8e5m2 = lambda: Float8E5M2Type.get()
-_f8e4m3 = lambda: Float8E4M3FNType.get()
-_f8e4m3b11fnuz = lambda: Float8E4M3B11FNUZType.get()
-
-_none = lambda: NoneType.get()
+index = lambda: IndexType.get()
 
 
-def _i(width):
+def i(width):
     return IntegerType.get_signless(width)
 
 
-def _si(width):
+def si(width):
     return IntegerType.get_signed(width)
 
 
-def _ui(width):
+def ui(width):
     return IntegerType.get_unsigned(width)
 
 
-def _complex(type):
+bool = lambda: i(1)
+i8 = lambda: i(8)
+i16 = lambda: i(16)
+i32 = lambda: i(32)
+i64 = lambda: i(64)
+
+si8 = lambda: si(8)
+si16 = lambda: si(16)
+si32 = lambda: si(32)
+si64 = lambda: si(64)
+
+ui8 = lambda: ui(8)
+ui16 = lambda: ui(16)
+ui32 = lambda: ui(32)
+ui64 = lambda: ui(64)
+
+f16 = lambda: F16Type.get()
+f32 = lambda: F32Type.get()
+f64 = lambda: F64Type.get()
+bf16 = lambda: BF16Type.get()
+
+f8E5M2 = lambda: Float8E5M2Type.get()
+f8E4M3 = lambda: Float8E4M3FNType.get()
+f8E4M3B11FNUZ = lambda: Float8E4M3B11FNUZType.get()
+
+none = lambda: NoneType.get()
+
+
+def complex(type):
     return ComplexType.get(type)
 
 
-def _opaque(dialect_namespace, type_data):
+def opaque(dialect_namespace, type_data):
     return OpaqueType.get(dialect_namespace, type_data)
 
 
@@ -105,7 +103,7 @@ def _shaped(*shape, element_type: Type = None, type_constructor=None):
         return type_constructor(type)
 
 
-def _vector(
+def vector(
     *shape,
     element_type: Type = None,
     scalable: Optional[List[bool]] = None,
@@ -120,7 +118,7 @@ def _vector(
     )
 
 
-def _tensor(*shape, element_type: Type = None, encoding: Optional[str] = None):
+def tensor(*shape, element_type: Type = None, encoding: Optional[str] = None):
     if encoding is not None:
         encoding = StringAttr.get(encoding)
     if not shape or (len(shape) == 1 and isinstance(shape[-1], Type)):
@@ -136,7 +134,7 @@ def _tensor(*shape, element_type: Type = None, encoding: Optional[str] = None):
     )
 
 
-def _memref(
+def memref(
     *shape,
     element_type: Type = None,
     memory_space: Optional[int] = None,
@@ -159,31 +157,9 @@ def _memref(
     )
 
 
-def _tuple(*elements):
+def tuple(*elements):
     return TupleType.get_tuple(elements)
 
 
-def _function(*, inputs, results):
+def function(*, inputs, results):
     return FunctionType.get(inputs, results)
-
-
-def __getattr__(name):
-    if name == "__path__":
-        # https://docs.python.org/3/reference/import.html#path__
-        # If a module is a package (either regular or namespace), the module object’s __path__ attribute must be set.
-        # This module is NOT a package and so this must be None (rather than throw the RuntimeError below).
-        return None
-    try:
-        Context.current
-    except ValueError:
-        raise RuntimeError("Types can only be instantiated under an active context.")
-
-    if f"_{name}" in globals():
-        builder = globals()[f"_{name}"]
-        if (
-            isinstance(builder, type(lambda: None))
-            and builder.__name__ == (lambda: None).__name__
-        ):
-            return builder()
-        return builder
-    raise RuntimeError(f"{name} is not a legal type.")
