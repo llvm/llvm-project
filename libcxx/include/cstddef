@@ -56,7 +56,7 @@ Types:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::nullptr_t;
+using nullptr_t = decltype(nullptr);
 using ::ptrdiff_t _LIBCPP_USING_IF_EXISTS;
 using ::size_t _LIBCPP_USING_IF_EXISTS;
 
