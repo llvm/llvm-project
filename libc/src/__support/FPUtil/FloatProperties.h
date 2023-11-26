@@ -10,21 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 
 #include "src/__support/UInt128.h"
-#include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_XXX
+#include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
 
 #include <stdint.h>
-
-// https://developer.arm.com/documentation/dui0491/i/C-and-C---Implementation-Details/Basic-data-types
-// https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms
-// https://docs.amd.com/bundle/HIP-Programming-Guide-v5.1/page/Programming_with_HIP.html
-#if defined(_WIN32) || defined(__arm__) || defined(__NVPTX__) ||               \
-    defined(__AMDGPU__) || (defined(__APPLE__) && defined(__aarch64__))
-#define LONG_DOUBLE_IS_DOUBLE
-#endif
-
-#if !defined(LONG_DOUBLE_IS_DOUBLE) && defined(LIBC_TARGET_ARCH_IS_X86)
-#define SPECIAL_X86_LONG_DOUBLE
-#endif
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -217,24 +205,6 @@ template <> struct FloatProperties<float128> {
                                              << (MANTISSA_WIDTH - 1);
 };
 #endif // LIBC_COMPILER_HAS_FLOAT128
-
-// Define the float type corresponding to the BitsType.
-template <typename BitsType> struct FloatType;
-
-template <> struct FloatType<uint32_t> {
-  static_assert(sizeof(uint32_t) == sizeof(float),
-                "Unexpected size of 'float' type.");
-  typedef float Type;
-};
-
-template <> struct FloatType<uint64_t> {
-  static_assert(sizeof(uint64_t) == sizeof(double),
-                "Unexpected size of 'double' type.");
-  typedef double Type;
-};
-
-template <typename BitsType>
-using FloatTypeT = typename FloatType<BitsType>::Type;
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
