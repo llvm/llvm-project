@@ -46,13 +46,13 @@
   iterator_types = ["parallel", "reduction"]
 }
 
-#redpar_vecmattrans_accesses = [
-  affine_map<(m, k) -> (m)>,
-  affine_map<(m, k) -> (m, k)>,
-  affine_map<(m, k) -> (k)>
+#matvec_accesses_8 = [
+  affine_map<(k, m) -> (k)>,
+  affine_map<(k, m) -> (k, m)>,
+  affine_map<(k, m) -> (m)>
 ]
-#redpar_vecmattrans_trait = {
-  indexing_maps = #redpar_vecmattrans_accesses,
+#matvec_trait_8 = {
+  indexing_maps = #matvec_accesses_8,
   iterator_types = ["reduction", "parallel"]
 }
 
@@ -321,23 +321,6 @@ func.func @matvec_k_km_m(%A: vector<2x2xf32>,
   return %0 : vector<2xf32>
 }
 
-// CHECK-LABEL: func @matvec_m_mk_k
-// CHECK-SAME: %[[A:.*0]]: vector<2x2xf32>
-// CHECK-SAME: %[[B:.*1]]: vector<2xf32>
-// CHECK-SAME: %[[C:.*2]]: vector<2xf32>
-// CHECK: %[[T3:.*]] = vector.extract %[[A]][0] : vector<2xf32> from vector<2x2xf32>
-// CHECK: %[[T4:.*]] = vector.extract %[[B]][0] : f32 from vector<2xf32>
-// CHECK: %[[T5:.*]] = vector.outerproduct %[[T3]], %[[T4]], %[[C]] {kind = #vector.kind<add>} : vector<2xf32>, f32
-// CHECK: %[[T6:.*]] = vector.extract %[[A]][1] : vector<2xf32> from vector<2x2xf32>
-// CHECK: %[[T7:.*]] = vector.extract %[[B]][1] : f32 from vector<2xf32>
-// CHECK: %[[T8:.*]] = vector.outerproduct %[[T6]], %[[T7]], %[[T5]] {kind = #vector.kind<add>} : vector<2xf32>, f32
-func.func @matvec_m_mk_k(%A: vector<2x2xf32>,
-                         %x: vector<2xf32>,
-                         %b: vector<2xf32>) -> vector<2xf32> {
-  %0 = vector.contract #matvec_trait_4 %x, %A, %b : vector<2xf32>, vector<2x2xf32> into vector<2xf32>
-  return %0 : vector<2xf32>
-}
-
 // ============================================================================
 //  Matvec 5 (masked + scalable)
 // ============================================================================
@@ -474,16 +457,23 @@ func.func @masked_tmatvec_k_mk_m_scalable_parallel_dim(%arg0: vector<[4]x2xf32>,
 }
 
 // ============================================================================
-//  Matvec 8 (masked + scalable)
+//  Matvec 8 (plain + masked + scalable)
 // ============================================================================
-#matvec_accesses_8 = [
-  affine_map<(k, m) -> (k)>,
-  affine_map<(k, m) -> (k, m)>,
-  affine_map<(k, m) -> (m)>
-]
-#matvec_trait_8 = {
-  indexing_maps = #matvec_accesses_8,
-  iterator_types = ["reduction", "parallel"]
+// CHECK-LABEL: func @matvec_m_mk_k
+// CHECK-SAME: %[[A:.*0]]: vector<2x2xf32>
+// CHECK-SAME: %[[B:.*1]]: vector<2xf32>
+// CHECK-SAME: %[[C:.*2]]: vector<2xf32>
+// CHECK: %[[T3:.*]] = vector.extract %[[A]][0] : vector<2xf32> from vector<2x2xf32>
+// CHECK: %[[T4:.*]] = vector.extract %[[B]][0] : f32 from vector<2xf32>
+// CHECK: %[[T5:.*]] = vector.outerproduct %[[T3]], %[[T4]], %[[C]] {kind = #vector.kind<add>} : vector<2xf32>, f32
+// CHECK: %[[T6:.*]] = vector.extract %[[A]][1] : vector<2xf32> from vector<2x2xf32>
+// CHECK: %[[T7:.*]] = vector.extract %[[B]][1] : f32 from vector<2xf32>
+// CHECK: %[[T8:.*]] = vector.outerproduct %[[T6]], %[[T7]], %[[T5]] {kind = #vector.kind<add>} : vector<2xf32>, f32
+func.func @matvec_m_mk_k(%A: vector<2x2xf32>,
+                         %x: vector<2xf32>,
+                         %b: vector<2xf32>) -> vector<2xf32> {
+  %0 = vector.contract #matvec_trait_8 %x, %A, %b : vector<2xf32>, vector<2x2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
 }
 
 // CHECK-LABEL: @masked_tmatvec_k_km_m
