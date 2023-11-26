@@ -237,17 +237,105 @@ func.func @reduce_invalid_op(%arg0 : f32) {
 
 // -----
 
-func.func @reduce_invalid_op_type(%arg0 : f32) {
-  // expected-error@+1 {{`and` accumulator is only compatible with Integer type}}
+func.func @reduce_invalid_op_type_minsi(%arg0 : f32) {
+  // expected-error@+1 {{`minsi` reduction operation is not compatible with type 'f32'}}
+  %res = gpu.all_reduce minsi %arg0 {} : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_minui(%arg0 : f32) {
+  // expected-error@+1 {{`minui` reduction operation is not compatible with type 'f32'}}
+  %res = gpu.all_reduce minui %arg0 {} : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maxsi(%arg0 : f32) {
+  // expected-error@+1 {{`maxsi` reduction operation is not compatible with type 'f32'}}
+  %res = gpu.all_reduce maxsi %arg0 {} : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maxui(%arg0 : f32) {
+  // expected-error@+1 {{`maxui` reduction operation is not compatible with type 'f32'}}
+  %res = gpu.all_reduce maxui %arg0 {} : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_and(%arg0 : f32) {
+  // expected-error@+1 {{`and` reduction operation is not compatible with type 'f32'}}
   %res = gpu.all_reduce and %arg0 {} : (f32) -> (f32)
   return
 }
 
 // -----
 
-func.func @subgroup_reduce_invalid_op_type(%arg0 : f32) {
-  // expected-error@+1 {{`and` accumulator is only compatible with Integer type}}
+func.func @reduce_invalid_op_type_or(%arg0 : f32) {
+  // expected-error@+1 {{`or` reduction operation is not compatible with type 'f32'}}
+  %res = gpu.all_reduce or %arg0 {} : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_xor(%arg0 : f32) {
+  // expected-error@+1 {{`xor` reduction operation is not compatible with type 'f32'}}
+  %res = gpu.all_reduce xor %arg0 {} : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_minf(%arg0 : i32) {
+  // expected-error@+1 {{`minf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maxf(%arg0 : i32) {
+  // expected-error@+1 {{`maxf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maxf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_minimumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minimumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
+  // expected-error@+1 {{`maximumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maximumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_and(%arg0 : f32) {
+  // expected-error@+1 {{`and` reduction operation is not compatible with type 'f32'}}
   %res = gpu.subgroup_reduce and %arg0 : (f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_maxf(%arg0 : i32) {
+  // expected-error@+1 {{`maxf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.subgroup_reduce maxf %arg0 : (i32) -> (i32)
   return
 }
 
@@ -647,11 +735,11 @@ func.func @main() {
   %shmemSize = arith.constant 10000 : i32
   %c1 = arith.constant 1 : index
   gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
-             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1)
              dynamic_shared_memory_size %shmemSize
   {
     // expected-error @below {{'gpu.dynamic_shared_memory' op address space must be address_space<workgroup>}}
-    %0 = gpu.dynamic_shared_memory : memref<?xi8>  
+    %0 = gpu.dynamic_shared_memory : memref<?xi8>
     gpu.terminator
   }
   return
@@ -664,11 +752,11 @@ func.func @main() {
   %shmemSize = arith.constant 8192 : i32
   %c1 = arith.constant 1 : index
   gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
-             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1)
              dynamic_shared_memory_size %shmemSize
   {
     // expected-error @below {{'gpu.dynamic_shared_memory' op result memref type must be memref<?xi8, #gpu.address_space<workgroup>>}}
-    %0 = gpu.dynamic_shared_memory : memref<1xi8, #gpu.address_space<workgroup>>  
+    %0 = gpu.dynamic_shared_memory : memref<1xi8, #gpu.address_space<workgroup>>
     gpu.terminator
   }
   return
@@ -680,7 +768,7 @@ func.func @main(%arg0 : index) {
   %shmemSize = arith.constant 8192 : i32
   %c1 = arith.constant 1 : index
   gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
-             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1)
              dynamic_shared_memory_size %shmemSize
   {
     // expected-error @below {{'gpu.dynamic_shared_memory' op address space must be address_space<workgroup>}}
@@ -696,7 +784,7 @@ func.func @main(%arg0 : index) {
   %shmemSize = arith.constant 8192 : i32
   %c1 = arith.constant 1 : index
   gpu.launch blocks(%bx, %by, %bz) in (%sbx = %c1, %sby = %c1, %sbz = %c1)
-             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1) 
+             threads(%tx, %ty, %tz) in (%stx = %c1, %sty = %c1, %stz = %c1)
              dynamic_shared_memory_size %shmemSize
   {
     // expected-error @below {{'gpu.dynamic_shared_memory' op result #0 must be 1D memref of 8-bit signless integer values, but got 'memref<?xf32, #gpu.address_space<workgroup>}}
