@@ -1460,7 +1460,6 @@ define i1 @select_ternary_icmp1(i32 noundef %a) {
 ; CHECK-LABEL: @select_ternary_icmp1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 5
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], 7
 ; CHECK-NEXT:    [[COND_V:%.*]] = select i1 [[CMP]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[COND_V]]
@@ -1477,8 +1476,6 @@ define i1 @select_ternary_icmp2(i32 noundef %a) {
 ; CHECK-LABEL: @select_ternary_icmp2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 5
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 7
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[A]], 3
 ; CHECK-NEXT:    [[COND_V:%.*]] = select i1 [[CMP]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[COND_V]]
 ;
@@ -1495,7 +1492,6 @@ define i1 @select_ternary_icmp3(i32 noundef %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A]], 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[A]], 5
 ; CHECK-NEXT:    [[COND_V:%.*]] = select i1 [[CMP]], i1 [[CMP1]], i1 false
 ; CHECK-NEXT:    ret i1 [[COND_V]]
 ;
@@ -1511,7 +1507,6 @@ define i1 @select_ternary_icmp3_reverse(i32 noundef %a) {
 ; CHECK-LABEL: @select_ternary_icmp3_reverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[A]], 5
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[A]], 7
 ; CHECK-NEXT:    [[COND_V:%.*]] = select i1 [[CMP]], i1 false, i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[COND_V]]

@@ -300,7 +300,7 @@ exit:
 @limit = external global i32
 define i32 @test11(ptr %p, i32 %i) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, ptr [[P:%.*]], !range !0
+; CHECK-NEXT:    [[LIMIT:%.*]] = load i32, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[WITHIN_1:%.*]] = icmp slt i32 [[LIMIT]], [[I:%.*]]
 ; CHECK-NEXT:    [[I_MINUS_7:%.*]] = add i32 [[I]], -7
 ; CHECK-NEXT:    [[WITHIN_2:%.*]] = icmp slt i32 [[LIMIT]], [[I_MINUS_7]]

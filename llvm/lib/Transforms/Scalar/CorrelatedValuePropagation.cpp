@@ -275,13 +275,14 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Cmp->isSigned())
     return false;
 
+  ConstantRange LHSRange =
+      LVI->getConstantRangeAtUse(Cmp->getOperandUse(0), /*UndefAllowed*/ true);
+  ConstantRange RHSRange =
+      LVI->getConstantRangeAtUse(Cmp->getOperandUse(1), /*UndefAllowed*/ true);
+
   ICmpInst::Predicate UnsignedPred =
-      ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                     /*UndefAllowed*/ true),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                     /*UndefAllowed*/ true));
+      ConstantRange::getEquivalentPredWithFlippedSignedness(Cmp->getPredicate(),
+                                                            LHSRange, RHSRange);
 
   if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
     return false;
@@ -297,11 +298,11 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
 static bool constantFoldCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
-  Value *Op0 = Cmp->getOperand(0);
-  Value *Op1 = Cmp->getOperand(1);
+  Use &Op0 = Cmp->getOperandUse(0);
+  Use &Op1 = Cmp->getOperandUse(1);
+
   LazyValueInfo::Tristate Result =
-      LVI->getPredicateAt(Cmp->getPredicate(), Op0, Op1, Cmp,
-                          /*UseBlockValue=*/true);
+      LVI->getPredicateAtUse(Cmp->getPredicate(), Op0, Op1);
   if (Result == LazyValueInfo::Unknown)
     return false;
 

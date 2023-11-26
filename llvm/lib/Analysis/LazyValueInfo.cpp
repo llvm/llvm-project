@@ -1932,6 +1932,39 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(unsigned P, Value *LHS,
   return LazyValueInfo::Unknown;
 }
 
+LazyValueInfo::Tristate
+LazyValueInfo::getPredicateAtUse(unsigned P, const Use &LHS, const Use &RHS) {
+  CmpInst::Predicate Pred = (CmpInst::Predicate)P;
+  Instruction *CxtI = cast<Instruction>(LHS.getUser());
+  Module *M = CxtI->getModule();
+
+  LazyValueInfo::Tristate Ret = LazyValueInfo::Unknown;
+  if (auto *C = dyn_cast<Constant>(RHS))
+    Ret = getPredicateAt(Pred, LHS, C, CxtI, true);
+  else if (auto *C = dyn_cast<Constant>(LHS))
+    Ret =
+        getPredicateAt(CmpInst::getSwappedPredicate(Pred), RHS, C, CxtI, true);
+
+  if (Ret != LazyValueInfo::Unknown)
+    return Ret;
+
+  ValueLatticeElement L = getOrCreateImpl(M).getValueAtUse(LHS);
+  if (L.isOverdefined())
+    return LazyValueInfo::Unknown;
+
+  ValueLatticeElement R = getOrCreateImpl(M).getValueAtUse(RHS);
+
+  Type *Ty = CmpInst::makeCmpResultType(LHS->getType());
+  if (Constant *Res = L.getCompare(Pred, Ty, R, M->getDataLayout())) {
+    if (Res->isNullValue())
+      return LazyValueInfo::False;
+    if (Res->isOneValue())
+      return LazyValueInfo::True;
+  }
+
+  return LazyValueInfo::Unknown;
+}
+
 void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
                                BasicBlock *NewSucc) {
   if (auto *Impl = getImpl())
