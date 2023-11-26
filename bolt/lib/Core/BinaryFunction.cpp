@@ -4144,7 +4144,7 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
     return;
 
   // Output ranges should match the input if the body hasn't changed.
-  if (!isSimple() && !BC.HasRelocations)
+  if (!isEmitted())
     return;
 
   // AArch64 may have functions that only contains a constant island (no code).
