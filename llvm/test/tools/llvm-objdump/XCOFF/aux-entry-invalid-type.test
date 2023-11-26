@@ -31,4 +31,3 @@ Symbols:
       - Type:                   AUX_CSECT
         SymbolAlignmentAndType: 5
         StorageMappingClass:    XMC_PR
-
