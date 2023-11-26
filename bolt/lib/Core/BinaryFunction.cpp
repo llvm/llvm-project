@@ -4190,6 +4190,12 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
                                     ? FF.getAddress() + FF.getImageSize()
                                     : getOutputAddress() + getOutputSize());
   }
+
+  // Reset output addresses for deleted blocks.
+  for (BinaryBasicBlock *BB : DeletedBasicBlocks) {
+    BB->setOutputStartAddress(0);
+    BB->setOutputEndAddress(0);
+  }
 }
 
 DebugAddressRangesVector BinaryFunction::getOutputAddressRanges() const {
