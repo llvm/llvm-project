@@ -14,7 +14,8 @@
 
 class TrackingMemRes : public std::pmr::memory_resource {
 public:
-  TrackingMemRes(std::size_t* last_size, size_t* last_alignment) : last_size_(last_size), last_alignment_(last_alignment) {}
+  TrackingMemRes(std::size_t* last_size, size_t* last_alignment)
+      : last_size_(last_size), last_alignment_(last_alignment) {}
 
 private:
   std::size_t* last_size_;

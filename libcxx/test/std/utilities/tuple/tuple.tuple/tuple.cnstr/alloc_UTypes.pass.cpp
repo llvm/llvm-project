@@ -38,7 +38,6 @@ struct DefaultCtorBlowsUp {
 
 struct DerivedFromAllocArgT : std::allocator_arg_t {};
 
-
 // Make sure the _Up... constructor SFINAEs out when the number of initializers
 // is less than the number of elements in the tuple. Previously libc++ would
 // offer these constructors as an extension but they broke conforming code.

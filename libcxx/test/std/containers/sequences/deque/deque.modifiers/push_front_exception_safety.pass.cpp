@@ -19,7 +19,6 @@
 // Flag that makes the copy constructor for CMyClass throw an exception
 static bool gCopyConstructorShouldThrow = false;
 
-
 class CMyClass {
     public: CMyClass(int tag);
     public: CMyClass(const CMyClass& iOther);
@@ -52,7 +51,7 @@ CMyClass::CMyClass(const CMyClass& iOther) :
 {
     // If requested, throw an exception _before_ setting fMagicValue to kFinishedConstructionMagicValue
     if (gCopyConstructorShouldThrow) {
-        throw std::exception();
+      throw std::exception();
     }
     // Signal that the constructor has finished running
     fMagicValue = kFinishedConstructionMagicValue;
@@ -80,8 +79,8 @@ int main(int, char**)
         assert(false);
     }
     catch (...) {
-        gCopyConstructorShouldThrow = false;
-        assert(vec==vec2);
+      gCopyConstructorShouldThrow = false;
+      assert(vec == vec2);
     }
     }
 

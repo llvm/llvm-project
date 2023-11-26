@@ -127,7 +127,7 @@ struct NonCommonSized : IntBufferView {
 };
 
 using SimpleNonCommonSized = NonCommonSized<true>;
-using SimpleNonCommonRandomAccessSized = SimpleNonCommonSized;
+using SimpleNonCommonRandomAccessSized    = SimpleNonCommonSized;
 using NonSimpleNonCommonSized = NonCommonSized<false>;
 using NonSimpleNonCommonRandomAccessSized = NonSimpleNonCommonSized;
 
