@@ -3118,8 +3118,8 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
     if (!isa<PHINode>(&*BI))
       ToRemove.push_back(&*BI);
 
-  Instruction *InsertionPoint = &*BB->getFirstInsertionPt();
-  assert(InsertionPoint && "Empty block?");
+  BasicBlock::iterator InsertionPoint = BB->getFirstInsertionPt();
+  assert(InsertionPoint != BB->end() && "Empty block?");
   // Substitute with Phis & remove.
   for (auto *Inst : reverse(ToRemove)) {
     if (!Inst->use_empty()) {
@@ -3129,6 +3129,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
       NewPN->insertBefore(InsertionPoint);
       Inst->replaceAllUsesWith(NewPN);
     }
+    Inst->dropDbgValues();
     Inst->eraseFromParent();
   }
   return true;
