@@ -45,3 +45,8 @@ Options
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.
+
+.. option:: IgnoreExternC
+
+   If set to `true`, the check will not give warning inside `extern "C"`scope.
+   Default is `false`

@@ -330,6 +330,9 @@ typedef class ISSUE_67529_1 *ISSUE_67529;
 extern "C" {
 
 typedef int InExternC;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
+// CHECK-FIXES: using InExternC = int;
+
 }
 
 extern "C++" {
