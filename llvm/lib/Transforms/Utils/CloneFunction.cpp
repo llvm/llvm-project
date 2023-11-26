@@ -989,7 +989,6 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
                                      ValueToValueMapTy &VMap) {
   // Rewrite the code to refer to itself.
   for (auto *BB : Blocks) {
-    Module *M = BB->getModule();
     for (auto &Inst : *BB) {
       RemapDPValueRange(Inst.getModule(), Inst.getDbgValueRange(), VMap,
                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
