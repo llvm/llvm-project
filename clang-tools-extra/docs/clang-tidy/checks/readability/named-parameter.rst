@@ -14,8 +14,12 @@ All parameters should have the same name in both the function declaration and de
 If a parameter is not utilized, its name can be commented out in a function definition.
 
 .. code-block:: c++
-int doingSomething(int a, int b, int) {  // Ok: the third paramet is not used
-    return a + b;
-}
+
+    int doingSomething(int a, int b, int c);
+
+    int doingSomething(int a, int b, int /*c*/) {
+        // Ok: the third param is not used
+        return a + b;
+    }
 
 Corresponding cpplint.py check name: `readability/function`.
