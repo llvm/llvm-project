@@ -92,6 +92,9 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
     cl::values(clEnumValN(SplitFunctionsStrategy::Profile2, "profile2",
                           "split each function into a hot and cold fragment "
                           "using profiling information")),
+    cl::values(clEnumValN(SplitFunctionsStrategy::CDSplit, "cdsplit",
+                          "split each function into a hot, warm, and cold "
+                          "fragment using profiling information")),
     cl::values(clEnumValN(
         SplitFunctionsStrategy::Random2, "random2",
         "split each function into a hot and cold fragment at a randomly chosen "
@@ -106,6 +109,11 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
         "fragment contains exactly a single basic block")),
     cl::desc("strategy used to partition blocks into fragments"),
     cl::cat(BoltOptCategory));
+
+bool threeWaySplit() {
+  return opts::SplitFunctions &&
+         opts::SplitStrategy == SplitFunctionsStrategy::CDSplit;
+}
 } // namespace opts
 
 namespace {
@@ -126,13 +134,67 @@ struct SplitProfile2 final : public SplitStrategy {
     return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
   }
 
-  bool keepEmpty() override { return false; }
+  bool keepEmpty() override {
+    return opts::SplitStrategy != SplitFunctionsStrategy::CDSplit ? false
+                                                                  : true;
+  }
+
+  bool autoReversal() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
       if (BB->getExecutionCount() == 0)
         BB->setFragmentNum(FragmentNum::cold());
     }
+  }
+};
+
+struct SplitCacheDirected final : public SplitStrategy {
+  BinaryContext &BC;
+  using BasicBlockOrder = BinaryFunction::BasicBlockOrderType;
+
+  explicit SplitCacheDirected(BinaryContext &BC) : BC(BC) {}
+
+  bool canSplit(const BinaryFunction &BF) override {
+    return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
+  }
+
+  bool keepEmpty() override { return true; }
+
+  // This strategy does not require that the new hot fragment size strictly
+  // decreases after splitting.
+  bool autoReversal() override { return false; }
+
+  void fragment(const BlockIt Start, const BlockIt End) override {
+    BasicBlockOrder BlockOrder(Start, End);
+    BinaryFunction &BF = *BlockOrder.front()->getFunction();
+
+    size_t BestSplitIndex = findSplitIndex(BF, BlockOrder);
+
+    // Assign fragments based on the computed best split index.
+    // All basic blocks with index up to the best split index become hot.
+    // All remaining blocks are warm / cold depending on if count is
+    // greater than 0 or not.
+    FragmentNum Main(0);
+    FragmentNum Warm(1);
+    FragmentNum Cold(2);
+    for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
+      BinaryBasicBlock *BB = BlockOrder[Index];
+      if (Index <= BestSplitIndex)
+        BB->setFragmentNum(Main);
+      else
+        BB->setFragmentNum(BB->getKnownExecutionCount() > 0 ? Warm : Cold);
+    }
+  }
+
+private:
+  /// Find the best index for splitting. The returned value is the index of the
+  /// last hot basic block. Hence, "no splitting" is equivalent to returning the
+  /// value which is one less than the size of the function.
+  size_t findSplitIndex(const BinaryFunction &BF,
+                        const BasicBlockOrder &BlockOrder) {
+    // Placeholder: hot-warm split after entry block.
+    return 0;
   }
 };
 
@@ -144,6 +206,8 @@ struct SplitRandom2 final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
   bool keepEmpty() override { return false; }
+
+  bool autoReversal() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
@@ -171,6 +235,8 @@ struct SplitRandomN final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
   bool keepEmpty() override { return false; }
+
+  bool autoReversal() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
@@ -223,6 +289,8 @@ struct SplitAll final : public SplitStrategy {
     return true;
   }
 
+  bool autoReversal() override { return true; }
+
   void fragment(const BlockIt Start, const BlockIt End) override {
     unsigned Fragment = 0;
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End))
@@ -250,6 +318,16 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
   bool ForceSequential = false;
 
   switch (opts::SplitStrategy) {
+  case SplitFunctionsStrategy::CDSplit:
+    // CDSplit runs two splitting passes: hot-cold splitting (SplitPrfoile2)
+    // before function reordering and hot-warm-cold splitting
+    // (SplitCacheDirected) after function reordering.
+    if (BC.HasFinalizedFunctionOrder)
+      Strategy = std::make_unique<SplitCacheDirected>(BC);
+    else
+      Strategy = std::make_unique<SplitProfile2>();
+    opts::AggressiveSplitting = true;
+    break;
   case SplitFunctionsStrategy::Profile2:
     Strategy = std::make_unique<SplitProfile2>();
     break;
@@ -409,8 +487,10 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
     LLVM_DEBUG(dbgs() << "Estimated size for function " << BF
                       << " post-split is <0x" << Twine::utohexstr(HotSize)
                       << ", 0x" << Twine::utohexstr(ColdSize) << ">\n");
-    if (alignTo(OriginalHotSize, opts::SplitAlignThreshold) <=
-        alignTo(HotSize, opts::SplitAlignThreshold) + opts::SplitThreshold) {
+    if (S.autoReversal() &&
+        alignTo(OriginalHotSize, opts::SplitAlignThreshold) <=
+            alignTo(HotSize, opts::SplitAlignThreshold) +
+                opts::SplitThreshold) {
       if (opts::Verbosity >= 2) {
         outs() << "BOLT-INFO: Reversing splitting of function "
                << formatv("{0}:\n  {1:x}, {2:x} -> {3:x}\n", BF, HotSize,

@@ -23,6 +23,9 @@ enum SplitFunctionsStrategy : char {
   /// Split each function into a hot and cold fragment using profiling
   /// information.
   Profile2 = 0,
+  /// Split each function into a hot, warm, and cold fragment using
+  /// profiling information.
+  CDSplit,
   /// Split each function into a hot and cold fragment at a randomly chosen
   /// split point (ignoring any available profiling information).
   Random2,
@@ -41,6 +44,9 @@ public:
   virtual ~SplitStrategy() = default;
   virtual bool canSplit(const BinaryFunction &BF) = 0;
   virtual bool keepEmpty() = 0;
+  // When autoReversal() == true, check if the new main fragment after splitting
+  // is of a smaller size; if not, revert splitting.
+  virtual bool autoReversal() = 0;
   virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
 };
 
