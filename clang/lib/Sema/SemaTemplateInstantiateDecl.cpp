@@ -6495,6 +6495,23 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
     PendingInstantiations.swap(delayedPCHInstantiations);
 }
 
+// Instantiate all referenced specializations of the given function template
+// definition. This make sure that function template that are defined after the
+// point of instantiation of their used can be evaluated after they are defined.
+// see CWG2497.
+void Sema::InstantiateFunctionTemplateSpecializations(
+    SourceLocation PointOfInstantiation, FunctionDecl *Tpl) {
+  auto It =
+      PendingInstantiationsOfConstexprEntities.find(Tpl->getCanonicalDecl());
+  if (It == PendingInstantiationsOfConstexprEntities.end())
+    return;
+  for (NamedDecl *Fun : It->second) {
+    InstantiateFunctionDefinition(PointOfInstantiation,
+                                  cast<FunctionDecl>(Fun));
+  }
+  PendingInstantiationsOfConstexprEntities.erase(It);
+}
+
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,
                        const MultiLevelTemplateArgumentList &TemplateArgs) {
   for (auto *DD : Pattern->ddiags()) {
