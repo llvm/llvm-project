@@ -83,87 +83,16 @@ static uint32_t lo12(uint32_t val) { return val & 0xfff; }
 
 // Calculate the adjusted page delta between dest and PC.
 uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
-  // Consider the large code model access pattern, of which the smaller code
-  // models' access patterns are a subset:
-  //
-  //     pcalau12i       U, %foo_hi20(sym)        ; b in [-0x80000, 0x7ffff]
-  //     addi.d          T, zero, %foo_lo12(sym)  ; a in [-0x800, 0x7ff]
-  //     lu32i.d         T, %foo64_lo20(sym)      ; c in [-0x80000, 0x7ffff]
-  //     lu52i.d         T, T, %foo64_hi12(sym)   ; d in [-0x800, 0x7ff]
-  //     {ldx,stx,add}.* dest, U, T
-  //
-  // Let page(pc) = 0xRRR'QQQQQ'PPPPP'000 and dest = 0xZZZ'YYYYY'XXXXX'AAA,
-  // with RQ, P, ZY, X and A representing the respective bitfields as unsigned
-  // integers. We have:
-  //
-  //     page(dest) = 0xZZZ'YYYYY'XXXXX'000
-  //     - page(pc) = 0xRRR'QQQQQ'PPPPP'000
-  //     ----------------------------------
-  //                  0xddd'ccccc'bbbbb'000
-  //
-  // Now consider the above pattern's actual effects:
-  //
-  //     page(pc)                     0xRRR'QQQQQ'PPPPP'000
-  //     pcalau12i                  + 0xiii'iiiii'bbbbb'000
-  //     addi                       + 0xjjj'jjjjj'kkkkk'AAA
-  //     lu32i.d & lu52i.d          + 0xddd'ccccc'00000'000
-  //     --------------------------------------------------
-  //     dest = U + T
-  //          = ((RQ<<32) + (P<<12) + i + (b<<12)) + (j + k + A + (cd<<32))
-  //          = (((RQ+cd)<<32) + i + j) + (((P+b)<<12) + k) + A
-  //          = (ZY<<32)                + (X<<12)           + A
-  //
-  //     ZY<<32 = (RQ<<32)+(cd<<32)+i+j, X<<12 = (P<<12)+(b<<12)+k
-  //     cd<<32 = (ZY<<32)-(RQ<<32)-i-j, b<<12 = (X<<12)-(P<<12)-k
-  //
-  // where i and k are terms representing the effect of b's and A's sign
-  // extension respectively.
-  //
-  //     i = signed b < 0 ? -0x10000'0000 : 0
-  //     k = signed A < 0 ? -0x1000 : 0
-  //
-  // The j term is a bit complex: it represents the higher half of
-  // sign-extended bits from A that are effectively lost if i == 0 but k != 0,
-  // due to overwriting by lu32i.d & lu52i.d.
-  //
-  //     j = signed A < 0 && signed b >= 0 ? 0x10000'0000 : 0
-  //
-  // The actual effect of the instruction sequence before the final addition,
-  // i.e. our desired result value, is thus:
-  //
-  //     result = (cd<<32) + (b<<12)
-  //            = (ZY<<32)-(RQ<<32)-i-j + (X<<12)-(P<<12)-k
-  //            = ((ZY<<32)+(X<<12)) - ((RQ<<32)+(P<<12)) - i - j - k
-  //            = page(dest) - page(pc) - i - j - k
-  //
-  // when signed A >= 0 && signed b >= 0:
-  //
-  //     i = j = k = 0
-  //     result = page(dest) - page(pc)
-  //
-  // when signed A >= 0 && signed b < 0:
-  //
-  //     i = -0x10000'0000, j = k = 0
-  //     result = page(dest) - page(pc) + 0x10000'0000
-  //
-  // when signed A < 0 && signed b >= 0:
-  //
-  //     i = 0, j = 0x10000'0000, k = -0x1000
-  //     result = page(dest) - page(pc) - 0x10000'0000 + 0x1000
-  //
-  // when signed A < 0 && signed b < 0:
-  //
-  //     i = -0x10000'0000, j = 0, k = -0x1000
-  //     result = page(dest) - page(pc) + 0x1000
+  // Compensating all the sign-extensions is a bit complicated.
+  // Just use the same logic as bfd and mold. Note that this algorithm assumes
+  // those four instructions (pcalau12i/addi.d/lu32i.d/lu52i.d) are in the same
+  // 4K-page. This assumption is expected to be documented as a constraint in
+  // psABI in future.
   uint64_t result = getLoongArchPage(dest) - getLoongArchPage(pc);
-  bool negativeA = lo12(dest) > 0x7ff;
-  if (negativeA)
-    result += 0x1000;
-  bool negativeB = (result & 0x8000'0000) != 0;
-  if (negativeA && !negativeB)
-    result -= 0x10000'0000;
-  else if (!negativeA && negativeB)
-    result += 0x10000'0000;
+  if (dest & 0x800)
+    result += 0x1000 - 0x1'0000'0000;
+  if (result & 0x8000'0000)
+    result += 0x1'0000'0000;
   return result;
 }
 
