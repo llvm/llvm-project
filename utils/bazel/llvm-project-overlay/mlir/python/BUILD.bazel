@@ -700,6 +700,62 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# GPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "GPUOpsPyTdFiles",
+    srcs = [],
+    includes = ["../include"],
+    deps = [
+        "//mlir:GPUOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "GPUOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=gpu",
+            ],
+            "mlir/dialects/_gpu_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=gpu",
+            ],
+            "mlir/dialects/_gpu_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/GPUOps.td",
+    deps = [
+        ":GPUOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "GPUOpsPyFiles",
+    srcs = [
+        ":GPUOpsPyGen",
+    ],
+)
+
+filegroup(
+    name = "GPUOpsPackagePyFiles",
+    srcs = glob(["mlir/dialects/gpu/*.py"]),
+)
+
+filegroup(
+    name = "GPUOpsPackagePassesPyFiles",
+    srcs = glob(["mlir/dialects/gpu/passes/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
 # NVGPU dialect.
 ##---------------------------------------------------------------------------##
 

@@ -512,6 +512,10 @@ enum PossiblyNonNegInstOptionalFlags { PNNI_NON_NEG = 0 };
 /// PossiblyExactOperator's SubclassOptionalData contents.
 enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 
+/// PossiblyDisjointInstOptionalFlags - Flags for serializing
+/// PossiblyDisjointInst's SubclassOptionalData contents.
+enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
   ORDERING_NOTATOMIC = 0,

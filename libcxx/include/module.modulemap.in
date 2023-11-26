@@ -2013,7 +2013,6 @@ module std_private_type_traits_nat                                       [system
 module std_private_type_traits_negation                                  [system] { header "__type_traits/negation.h" }
 module std_private_type_traits_noexcept_move_assign_container            [system] { header "__type_traits/noexcept_move_assign_container.h" }
 module std_private_type_traits_operation_traits                          [system] { header "__type_traits/operation_traits.h" }
-module std_private_type_traits_predicate_traits                          [system] { header "__type_traits/predicate_traits.h" }
 module std_private_type_traits_promote                                   [system] { header "__type_traits/promote.h" }
 module std_private_type_traits_rank                                      [system] { header "__type_traits/rank.h" }
 module std_private_type_traits_remove_all_extents                        [system] { header "__type_traits/remove_all_extents.h" }

@@ -27,14 +27,22 @@ add_header_library(
 )
 
 add_header_library(
-  builtin_wrappers
+  bit
   HDRS
-    builtin_wrappers.h
+    bit.h
+  DEPENDS
+    libc.src.__support.macros.attributes
+)
+
+add_header_library(
+  math_extras
+  HDRS
+    math_extras.h
   DEPENDS
     .named_pair
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -98,7 +106,6 @@ add_header_library(
     libc.src.__support.CPP.type_traits
 )
 
-
 add_header_library(
   float_to_string
   HDRS
@@ -131,17 +138,16 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
-    libc.src.__support.CPP.optional
+    libc.src.__support.common
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.optional
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.builtin_wrappers
-    libc.src.__support.common
+    libc.src.__support.bit
     libc.src.errno.errno
 )
-
 
 add_header_library(
   integer_operations
@@ -187,10 +193,10 @@ add_header_library(
   HDRS
     integer_utils.h
   DEPENDS
-    .builtin_wrappers
+    .bit
     .number_pair
-    libc.src.__support.CPP.type_traits
     libc.src.__support.common
+    libc.src.__support.CPP.type_traits
 )
 
 add_header_library(
@@ -198,9 +204,10 @@ add_header_library(
   HDRS
     UInt.h
   DEPENDS
-    .builtin_wrappers
-    .number_pair
+    .bit
     .integer_utils
+    .math_extras
+    .number_pair
     libc.src.__support.CPP.array
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.optimization

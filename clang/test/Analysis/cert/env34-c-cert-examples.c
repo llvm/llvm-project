@@ -1,18 +1,18 @@
 // Default options.
-// RUN: %clang_analyze_cc1                                         \
-// RUN:  -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
+// RUN: %clang_analyze_cc1                                                      \
+// RUN:  -analyzer-checker=core,security.cert.env.InvalidPtr                    \
 // RUN:  -verify -Wno-unused %s
 //
 // Test the laxer handling of getenv function (this is the default).
-// RUN: %clang_analyze_cc1                                         \
-// RUN:  -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
-// RUN:  -analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=false \
+// RUN: %clang_analyze_cc1                                                      \
+// RUN:  -analyzer-checker=core,security.cert.env.InvalidPtr                    \
+// RUN:  -analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=false \
 // RUN:  -verify -Wno-unused %s
 //
 // Test the stricter handling of getenv function.
-// RUN: %clang_analyze_cc1                                         \
-// RUN:  -analyzer-checker=core,alpha.security.cert.env.InvalidPtr \
-// RUN:  -analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=true \
+// RUN: %clang_analyze_cc1                                                      \
+// RUN:  -analyzer-checker=core,security.cert.env.InvalidPtr                    \
+// RUN:  -analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true  \
 // RUN:  -verify=expected,pedantic -Wno-unused %s
 
 #include "../Inputs/system-header-simulator.h"

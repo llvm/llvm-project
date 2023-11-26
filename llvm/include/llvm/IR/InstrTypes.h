@@ -415,6 +415,29 @@ struct OperandTraits<BinaryOperator> :
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BinaryOperator, Value)
 
+/// An or instruction, which can be marked as "disjoint", indicating that the
+/// inputs don't have a 1 in the same bit position. Meaning this instruction
+/// can also be treated as an add.
+class PossiblyDisjointInst : public BinaryOperator {
+public:
+  enum { IsDisjoint = (1 << 0) };
+
+  void setIsDisjoint(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~IsDisjoint) | (B * IsDisjoint);
+  }
+
+  bool isDisjoint() const { return SubclassOptionalData & IsDisjoint; }
+
+  static bool classof(const Instruction *I) {
+    return I->getOpcode() == Instruction::Or;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 //                               CastInst Class
 //===----------------------------------------------------------------------===//
