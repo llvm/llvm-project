@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03 c++11 c++14 c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <filesystem>
 
@@ -18,30 +18,30 @@
 #include <cassert>
 #include <filesystem>
 
-#include "test_macros.h"
+#include "test_comparisons.h"
 
 void test() {
   {
-    std::fileystem::file_status f1;
-    std::fileystem::file_status f2;
+    std::filesystem::file_status f1;
+    std::filesystem::file_status f2;
 
     assert(testEquality(f1, f2, true));
   }
   {
-    std::fileystem::file_status f1{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
-    std::fileystem::file_status f2{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
+    std::filesystem::file_status f1{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
+    std::filesystem::file_status f2{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
 
     assert(testEquality(f1, f2, true));
   }
   {
-    std::fileystem::file_status f1{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
-    std::fileystem::file_status f2{std::filesystem::file_type::none, std::filesystem::perms::owner_read};
+    std::filesystem::file_status f1{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
+    std::filesystem::file_status f2{std::filesystem::file_type::none, std::filesystem::perms::owner_read};
 
     assert(testEquality(f1, f2, false));
   }
   {
-    std::fileystem::file_status f1{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
-    std::fileystem::file_status f2{std::filesystem::file_type::regular, std::filesystem::perms::owner_write};
+    std::filesystem::file_status f1{std::filesystem::file_type::regular, std::filesystem::perms::owner_read};
+    std::filesystem::file_status f2{std::filesystem::file_type::regular, std::filesystem::perms::owner_write};
 
     assert(testEquality(f1, f2, false));
   }
