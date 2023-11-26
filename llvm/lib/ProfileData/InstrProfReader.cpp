@@ -312,7 +312,8 @@ Error TextInstrProfReader::readTemporalProfTraceData() {
   return success();
 }
 
-Error TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
+Error
+TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
 
 #define CHECK_LINE_END(Line)                                                   \
   if (Line.is_at_end())                                                        \
@@ -493,12 +494,13 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
   if (DataBuffer.getBufferSize() < sizeof(uint64_t))
     return false;
   uint64_t Magic =
-      *reinterpret_cast<const uint64_t *>(DataBuffer.getBufferStart());
+    *reinterpret_cast<const uint64_t *>(DataBuffer.getBufferStart());
   return RawInstrProf::getMagic<IntPtrT>() == Magic ||
          llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
-template <class IntPtrT> Error RawInstrProfReader<IntPtrT>::readHeader() {
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
@@ -541,9 +543,8 @@ template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
   if (Error E =
           Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
-                        StringRef(VNamesStart, VNamesEnd - VNamesStart))) {
+                        StringRef(VNamesStart, VNamesEnd - VNamesStart)))
     return error(std::move(E));
-  }
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
@@ -668,8 +669,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   BitmapEnd = BitmapStart + NumBitmapBytes;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
-  std::unique_ptr<InstrProfSymtab> NewSymtab =
-      std::make_unique<InstrProfSymtab>();
+  std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = createSymtab(*NewSymtab))
     return E;
 
@@ -690,7 +690,8 @@ Error RawInstrProfReader<IntPtrT>::readFuncHash(NamedInstrProfRecord &Record) {
 }
 
 template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::readRawCounts(InstrProfRecord &Record) {
+Error RawInstrProfReader<IntPtrT>::readRawCounts(
+    InstrProfRecord &Record) {
   uint32_t NumCounters = swap(Data->NumCounters);
   if (NumCounters == 0)
     return error(instrprof_error::malformed, "number of counters is zero");
@@ -829,8 +830,7 @@ Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
 }
 
 template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::readNextRecord(
-    NamedInstrProfRecord &Record) {
+Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) {
   // Keep reading profiles that consist of only headers and no profile data and
   // counters.
   while (atEnd())
@@ -1042,12 +1042,14 @@ public:
 
 /// A remapper that applies remappings based on a symbol remapping file.
 template <typename HashTableImpl>
-class llvm::InstrProfReaderItaniumRemapper : public InstrProfReaderRemapper {
+class llvm::InstrProfReaderItaniumRemapper
+    : public InstrProfReaderRemapper {
 public:
   InstrProfReaderItaniumRemapper(
       std::unique_ptr<MemoryBuffer> RemapBuffer,
       InstrProfReaderIndex<HashTableImpl> &Underlying)
-      : RemapBuffer(std::move(RemapBuffer)), Underlying(Underlying) {}
+      : RemapBuffer(std::move(RemapBuffer)), Underlying(Underlying) {
+  }
 
   /// Extract the original function name from a PGO function name.
   static StringRef extractName(StringRef Name) {
