@@ -7904,6 +7904,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
       IdxC && MinVLen == MaxVLen &&
       VecVT.getSizeInBits().getKnownMinValue() > MinVLen) {
+    MVT M1VT = getLMUL1VT(ContainerVT);
     unsigned OrigIdx = IdxC->getZExtValue();
     EVT ElemVT = VecVT.getVectorElementType();
     unsigned ElemSize = ElemVT.getSizeInBits().getKnownMinValue();
@@ -7911,11 +7912,11 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     unsigned RemIdx = OrigIdx % ElemsPerVReg;
     unsigned SubRegIdx = OrigIdx / ElemsPerVReg;
     unsigned ExtractIdx =
-      SubRegIdx * ContainerVT.getVectorElementCount().getKnownMinValue();
-    ContainerVT = getLMUL1VT(ContainerVT);
-    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+      SubRegIdx * M1VT.getVectorElementCount().getKnownMinValue();
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, M1VT, Vec,
                       DAG.getVectorIdxConstant(ExtractIdx, DL));
     Idx = DAG.getVectorIdxConstant(RemIdx, DL);
+    ContainerVT = M1VT;
   }
 
   // Reduce the LMUL of our slidedown and vmv.x.s to the smallest LMUL which
