@@ -1163,17 +1163,18 @@ uint32_t TableJumpSection::getIndex(
     const Symbol *symbol, uint32_t maxSize,
     SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
         &entriesList) {
-  // Prevent adding duplicate entries
-  uint32_t i = 0;
+  // Find this symbol in the ordered list of entries if it exists.
+  assert(maxSize >= entriesList.size() &&
+       "Finalized vector of entries exceeds maximum");
+  auto idx = std::find_if(
+    entriesList.begin(), entriesList.end(),
+    [symbol](llvm::detail::DenseMapPair<const Symbol *, int> &e) {
+      return e.first == symbol;
+    });
 
-  for (; i < entriesList.size() && i <= maxSize; i++) {
-    // If this is a duplicate addition, do not add it and return the address
-    // offset of the original entry.
-    if (symbol == entriesList[i].first) {
-      return i;
-    }
-  }
-  return i;
+  if (idx == entriesList.end())
+    return entriesList.size();
+  return idx - entriesList.begin();
 }
 
 void TableJumpSection::scanTableJumpEntries(const InputSection &sec) const {
