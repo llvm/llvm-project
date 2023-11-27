@@ -47,4 +47,4 @@ attributes #0 = { nounwind }
 attributes #1 = { mustprogress noinline optnone }
 
 ; CHECK: __ehinfo.0:
-; CHECK: .tc __ehinfo.0[TC],__ehinfo.0
+; CHECK: .tc __ehinfo.0[TE],__ehinfo.0
