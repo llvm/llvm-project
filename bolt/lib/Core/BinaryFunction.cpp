@@ -108,6 +108,13 @@ cl::opt<bool>
                             cl::desc("try to preserve basic block alignment"),
                             cl::cat(BoltOptCategory));
 
+static cl::opt<bool> PrintOutputAddressRange(
+    "print-output-address-range",
+    cl::desc(
+        "print output address range for each basic block in the function when"
+        "BinaryFunction::print is called"),
+    cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<bool>
 PrintDynoStats("dyno-stats",
   cl::desc("print execution info based on profile"),
@@ -509,6 +516,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     for (const BinaryBasicBlock *BB : FF) {
       OS << BB->getName() << " (" << BB->size()
          << " instructions, align : " << BB->getAlignment() << ")\n";
+
+      if (opts::PrintOutputAddressRange)
+        OS << formatv("  Output Address Range: [{0:x}, {1:x}) ({2} bytes)\n",
+                      BB->getOutputAddressRange().first,
+                      BB->getOutputAddressRange().second, BB->getOutputSize());
 
       if (isEntryPoint(*BB)) {
         if (MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB))
@@ -4131,10 +4143,6 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
   if (!requiresAddressMap())
     return;
 
-  // Output ranges should match the input if the body hasn't changed.
-  if (!isSimple() && !BC.HasRelocations)
-    return;
-
   // AArch64 may have functions that only contains a constant island (no code).
   if (getLayout().block_empty())
     return;
@@ -4181,6 +4189,12 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
     PrevBB->setOutputEndAddress(PrevBB->isSplit()
                                     ? FF.getAddress() + FF.getImageSize()
                                     : getOutputAddress() + getOutputSize());
+  }
+
+  // Reset output addresses for deleted blocks.
+  for (BinaryBasicBlock *BB : DeletedBasicBlocks) {
+    BB->setOutputStartAddress(0);
+    BB->setOutputEndAddress(0);
   }
 }
 

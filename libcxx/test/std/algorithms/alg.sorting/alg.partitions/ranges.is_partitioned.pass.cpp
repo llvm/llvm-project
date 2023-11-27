@@ -87,7 +87,7 @@ constexpr void test_iterators() {
     }
   }
 
-  { // check that it's partitoned if the predicate is true for all elements
+  { // check that it's partitioned if the predicate is true for all elements
     {
       int a[] = {1, 2, 3, 4};
       auto ret = std::ranges::is_partitioned(Iter(a), Sent(Iter(a + 4)), [](int) { return true; });

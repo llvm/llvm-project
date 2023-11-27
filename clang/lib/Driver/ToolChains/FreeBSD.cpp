@@ -310,7 +310,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else

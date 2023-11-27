@@ -3781,8 +3781,8 @@ void IntegerSet::print(raw_ostream &os) const {
   AsmPrinter::Impl(os, state.getImpl()).printIntegerSet(*this);
 }
 
-void Value::print(raw_ostream &os) { print(os, OpPrintingFlags()); }
-void Value::print(raw_ostream &os, const OpPrintingFlags &flags) {
+void Value::print(raw_ostream &os) const { print(os, OpPrintingFlags()); }
+void Value::print(raw_ostream &os, const OpPrintingFlags &flags) const {
   if (!impl) {
     os << "<<NULL VALUE>>";
     return;
@@ -3795,7 +3795,7 @@ void Value::print(raw_ostream &os, const OpPrintingFlags &flags) {
   os << "<block argument> of type '" << arg.getType()
      << "' at index: " << arg.getArgNumber();
 }
-void Value::print(raw_ostream &os, AsmState &state) {
+void Value::print(raw_ostream &os, AsmState &state) const {
   if (!impl) {
     os << "<<NULL VALUE>>";
     return;
@@ -3810,12 +3810,12 @@ void Value::print(raw_ostream &os, AsmState &state) {
      << "' at index: " << arg.getArgNumber();
 }
 
-void Value::dump() {
+void Value::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
 
-void Value::printAsOperand(raw_ostream &os, AsmState &state) {
+void Value::printAsOperand(raw_ostream &os, AsmState &state) const {
   // TODO: This doesn't necessarily capture all potential cases.
   // Currently, region arguments can be shadowed when printing the main
   // operation. If the IR hasn't been printed, this will produce the old SSA
@@ -3840,7 +3840,8 @@ static Operation *findParent(Operation *op, bool shouldUseLocalScope) {
   return op;
 }
 
-void Value::printAsOperand(raw_ostream &os, const OpPrintingFlags &flags) {
+void Value::printAsOperand(raw_ostream &os,
+                           const OpPrintingFlags &flags) const {
   Operation *op;
   if (auto result = llvm::dyn_cast<OpResult>(*this)) {
     op = result.getOwner();

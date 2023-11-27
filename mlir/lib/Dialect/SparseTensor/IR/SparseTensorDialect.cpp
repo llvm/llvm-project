@@ -71,13 +71,13 @@ void StorageLayout::foreachField(
   FieldIndex fieldIdx = kDataFieldStartingIdx;
   // Per-level storage.
   for (Level l = 0; l < end; l++) {
-    const auto dlt = lvlTypes[l];
-    if (isDLTWithPos(dlt)) {
-      if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, dlt)))
+    const auto lt = lvlTypes[l];
+    if (isWithPosLT(lt)) {
+      if (!(callback(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, lt)))
         return;
     }
-    if (isDLTWithCrd(dlt)) {
-      if (!(callback(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt)))
+    if (isWithCrdLT(lt)) {
+      if (!(callback(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, lt)))
         return;
     }
   }
@@ -113,16 +113,16 @@ void sparse_tensor::foreachFieldAndTypeInSparseTensor(
   StorageLayout(stt).foreachField(
       [specType, posMemType, crdMemType, valMemType,
        callback](FieldIndex fieldIdx, SparseTensorFieldKind fieldKind,
-                 Level lvl, DimLevelType dlt) -> bool {
+                 Level lvl, DimLevelType lt) -> bool {
         switch (fieldKind) {
         case SparseTensorFieldKind::StorageSpec:
-          return callback(specType, fieldIdx, fieldKind, lvl, dlt);
+          return callback(specType, fieldIdx, fieldKind, lvl, lt);
         case SparseTensorFieldKind::PosMemRef:
-          return callback(posMemType, fieldIdx, fieldKind, lvl, dlt);
+          return callback(posMemType, fieldIdx, fieldKind, lvl, lt);
         case SparseTensorFieldKind::CrdMemRef:
-          return callback(crdMemType, fieldIdx, fieldKind, lvl, dlt);
+          return callback(crdMemType, fieldIdx, fieldKind, lvl, lt);
         case SparseTensorFieldKind::ValMemRef:
-          return callback(valMemType, fieldIdx, fieldKind, lvl, dlt);
+          return callback(valMemType, fieldIdx, fieldKind, lvl, lt);
         };
         llvm_unreachable("unrecognized field kind");
       });
@@ -167,7 +167,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   }
   foreachField([lvl, kind, &fieldIdx](FieldIndex fIdx,
                                       SparseTensorFieldKind fKind, Level fLvl,
-                                      DimLevelType dlt) -> bool {
+                                      DimLevelType lt) -> bool {
     if ((lvl && fLvl == lvl.value() && kind == fKind) ||
         (kind == fKind && fKind == SparseTensorFieldKind::ValMemRef)) {
       fieldIdx = fIdx;
@@ -313,7 +313,7 @@ SparseTensorEncodingAttr SparseTensorEncodingAttr::withoutDimSlices() const {
 }
 
 bool SparseTensorEncodingAttr::isAllDense() const {
-  return !getImpl() || llvm::all_of(getLvlTypes(), isDenseDLT);
+  return !getImpl() || llvm::all_of(getLvlTypes(), isDenseLT);
 }
 
 bool SparseTensorEncodingAttr::isCOO() const {
@@ -321,7 +321,7 @@ bool SparseTensorEncodingAttr::isCOO() const {
 }
 
 bool SparseTensorEncodingAttr::isAllOrdered() const {
-  return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedDLT);
+  return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedLT);
 }
 
 bool SparseTensorEncodingAttr::isIdentity() const {
@@ -369,11 +369,6 @@ SparseTensorEncodingAttr::getStaticDimSliceOffset(Dimension dim) const {
 }
 
 std::optional<uint64_t>
-SparseTensorEncodingAttr::getStaticDimSliceSize(Dimension dim) const {
-  return getDimSlice(dim).getStaticSize();
-}
-
-std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticDimSliceStride(Dimension dim) const {
   return getDimSlice(dim).getStaticStride();
 }
@@ -382,12 +377,6 @@ std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticLvlSliceOffset(Level lvl) const {
   // FIXME: `toOrigDim` is deprecated.
   return getStaticDimSliceOffset(toOrigDim(*this, lvl));
-}
-
-std::optional<uint64_t>
-SparseTensorEncodingAttr::getStaticLvlSliceSize(Level lvl) const {
-  // FIXME: `toOrigDim` is deprecated.
-  return getStaticDimSliceSize(toOrigDim(*this, lvl));
 }
 
 std::optional<uint64_t>
@@ -656,14 +645,14 @@ SparseTensorEncodingAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unexpected position bitwidth: " << posWidth;
   if (!acceptBitWidth(crdWidth))
     return emitError() << "unexpected coordinate bitwidth: " << crdWidth;
-  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonDLT);
+  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
       it != std::end(lvlTypes)) {
     if (it == lvlTypes.begin() ||
-        (!isCompressedDLT(*(it - 1)) && !isLooseCompressedDLT(*(it - 1))))
+        (!isCompressedLT(*(it - 1)) && !isLooseCompressedLT(*(it - 1))))
       return emitError() << "expected compressed or loose_compressed level "
                             "before singleton level";
     if (!std::all_of(it, lvlTypes.end(),
-                     [](DimLevelType i) { return isSingletonDLT(i); }))
+                     [](DimLevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
   }
@@ -966,17 +955,17 @@ Level mlir::sparse_tensor::toStoredDim(SparseTensorEncodingAttr enc,
 }
 
 /// We normalized sparse tensor encoding attribute by always using
-/// ordered/unique DLT such that "compressed_nu_no" and "compressed_nu" (as well
+/// ordered/unique LT such that "compressed_nu_no" and "compressed_nu" (as well
 /// as other variants) lead to the same storage specifier type, and stripping
 /// irrelevant fields that do not alter the sparse tensor memory layout.
 static SparseTensorEncodingAttr
 getNormalizedEncodingForSpecifier(SparseTensorEncodingAttr enc) {
-  SmallVector<DimLevelType> dlts;
-  for (auto dlt : enc.getLvlTypes())
-    dlts.push_back(*buildLevelType(*getLevelFormat(dlt), true, true));
+  SmallVector<DimLevelType> lts;
+  for (auto lt : enc.getLvlTypes())
+    lts.push_back(*buildLevelType(*getLevelFormat(lt), true, true));
 
   return SparseTensorEncodingAttr::get(
-      enc.getContext(), dlts,
+      enc.getContext(), lts,
       AffineMap(), // dimToLvl (irrelevant to storage specifier)
       AffineMap(), // lvlToDim (irrelevant to storage specifier)
       // Always use `index` for memSize and lvlSize instead of reusing
@@ -1081,7 +1070,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
   bool misMatch = false;
   layout.foreachField([&idx, &misMatch, stt, valTp,
                        lvlTps](FieldIndex fid, SparseTensorFieldKind fKind,
-                               Level lvl, DimLevelType dlt) -> bool {
+                               Level lvl, DimLevelType lt) -> bool {
     if (fKind == SparseTensorFieldKind::StorageSpec)
       return true;
 
@@ -1089,7 +1078,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     if (fKind == SparseTensorFieldKind::ValMemRef) {
       inputTp = valTp;
     } else {
-      assert(fid == idx && stt.getLvlType(lvl) == dlt);
+      assert(fid == idx && stt.getLvlType(lvl) == lt);
       inputTp = lvlTps[idx++];
     }
     // The input element type and expected element type should match.
@@ -1744,33 +1733,26 @@ LogicalResult SortOp::verify() {
   if (!xPerm.isPermutation())
     emitError(llvm::formatv("Expected a permutation map, got {0}", xPerm));
 
-  std::optional<int64_t> cn = getConstantIntValue(getN());
   // We can't check the size of the buffers when n or buffer dimensions aren't
   // compile-time constants.
+  std::optional<int64_t> cn = getConstantIntValue(getN());
   if (!cn)
     return success();
 
-  uint64_t n = cn.value();
-  uint64_t ny = 0;
-  if (auto nyAttr = getNyAttr()) {
-    ny = nyAttr.getInt();
-  }
-
-  // FIXME: update the types of variables used in expressions bassed as
-  // the `minSize` argument, to avoid implicit casting at the callsites
-  // of this lambda.
+  // Verify dimensions.
   const auto checkDim = [&](Value v, Size minSize, const char *message) {
     const Size sh = getMemRefType(v).getShape()[0];
     if (!ShapedType::isDynamic(sh) && sh < minSize)
       emitError(llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
   };
-
+  uint64_t n = cn.value();
+  uint64_t ny = 0;
+  if (auto nyAttr = getNyAttr())
+    ny = nyAttr.getInt();
   checkDim(getXy(), n * (nx + ny),
            "Expected dimension(xy) >= n * (rank(perm_map) + ny)");
-
-  for (Value opnd : getYs()) {
+  for (Value opnd : getYs())
     checkDim(opnd, n, "Expected dimension(y) >= n");
-  }
 
   return success();
 }

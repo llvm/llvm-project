@@ -321,10 +321,10 @@ public:
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);
   }
-  static constexpr TypeSize Fixed(ScalarTy ExactSize) {
+  static constexpr TypeSize getFixed(ScalarTy ExactSize) {
     return TypeSize(ExactSize, false);
   }
-  static constexpr TypeSize Scalable(ScalarTy MinimumSize) {
+  static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
 

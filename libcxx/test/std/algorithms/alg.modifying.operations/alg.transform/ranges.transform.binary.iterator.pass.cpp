@@ -19,7 +19,7 @@
 //     ranges::transform(I1 first1, S1 last1, I2 first2, S2 last2, O result,
 //                       F binary_op, Proj1 proj1 = {}, Proj2 proj2 = {});
 
-// The range overloads are tested in ranges.tranform.binary.range.pass.cpp.
+// The range overloads are tested in ranges.transform.binary.range.pass.cpp.
 
 #include <algorithm>
 #include <array>

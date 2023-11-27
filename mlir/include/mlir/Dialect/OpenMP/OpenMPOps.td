@@ -1145,15 +1145,14 @@ def DataBoundsOp : OpenMP_Op<"bounds",
 }
 
 def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
-  let arguments = (ins Optional<AnyType>:$val,
-                       Optional<OpenMP_PointerLikeType>:$var_ptr,
-                       OptionalAttr<TypeAttr>:$var_type,
+  let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
+                       TypeAttr:$var_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name);
-  let results = (outs AnyType:$omp_ptr);
+  let results = (outs OpenMP_PointerLikeType:$omp_ptr);
 
   let description = [{
     The MapInfoOp captures information relating to individual OpenMP map clauses
@@ -1184,9 +1183,8 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
     ```
 
     Description of arguments:
-    - `val`: The value to copy.
     - `var_ptr`: The address of variable to copy.
-    - `var_type`: The type of the variable/value to copy.
+    - `var_type`: The type of the variable to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
@@ -1202,10 +1200,9 @@ def MapInfoOp : OpenMP_Op<"map_info", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
+    `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
     oilist(
-        `val` `(` $val `:` type($val) `)`
-      | `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
-      | `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
+        `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `map_clauses` `(` custom<MapClause>($map_type) `)`
       | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `bounds` `(` $bounds `)`
