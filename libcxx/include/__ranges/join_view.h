@@ -214,6 +214,8 @@ namespace ranges {
     using _Inner = iterator_t<range_reference_t<_Base>>;
     using _InnerRange = range_reference_t<_View>;
 
+    static_assert(!_Const || forward_range<_Base>, "Const can only be true when Base models forward_range.");
+
     static constexpr bool __ref_is_glvalue = is_reference_v<range_reference_t<_Base>>;
 
     static constexpr bool _OuterPresent = forward_range<_Base>;
