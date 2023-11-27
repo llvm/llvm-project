@@ -912,8 +912,17 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
   RISCVCC::CondCode CC;
   getOperandsForBranch(SelectMI.getCondReg(), MRI, CC, LHS, RHS);
 
-  MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
-                             .addDef(SelectMI.getReg(0))
+  Register DstReg = SelectMI.getReg(0);
+
+  unsigned Opc = RISCV::Select_GPR_Using_CC_GPR;
+  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() == RISCV::FPRBRegBankID) {
+    unsigned Size = MRI.getType(DstReg).getSizeInBits();
+    Opc = Size == 32 ? RISCV::Select_FPR32_Using_CC_GPR
+                     : RISCV::Select_FPR64_Using_CC_GPR;
+  }
+
+  MachineInstr *Result = MIB.buildInstr(Opc)
+                             .addDef(DstReg)
                              .addReg(LHS)
                              .addReg(RHS)
                              .addImm(CC)
