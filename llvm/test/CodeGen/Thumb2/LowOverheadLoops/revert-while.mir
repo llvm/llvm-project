@@ -100,7 +100,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK-NEXT:   dead $lr = t2SUBri $r3, 0, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK-NEXT:   $lr = t2SUBri $r3, 0, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK-NEXT:   t2Bcc %bb.3, 0 /* CC::eq */, killed $cpsr
   ; CHECK-NEXT:   tB %bb.1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
@@ -124,6 +124,8 @@ body:             |
   ; CHECK-NEXT:   tB %bb.3, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.if.end:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)

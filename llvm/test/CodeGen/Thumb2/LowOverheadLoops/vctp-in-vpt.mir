@@ -138,7 +138,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -171,6 +171,8 @@ body:             |
   ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb27:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.bb:
@@ -278,7 +280,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -318,6 +320,8 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb27:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.bb:
@@ -426,7 +430,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -466,6 +470,8 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb27:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.bb:
@@ -574,7 +580,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -614,6 +620,8 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb27:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = tADDspi $sp, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.bb:

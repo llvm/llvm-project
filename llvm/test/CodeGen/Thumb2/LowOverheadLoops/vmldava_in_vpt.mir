@@ -174,7 +174,7 @@ body:             |
   ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.for.cond.cleanup:
-  ; CHECK-NEXT:   liveins: $r12
+  ; CHECK-NEXT:   liveins: $lr, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r0 = tMOVr killed $r12, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r6, def $pc, implicit killed $r0

@@ -174,10 +174,10 @@ body:             |
   ; CHECK-NEXT:   renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
   ; CHECK-NEXT:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   renamable $q0 = MVE_VPSEL killed renamable $q1, killed renamable $q0, 0, killed renamable $vpr, $noreg
-  ; CHECK-NEXT:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.middle.block:
-  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT:   liveins: $lr, $q0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r7, def $pc, implicit killed $r0

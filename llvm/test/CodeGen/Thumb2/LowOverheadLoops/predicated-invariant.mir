@@ -106,7 +106,7 @@ body:             |
   ; CHECK-NEXT:   renamable $q1 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.exit:
-  ; CHECK-NEXT:   liveins: $q1
+  ; CHECK-NEXT:   liveins: $lr, $q1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0, renamable $r1 = VMOVRRD renamable $d2, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d3, 14 /* CC::al */, $noreg, implicit killed $q1

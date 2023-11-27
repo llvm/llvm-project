@@ -76,7 +76,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r5, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r5, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r5, -8
@@ -111,9 +111,11 @@ body:             |
   ; CHECK-NEXT:   early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
   ; CHECK-NEXT:   renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 8, 14 /* CC::al */, $noreg
-  ; CHECK-NEXT:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r5, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)

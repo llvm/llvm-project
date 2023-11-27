@@ -89,7 +89,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -8
@@ -116,7 +116,7 @@ body:             |
   ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
-  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT:   liveins: $lr, $q0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0, renamable $r1 = VMOVRRD renamable $d0, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d1, 14 /* CC::al */, $noreg, implicit killed $q0

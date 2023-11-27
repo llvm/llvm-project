@@ -119,7 +119,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -8
@@ -145,9 +145,11 @@ body:             |
   ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg :: (load (s128) from %ir.addr.a, align 4)
   ; CHECK-NEXT:   renamable $q1 = MVE_VQSHRUNs32th killed renamable $q1, killed renamable $q0, 3, 0, $noreg, $noreg
   ; CHECK-NEXT:   renamable $r2 = MVE_VSTRWU32_post killed renamable $q1, killed renamable $r2, 16, 0, killed $noreg, $noreg :: (store (s128) into %ir.addr.c, align 4)
-  ; CHECK-NEXT:   dead $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
@@ -225,7 +227,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r3, $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -8
@@ -252,9 +254,11 @@ body:             |
   ; CHECK-NEXT:   $r0 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $q1 = MVE_VQSHRUNs16th killed renamable $q1, killed renamable $q0, 1, 0, $noreg, $noreg
   ; CHECK-NEXT:   renamable $r2 = MVE_VSTRHU16_post killed renamable $q1, killed renamable $r2, 16, 0, killed $noreg, $noreg :: (store (s128) into %ir.addr.c, align 2)
-  ; CHECK-NEXT:   dead $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)

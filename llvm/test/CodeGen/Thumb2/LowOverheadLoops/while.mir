@@ -97,7 +97,7 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK-NEXT:   dead $lr = t2WLS $r2, %bb.3
+  ; CHECK-NEXT:   $lr = t2WLS $r2, %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.while.body.preheader:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -116,6 +116,8 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.while.end:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.3(0x40000000)

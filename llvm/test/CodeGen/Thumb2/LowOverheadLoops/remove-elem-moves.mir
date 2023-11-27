@@ -143,7 +143,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.9(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r4, $r5, $r7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $r5, killed $r7, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -236,6 +236,8 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9.while.end:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $r5, def $r7, def $pc
   bb.0.entry:
     successors: %bb.9(0x30000000), %bb.1(0x50000000)

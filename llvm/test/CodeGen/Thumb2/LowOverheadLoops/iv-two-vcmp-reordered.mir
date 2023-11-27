@@ -100,7 +100,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $d8, $d9, $r0, $r1, $r2, $r4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r4, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r4, -8
@@ -142,9 +142,11 @@ body:             |
   ; CHECK-NEXT:   renamable $r1, renamable $q4 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv35, align 4)
   ; CHECK-NEXT:   renamable $r0 = MVE_VSTRWU32_post killed renamable $q4, killed renamable $r0, 16, 1, killed renamable $vpr, $noreg :: (store (s128) into %ir.lsr.iv12, align 4)
   ; CHECK-NEXT:   renamable $q0 = MVE_VADDi32 killed renamable $q0, renamable $q3, 0, $noreg, $noreg, undef renamable $q0
-  ; CHECK-NEXT:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.for.cond.cleanup:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = frame-destroy VLDMDIA_UPD $sp, 14 /* CC::al */, $noreg, def $d8, def $d9
   ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r4, def $pc
   ; CHECK-NEXT: {{  $}}

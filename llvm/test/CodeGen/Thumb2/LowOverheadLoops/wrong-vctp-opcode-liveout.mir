@@ -154,10 +154,10 @@ body:             |
   ; CHECK-NEXT:   renamable $r12 = nsw t2SUBri killed $r12, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
-  ; CHECK-NEXT:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.middle.block:
-  ; CHECK-NEXT:   liveins: $q0, $q1, $r2, $r3
+  ; CHECK-NEXT:   liveins: $lr, $q0, $q1, $r2, $r3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $q2 = MVE_VDUP32 killed renamable $r0, 0, $noreg, $noreg, undef renamable $q2

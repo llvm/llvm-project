@@ -151,9 +151,11 @@ body:             |
   ; CHECK-NEXT:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg :: (load (s128) from %ir.pSrc.addr.02, align 4)
   ; CHECK-NEXT:   renamable $q0 = MVE_VMULf32 killed renamable $q0, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK-NEXT:   renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 0, killed $noreg, $noreg :: (store (s128) into %ir.pDst.addr.01, align 4)
-  ; CHECK-NEXT:   dead $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.do.end:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
@@ -256,9 +258,11 @@ body:             |
   ; CHECK-NEXT:   renamable $r0, renamable $q0 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg :: (load (s128) from %ir.pSrc.addr.02, align 4)
   ; CHECK-NEXT:   renamable $q0 = MVE_VMULf32 killed renamable $q0, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK-NEXT:   renamable $r1 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r1, 16, 0, killed $noreg, $noreg :: (store (s128) into %ir.pDst.addr.01, align 4)
-  ; CHECK-NEXT:   dead $lr = MVE_LETP killed renamable $lr, %bb.1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.do.end:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)

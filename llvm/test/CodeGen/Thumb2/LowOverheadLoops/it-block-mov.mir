@@ -111,7 +111,7 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
-  ; CHECK-NEXT:   liveins: $q0, $r1, $r2
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r1, $r2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 1, 14 /* CC::al */, $noreg

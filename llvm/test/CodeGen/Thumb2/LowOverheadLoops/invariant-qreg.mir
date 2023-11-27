@@ -158,7 +158,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
   ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2, $r7
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, $lr, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -184,7 +184,7 @@ body:             |
   ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
-  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT:   liveins: $lr, $q0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0, renamable $r1 = VMOVRRD renamable $d0, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d1, 14 /* CC::al */, $noreg, implicit killed $q0
@@ -303,10 +303,10 @@ body:             |
   ; CHECK-NEXT:   MVE_VPST 8, implicit $vpr
   ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, killed renamable $vpr, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
   ; CHECK-NEXT:   renamable $r12 = MVE_VMLADAVu32 renamable $q0, killed renamable $q1, 0, $noreg, $noreg
-  ; CHECK-NEXT:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
-  ; CHECK-NEXT:   liveins: $r12
+  ; CHECK-NEXT:   liveins: $lr, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r0 = tMOVr killed $r12, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
@@ -430,10 +430,10 @@ body:             |
   ; CHECK-NEXT:   renamable $r1, dead $cpsr = nsw tSUBi8 killed $r1, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r12 = MVE_VADDVu32no_acc killed renamable $q1, 0, $noreg, $noreg
-  ; CHECK-NEXT:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
-  ; CHECK-NEXT:   liveins: $r12
+  ; CHECK-NEXT:   liveins: $lr, $r12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r0 = tMOVr killed $r12, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0

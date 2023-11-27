@@ -190,7 +190,7 @@ body:             |
   ; CHECK-NEXT:   $lr = t2LEUpdate killed renamable $lr, %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.do.end:
-  ; CHECK-NEXT:   liveins: $q0, $r1, $r2
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r1, $r2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $s0 = nnan ninf nsz arcp contract afn reassoc VADDS killed renamable $s3, killed renamable $s3, 14 /* CC::al */, $noreg, implicit killed $q0

@@ -214,16 +214,14 @@ void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
     // Return blocks are a special case because we currently don't mark up
     // return instructions completely: specifically, there is no explicit
     // use for callee-saved registers. So we add all callee saved registers
-    // that are saved and restored (somewhere). This does not include
-    // callee saved registers that are unused and hence not saved and
-    // restored; they are called pristine.
+    // This does include callee saved registers that may be only used by the
+    // terminator instruction and unused otherwise.
     // FIXME: PEI should add explicit markings to return instructions
     // instead of implicitly handling them here.
     const MachineFunction &MF = *MBB.getParent();
     const MachineFrameInfo &MFI = MF.getFrameInfo();
     if (MFI.isCalleeSavedInfoValid()) {
       for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo())
-        if (Info.isRestored())
           addReg(Info.getReg());
     }
   }

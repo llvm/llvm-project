@@ -135,7 +135,7 @@ body:             |
   ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.middle.block:
-  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT:   liveins: $lr, $q0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $r0 = VMOVRS killed $s3, 14 /* CC::al */, $noreg, implicit killed $q0
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0

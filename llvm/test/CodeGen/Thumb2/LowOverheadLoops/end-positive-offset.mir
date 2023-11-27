@@ -154,7 +154,7 @@ body:             |
   ; CHECK-NEXT:   $r1 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.7)
   ; CHECK-NEXT:   $lr = tMOVr killed $r1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
-  ; CHECK-NEXT:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   $r12 = tMOVr $lr, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tSTRspi killed $r0, $sp, 7, 14 /* CC::al */, $noreg :: (store (s32) into %stack.0)
   ; CHECK-NEXT:   tSTRspi killed $r2, $sp, 6, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
   ; CHECK-NEXT:   tSTRspi killed $r3, $sp, 5, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
@@ -163,6 +163,8 @@ body:             |
   ; CHECK-NEXT:   tB %bb.2, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.for.cond.cleanup:
+  ; CHECK-NEXT:   liveins: $lr
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = tADDspi $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   ; CHECK-NEXT: {{  $}}

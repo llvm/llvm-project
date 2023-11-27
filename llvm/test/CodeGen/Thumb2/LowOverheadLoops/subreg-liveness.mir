@@ -112,7 +112,7 @@ body:             |
   ; CHECK-NEXT:   renamable $q0 = MVE_VMOVimmi32 1, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.while.end:
-  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT:   liveins: $lr, $d0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r0, renamable $r1 = VMOVRRD killed renamable $d0, 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   renamable $r0 = nsw tADDhirr killed renamable $r0, killed renamable $r1, 14 /* CC::al */, $noreg
