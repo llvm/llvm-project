@@ -181,6 +181,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, sXLen}});
 
+  getActionDefinitionsBuilder(G_BRINDIRECT).legalFor({p0});
+
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, sXLen})
       .widenScalarToNextPow2(0)
