@@ -2042,7 +2042,6 @@ module std_private_utility_move                   [system] {
   export std_private_type_traits_is_nothrow_move_constructible
   export std_private_type_traits_remove_reference
 }
-module std_private_utility_no_destroy             [system] { header "__utility/no_destroy.h" }
 module std_private_utility_pair                   [system] {
   header "__utility/pair.h"
   export std_private_ranges_subrange_fwd
