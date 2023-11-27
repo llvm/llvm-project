@@ -2899,54 +2899,47 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
 
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
-  unsigned Opc = getPUSHOpcode(STI);
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  MachineInstrBuilder MIB;
-  bool IncompletePush2 = false;
   if (X86FI->padForPush2Pop2())
     emitSPUpdate(MBB, MI, DL, -(int64_t)SlotSize, /*InEpilogue=*/false);
 
-  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
-    Register Reg = I.getReg();
+  // Update LiveIn of the basic block and decide whether we can add a kill flag
+  // to the use.
+  auto UpdateLiveInCheckCanKill = [&](Register Reg) {
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    if (MRI.isLiveIn(Reg))
+      return false;
+    MBB.addLiveIn(Reg);
+    // Check if any subregister is live-in
+    for (MCRegAliasIterator AReg(Reg, TRI, false); AReg.isValid(); ++AReg)
+      if (MRI.isLiveIn(*AReg))
+        return false;
+    return true;
+  };
 
+  auto UpdateLiveInGetKillRegState = [&](Register Reg) {
+    return getKillRegState(UpdateLiveInCheckCanKill(Reg));
+  };
+
+  for (auto RI = CSI.rbegin(), RE = CSI.rend(); RI != RE; ++RI) {
+    Register Reg = RI->getReg();
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
 
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    bool isLiveIn = MRI.isLiveIn(Reg);
-    if (!isLiveIn)
-      MBB.addLiveIn(Reg);
-
-    // Decide whether we can add a kill flag to the use.
-    bool CanKill = !isLiveIn;
-    // Check if any subregister is live-in
-    if (CanKill) {
-      for (MCRegAliasIterator AReg(Reg, TRI, false); AReg.isValid(); ++AReg) {
-        if (MRI.isLiveIn(*AReg)) {
-          CanKill = false;
-          break;
-        }
-      }
-    }
-
     if (X86FI->isCandidateForPush2Pop2(Reg)) {
-      if (MIB.getInstr() && IncompletePush2) {
-        MIB.addReg(Reg, getKillRegState(CanKill));
-        IncompletePush2 = false;
-      } else {
-        MIB = BuildMI(MBB, MI, DL, TII.get(getPUSH2Opcode(STI)))
-                  .addReg(Reg, getKillRegState(CanKill))
-                  .setMIFlag(MachineInstr::FrameSetup);
-        IncompletePush2 = true;
-      }
+      Register Reg2 = (++RI)->getReg();
+      BuildMI(MBB, MI, DL, TII.get(getPUSH2Opcode(STI)))
+          .addReg(Reg, UpdateLiveInGetKillRegState(Reg))
+          .addReg(Reg2, UpdateLiveInGetKillRegState(Reg2))
+          .setMIFlag(MachineInstr::FrameSetup);
     } else {
       // Do not set a kill flag on values that are also marked as live-in. This
       // happens with the @llvm-returnaddress intrinsic and with arguments
       // passed in callee saved registers.
       // Omitting the kill flags is conservatively correct even if the live-in
       // is not used after all.
-      BuildMI(MBB, MI, DL, TII.get(Opc))
-          .addReg(Reg, getKillRegState(CanKill))
+      BuildMI(MBB, MI, DL, TII.get(getPUSHOpcode(STI)))
+          .addReg(Reg, UpdateLiveInGetKillRegState(Reg))
           .setMIFlag(MachineInstr::FrameSetup);
     }
   }
@@ -3066,24 +3059,18 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
   }
 
   // POP GPRs.
-  MachineInstrBuilder MIB;
-  bool IncompletePop2 = false;
-  unsigned Opc = getPOPOpcode(STI);
-  for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+  for (auto I = CSI.begin(), E = CSI.end(); I != E; ++I) {
+    Register Reg = I->getReg();
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
+
     if (X86FI->isCandidateForPush2Pop2(Reg)) {
-      if (MIB.getInstr() && IncompletePop2) {
-        MIB.addReg(Reg, RegState::Define);
-        IncompletePop2 = false;
-      } else {
-        MIB = BuildMI(MBB, MI, DL, TII.get(getPOP2Opcode(STI)), Reg)
-                  .setMIFlag(MachineInstr::FrameDestroy);
-        IncompletePop2 = true;
-      }
+      Register Reg2 = (++I)->getReg();
+      BuildMI(MBB, MI, DL, TII.get(getPOP2Opcode(STI)), Reg)
+          .addReg(Reg2, RegState::Define)
+          .setMIFlag(MachineInstr::FrameDestroy);
     } else {
-      BuildMI(MBB, MI, DL, TII.get(Opc), Reg)
+      BuildMI(MBB, MI, DL, TII.get(getPOPOpcode(STI)), Reg)
           .setMIFlag(MachineInstr::FrameDestroy);
     }
   }
