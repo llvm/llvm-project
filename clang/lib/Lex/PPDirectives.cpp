@@ -1077,10 +1077,9 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   return std::nullopt;
 }
 
-OptionalFileEntryRef Preprocessor::LookupEmbedFile(
-    SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
-    bool OpenFile, const FileEntry *LookupFromFile,
-    SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath) {
+OptionalFileEntryRef
+Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
+                              const FileEntry *LookupFromFile) {
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
@@ -1094,11 +1093,7 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(
   // Non-angled lookup
   if (!isAngled) {
     bool TryLocalLookup = false;
-    if (SearchPath) {
-      // use the provided search path as the local lookup path
-      llvm::sys::path::native(*SearchPath, LookupPath);
-      TryLocalLookup = true;
-    } else if (LookupFromFile) {
+    if (LookupFromFile) {
       // Use file-based lookup here
       StringRef FullFileDir = LookupFromFile->tryGetRealPathName();
       if (!FullFileDir.empty()) {
@@ -3816,10 +3811,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
 }
 
 void Preprocessor::HandleEmbedDirectiveImpl(
-    SourceLocation HashLoc, const Token &FilenameTok,
-    StringRef ResolvedFilename, StringRef SearchPath, StringRef RelativePath,
-    const LexEmbedParametersResult &Params, StringRef BinaryContents,
-    const size_t TargetCharWidth) {
+    SourceLocation HashLoc, StringRef ResolvedFilename,
+    const LexEmbedParametersResult &Params, StringRef BinaryContents) {
   // Pass off the annotation token stream. The parser expects:
   //   if_empty-tokens or
   //     prefix-tokens (if any)
@@ -3942,10 +3935,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
 
   // Now, splat the data out!
   SmallString<128> FilenameBuffer;
-  SmallString<512> SearchPath;
-  SmallString<512> RelativePath;
   StringRef Filename = getSpelling(FilenameTok, FilenameBuffer);
-  SourceLocation FilenameLoc = FilenameTok.getLocation();
   StringRef OriginalFilename = Filename;
   bool isAngled =
       GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
@@ -3953,8 +3943,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   // error.
   assert(!Filename.empty());
   OptionalFileEntryRef MaybeFileRef =
-      this->LookupEmbedFile(FilenameLoc, Filename, isAngled, false,
-                            LookupFromFile, &SearchPath, &RelativePath);
+      this->LookupEmbedFile(Filename, isAngled, false, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
     if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
@@ -4014,7 +4003,5 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   if (Callbacks)
     Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
                               Params);
-  HandleEmbedDirectiveImpl(HashLoc, FilenameTok, Filename, SearchPath,
-                           RelativePath, Params, BinaryContents,
-                           TargetCharWidth);
+  HandleEmbedDirectiveImpl(HashLoc, Filename, Params, BinaryContents);
 }

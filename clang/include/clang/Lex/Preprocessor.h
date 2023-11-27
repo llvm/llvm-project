@@ -2431,10 +2431,8 @@ public:
   /// Returns std::nullopt on failure.  \p isAngled indicates whether the file
   /// reference is for system \#include's or not (i.e. using <> instead of "").
   OptionalFileEntryRef
-  LookupEmbedFile(SourceLocation FilenameLoc, StringRef Filename, bool isAngled,
-                  bool OpenFile, const FileEntry *LookupFromFile = nullptr,
-                  SmallVectorImpl<char> *SearchPath = nullptr,
-                  SmallVectorImpl<char> *RelativePath = nullptr);
+  LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
+                  const FileEntry *LookupFromFile = nullptr);
 
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
@@ -2727,12 +2725,9 @@ private:
   void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
                             const FileEntry *LookupFromFile = nullptr);
   void HandleEmbedDirectiveImpl(SourceLocation HashLoc,
-                                const Token &FilenameTok,
                                 StringRef ResolvedFilename,
-                                StringRef SearchPath, StringRef RelativePath,
                                 const LexEmbedParametersResult &Params,
-                                StringRef BinaryContents,
-                                const size_t TargetCharWidth);
+                                StringRef BinaryContents);
 
   // File inclusion.
   void HandleIncludeDirective(SourceLocation HashLoc, Token &Tok,

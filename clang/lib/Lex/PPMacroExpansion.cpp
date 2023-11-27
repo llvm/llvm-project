@@ -1331,7 +1331,6 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   }
 
   SmallString<128> FilenameBuffer;
-  SmallString<256> RelativePath;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
   StringRef OriginalFilename = Filename;
   bool isAngled =
@@ -1343,8 +1342,7 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
       this->getCurrentFileLexer() ? this->getCurrentFileLexer()->getFileEntry()
                                   : static_cast<FileEntry *>(nullptr);
   OptionalFileEntryRef MaybeFileEntry =
-      this->LookupEmbedFile(FilenameLoc, Filename, isAngled, false,
-                            LookupFromFile, nullptr, &RelativePath);
+      this->LookupEmbedFile(Filename, isAngled, false, LookupFromFile);
   if (Callbacks) {
     Callbacks->HasEmbed(LParenLoc, Filename, isAngled, MaybeFileEntry);
   }

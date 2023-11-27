@@ -45,3 +45,15 @@
 #elif __has_embed(<media/art.txt> if_empty(meow)) != __STDC_EMBED_FOUND__
 #error 14
 #endif
+
+// Ensure that when __has_embed returns true, the file can actually be
+// embedded. This was previously failing because the way in which __has_embed
+// would search for files was differentl from how #embed would resolve them
+// when the file path included relative path markers like `./` or `../`.
+#if __has_embed("./embed___has_embed.c") == __STDC_EMBED_FOUND__
+unsigned char buffer[] = {
+#embed "./embed___has_embed.c"
+};
+#else
+#error 15
+#endif
