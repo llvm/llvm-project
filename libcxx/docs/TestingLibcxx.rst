@@ -334,11 +334,12 @@ Test names
 ----------
 
 The names of test files have meaning for the libcxx-specific configuration of 
-Lit. A complete description can be found in the docstring for the function 
-``CxxStandardLibraryTest`` in the file ``libcxx/utils/libcxx/test/format.py``.
+Lit. Based on the pattern that matches the name of a test file, Lit will test
+the code contained therein in different ways. Refer to the `Lit Meaning of libcxx
+Test Filenames`_ when
+determining the names for new test files.
 
-For quick reference, here is an overview of some of the most useful patterns:
-
+.. _Lit Meaning of libcxx Test Filenames:
 .. list-table:: Lit Meaning of libcxx Test Filenames
    :widths: 25 75
    :header-rows: 1
@@ -346,32 +347,36 @@ For quick reference, here is an overview of some of the most useful patterns:
    * - Name Pattern
      - Meaning
    * - ``FOO.pass.cpp``
-     - Compiles, links and runs successfully
+     - Checks whether the C++ code in the file compiles, links and runs successfully.
    * - ``FOO.pass.mm``
-     - Same as ``FOO.pass.cpp``, but for Objective-C++
+     - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Compiles successfully, link and run not attempted
+     - Checks whether the C++ code in the file compiles successfully.
    * - ``FOO.compile.pass.mm``
-     - Same as ``FOO.compile.pass.cpp``, but for Objective-C++
+     - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
    * - ``FOO.compile.fail.cpp``
-     - Does not compile successfully
-
-   * - ``FOO.link.pass.cpp``
-     - Compiles and links successfully, run not attempted
-   * - ``FOO.link.pass.mm``
-     - Same as ``FOO.link.pass.cpp``, but for Objective-C++
-   * - ``FOO.link.fail.cpp``
-     - Compiles successfully, but fails to link
-
-   * - ``FOO.sh.<anything>``
-     - A builtin Lit Shell test
-
-   * - ``FOO.gen.<anything>``
-     - A ``.sh`` test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected by LLVM split-file, and each generated file leads to a separate Lit test that runs that file as defined by the test format. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties in the library.  Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
+     - Checks that the code in the file does *not* compile successfully.
 
    * - ``FOO.verify.cpp``
      - Compiles with clang-verify. This type of test is automatically marked as UNSUPPORTED if the compiler does not support clang-verify.
+
+   * - ``FOO.link.pass.cpp``
+     - Checks that the C++ code in the file compiles and links successfully -- no run attempted.
+   * - ``FOO.link.pass.mm``
+     - Same as ``FOO.link.pass.cpp``, but for Objective-C++.
+   * - ``FOO.link.fail.cpp``
+     - Checks whether the C++ code in the file fails to link after successful compilation.
+   * - ``FOO.link.fail.mm``
+     - Same as ``FOO.link.fail.cpp``, but for Objective-C++.
+
+   * - ``FOO.sh.<anything>``
+     - A *builtin Lit Shell* test.
+   * - ``FOO.gen.<anything>``
+     - A *builtin Lit Shell* test that generates one or more Lit tests on the fly. Executing this test must generate one or more files as expected
+       by LLVM split-file. Each generated file will drive an invocation of a separate Lit test. The format of the generated file will determine the type
+       of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
+       in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
 
 Benchmarks
 ==========
