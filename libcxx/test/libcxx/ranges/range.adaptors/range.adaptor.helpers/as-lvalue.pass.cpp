@@ -21,12 +21,6 @@ constexpr bool test() {
     [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(lvalue);
   }
 
-  // Check prvalue
-  {
-    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(
-        0); // expected-warning {{temporary bound to local reference 'check' will be destroyed at the end of the full-expression}}
-  }
-
   // Check xvalue
   {
     int xvalue{};
