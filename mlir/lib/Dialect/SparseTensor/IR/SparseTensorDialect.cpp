@@ -396,7 +396,6 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
 
   if (isPermutation()) {
     for (unsigned r = 0; r < rank; r++) {
-      // FIXME: `toOrigDim` and `toStoredDim` are deprecated.
       unsigned trans = dir == CrdTransDirectionKind::dim2lvl ? toDim(*this, r)
                                                              : toLvl(*this, r);
       ret.push_back(srcShape[trans]);
