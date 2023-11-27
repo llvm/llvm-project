@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// ranges
-
 // std::views::stride_view::iterator
 
 #include "../test.h"
@@ -72,5 +70,6 @@ constexpr bool iterator_concept_test() {
 int main(int, char**) {
   iterator_concept_test();
   static_assert(iterator_concept_test());
+
   return 0;
 }

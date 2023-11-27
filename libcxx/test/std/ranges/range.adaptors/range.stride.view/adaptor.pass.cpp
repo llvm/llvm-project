@@ -8,11 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// ranges
-
 // std::views::stride_view
 
-#include "__ranges/stride_view.h"
 #include "test.h"
 #include "test_iterators.h"
 #include <concepts>

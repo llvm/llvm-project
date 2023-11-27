@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// ranges
-
 // std::views::stride_view
 
 #include "../test.h"
@@ -242,5 +240,6 @@ int main(int, char**) {
   static_assert(non_simple_view_iter_ctor_test());
   static_assert(iterator_default_constructible());
   static_assert(non_const_iterator_copy_ctor());
+
   return 0;
 }
