@@ -197,7 +197,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {
     if (!Features.CPlusPlus)
-      return getTypeInfo(Context.getIntTypeForBitwidth(Size * 8, 0));
+      return getTypeInfo(ETy->getDecl()->getIntegerType());
 
     // In C++ mode, types have linkage, so we can rely on the ODR and
     // on their mangled names, if they're external.
