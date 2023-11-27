@@ -112,9 +112,7 @@ public:
 
   /// Tests.
   /// \{
-  explicit operator bool() const {
-    return m_type_system.lock() && m_type;
-  }
+  explicit operator bool() const { return m_type_system.lock() && m_type; }
 
   bool IsValid() const { return (bool)*this; }
 
@@ -223,8 +221,7 @@ public:
 
   bool IsRecordType() const;
 
-  bool IsVirtualBase(CompilerType target_base,
-                     CompilerType *virtual_base,
+  bool IsVirtualBase(CompilerType target_base, CompilerType *virtual_base,
                      bool carry_virtual = false) const;
 
   bool IsContextuallyConvertibleToBool() const;
@@ -235,7 +232,7 @@ public:
 
   bool CompareTypes(CompilerType rhs) const;
 
-  const char * GetTypeTag();
+  const char *GetTypeTag();
 
   uint32_t GetNumberOfNonEmptyBaseClasses();
 
@@ -485,8 +482,8 @@ public:
                      ExecutionContextScope *exe_scope);
 
   /// Dump to stdout.
-  void DumpTypeDescription(lldb::DescriptionLevel level =
-                           lldb::eDescriptionLevelFull) const;
+  void DumpTypeDescription(
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) const;
 
   /// Print a description of the type to a stream. The exact implementation
   /// varies, but the expectation is that eDescriptionLevelFull returns a
