@@ -1007,7 +1007,7 @@ addTaggedSymbolReferences(InputSectionBase &sec,
     // doesn't work under MTE globals, because each GV would have its own unique
     // tag. So, symbols that are destined for a special section with start/stop
     // symbols should go untagged implicitly.
-    const Defined* defined_sym = dyn_cast<Defined>(&sym);
+    const Defined *defined_sym = dyn_cast<Defined>(&sym);
     if (defined_sym && defined_sym->section &&
         isValidCIdentifier(defined_sym->section->name))
       continue;
