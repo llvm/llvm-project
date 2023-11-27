@@ -62,16 +62,17 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
                                     /*IsMissing=*/false);
   }
 
-  void EmbedDirective(SourceLocation, StringRef FileName, bool,
+  void EmbedDirective(SourceLocation, StringRef, bool,
                       OptionalFileEntryRef File,
-                      const LexEmbedParametersResult &Params) override {
-    if (!File)
-      DepCollector.maybeAddDependency(FileName,
-                                      /*FromModule*/ false,
-                                      /*IsSystem*/ false,
-                                      /*IsModuleFile*/ false,
-                                      /*IsMissing*/ true);
-    // Files that actually exist are handled by FileChanged.
+                      const LexEmbedParametersResult &) override {
+    assert(File && "expected to only be called when the file is found");
+    StringRef FileName =
+        llvm::sys::path::remove_leading_dotslash(File->getName());
+    DepCollector.maybeAddDependency(FileName,
+                                    /*FromModule*/ false,
+                                    /*IsSystem*/ false,
+                                    /*IsModuleFile*/ false,
+                                    /*IsMissing*/ false);
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -88,7 +89,7 @@ struct DepCollectorPPCallbacks : public PPCallbacks {
     // Files that actually exist are handled by FileChanged.
   }
 
-  void HasEmbed(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
+  void HasEmbed(SourceLocation, StringRef, bool,
                 OptionalFileEntryRef File) override {
     if (!File)
       return;
