@@ -422,10 +422,10 @@ struct GenericOpScheduler : public OpRewritePattern<linalg::GenericOp> {
     // computation. Must be ordered from more strict to less strict.
     // Ideally (though might not be guaranteed), the earlier a constraint mask
     // can be satisfied, the faster the generated kernel will be.
-    const auto allMasks = {
-        SortMask::kIncludeAll,        SortMask::kIncludeDense,
-        SortMask::kIncludeDenseInput, SortMask::kIncludeDenseOutput,
-        SortMask::kIncludeUndef,      SortMask::kSparseOnly};
+    const auto allMasks = {SortMask::kIncludeAll, SortMask::kIncludeDense,
+                           SortMask::kIncludeDenseInput,
+                           SortMask::kIncludeDenseOutput,
+                           SortMask::kSparseOnly};
     for (const SortMask mask : allMasks) {
       order = scheduler.sort(mask);
       if (order) {
