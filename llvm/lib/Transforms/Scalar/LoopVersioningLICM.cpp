@@ -70,6 +70,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/SourceExpressionAnalysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -576,8 +577,9 @@ PreservedAnalyses LoopVersioningLICMPass::run(Loop &L, LoopAnalysisManager &AM,
   DominatorTree *DT = &LAR.DT;
   const Function *F = L.getHeader()->getParent();
   OptimizationRemarkEmitter ORE(F);
+  LoadStoreSourceExpression *LSE = &LAR.LSE;
 
-  LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr);
+  LoopAccessInfoManager LAIs(*SE, *AA, *DT, LAR.LI, nullptr, *LSE);
   if (!LoopVersioningLICM(AA, SE, &ORE, LAIs, LAR.LI, &L).run(DT))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();

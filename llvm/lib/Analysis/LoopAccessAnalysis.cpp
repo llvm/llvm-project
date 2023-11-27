@@ -33,6 +33,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/Analysis/SourceExpressionAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -82,6 +83,11 @@ VectorizationInterleave("force-vector-interleave", cl::Hidden,
                         cl::location(
                             VectorizerParams::VectorizationInterleave));
 unsigned VectorizerParams::VectorizationInterleave;
+
+static cl::opt<bool> ReportSourceExpr(
+    "report-source-expr", cl::Hidden,
+    cl::desc("Report source expression for Load/Store pointers."),
+    cl::init(true));
 
 static cl::opt<unsigned, true> RuntimeMemoryCheckThreshold(
     "runtime-memory-check-threshold", cl::Hidden,
@@ -2274,7 +2280,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
 
 void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                                  const TargetLibraryInfo *TLI,
-                                 DominatorTree *DT) {
+                                 DominatorTree *DT, LoadStoreSourceExpression *LSE) {
   // Holds the Load and Store instructions.
   SmallVector<LoadInst *, 16> Loads;
   SmallVector<StoreInst *, 16> Stores;
@@ -2575,10 +2581,10 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
                << (PtrRtChecking->Need ? "" : " don't")
                << " need runtime memory checks.\n");
   else
-    emitUnsafeDependenceRemark();
+    emitUnsafeDependenceRemark(LSE);
 }
 
-void LoopAccessInfo::emitUnsafeDependenceRemark() {
+void LoopAccessInfo::emitUnsafeDependenceRemark(LoadStoreSourceExpression *LSE) {
   auto Deps = getDepChecker().getDependences();
   if (!Deps)
     return;
@@ -2611,6 +2617,42 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
             "loop";
   OptimizationRemarkAnalysis &R =
       recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
+  
+  // Report source expression for dependence source and destination if the user
+  // asked for it.
+
+  if (ReportSourceExpr) {
+    llvm::Instruction *SourceInst = Dep.getSource(*this);
+    llvm::Instruction *DestInst = Dep.getDestination(*this);
+
+    R << " Dependence source: ";
+    llvm::Value *SourceValue = nullptr;
+
+    if (llvm::StoreInst *StoreInstruction =
+            llvm::dyn_cast<llvm::StoreInst>(SourceInst)) {
+      SourceValue = StoreInstruction->getPointerOperand();
+    } else if (llvm::LoadInst *LoadInstruction =
+                   llvm::dyn_cast<llvm::LoadInst>(SourceInst)) {
+      SourceValue = LoadInstruction->getPointerOperand();
+    } else {
+      SourceValue = Dep.getSource(*this);
+    }
+    R << LSE->getSourceExpressionForValue(SourceValue);
+
+    R << " Dependence destination: ";
+    llvm::Value *DestValue = nullptr;
+
+    if (llvm::StoreInst *StoreInstruction =
+            llvm::dyn_cast<llvm::StoreInst>(DestInst)) {
+      DestValue = StoreInstruction->getPointerOperand();
+    } else if (llvm::LoadInst *LoadInstruction =
+                   llvm::dyn_cast<llvm::LoadInst>(DestInst)) {
+      DestValue = LoadInstruction->getPointerOperand();
+    } else {
+      DestValue = Dep.getDestination(*this);
+    }
+    R << LSE->getSourceExpressionForValue(DestValue);
+  }
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:
@@ -2897,13 +2939,13 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const TargetLibraryInfo *TLI, AAResults *AA,
-                               DominatorTree *DT, LoopInfo *LI)
+                               DominatorTree *DT, LoopInfo *LI, LoadStoreSourceExpression *LSE)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(nullptr),
       DepChecker(std::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L) {
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop()) {
-    analyzeLoop(AA, LI, TLI, DT);
+    analyzeLoop(AA, LI, TLI, DT, LSE);
   }
 }
 
@@ -2956,7 +2998,7 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
 
   if (I.second)
     I.first->second =
-        std::make_unique<LoopAccessInfo>(&L, &SE, TLI, &AA, &DT, &LI);
+        std::make_unique<LoopAccessInfo>(&L, &SE, TLI, &AA, &DT, &LI, &LSE);
 
   return *I.first->second;
 }
@@ -2986,7 +3028,8 @@ LoopAccessInfoManager LoopAccessAnalysis::run(Function &F,
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = FAM.getResult<LoopAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-  return LoopAccessInfoManager(SE, AA, DT, LI, &TLI);
+  auto &LSE = FAM.getResult<SourceExpressionAnalysis>(F);
+  return LoopAccessInfoManager(SE, AA, DT, LI, &TLI, LSE);
 }
 
 AnalysisKey LoopAccessAnalysis::Key;
