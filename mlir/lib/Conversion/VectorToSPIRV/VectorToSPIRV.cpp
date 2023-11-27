@@ -756,30 +756,32 @@ struct VectorReductionToFPDotProd final
     if (!resultType)
       return rewriter.notifyMatchFailure(op, "result is not a float");
 
-    auto vectorType = dyn_cast<VectorType>(adaptor.getVector().getType());
+    Value vec = adaptor.getVector();
+    Value acc = adaptor.getAcc();
+
+    auto vectorType = dyn_cast<VectorType>(vec.getType());
     if (!vectorType) {
-      assert(isa<FloatType>(adaptor.getVector().getType()) &&
+      assert(isa<FloatType>(vec.getType()) &&
              "Expected the vector to be scalarized");
       if (op.getAcc()) {
-        rewriter.replaceOpWithNewOp<spirv::FAddOp>(op, adaptor.getAcc(),
-                                                   adaptor.getVector());
+        rewriter.replaceOpWithNewOp<spirv::FAddOp>(op, acc, vec);
         return success();
       }
 
-      rewriter.replaceOp(op, adaptor.getVector());
+      rewriter.replaceOp(op, vec);
       return success();
     }
 
     Location loc = op.getLoc();
     Value lhs;
     Value rhs;
-    if (auto mul = adaptor.getVector().getDefiningOp<arith::MulFOp>()) {
+    if (auto mul = vec.getDefiningOp<arith::MulFOp>()) {
       lhs = mul.getLhs();
       rhs = mul.getRhs();
     } else {
       // If the operand is not a mul, use a vector of ones for the dot operand
       // to just sum up all values.
-      lhs = adaptor.getVector();
+      lhs = vec;
       Attribute oneAttr =
           rewriter.getFloatAttr(vectorType.getElementType(), 1.0);
       oneAttr = SplatElementsAttr::get(vectorType, oneAttr);
@@ -790,7 +792,7 @@ struct VectorReductionToFPDotProd final
 
     Value res = rewriter.create<spirv::DotOp>(loc, resultType, lhs, rhs);
     if (op.getAcc())
-      res = rewriter.create<spirv::FAddOp>(loc, adaptor.getAcc(), res);
+      res = rewriter.create<spirv::FAddOp>(loc, acc, res);
 
     rewriter.replaceOp(op, res);
     return success();
