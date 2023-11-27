@@ -39,9 +39,9 @@ class SPIRV_IntegerDotProductBinaryOp<string mnemonic,
       SPIRV_IntegerDotProductOp<mnemonic,
         !listconcat(traits, [AllTypesMatch<["vector1", "vector2"]>])> {
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector2,
-    OptionalAttr<SPIRV_PackedVectorFormatAttr> :$format
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector1,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector2,
+    OptionalAttr<SPIRV_PackedVectorFormatAttr>:$format
   );
 
   let assemblyFormat = [{
@@ -56,10 +56,10 @@ class SPIRV_IntegerDotProductTernaryOp<string mnemonic,
         !listconcat(traits, [AllTypesMatch<["vector1", "vector2"]>,
                              AllTypesMatch<["accumulator", "result"]>])> {
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector2,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector1,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector2,
     SPIRV_Integer:$accumulator,
-    OptionalAttr<SPIRV_PackedVectorFormatAttr> :$format
+    OptionalAttr<SPIRV_PackedVectorFormatAttr>:$format
   );
 
   let assemblyFormat = [{
