@@ -105,6 +105,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // all vector operands have identical vector width.
   ElementCount VF = ElementCount::getFixed(0);
   SmallVector<Type *> ScalarTypes;
+  bool MayBeMasked = false;
   for (auto Arg : enumerate(CI.args())) {
     auto *ArgType = Arg.value()->getType();
     // Vector calls to intrinsics can still have
@@ -121,17 +122,13 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
         return false;
       }
       ElementCount NumElements = VectorArgTy->getElementCount();
-      if (NumElements.isScalable()) {
-        // The current implementation does not support
-        // scalable vectors.
+      if (NumElements.isScalable())
+        MayBeMasked = true;
+
+      // The different arguments differ in vector size.
+      if (VF.isNonZero() && VF != NumElements)
         return false;
-      }
-      if (VF.isNonZero() && VF != NumElements) {
-        // The different arguments differ in vector size.
-        return false;
-      } else {
-        VF = NumElements;
-      }
+      VF = NumElements;
       ScalarTypes.push_back(VectorArgTy->getElementType());
     }
   }
@@ -152,11 +149,14 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
     return false;
   }
 
+  // Assume it has a mask when that is a possibility and has no mapping for
+  // a Non-Masked variant.
+  const bool IsMasked =
+      MayBeMasked && !TLI.getVectorMappingInfo(ScalarName, VF, false);
   // Try to find the mapping for the scalar version of this intrinsic
   // and the exact vector width of the call operands in the
   // TargetLibraryInfo.
-  StringRef TLIName = TLI.getVectorizedFunction(ScalarName, VF);
-
+  StringRef TLIName = TLI.getVectorizedFunction(ScalarName, VF, IsMasked);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Looking up TLI mapping for `"
                     << ScalarName << "` and vector width " << VF << ".\n");
 

@@ -126,7 +126,7 @@ static ParseRet tryParseLinearTokenWithRuntimeStep(StringRef &ParseString,
   return ParseRet::None;
 }
 
-/// The function looks for the following stringt at the beginning of
+/// The function looks for the following string at the beginning of
 /// the input string `ParseString`:
 ///
 ///  <token> <number>
