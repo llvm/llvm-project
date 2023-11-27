@@ -4512,43 +4512,6 @@ static bool checkTLSSections(const typename ELFT::Phdr &Phdr,
 }
 
 template <class ELFT>
-static bool checkOffsets(const typename ELFT::Phdr &Phdr,
-                         const typename ELFT::Shdr &Sec) {
-  // SHT_NOBITS sections don't need to have an offset inside the segment.
-  if (Sec.sh_type == ELF::SHT_NOBITS)
-    return true;
-
-  if (Sec.sh_offset < Phdr.p_offset)
-    return false;
-
-  // Only non-empty sections can be at the end of a segment.
-  if (Sec.sh_size == 0)
-    return (Sec.sh_offset + 1 <= Phdr.p_offset + Phdr.p_filesz);
-  return Sec.sh_offset + Sec.sh_size <= Phdr.p_offset + Phdr.p_filesz;
-}
-
-// Check that an allocatable section belongs to a virtual address
-// space of a segment.
-template <class ELFT>
-static bool checkVMA(const typename ELFT::Phdr &Phdr,
-                     const typename ELFT::Shdr &Sec) {
-  if (!(Sec.sh_flags & ELF::SHF_ALLOC))
-    return true;
-
-  if (Sec.sh_addr < Phdr.p_vaddr)
-    return false;
-
-  bool IsTbss =
-      (Sec.sh_type == ELF::SHT_NOBITS) && ((Sec.sh_flags & ELF::SHF_TLS) != 0);
-  // .tbss is special, it only has memory in PT_TLS and has NOBITS properties.
-  bool IsTbssInNonTLS = IsTbss && Phdr.p_type != ELF::PT_TLS;
-  // Only non-empty sections can be at the end of a segment.
-  if (Sec.sh_size == 0 || IsTbssInNonTLS)
-    return Sec.sh_addr + 1 <= Phdr.p_vaddr + Phdr.p_memsz;
-  return Sec.sh_addr + Sec.sh_size <= Phdr.p_vaddr + Phdr.p_memsz;
-}
-
-template <class ELFT>
 static bool checkPTDynamic(const typename ELFT::Phdr &Phdr,
                            const typename ELFT::Shdr &Sec) {
   if (Phdr.p_type != ELF::PT_DYNAMIC || Phdr.p_memsz == 0 || Sec.sh_size != 0)
@@ -4679,8 +4642,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printSectionMapping() {
       // readelf additionally makes sure it does not print zero sized sections
       // at end of segments and for PT_DYNAMIC both start and end of section
       // .tbss must only be shown in PT_TLS section.
-      if (checkTLSSections<ELFT>(Phdr, Sec) && checkOffsets<ELFT>(Phdr, Sec) &&
-          checkVMA<ELFT>(Phdr, Sec) && checkPTDynamic<ELFT>(Phdr, Sec)) {
+      if (isSectionInSegment<ELFT>(Phdr, Sec) &&
+          checkTLSSections<ELFT>(Phdr, Sec) &&
+          checkPTDynamic<ELFT>(Phdr, Sec)) {
         Sections +=
             unwrapOrError(this->FileName, this->Obj.getSectionName(Sec)).str() +
             " ";
