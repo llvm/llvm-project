@@ -157,12 +157,25 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
                                   Environment &CurrentEnv,
                                   Environment::ValueModel &Model) {
   // Boolean-model widening.
-  if (isa<BoolValue>(&Prev)) {
-    assert(isa<BoolValue>(Current));
-    // Widen to Top, because we know they are different values. If previous was
-    // already Top, re-use that to (implicitly) indicate that no change occured.
+  if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
+    // If previous value was already Top, re-use that to (implicitly) indicate
+    // that no change occurred.
     if (isa<TopBoolValue>(Prev))
       return Prev;
+
+    // We may need to widen to Top, but before we do so, check whether both
+    // values are implied to be either true or false in the current environment.
+    // In that case, we can simply return a literal instead.
+    auto &CurBool = cast<BoolValue>(Current);
+    bool TruePrev = PrevEnv.proves(PrevBool->formula());
+    bool TrueCur = CurrentEnv.proves(CurBool.formula());
+    if (TruePrev && TrueCur)
+      return CurrentEnv.getBoolLiteralValue(true);
+    if (!TruePrev && !TrueCur &&
+        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
+        CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
+      return CurrentEnv.getBoolLiteralValue(false);
+
     return CurrentEnv.makeTopBoolValue();
   }
 
