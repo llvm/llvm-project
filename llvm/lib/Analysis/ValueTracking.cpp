@@ -630,14 +630,14 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   return false;
 }
 
-static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
-                                    KnownBits &Known, unsigned Depth,
-                                    const SimplifyQuery &Q) {
-  if (Cmp->getOperand(1)->getType()->isPointerTy()) {
+static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
+                                    Value *LHS, Value *RHS, KnownBits &Known,
+                                    unsigned Depth, const SimplifyQuery &Q) {
+  if (RHS->getType()->isPointerTy()) {
     // Handle comparison of pointer to null explicitly, as it will not be
     // covered by the m_APInt() logic below.
-    if (match(Cmp->getOperand(1), m_Zero())) {
-      switch (Cmp->getPredicate()) {
+    if (match(RHS, m_Zero())) {
+      switch (Pred) {
       case ICmpInst::ICMP_EQ:
         Known.setAllZero();
         break;
@@ -659,34 +659,32 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   auto m_V =
       m_CombineOr(m_Specific(V), m_PtrToIntSameSize(Q.DL, m_Specific(V)));
 
-  CmpInst::Predicate Pred;
   const APInt *Mask, *C;
   uint64_t ShAmt;
-  switch (Cmp->getPredicate()) {
+  switch (Pred) {
   case ICmpInst::ICMP_EQ:
     // assume(V = C)
-    if (match(Cmp, m_ICmp(Pred, m_V, m_APInt(C)))) {
+    if (match(LHS, m_V) && match(RHS, m_APInt(C))) {
       Known = Known.unionWith(KnownBits::makeConstant(*C));
       // assume(V & Mask = C)
-    } else if (match(Cmp,
-                     m_ICmp(Pred, m_And(m_V, m_APInt(Mask)), m_APInt(C)))) {
+    } else if (match(LHS, m_And(m_V, m_APInt(Mask))) &&
+               match(RHS, m_APInt(C))) {
       // For one bits in Mask, we can propagate bits from C to V.
       Known.Zero |= ~*C & *Mask;
       Known.One |= *C & *Mask;
       // assume(V | Mask = C)
-    } else if (match(Cmp, m_ICmp(Pred, m_Or(m_V, m_APInt(Mask)), m_APInt(C)))) {
+    } else if (match(LHS, m_Or(m_V, m_APInt(Mask))) && match(RHS, m_APInt(C))) {
       // For zero bits in Mask, we can propagate bits from C to V.
       Known.Zero |= ~*C & ~*Mask;
       Known.One |= *C & ~*Mask;
       // assume(V ^ Mask = C)
-    } else if (match(Cmp,
-                     m_ICmp(Pred, m_Xor(m_V, m_APInt(Mask)), m_APInt(C)))) {
+    } else if (match(LHS, m_Xor(m_V, m_APInt(Mask))) &&
+               match(RHS, m_APInt(C))) {
       // Equivalent to assume(V == Mask ^ C)
       Known = Known.unionWith(KnownBits::makeConstant(*C ^ *Mask));
       // assume(V << ShAmt = C)
-    } else if (match(Cmp, m_ICmp(Pred, m_Shl(m_V, m_ConstantInt(ShAmt)),
-                                 m_APInt(C))) &&
-               ShAmt < BitWidth) {
+    } else if (match(LHS, m_Shl(m_V, m_ConstantInt(ShAmt))) &&
+               match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
       // For those bits in C that are known, we can propagate them to known
       // bits in V shifted to the right by ShAmt.
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
@@ -694,9 +692,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       RHSKnown.One.lshrInPlace(ShAmt);
       Known = Known.unionWith(RHSKnown);
       // assume(V >> ShAmt = C)
-    } else if (match(Cmp, m_ICmp(Pred, m_Shr(m_V, m_ConstantInt(ShAmt)),
-                                 m_APInt(C))) &&
-               ShAmt < BitWidth) {
+    } else if (match(LHS, m_Shr(m_V, m_ConstantInt(ShAmt))) &&
+               match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
@@ -707,14 +704,14 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_NE: {
     // assume (V & B != 0) where B is a power of 2
     const APInt *BPow2;
-    if (match(Cmp, m_ICmp(Pred, m_And(m_V, m_Power2(BPow2)), m_Zero())))
+    if (match(LHS, m_And(m_V, m_Power2(BPow2))) && match(RHS, m_Zero()))
       Known.One |= *BPow2;
     break;
   }
   default:
     const APInt *Offset = nullptr;
-    if (match(Cmp, m_ICmp(Pred, m_CombineOr(m_V, m_Add(m_V, m_APInt(Offset))),
-                          m_APInt(C)))) {
+    if (match(LHS, m_CombineOr(m_V, m_Add(m_V, m_APInt(Offset)))) &&
+        match(RHS, m_APInt(C))) {
       ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
       if (Offset)
         LHSRange = LHSRange.sub(*Offset);
@@ -788,7 +785,8 @@ void llvm::computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
       continue;
 
-    computeKnownBitsFromCmp(V, Cmp, Known, Depth, Q);
+    computeKnownBitsFromCmp(V, Cmp->getPredicate(), Cmp->getOperand(0),
+                            Cmp->getOperand(1), Known, Depth, Q);
   }
 
   // Conflicting assumption: Undefined behavior will occur on this execution
