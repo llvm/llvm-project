@@ -31,6 +31,33 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Helper functions
+//===----------------------------------------------------------------------===//
+
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b) {
+  do {
+    if (a->isProperAncestor(b))
+      return false;
+    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
+      return a->isBeforeInBlock(bAncestor);
+    }
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
+/// Return nullptr if `v` is dead (has no further uses) after `op`. Otherwise,
+/// return an arbitrary alive use. This return value is typically used in error
+/// messages or for debugging purposes.
+static OpOperand *getAliveUse(Value v, Operation *op) {
+  for (OpOperand &use : v.getUses())
+    if (use.getOwner() != op && !happensBefore(use.getOwner(), op))
+      return &use;
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // TransformState
 //===----------------------------------------------------------------------===//
 
@@ -216,6 +243,10 @@ transform::TransformState::setPayloadOps(Value value,
   if (failed(result.checkAndReport()))
     return failure();
 
+  // Do not maintain mappings for dead handles.
+  if (value.getUses().empty())
+    return success();
+
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
   SmallVector<Operation *> storedTargets(targets.begin(), targets.end());
@@ -252,6 +283,10 @@ transform::TransformState::setPayloadValues(Value handle,
   if (failed(result.checkAndReport()))
     return failure();
 
+  // Do not maintain mappings for dead handles.
+  if (handle.getUses().empty())
+    return success();
+
   Mappings &mappings = getMapping(handle);
   bool inserted =
       mappings.values.insert({handle, std::move(payloadValueVector)}).second;
@@ -284,6 +319,10 @@ LogicalResult transform::TransformState::setParams(Value value,
       valueType.checkPayload(value.getLoc(), params);
   if (failed(result.checkAndReport()))
     return failure();
+
+  // Do not maintain mappings for dead handles.
+  if (value.getUses().empty())
+    return success();
 
   Mappings &mappings = getMapping(value);
   bool inserted =
@@ -494,10 +533,10 @@ void transform::TransformState::recordOpHandleInvalidationOne(
   unsigned operandNo = consumingHandle.getOperandNumber();
   for (Operation *ancestor : potentialAncestors) {
     // clang-format off
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
       { (DBGS() << "----handle one ancestor: " << *ancestor << "\n"); });
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
-      { (DBGS() << "----of payload with name: " 
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
+      { (DBGS() << "----of payload with name: "
                 << payloadOp->getName().getIdentifier() << "\n"); });
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
       { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
@@ -992,15 +1031,21 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   if (result.isSilenceableFailure())
     results.setRemainingToEmpty(transform);
 
-  // Remove the mapping for the operand if it is consumed by the operation. This
-  // allows us to catch use-after-free with assertions later on.
-  for (OpOperand *opOperand : consumedOperands) {
-    Value operand = opOperand->get();
+  // Remove the mapping for the operand if it is consumed by the operation. Also
+  // remove the mapping for handles that are now dead. This allows us to catch
+  // use-after-free with assertions later on.
+  for (OpOperand &opOperand : transform->getOpOperands()) {
+    Value operand = opOperand.get();
+    if (getAliveUse(operand, transform) != nullptr)
+      continue;
+    bool wasConsumed = llvm::is_contained(consumedOperands, &opOperand);
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
-      forgetMapping(operand, origOpFlatResults);
+      forgetMapping(operand,
+                    wasConsumed ? ValueRange(origOpFlatResults) : ValueRange());
     } else if (llvm::isa<TransformValueHandleTypeInterface>(
                    operand.getType())) {
-      forgetValueMapping(operand, origAssociatedOps);
+      forgetValueMapping(operand, wasConsumed ? ArrayRef(origAssociatedOps)
+                                              : ArrayRef<Operation *>());
     }
   }
 
@@ -1369,19 +1414,6 @@ void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
   });
 }
 
-/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
-/// properly dominates `b` and `b` is not inside `a`.
-static bool happensBefore(Operation *a, Operation *b) {
-  do {
-    if (a->isProperAncestor(b))
-      return false;
-    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
-      return a->isBeforeInBlock(bAncestor);
-    }
-  } while ((a = a->getParentOp()));
-  return false;
-}
-
 void transform::TrackingListener::notifyOperationReplaced(
     Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
@@ -1413,20 +1445,18 @@ void transform::TrackingListener::notifyOperationReplaced(
                         [&](Value h) { return consumedHandles.contains(h); });
   };
 
-  // Helper function to check if the handle is alive.
-  auto firstAliveUser = [&]() -> std::optional<OpOperand *> {
-    for (Value v : opHandles) {
-      for (OpOperand &use : v.getUses())
-        if (use.getOwner() != transformOp &&
-            !happensBefore(use.getOwner(), transformOp))
-          return &use;
+  // Check if there are any live handles.
+  OpOperand *aliveUse = nullptr;
+  for (Value v : opHandles) {
+    if (OpOperand *use = getAliveUse(v, transformOp)) {
+      aliveUse = use;
+      break;
     }
-    return std::nullopt;
-  }();
+  }
 
-  if (!firstAliveUser.has_value() || handleWasConsumed()) {
-    // The op is tracked but the corresponding handles are dead or were
-    // consumed. Drop the op form the mapping.
+  if (!aliveUse || handleWasConsumed()) {
+    // The op is tracked but the corresponding handles are dead. Drop the op
+    // from the mapping.
     (void)replacePayloadOp(op, nullptr);
     return;
   }
@@ -1437,10 +1467,10 @@ void transform::TrackingListener::notifyOperationReplaced(
   // If the op is tracked but no replacement op was found, send a
   // notification.
   if (!diag.succeeded()) {
-    diag.attachNote((*firstAliveUser)->getOwner()->getLoc())
+    diag.attachNote(aliveUse->getOwner()->getLoc())
         << "replacement is required because alive handle(s) exist "
         << "(first use in this op as operand number "
-        << (*firstAliveUser)->getOperandNumber() << ")";
+        << aliveUse->getOperandNumber() << ")";
     notifyPayloadReplacementNotFound(op, newValues, std::move(diag));
     (void)replacePayloadOp(op, nullptr);
     return;

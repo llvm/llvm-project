@@ -76,6 +76,9 @@ transform.sequence failures(propagate) {
   %dummy = test_remap_operand_to_self %arg0 : (!transform.any_op) -> !transform.any_op
   %valuehandle = transform.get_result %dummy[0] : (!transform.any_op) -> !transform.any_value
   test_remap_operand_to_self %dummy : (!transform.any_op) -> ()
+  // Use %valuehandle so that the SSA value is not dead. This prevents the
+  // transform dialect interpreter from discarding the handle.
+  test_print_number_of_associated_payload_ir_values %valuehandle : !transform.any_value
 }
 
 // -----
