@@ -8910,8 +8910,7 @@ SDValue PPCTargetLowering::LowerSET_ROUNDING(SDValue Op,
   // If requested mode is constant, just use simpler mtfsb.
   if (auto *CVal = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
     uint64_t Mode = CVal->getZExtValue();
-    if (Mode >= 4)
-      llvm_unreachable("Unsupported rounding mode!");
+    assert(Model < 4 && "Unsupported rounding mode!");
     unsigned InternalRnd = Mode ^ (~(Mode >> 1) & 1);
     SDNode *SetHi = DAG.getMachineNode(
         (InternalRnd & 2) ? PPC::MTFSB1 : PPC::MTFSB0, Dl, MVT::Other,
