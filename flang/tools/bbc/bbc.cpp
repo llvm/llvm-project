@@ -52,6 +52,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -65,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+#include <memory>
 
 //===----------------------------------------------------------------------===//
 // Some basic command-line options
@@ -225,6 +227,27 @@ static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
 static void registerAllPasses() {
   fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptTransformPasses();
+}
+
+/// Create a target machine that is at least sufficient to get data-layout
+/// information required by flang semantics and lowering. Note that it may not
+/// contain all the CPU feature information to get optimized assembly generation
+/// from LLVM IR. Drivers that needs to generate assembly from LLVM IR should
+/// create a target machine according to their specific options.
+static std::unique_ptr<llvm::TargetMachine>
+createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
+  std::string triple{targetTriple};
+  if (triple.empty())
+    triple = llvm::sys::getDefaultTargetTriple();
+
+  const llvm::Target *theTarget =
+      llvm::TargetRegistry::lookupTarget(triple, error);
+  if (!theTarget)
+    return nullptr;
+  return std::unique_ptr<llvm::TargetMachine>{
+      theTarget->createTargetMachine(triple, /*CPU=*/"",
+                                     /*Features=*/"", llvm::TargetOptions(),
+                                     /*Reloc::Model=*/std::nullopt)};
 }
 
 //===----------------------------------------------------------------------===//
@@ -468,7 +491,7 @@ int main(int argc, char **argv) {
   std::string error;
   // Create host target machine.
   std::unique_ptr<llvm::TargetMachine> targetMachine =
-      Fortran::tools::createTargetMachine(targetTripleOverride, error);
+      createTargetMachine(targetTripleOverride, error);
   if (!targetMachine) {
     llvm::errs() << "failed to create target machine: " << error << "\n";
     return mlir::failed(mlir::failure());

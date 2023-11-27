@@ -10,10 +10,7 @@
 #define FORTRAN_TOOLS_TARGET_SETUP_H
 
 #include "flang/Evaluate/target.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Host.h"
-#include <memory>
 
 namespace Fortran::tools {
 
@@ -38,26 +35,6 @@ namespace Fortran::tools {
   // type size and alignment info.
 }
 
-/// Create a target machine that is at least sufficient to get data-layout
-/// information required by flang semantics and lowering. Note that it may not
-/// contain all the CPU feature information to get optimized assembly generation
-/// from LLVM IR. Drivers that needs to generate assembly from LLVM IR should
-/// create a target machine according to their specific options.
-[[maybe_unused]] inline static std::unique_ptr<llvm::TargetMachine>
-createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
-  std::string triple{targetTriple};
-  if (triple.empty())
-    triple = llvm::sys::getDefaultTargetTriple();
-
-  const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(triple, error);
-  if (!theTarget)
-    return nullptr;
-  return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(triple, /*CPU=*/"",
-          /*Features=*/"", llvm::TargetOptions(),
-          /*Reloc::Model=*/std::nullopt)};
-}
 } // namespace Fortran::tools
 
 #endif // FORTRAN_TOOLS_TARGET_SETUP_H
