@@ -730,11 +730,8 @@ func.func @break_outs_dependency(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?xf32>)
 //  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
-//  CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
-//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty(%[[D0]], %[[D1]])
 //      CHECK:   %[[GENERIC1:.+]] = linalg.generic
-// CHECK-SAME:     outs(%[[INIT]] : tensor<?x?xf32>)
+// CHECK-SAME:     outs(%[[ARG0]] : tensor<?x?xf32>)
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[GENERIC1]], %[[C0]]
 //  CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[GENERIC1]], %[[C1]]
 //  CHECK-DAG:   %[[INIT:.+]] = tensor.empty(%[[D0]], %[[D1]])
@@ -976,11 +973,10 @@ func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi
 //      CHECK: func @fusion_different_axes(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<5000xi64>
 // CHECK-SAME:     %[[ARG1:.+]]: tensor<5000xi32>
-//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty() : tensor<5000xi64>
 //  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty() : tensor<5000xi32>
 //      CHECK:   %[[RESULT:.+]]:2 = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
-// CHECK-SAME:       outs(%[[INIT0]], %[[INIT1]] :
+// CHECK-SAME:       outs(%[[ARG0]], %[[INIT1]] :
 // CHECK-NEXT:   ^bb0(
 // CHECK-SAME:       %[[B0:.+]]: i64
 // CHECK-SAME:       %[[B1:.+]]: i32
@@ -1097,10 +1093,12 @@ module {
 // CHECK-LABEL: func.func @fuse_multi_result_producer
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<f32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<f32>
-//       CHECK:   %[[INIT:.+]] = tensor.empty
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<f32>
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: tensor<f32>
+//  CHECK-SAME:     %[[ARG4:[a-zA-Z0-9_]+]]: tensor<f32>
 //       CHECK:   %[[GENERIC:.+]] = linalg.generic
 //  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
-//  CHECK-SAME:       outs(%[[INIT]] :
+//  CHECK-SAME:       outs(%[[ARG4]] :
 //  CHECK-NEXT:     ^bb0
 //  CHECK-SAME:         %[[B0:[a-zA-Z0-9_]+]]: f32
 //  CHECK-SAME:         %[[B1:[a-zA-Z0-9_]+]]: f32

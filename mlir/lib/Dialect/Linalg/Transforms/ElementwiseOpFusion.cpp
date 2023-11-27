@@ -1818,6 +1818,11 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         if (sparse_tensor::getSparseTensorEncoding(operandVal.getType()))
           continue;
 
+        // If outs is wired from a block argument, keep the dependency to
+        // prevent the argument from being optimized away.
+        if (isa<BlockArgument>(operandVal))
+          continue;
+
         // If outs is already an `empty` operation, nothing to do.
         auto definingOp = operandVal.getDefiningOp<tensor::EmptyOp>();
         if (definingOp)
