@@ -455,18 +455,11 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
 SmallVector<std::string> DiagnosticInfoDontCall::getInliningDecisions() const {
   SmallVector<std::string> InliningDecisions;
 
-  if (MDN) {
-    const MDOperand &MO = MDN->getOperand(0);
-    if (auto *MDT = dyn_cast<MDTuple>(MO)) {
-      for (const MDOperand &MO : MDT->operands()) {
-        if (auto *S = dyn_cast<MDString>(MO)) {
+  if (MDN)
+    if (auto *MDT = dyn_cast<MDTuple>(MDN->getOperand(0)))
+      for (const MDOperand &MO : MDT->operands())
+        if (auto *S = dyn_cast<MDString>(MO))
           InliningDecisions.push_back(S->getString().str());
-        }
-      }
-    } else if (auto *S = dyn_cast<MDString>(MO)) {
-      InliningDecisions.push_back(S->getString().str());
-    }
-  }
 
   return InliningDecisions;
 }
