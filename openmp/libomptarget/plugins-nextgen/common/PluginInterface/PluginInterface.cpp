@@ -1632,17 +1632,6 @@ int32_t __tgt_rtl_init_plugin() {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_deinit_plugin() {
-  auto Err = Plugin::deinitIfNeeded();
-  if (Err) {
-    REPORT("Failure to deinitialize plugin " GETNAME(TARGET_NAME) ": %s\n",
-           toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
   if (!Plugin::isActive())
     return false;
