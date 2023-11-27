@@ -10152,8 +10152,8 @@ static bool sameFunctionParameterTypeLists(Sema &S,
   if (!Cand1.Function || !Cand2.Function)
     return false;
 
-  auto *Fn1 = Cand1.Function;
-  auto *Fn2 = Cand2.Function;
+  FunctionDecl *Fn1 = Cand1.Function;
+  FunctionDecl *Fn2 = Cand2.Function;
 
   if (Fn1->isVariadic() != Fn1->isVariadic())
     return false;
