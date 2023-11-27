@@ -14,7 +14,7 @@
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
-#include "flang/Runtime/time-intrinsic.h" // copyBufferAndPad
+#include "flang/Runtime/time-intrinsic.h" // CopyBufferAndPad
 #include <cstring>
 
 #ifdef _WIN32
@@ -88,7 +88,7 @@ void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
   Terminator terminator{__FILE__, __LINE__};
   RUNTIME_CHECK(terminator, error == 0);
 
-  copyBufferAndPad(
+  CopyBufferAndPad(
       reinterpret_cast<char *>(arg), length, str.data(), str.size());
 }
 

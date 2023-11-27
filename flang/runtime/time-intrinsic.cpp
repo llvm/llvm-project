@@ -41,8 +41,8 @@
 // default values provided.
 
 // outside anonymous namespace, function reused
-void copyBufferAndPad(
-    char *dest, std::size_t destChars, char *buffer, std::size_t len) {
+void CopyBufferAndPad(
+    char *dest, std::size_t destChars, const char *buffer, std::size_t len) {
   auto copyLen{std::min(len, destChars)};
   std::memcpy(dest, buffer, copyLen);
   for (auto i{copyLen}; i < destChars; ++i) {
@@ -293,19 +293,19 @@ static void GetDateAndTime(Fortran::runtime::Terminator &terminator, char *date,
 
   if (date) {
     auto len = std::strftime(buffer, buffSize, "%Y%m%d", &localTime);
-    copyBufferAndPad(date, dateChars, buffer, len);
+    CopyBufferAndPad(date, dateChars, buffer, len);
   }
   if (time) {
     auto len{std::snprintf(buffer, buffSize, "%02d%02d%02d.%03jd",
         localTime.tm_hour, localTime.tm_min, localTime.tm_sec, ms)};
-    copyBufferAndPad(time, timeChars, buffer, len);
+    CopyBufferAndPad(time, timeChars, buffer, len);
   }
   if (zone) {
     // Note: this may leave the buffer empty on many platforms. Classic flang
     // has a much more complex way of doing this (see __io_timezone in classic
     // flang).
     auto len{std::strftime(buffer, buffSize, "%z", &localTime)};
-    copyBufferAndPad(zone, zoneChars, buffer, len);
+    CopyBufferAndPad(zone, zoneChars, buffer, len);
   }
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};

@@ -15,8 +15,8 @@
 
 #include <cstddef>
 
-void copyBufferAndPad(
-    char *dest, std::size_t destChars, char *buffer, std::size_t len);
+void CopyBufferAndPad(
+    char *dest, std::size_t destChars, const char *buffer, std::size_t len);
 
 #endif // TIME_INTRINSIC_H
 
