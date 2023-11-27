@@ -441,3 +441,27 @@ entry:
   call void @dso_local_function()
   ret void
 }
+
+define void @test_indirect_call(ptr %func) {
+  ; RV32I-LABEL: name: test_indirect_call
+  ; RV32I: bb.1 (%ir-block.0):
+  ; RV32I-NEXT:   liveins: $x10
+  ; RV32I-NEXT: {{  $}}
+  ; RV32I-NEXT:   [[COPY:%[0-9]+]]:gprjalr(p0) = COPY $x10
+  ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoCALLIndirect [[COPY]](p0), csr_ilp32_lp64, implicit-def $x1
+  ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV32I-NEXT:   PseudoRET
+  ;
+  ; RV64I-LABEL: name: test_indirect_call
+  ; RV64I: bb.1 (%ir-block.0):
+  ; RV64I-NEXT:   liveins: $x10
+  ; RV64I-NEXT: {{  $}}
+  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:gprjalr(p0) = COPY $x10
+  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoCALLIndirect [[COPY]](p0), csr_ilp32_lp64, implicit-def $x1
+  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; RV64I-NEXT:   PseudoRET
+  call void %func()
+  ret void
+}
