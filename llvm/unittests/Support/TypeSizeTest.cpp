@@ -97,6 +97,10 @@ static_assert(TypeSize::getFixed(8) + TypeSize::getScalable(0) ==
               TypeSize::getFixed(8));
 static_assert(TypeSize::getScalable(0) + TypeSize::getFixed(8) ==
               TypeSize::getFixed(8));
+static_assert(TypeSize::getScalable(8) - TypeSize::getFixed(0) ==
+              TypeSize::getScalable(8));
+static_assert(TypeSize::getFixed(8) - TypeSize::getScalable(0) ==
+              TypeSize::getFixed(8));
 
 TEST(TypeSize, FailIncompatibleTypes) {
   EXPECT_DEBUG_DEATH(TypeSize::getFixed(8) + TypeSize::getScalable(8),
