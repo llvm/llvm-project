@@ -341,6 +341,6 @@ let TargetGuard = "sme2" in {
 // lookup table expand one register
 //
 let TargetGuard = "sme2" in {
-  def SVLUTI2_LANE_ZT : Inst<"svluti2_lane_zt[_{d}]", "didi", "cUcsUsiUi", MergeNone, "aarch64_sme_luti2_lane_zt", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_15>]>;
-  def SVLUTI4_LANE_ZT : Inst<"svluti4_lane_zt[_{d}]", "didi", "cUcsUsiUi", MergeNone, "aarch64_sme_luti4_lane_zt", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
+  def SVLUTI2_LANE_ZT : Inst<"svluti2_lane_zt_{d}", "didi", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_15>]>;
+  def SVLUTI4_LANE_ZT : Inst<"svluti4_lane_zt_{d}", "didi", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
 }
