@@ -1852,7 +1852,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // Skip the callee-saved push instructions.
   bool PushedRegs = false;
   int StackOffset = 2 * stackGrowth;
-  MachineBasicBlock::iterator LastCSPush = MBBI;
+  MachineBasicBlock::const_iterator LastCSPush = MBBI;
   auto IsCSPush = [&](const MachineBasicBlock::iterator &MBBI) {
     if (MBBI == MBB.end() || !MBBI->getFlag(MachineInstr::FrameSetup))
       return false;
