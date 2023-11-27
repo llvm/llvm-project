@@ -39,14 +39,14 @@ define void @zing() {
 
 ; Same test but @fof has fn attr "dontcall-error"="..." rather than
 ; "dontcall-warn"="...".
-define void @a() {
+define void @_Z1av() {
   call void @fof()
   ret void
 }
-define void @b() {
-; CHECK-LABEL: @b(
+define void @_Z1bv() {
+; CHECK-LABEL: define {{[^@]+}}@_Z1bv(
 ; CHECK-NEXT: call void @fof(), !inlined.from !3
-  call void @a()
+  call void @_Z1av()
   ret void
 }
 
@@ -73,7 +73,7 @@ define void @always_caller2() alwaysinline {
 ; CHECK: !0 = !{!"bar"}
 ; CHECK-NEXT: !1 = !{!2}
 ; CHECK-NEXT: !2 = !{!"bar", !"baz"}
-; CHECK-NEXT: !3 = !{!"a"}
+; CHECK-NEXT: !3 = !{!"_Z1av"}
 ; CHECK-NEXT: !4 = !{!"always_callee"}
 ; CHECK-ALWAYS: !0 = !{!"always_callee"}
 ; CHECK-ALWAYS-NEXT: !1 = !{!2}
