@@ -1573,7 +1573,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   WithCache<const Value *> LHSCache(LHS), RHSCache(RHS);
   if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I))) {
     auto *Or = BinaryOperator::CreateOr(LHS, RHS);
-    Or->setIsDisjoint();
+    cast<PossiblyDisjointInst>(Or)->setIsDisjoint(true);
     return Or;
   }
 
