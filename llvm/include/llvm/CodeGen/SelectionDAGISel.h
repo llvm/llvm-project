@@ -244,11 +244,31 @@ public:
     OPC_EmitNode0,
     OPC_EmitNode1,
     OPC_EmitNode2,
+    // Space-optimized forms that implicitly encode EmitNodeInfo.
+    OPC_EmitNode0None,
+    OPC_EmitNode1None,
+    OPC_EmitNode2None,
+    OPC_EmitNode0Chain,
+    OPC_EmitNode1Chain,
+    OPC_EmitNode2Chain,
     OPC_MorphNodeTo,
     // Space-optimized forms that implicitly encode number of result VTs.
     OPC_MorphNodeTo0,
     OPC_MorphNodeTo1,
     OPC_MorphNodeTo2,
+    // Space-optimized forms that implicitly encode EmitNodeInfo.
+    OPC_MorphNodeTo0None,
+    OPC_MorphNodeTo1None,
+    OPC_MorphNodeTo2None,
+    OPC_MorphNodeTo0Chain,
+    OPC_MorphNodeTo1Chain,
+    OPC_MorphNodeTo2Chain,
+    OPC_MorphNodeTo0GlueInput,
+    OPC_MorphNodeTo1GlueInput,
+    OPC_MorphNodeTo2GlueInput,
+    OPC_MorphNodeTo0GlueOutput,
+    OPC_MorphNodeTo1GlueOutput,
+    OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
     // Contains offset in table for pattern being selected
     OPC_Coverage
