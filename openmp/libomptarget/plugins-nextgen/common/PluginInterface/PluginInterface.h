@@ -1167,13 +1167,6 @@ public:
     return Error::success();
   }
 
-  // Deinitialize the plugin if needed. The plugin could have been deinitialized
-  // because the plugin library was exiting.
-  static Error deinitIfNeeded() {
-    // Do nothing. The plugin is deinitialized automatically.
-    return Plugin::success();
-  }
-
   /// Get a reference (or create if it was not created) to the plugin instance.
   static GenericPluginTy &get() {
     // This static variable will initialize the underlying plugin instance in
