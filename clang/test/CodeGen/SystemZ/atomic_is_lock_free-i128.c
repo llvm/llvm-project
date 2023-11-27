@@ -50,11 +50,23 @@ _Atomic __int128 AtomicI128;
 // CHECK-LABEL: @fun6
 // CHECK:       ret i1 true
 _Bool fun6() {
-  return atomic_is_lock_free(&AtomicI128);
+  return __atomic_is_lock_free(16, &AtomicI128);
 }
 
 // CHECK-LABEL: @fun7
 // CHECK:       ret i1 true
 _Bool fun7() {
+  return __atomic_always_lock_free(16, &AtomicI128);
+}
+
+// CHECK-LABEL: @fun8
+// CHECK:       ret i1 true
+_Bool fun8() {
+  return atomic_is_lock_free(&AtomicI128);
+}
+
+// CHECK-LABEL: @fun9
+// CHECK:       ret i1 true
+_Bool fun9() {
   return __c11_atomic_is_lock_free(16);
 }
