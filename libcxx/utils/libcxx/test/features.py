@@ -58,7 +58,8 @@ def _getAndroidDeviceApi(cfg):
         )
     )
 
-
+# Lit features are evaluated in order. Some checks may require the compiler detection to have
+# run first in order to work properly.
 DEFAULT_FEATURES = [
     Feature(name="apple-clang", when=_isAppleClang),
     Feature(
