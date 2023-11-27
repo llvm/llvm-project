@@ -9,6 +9,7 @@
 
 ! RUN: %flang -c -emit-llvm -O0 %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 ! RUN: %flang -c -emit-llvm -Ofast -fno-alias-analysis %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
+! RUN: %flang -c -emit-llvm -fno-alias-analysis -Ofast %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 ! RUN: %flang -c -emit-llvm %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 ! RUN: %flang -c -emit-llvm -falias-analysis -fno-alias-analysis %s -o - | llvm-dis | FileCheck %s --check-prefix=CHECK-NOAA --check-prefix=CHECK-ALL
 
