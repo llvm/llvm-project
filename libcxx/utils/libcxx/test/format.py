@@ -61,7 +61,7 @@ def _parseLitOutput(fullOutput):
     injecting additional Lit output around it.
     """
     parsed = ''
-    for output in re.split('[$]\s*":"\s*"RUN: at line \d+"', fullOutput):
+    for output in re.split(r'[$]\s*":"\s*"RUN: at line \d+"', fullOutput):
         if output: # skip blank lines
             commandOutput = re.search("# command output:\n(.+)\n$", output, flags=re.DOTALL)
             if commandOutput:
