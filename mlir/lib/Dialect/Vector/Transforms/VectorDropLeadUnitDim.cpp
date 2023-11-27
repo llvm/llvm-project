@@ -197,16 +197,16 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
   }
 };
 
-static Value processTransferMask(OpBuilder &b, Location loc, Value mask,
-                                 VectorType newType, AffineMap newMap,
-                                 VectorType oldMaskType) {
+static Value dropUnitDimsFromMask(OpBuilder &b, Location loc, Value mask,
+                                  VectorType newType, AffineMap newMap,
+                                  VectorType oldMaskType) {
   // Infer the type of the new mask from the new map.
-  auto newMaskType = inferTransferOpMaskType(newType, newMap);
+  VectorType newMaskType = inferTransferOpMaskType(newType, newMap);
 
   // If the new mask is broadcastable to the old result type, we can safely
   // use a `vector.extract` to get the new mask. Otherwise the best we can
   // do is shape cast.
-  if (mlir::vector::isBroadcastableTo(newMaskType, oldMaskType) ==
+  if (vector::isBroadcastableTo(newMaskType, oldMaskType) ==
       BroadcastableToResult::Success) {
     int64_t dropDim = oldMaskType.getRank() - newMaskType.getRank();
     return b.create<vector::ExtractOp>(loc, mask, splatZero(dropDim));
@@ -252,8 +252,8 @@ struct CastAwayTransferReadLeadingOneDim
     Value mask = Value();
     if (read.getMask()) {
       VectorType maskType = read.getMaskType();
-      mask = processTransferMask(rewriter, read.getLoc(), read.getMask(),
-                                 newType, newMap, maskType);
+      mask = dropUnitDimsFromMask(rewriter, read.getLoc(), read.getMask(),
+                                  newType, newMap, maskType);
     }
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
@@ -305,7 +305,7 @@ struct CastAwayTransferWriteLeadingOneDim
 
     if (write.getMask()) {
       VectorType maskType = write.getMaskType();
-      Value newMask = processTransferMask(
+      Value newMask = dropUnitDimsFromMask(
           rewriter, write.getLoc(), write.getMask(), newType, newMap, maskType);
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
           write, newVector, write.getSource(), write.getIndices(),
