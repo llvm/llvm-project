@@ -153,7 +153,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
 
     Lit tests are contained in files that follow a certain pattern. That
     pattern determines the semantics of the test. See
-    libcxx/docs/TestingLibcxx.rst or https://libcxx.llvm.org/TestingLibcxx.html
+    https://libcxx.llvm.org/TestingLibcxx.html#test-names
     for a complete description of those semantics.
 
     Substitution requirements
