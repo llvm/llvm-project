@@ -40,17 +40,17 @@ void test_svluti2_lane_zt_x4(svuint8_t zn_u8, svuint16_t zn_u16, svuint32_t zn_u
   svluti2_lane_zt_u32_x4(1, zn_u32, 3);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
   // Test index value range
   svluti2_lane_zt_u32_x4(0, zn_u32, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-
+  // Test Reg Offset
   svluti2_lane_zt_f16_x4(1, zn_f16, 3);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-
+  // Test index value range
   svluti2_lane_zt_f16_x4(0, zn_f16, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-
+  // Test Reg Offset
   svluti2_lane_zt_bf16_x4(1, zn_bf16, 3);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-
+  // Test index value range
   svluti2_lane_zt_bf16_x4(0, zn_bf16, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
-
+  // Test Reg Offset
   svluti2_lane_zt_f32_x4(1, zn_f32, 3);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-
+  // Test index value range
   svluti2_lane_zt_f32_x4(0, zn_f32, 4);   // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
@@ -63,17 +63,17 @@ void test_svluti4_lane_zt_x4(svuint8_t zn_u8, svuint16_t zn_u16, svuint32_t zn_u
   svluti4_lane_zt_u32_x4(1, zn_u32, 1);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
   // Test index value range
   svluti4_lane_zt_u32_x4(0, zn_u32, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-
+  // Test Reg Offset
   svluti4_lane_zt_f16_x4(1, zn_f16, 0);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-
+  // Test index value range
   svluti4_lane_zt_f16_x4(0, zn_f16, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-
+  // Test Reg Offset
   svluti4_lane_zt_bf16_x4(1, zn_bf16, 0); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-
+  // Test index value range
   svluti4_lane_zt_bf16_x4(0, zn_bf16, 2); // expected-error {{argument value 2 is outside the valid range [0, 1]}}
-
+  // Test Reg Offset
   svluti4_lane_zt_f32_x4(1, zn_f32, 1);   // expected-error {{argument value 1 is outside the valid range [0, 0]}}
-
+  // Test index value range
   svluti4_lane_zt_f32_x4(0, zn_f32, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
 }
 
