@@ -43,8 +43,8 @@ static int testRoundtripEncoding(MlirContext ctx) {
   MlirAffineMap lvlToDim =
       mlirSparseTensorEncodingAttrGetLvlToDim(originalAttr);
   int lvlRank = mlirSparseTensorEncodingGetLvlRank(originalAttr);
-  enum MlirSparseTensorDimLevelType *lvlTypes =
-      malloc(sizeof(enum MlirSparseTensorDimLevelType) * lvlRank);
+  enum MlirSparseTensorLevelType *lvlTypes =
+      malloc(sizeof(enum MlirSparseTensorLevelType) * lvlRank);
   for (int l = 0; l < lvlRank; ++l) {
     lvlTypes[l] = mlirSparseTensorEncodingAttrGetLvlType(originalAttr, l);
     fprintf(stderr, "level_type: %d\n", lvlTypes[l]);

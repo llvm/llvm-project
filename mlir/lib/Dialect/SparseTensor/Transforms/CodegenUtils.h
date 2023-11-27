@@ -428,8 +428,8 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 }
 
 /// Generates a constant of the internal dimension level type encoding.
-inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
-                                          DimLevelType lt) {
+inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
+                                       LevelType lt) {
   return constantI8(builder, loc, static_cast<uint8_t>(lt));
 }
 

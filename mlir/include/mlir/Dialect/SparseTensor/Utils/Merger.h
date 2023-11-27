@@ -56,8 +56,8 @@ using LatPointId = unsigned;
 /// for the corresponding `SmallVector<LatPointId>` object.
 using LatSetId = unsigned;
 
-/// A pair of level and its corresponding DimLevelType of a tensor.
-using LvlLTPair = std::pair<Level, DimLevelType>;
+/// A pair of level and its corresponding LevelType of a tensor.
+using LvlLTPair = std::pair<Level, LevelType>;
 
 /// A pair of loop id and its coefficients. E.g., for affine expression in the
 /// affine map `2 * d0`, loop id = 0, coefficient = 2.
@@ -395,13 +395,13 @@ public:
   bool hasSparseIdxReduction(const BitVector &bits) const;
 
   /// Gets the level-type of the `t`th tensor on `i`th loop.
-  DimLevelType getLvlType(TensorId t, LoopId i) const {
+  LevelType getLvlType(TensorId t, LoopId i) const {
     assert(isValidTensorId(t) && isValidLoopId(i));
     return lvlTypes[t][i];
   }
 
   /// Gets the level-type of the TensorLoopId.
-  DimLevelType getLvlType(TensorLoopId b) const {
+  LevelType getLvlType(TensorLoopId b) const {
     return getLvlType(tensor(b), loop(b));
   }
 
@@ -422,7 +422,7 @@ public:
 
   /// Sets the level number and level-type of the `t`th tensor on
   /// `i`th loop.
-  void setLevelAndType(TensorId t, LoopId i, Level lvl, DimLevelType lt) {
+  void setLevelAndType(TensorId t, LoopId i, Level lvl, LevelType lt) {
     assert(isValidLevel(t, lvl) && isValidLoopId(i) && isValidLT(lt));
     lvlTypes[t][i] = lt;
     loopToLvl[t][i] = lvl;
@@ -432,7 +432,7 @@ public:
   }
 
   using ForeachTensorLoopIdCallback = function_ref<void(
-      TensorLoopId, TensorId, std::optional<Level>, DimLevelType, bool)>;
+      TensorLoopId, TensorId, std::optional<Level>, LevelType, bool)>;
 
   /// Iterates over a set of `TensorLoopId`s, invoking the callback
   /// for each `TensorLoopId` and passing it the corresponding tensor
@@ -469,7 +469,7 @@ public:
 
   /// Establishes the two-way map that i <-> <t, lvl, lt>.
   void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
-                                   DimLevelType lt, unsigned coefficient) {
+                                   LevelType lt, unsigned coefficient) {
     assert(isValidLoopId(i) && isValidLevel(t, lvl));
     assert(!loopToUnresolvedLvls[i][t].has_value()); // must be the first def
     loopToUnresolvedLvls[i][t] = std::make_pair(lvl, lt);
@@ -520,7 +520,7 @@ public:
     return loopToUnresolvedLvls[loop(b)][tensor(b)]->first;
   }
 
-  DimLevelType getLoopDependentLevelType(TensorLoopId b) const {
+  LevelType getLoopDependentLevelType(TensorLoopId b) const {
     assert(isLvlWithNonTrivialIdxExp(b));
     return loopToUnresolvedLvls[loop(b)][tensor(b)]->second;
   }
@@ -636,7 +636,7 @@ private:
   // does not.
 
   /// Map that converts pair<TensorId, LoopId> to the corresponding lvl-type.
-  std::vector<std::vector<DimLevelType>> lvlTypes;
+  std::vector<std::vector<LevelType>> lvlTypes;
 
   /// Map that converts pair<TensorId, LoopId> to the corresponding lvl.
   std::vector<std::vector<std::optional<Level>>> loopToLvl;

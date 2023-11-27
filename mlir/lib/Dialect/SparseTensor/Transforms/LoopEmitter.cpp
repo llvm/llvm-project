@@ -295,7 +295,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
   // tensors array (len == numManifestTensor).
   this->tensors.assign(ts.begin(), ts.end());
   // Arrays with len == numTensor.
-  this->lvlTypes.assign(numTensors, std::vector<DimLevelType>());
+  this->lvlTypes.assign(numTensors, std::vector<LevelType>());
   this->lvlSizes.assign(numTensors, std::vector<Value>());
   this->highs.assign(numTensors, std::vector<Value>());
   this->segHi.assign(numTensors, std::vector<Value>());
@@ -330,7 +330,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       // to the total number of loops (each level can potentially be mapped to
       // one of the loop being generated).
       lvlRank = numLoops;
-      lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+      lvlTypes[tid].assign(lvlRank, LevelType::Dense);
     } else {
       const Value t = tensors[tid];
       // a scalar or 0-dimension tensors
@@ -349,7 +349,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
         for (auto lvlTp : enc.getLvlTypes())
           lvlTypes[tid].push_back(lvlTp);
       } else {
-        lvlTypes[tid].assign(lvlRank, DimLevelType::Dense);
+        lvlTypes[tid].assign(lvlRank, LevelType::Dense);
       }
     }
 
@@ -2072,7 +2072,7 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
 
   // Only when the level is sorted, the next-non-empty slice can be computed
   // efficiently.
-  const DimLevelType lvlType = lvlTypes[tid][lvl];
+  const LevelType lvlType = lvlTypes[tid][lvl];
   assert(isOrderedLT(lvlType));
   if (isSingletonLT(lvlType)) {
     llvm_unreachable("TODO: dense level should be easy to support, while "
