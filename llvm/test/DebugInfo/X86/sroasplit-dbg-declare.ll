@@ -1,4 +1,5 @@
 ; RUN: opt -S -passes='sroa' -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -passes='sroa' -o - %s | FileCheck %s
 
 ; SROA should split the alloca in two new ones, each with its own dbg.declare.
 ; The original alloca and dbg.declare should be removed.
@@ -55,3 +56,4 @@ attributes #1 = { nounwind readnone speculatable }
 ; CHECK-NOT:  = alloca [9 x i32]
 ; CHECK-NOT:  call void @llvm.dbg.declare(metadata ptr
 
+; CHECK: declare void @llvm.dbg.declare(metadata, metadata, metadata)
