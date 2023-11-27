@@ -651,26 +651,39 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
   if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
     return;
 
-  // The symbol may be accessed in multiple pieces. We need to make sure that
-  // all of the possible accesses are relaxed or none are. This prevents
-  // relaxing the hi relocation and being unable to relax one of the low
-  // relocations. The compiler will only access multiple pieces of an object
-  // with low relocations on the memory op if the alignment allows it.
-  // Therefore it should suffice to check that the smaller of the alignment
-  // and size can be reached from GP.
+  // The symbol may be accessed in multiple pieces with different addends.
+  // If we are relaxing the HI20 relocation, we need to ensure that we only
+  // relax (and delete the instruction) if all possible LO12 relocations
+  // that depend on it will be relaxable. The compiler will only access multiple
+  // pieces of an object with low relocations on the memory op if the alignment
+  // allows it. Therefore it should suffice to check that the smaller of the
+  // alignment and size can be reached from GP.
   uint32_t alignAdjust =
       r.sym->getOutputSection() ? r.sym->getOutputSection()->addralign : 0;
   alignAdjust = std::min<uint32_t>(alignAdjust, r.sym->getSize());
-
-  if (!isInt<12>(r.sym->getVA() + alignAdjust - gp->getVA()))
-    return;
+  if (alignAdjust)
+    alignAdjust--;
 
   switch (r.type) {
-  case R_RISCV_HI20:
+  case R_RISCV_HI20: {
+    uint64_t hiAddr = r.sym->getVA(r.addend);
+    // If the addend is zero, the LO12 relocations can only be accessing the
+    // range [base, base+alignAdjust] (where base == r.sym->getVA()).
+    if (r.addend == 0 && !isInt<12>(hiAddr + alignAdjust - gp->getVA()))
+      return;
+
+    // However, if the addend is non-zero, the LO12 relocations may be accessing
+    // the range [HI-alignAdjust-1, HI+alignAdjust].
+    if (r.addend != 0 &&
+        (!isInt<12>(hiAddr - alignAdjust - 1 - gp->getVA()) ||
+         !isInt<12>(hiAddr + alignAdjust - gp->getVA())))
+      return;
+
     // Remove lui rd, %hi20(x).
     sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
     remove = 4;
     break;
+  }
   case R_RISCV_LO12_I:
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
     break;
