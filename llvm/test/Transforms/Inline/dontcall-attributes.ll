@@ -23,7 +23,7 @@ define void @quux() {
 
 ; Test that @baz's call to @foo has metadata with inlining info.
 define void @baz() {
-; CHECK-LABEL: @baz(
+; CHECK-LABEL: define {{[^@]+}}@baz(
 ; CHECK-NEXT:    call void @foo(), !inlined.from !0
 ;
   call void @bar(i32 10)
@@ -32,7 +32,7 @@ define void @baz() {
 
 ; Test that @zing's call to @foo has unique metadata from @baz's call to @foo.
 define void @zing() {
-; CHECK-LABEL: @zing(
+; CHECK-LABEL: define {{[^@]+}}@zing(
 ; CHECK-NEXT:    call void @foo(), !inlined.from !1
 ;
   call void @baz()
@@ -58,14 +58,14 @@ define void @always_callee() alwaysinline {
   ret void
 }
 define void @always_caller() alwaysinline {
-; CHECK-BOTH-LABEL: @always_caller(
+; CHECK-BOTH-LABEL: define {{[^@]+}}@always_caller(
 ; CHECK-NEXT: call void @fof(), !inlined.from !4
 ; CHECK-ALWAYS-NEXT: call void @fof(), !inlined.from !0
   call void @always_callee()
   ret void
 }
 define void @always_caller2() alwaysinline {
-; CHECK-BOTH-LABEL: @always_caller2(
+; CHECK-BOTH-LABEL: define {{[^@]+}}@always_caller2(
 ; CHECK-NEXT: call void @fof(), !inlined.from !5
 ; CHECK-ALWAYS-NEXT: call void @fof(), !inlined.from !1
   call void @always_caller()
