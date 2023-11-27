@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZTISt9exception = external constant ptr
 @pfptr = global ptr null, align 8
 
-define internal i32 @_ZL4bar1v() !PGOFuncName !0 {
+define internal i32 @_ZL4bar1v() !PGOName !0 {
 entry:
   ret i32 100 
 }

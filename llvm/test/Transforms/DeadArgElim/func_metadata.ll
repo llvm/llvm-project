@@ -7,8 +7,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @s = common dso_local local_unnamed_addr global i32 0, align 4
 
-define internal i32 @va_func(i32 %num, ...) !prof !28 !PGOFuncName !29{
-; CHECK: define internal void @va_func(i32 %num) !prof ![[ENTRYCOUNT:[0-9]+]] !PGOFuncName ![[PGOFUNCNAME1:[0-9]+]] {
+define internal i32 @va_func(i32 %num, ...) !prof !28 !PGOName !29{
+; CHECK: define internal void @va_func(i32 %num) !prof ![[ENTRYCOUNT:[0-9]+]] !PGOName ![[PGOName1:[0-9]+]] {
 entry:
   %0 = load i32, ptr @s, align 4, !tbaa !31
   %add = add nsw i32 %0, %num
@@ -16,8 +16,8 @@ entry:
   ret i32 0
 }
 
-define internal fastcc i32 @foo() unnamed_addr !prof !28 !PGOFuncName !30 {
-; CHECK: define internal fastcc void @foo() unnamed_addr !prof ![[ENTRYCOUNT:[0-9]+]] !PGOFuncName ![[PGOFUNCNAME2:[0-9]+]] {
+define internal fastcc i32 @foo() unnamed_addr !prof !28 !PGOName !30 {
+; CHECK: define internal fastcc void @foo() unnamed_addr !prof ![[ENTRYCOUNT:[0-9]+]] !PGOName ![[PGOName2:[0-9]+]] {
 entry:
   %0 = load i32, ptr @s, align 4, !tbaa !31
   %add = add nsw i32 %0, 8
@@ -58,9 +58,9 @@ entry:
 !28 = !{!"function_entry_count", i64 1}
 ; CHECK: ![[ENTRYCOUNT]] = !{!"function_entry_count", i64 1}
 !29 = !{!"foo.c:va_func"}
-; CHECK: ![[PGOFUNCNAME1]] = !{!"foo.c:va_func"}
+; CHECK: ![[PGOName1]] = !{!"foo.c:va_func"}
 !30 = !{!"foo.c:foo"}
-; CHECK: ![[PGOFUNCNAME2]] = !{!"foo.c:foo"}
+; CHECK: ![[PGOName2]] = !{!"foo.c:foo"}
 !31 = !{!32, !32, i64 0}
 !32 = !{!"int", !33, i64 0}
 !33 = !{!"omnipotent char", !34, i64 0}

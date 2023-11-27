@@ -246,11 +246,11 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
-std::string getPGOFuncName(StringRef RawFuncName,
-                           GlobalValue::LinkageTypes Linkage,
-                           StringRef FileName,
-                           uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
-  return GlobalValue::getGlobalIdentifier(RawFuncName, Linkage, FileName);
+std::string getPGOObjectName(StringRef RawName,
+                             GlobalValue::LinkageTypes Linkage,
+                             StringRef FileName,
+                             uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
+  return GlobalValue::getGlobalIdentifier(RawName, Linkage, FileName);
 }
 
 // Strip NumPrefix level of directory name from PathNameStr. If the number of
@@ -287,11 +287,11 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
 // ; is used because it is unlikely to be found in either <filepath> or
 // <linkage-name>.
 //
-// Older compilers used getPGOFuncName() which has the format
-// [<filepath>:]<function-name>. <filepath> is used to discriminate between
-// possibly identical function names when linkage is local and <function-name>
-// simply comes from F.getName(). This caused trouble for Objective-C functions
-// which commonly have :'s in their names. Also, since <function-name> is not
+// Older compilers used getPGOObjectName() which has the format
+// [<filepath>:]<object-name>. <filepath> is used to discriminate between
+// possibly identical object names when linkage is local and <object-name>
+// simply comes from GO.getName(). This caused trouble for Objective-C functions
+// which commonly have :'s in their names. Also, since <object-name> is not
 // mangled, they cannot be passed to Mach-O linkers via -order_file. We still
 // need to compute this name to lookup functions from profiles built by older
 // compilers.
@@ -325,9 +325,9 @@ static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
 // and renamed. We need to ensure that the original internal PGO name is
 // used when computing the GUID that is compared against the profiled GUIDs.
 // To differentiate compiler generated internal symbols from original ones,
-// PGOFuncName meta data are created and attached to the original internal
+// PGOName meta data are created and attached to the original internal
 // symbols in the value profile annotation step
-// (PGOUseFunc::annotateIndirectCallSites). If a symbol does not have the meta
+// (PGOUseFunc::annotateValueSites). If a symbol does not have the meta
 // data, its original linkage must be non-internal.
 static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
                                       MDNode *PGONameMetadata) {
@@ -337,39 +337,51 @@ static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto IRPGOFuncName = lookupPGONameFromMetadata(PGONameMetadata))
-    return *IRPGOFuncName;
+  if (auto IRPGOName = lookupPGONameFromMetadata(PGONameMetadata))
+    return *IRPGOName;
 
-  // If there is no meta data, the function must be a global before the value
-  // profile annotation pass. Its current linkage may be internal if it is
+  // If there is no meta data, the global object must be a global before the
+  // value profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
   return getIRPGONameForGlobalObject(GO, GlobalValue::ExternalLinkage, "");
+}
+
+/// Return the PGOName meta data associated with a global object.
+static MDNode *getPGONameMetadata(const GlobalObject &GO) {
+  return GO.getMetadata(getPGONameMetadataName());
 }
 
 // Returns the IRPGO function name and does special handling when called
 // in LTO optimization. See the comments of `getIRPGOObjectName` for details.
 std::string getIRPGOFuncName(const Function &F, bool InLTO) {
-  return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
+  return getIRPGOObjectName(F, InLTO, getPGONameMetadata(F));
 }
 
-// This is similar to `getIRPGOFuncName` except that this function calls
-// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
+// This is similar to `getIRPGOObjectName` except that this function calls
+// 'getPGOObjectName' to get a name and `getIRPGOObjectName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
 // comments of `getIRPGONameForGlobalObject`.
-std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
+static std::string getPGOObjectName(const GlobalObject &GO, bool InLTO,
+                                    uint64_t Version) {
   if (!InLTO) {
-    auto FileName = getStrippedSourceFileName(F);
-    return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
+    auto FileName = getStrippedSourceFileName(GO);
+    return getPGOObjectName(GO.getName(), GO.getLinkage(), FileName, Version);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto PGOFuncName = lookupPGONameFromMetadata(getPGOFuncNameMetadata(F)))
+  if (auto PGOFuncName = lookupPGONameFromMetadata(getPGONameMetadata(GO)))
     return *PGOFuncName;
 
-  // If there is no meta data, the function must be a global before the value
-  // profile annotation pass. Its current linkage may be internal if it is
-  // internalized in LTO mode.
-  return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
+  // If there is no meta data, the function or global variable must be a global
+  // before the value profile annotation pass. Its current linkage may be
+  // internal if it is internalized in LTO mode.
+  return getPGOObjectName(GO.getName(), GlobalValue::ExternalLinkage, "");
+}
+
+// Returns the PGO function name and does special handling when called in LTO
+// optimization. See the comments of `getPGOObjectName` for details.
+std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
+  return getPGOObjectName(F, InLTO, Version);
 }
 
 // See getIRPGOFuncName() for a discription of the format.
@@ -1255,20 +1267,16 @@ bool getValueProfDataFromInst(const Instruction &Inst,
   return true;
 }
 
-MDNode *getPGOFuncNameMetadata(const Function &F) {
-  return F.getMetadata(getPGOFuncNameMetadataName());
-}
-
-void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
-  // Only for internal linkage functions.
-  if (PGOFuncName == F.getName())
-      return;
-  // Don't create duplicated meta-data.
-  if (getPGOFuncNameMetadata(F))
+void createPGONameMetadata(GlobalObject &GO, StringRef PGOName) {
+  // Only for internal linkage functions or global variables.
+  if (PGOName == GO.getName())
     return;
-  LLVMContext &C = F.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, PGOFuncName));
-  F.setMetadata(getPGOFuncNameMetadataName(), N);
+  // Don't create duplicated meta-data.
+  if (getPGONameMetadata(GO))
+    return;
+  LLVMContext &C = GO.getContext();
+  MDNode *N = MDNode::get(C, MDString::get(C, PGOName));
+  GO.setMetadata(getPGONameMetadataName(), N);
 }
 
 bool needsComdatForCounter(const Function &F, const Module &M) {

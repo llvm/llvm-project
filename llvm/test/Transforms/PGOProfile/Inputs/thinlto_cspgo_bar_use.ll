@@ -31,7 +31,7 @@ if.end:
 
 declare void @clobber()
 
-define internal fastcc i32 @cond(i32 %i) #1 !prof !29 !PGOFuncName !35 {
+define internal fastcc i32 @cond(i32 %i) #1 !prof !29 !PGOName !35 {
 entry:
   %rem = srem i32 %i, 2
   ret i32 %rem

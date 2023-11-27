@@ -6,12 +6,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @foo2 = global ptr null, align 8
 @_ZTIi = external constant ptr
 
-define internal void @_ZL4bar1v() !PGOFuncName !0 {
+define internal void @_ZL4bar1v() !PGOName !0 {
 entry:
   ret void
 }
 
-define internal i32 @_ZL4bar2v() !PGOFuncName !1 {
+define internal i32 @_ZL4bar2v() !PGOName !1 {
 entry:
   ret i32 100
 }

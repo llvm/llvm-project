@@ -8,7 +8,7 @@ entry:
   ret void
 }
 
-define internal void @c() !PGOFuncName !1 {
+define internal void @c() !PGOName !1 {
 entry:
   ret void
 }

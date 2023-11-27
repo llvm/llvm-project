@@ -4,7 +4,7 @@
 ; Make sure that we set the branch probability for the newly created
 ; basic block.
 
-define void @foo(i1 %cond1, i1 %cond2) !prof !0 !PGOFuncName !1 {
+define void @foo(i1 %cond1, i1 %cond2) !prof !0 !PGOName !1 {
 entry:
   br i1 %cond1, label %bb.f1, label %bb.f2, !prof !2
 

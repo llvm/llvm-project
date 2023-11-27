@@ -181,10 +181,10 @@ std::string getPGOFuncName(const Function &F, bool InLTO = false,
 /// used the key for profile lookup. The function's original
 /// name is \c RawFuncName and has linkage of type \c Linkage.
 /// The function is defined in module \c FileName.
-std::string getPGOFuncName(StringRef RawFuncName,
-                           GlobalValue::LinkageTypes Linkage,
-                           StringRef FileName,
-                           uint64_t Version = INSTR_PROF_INDEX_VERSION);
+std::string getPGOObjectName(StringRef RawFuncName,
+                             GlobalValue::LinkageTypes Linkage,
+                             StringRef FileName,
+                             uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
 /// \return the modified name for function \c F suitable to be
 /// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
@@ -279,15 +279,12 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               uint32_t &ActualNumValueData, uint64_t &TotalC,
                               bool GetNoICPValue = false);
 
-inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
+inline StringRef getPGONameMetadataName() { return "PGOName"; }
 
-/// Return the PGOFuncName meta data associated with a function.
-MDNode *getPGOFuncNameMetadata(const Function &F);
-
-/// Create the PGOFuncName meta data if PGOFuncName is different from
-/// function's raw name. This should only apply to internal linkage functions
-/// declared by users only.
-void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
+/// Create the PGOName meta data if PGOName is different from the object's raw
+/// name. This should only apply to internal linkage objects declared by users
+/// only (i.e., not internalized by LTO).
+void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
 
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.

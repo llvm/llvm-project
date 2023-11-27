@@ -63,7 +63,7 @@ for.inc.3:
   ret void
 }
 
-define internal fastcc i32 @cond(i32 %i) #1 !prof !29 !PGOFuncName !36 {
+define internal fastcc i32 @cond(i32 %i) #1 !prof !29 !PGOName !36 {
 entry:
   %rem = srem i32 %i, 2
   ret i32 %rem

@@ -1700,8 +1700,8 @@ void PGOUseFunc::annotateValueSites() {
   if (DisableValueProfiling)
     return;
 
-  // Create the PGOFuncName meta data.
-  createPGOFuncNameMetadata(F, FuncInfo.FuncName);
+  // Create the PGOName meta data.
+  createPGONameMetadata(F, FuncInfo.FuncName);
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     annotateValueSites(Kind);

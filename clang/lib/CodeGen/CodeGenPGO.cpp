@@ -34,7 +34,7 @@ using namespace CodeGen;
 void CodeGenPGO::setFuncName(StringRef Name,
                              llvm::GlobalValue::LinkageTypes Linkage) {
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
-  FuncName = llvm::getPGOFuncName(
+  FuncName = llvm::getPGOObjectName(
       Name, Linkage, CGM.getCodeGenOpts().MainFileName,
       PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
 
@@ -45,8 +45,8 @@ void CodeGenPGO::setFuncName(StringRef Name,
 
 void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   setFuncName(Fn->getName(), Fn->getLinkage());
-  // Create PGOFuncName meta data.
-  llvm::createPGOFuncNameMetadata(*Fn, FuncName);
+  // Create PGOName meta data.
+  llvm::createPGONameMetadata(*Fn, FuncName);
 }
 
 /// The version of the PGO hash algorithm.
