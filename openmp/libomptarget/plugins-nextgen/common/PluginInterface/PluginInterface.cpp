@@ -1688,17 +1688,6 @@ int32_t __tgt_rtl_init_device(int32_t DeviceId) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_deinit_device(int32_t DeviceId) {
-  auto Err = Plugin::get().deinitDevice(DeviceId);
-  if (Err) {
-    REPORT("Failure to deinitialize device %d: %s\n", DeviceId,
-           toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t __tgt_rtl_number_of_devices() { return Plugin::get().getNumDevices(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {

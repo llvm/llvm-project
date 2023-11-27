@@ -195,8 +195,6 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   // Optional functions
   *((void **)&RTL.is_valid_binary_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-  *((void **)&RTL.deinit_device) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
   *((void **)&RTL.init_requires) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
   *((void **)&RTL.data_submit_async) =
