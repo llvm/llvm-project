@@ -54,7 +54,7 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
 }
 
 // Matches the expression awaited by the `co_await`.
-AST_MATCHER_P(CoawaitExpr, awaiatable, ast_matchers::internal::Matcher<Expr>,
+AST_MATCHER_P(CoawaitExpr, awaitable, ast_matchers::internal::Matcher<Expr>,
               InnerMatcher) {
   if (Expr *E = Node.getCommonExpr())
     return InnerMatcher.matches(*E, Finder, Builder);
@@ -81,7 +81,7 @@ void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
                                     hasAttr(attr::Kind::ScopedLockable)))))
                             .bind("scoped-lockable");
   auto OtherRAII = varDecl(typeWithNameIn(RAIITypesList)).bind("raii");
-  auto AllowedSuspend = awaiatable(typeWithNameIn(AllowedAwaitablesList));
+  auto AllowedSuspend = awaitable(typeWithNameIn(AllowedAwaitablesList));
   Finder->addMatcher(
       expr(anyOf(coawaitExpr(unless(AllowedSuspend)), coyieldExpr()),
            forEachPrevStmt(
