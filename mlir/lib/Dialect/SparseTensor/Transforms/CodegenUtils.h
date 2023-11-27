@@ -277,13 +277,6 @@ SmallVector<Value> loadAll(OpBuilder &builder, Location loc, size_t size,
 void storeAll(OpBuilder &builder, Location loc, Value mem, ValueRange vs,
               size_t offsetIdx = 0, Value offsetVal = Value());
 
-/// Reshapes the linear values buffer for an annotated all dense sparse tensor
-/// to match the shape of the corresponding dense tensor to support direct
-/// access of the buffer through `lvlCoords`.
-Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
-                            SparseTensorEncodingAttr enc, ValueRange dimSizes,
-                            Value valuesBuffer, Value lvlCoords);
-
 // Generates code to cast a tensor to a memref.
 TypedValue<BaseMemRefType> genToMemref(OpBuilder &builder, Location loc,
                                        Value tensor);
