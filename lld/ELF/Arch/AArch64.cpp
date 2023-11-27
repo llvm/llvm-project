@@ -999,6 +999,18 @@ addTaggedSymbolReferences(InputSectionBase &sec,
     // like functions or TLS symbols.
     if (sym.type != STT_OBJECT)
       continue;
+    // Global variables can be explicitly put into sections where the section
+    // name is a valid C identifier. In these cases, the linker will create
+    // implicit __start and __stop symbols for the section. Globals that are in
+    // these special sections often are done there intentionally so they can be
+    // iterated over by going from __start_<secname> -> __stop_<secname>. This
+    // doesn't work under MTE globals, because each GV would have its own unique
+    // tag. So, symbols that are destined for a special section with start/stop
+    // symbols should go untagged implicitly.
+    const Defined* defined_sym = dyn_cast<Defined>(&sym);
+    if (defined_sym && defined_sym->section &&
+        isValidCIdentifier(defined_sym->section->name))
+      continue;
     // STB_LOCAL symbols can't be referenced from outside the object file, and
     // thus don't need to be checked for references from other object files.
     if (sym.binding == STB_LOCAL) {
