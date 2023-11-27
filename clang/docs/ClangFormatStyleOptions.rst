@@ -2046,6 +2046,21 @@ the configuration (without a prefix: ``Auto``).
       };
     }
 
+.. _BreakAdjacentStringLiterals:
+
+**BreakAdjacentStringLiterals** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <BreakAdjacentStringLiterals>`
+  Break between adjacent string literals.
+
+  .. code-block:: c++
+
+     true:
+     return "Code"
+            "\0\52\26\55\55\0"
+            "x013"
+            "\02\xBA";
+     false:
+     return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
