@@ -354,8 +354,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Also check whether or not the sources have already been decided to be
     // FPR. Keep track of this.
     //
-    // This doesn't check the condition, since it's just whatever is in NZCV.
-    // This isn't passed explicitly in a register to fcsel/csel.
+    // This doesn't check the condition, since the condition is always an
+    // integer.
     for (unsigned Idx = 2; Idx < 4; ++Idx) {
       Register VReg = MI.getOperand(Idx).getReg();
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
