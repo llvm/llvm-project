@@ -3655,7 +3655,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
     // Lex identifier [:: identifier ...]
     if (!CurTok.is(tok::identifier)) {
       Result.EndLoc = CurTok.getEndLoc();
-      Diag(CurTok, diag::err_expected) << "identifier";
+      Diag(CurTok, diag::err_expected) << tok::identifier;
       DiscardUntilEndOfDirective();
       return Result;
     }
@@ -3668,7 +3668,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
       LexNonComment(CurTok);
       if (!CurTok.is(tok::identifier)) {
         Result.EndLoc = CurTok.getEndLoc();
-        Diag(CurTok, diag::err_expected) << "identifier";
+        Diag(CurTok, diag::err_expected) << tok::identifier;
         DiscardUntilEndOfDirective();
         return Result;
       }
