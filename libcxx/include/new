@@ -46,7 +46,7 @@ new_handler set_new_handler(new_handler new_p) noexcept;
 new_handler get_new_handler() noexcept;
 
 // 21.6.4, pointer optimization barrier
-template <class T> constexpr T* launder(T* p) noexcept; // C++17
+template <class T> [[nodiscard]] constexpr T* launder(T* p) noexcept;   // C++17, nodiscard since C++20
 }  // std
 
 void* operator new(std::size_t size);                                   // replaceable, nodiscard in C++20

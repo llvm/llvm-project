@@ -161,6 +161,15 @@ let isCodeGenOnly = 1, ForceDisassemble = 1 in {
 def POP64rmr: I<0x8F, MRM0r, (outs GR64:$reg), (ins), "pop{q}\t$reg", []>,
                 OpSize32, Requires<[In64BitMode]>;
 } // isCodeGenOnly = 1, ForceDisassemble = 1
+def POPP64r  : I<0x58, AddRegFrm, (outs GR64:$reg), (ins), "popp\t$reg", []>,
+                 REX_W, ExplicitREX2Prefix, Requires<[In64BitMode]>;
+def POP2: I<0x8F, MRM0r, (outs GR64:$reg1, GR64:$reg2), (ins),
+            "pop2\t{$reg2, $reg1|$reg1, $reg2}",
+            []>, EVEX_4V, EVEX_B, T_MAP4PS;
+def POP2P: I<0x8F, MRM0r, (outs GR64:$reg1, GR64:$reg2), (ins),
+             "pop2p\t{$reg2, $reg1|$reg1, $reg2}",
+             []>, EVEX_4V, EVEX_B, T_MAP4PS, REX_W;
+
 } // mayLoad, SchedRW
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteCopy] in
 def POP64rmm: I<0x8F, MRM0m, (outs), (ins i64mem:$dst), "pop{q}\t$dst", []>,
@@ -173,6 +182,14 @@ let isCodeGenOnly = 1, ForceDisassemble = 1 in {
 def PUSH64rmr: I<0xFF, MRM6r, (outs), (ins GR64:$reg), "push{q}\t$reg", []>,
                  OpSize32, Requires<[In64BitMode]>;
 } // isCodeGenOnly = 1, ForceDisassemble = 1
+def PUSHP64r  : I<0x50, AddRegFrm, (outs), (ins GR64:$reg), "pushp\t$reg", []>,
+                  REX_W, ExplicitREX2Prefix, Requires<[In64BitMode]>;
+def PUSH2: I<0xFF, MRM6r, (outs), (ins GR64:$reg1, GR64:$reg2),
+            "push2\t{$reg2, $reg1|$reg1, $reg2}",
+            []>, EVEX_4V, EVEX_B, T_MAP4PS;
+def PUSH2P: I<0xFF, MRM6r, (outs), (ins GR64:$reg1, GR64:$reg2),
+             "push2p\t{$reg2, $reg1|$reg1, $reg2}",
+             []>, EVEX_4V, EVEX_B, T_MAP4PS, REX_W;
 } // mayStore, SchedRW
 let mayLoad = 1, mayStore = 1, SchedRW = [WriteCopy] in {
 def PUSH64rmm: I<0xFF, MRM6m, (outs), (ins i64mem:$src), "push{q}\t$src", []>,

@@ -505,14 +505,15 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   Info.IsTailCall = false;
 
   // Select the recommended relocation type R_RISCV_CALL_PLT.
-  Info.Callee.setTargetFlags(RISCVII::MO_PLT);
+  if (!Info.Callee.isReg())
+    Info.Callee.setTargetFlags(RISCVII::MO_PLT);
 
   MachineInstrBuilder Call =
       MIRBuilder
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   RISCVOutgoingValueAssigner ArgAssigner(
@@ -529,6 +530,15 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildInstr(RISCV::ADJCALLSTACKUP)
       .addImm(ArgAssigner.StackSize)
       .addImm(0);
+
+  // If Callee is a reg, since it is used by a target specific
+  // instruction, it must have a register class matching the
+  // constraint of that instruction.
+  if (Call->getOperand(0).isReg())
+    constrainOperandRegClass(MF, *TRI, MF.getRegInfo(),
+                             *Subtarget.getInstrInfo(),
+                             *Subtarget.getRegBankInfo(), *Call,
+                             Call->getDesc(), Call->getOperand(0), 0);
 
   if (Info.OrigRet.Ty->isVoidTy())
     return true;

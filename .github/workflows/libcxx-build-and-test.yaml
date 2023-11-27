@@ -43,8 +43,9 @@ env:
 
 jobs:
   stage1:
+    if: github.repository_owner == 'llvm'
     runs-on:
-      group: libcxx-runners-16
+      group: libcxx-runners-8
     continue-on-error: false
     strategy:
       fail-fast: true
@@ -81,6 +82,7 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
+    if: github.repository_owner == 'llvm'
     runs-on:
       group: libcxx-runners-8
     needs: [ stage1 ]
@@ -130,6 +132,7 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage3:
+    if: github.repository_owner == 'llvm'
     needs: [ stage1, stage2 ]
     continue-on-error: false
     strategy:
@@ -163,10 +166,10 @@ jobs:
           machine: libcxx-runners-8
           std_modules: 'ON'
         - config: 'generic-asan'
-          machine: libcxx-runners-16
+          machine: libcxx-runners-8
           std_modules: 'OFF'
         - config: 'generic-tsan'
-          machine: libcxx-runners-16
+          machine: libcxx-runners-8
           std_modules: 'OFF'
         - config: 'generic-ubsan'
           machine: libcxx-runners-8

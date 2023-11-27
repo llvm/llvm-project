@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 define i32 @cmp1(ptr readnone %0, ptr readnone %1) {
-; CHECK: Printing analysis results of BPI for function 'cmp1':
+; CHECK-LABEL: 'cmp1'
   %3 = icmp eq ptr %0, %1
   br i1 %3, label %4, label %6
 ; CHECK:   edge  ->  probability is 0x30000000 / 0x80000000 = 37.50%
@@ -23,7 +23,7 @@ define i32 @cmp1(ptr readnone %0, ptr readnone %1) {
 }
 
 define i32 @cmp2(ptr readnone %0, ptr readnone %1) {
-; CHECK: Printing analysis results of BPI for function 'cmp2':
+; CHECK-LABEL: 'cmp2'
   %3 = icmp eq ptr %0, %1
   br i1 %3, label %6, label %4
 ; CHECK:   edge  ->  probability is 0x30000000 / 0x80000000 = 37.50%
@@ -44,8 +44,8 @@ define i32 @cmp2(ptr readnone %0, ptr readnone %1) {
   ret i32 %9
 }
 
-; CHECK: Printing analysis results of BPI for function 'cmp3':
 define i32 @cmp3(ptr readnone %0) {
+; CHECK-LABEL: 'cmp3'
   %2 = icmp eq ptr %0, null
   br i1 %2, label %3, label %5
 ; CHECK:   edge  ->  probability is 0x30000000 / 0x80000000 = 37.50%

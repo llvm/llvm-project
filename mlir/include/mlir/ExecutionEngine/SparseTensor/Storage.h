@@ -108,31 +108,29 @@ public:
   }
 
   /// Safely checks if the level uses dense storage.
-  bool isDenseLvl(uint64_t l) const { return isDenseDLT(getLvlType(l)); }
+  bool isDenseLvl(uint64_t l) const { return isDenseLT(getLvlType(l)); }
 
   /// Safely checks if the level uses compressed storage.
   bool isCompressedLvl(uint64_t l) const {
-    return isCompressedDLT(getLvlType(l));
+    return isCompressedLT(getLvlType(l));
   }
 
   /// Safely checks if the level uses loose compressed storage.
   bool isLooseCompressedLvl(uint64_t l) const {
-    return isLooseCompressedDLT(getLvlType(l));
+    return isLooseCompressedLT(getLvlType(l));
   }
 
   /// Safely checks if the level uses singleton storage.
-  bool isSingletonLvl(uint64_t l) const {
-    return isSingletonDLT(getLvlType(l));
-  }
+  bool isSingletonLvl(uint64_t l) const { return isSingletonLT(getLvlType(l)); }
 
   /// Safely checks if the level uses 2 out of 4 storage.
-  bool is2OutOf4Lvl(uint64_t l) const { return is2OutOf4DLT(getLvlType(l)); }
+  bool is2OutOf4Lvl(uint64_t l) const { return is2OutOf4LT(getLvlType(l)); }
 
   /// Safely checks if the level is ordered.
-  bool isOrderedLvl(uint64_t l) const { return isOrderedDLT(getLvlType(l)); }
+  bool isOrderedLvl(uint64_t l) const { return isOrderedLT(getLvlType(l)); }
 
   /// Safely checks if the level is unique.
-  bool isUniqueLvl(uint64_t l) const { return isUniqueDLT(getLvlType(l)); }
+  bool isUniqueLvl(uint64_t l) const { return isUniqueLT(getLvlType(l)); }
 
   /// Gets positions-overhead storage for the given level.
 #define DECL_GETPOSITIONS(PNAME, P)                                            \
@@ -296,7 +294,7 @@ public:
   void lexInsert(const uint64_t *lvlCoords, V val) final {
     assert(lvlCoords);
     bool allDense = std::all_of(getLvlTypes().begin(), getLvlTypes().end(),
-                                [](DimLevelType lt) { return isDenseDLT(lt); });
+                                [](DimLevelType lt) { return isDenseLT(lt); });
     if (allDense) {
       uint64_t lvlRank = getLvlRank();
       uint64_t valIdx = 0;

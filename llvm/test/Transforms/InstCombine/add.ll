@@ -199,7 +199,7 @@ define i32 @test8(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[A1:%.*]] = and i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[B1:%.*]] = and i32 [[B:%.*]], 128
-; CHECK-NEXT:    [[C:%.*]] = or i32 [[A1]], [[B1]]
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i32 [[A1]], [[B1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %A1 = and i32 %A, 7
@@ -2565,7 +2565,7 @@ define i16 @add_sub_zext_constant(i8 %x) {
 define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
 ; CHECK-LABEL: @add_to_or_scalable(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    [[ADD:%.*]] = or <vscale x 1 x i32> [[SHL]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 1 x i32> [[SHL]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[ADD]]
 ;
   %shl = shl <vscale x 1 x i32> %in, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
@@ -2626,7 +2626,7 @@ define i5 @zext_sext_not(i4 %x) {
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i4 [[X:%.*]] to i5
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[SNOTX:%.*]] = sext i4 [[NOTX]] to i5
-; CHECK-NEXT:    [[R:%.*]] = or i5 [[ZX]], [[SNOTX]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i5 [[ZX]], [[SNOTX]]
 ; CHECK-NEXT:    ret i5 [[R]]
 ;
   %zx = zext i4 %x to i5
@@ -2643,7 +2643,7 @@ define i8 @zext_sext_not_commute(i4 %x) {
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[SNOTX:%.*]] = sext i4 [[NOTX]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[SNOTX]])
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SNOTX]], [[ZX]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i8 [[SNOTX]], [[ZX]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %zx = zext i4 %x to i8
@@ -2660,7 +2660,7 @@ define i9 @sext_zext_not(i4 %x) {
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i4 [[NOTX]] to i9
-; CHECK-NEXT:    [[R:%.*]] = or i9 [[SX]], [[ZNOTX]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i9 [[SX]], [[ZNOTX]]
 ; CHECK-NEXT:    ret i9 [[R]]
 ;
   %sx = sext i4 %x to i9
@@ -2675,7 +2675,7 @@ define i9 @sext_zext_not_commute(i4 %x) {
 ; CHECK-NEXT:    [[SX:%.*]] = sext i4 [[X:%.*]] to i9
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X]], -1
 ; CHECK-NEXT:    [[ZNOTX:%.*]] = zext i4 [[NOTX]] to i9
-; CHECK-NEXT:    [[R:%.*]] = or i9 [[ZNOTX]], [[SX]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i9 [[ZNOTX]], [[SX]]
 ; CHECK-NEXT:    ret i9 [[R]]
 ;
   %sx = sext i4 %x to i9

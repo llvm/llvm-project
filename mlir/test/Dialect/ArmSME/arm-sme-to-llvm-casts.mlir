@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-arm-sme-to-scf -convert-vector-to-llvm="enable-arm-sme" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-arm-sme-to-scf -convert-arm-sme-to-llvm -split-input-file | FileCheck %s
 
 // This test verifies the temporary casts that are emitted when lowering to
 // intrinsics to preserve data flow are correct. Canonicalization will remove

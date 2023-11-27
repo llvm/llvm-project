@@ -24,18 +24,25 @@ enum class OpenACCDirectiveKind {
   Serial,
   Kernels,
 
-  // Data Environment.
+  // Data Environment. "enter data" and "exit data" are also referred to in the
+  // Executable Directives section, but just as a back reference to the Data
+  // Environment.
   Data,
-  // FIXME: 'enter data', 'exit data'.
+  EnterData,
+  ExitData,
   HostData,
 
   // Misc.
   Loop,
   // FIXME: 'cache'
 
-  // FIXME: Combined Constructs.
+  // Combined Constructs.
+  ParallelLoop,
+  SerialLoop,
+  KernelsLoop,
 
-  // FIXME: atomic Construct variants.
+  // Atomic Construct.
+  Atomic,
 
   // Declare Directive.
   Declare,
@@ -48,9 +55,18 @@ enum class OpenACCDirectiveKind {
   Update,
   // FIXME: wait construct.
 
-  // FIXME: routine construct.
+  // Procedure Calls in Compute Regions.
+  Routine,
 
   // Invalid.
+  Invalid,
+};
+
+enum class OpenACCAtomicKind {
+  Read,
+  Write,
+  Update,
+  Capture,
   Invalid,
 };
 } // namespace clang

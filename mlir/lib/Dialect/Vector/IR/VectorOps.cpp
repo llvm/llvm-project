@@ -3754,12 +3754,8 @@ void TransferReadOp::print(OpAsmPrinter &p) {
   p << " : " << getShapedType() << ", " << getVectorType();
 }
 
-/// Infers the mask type for a transfer op given its vector type and
-/// permutation map. The mask in a transfer op operation applies to the
-/// tensor/buffer part of it and its type should match the vector shape
-/// *before* any permutation or broadcasting.
-static VectorType inferTransferOpMaskType(VectorType vecType,
-                                          AffineMap permMap) {
+VectorType mlir::vector::inferTransferOpMaskType(VectorType vecType,
+                                                 AffineMap permMap) {
   auto i1Type = IntegerType::get(permMap.getContext(), 1);
   AffineMap invPermMap = inversePermutation(compressUnusedDims(permMap));
   assert(invPermMap && "Inversed permutation map couldn't be computed");
@@ -5552,49 +5548,12 @@ public:
   }
 };
 
-/// Folds transpose with non-scalable unit dims into a shape_cast.
-///
-/// Replace:
-///   vector.transpose %0, [1, 0] : vector<nx1x<eltty>> to
-///                                 vector<1xnxelty>
-/// with:
-///   vector.shape_cast %0 : vector<nx1x<eltty>> to vector<1xnxelty>
-///
-/// Source with leading unit dim (inverse) is also replaced. Unit dim must
-/// be fixed. Non-unit dims can be scalable.
-class FoldTransposeWithNonScalableUnitDimsToShapeCast final
-    : public OpRewritePattern<TransposeOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(TransposeOp transpOp,
-                                PatternRewriter &rewriter) const override {
-    Value input = transpOp.getVector();
-    VectorType resType = transpOp.getResultVectorType();
-    ArrayRef<int64_t> permutation = transpOp.getPermutation();
-
-    if (resType.getRank() == 2 &&
-        ((resType.getShape().front() == 1 &&
-          !resType.getScalableDims().front()) ||
-         (resType.getShape().back() == 1 &&
-          !resType.getScalableDims().back())) &&
-        permutation == ArrayRef<int64_t>({1, 0})) {
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transpOp, resType,
-                                                       input);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
-              TransposeFolder, FoldTransposeSplat,
-              FoldTransposeWithNonScalableUnitDimsToShapeCast>(context);
+              TransposeFolder, FoldTransposeSplat>(context);
 }
 
 //===----------------------------------------------------------------------===//
