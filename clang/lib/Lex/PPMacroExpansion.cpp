@@ -1280,43 +1280,29 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     Diag(Tok, diag::ext_pp_has_embed)
         << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
 
-  // Save the location of the current token.  If a '(' is later found, use
-  // that location.  If not, use the end of this location instead.
-  SourceLocation LParenLoc = Tok.getLocation();
-
   // These expressions are only allowed within a preprocessor directive.
   if (!this->isParsingIfOrElifDirective()) {
-    Diag(LParenLoc, diag::err_pp_directive_required) << II;
+    Diag(Tok, diag::err_pp_directive_required) << II;
     // Return a valid identifier token.
     assert(Tok.is(tok::identifier));
     Tok.setIdentifierInfo(II);
     return EmbedResult::NotFound;
   }
 
-  // Get '('. If we don't have a '(', try to form a header-name token.
-  do {
-    if (this->LexHeaderName(Tok)) {
-      return EmbedResult::NotFound;
-    }
-  } while (Tok.getKind() == tok::comment);
-
   // Ensure we have a '('.
+  LexUnexpandedToken(Tok);
   if (Tok.isNot(tok::l_paren)) {
-    // No '(', use end of last token.
-    LParenLoc = this->getLocForEndOfToken(LParenLoc);
-    this->Diag(LParenLoc, diag::err_pp_expected_after) << II << tok::l_paren;
+    Diag(Tok, diag::err_pp_expected_after) << II << tok::l_paren;
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
-    if (Tok.isNot(tok::header_name)) {
-      return EmbedResult::NotFound;
-    }
-  } else {
-    // Save '(' location for possible missing ')' message.
-    LParenLoc = Tok.getLocation();
-    if (this->LexHeaderName(Tok)) {
-      return EmbedResult::NotFound;
-    }
+    return EmbedResult::NotFound;
   }
+
+  // Save '(' location for possible missing ')' message and then lex the header
+  // name token for the embed resource.
+  SourceLocation LParenLoc = Tok.getLocation();
+  if (this->LexHeaderName(Tok))
+    return EmbedResult::NotFound;
 
   if (Tok.isNot(tok::header_name)) {
     Diag(Tok.getLocation(), diag::err_pp_expects_filename);
