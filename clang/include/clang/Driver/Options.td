@@ -830,11 +830,7 @@ will be ignored}]>;
 def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     Visibility<[ClangOption, FlangOption]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
-def embed_dir : JoinedOrSeparate<["-"], "embed-dir">,
-    Flags<[RenderJoined]>, Group<EmbedPath_Group>,
-    Visibility<[ClangOption, CC1Option]>,
-    MetaVarName<"<dir>">, HelpText<"Add directory to embed search path">;
-def embed_dir_EQ : JoinedOrSeparate<["-"], "embed-dir=">,
+def embed_dir_EQ : Joined<["--"], "embed-dir=">,
     Flags<[RenderJoined]>, Group<EmbedPath_Group>,
     Visibility<[ClangOption, CC1Option]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to embed search path">;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c23 %s -E -embed-dir=%S/Inputs | FileCheck %s --check-prefix EXPANDED
-// RUN: %clang_cc1 -std=c23 %s -E -dE -embed-dir=%S/Inputs | FileCheck %s --check-prefix DIRECTIVE
+// RUN: %clang_cc1 -std=c23 %s -E --embed-dir=%S/Inputs | FileCheck %s --check-prefix EXPANDED
+// RUN: %clang_cc1 -std=c23 %s -E -dE --embed-dir=%S/Inputs | FileCheck %s --check-prefix DIRECTIVE
 
 // Ensure that we correctly preprocess to a file, both with expanding embed
 // directives fully and with printing the directive instead.

@@ -4352,7 +4352,7 @@ static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
     GenerateArg(Consumer, OPT_source_date_epoch, Twine(*Opts.SourceDateEpoch));
 
   for (const auto &EmbedEntry : Opts.EmbedEntries)
-    GenerateArg(Consumer, OPT_embed_dir, EmbedEntry);
+    GenerateArg(Consumer, OPT_embed_dir_EQ, EmbedEntry);
 
   // Don't handle LexEditorPlaceholders. It is implied by the action that is
   // generated elsewhere.
@@ -4446,7 +4446,7 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     }
   }
 
-  for (const auto *A : Args.filtered(OPT_embed_dir, OPT_embed_dir_EQ)) {
+  for (const auto *A : Args.filtered(OPT_embed_dir_EQ)) {
     StringRef Val = A->getValue();
     Opts.EmbedEntries.push_back(std::string(Val));
   }

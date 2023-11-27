@@ -8280,7 +8280,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   // Pass along any -I options so we get proper .include search paths.
   Args.AddAllArgs(CmdArgs, options::OPT_I_Group);
 
-  // Pass along any -embed-dir or similar options so we get proper embed paths.
+  // Pass along any --embed-dir or similar options so we get proper embed paths.
   Args.AddAllArgs(CmdArgs, options::OPT_EmbedPath_Group);
 
   // Determine the original source input.

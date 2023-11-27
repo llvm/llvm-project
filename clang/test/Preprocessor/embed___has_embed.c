@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 %s -E -embed-dir=%S/Inputs -verify
+// RUN: %clang_cc1 -std=c23 %s -E --embed-dir=%S/Inputs -verify
 // expected-no-diagnostics
 
 #if __has_embed(__FILE__) != __STDC_EMBED_FOUND__

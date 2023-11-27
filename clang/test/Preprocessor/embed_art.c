@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 %s -fsyntax-only -embed-dir=%S/Inputs -verify
+// RUN: %clang_cc1 -std=c23 %s -fsyntax-only --embed-dir=%S/Inputs -verify
 // expected-no-diagnostics
 
 const char data[] = {
