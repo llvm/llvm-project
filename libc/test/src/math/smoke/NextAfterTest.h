@@ -17,6 +17,17 @@
 #include "test/UnitTest/Test.h"
 #include <math.h>
 
+#define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
+  ASSERT_FP_EQ(result, expected);                                              \
+  ASSERT_FP_EXCEPTION(expected_exception);                                     \
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+
+#define ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected)                          \
+  ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_UNDERFLOW)
+
+#define ASSERT_FP_EQ_WITH_OVERFLOW(result, expected)                           \
+  ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_OVERFLOW)
+
 template <typename T>
 class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
@@ -53,23 +64,23 @@ public:
     T result = func(x, T(1));
     UIntType expected_bits = 1;
     T expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, T(-1));
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     x = neg_zero;
     result = func(x, 1);
     expected_bits = 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, -1);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     // 'from' is max subnormal value.
     x = LIBC_NAMESPACE::cpp::bit_cast<T>(max_subnormal);
@@ -80,7 +91,7 @@ public:
     result = func(x, 0);
     expected_bits = max_subnormal - 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     x = -x;
 
@@ -93,30 +104,30 @@ public:
     expected_bits =
         (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal - 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     // 'from' is min subnormal value.
     x = LIBC_NAMESPACE::cpp::bit_cast<T>(min_subnormal);
     result = func(x, 1);
     expected_bits = min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ(func(x, 0), 0);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(func(x, 0), 0);
 
     x = -x;
     result = func(x, -1);
     expected_bits =
         (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ(func(x, 0), T(-0.0));
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(func(x, 0), T(-0.0));
 
     // 'from' is min normal.
     x = LIBC_NAMESPACE::cpp::bit_cast<T>(min_normal);
     result = func(x, 0);
     expected_bits = max_subnormal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, inf);
     expected_bits = min_normal + 1;
@@ -127,7 +138,7 @@ public:
     result = func(x, 0);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + max_subnormal;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
-    ASSERT_FP_EQ(result, expected);
+    ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected);
 
     result = func(x, -inf);
     expected_bits = (UIntType(1) << (BIT_WIDTH_OF_TYPE - 1)) + min_normal + 1;
@@ -137,10 +148,10 @@ public:
     // 'from' is max normal and 'to' is infinity.
     x = LIBC_NAMESPACE::cpp::bit_cast<T>(max_normal);
     result = func(x, inf);
-    ASSERT_FP_EQ(result, inf);
+    ASSERT_FP_EQ_WITH_OVERFLOW(result, inf);
 
     result = func(-x, -inf);
-    ASSERT_FP_EQ(result, -inf);
+    ASSERT_FP_EQ_WITH_OVERFLOW(result, -inf);
 
     // 'from' is infinity.
     x = inf;
