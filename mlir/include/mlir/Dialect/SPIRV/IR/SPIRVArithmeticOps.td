@@ -503,6 +503,40 @@ def SPIRV_ISubBorrowOp : SPIRV_ArithmeticExtendedBinaryOp<"ISubBorrow",
 
 // -----
 
+def SPIRV_DotOp : SPIRV_Op<"Dot",
+                    [Pure, AllTypesMatch<["vector1", "vector2"]>,
+                     AllElementTypesMatch<["vector1", "result"]>]> {
+  let summary = "Dot product of Vector 1 and Vector 2";
+
+  let description = [{
+    Result Type must be a floating point scalar.
+
+    Vector 1 and Vector 2 must be vectors of the same type, and their component
+    type must be Result Type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Dot %v1, %v2 : vector<4xf32> -> f32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_VectorOf<SPIRV_Float>:$vector1,
+    SPIRV_VectorOf<SPIRV_Float>:$vector2
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = "operands attr-dict `:` type($vector1) `->` type($result)";
+
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_SDivOp : SPIRV_ArithmeticBinaryOp<"SDiv",
                                         SPIRV_Integer,
                                         [UsableInSpecConstantOp]> {
