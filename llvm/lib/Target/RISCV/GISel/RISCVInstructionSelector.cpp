@@ -590,6 +590,10 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_BRINDIRECT:
+    MI.setDesc(TII.get(RISCV::PseudoBRIND));
+    MI.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
   case TargetOpcode::G_FRAME_INDEX: {
