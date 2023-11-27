@@ -799,7 +799,7 @@ void BackendConsumer::DontCallDiagHandler(const DiagnosticInfoDontCall &D) {
 
   SmallVector<std::string> InliningDecisions = D.getInliningDecisions();
   InliningDecisions.push_back(D.getCaller().str());
-  for (auto [index, value] : llvm::enumerate(InliningDecisions))
+  for (const auto &[index, value] : llvm::enumerate(InliningDecisions))
     Diags.Report(LocCookie, index ? diag::note_fe_backend_inlined
                                   : diag::note_fe_backend_in)
         << llvm::demangle(value);
