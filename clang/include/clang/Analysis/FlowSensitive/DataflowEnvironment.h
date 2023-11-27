@@ -166,6 +166,10 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
+  /// Assigns storage locations and values to all global variables, fields
+  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
+  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
+
   /// Returns a new environment that is a copy of this one.
   ///
   /// The state of the program is initially the same, but can be mutated without
@@ -283,7 +287,15 @@ public:
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  RecordStorageLocation *getThisPointeeStorageLocation() const;
+  RecordStorageLocation *getThisPointeeStorageLocation() const {
+    return ThisPointeeLoc;
+  }
+
+  /// Sets the storage location assigned to the `this` pointee in the
+  /// environment.
+  void setThisPointeeStorageLocation(RecordStorageLocation &Loc) {
+    ThisPointeeLoc = &Loc;
+  }
 
   /// Returns the location of the result object for a record-type prvalue.
   ///
@@ -570,6 +582,9 @@ public:
     return dyn_cast<FunctionDecl>(getDeclCtx());
   }
 
+  /// Returns the size of the call stack.
+  size_t callStackSize() const { return CallStack.size(); }
+
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
   /// given `MaxDepth`.
@@ -629,10 +644,7 @@ private:
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
 
-  /// Assigns storage locations and values to all global variables, fields
-  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
-  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
-
+private:
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
