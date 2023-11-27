@@ -164,10 +164,11 @@ namespace ranges {
   template<bool _Const>
   struct join_view<_View>::__sentinel {
   private:
-    friend join_view;
+    template <bool>
+    friend struct __sentinel;
 
-    using _Parent = __maybe_const<_Const, join_view>;
-    using _Base = __maybe_const<_Const, _View>;
+    using _Parent            = __maybe_const<_Const, join_view>;
+    using _Base              = __maybe_const<_Const, _View>;
     sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
   public:
