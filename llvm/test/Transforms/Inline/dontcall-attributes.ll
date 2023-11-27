@@ -1,7 +1,5 @@
-; RUN: opt -S -o - -passes=inline %s \
-; RUN:  | FileCheck %s --check-prefixes=CHECK-BOTH,CHECK
-; RUN: opt -S -o - -passes=always-inline %s \
-; RUN:  | FileCheck %s --check-prefixes=CHECK-BOTH,CHECK-ALWAYS
+; RUN: opt -S -passes=inline < %s | FileCheck %s --check-prefixes=CHECK-BOTH,CHECK
+; RUN: opt -S -passes=always-inline < %s | FileCheck %s --check-prefixes=CHECK-BOTH,CHECK-ALWAYS
 
 declare void @foo() "dontcall-warn"="oh no"
 declare void @fof() "dontcall-error"="oh no"
