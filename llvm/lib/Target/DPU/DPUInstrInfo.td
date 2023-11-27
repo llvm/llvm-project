@@ -130,7 +130,7 @@ def IsInImmediateSection: PatFrag<(ops node:$sym), (DPUWrapper node:$sym), [{
     return IsGlobalAddrInImmediateSection(N);
 }]>;
 
-multiclass WramLoadXPat<ImmOperand LdTy, PatFrag LoadOp, DPUInstruction Inst> {
+multiclass WramLoadXPat<ValueType LdTy, PatFrag LoadOp, DPUInstruction Inst> {
   def : Pat<(LdTy (wram_load_frag<LoadOp> SimpleRegOrCst:$ra)), (Inst SimpleRegOrCst:$ra, 0)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> AddrFI:$ra)), (Inst AddrFI:$ra, 0)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> (DPUWrapper i32:$off))), (Inst ZERO, i32:$off)>;
@@ -149,7 +149,7 @@ multiclass WramLoadPat<PatFrag LoadOp, DPUInstruction Inst, DPUInstruction Inst6
     defm : WramLoadXPat<i64, LoadOp, Inst64>;
 }
 
-multiclass WramStorePat<PatFrag StoreOp, DPUInstruction Inst, RegisterClass StTy> {
+multiclass WramStorePat<PatFrag StoreOp, DPUInstruction Inst, DPURegOperand StTy> {
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, SimpleRegOrCst:$ra), (Inst SimpleRegOrCst:$ra, 0, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, AddrFI:$ra), (Inst AddrFI:$ra, 0, StTy:$rb)>;
   def : Pat<(wram_store_frag<StoreOp> StTy:$rb, (DPUWrapper i32:$off)), (Inst ZERO, i32:$off, StTy:$rb)>;
