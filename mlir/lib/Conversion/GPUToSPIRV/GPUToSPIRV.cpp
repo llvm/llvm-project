@@ -485,9 +485,7 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
                                                 Location loc, Value arg,
                                                 gpu::AllReduceOperation opType,
                                                 bool isGroup, bool isUniform) {
-  enum class ElemType {
-    Float, Boolean, Integer
-  };
+  enum class ElemType { Float, Boolean, Integer };
   using FuncT = Value (*)(OpBuilder &, Location, Value, bool, bool);
   struct OpHandler {
     gpu::AllReduceOperation kind;
@@ -500,7 +498,8 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
   if (isa<FloatType>(type)) {
     elementType = ElemType::Float;
   } else if (auto intTy = dyn_cast<IntegerType>(type)) {
-    elementType = (intTy.getIntOrFloatBitWidth() == 1) ? ElemType::Boolean : ElemType::Integer;
+    elementType = (intTy.getIntOrFloatBitWidth() == 1) ? ElemType::Boolean
+                                                       : ElemType::Integer;
   } else {
     return std::nullopt;
   }
