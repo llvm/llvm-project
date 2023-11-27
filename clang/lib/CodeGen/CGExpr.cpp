@@ -940,7 +940,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
     if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
       IndexedType = Base->getType();
-      Expr *E = CGF.BuildCountedByFieldExpr(Base, VD);
+      const Expr *E = CGF.BuildCountedByFieldExpr(Base, VD);
       return CGF.EmitAnyExprToTemp(E).getScalarVal();
     }
   }
@@ -956,8 +956,9 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-Expr *CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
-                                               const ValueDecl *CountedByVD) {
+const Expr *
+CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
+                                         const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr = const_cast<Expr *>(Base)->IgnoreParenImpCasts();
 
