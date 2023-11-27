@@ -50,7 +50,7 @@ struct move_counted_handle {
   constexpr move_counted_handle(const move_counted_handle&) = default;
   template <class OtherT>
     requires(std::is_constructible_v<T*, OtherT*>)
-  constexpr move_counted_handle(const move_counted_handle<OtherT>& other) : ptr(other.ptr){};
+  constexpr move_counted_handle(const move_counted_handle<OtherT>& other) : ptr(other.ptr) {}
   constexpr move_counted_handle(move_counted_handle&& other) {
     ptr = other.ptr;
     if !consteval {

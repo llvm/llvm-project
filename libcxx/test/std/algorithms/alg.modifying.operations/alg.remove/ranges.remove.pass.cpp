@@ -35,7 +35,7 @@ static_assert(!HasRemoveIt<PermutableNotForwardIterator>);
 static_assert(!HasRemoveIt<PermutableNotSwappable>);
 static_assert(!HasRemoveIt<int*, SentinelForNotSemiregular>);
 static_assert(!HasRemoveIt<int*, SentinelForNotWeaklyEqualityComparableWith>);
-static_assert(!HasRemoveIt<int**>); // not indirect_binary_prediacte
+static_assert(!HasRemoveIt<int**>); // not indirect_binary_predicate
 
 template <class Range>
 concept HasRemoveR = requires(Range range) { std::ranges::remove(range, 0); };
@@ -45,7 +45,7 @@ static_assert(!HasRemoveR<PermutableRangeNotForwardIterator>);
 static_assert(!HasRemoveR<PermutableRangeNotSwappable>);
 static_assert(!HasRemoveR<SentinelForNotSemiregular>);
 static_assert(!HasRemoveR<SentinelForNotWeaklyEqualityComparableWith>);
-static_assert(!HasRemoveR<UncheckedRange<int**>>); // not indirect_binary_prediacte
+static_assert(!HasRemoveR<UncheckedRange<int**>>); // not indirect_binary_predicate
 
 template <int N, int M>
 struct Data {
