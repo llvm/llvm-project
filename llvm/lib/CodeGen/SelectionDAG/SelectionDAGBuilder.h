@@ -368,6 +368,9 @@ public:
   void handleKillDebugValue(DILocalVariable *Var, DIExpression *Expr,
                             DebugLoc DbgLoc, unsigned Order);
 
+  void handleDebugDeclare(Value *Address, DILocalVariable *Variable,
+                          DIExpression *Expression, DebugLoc DL);
+
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
 

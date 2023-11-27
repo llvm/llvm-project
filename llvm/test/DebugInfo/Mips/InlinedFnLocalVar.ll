@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple mips-linux-gnu -O2 %s -o - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple mips-linux-gnu -O2 %s -o - | FileCheck %s
 ; Check struct X for dead variable xyz from inlined function foo.
 
 ; CHECK: .section .debug_info,"",@0x7000001e

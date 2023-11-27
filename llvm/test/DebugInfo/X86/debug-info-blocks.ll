@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
 
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
+; RUN: llvm-dwarfdump -v -debug-info %t.o | FileCheck %s
+
 ; Generated from llvm/tools/clang/test/CodeGenObjC/debug-info-blocks.m
 ; rdar://problem/9279956
 ; test that the DW_AT_location of self is at ( fbreg +{{[0-9]+}}, deref, +{{[0-9]+}} )
