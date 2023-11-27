@@ -2409,10 +2409,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
     if (Opc != X86::DBG_VALUE && !PI->isTerminator()) {
       if (!PI->getFlag(MachineInstr::FrameDestroy) ||
-          (Opc != X86::POP32r && Opc != X86::POP64r &&
-           (Opc != X86::BTR64ri8 && Opc != X86::ADD64ri32 &&
-            Opc != X86::POPP64r && Opc != X86::POP2 && Opc != X86::POP2P &&
-            Opc != X86::LEA64r)))
+          (Opc != X86::POP32r && Opc != X86::POP64r && Opc != X86::BTR64ri8 &&
+           Opc != X86::ADD64ri32 && Opc != X86::POPP64r && Opc != X86::POP2 &&
+           Opc != X86::POP2P && Opc != X86::LEA64r))
         break;
       FirstCSPop = PI;
     }
