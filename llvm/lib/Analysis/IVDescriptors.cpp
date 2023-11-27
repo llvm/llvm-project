@@ -688,8 +688,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
 RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isFindLastIVPattern(Loop *Loop, PHINode *OrigPhi,
-                                          Instruction *I, ScalarEvolution *SE) {
+RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
+                                          ScalarEvolution *SE) {
   // Only match select with single use cmp condition.
   // TODO: Only handle single use for now.
   CmpInst::Predicate Pred;
@@ -881,7 +881,7 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
         Kind == RecurKind::Add || Kind == RecurKind::Mul)
       return isConditionalRdxPattern(Kind, I);
     if (isFindLastIVRecurrenceKind(Kind))
-      return isFindLastIVPattern(L, OrigPhi, I, SE);
+      return isFindLastIVPattern(OrigPhi, I, SE);
     [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
