@@ -5078,10 +5078,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
-  } else if ((Style.isCpp() && Style.BreakConcatenatedStrings) ||
-             Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TableGen ||
-             Style.Language == FormatStyle::LK_TextProto) {
+  } else if (Style.BreakAdjacentStringLiterals &&
+             (Style.isCpp() || Style.isProto() ||
+              Style.Language == FormatStyle::LK_TableGen ||
+              Style.Language == FormatStyle::LK_TextProto)) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }

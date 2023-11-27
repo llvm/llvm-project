@@ -26642,7 +26642,7 @@ TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
 }
 
-TEST_F(FormatTest, BreakConcatenatedStrings) {
+TEST_F(FormatTest, BreakAdjacentStringLiterals) {
   constexpr StringRef Code{
       "return \"Code\" \"\\0\\52\\26\\55\\55\\0\" \"x013\" \"\\02\\xBA\";"};
 
@@ -26653,7 +26653,7 @@ TEST_F(FormatTest, BreakConcatenatedStrings) {
                Code);
 
   auto Style = getLLVMStyle();
-  Style.BreakConcatenatedStrings = false;
+  Style.BreakAdjacentStringLiterals = false;
   verifyFormat(Code, Style);
 }
 } // namespace

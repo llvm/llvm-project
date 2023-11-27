@@ -884,7 +884,7 @@ clang-format
 - Add ``AllowBreakBeforeNoexceptSpecifier`` option.
 - Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 - Change ``BreakAfterAttributes`` from ``Never`` to ``Leave`` in LLVM style.
-- Add ``BreakConcatenatedStrings`` option.
+- Add ``BreakAdjacentStringLiterals`` option.
 
 libclang
 --------
