@@ -13,7 +13,7 @@
 #include "lldb/lldb-public.h"
 
 #include <mutex>
-#include <set>
+#include <vector>
 
 namespace lldb_private {
 
