@@ -21,16 +21,14 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#ifndef _LIBCPP_CXX03_LANG
 
-namespace ranges {
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp& __as_lvalue(_LIBCPP_LIFETIMEBOUND _Tp&& __t) {
   return static_cast<_Tp&>(__t);
 }
-} // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // !_LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

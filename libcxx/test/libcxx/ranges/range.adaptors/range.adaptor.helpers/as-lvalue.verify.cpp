@@ -6,14 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// <ranges>
+// UNSUPPORTED: c++03
 
 // template<class T>
 // constexpr T& as-lvalue(T&& t) { // exposition only
-
-#include <ranges>
 
 #include <concepts>
 #include <utility>
@@ -22,19 +18,19 @@ constexpr bool test() {
   // Check glvalue
   {
     int lvalue{};
-    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::ranges::__as_lvalue(lvalue);
+    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(lvalue);
   }
 
   // Check prvalue
   {
-    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::ranges::__as_lvalue(
+    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(
         0); // expected-warning {{temporary bound to local reference 'check' will be destroyed at the end of the full-expression}}
   }
 
   // Check xvalue
   {
     int xvalue{};
-    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::ranges::__as_lvalue(std::move(xvalue));
+    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(std::move(xvalue));
   }
 
   return true;

@@ -323,7 +323,7 @@ namespace ranges {
         else
           return *__parent_->__inner_;
       };
-      if (++*__inner_ == ranges::end(ranges::__as_lvalue(__get_inner_range()))) {
+      if (++*__inner_ == ranges::end(std::__as_lvalue(__get_inner_range()))) {
         ++__get_outer();
         __satisfy();
       }
@@ -354,11 +354,11 @@ namespace ranges {
                common_range<range_reference_t<_Base>>
     {
       if (__outer_ == ranges::end(__parent_->__base_))
-        __inner_ = ranges::end(ranges::__as_lvalue(*--__outer_));
+        __inner_ = ranges::end(std::__as_lvalue(*--__outer_));
 
       // Skip empty inner ranges when going backwards.
-      while (*__inner_ == ranges::begin(ranges::__as_lvalue(*__outer_))) {
-        __inner_ = ranges::end(ranges::__as_lvalue(*--__outer_));
+      while (*__inner_ == ranges::begin(std::__as_lvalue(*__outer_))) {
+        __inner_ = ranges::end(std::__as_lvalue(*--__outer_));
       }
 
       --*__inner_;
