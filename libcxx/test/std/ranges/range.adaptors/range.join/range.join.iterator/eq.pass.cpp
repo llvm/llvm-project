@@ -42,7 +42,7 @@ constexpr bool test() {
   }
 
   {
-    // !forward_range<iterator_t<Base>>
+    // !forward_range<Base>
     using Inner = BufferView<int*>;
     using Outer = BufferView<cpp20_input_iterator<Inner*>, sentinel_wrapper<cpp20_input_iterator<Inner*>>>;
     static_assert(!std::equality_comparable<std::ranges::iterator_t<Outer>>);
