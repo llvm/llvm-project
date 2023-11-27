@@ -346,7 +346,7 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
 //
 // The AArch64 register mapping is defined in the following header file:
 //
-//    https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs/arm32.h
+//    https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs/arm64.h
 //
 
 let Entry = 1 in
