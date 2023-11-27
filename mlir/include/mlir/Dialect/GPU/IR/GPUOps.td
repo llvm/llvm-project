@@ -931,38 +931,53 @@ def GPU_YieldOp : GPU_Op<"yield", [Pure, Terminator]>,
   }];
 }
 
-// add, mul mirror the XLA ComparisonDirection enum.
+// These mirror the reduction combining kinds from the vector dialect.
 def GPU_AllReduceOpAdd : I32EnumAttrCase<"ADD", 0, "add">;
-def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 1, "and">;
-def GPU_AllReduceOpMax : I32EnumAttrCase<"MAX", 2, "max">;
-def GPU_AllReduceOpMin : I32EnumAttrCase<"MIN", 3, "min">;
-def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 4, "mul">;
-def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  5, "or">;
-def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 6, "xor">;
+def GPU_AllReduceOpMul : I32EnumAttrCase<"MUL", 1, "mul">;
+def GPU_AllReduceOpMinUI : I32EnumAttrCase<"MINUI", 2, "minui">;
+def GPU_AllReduceOpMinSI : I32EnumAttrCase<"MINSI", 3, "minsi">;
+// Follows the `arith.minnumf` semantics.
+def GPU_AllReduceOpMinF : I32EnumAttrCase<"MINF", 4, "minf">;
+def GPU_AllReduceOpMaxUI : I32EnumAttrCase<"MAXUI", 5, "maxui">;
+def GPU_AllReduceOpMaxSI : I32EnumAttrCase<"MAXSI", 6, "maxsi">;
+// Follows the `arith.maxnumf` semantics.
+def GPU_AllReduceOpMaxF : I32EnumAttrCase<"MAXF", 7, "maxf">;
+def GPU_AllReduceOpAnd : I32EnumAttrCase<"AND", 8, "and">;
+def GPU_AllReduceOpOr  : I32EnumAttrCase<"OR",  9, "or">;
+def GPU_AllReduceOpXor : I32EnumAttrCase<"XOR", 10, "xor">;
+// Follows the `arith.minimumf` semantics.
+def GPU_AllReduceOpMinimumF : I32EnumAttrCase<"MINIMUMF", 11, "minimumf">;
+// Follows the `arith.maximumf` semantics.
+def GPU_AllReduceOpMaximumF : I32EnumAttrCase<"MAXIMUMF", 12, "maximumf">;
 
 def GPU_AllReduceOperation : I32EnumAttr<"AllReduceOperation",
     "built-in reduction operations supported by gpu.allreduce.",
     [
       GPU_AllReduceOpAdd,
-      GPU_AllReduceOpAnd,
-      GPU_AllReduceOpMax,
-      GPU_AllReduceOpMin,
       GPU_AllReduceOpMul,
+      GPU_AllReduceOpMinUI,
+      GPU_AllReduceOpMinSI,
+      GPU_AllReduceOpMinF,
+      GPU_AllReduceOpMaxUI,
+      GPU_AllReduceOpMaxSI,
+      GPU_AllReduceOpMaxF,
+      GPU_AllReduceOpAnd,
       GPU_AllReduceOpOr,
-      GPU_AllReduceOpXor
+      GPU_AllReduceOpXor,
+      GPU_AllReduceOpMinimumF,
+      GPU_AllReduceOpMaximumF
     ]>{
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
 }
+
+def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
+
 def GPU_AllReduceOperationAttr : EnumAttr<GPU_Dialect, GPU_AllReduceOperation,
                                           "all_reduce_op">;
 
 def GPU_AllReduceOp : GPU_Op<"all_reduce",
-    [SameOperandsAndResultType, IsolatedFromAbove]>,
-    Arguments<(ins AnyType:$value,
-               OptionalAttr<GPU_AllReduceOperationAttr>:$op,
-               UnitAttr:$uniform)>,
-    Results<(outs AnyType)> {
+    [SameOperandsAndResultType, IsolatedFromAbove]> {
   let summary = "Reduce values among workgroup.";
   let description = [{
     The `all_reduce` op reduces the value of every work item across a local
@@ -981,12 +996,23 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 
     compute the sum of each work item's %0 value. The first version specifies
     the accumulation as operation, whereas the second version specifies the
-    accumulation as code region. The accumulation operation must be one of:
-    `add`, `and`, `max`, `min`, `mul`, `or`, `xor`.
+    accumulation as code region. The reduction operation must be one of:
+    *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
+       `or`, `xor`
+    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+       `maximumf`
 
     If `uniform` flag is set either none or all work items of a workgroup
     need to execute this op in convergence.
   }];
+
+  let arguments = (ins
+    AnyIntegerOrFloat:$value,
+    OptionalAttr<GPU_AllReduceOperationAttr>:$op,
+    UnitAttr:$uniform
+  );
+  let results = (outs AnyIntegerOrFloat:$result);
+
   let regions = (region AnyRegion:$body);
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? $body attr-dict
@@ -996,12 +1022,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let hasRegionVerifier = 1;
 }
 
-def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
-    [SameOperandsAndResultType]>,
-    Arguments<(ins AnyType:$value,
-               GPU_AllReduceOperationAttr:$op,
-               UnitAttr:$uniform)>,
-    Results<(outs AnyType)> {
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the value of every work item across a
@@ -1014,8 +1035,21 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
     ```
 
     If `uniform` flag is set either none or all work items of a subgroup
-    need to execute this op in convergence.
+    need to execute this op in convergence. The reduction operation must be one
+    of:
+    *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
+       `or`, `xor`
+    *  Floating point types: `add`, `mul`, `minf`, `maxf`, `minimumf`,
+       `maximumf`
   }];
+
+  let arguments = (ins
+    AnyIntegerOrFloat:$value,
+    GPU_AllReduceOperationAttr:$op,
+    UnitAttr:$uniform
+  );
+  let results = (outs AnyIntegerOrFloat:$result);
+
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? attr-dict
                           `:` functional-type(operands, results) }];
