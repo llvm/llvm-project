@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-exceptions
+// REQUIRES: has-unix-headers
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
