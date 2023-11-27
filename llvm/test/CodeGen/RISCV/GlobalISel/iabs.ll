@@ -12,7 +12,6 @@ declare i8 @llvm.abs.i8(i8, i1 immarg)
 declare i16 @llvm.abs.i16(i16, i1 immarg)
 declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare i64 @llvm.abs.i64(i64, i1 immarg)
-declare i128 @llvm.abs.i128(i128, i1 immarg)
 
 define i8 @abs8(i8 %x) {
 ; RV32I-LABEL: abs8:
