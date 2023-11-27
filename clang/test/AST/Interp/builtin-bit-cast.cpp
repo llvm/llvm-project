@@ -74,6 +74,19 @@ constexpr int foo() {
 }
 static_assert(foo() == 1, "");
 
+
+namespace bitint {
+  constexpr _BitInt(sizeof(int) * 8) BI = ~0;
+  constexpr unsigned int I = __builtin_bit_cast(unsigned int, BI);
+  static_assert(I == ~0u, "");
+
+  constexpr _BitInt(sizeof(int) * 8) IB = __builtin_bit_cast(_BitInt(sizeof(int) * 8), I); // ref-error {{must be initialized by a constant expression}} \
+                                                                                           // ref-note {{constexpr bit cast involving type '_BitInt(32)' is not yet supported}} \
+                                                                                           // ref-note {{declared here}}
+  static_assert(IB == ~0u, ""); // ref-error {{not an integral constant expression}} \
+                                // ref-note {{initializer of 'IB' is not a constant expression}}
+}
+
 namespace Ints {
   static_assert(round_trip<unsigned>((int)-1));
   static_assert(round_trip<unsigned>((int)0x12345678));

@@ -130,8 +130,10 @@ bool ByteCodeExprGen<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
 
   bool ToTypeIsUChar = (ToType->isSpecificBuiltinType(BuiltinType::UChar) ||
                         ToType->isSpecificBuiltinType(BuiltinType::Char_U));
+  uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
 
-  if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(), E))
+  if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
+                         ResultBitWidth, E))
     return false;
 
   if (DiscardResult)

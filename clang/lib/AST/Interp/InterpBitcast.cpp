@@ -32,6 +32,8 @@ using DataFunc =
       TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
       TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
       TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
     default:                                                                   \
       llvm_unreachable("Unhandled bitcast type");                              \
@@ -51,6 +53,8 @@ using DataFunc =
       TYPE_SWITCH_CASE(PT_Uint32, B)                                           \
       TYPE_SWITCH_CASE(PT_Sint64, B)                                           \
       TYPE_SWITCH_CASE(PT_Uint64, B)                                           \
+      TYPE_SWITCH_CASE(PT_IntAP, B)                                            \
+      TYPE_SWITCH_CASE(PT_IntAPS, B)                                           \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
       TYPE_SWITCH_CASE(PT_Float, B)                                            \
     default:                                                                   \
@@ -384,10 +388,10 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
 
           CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
           const std::byte *M = Bytes.getBytes(BitOffset, 1234);
-          std::byte *Buff = (std::byte *)std::malloc(
-              ObjectReprChars.getQuantity()); //[sizeof(T)];
+          std::byte *Buff =
+              (std::byte *)std::malloc(ObjectReprChars.getQuantity());
           std::memcpy(Buff, M, ObjectReprChars.getQuantity());
-          // Val.bitcastToMemory(Buff);
+
           if (BigEndian)
             swapBytes(Buff, ObjectReprChars.getQuantity());
 
@@ -407,7 +411,7 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
         BITCAST_TYPE_SWITCH(T, {
           T &Val = P.deref<T>();
 
-          size_t ValueReprBits = T::valueReprBits(ASTCtx);
+          size_t ValueReprBits = Val.valueReprBits(ASTCtx);
           // Check if any of the bits we're about to read are uninitialized.
           bool HasIndeterminateBits =
               !Bytes.allInitialized(BitOffset, ValueReprBits);
@@ -440,7 +444,7 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
           if (BigEndian) {
             swapBytes(Copy, ValueReprBits / 8);
           }
-          Val = T::bitcastFromMemory(Copy);
+          Val = T::bitcastFromMemory(Copy, Val.bitWidth());
           std::free(Copy);
 
           if (!HasIndeterminateBits)

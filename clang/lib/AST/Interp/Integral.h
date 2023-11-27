@@ -193,7 +193,8 @@ public:
     return Integral(Value);
   }
 
-  static Integral bitcastFromMemory(const std::byte *Buff) {
+  static Integral bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
+    assert(BitWidth == sizeof(ReprT) * 8);
     ReprT V;
 
     std::memcpy(&V, Buff, sizeof(ReprT));

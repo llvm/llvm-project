@@ -1577,11 +1577,12 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
 }
 
 template <PrimType Name, class ToT = typename PrimConv<Name>::T>
-bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte) {
+bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
+             uint32_t ResultBitWidth) {
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
-  size_t BuffSize = ToT::valueReprBytes(S.getCtx());
-  std::vector<std::byte> Buff(BuffSize);
+  size_t BuffSize = ResultBitWidth / 8;
+  llvm::SmallVector<std::byte> Buff(BuffSize);
   bool HasIndeterminateBits = false;
 
   if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, HasIndeterminateBits))
@@ -1590,7 +1591,7 @@ bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte) {
   if (!CheckBitcast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
     return false;
 
-  S.Stk.push<ToT>(ToT::bitcastFromMemory(Buff.data()));
+  S.Stk.push<ToT>(ToT::bitcastFromMemory(Buff.data(), ResultBitWidth));
   return true;
 }
 

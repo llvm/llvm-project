@@ -15,6 +15,7 @@
 
 #include "clang/AST/APValue.h"
 #include "clang/AST/ComparisonCategories.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -61,7 +62,7 @@ public:
 
   IntegralAP(APInt V) : V(V) {}
   /// Arbitrary value for uninitialized variables.
-  IntegralAP() : IntegralAP(-1, 1024) {}
+  IntegralAP() : IntegralAP(-1, 17) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
   IntegralAP operator-(const IntegralAP &Other) const {
@@ -123,6 +124,11 @@ public:
   }
 
   constexpr unsigned bitWidth() const { return V.getBitWidth(); }
+  constexpr unsigned objectReprBits() { return bitWidth(); }
+  constexpr unsigned valueReprBits(const ASTContext &Ctx) { return bitWidth(); }
+  constexpr unsigned valueReprBytes(const ASTContext &Ctx) {
+    return Ctx.toCharUnitsFromBits(bitWidth()).getQuantity();
+  }
 
   APSInt toAPSInt(unsigned Bits = 0) const {
     if (Bits == 0)
@@ -144,6 +150,17 @@ public:
   bool isMinusOne() const { return Signed && V == -1; }
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
+
+  static IntegralAP bitcastFromMemory(const std::byte *Buff,
+                                      unsigned BitWidth) {
+    APInt V(BitWidth, static_cast<uint64_t>(0), Signed);
+    llvm::LoadIntFromMemory(V, (const uint8_t *)Buff, BitWidth / 8);
+    return IntegralAP(V);
+  }
+
+  void bitcastToMemory(std::byte *Buff) const {
+    llvm::StoreIntToMemory(V, (uint8_t *)Buff, bitWidth() / 8);
+  }
 
   void print(llvm::raw_ostream &OS) const { OS << V; }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

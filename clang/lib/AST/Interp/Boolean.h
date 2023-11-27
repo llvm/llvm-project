@@ -16,8 +16,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstddef>
-#include <cstdint>
 
 namespace clang {
 namespace interp {
@@ -114,7 +112,8 @@ class Boolean final {
     return Boolean(!Value.isZero());
   }
 
-  static Boolean bitcastFromMemory(const std::byte *Buff) {
+  static Boolean bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
+    assert(BitWidth == 8);
     bool Val = static_cast<bool>(*Buff);
     return Boolean(Val);
   }
