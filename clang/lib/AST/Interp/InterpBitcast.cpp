@@ -73,18 +73,18 @@ static void swapBytes(std::byte *M, size_t N) {
 /// All offsets are in bits.
 struct BitTracker {
   llvm::BitVector Initialized;
-  llvm::BitVector Data_;
+  llvm::BitVector Data;
 
   BitTracker() = default;
 
   size_t size() const {
-    assert(Initialized.size() == Data_.size());
+    assert(Initialized.size() == Data.size());
     return Initialized.size();
   }
 
   const std::byte *getBytes(size_t BitOffset, int a) {
     assert(BitOffset % 8 == 0);
-    return reinterpret_cast<const std::byte *>(Data_.getData().data()) +
+    return reinterpret_cast<const std::byte *>(Data.getData().data()) +
            (BitOffset / 8);
   }
 
@@ -95,11 +95,14 @@ struct BitTracker {
   bool allInitialized() const { return Initialized.all(); }
 
   void pushData(const std::byte *data, size_t BitOffset, size_t BitWidth) {
-    assert(BitOffset >= Data_.size());
+    assert(BitOffset >= Data.size());
+    Data.reserve(BitOffset + BitWidth);
+    Initialized.reserve(BitOffset + BitWidth);
+
     // First, fill up the bit vector until BitOffset. The bits are all 0
     // but we record them as indeterminate.
     {
-      Data_.resize(BitOffset, false);
+      Data.resize(BitOffset, false);
       Initialized.resize(BitOffset, false);
     }
 
@@ -107,7 +110,7 @@ struct BitTracker {
     // Read all full bytes first
     for (size_t I = 0; I != BitWidth / 8; ++I) {
       for (unsigned X = 0; X != 8; ++X) {
-        Data_.push_back((data[I] & std::byte(1 << X)) != std::byte{0});
+        Data.push_back((data[I] & std::byte(1 << X)) != std::byte{0});
         Initialized.push_back(true);
         ++BitsHandled;
       }
@@ -116,21 +119,21 @@ struct BitTracker {
     // Rest of the bits.
     assert((BitWidth - BitsHandled) < 8);
     for (size_t I = 0, E = (BitWidth - BitsHandled); I != E; ++I) {
-      Data_.push_back((data[BitWidth / 8] & std::byte(1 << I)) != std::byte{0});
+      Data.push_back((data[BitWidth / 8] & std::byte(1 << I)) != std::byte{0});
       Initialized.push_back(true);
       ++BitsHandled;
     }
   }
 
   void pushZeroes(size_t Amount) {
-    size_t N = Data_.size();
-    Data_.resize(N + Amount, false);
+    size_t N = Data.size();
+    Data.resize(N + Amount, false);
     Initialized.resize(N + Amount, true);
   }
 
   void markUninitializedUntil(size_t Offset) {
-    assert(Offset >= Data_.size());
-    Data_.resize(Offset, false);
+    assert(Offset >= Data.size());
+    Data.resize(Offset, false);
     Initialized.resize(Offset, false);
   }
 };
@@ -185,7 +188,6 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, size_t Offset,
       size_t BitOffset = Offset + Ctx.getASTContext().toBits(ByteOffset);
       Ok = Ok && enumerateData(Elem, Ctx, BitOffset, F);
     }
-    // TODO: Virtual bases?
 
     for (unsigned I = 0; I != R->getNumFields(); ++I) {
       const Record::Field *Fi = R->getField(I);
@@ -344,11 +346,11 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
   assert(Bits.size() == BuffSize * 8);
 
   HasIndeterminateBits = !Bits.allInitialized();
-  std::memcpy(Buff, Bits.Data_.getData().data(), BuffSize);
+  std::memcpy(Buff, Bits.Data.getData().data(), BuffSize);
 
   if (BigEndian)
     swapBytes(Buff, BuffSize);
-  return Success; // && !HasIndeterminateBits;
+  return Success;
 }
 
 /// Bitcast from a Pointer to a Pointer.
