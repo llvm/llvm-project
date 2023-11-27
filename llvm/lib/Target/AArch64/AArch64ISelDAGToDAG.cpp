@@ -1674,8 +1674,7 @@ static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
       return 0;
     break;
   case SelectTypeKind::FP:
-    if (EltVT != MVT::bf16 && EltVT != MVT::f16 && EltVT != MVT::f32 &&
-        EltVT != MVT::f64)
+    if (EltVT != MVT::f16 && EltVT != MVT::f32 && EltVT != MVT::f64)
       return 0;
     break;
   }
