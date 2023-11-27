@@ -800,10 +800,10 @@ void BackendConsumer::DontCallDiagHandler(const DiagnosticInfoDontCall &D) {
   SmallVector<std::string, 4> InliningDecisions;
   D.getInliningDecisions(InliningDecisions);
   InliningDecisions.push_back(D.getCaller().str());
-  for (auto Dec : llvm::enumerate(InliningDecisions))
-    Diags.Report(Dec.index() ? diag::note_fe_backend_inlined
-                             : diag::note_fe_backend_in)
-        << llvm::demangle(Dec.value());
+  for (auto [index, value] : llvm::enumerate(InliningDecisions))
+    Diags.Report(index ? diag::note_fe_backend_inlined
+                       : diag::note_fe_backend_in)
+        << llvm::demangle(value);
 }
 
 void BackendConsumer::MisExpectDiagHandler(
