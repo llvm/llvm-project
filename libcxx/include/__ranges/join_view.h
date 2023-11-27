@@ -219,12 +219,9 @@ namespace ranges {
     static constexpr bool _OuterPresent = forward_range<_Base>;
     using _OuterType                    = _If<_OuterPresent, _Outer, std::__empty>;
 
-  public:
     _LIBCPP_NO_UNIQUE_ADDRESS _OuterType __outer_ = _OuterType();
-
-  private:
     optional<_Inner> __inner_;
-    _Parent *__parent_ = nullptr;
+    _Parent* __parent_ = nullptr;
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr void __satisfy() {
@@ -243,7 +240,7 @@ namespace ranges {
       if constexpr (__ref_is_glvalue)
         __inner_.reset();
     }
-
+    
     _LIBCPP_HIDE_FROM_ABI constexpr _Outer& __get_outer() {
       if constexpr (forward_range<_Base>) {
         return __outer_;
