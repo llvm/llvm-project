@@ -1498,6 +1498,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
         }
       }
       // Emit the number of corresponding BasicBlocks.
+      OutStreamer->AddComment("num corresponding blocks");
       OutStreamer->emitULEB128IntValue(CorrBBs.size());
       // Emit the corresponding block indices.
       for (auto CorrBB : CorrBBs) {
@@ -1513,6 +1514,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
         }
         if (!Found)
           OutContext.reportError(SMLoc(), "Couldn't find the block's index");
+        OutStreamer->AddComment("corresponding block");
         OutStreamer->emitULEB128IntValue(I);
       }
 
@@ -1524,18 +1526,25 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       // compute the distance from the start of the block and use uleb128
       // encoding.
       const size_t NumCalls = YkCallMarkerSyms[&MBB].size();
+      OutStreamer->AddComment("num calls");
       OutStreamer->emitULEB128IntValue(NumCalls);
       for (auto Tup : YkCallMarkerSyms[&MBB]) {
         // Emit address of the call instruction.
+        OutStreamer->AddComment("call offset");
         OutStreamer->emitSymbolValue(std::get<0>(Tup), getPointerSize());
         // Emit the return address of the call.
+        OutStreamer->AddComment("return offset");
         OutStreamer->emitSymbolValue(std::get<1>(Tup), getPointerSize());
         // Emit address of target if known, or 0.
+        OutStreamer->AddComment("target offset");
         MCSymbol *Target = std::get<2>(Tup);
         if (Target)
           OutStreamer->emitSymbolValue(Target, getPointerSize());
         else
           OutStreamer->emitIntValue(0, getPointerSize());
+        // Emit whether it's a direct call.
+        OutStreamer->AddComment("direct?");
+        OutStreamer->emitIntValue(std::get<3>(Tup), 1);
       }
 
       // Emit successor information.
@@ -2009,14 +2018,25 @@ void AsmPrinter::emitFunctionBody() {
           // If it's direct, then we know the call's target from the first
           // operand alone.
           const MachineOperand CallOpnd = MI.getOperand(0);
+          std::optional<bool> DirectCall;
           MCSymbol *CallTargetSym = nullptr;
           if (CallOpnd.isGlobal()) {
-            // Direct call.
+            // Global: direct call, known target.
+            DirectCall = true;
             CallTargetSym = getSymbol(CallOpnd.getGlobal());
           } else if (CallOpnd.isMCSymbol()) {
-            // Also a direct call.
+            // MCSymbol: direct call, known target.
+            DirectCall = true;
             CallTargetSym = CallOpnd.getMCSymbol();
-          } // Otherwise it's an indirect call.
+          } else if (CallOpnd.isSymbol()) {
+            // Symbol: direct call, unknown target.
+            DirectCall = true;
+            // CallTargetSym remains null.
+          } else {
+            // Otherwise: indirect call, therefore unknown target.
+            DirectCall = false;
+            // CallTargetSym remains null.
+          }
 
           // Ensure we are only working with near calls. This matters because
           // Intel PT optimises near calls, and it simplifies our implementation
@@ -2025,7 +2045,8 @@ void AsmPrinter::emitFunctionBody() {
           assert(!MF->getSubtarget().getInstrInfo()->isFarCall(MI));
 
           assert(YkCallMarkerSyms.find(&MBB) != YkCallMarkerSyms.end());
-          YkCallMarkerSyms[&MBB].push_back({YkPreCallSym, YkPostCallSym, CallTargetSym});
+          YkCallMarkerSyms[&MBB].push_back({
+              YkPreCallSym, YkPostCallSym, CallTargetSym, DirectCall.value()});
         } else {
           emitInstruction(&MI);
         }
