@@ -15,3 +15,9 @@ def register_python_test_dialect(context, load=True):
     from .._mlir_libs import _mlirPythonTest
 
     _mlirPythonTest.register_python_test_dialect(context, load)
+
+
+def register_python_test_pass_demo_pass(func):
+    from .._mlir_libs import _mlirPythonTest
+
+    _mlirPythonTest.register_python_test_pass_demo_pass(func)

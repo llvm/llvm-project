@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PythonTestCAPI.h"
+#include "PythonTestPass.h"
+
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
@@ -33,6 +35,10 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
         }
       },
       py::arg("context"), py::arg("load") = true);
+
+  m.def("register_python_test_pass_demo_pass", [](py::function func) {
+    registerPythonTestPassDemoPassWithFunc(func.ptr());
+  });
 
   mlir_attribute_subclass(m, "TestAttr",
                           mlirAttributeIsAPythonTestTestAttribute)
