@@ -20,6 +20,11 @@
 ; CHECK:    .quad   @@PPA2-CELQSTRT                 * A(PPA2-CELQSTRT)
 ; CHECK: @@PPA1_void_test_0:
 ; CHECK:    .long   @@PPA2-@@PPA1_void_test_0       * Offset to PPA2
+; CHECK:    .section    "B_IDRL"
+; CHECK:    .byte   0
+; CHECK:    .byte   3
+; CHECK:    .short  30
+; CHECK:    .ascii  "\323\323\345\324@@@@@@\361\370\360\360\361\371\367\360\360\361\360\361\360\360\360\360\360\360\360\360"
 define void @void_test() {
 entry:
   ret void
