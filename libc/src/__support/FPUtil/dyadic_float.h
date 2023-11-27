@@ -38,13 +38,11 @@ template <size_t Bits> struct DyadicFloat {
   int exponent = 0;
   MantissaType mantissa = MantissaType(0);
 
-  DyadicFloat() = default;
+  constexpr DyadicFloat() = default;
 
-  template <typename T,
-            cpp::enable_if_t<cpp::is_floating_point_v<T> &&
-                                 (FloatProperties<T>::MANTISSA_WIDTH < Bits),
-                             int> = 0>
+  template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
   DyadicFloat(T x) {
+    static_assert(FloatProperties<T>::MANTISSA_WIDTH < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.get_sign();
     exponent = x_bits.get_exponent() - FloatProperties<T>::MANTISSA_WIDTH;
