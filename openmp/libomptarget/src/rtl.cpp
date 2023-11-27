@@ -193,8 +193,6 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   DP("Registering RTL %s supporting %d devices!\n", Name, RTL.NumberOfDevices);
 
   // Optional functions
-  *((void **)&RTL.deinit_plugin) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
   *((void **)&RTL.is_valid_binary_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
   *((void **)&RTL.deinit_device) =
@@ -597,15 +595,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
   }
 
   PM->TblMapMtx.unlock();
-
-  // TODO: Write some RTL->unload_image(...) function?
-  for (auto *R : UsedRTLs) {
-    if (R->deinit_plugin) {
-      if (R->deinit_plugin() != OFFLOAD_SUCCESS) {
-        DP("Failure deinitializing RTL %s!\n", R->RTLName.c_str());
-      }
-    }
-  }
 
   DP("Done unregistering library!\n");
 }
