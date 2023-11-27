@@ -1100,7 +1100,7 @@ LogicalResult LaunchFuncOp::verify() {
                        GPUDialect::getContainerModuleAttrName() +
                        "' attribute");
 
-  if (getClusterSizeX()) {
+  if (hasClusterSize()) {
     if (getClusterSizeY().getType() != getClusterSizeX().getType() ||
         getClusterSizeZ().getType() != getClusterSizeX().getType())
       return emitOpError()
