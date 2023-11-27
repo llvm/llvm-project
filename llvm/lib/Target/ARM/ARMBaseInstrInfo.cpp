@@ -6587,6 +6587,10 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
   // For thunk outlining, rewrite the last instruction from a call to a
   // tail-call.
   if (OF.FrameConstructionID == MachineOutlinerThunk) {
+    // LR is used by the tail call.
+    if (!MBB.isLiveIn(ARM::LR))
+      MBB.addLiveIn(ARM::LR);
+
     MachineInstr *Call = &*--MBB.instr_end();
     bool isThumb = Subtarget.isThumb();
     unsigned FuncOp = isThumb ? 2 : 0;

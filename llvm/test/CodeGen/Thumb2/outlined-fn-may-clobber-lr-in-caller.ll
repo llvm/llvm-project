@@ -16,6 +16,8 @@ target datalayout = "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define void @test(ptr nocapture noundef writeonly %arg, i32 noundef %arg1, i8 noundef zeroext %arg2) unnamed_addr #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0: @ %bb
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r1, #2
 ; CHECK-NEXT:    beq .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %bb
@@ -32,10 +34,9 @@ define void @test(ptr nocapture noundef writeonly %arg, i32 noundef %arg1, i8 no
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    movs r2, #30
+; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    b __aeabi_memcpy
 ; CHECK-NEXT:  .LBB0_5: @ %bb24
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    bl wombat
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP

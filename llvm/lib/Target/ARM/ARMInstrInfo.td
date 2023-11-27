@@ -2668,7 +2668,7 @@ def BXJ : ABI<0b0001, (outs), (ins GPR:$func), NoItinerary, "bxj", "\t$func",
 
 // Tail calls.
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in {
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP,LR] in {
   def TCRETURNdi : PseudoInst<(outs), (ins i32imm:$dst, i32imm:$SPDiff), IIC_Br, []>,
                    Sched<[WriteBr]>;
 

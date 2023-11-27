@@ -4035,7 +4035,7 @@ def t2Bcc : T2I<(outs), (ins brtarget:$target), IIC_Br,
 // Windows SEH unwinding also needs a strict t2 branch for tail calls.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // IOS version.
-  let Uses = [SP] in
+  let Uses = [SP,LR] in
   def tTAILJMPd: tPseudoExpand<(outs),
                    (ins thumb_br_target:$dst, pred:$p),
                    4, IIC_Br, [],
