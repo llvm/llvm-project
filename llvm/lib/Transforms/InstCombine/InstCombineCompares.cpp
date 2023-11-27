@@ -448,9 +448,9 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         return false;
 
       if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-        // Only allow GEPs with at most one variable offset.
+        // Only allow inbounds GEPs with at most one variable offset.
         auto IsNonConst = [](Value *V) { return !isa<ConstantInt>(V); };
-        if (count_if(GEP->indices(), IsNonConst) > 1)
+        if (!GEP->isInBounds() || count_if(GEP->indices(), IsNonConst) > 1)
           return false;
 
         if (!Explored.contains(GEP->getOperand(0)))
