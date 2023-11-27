@@ -674,9 +674,8 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
 
     // However, if the addend is non-zero, the LO12 relocations may be accessing
     // the range [HI-alignAdjust-1, HI+alignAdjust].
-    if (r.addend != 0 &&
-        (!isInt<12>(hiAddr - alignAdjust - 1 - gp->getVA()) ||
-         !isInt<12>(hiAddr + alignAdjust - gp->getVA())))
+    if (r.addend != 0 && (!isInt<12>(hiAddr - alignAdjust - 1 - gp->getVA()) ||
+                          !isInt<12>(hiAddr + alignAdjust - gp->getVA())))
       return;
 
     // Remove lui rd, %hi20(x).
