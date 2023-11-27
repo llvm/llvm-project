@@ -67,7 +67,7 @@ struct SemiNCAInfo {
     unsigned Semi = 0;
     unsigned Label = 0;
     NodePtr IDom = nullptr;
-    SmallVector<NodePtr, 2> ReverseChildren;
+    SmallVector<unsigned, 4> ReverseChildren;
   };
 
   // Number to node mapping is 1-based. Initialize the mapping to start with
@@ -205,7 +205,7 @@ struct SemiNCAInfo {
         // Don't visit nodes more than once but remember to collect
         // ReverseChildren.
         if (SIT != NodeToInfo.end() && SIT->second.DFSNum != 0) {
-          if (Succ != BB) SIT->second.ReverseChildren.push_back(BB);
+          if (Succ != BB) SIT->second.ReverseChildren.push_back(LastNum);
           continue;
         }
 
@@ -216,7 +216,7 @@ struct SemiNCAInfo {
         auto &SuccInfo = NodeToInfo[Succ];
         WorkList.push_back(Succ);
         SuccInfo.Parent = LastNum;
-        SuccInfo.ReverseChildren.push_back(BB);
+        SuccInfo.ReverseChildren.push_back(LastNum);
       }
     }
 
@@ -236,10 +236,10 @@ struct SemiNCAInfo {
   //
   // For each vertex V, its Label points to the vertex with the minimal sdom(U)
   // (Semi) in its path from V (included) to NodeToInfo[V].Parent (excluded).
-  unsigned eval(NodePtr V, unsigned LastLinked,
+  unsigned eval(unsigned V, unsigned LastLinked,
                 SmallVectorImpl<InfoRec *> &Stack,
                 ArrayRef<InfoRec *> NumToInfo) {
-    InfoRec *VInfo = &NodeToInfo[V];
+    InfoRec *VInfo = NumToInfo[V];
     if (VInfo->Parent < LastLinked)
       return VInfo->Label;
 
@@ -287,10 +287,7 @@ struct SemiNCAInfo {
 
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
-      for (const auto &N : WInfo.ReverseChildren) {
-        assert(NodeToInfo.contains(N) &&
-               "ReverseChildren should not contain unreachable predecessors");
-
+      for (unsigned N : WInfo.ReverseChildren) {
         unsigned SemiU = NumToInfo[eval(N, i + 1, EvalStack, NumToInfo)]->Semi;
         if (SemiU < WInfo.Semi) WInfo.Semi = SemiU;
       }
