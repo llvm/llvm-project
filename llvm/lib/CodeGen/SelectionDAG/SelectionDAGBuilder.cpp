@@ -1151,7 +1151,7 @@ SDValue SelectionDAGBuilder::getControlRoot() {
 void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
                                              DILocalVariable *Variable,
                                              DIExpression *Expression,
-                                             DebugLoc dl) {
+                                             DebugLoc DL) {
   assert(Variable && "Missing variable");
 
   // Check if address has undef value.
@@ -1163,7 +1163,7 @@ void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
     return;
   }
 
-  bool isParameter = Variable->isParameter() || isa<Argument>(Address);
+  bool IsParameter = Variable->isParameter() || isa<Argument>(Address);
 
   SDValue &N = NodeMap[Address];
   if (!N.getNode() && isa<Argument>(Address))
@@ -1174,26 +1174,26 @@ void SelectionDAGBuilder::handleDebugDeclare(Value *Address,
     if (const BitCastInst *BCI = dyn_cast<BitCastInst>(Address))
       Address = BCI->getOperand(0);
     // Parameters are handled specially.
-    auto FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
-    if (isParameter && FINode) {
+    auto *FINode = dyn_cast<FrameIndexSDNode>(N.getNode());
+    if (IsParameter && FINode) {
       // Byval parameter. We have a frame index at this point.
       SDV = DAG.getFrameIndexDbgValue(Variable, Expression, FINode->getIndex(),
-                                      /*IsIndirect*/ true, dl, SDNodeOrder);
+                                      /*IsIndirect*/ true, DL, SDNodeOrder);
     } else if (isa<Argument>(Address)) {
       // Address is an argument, so try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
-      EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
+      EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
                                FuncArgumentDbgValueKind::Declare, N);
       return;
     } else {
       SDV = DAG.getDbgValue(Variable, Expression, N.getNode(), N.getResNo(),
-                            true, dl, SDNodeOrder);
+                            true, DL, SDNodeOrder);
     }
-    DAG.AddDbgValue(SDV, isParameter);
+    DAG.AddDbgValue(SDV, IsParameter);
   } else {
     // If Address is an argument then try to emit its dbg value using
     // virtual register info from the FuncInfo.ValueMap.
-    if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
+    if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, DL,
                                   FuncArgumentDbgValueKind::Declare, N)) {
       LLVM_DEBUG(dbgs() << "dbg_declare: Dropping debug info"
                         << " (could not emit func-arg dbg_value)\n");
