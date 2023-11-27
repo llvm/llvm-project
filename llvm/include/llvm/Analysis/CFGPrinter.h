@@ -342,4 +342,9 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 };
 } // End llvm namespace
 
+namespace llvm {
+class FunctionPass;
+FunctionPass *createCFGPrinterLegacyPassPass();
+} // End llvm namespace
+
 #endif
