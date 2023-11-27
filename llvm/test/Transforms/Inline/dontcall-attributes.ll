@@ -25,7 +25,6 @@ define void @quux() {
 define void @baz() {
 ; CHECK-LABEL: define {{[^@]+}}@baz(
 ; CHECK-NEXT:    call void @foo(), !inlined.from !0
-;
   call void @bar(i32 10)
   ret void
 }
@@ -34,7 +33,6 @@ define void @baz() {
 define void @zing() {
 ; CHECK-LABEL: define {{[^@]+}}@zing(
 ; CHECK-NEXT:    call void @foo(), !inlined.from !1
-;
   call void @baz()
   ret void
 }
