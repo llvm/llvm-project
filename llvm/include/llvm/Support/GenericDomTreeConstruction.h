@@ -268,7 +268,7 @@ struct SemiNCAInfo {
   }
 
   // This function requires DFS to be run before calling it.
-  void runSemiNCA(DomTreeT &DT, const unsigned MinLevel = 0) {
+  void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
     SmallVector<InfoRec *, 8> NumToInfo = {nullptr};
     NumToInfo.reserve(NextDFSNum);
@@ -290,11 +290,6 @@ struct SemiNCAInfo {
       for (const auto &N : WInfo.ReverseChildren) {
         assert(NodeToInfo.contains(N) &&
                "ReverseChildren should not contain unreachable predecessors");
-
-        const TreeNodePtr TN = DT.getNode(N);
-        // Skip predecessors whose level is above the subtree we are processing.
-        if (TN && TN->getLevel() < MinLevel)
-          continue;
 
         unsigned SemiU = NumToInfo[eval(N, i + 1, EvalStack, NumToInfo)]->Semi;
         if (SemiU < WInfo.Semi) WInfo.Semi = SemiU;
@@ -576,7 +571,7 @@ struct SemiNCAInfo {
     DT.Roots = FindRoots(DT, PostViewBUI);
     SNCA.doFullDFSWalk(DT, AlwaysDescend);
 
-    SNCA.runSemiNCA(DT);
+    SNCA.runSemiNCA();
     if (BUI) {
       BUI->IsRecalculated = true;
       LLVM_DEBUG(
@@ -904,7 +899,7 @@ struct SemiNCAInfo {
 
     SemiNCAInfo SNCA(BUI);
     SNCA.runDFS(Root, 0, UnreachableDescender, 0);
-    SNCA.runSemiNCA(DT);
+    SNCA.runSemiNCA();
     SNCA.attachNewSubtree(DT, Incoming);
 
     LLVM_DEBUG(dbgs() << "After adding unreachable nodes\n");
@@ -998,7 +993,7 @@ struct SemiNCAInfo {
     SemiNCAInfo SNCA(BUI);
     SNCA.runDFS(ToIDom, 0, DescendBelow, 0);
     LLVM_DEBUG(dbgs() << "\tRunning Semi-NCA\n");
-    SNCA.runSemiNCA(DT, Level);
+    SNCA.runSemiNCA();
     SNCA.reattachExistingSubtree(DT, PrevIDomSubTree);
   }
 
@@ -1122,7 +1117,7 @@ struct SemiNCAInfo {
                       << BlockNamePrinter(PrevIDom) << "\nRunning Semi-NCA\n");
 
     // Rebuild the remaining part of affected subtree.
-    SNCA.runSemiNCA(DT, MinLevel);
+    SNCA.runSemiNCA();
     SNCA.reattachExistingSubtree(DT, PrevIDom);
   }
 
