@@ -552,7 +552,7 @@ func.func @reduction_addf_acc(%arg0: vector<4xf32>, %acc: f32) -> f32 {
 
 // CHECK-LABEL: func @reduction_addf_one_elem
 //  CHECK-SAME:  (%[[ARG0:.+]]: vector<1xf32>)
-//  CHECK:       %[[RES:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<1xf32> to f32
+//  CHECK:       %[[RES:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : vector<1xf32> to f32
 //  CHECK:       return %[[RES]] : f32
 func.func @reduction_addf_one_elem(%arg0: vector<1xf32>) -> f32 {
   %red = vector.reduction <add>, %arg0 : vector<1xf32> into f32
