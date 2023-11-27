@@ -1137,7 +1137,7 @@ void TableJumpSection::addCMJTEntryCandidate(const Symbol *symbol, int gain) {
 }
 
 int TableJumpSection::getCMJTEntryIndex(const Symbol *symbol) {
-  uint32_t index = getEntry(symbol, maxCMJTEntrySize, finalizedCMJTEntries);
+  uint32_t index = getIndex(symbol, maxCMJTEntrySize, finalizedCMJTEntries);
   return index < finalizedCMJTEntries.size() ? (int)(startCMJTEntryIdx + index)
                                              : -1;
 }
@@ -1147,7 +1147,7 @@ void TableJumpSection::addCMJALTEntryCandidate(const Symbol *symbol, int gain) {
 }
 
 int TableJumpSection::getCMJALTEntryIndex(const Symbol *symbol) {
-  uint32_t index = getEntry(symbol, maxCMJALTEntrySize, finalizedCMJALTEntries);
+  uint32_t index = getIndex(symbol, maxCMJALTEntrySize, finalizedCMJALTEntries);
   return index < finalizedCMJALTEntries.size()
              ? (int)(startCMJALTEntryIdx + index)
              : -1;
@@ -1159,7 +1159,7 @@ void TableJumpSection::addEntry(
   entriesList[symbol] += gain;
 }
 
-uint32_t TableJumpSection::getEntry(
+uint32_t TableJumpSection::getIndex(
     const Symbol *symbol, uint32_t maxSize,
     SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
         &entriesList) {
