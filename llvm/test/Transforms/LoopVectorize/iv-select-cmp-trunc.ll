@@ -3,14 +3,10 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s --check-prefix=CHECK-VF4IC4 --check-prefix=CHECK
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=1 -S < %s | FileCheck %s --check-prefix=CHECK-VF1IC4 --check-prefix=CHECK
 
-; This test can theoretically be vectorized without a runtime-check, by
-; pattern-matching on the constructs that are introduced by IndVarSimplify.
-; We can check two things:
-;   %1 = trunc i64 %iv to i32
-; This indicates that the %iv is truncated to i32. We can then check the loop
-; guard is a signed i32:
-;   %cmp.sgt = icmp sgt i32 %n, 0
-; and successfully vectorize the case without a runtime-check.
+; About the truncated test cases, the range analysis of induction variable is
+; used to ensure the induction variable is always greater than the sentinal
+; value. The case is vectorizable if the truncated induction variable is
+; monotonic increasing, and not equals to the sentinal.
 define i32 @select_icmp_const_truncated_iv_widened_exit(ptr %a, i32 %n) {
 ; CHECK-LABEL: define i32 @select_icmp_const_truncated_iv_widened_exit(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
@@ -63,14 +59,8 @@ exit:                                            ; preds = %for.body, %entry
   ret i32 %rdx.lcssa
 }
 
-; This test can theoretically be vectorized without a runtime-check, by
-; pattern-matching on the constructs that are introduced by IndVarSimplify.
-; We can check two things:
-;   %1 = trunc i64 %iv to i32
-; This indicates that the %iv is truncated to i32. We can then check the loop
-; exit condition, which compares to a constant that fits within i32:
-;   %exitcond.not = icmp eq i64 %inc, 20000
-; and successfully vectorize the case without a runtime-check.
+; Without loop guard, the range analysis is also able to base on the constant
+; trip count.
 define i32 @select_icmp_const_truncated_iv_const_exit(ptr %a) {
 ; CHECK-LABEL: define i32 @select_icmp_const_truncated_iv_const_exit(
 ; CHECK-SAME: ptr [[A:%.*]]) {
