@@ -46,7 +46,7 @@ PERF2BOLT: 1 usqrt a 1 usqrt 10 0 22
 
 NEWFORMAT:  - name:            'frame_dummy/1'
 NEWFORMAT:    fid:             3
-NEWFORMAT:    hash:            0x24496F7F9594E89F
+NEWFORMAT:    hash:            0x28C72085C0BD8D37
 NEWFORMAT:    exec:            1
 
 NEWFORMAT:  - name:            usqrt
