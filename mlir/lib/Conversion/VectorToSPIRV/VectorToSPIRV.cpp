@@ -763,7 +763,7 @@ struct VectorReductionToFPDotProd final
     if (!vectorType) {
       assert(isa<FloatType>(vec.getType()) &&
              "Expected the vector to be scalarized");
-      if (op.getAcc()) {
+      if (acc) {
         rewriter.replaceOpWithNewOp<spirv::FAddOp>(op, acc, vec);
         return success();
       }
@@ -791,7 +791,7 @@ struct VectorReductionToFPDotProd final
     assert(rhs);
 
     Value res = rewriter.create<spirv::DotOp>(loc, resultType, lhs, rhs);
-    if (op.getAcc())
+    if (acc)
       res = rewriter.create<spirv::FAddOp>(loc, acc, res);
 
     rewriter.replaceOp(op, res);
