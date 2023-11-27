@@ -57,14 +57,18 @@ def get_include_dirs() -> Sequence[str]:
 # This facility allows downstreams to customize Context creation to their
 # needs.
 
+_dialect_registry = None
 
-def get_registry():
-    if not hasattr(get_registry, "__registry"):
+
+def get_dialect_registry():
+    global _dialect_registry
+
+    if _dialect_registry is None:
         from ._mlir import ir
 
-        get_registry.__registry = ir.DialectRegistry()
+        _dialect_registry = ir.DialectRegistry()
 
-    return get_registry.__registry
+    return _dialect_registry
 
 
 def _site_initialize():
@@ -94,7 +98,7 @@ def _site_initialize():
         logger.debug("Initializing MLIR with module: %s", module_name)
         if hasattr(m, "register_dialects"):
             logger.debug("Registering dialects from initializer %r", m)
-            m.register_dialects(get_registry())
+            m.register_dialects(get_dialect_registry())
         if hasattr(m, "context_init_hook"):
             logger.debug("Adding context init hook from %r", m)
             post_init_hooks.append(m.context_init_hook)
@@ -120,7 +124,7 @@ def _site_initialize():
     class Context(ir._BaseContext):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            self.append_dialect_registry(get_registry())
+            self.append_dialect_registry(get_dialect_registry())
             for hook in post_init_hooks:
                 hook(self)
             if not disable_multithreading:

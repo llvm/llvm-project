@@ -6,7 +6,7 @@ import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
 
-test.register_python_test_dialect(get_registry())
+test.register_python_test_dialect(get_dialect_registry())
 
 
 def run(f):
