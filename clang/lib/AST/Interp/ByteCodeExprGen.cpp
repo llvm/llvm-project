@@ -117,23 +117,18 @@ bool ByteCodeExprGen<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
 
   assert(ToT);
 
+  const llvm::fltSemantics *TargetSemantics = nullptr;
+  if (ToT == PT_Float)
+    TargetSemantics = &Ctx.getFloatSemantics(ToType);
+
   // Conversion to a primitive type. FromType can be another
   // primitive type, or a record/array.
-  //
-  // Same thing for floats, but we need the target
-  // semantics here.
-  if (ToT == PT_Float) {
-    const auto *TargetSemantics = &Ctx.getFloatSemantics(ToType);
-    CharUnits FloatSize = Ctx.getASTContext().getTypeSizeInChars(ToType);
-    return this->emitBitCastFP(TargetSemantics, FloatSize.getQuantity(), E);
-  }
-
   bool ToTypeIsUChar = (ToType->isSpecificBuiltinType(BuiltinType::UChar) ||
                         ToType->isSpecificBuiltinType(BuiltinType::Char_U));
   uint32_t ResultBitWidth = std::max(Ctx.getBitWidth(ToType), 8u);
 
   if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(),
-                         ResultBitWidth, E))
+                         ResultBitWidth, TargetSemantics, E))
     return false;
 
   if (DiscardResult)

@@ -1578,7 +1578,8 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class ToT = typename PrimConv<Name>::T>
 bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
-             uint32_t ResultBitWidth) {
+             uint32_t ResultBitWidth, const llvm::fltSemantics *Sem) {
+  assert(ResultBitWidth > 0);
   const Pointer &FromPtr = S.Stk.pop<Pointer>();
 
   size_t BuffSize = ResultBitWidth / 8;
@@ -1591,27 +1592,13 @@ bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte,
   if (!CheckBitcast(S, OpPC, HasIndeterminateBits, TargetIsUCharOrByte))
     return false;
 
-  S.Stk.push<ToT>(ToT::bitcastFromMemory(Buff.data(), ResultBitWidth));
-  return true;
-}
-
-/// Bitcast TO a float.
-inline bool BitCastFP(InterpState &S, CodePtr OpPC,
-                      const llvm::fltSemantics *Sem, uint32_t TargetSize) {
-  const Pointer &FromPtr = S.Stk.pop<Pointer>();
-
-  std::vector<std::byte> Buff(TargetSize);
-  bool HasIndeterminateBits = false;
-
-  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), TargetSize,
-                 HasIndeterminateBits))
-    return false;
-
-  if (!CheckBitcast(S, OpPC, HasIndeterminateBits,
-                    /*TargetIsUCharOrByte=*/false))
-    return false;
-
-  S.Stk.push<Floating>(Floating::bitcastFromMemory(Buff.data(), *Sem));
+  if constexpr (std::is_same_v<ToT, Floating>) {
+    assert(Sem);
+    S.Stk.push<Floating>(Floating::bitcastFromMemory(Buff.data(), *Sem));
+  } else {
+    assert(!Sem);
+    S.Stk.push<ToT>(ToT::bitcastFromMemory(Buff.data(), ResultBitWidth));
+  }
   return true;
 }
 

@@ -586,21 +586,16 @@ def Cast: Opcode {
 }
 
 def BitCastTypeClass : TypeClass {
-  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, IntAP, IntAPS, Bool];
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, IntAP, IntAPS, Bool, Float];
 }
 
 def BitCast : Opcode {
   let Types = [BitCastTypeClass];
   let HasGroup = 1;
-  let Args = [ArgBool, ArgUint32];
+  let Args = [ArgBool, ArgUint32, ArgFltSemantics];
 }
 
 def BitCastPtr : Opcode;
-
-def BitCastFP : Opcode {
-  let Types = [];
-  let Args = [ArgFltSemantics, ArgUint32];
-}
 
 def CastFP : Opcode {
   let Types = [];
