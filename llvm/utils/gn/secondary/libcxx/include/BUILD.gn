@@ -62,11 +62,7 @@ if (current_toolchain == default_toolchain) {
     output = "$libcxx_generated_include_dir/module.modulemap"
 
     #no = "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER"
-    values = [
-      # An empty value here means the feature is supported.
-      # Unsupported values should be set to `$no`.
-      "requires_LIBCXX_ENABLE_LOCALIZATION=",
-    ]
+    values = []
   }
 
   copy("copy_headers") {
