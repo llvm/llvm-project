@@ -1,6 +1,7 @@
 # This script checks that YamlProfileReader in llvm-bolt is reading data
 # correctly and stale data is corrected by profile inference.
 
+REQUIRES: asserts
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 # Testing "usqrt"
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
