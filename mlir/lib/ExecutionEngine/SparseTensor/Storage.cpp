@@ -19,7 +19,7 @@ using namespace mlir::sparse_tensor;
 
 SparseTensorStorageBase::SparseTensorStorageBase( // NOLINT
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim)
     : dimSizes(dimSizes, dimSizes + dimRank),
       lvlSizes(lvlSizes, lvlSizes + lvlRank),
