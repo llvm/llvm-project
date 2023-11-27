@@ -512,9 +512,7 @@ define <vscale x 2 x i64> @insert_nxv2i64_nxv3i64(<3 x i64> %sv) #0 {
 define <vscale x 8 x i32> @insert_insert_combine(<2 x i32> %subvec) {
 ; CHECK-LABEL: insert_insert_combine:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 6, e32, m4, ta, ma
-; CHECK-NEXT:    vslideup.vi v12, v8, 4
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    ret
   %inner = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32> undef, <2 x i32> %subvec, i64 0)
   %outer = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> undef, <vscale x 4 x i32> %inner, i64 4)
