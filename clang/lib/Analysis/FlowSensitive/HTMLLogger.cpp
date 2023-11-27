@@ -136,6 +136,10 @@ public:
             if (Value *Val = Env.getValue(*Child.second))
               dump(*Val);
         });
+
+      for (const auto &Prop : RLoc->synthetic_fields())
+        JOS.attributeObject(("sf:" + Prop.first()).str(),
+                            [&] { dump(*Prop.second); });
     }
   }
 

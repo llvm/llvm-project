@@ -54,6 +54,18 @@ void clang::dataflow::copyRecord(RecordStorageLocation &Src,
     }
   }
 
+  for (const auto &[Name, PropLocSrc] : Src.synthetic_fields()) {
+    if (PropLocSrc->getType()->isRecordType()) {
+      copyRecord(*cast<RecordStorageLocation>(PropLocSrc),
+                 cast<RecordStorageLocation>(Dst.getSyntheticField(Name)), Env);
+    } else {
+      if (Value *Val = Env.getValue(*PropLocSrc))
+        Env.setValue(Dst.getSyntheticField(Name), *Val);
+      else
+        Env.clearValue(Dst.getSyntheticField(Name));
+    }
+  }
+
   RecordValue *SrcVal = cast_or_null<RecordValue>(Env.getValue(Src));
   RecordValue *DstVal = cast_or_null<RecordValue>(Env.getValue(Dst));
 
@@ -97,6 +109,18 @@ bool clang::dataflow::recordsEqual(const RecordStorageLocation &Loc1,
       if (FieldLoc1 != FieldLoc2)
         return false;
     } else if (Env1.getValue(*FieldLoc1) != Env2.getValue(*FieldLoc2)) {
+      return false;
+    }
+  }
+
+  for (const auto &[Name, PropLoc1] : Loc1.synthetic_fields()) {
+    if (PropLoc1->getType()->isRecordType()) {
+      if (!recordsEqual(
+              *cast<RecordStorageLocation>(PropLoc1), Env1,
+              cast<RecordStorageLocation>(Loc2.getSyntheticField(Name)), Env2))
+        return false;
+    } else if (Env1.getValue(*PropLoc1) !=
+               Env2.getValue(Loc2.getSyntheticField(Name))) {
       return false;
     }
   }

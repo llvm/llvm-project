@@ -379,7 +379,8 @@ public:
   /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
-  /// If `Type` is a class, struct, or union type, calls `setValue()` to
+  /// If `Type` is a class, struct, or union type, creates values for all
+  /// modeled fields (including synthetic fields) and calls `setValue()` to
   /// associate the `RecordValue` with its storage location
   /// (`RecordValue::getLoc()`).
   ///

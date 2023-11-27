@@ -811,8 +811,16 @@ Value *Environment::createValueUnlessSelfReferential(
                                           CreatedValuesCount)});
     }
 
-    RecordStorageLocation &Loc =
-        arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
+    RecordStorageLocation::SyntheticFieldMap SyntheticFieldLocs;
+    for (const auto &Entry : DACtx->getSyntheticFields(Type)) {
+      SyntheticFieldLocs.insert(
+          {Entry.getKey(),
+           &createLocAndMaybeValue(Entry.getValue(), Visited, Depth + 1,
+                                   CreatedValuesCount)});
+    }
+
+    RecordStorageLocation &Loc = DACtx->createRecordStorageLocation(
+        Type, std::move(FieldLocs), std::move(SyntheticFieldLocs));
     RecordValue &RecordVal = create<RecordValue>(Loc);
 
     // As we already have a storage location for the `RecordValue`, we can and
