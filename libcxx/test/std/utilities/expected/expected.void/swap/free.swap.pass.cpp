@@ -28,13 +28,13 @@ void swap(NotSwappable&, NotSwappable&) = delete;
 // !is_swappable_v<E>
 static_assert(!std::is_swappable_v<std::expected<void, NotSwappable>>);
 
-struct NotMoveContructible {
-  NotMoveContructible(NotMoveContructible&&) = delete;
-  friend void swap(NotMoveContructible&, NotMoveContructible&) {}
+struct NotMoveConstructible {
+  NotMoveConstructible(NotMoveConstructible&&) = delete;
+  friend void swap(NotMoveConstructible&, NotMoveConstructible&) {}
 };
 
 // !is_move_constructible_v<E>
-static_assert(!std::is_swappable_v<std::expected<void, NotMoveContructible>>);
+static_assert(!std::is_swappable_v<std::expected<void, NotMoveConstructible>>);
 
 // Test noexcept
 struct MoveMayThrow {

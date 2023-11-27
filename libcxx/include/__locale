@@ -15,6 +15,7 @@
 #include <__memory/shared_ptr.h> // __shared_count
 #include <__mutex/once_flag.h>
 #include <__type_traits/make_unsigned.h>
+#include <__utility/no_destroy.h>
 #include <cctype>
 #include <clocale>
 #include <cstdint>

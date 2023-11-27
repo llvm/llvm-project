@@ -127,9 +127,9 @@ struct NonCommonSized : IntBufferView {
 };
 
 using SimpleNonCommonSized = NonCommonSized<true>;
-using SimpleNonCommonRandomAcessSized = SimpleNonCommonSized;
+using SimpleNonCommonRandomAccessSized    = SimpleNonCommonSized;
 using NonSimpleNonCommonSized = NonCommonSized<false>;
-using NonSimpleNonCommonRandomAcessSized = NonSimpleNonCommonSized;
+using NonSimpleNonCommonRandomAccessSized = NonSimpleNonCommonSized;
 
 static_assert(!std::ranges::common_range<SimpleNonCommonSized>);
 static_assert(std::ranges::random_access_range<SimpleNonCommonSized>);

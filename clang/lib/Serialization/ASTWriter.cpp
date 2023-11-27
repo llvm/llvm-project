@@ -6622,6 +6622,13 @@ void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseWriter::VisitOMPCompareClause(OMPCompareClause *) {}
 
+// Save the parameter of fail clause.
+void OMPClauseWriter::VisitOMPFailClause(OMPFailClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getFailParameterLoc());
+  Record.writeEnum(C->getFailParameter());
+}
+
 void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
 void OMPClauseWriter::VisitOMPAcqRelClause(OMPAcqRelClause *) {}

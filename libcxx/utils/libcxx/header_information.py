@@ -166,12 +166,35 @@ headers_not_available = [
 
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return (
-        not file.is_dir()
-        and not file.name == "module.modulemap.in"
-        and not file.name == "CMakeLists.txt"
-        and file.name != "libcxx.imp"
-    )
+    return not file.is_dir() and not file.name in [
+        "module.modulemap.in",
+        "module.modulemap",
+        "CMakeLists.txt",
+        "libcxx.imp",
+    ]
+
+
+def is_modulemap_header(header):
+    """Returns whether a header should be listed in the modulemap"""
+    # TODO: Should `__config_site` be in the modulemap?
+    if header == "__config_site":
+        return False
+
+    # exclude libc++abi files
+    if header in ["cxxabi.h", "__cxxabi_config.h"]:
+        return False
+
+    # exclude headers in __support/ - these aren't supposed to work everywhere,
+    # so they shouldn't be included in general
+    if header.startswith("__support/"):
+        return False
+
+    # exclude ext/ headers - these are non-standard extensions and are barely
+    # maintained. People should migrate away from these and we don't need to
+    # burden ourself with maintaining them in any way.
+    if header.startswith("ext/"):
+        return False
+    return True
 
 libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 include = pathlib.Path(os.path.join(libcxx_root, "include"))
