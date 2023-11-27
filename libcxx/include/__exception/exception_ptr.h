@@ -31,12 +31,13 @@ namespace std { // purposefully not using versioning namespace
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-#  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
+#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
   template <class _Ep>
   _LIBCPP_HIDE_FROM_ABI _LIBCXX_DTOR_FUNC static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
   }
 
+  _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
   static void* __init_native_exception(size_t, std::type_info*, void(_LIBCXX_DTOR_FUNC*)(void*)) _NOEXCEPT;
   static void __free_native_exception(void*) _NOEXCEPT;
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
@@ -70,7 +71,7 @@ public:
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
-#    if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
+#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = exception_ptr::__init_native_exception(
       sizeof(_Ep), const_cast<std::type_info*>(&typeid(_Ep)), exception_ptr::__dest_thunk<_Ep2>);

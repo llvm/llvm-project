@@ -17,7 +17,7 @@
 // function.
 
 
-#  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
+#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 extern "C"
 {
     void* __cxa_allocate_exception(size_t) throw();
@@ -36,7 +36,7 @@ struct exception_ptr
 {
     void* __ptr_;
 
-#  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
+#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
     explicit exception_ptr(void*) noexcept;
 #  endif
     exception_ptr(const exception_ptr&) noexcept;
@@ -67,7 +67,7 @@ exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept
     return *this;
 }
 
-#  if !defined(_LIBCPP_AVAILABILITY_HAS_NO_INIT_PRIMARY_EXCEPTION)
+#  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 void *exception_ptr::__init_native_exception(size_t size, type_info* tinfo, void (_LIBCXX_DTOR_FUNC* dest)(void*)) noexcept
 {
     void* __ex = __cxa_allocate_exception(size);
