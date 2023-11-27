@@ -182,6 +182,8 @@ class SiFive7AnyToGPRBypass<SchedRead read, int cycles = 2>
                                  WriteSHXADD, WriteSHXADD32,
                                  WriteRotateImm, WriteRotateImm32,
                                  WriteRotateReg, WriteRotateReg32,
+                                 WriteSingleBit, WriteSingleBitImm,
+                                 WriteBEXT, WriteBEXTI,
                                  WriteCLZ, WriteCLZ32, WriteCTZ, WriteCTZ32,
                                  WriteCPOP, WriteCPOP32,
                                  WriteREV8, WriteORCB, WriteSFB,

@@ -1036,6 +1036,50 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
       break;
     }
+    case ISD::LOAD: {
+      // If this is a XMM/YMM load of the same lower bits as another YMM/ZMM
+      // load, then just extract the lower subvector and avoid the second load.
+      auto *Ld = cast<LoadSDNode>(N);
+      MVT VT = N->getSimpleValueType(0);
+      if (!ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
+          !(VT.is128BitVector() || VT.is256BitVector()))
+        break;
+
+      MVT MaxVT = VT;
+      SDNode *MaxLd = nullptr;
+      SDValue Ptr = Ld->getBasePtr();
+      SDValue Chain = Ld->getChain();
+      for (SDNode *User : Ptr->uses()) {
+        auto *UserLd = dyn_cast<LoadSDNode>(N);
+        MVT UserVT = User->getSimpleValueType(0);
+        if (User != N && UserLd && ISD::isNormalLoad(User) &&
+            UserLd->getBasePtr() == Ptr && UserLd->getChain() == Chain &&
+            !User->hasAnyUseOfValue(1) &&
+            (UserVT.is256BitVector() || UserVT.is512BitVector()) &&
+            UserVT.getSizeInBits() > VT.getSizeInBits() &&
+            (!MaxLd || UserVT.getSizeInBits() > MaxVT.getSizeInBits())) {
+          MaxLd = User;
+          MaxVT = UserVT;
+        }
+      }
+      if (MaxLd) {
+        SDLoc dl(N);
+        unsigned NumSubElts = VT.getSizeInBits() / MaxVT.getScalarSizeInBits();
+        MVT SubVT = MVT::getVectorVT(MaxVT.getScalarType(), NumSubElts);
+        SDValue Extract = CurDAG->getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT,
+                                          SDValue(MaxLd, 0),
+                                          CurDAG->getIntPtrConstant(0, dl));
+        SDValue Res = CurDAG->getBitcast(VT, Extract);
+
+        --I;
+        SDValue To[] = {Res, SDValue(MaxLd, 1)};
+        CurDAG->ReplaceAllUsesWith(N, To);
+        ++I;
+        MadeChange = true;
+        continue;
+      }
+      break;
+    }
     case ISD::VSELECT: {
       // Replace VSELECT with non-mask conditions with with BLENDV/VPTERNLOG.
       EVT EleVT = N->getOperand(0).getValueType().getVectorElementType();

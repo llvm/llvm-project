@@ -102,11 +102,6 @@ static cl::opt<unsigned> PhiDuplicateThreshold(
     cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
     cl::Hidden);
 
-static cl::opt<bool> PrintLVIAfterJumpThreading(
-    "print-lvi-after-jump-threading",
-    cl::desc("Print the LazyValueInfo cache after JumpThreading"), cl::init(false),
-    cl::Hidden);
-
 static cl::opt<bool> ThreadAcrossLoopHeaders(
     "jump-threading-across-loop-headers",
     cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
@@ -256,11 +251,6 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
               std::make_unique<DomTreeUpdater>(
                   &DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy),
               std::nullopt, std::nullopt);
-
-  if (PrintLVIAfterJumpThreading) {
-    dbgs() << "LVI for function '" << F.getName() << "':\n";
-    LVI.printLVI(F, getDomTreeUpdater()->getDomTree(), dbgs());
-  }
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -3118,8 +3108,8 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
     if (!isa<PHINode>(&*BI))
       ToRemove.push_back(&*BI);
 
-  Instruction *InsertionPoint = &*BB->getFirstInsertionPt();
-  assert(InsertionPoint && "Empty block?");
+  BasicBlock::iterator InsertionPoint = BB->getFirstInsertionPt();
+  assert(InsertionPoint != BB->end() && "Empty block?");
   // Substitute with Phis & remove.
   for (auto *Inst : reverse(ToRemove)) {
     if (!Inst->use_empty()) {
@@ -3129,6 +3119,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
       NewPN->insertBefore(InsertionPoint);
       Inst->replaceAllUsesWith(NewPN);
     }
+    Inst->dropDbgValues();
     Inst->eraseFromParent();
   }
   return true;
