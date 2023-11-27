@@ -5002,7 +5002,7 @@ static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
   const uint8_t *End = Data.end();
   while (Cur != End) {
     unsigned Size;
-    const char *Err;
+    const char *Err = nullptr;
     Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
     if (Err)
       return createError(Err);
