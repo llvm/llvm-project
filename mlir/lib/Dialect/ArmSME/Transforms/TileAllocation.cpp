@@ -243,8 +243,13 @@ struct AssignTileIDsPattern
     auto tileIDAttr = rewriter.getI32IntegerAttr(*tileId);
     tileOp.setTileId(tileIDAttr);
     for (auto *op : dependantOps) {
-      if (auto tileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op))
+      if (auto tileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op)) {
+        auto currentTileId = tileOp.getTileId();
+        if (currentTileId && unsigned(currentTileId.getInt()) != tileId)
+          return tileOp.emitOpError(
+              "already assigned different SME virtual tile!");
         tileOp.setTileId(tileIDAttr);
+      }
     }
 
     return success();
