@@ -112,9 +112,7 @@ public:
 
   /// Tests.
   /// \{
-  explicit operator bool() const {
-    return m_type_system.lock() && m_type;
-  }
+  explicit operator bool() const { return m_type_system.lock() && m_type; }
 
   bool IsValid() const { return (bool)*this; }
 
@@ -194,6 +192,54 @@ public:
   bool IsTypedefType() const;
 
   bool IsVoidType() const;
+
+  bool IsSmartPtrType() const;
+
+  bool IsInteger() const;
+
+  bool IsFloat() const;
+
+  bool IsEnumerationType() const;
+
+  bool IsUnscopedEnumerationType() const;
+
+  bool IsIntegerOrUnscopedEnumerationType() const;
+
+  bool IsSigned() const;
+
+  bool IsNullPtrType() const;
+
+  bool IsBoolean() const;
+
+  bool IsEnumerationIntegerTypeSigned() const;
+
+  bool IsScalarOrUnscopedEnumerationType() const;
+
+  bool IsPromotableIntegerType() const;
+
+  bool IsPointerToVoid() const;
+
+  bool IsRecordType() const;
+
+  bool IsVirtualBase(CompilerType target_base, CompilerType *virtual_base,
+                     bool carry_virtual = false) const;
+
+  bool IsContextuallyConvertibleToBool() const;
+
+  bool IsBasicType() const;
+
+  std::string TypeDescription();
+
+  bool CompareTypes(CompilerType rhs) const;
+
+  const char *GetTypeTag();
+
+  uint32_t GetNumberOfNonEmptyBaseClasses();
+
+  CompilerType GetTemplateArgumentType(uint32_t idx);
+
+  CompilerType GetSmartPtrPointeeType();
+
   /// \}
 
   /// Type Completion.
@@ -436,8 +482,8 @@ public:
                      ExecutionContextScope *exe_scope);
 
   /// Dump to stdout.
-  void DumpTypeDescription(lldb::DescriptionLevel level =
-                           lldb::eDescriptionLevelFull) const;
+  void DumpTypeDescription(
+      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) const;
 
   /// Print a description of the type to a stream. The exact implementation
   /// varies, but the expectation is that eDescriptionLevelFull returns a
