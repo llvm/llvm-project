@@ -1972,10 +1972,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -1991,6 +1990,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint16_t t = static_cast<uint16_t>(((c1 & 0x0F) << 12)
@@ -2003,11 +2005,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF5)
         {
-            if (frm_end-frm_nxt < 4)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
-            uint8_t c4 = frm_nxt[3];
             switch (c1)
             {
             case 0xF0:
@@ -2023,8 +2023,16 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
-            if ((c3 & 0xC0) != 0x80 || (c4 & 0xC0) != 0x80)
-                return codecvt_base::error;
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
+            if ((c3 & 0xC0) != 0x80)
+                 return codecvt_base::error;
+            if (frm_end-frm_nxt < 4)
+                 return codecvt_base::partial;
+            uint8_t c4 = frm_nxt[3];
+            if ((c4 & 0xC0) != 0x80)
+                 return codecvt_base::error;
             if (to_end-to_nxt < 2)
                 return codecvt_base::partial;
             if ((((c1 & 7UL) << 18) +
@@ -2093,10 +2101,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2112,6 +2119,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint16_t t = static_cast<uint16_t>(((c1 & 0x0F) << 12)
@@ -2124,11 +2134,9 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
         }
         else if (c1 < 0xF5)
         {
-            if (frm_end-frm_nxt < 4)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
-            uint8_t c4 = frm_nxt[3];
             switch (c1)
             {
             case 0xF0:
@@ -2144,8 +2152,16 @@ utf8_to_utf16(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nx
                     return codecvt_base::error;
                  break;
             }
-            if ((c3 & 0xC0) != 0x80 || (c4 & 0xC0) != 0x80)
-                return codecvt_base::error;
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
+            if ((c3 & 0xC0) != 0x80)
+                 return codecvt_base::error;
+            if (frm_end-frm_nxt < 4)
+                 return codecvt_base::partial;
+            uint8_t c4 = frm_nxt[3];
+            if ((c4 & 0xC0) != 0x80)
+                 return codecvt_base::error;
             if (to_end-to_nxt < 2)
                 return codecvt_base::partial;
             if ((((c1 & 7UL) << 18) +
@@ -2371,10 +2387,9 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2390,6 +2405,9 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint32_t t = static_cast<uint32_t>(((c1 & 0x0F) << 12)
@@ -2402,11 +2420,9 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
         }
         else if (c1 < 0xF5)
         {
-            if (frm_end-frm_nxt < 4)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
-            uint8_t c4 = frm_nxt[3];
             switch (c1)
             {
             case 0xF0:
@@ -2422,8 +2438,16 @@ utf8_to_ucs4(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
                     return codecvt_base::error;
                  break;
             }
-            if ((c3 & 0xC0) != 0x80 || (c4 & 0xC0) != 0x80)
-                return codecvt_base::error;
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
+            if ((c3 & 0xC0) != 0x80)
+                 return codecvt_base::error;
+            if (frm_end-frm_nxt < 4)
+                 return codecvt_base::partial;
+            uint8_t c4 = frm_nxt[3];
+            if ((c4 & 0xC0) != 0x80)
+                 return codecvt_base::error;
             uint32_t t = static_cast<uint32_t>(((c1 & 0x07) << 18)
                                              | ((c2 & 0x3F) << 12)
                                              | ((c3 & 0x3F) << 6)
@@ -2629,10 +2653,9 @@ utf8_to_ucs2(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
         }
         else if (c1 < 0xF0)
         {
-            if (frm_end-frm_nxt < 3)
+            if (frm_end-frm_nxt < 2)
                 return codecvt_base::partial;
             uint8_t c2 = frm_nxt[1];
-            uint8_t c3 = frm_nxt[2];
             switch (c1)
             {
             case 0xE0:
@@ -2648,6 +2671,9 @@ utf8_to_ucs2(const uint8_t* frm, const uint8_t* frm_end, const uint8_t*& frm_nxt
                     return codecvt_base::error;
                  break;
             }
+            if (frm_end-frm_nxt < 3)
+                 return codecvt_base::partial;
+            uint8_t c3 = frm_nxt[2];
             if ((c3 & 0xC0) != 0x80)
                 return codecvt_base::error;
             uint16_t t = static_cast<uint16_t>(((c1 & 0x0F) << 12)
