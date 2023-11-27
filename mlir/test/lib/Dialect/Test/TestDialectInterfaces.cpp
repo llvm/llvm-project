@@ -9,6 +9,7 @@
 #include "TestDialect.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Transforms/CSE.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -385,6 +386,90 @@ public:
   }
 };
 
+/// This class defines the interface for customizing CSE.
+struct TestCSEInterface : public DialectCSEInterface {
+  using DialectCSEInterface::DialectCSEInterface;
+
+  StringRef nonEssentialAttrName = "test.non_essential";
+
+  //===--------------------------------------------------------------------===//
+  // Analysis Hooks
+  //===--------------------------------------------------------------------===//
+
+  /// Return a hash that excludes 'test.non_essential' attributes.
+  std::optional<unsigned> getHashValue(Operation *op) const override {
+    auto attr = op->getDiscardableAttrDictionary();
+    if (!attr.contains(nonEssentialAttrName))
+      return std::nullopt;
+
+    auto hashOp = [&](Operation *op) {
+      auto hash = llvm::hash_combine(op->getName(), op->getResultTypes(),
+                                     op->hashProperties());
+      NamedAttrList attributes(attr);
+      attributes.erase(nonEssentialAttrName);
+      return llvm::hash_combine(hash,
+                                attributes.getDictionary(op->getContext()));
+    };
+
+    return OperationEquivalence::computeHash(
+        op,
+        /*hashOp=*/hashOp,
+        /*hashOperands=*/OperationEquivalence::directHashValue,
+        /*hashResults=*/OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::IgnoreLocations);
+  }
+
+  /// Return true if operations are same except for 'test.non_essential'
+  /// attributes.
+  std::optional<bool> isEqual(Operation *lhs, Operation *rhs) const override {
+    if (!lhs->getDiscardableAttrDictionary().contains(nonEssentialAttrName) ||
+        !rhs->getDiscardableAttrDictionary().contains(nonEssentialAttrName))
+      return std::nullopt;
+
+    auto checkOp = [&](Operation *lhs, Operation *rhs) -> LogicalResult {
+      bool result =
+          lhs->getName() == rhs->getName() &&
+          lhs->getNumRegions() == rhs->getNumRegions() &&
+          lhs->getNumSuccessors() == rhs->getNumSuccessors() &&
+          lhs->getNumOperands() == rhs->getNumOperands() &&
+          lhs->getNumResults() == rhs->getNumResults() &&
+          lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                             rhs->getPropertiesStorage());
+      if (!result)
+        return failure();
+      auto lhsAttr = lhs->getDiscardableAttrs();
+      auto rhsAttr = rhs->getDiscardableAttrs();
+      NamedAttrList lhsFiltered(lhsAttr);
+      lhsFiltered.erase(nonEssentialAttrName);
+      NamedAttrList rhsFiltered(rhsAttr);
+      rhsFiltered.erase(nonEssentialAttrName);
+      return LogicalResult::success(lhsFiltered == rhsFiltered);
+    };
+
+    return OperationEquivalence::isEquivalentTo(
+        lhs, rhs, checkOp, OperationEquivalence::IgnoreLocations);
+  };
+
+  //===--------------------------------------------------------------------===//
+  // Transformation Hooks
+  //===--------------------------------------------------------------------===//
+
+  /// Propagate 'test.non_essential' to an existing op. Use a smaller value if
+  /// both have the attribute.
+  void mergeOperations(Operation *existingOp,
+                       Operation *opsToBeDeleted) const override {
+    if (auto rhs =
+            opsToBeDeleted->getAttrOfType<StringAttr>(nonEssentialAttrName))
+      if (auto lhs =
+              existingOp->getAttrOfType<StringAttr>(nonEssentialAttrName)) {
+        if (rhs.getValue() < lhs.getValue()) {
+          existingOp->setAttr(nonEssentialAttrName, rhs);
+        }
+      } else {
+        existingOp->setAttr(nonEssentialAttrName, rhs);
+      }
+  }
+};
 } // namespace
 
 void TestDialect::registerInterfaces() {
@@ -392,5 +477,6 @@ void TestDialect::registerInterfaces() {
   addInterface<TestOpAsmInterface>(blobInterface);
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
-                TestReductionPatternInterface, TestBytecodeDialectInterface>();
+                TestReductionPatternInterface, TestCSEInterface,
+                TestBytecodeDialectInterface>();
 }
