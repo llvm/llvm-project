@@ -3973,7 +3973,8 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
     return Match_Unsupported;
 
-  if (MCID.TSFlags & X86II::ExplicitVEXPrefix &&
+  if ((MCID.TSFlags & X86II::ExplicitOpPrefixMask) ==
+          X86II::ExplicitVEXPrefix &&
       (ForcedVEXEncoding != VEXEncoding_VEX &&
        ForcedVEXEncoding != VEXEncoding_VEX2 &&
        ForcedVEXEncoding != VEXEncoding_VEX3))
