@@ -62,7 +62,7 @@ static std::optional<int64_t> unpackedDim(OpTy xferOp) {
   // TODO: support 0-d corner case.
   assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.getPermutationMap();
-  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+  if (auto expr = dyn_cast<AffineDimExpr>(map.getResult(0))) {
     return expr.getPosition();
   }
   assert(xferOp.isBroadcastDim(0) &&
@@ -1218,6 +1218,11 @@ struct UnrollTransferWriteConversion
 
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
+    if (xferVecType.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
+      return failure();
+    }
+
     int64_t dimSize = xferVecType.getShape()[0];
     Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
@@ -1290,7 +1295,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
   memrefIndices.append(indices.begin(), indices.end());
   assert(map.getNumResults() == 1 &&
          "Expected 1 permutation map result for 1D transfer");
-  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+  if (auto expr = dyn_cast<AffineDimExpr>(map.getResult(0))) {
     Location loc = xferOp.getLoc();
     auto dim = expr.getPosition();
     AffineExpr d0, d1;

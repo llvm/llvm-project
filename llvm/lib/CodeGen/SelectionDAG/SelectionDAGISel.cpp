@@ -78,6 +78,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -113,6 +114,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "isel"
+#define ISEL_DUMP_DEBUG_TYPE DEBUG_TYPE "-dump"
 
 STATISTIC(NumFastIselFailures, "Number of instructions fast isel failed on");
 STATISTIC(NumFastIselSuccess, "Number of instructions fast isel selected");
@@ -180,6 +182,19 @@ static const bool ViewDAGCombine1 = false, ViewLegalizeTypesDAGs = false,
                   ViewSchedDAGs = false, ViewSUnitDAGs = false;
 #endif
 
+#ifndef NDEBUG
+#define ISEL_DUMP(X)                                                           \
+  do {                                                                         \
+    if (llvm::DebugFlag &&                                                     \
+        (isCurrentDebugType(DEBUG_TYPE) ||                                     \
+         (isCurrentDebugType(ISEL_DUMP_DEBUG_TYPE) && MatchFilterFuncName))) { \
+      X;                                                                       \
+    }                                                                          \
+  } while (false)
+#else
+#define ISEL_DUMP(X) do { } while (false)
+#endif
+
 //===---------------------------------------------------------------------===//
 ///
 /// RegisterScheduler class - Track the registration of instruction schedulers.
@@ -204,6 +219,16 @@ static RegisterScheduler
 defaultListDAGScheduler("default", "Best scheduler for the target",
                         createDefaultScheduler);
 
+static bool dontUseFastISelFor(const Function &Fn) {
+  // Don't enable FastISel for functions with swiftasync Arguments.
+  // Debug info on those is reliant on good Argument lowering, and FastISel is
+  // not capable of lowering the entire function. Mixing the two selectors tend
+  // to result in poor lowering of Arguments.
+  return any_of(Fn.args(), [](const Argument &Arg) {
+    return Arg.hasAttribute(Attribute::AttrKind::SwiftAsync);
+  });
+}
+
 namespace llvm {
 
   //===--------------------------------------------------------------------===//
@@ -219,21 +244,23 @@ namespace llvm {
         : IS(ISel) {
       SavedOptLevel = IS.OptLevel;
       SavedFastISel = IS.TM.Options.EnableFastISel;
-      if (NewOptLevel == SavedOptLevel)
-        return;
-      IS.OptLevel = NewOptLevel;
-      IS.TM.setOptLevel(NewOptLevel);
-      LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
-                        << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel) << " ; After: -O"
-                        << static_cast<int>(NewOptLevel) << "\n");
-      if (NewOptLevel == CodeGenOptLevel::None) {
-        IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
-        LLVM_DEBUG(
-            dbgs() << "\tFastISel is "
-                   << (IS.TM.Options.EnableFastISel ? "enabled" : "disabled")
-                   << "\n");
+      if (NewOptLevel != SavedOptLevel) {
+        IS.OptLevel = NewOptLevel;
+        IS.TM.setOptLevel(NewOptLevel);
+        LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
+                          << IS.MF->getFunction().getName() << "\n");
+        LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel)
+                          << " ; After: -O" << static_cast<int>(NewOptLevel)
+                          << "\n");
+        if (NewOptLevel == CodeGenOptLevel::None)
+          IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
       }
+      if (dontUseFastISelFor(IS.MF->getFunction()))
+        IS.TM.setFastISel(false);
+      LLVM_DEBUG(
+          dbgs() << "\tFastISel is "
+                 << (IS.TM.Options.EnableFastISel ? "enabled" : "disabled")
+                 << "\n");
     }
 
     ~OptLevelChanger() {
@@ -391,6 +418,13 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   const Function &Fn = mf.getFunction();
   MF = &mf;
 
+#ifndef NDEBUG
+  StringRef FuncName = Fn.getName();
+  MatchFilterFuncName = isFunctionInPrintList(FuncName);
+#else
+  (void)MatchFilterFuncName;
+#endif
+
   // Decide what flavour of variable location debug-info will be used, before
   // we change the optimisation level.
   bool InstrRef = mf.shouldUseDebugInstrRef();
@@ -424,7 +458,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   if (isAssignmentTrackingEnabled(*Fn.getParent()))
     FnVarLocs = getAnalysis<AssignmentTrackingAnalysis>().getResults();
 
-  LLVM_DEBUG(dbgs() << "\n\n\n=== " << Fn.getName() << "\n");
+  ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << "\n");
 
   UniformityInfo *UA = nullptr;
   if (auto *UAPass = getAnalysisIfAvailable<UniformityInfoWrapperPass>())
@@ -656,8 +690,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // at this point.
   FuncInfo->clear();
 
-  LLVM_DEBUG(dbgs() << "*** MachineFunction at end of ISel ***\n");
-  LLVM_DEBUG(MF->print(dbgs()));
+  ISEL_DUMP(dbgs() << "*** MachineFunction at end of ISel ***\n");
+  ISEL_DUMP(MF->print(dbgs()));
 
   return true;
 }
@@ -685,10 +719,13 @@ void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
   CurDAG->NewNodesMustHaveLegalTypes = false;
 
   // Lower the instructions. If a call is emitted as a tail call, cease emitting
-  // nodes for this block.
+  // nodes for this block. If an instruction is elided, don't emit it, but do
+  // handle any debug-info attached to it.
   for (BasicBlock::const_iterator I = Begin; I != End && !SDB->HasTailCall; ++I) {
     if (!ElidedArgCopyInstrs.count(&*I))
       SDB->visit(*I);
+    else
+      SDB->visitDbgInfo(*I);
   }
 
   // Make sure the root of the DAG is up-to-date.
@@ -765,10 +802,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     BlockName =
         (MF->getName() + ":" + FuncInfo->MBB->getBasicBlock()->getName()).str();
   }
-  LLVM_DEBUG(dbgs() << "\nInitial selection DAG: "
-                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                    << "'\n";
-             CurDAG->dump());
+  ISEL_DUMP(dbgs() << "\nInitial selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -785,10 +822,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(BeforeLegalizeTypes, AA, OptLevel);
   }
 
-  LLVM_DEBUG(dbgs() << "\nOptimized lowered selection DAG: "
-                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                    << "'\n";
-             CurDAG->dump());
+  ISEL_DUMP(dbgs() << "\nOptimized lowered selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -807,10 +844,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     Changed = CurDAG->LegalizeTypes();
   }
 
-  LLVM_DEBUG(dbgs() << "\nType-legalized selection DAG: "
-                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                    << "'\n";
-             CurDAG->dump());
+  ISEL_DUMP(dbgs() << "\nType-legalized selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -831,10 +868,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeTypes, AA, OptLevel);
     }
 
-    LLVM_DEBUG(dbgs() << "\nOptimized type-legalized selection DAG: "
-                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                      << "'\n";
-               CurDAG->dump());
+    ISEL_DUMP(dbgs() << "\nOptimized type-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -849,10 +886,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   }
 
   if (Changed) {
-    LLVM_DEBUG(dbgs() << "\nVector-legalized selection DAG: "
-                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                      << "'\n";
-               CurDAG->dump());
+    ISEL_DUMP(dbgs() << "\nVector-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -865,10 +902,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->LegalizeTypes();
     }
 
-    LLVM_DEBUG(dbgs() << "\nVector/type-legalized selection DAG: "
-                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                      << "'\n";
-               CurDAG->dump());
+    ISEL_DUMP(dbgs() << "\nVector/type-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -885,10 +922,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
       CurDAG->Combine(AfterLegalizeVectorOps, AA, OptLevel);
     }
 
-    LLVM_DEBUG(dbgs() << "\nOptimized vector-legalized selection DAG: "
-                      << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                      << "'\n";
-               CurDAG->dump());
+    ISEL_DUMP(dbgs() << "\nOptimized vector-legalized selection DAG: "
+                     << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                     << "'\n";
+              CurDAG->dump());
 
 #ifndef NDEBUG
     if (TTI.hasBranchDivergence())
@@ -905,10 +942,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Legalize();
   }
 
-  LLVM_DEBUG(dbgs() << "\nLegalized selection DAG: "
-                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                    << "'\n";
-             CurDAG->dump());
+  ISEL_DUMP(dbgs() << "\nLegalized selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -925,10 +962,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->Combine(AfterLegalizeDAG, AA, OptLevel);
   }
 
-  LLVM_DEBUG(dbgs() << "\nOptimized legalized selection DAG: "
-                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                    << "'\n";
-             CurDAG->dump());
+  ISEL_DUMP(dbgs() << "\nOptimized legalized selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
 #ifndef NDEBUG
   if (TTI.hasBranchDivergence())
@@ -949,10 +986,10 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     DoInstructionSelection();
   }
 
-  LLVM_DEBUG(dbgs() << "\nSelected selection DAG: "
-                    << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
-                    << "'\n";
-             CurDAG->dump());
+  ISEL_DUMP(dbgs() << "\nSelected selection DAG: "
+                   << printMBBReference(*FuncInfo->MBB) << " '" << BlockName
+                   << "'\n";
+            CurDAG->dump());
 
   if (ViewSchedDAGs && MatchFilterBB)
     CurDAG->viewGraph("scheduler input for " + BlockName);
@@ -3415,17 +3452,38 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
     case OPC_EmitInteger:
-    case OPC_EmitStringInteger: {
-      MVT::SimpleValueType VT =
-        (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+    case OPC_EmitInteger8:
+    case OPC_EmitInteger16:
+    case OPC_EmitInteger32:
+    case OPC_EmitInteger64:
+    case OPC_EmitStringInteger:
+    case OPC_EmitStringInteger32: {
+      MVT::SimpleValueType VT;
+      switch (Opcode) {
+      case OPC_EmitInteger8:
+        VT = MVT::i8;
+        break;
+      case OPC_EmitInteger16:
+        VT = MVT::i16;
+        break;
+      case OPC_EmitInteger32:
+      case OPC_EmitStringInteger32:
+        VT = MVT::i32;
+        break;
+      case OPC_EmitInteger64:
+        VT = MVT::i64;
+        break;
+      default:
+        VT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+        break;
+      }
       int64_t Val = MatcherTable[MatcherIndex++];
       if (Val & 128)
         Val = GetVBR(Val, MatcherTable, MatcherIndex);
-      if (Opcode == OPC_EmitInteger)
+      if (Opcode >= OPC_EmitInteger && Opcode <= OPC_EmitInteger64)
         Val = decodeSignRotatedValue(Val);
-      RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
-                              CurDAG->getTargetConstant(Val, SDLoc(NodeToMatch),
-                                                        VT), nullptr));
+      RecordedNodes.push_back(std::pair<SDValue, SDNode *>(
+          CurDAG->getTargetConstant(Val, SDLoc(NodeToMatch), VT), nullptr));
       continue;
     }
     case OPC_EmitRegister: {

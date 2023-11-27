@@ -284,7 +284,7 @@ public:
 
   /// Return the size in bits of a register from class RC.
   TypeSize getRegSizeInBits(const TargetRegisterClass &RC) const {
-    return TypeSize::Fixed(getRegClassInfo(RC).RegSize);
+    return TypeSize::getFixed(getRegClassInfo(RC).RegSize);
   }
 
   /// Return the size in bytes of the stack slot allocated to hold a spilled

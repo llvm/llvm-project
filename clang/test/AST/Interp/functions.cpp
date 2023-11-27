@@ -371,3 +371,10 @@ namespace Variadic {
   constexpr int (*VFP)(...) = variadic_function2;
   static_assert(VFP() == 12, "");
 }
+
+namespace Packs {
+  template<typename...T>
+  constexpr int foo() { return sizeof...(T); }
+  static_assert(foo<int, char>() == 2, "");
+  static_assert(foo<>() == 0, "");
+}

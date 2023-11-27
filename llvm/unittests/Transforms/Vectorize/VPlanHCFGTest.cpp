@@ -112,12 +112,12 @@ compound=true
   ]
   N1 [label =
     "vector.ph:\l" +
-    "Successor(s): for.body\l"
+    "Successor(s): vector loop\l"
   ]
   N1 -> N2 [ label="" lhead=cluster_N3]
   subgraph cluster_N3 {
     fontname=Courier
-    label="\<x1\> for.body"
+    label="\<x1\> vector loop"
     N2 [label =
       "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
@@ -133,7 +133,7 @@ compound=true
   }
   N2 -> N4 [ label="" ltail=cluster_N3]
   N4 [label =
-    "for.end:\l" +
+    "middle.block:\l" +
     "No successors\l"
   ]
 }

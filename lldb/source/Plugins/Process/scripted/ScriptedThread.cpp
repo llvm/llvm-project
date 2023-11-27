@@ -176,8 +176,9 @@ bool ScriptedThread::LoadArtificialStackFrames() {
   StackFrameListSP frames = GetStackFrameList();
 
   for (size_t idx = 0; idx < arr_size; idx++) {
-    StructuredData::Dictionary *dict;
-    if (!arr_sp->GetItemAtIndexAsDictionary(idx, dict) || !dict)
+    std::optional<StructuredData::Dictionary *> maybe_dict =
+        arr_sp->GetItemAtIndexAsDictionary(idx);
+    if (!maybe_dict)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
           llvm::Twine(
@@ -185,6 +186,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
               llvm::Twine(idx) + llvm::Twine(") from stackframe array."))
               .str(),
           error, LLDBLog::Thread);
+    StructuredData::Dictionary *dict = *maybe_dict;
 
     lldb::addr_t pc;
     if (!dict->GetValueForKeyAsInteger("pc", pc))

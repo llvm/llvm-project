@@ -33,8 +33,8 @@
 // Warn if a compiler version is used that is not supported anymore
 // LLVM RELEASE Update the minimum compiler versions
 #  if defined(_LIBCPP_CLANG_VER)
-#    if _LIBCPP_CLANG_VER < 1500
-#      warning "Libc++ only supports Clang 15 and later"
+#    if _LIBCPP_CLANG_VER < 1600
+#      warning "Libc++ only supports Clang 16 and later"
 #    endif
 #  elif defined(_LIBCPP_APPLE_CLANG_VER)
 #    if _LIBCPP_APPLE_CLANG_VER < 1500
@@ -552,12 +552,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_USING_DEV_RANDOM
 #  endif
 
-#  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
-#  else
-#    define _LIBCPP_NO_CFI
-#  endif
-
 #  ifndef _LIBCPP_CXX03_LANG
 
 #    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
@@ -627,11 +621,6 @@ typedef __char32_t char32_t;
 
 #    if !__has_feature(address_sanitizer)
 #      define _LIBCPP_HAS_NO_ASAN
-#    endif
-
-// Allow for build-time disabling of unsigned integer sanitization
-#    if __has_attribute(no_sanitize)
-#      define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #    endif
 
 #    define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
@@ -836,8 +825,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_END_NAMESPACE_STD }}
 #  define _VSTD std
 
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
 #    define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM                                                                         \
        _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
@@ -857,18 +844,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #  if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
 #    define _LIBCPP_HAS_NO_INT128
-#  endif
-
-#  if __has_attribute(__malloc__)
-#    define _LIBCPP_NOALIAS __attribute__((__malloc__))
-#  else
-#    define _LIBCPP_NOALIAS
-#  endif
-
-#  if __has_attribute(__using_if_exists__)
-#    define _LIBCPP_USING_IF_EXISTS __attribute__((__using_if_exists__))
-#  else
-#    define _LIBCPP_USING_IF_EXISTS
 #  endif
 
 #  ifdef _LIBCPP_CXX03_LANG
@@ -1040,35 +1015,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23
 #  endif
 
-#  if __has_cpp_attribute(nodiscard)
-#    define _LIBCPP_NODISCARD [[__nodiscard__]]
-#  else
-// We can't use GCC's [[gnu::warn_unused_result]] and
-// __attribute__((warn_unused_result)), because GCC does not silence them via
-// (void) cast.
-#    define _LIBCPP_NODISCARD
-#  endif
-
-// _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
-// specified as such as an extension.
-#  if !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
-#  else
-#    define _LIBCPP_NODISCARD_EXT
-#  endif
-
-#  if _LIBCPP_STD_VER >= 20 || !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
-#  else
-#    define _LIBCPP_NODISCARD_AFTER_CXX17
-#  endif
-
-#  if __has_attribute(__no_destroy__)
-#    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
-#  else
-#    define _LIBCPP_NO_DESTROY
-#  endif
-
 #  ifndef _LIBCPP_HAS_NO_ASAN
     extern "C" _LIBCPP_EXPORTED_FROM_ABI void
     __sanitizer_annotate_contiguous_container(const void*, const void*, const void*, const void*);
@@ -1204,10 +1150,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    endif
 #  endif
 
-#  ifndef _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
-#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
-#  endif
-
 #  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
 #  else
@@ -1240,51 +1182,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_CONSTINIT
 #  endif
 
-#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
-#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
-#  else
-#    define _LIBCPP_DIAGNOSE_WARNING(...)
-#  endif
-
-// Use a function like macro to imply that it must be followed by a semicolon
-#  if __has_cpp_attribute(fallthrough)
-#    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
-#  elif __has_attribute(__fallthrough__)
-#    define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
-#  else
-#    define _LIBCPP_FALLTHROUGH() ((void)0)
-#  endif
-
-#  if __has_cpp_attribute(_Clang::__lifetimebound__)
-#    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
-#  else
-#    define _LIBCPP_LIFETIMEBOUND
-#  endif
-
-#  if __has_attribute(__nodebug__)
-#    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
-#  else
-#    define _LIBCPP_NODEBUG
-#  endif
-
-#  if __has_attribute(__standalone_debug__)
-#    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
-#  else
-#    define _LIBCPP_STANDALONE_DEBUG
-#  endif
-
-#  if __has_attribute(__preferred_name__)
-#    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
-#  else
-#    define _LIBCPP_PREFERRED_NAME(x)
-#  endif
-
-#  if __has_attribute(__no_sanitize__)
-#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
-#  else
-#    define _LIBCPP_NO_SANITIZE(...)
-#  endif
-
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger
@@ -1293,12 +1190,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...)
 #  else
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__
-#  endif
-
-#  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
-#    define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
-#  else
-#    define _LIBCPP_DECLSPEC_EMPTY_BASES
 #  endif
 
 #  if defined(_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES)
@@ -1344,28 +1235,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_FOPEN_CLOEXEC_MODE
 #  endif
 
-// Support for _FILE_OFFSET_BITS=64 landed gradually in Android, so the full set
-// of functions used in cstdio may not be available for low API levels when
-// using 64-bit file offsets on LP32.
-#  if defined(__BIONIC__) && defined(__USE_FILE_OFFSET64) && __ANDROID_API__ < 24
-#    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
-#  endif
-
-#  if __has_attribute(__init_priority__)
-#    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
-#  else
-#    define _LIBCPP_INIT_PRIORITY_MAX
-#  endif
-
-#  if __has_attribute(__format__)
-// The attribute uses 1-based indices for ordinary and static member functions.
-// The attribute uses 2-based indices for non-static member functions.
-#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                           \
-      __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
-#  else
-#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
-#  endif
-
 #  if __has_cpp_attribute(msvc::no_unique_address)
 // MSVC implements [[no_unique_address]] as a silent no-op currently.
 // (If/when MSVC breaks its C++ ABI, it will be changed to work as intended.)
@@ -1403,20 +1272,6 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DIAGNOSTIC_POP
 #    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED(str)
 #    define _LIBCPP_GCC_DIAGNOSTIC_IGNORED(str)
-#  endif
-
-#  if defined(_AIX) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX _Pragma("pack(1)")
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX_END _Pragma("pack(pop)")
-#  else
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX     /* empty */
-#    define _LIBCPP_PACKED_BYTE_FOR_AIX_END /* empty */
-#  endif
-
-#  if __has_attribute(__packed__)
-#    define _LIBCPP_PACKED __attribute__((__packed__))
-#  else
-#    define _LIBCPP_PACKED
 #  endif
 
 // c8rtomb() and mbrtoc8() were added in C++20 and C23. Support for these
@@ -1506,6 +1361,134 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif // (defined(_OPENMP) && _OPENMP >= 201307)
 
 #  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+
+// Optional attributes - these are useful for a better QoI, but not required to be available
+
+#  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
+#    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
+#  else
+#    define _LIBCPP_NO_CFI
+#  endif
+
+#  if __has_attribute(__malloc__)
+#    define _LIBCPP_NOALIAS __attribute__((__malloc__))
+#  else
+#    define _LIBCPP_NOALIAS
+#  endif
+
+#  if __has_attribute(__using_if_exists__)
+#    define _LIBCPP_USING_IF_EXISTS __attribute__((__using_if_exists__))
+#  else
+#    define _LIBCPP_USING_IF_EXISTS
+#  endif
+
+#  if __has_cpp_attribute(nodiscard)
+#    define _LIBCPP_NODISCARD [[__nodiscard__]]
+#  else
+// We can't use GCC's [[gnu::warn_unused_result]] and
+// __attribute__((warn_unused_result)), because GCC does not silence them via
+// (void) cast.
+#    define _LIBCPP_NODISCARD
+#  endif
+
+// _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
+// specified as such as an extension.
+#  if !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
+#    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
+#  else
+#    define _LIBCPP_NODISCARD_EXT
+#  endif
+
+#  if _LIBCPP_STD_VER >= 20 || !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
+#    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
+#  else
+#    define _LIBCPP_NODISCARD_AFTER_CXX17
+#  endif
+
+#  if __has_attribute(__no_destroy__)
+#    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
+#  else
+#    define _LIBCPP_NO_DESTROY
+#  endif
+
+#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
+#  else
+#    define _LIBCPP_DIAGNOSE_WARNING(...)
+#  endif
+
+// Use a function like macro to imply that it must be followed by a semicolon
+#  if __has_cpp_attribute(fallthrough)
+#    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
+#  elif __has_attribute(__fallthrough__)
+#    define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
+#  else
+#    define _LIBCPP_FALLTHROUGH() ((void)0)
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__lifetimebound__)
+#    define _LIBCPP_LIFETIMEBOUND [[_Clang::__lifetimebound__]]
+#  else
+#    define _LIBCPP_LIFETIMEBOUND
+#  endif
+
+#  if __has_attribute(__nodebug__)
+#    define _LIBCPP_NODEBUG __attribute__((__nodebug__))
+#  else
+#    define _LIBCPP_NODEBUG
+#  endif
+
+#  if __has_attribute(__standalone_debug__)
+#    define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))
+#  else
+#    define _LIBCPP_STANDALONE_DEBUG
+#  endif
+
+#  if __has_attribute(__preferred_name__)
+#    define _LIBCPP_PREFERRED_NAME(x) __attribute__((__preferred_name__(x)))
+#  else
+#    define _LIBCPP_PREFERRED_NAME(x)
+#  endif
+
+#  if __has_attribute(__no_sanitize__)
+#    define _LIBCPP_NO_SANITIZE(...) __attribute__((__no_sanitize__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_NO_SANITIZE(...)
+#  endif
+
+#  if __has_attribute(__init_priority__)
+#    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
+#  else
+#    define _LIBCPP_INIT_PRIORITY_MAX
+#  endif
+
+#  if __has_attribute(__format__)
+// The attribute uses 1-based indices for ordinary and static member functions.
+// The attribute uses 2-based indices for non-static member functions.
+#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                           \
+      __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
+#  else
+#    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index) /* nothing */
+#  endif
+
+#  if __has_attribute(__packed__)
+#    define _LIBCPP_PACKED __attribute__((__packed__))
+#  else
+#    define _LIBCPP_PACKED
+#  endif
+
+#  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
+#    define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
+#  else
+#    define _LIBCPP_DECLSPEC_EMPTY_BASES
+#  endif
+
+// Allow for build-time disabling of unsigned integer sanitization
+#  if __has_attribute(no_sanitize) && !defined(_LIBCPP_COMPILER_GCC)
+#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
+#  else
+#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
+#  endif
 
 #endif // __cplusplus
 

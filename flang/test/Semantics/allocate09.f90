@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)

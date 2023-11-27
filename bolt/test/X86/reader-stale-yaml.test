@@ -3,11 +3,11 @@
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 # Testing "usqrt"
-RUN: llvm-bolt %t.exe -o /dev/null --b %p/Inputs/blarge_profile_stale.yaml \
+RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=usqrt --infer-stale-profile=1 \
 RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 2>&1 | FileCheck %s -check-prefix=CHECK1
 # Testing "SolveCubic"
-RUN: llvm-bolt %t.exe -o /dev/null --b %p/Inputs/blarge_profile_stale.yaml \
+RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=SolveCubic --infer-stale-profile=1 \
 RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 2>&1 | FileCheck %s -check-prefix=CHECK2
 

@@ -84,7 +84,7 @@ constexpr void test(Data<N, M> d) {
 
     assert(base(ret.begin()) == input.data() + M);
     assert(base(ret.end()) == input.data() + N);
-    assert(std::ranges::equal(base(input.begin()), base(ret.begin()), d.expected.begin(), d.expected.end()));
+    assert(std::ranges::equal(input.data(), base(ret.begin()), d.expected.begin(), d.expected.end()));
   }
 }
 

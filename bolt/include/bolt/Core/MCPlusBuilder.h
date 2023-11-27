@@ -1082,7 +1082,7 @@ public:
 
   /// Replace the compound memory operand of Inst with an immediate operand.
   /// The value of the immediate operand is computed by reading the \p
-  /// ConstantData array starting from \p offset and assuming little-endianess.
+  /// ConstantData array starting from \p offset and assuming little-endianness.
   /// Return true on success. The given instruction is modified in place.
   virtual bool replaceMemOperandWithImm(MCInst &Inst, StringRef ConstantData,
                                         uint64_t Offset) const {
@@ -1178,6 +1178,12 @@ public:
   /// Set the label of \p Inst. This label will be emitted right before \p Inst
   /// is emitted to MCStreamer.
   bool setLabel(MCInst &Inst, MCSymbol *Label) const;
+
+  /// Get instruction size specified via annotation.
+  std::optional<uint32_t> getSize(const MCInst &Inst) const;
+
+  /// Set instruction size.
+  void setSize(MCInst &Inst, uint32_t Size) const;
 
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with

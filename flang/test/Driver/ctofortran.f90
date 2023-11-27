@@ -1,4 +1,5 @@
-! UNSUPPORTED: system-windows
+! MacOS needs -isysroot <osx_sysroot> with clang and flang to build binaries.
+! UNSUPPORTED: system-windows, system-darwin
 ! RUN: split-file %s %t
 ! RUN: chmod +x %t/runtest.sh
 ! RUN: %t/runtest.sh %t %flang $t/ffile.f90 $t/cfile.c

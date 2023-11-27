@@ -4983,10 +4983,10 @@ QualType OMPArraySectionExpr::getBaseOriginalType(const Expr *Base) {
   for (unsigned Cnt = 0; Cnt < ArraySectionCount; ++Cnt) {
     if (OriginalTy->isAnyPointerType())
       OriginalTy = OriginalTy->getPointeeType();
-    else {
-      assert (OriginalTy->isArrayType());
+    else if (OriginalTy->isArrayType())
       OriginalTy = OriginalTy->castAsArrayTypeUnsafe()->getElementType();
-    }
+    else
+      return {};
   }
   return OriginalTy;
 }

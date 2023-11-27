@@ -5,7 +5,6 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
 #include "llvm/Analysis/Interval.h"
@@ -26,6 +25,7 @@
 #include <assert.h>
 #include <cstdint>
 #include <optional>
+#include <queue>
 #include <sstream>
 #include <unordered_map>
 

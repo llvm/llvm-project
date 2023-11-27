@@ -50,7 +50,6 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugLoc.h"
 
 namespace llvm {

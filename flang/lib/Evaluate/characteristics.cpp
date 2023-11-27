@@ -792,8 +792,9 @@ static std::optional<DummyArgument> CharacterizeDummyArgument(
   return std::nullopt;
 }
 
-std::optional<DummyArgument> DummyArgument::FromActual(
-    std::string &&name, const Expr<SomeType> &expr, FoldingContext &context) {
+std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
+    const Expr<SomeType> &expr, FoldingContext &context,
+    bool forImplicitInterface) {
   return common::visit(
       common::visitors{
           [&](const BOZLiteralConstant &) {
@@ -828,6 +829,13 @@ std::optional<DummyArgument> DummyArgument::FromActual(
           },
           [&](const auto &) {
             if (auto type{TypeAndShape::Characterize(expr, context)}) {
+              if (forImplicitInterface &&
+                  !type->type().IsUnlimitedPolymorphic() &&
+                  type->type().IsPolymorphic()) {
+                // Pass the monomorphic declared type to an implicit interface
+                type->set_type(DynamicType{
+                    type->type().GetDerivedTypeSpec(), /*poly=*/false});
+              }
               DummyDataObject obj{std::move(*type)};
               obj.attrs.set(DummyDataObject::Attr::DeducedFromActual);
               return std::make_optional<DummyArgument>(
@@ -840,10 +848,11 @@ std::optional<DummyArgument> DummyArgument::FromActual(
       expr.u);
 }
 
-std::optional<DummyArgument> DummyArgument::FromActual(
-    std::string &&name, const ActualArgument &arg, FoldingContext &context) {
+std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
+    const ActualArgument &arg, FoldingContext &context,
+    bool forImplicitInterface) {
   if (const auto *expr{arg.UnwrapExpr()}) {
-    return FromActual(std::move(name), *expr, context);
+    return FromActual(std::move(name), *expr, context, forImplicitInterface);
   } else if (arg.GetAssumedTypeDummy()) {
     return std::nullopt;
   } else {
@@ -1325,8 +1334,9 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
       for (const auto &arg : args) {
         ++j;
         if (arg) {
-          if (auto dummy{DummyArgument::FromActual(
-                  "x"s + std::to_string(j), *arg, context)}) {
+          if (auto dummy{DummyArgument::FromActual("x"s + std::to_string(j),
+                  *arg, context,
+                  /*forImplicitInterface=*/true)}) {
             callee->dummyArguments.emplace_back(std::move(*dummy));
             continue;
           }

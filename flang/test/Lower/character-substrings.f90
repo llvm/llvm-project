@@ -1,5 +1,5 @@
 ! Test character substring lowering
-! RUN: bbc %s -o - -emit-fir | FileCheck %s
+! RUN: bbc %s -o - -emit-fir -hlfir=false | FileCheck %s
 
 ! Test substring lower where the parent is a scalar-char-literal-constant
 ! CHECK-LABEL: func @_QPscalar_substring_embox(

@@ -1,13 +1,6 @@
 #include "../include/KaleidoscopeJIT.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -645,7 +638,9 @@ static std::unique_ptr<IRBuilder<>> Builder;
 static std::map<std::string, Value *> NamedValues;
 static std::unique_ptr<KaleidoscopeJIT> TheJIT;
 static std::unique_ptr<FunctionPassManager> TheFPM;
+static std::unique_ptr<LoopAnalysisManager> TheLAM;
 static std::unique_ptr<FunctionAnalysisManager> TheFAM;
+static std::unique_ptr<CGSCCAnalysisManager> TheCGAM;
 static std::unique_ptr<ModuleAnalysisManager> TheMAM;
 static std::unique_ptr<PassInstrumentationCallbacks> ThePIC;
 static std::unique_ptr<StandardInstrumentations> TheSI;
@@ -968,7 +963,9 @@ static void InitializeModuleAndManagers() {
 
   // Create new pass and analysis managers.
   TheFPM = std::make_unique<FunctionPassManager>();
+  TheLAM = std::make_unique<LoopAnalysisManager>();
   TheFAM = std::make_unique<FunctionAnalysisManager>();
+  TheCGAM = std::make_unique<CGSCCAnalysisManager>();
   TheMAM = std::make_unique<ModuleAnalysisManager>();
   ThePIC = std::make_unique<PassInstrumentationCallbacks>();
   TheSI = std::make_unique<StandardInstrumentations>(*TheContext,
@@ -986,22 +983,10 @@ static void InitializeModuleAndManagers() {
   TheFPM->addPass(SimplifyCFGPass());
 
   // Register analysis passes used in these transform passes.
-  TheFAM->registerPass([&] { return AAManager(); });
-  TheFAM->registerPass([&] { return AssumptionAnalysis(); });
-  TheFAM->registerPass([&] { return DominatorTreeAnalysis(); });
-  TheFAM->registerPass([&] { return LoopAnalysis(); });
-  TheFAM->registerPass([&] { return MemoryDependenceAnalysis(); });
-  TheFAM->registerPass([&] { return MemorySSAAnalysis(); });
-  TheFAM->registerPass([&] { return OptimizationRemarkEmitterAnalysis(); });
-  TheFAM->registerPass([&] {
-    return OuterAnalysisManagerProxy<ModuleAnalysisManager, Function>(*TheMAM);
-  });
-  TheFAM->registerPass(
-      [&] { return PassInstrumentationAnalysis(ThePIC.get()); });
-  TheFAM->registerPass([&] { return TargetIRAnalysis(); });
-  TheFAM->registerPass([&] { return TargetLibraryAnalysis(); });
-
-  TheMAM->registerPass([&] { return ProfileSummaryAnalysis(); });
+  PassBuilder PB;
+  PB.registerModuleAnalyses(*TheMAM);
+  PB.registerFunctionAnalyses(*TheFAM);
+  PB.crossRegisterProxies(*TheLAM, *TheFAM, *TheCGAM, *TheMAM);
 }
 
 static void HandleDefinition() {

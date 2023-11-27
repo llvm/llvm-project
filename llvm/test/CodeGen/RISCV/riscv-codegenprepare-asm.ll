@@ -24,7 +24,7 @@ entry:
   br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %n to i64
+  %wide.trip.count = zext nneg i32 %n to i64
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -84,7 +84,7 @@ entry:
   br i1 %cmp3, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %n to i64
+  %wide.trip.count = zext nneg i32 %n to i64
   %xtraiter = and i64 %wide.trip.count, 1
   %0 = icmp eq i32 %n, 1
   br i1 %0, label %for.cond.cleanup.loopexit.unr-lcssa, label %for.body.preheader.new

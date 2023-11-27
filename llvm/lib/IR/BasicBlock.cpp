@@ -39,8 +39,8 @@ cl::opt<bool>
 DPMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
          "Tried to create a marker in a non new debug-info block!");
-  assert(I->DbgMarker == nullptr &&
-         "Tried to create marker for instuction that already has one!");
+  if (I->DbgMarker)
+    return I->DbgMarker;
   DPMarker *Marker = new DPMarker();
   Marker->MarkedInstr = I;
   I->DbgMarker = Marker;
@@ -178,6 +178,18 @@ bool BasicBlock::validateDbgValues(bool Assert, bool Msg, raw_ostream *OS) {
   TestFailure(!getTrailingDPValues(), "Trailing DPValues in block");
   return RetVal;
 }
+
+#ifndef NDEBUG
+void BasicBlock::dumpDbgValues() const {
+  for (auto &Inst : *this) {
+    if (!Inst.DbgMarker)
+      continue;
+
+    dbgs() << "@ " << Inst.DbgMarker << " ";
+    Inst.DbgMarker->dump();
+  };
+}
+#endif
 
 void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
   if (NewFlag && !IsNewDbgInfoFormat)
@@ -906,8 +918,8 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
   // move their markers onto Last. They remain in the Src block. No action
   // needed.
   if (!ReadFromHead) {
-    DPMarker *OntoLast = Src->getMarker(Last);
-    DPMarker *FromFirst = Src->getMarker(First);
+    DPMarker *OntoLast = Src->createMarker(Last);
+    DPMarker *FromFirst = Src->createMarker(First);
     OntoLast->absorbDebugValues(*FromFirst,
                                 true); // Always insert at head of it.
   }
@@ -973,8 +985,9 @@ void BasicBlock::insertDPValueAfter(DPValue *DPV, Instruction *I) {
   assert(I->getParent() == this);
 
   iterator NextIt = std::next(I->getIterator());
-  DPMarker *NextMarker =
-      (NextIt == end()) ? getTrailingDPValues() : NextIt->DbgMarker;
+  DPMarker *NextMarker = getMarker(NextIt);
+  if (!NextMarker)
+    NextMarker = createMarker(NextIt);
   NextMarker->insertDPValue(DPV, true);
 }
 

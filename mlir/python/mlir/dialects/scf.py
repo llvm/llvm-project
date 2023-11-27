@@ -120,10 +120,12 @@ def for_(
     params = [start, stop, step]
     for i, p in enumerate(params):
         if isinstance(p, int):
-            p = constant(p)
+            p = constant(IntegerAttr.get(IndexType.get(), p))
         elif isinstance(p, float):
             raise ValueError(f"{p=} must be int.")
         params[i] = p
+
+    start, stop, step = params
 
     for_op = ForOp(start, stop, step, iter_args, loc=loc, ip=ip)
     iv = for_op.induction_variable

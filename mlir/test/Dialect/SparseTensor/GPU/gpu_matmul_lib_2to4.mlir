@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s --linalg-generalize-named-ops \
-// RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --linalg-generalize-named-ops --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 // CHECK-LABEL:   func.func @matmul(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<?x?xf16>,

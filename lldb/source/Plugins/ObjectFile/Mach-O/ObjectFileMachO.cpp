@@ -5688,14 +5688,16 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(std::vector<tid_t> &tids) {
       }
       const size_t num_threads = threads->GetSize();
       for (size_t i = 0; i < num_threads; i++) {
-        StructuredData::Dictionary *thread;
-        if (!threads->GetItemAtIndexAsDictionary(i, thread) || !thread) {
+        std::optional<StructuredData::Dictionary *> maybe_thread =
+            threads->GetItemAtIndexAsDictionary(i);
+        if (!maybe_thread) {
           LLDB_LOGF(log,
                     "Unable to read 'process metadata' LC_NOTE, threads "
                     "array does not have a dictionary at index %zu.",
                     i);
           return false;
         }
+        StructuredData::Dictionary *thread = *maybe_thread;
         tid_t tid = LLDB_INVALID_THREAD_ID;
         if (thread->GetValueForKeyAsInteger<tid_t>("thread_id", tid))
           if (tid == 0)
@@ -6474,9 +6476,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     return false;
 
   // Default on macOS is to create a dirty-memory-only corefile.
-  if (core_style == SaveCoreStyle::eSaveCoreUnspecified) {
+  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
     core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
-  }
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
@@ -6505,115 +6506,42 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     }
 
     if (make_core) {
-      std::vector<llvm::MachO::segment_command_64> segment_load_commands;
-      //                uint32_t range_info_idx = 0;
-      MemoryRegionInfo range_info;
-      Status range_error = process_sp->GetMemoryRegionInfo(0, range_info);
-      const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
-      const ByteOrder byte_order = target_arch.GetByteOrder();
-      std::vector<page_object> pages_to_copy;
-
-      if (range_error.Success()) {
-        while (range_info.GetRange().GetRangeBase() != LLDB_INVALID_ADDRESS) {
-          // Calculate correct protections
-          uint32_t prot = 0;
-          if (range_info.GetReadable() == MemoryRegionInfo::eYes)
-            prot |= VM_PROT_READ;
-          if (range_info.GetWritable() == MemoryRegionInfo::eYes)
-            prot |= VM_PROT_WRITE;
-          if (range_info.GetExecutable() == MemoryRegionInfo::eYes)
-            prot |= VM_PROT_EXECUTE;
-
-          const addr_t addr = range_info.GetRange().GetRangeBase();
-          const addr_t size = range_info.GetRange().GetByteSize();
-
-          if (size == 0)
-            break;
-
-          bool include_this_region = true;
-          bool dirty_pages_only = false;
-          if (core_style == SaveCoreStyle::eSaveCoreStackOnly) {
-            dirty_pages_only = true;
-            if (range_info.IsStackMemory() != MemoryRegionInfo::eYes) {
-              include_this_region = false;
-            }
-          }
-          if (core_style == SaveCoreStyle::eSaveCoreDirtyOnly) {
-            dirty_pages_only = true;
-          }
-
-          if (prot != 0 && include_this_region) {
-            addr_t pagesize = range_info.GetPageSize();
-            const std::optional<std::vector<addr_t>> &dirty_page_list =
-                range_info.GetDirtyPageList();
-            if (dirty_pages_only && dirty_page_list) {
-              for (addr_t dirtypage : *dirty_page_list) {
-                page_object obj;
-                obj.addr = dirtypage;
-                obj.size = pagesize;
-                obj.prot = prot;
-                pages_to_copy.push_back(obj);
-              }
-            } else {
-              page_object obj;
-              obj.addr = addr;
-              obj.size = size;
-              obj.prot = prot;
-              pages_to_copy.push_back(obj);
-            }
-          }
-
-          range_error = process_sp->GetMemoryRegionInfo(
-              range_info.GetRange().GetRangeEnd(), range_info);
-          if (range_error.Fail())
-            break;
-        }
-
-        // Combine contiguous entries that have the same
-        // protections so we don't have an excess of
-        // load commands.
-        std::vector<page_object> combined_page_objects;
-        page_object last_obj;
-        last_obj.addr = LLDB_INVALID_ADDRESS;
-        last_obj.size = 0;
-        for (page_object obj : pages_to_copy) {
-          if (last_obj.addr == LLDB_INVALID_ADDRESS) {
-            last_obj = obj;
-            continue;
-          }
-          if (last_obj.addr + last_obj.size == obj.addr &&
-              last_obj.prot == obj.prot) {
-            last_obj.size += obj.size;
-            continue;
-          }
-          combined_page_objects.push_back(last_obj);
-          last_obj = obj;
-        }
-        // Add the last entry we were looking to combine
-        // on to the array.
-        if (last_obj.addr != LLDB_INVALID_ADDRESS && last_obj.size != 0)
-          combined_page_objects.push_back(last_obj);
-
-        for (page_object obj : combined_page_objects) {
+      Process::CoreFileMemoryRanges core_ranges;
+      error = process_sp->CalculateCoreFileSaveRanges(core_style, core_ranges);
+      if (error.Success()) {
+        const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
+        const ByteOrder byte_order = target_arch.GetByteOrder();
+        std::vector<llvm::MachO::segment_command_64> segment_load_commands;
+        for (const auto &core_range : core_ranges) {
           uint32_t cmd_type = LC_SEGMENT_64;
           uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
           if (addr_byte_size == 4) {
             cmd_type = LC_SEGMENT;
             segment_size = sizeof(llvm::MachO::segment_command);
           }
+          // Skip any ranges with no read/write/execute permissions and empty
+          // ranges.
+          if (core_range.lldb_permissions == 0 || core_range.range.size() == 0)
+            continue;
+          uint32_t vm_prot = 0;
+          if (core_range.lldb_permissions & ePermissionsReadable)
+            vm_prot |= VM_PROT_READ;
+          if (core_range.lldb_permissions & ePermissionsWritable)
+            vm_prot |= VM_PROT_WRITE;
+          if (core_range.lldb_permissions & ePermissionsExecutable)
+            vm_prot |= VM_PROT_EXECUTE;
+          const addr_t vm_addr = core_range.range.start();
+          const addr_t vm_size = core_range.range.size();
           llvm::MachO::segment_command_64 segment = {
               cmd_type,     // uint32_t cmd;
               segment_size, // uint32_t cmdsize;
               {0},          // char segname[16];
-              obj.addr,     // uint64_t vmaddr;    // uint32_t for 32-bit
-                            // Mach-O
-              obj.size,     // uint64_t vmsize;    // uint32_t for 32-bit
-                            // Mach-O
-              0,            // uint64_t fileoff;   // uint32_t for 32-bit Mach-O
-              obj.size,     // uint64_t filesize;  // uint32_t for 32-bit
-                            // Mach-O
-              obj.prot,     // uint32_t maxprot;
-              obj.prot,     // uint32_t initprot;
+              vm_addr,      // uint64_t vmaddr;   // uint32_t for 32-bit Mach-O
+              vm_size,      // uint64_t vmsize;   // uint32_t for 32-bit Mach-O
+              0,            // uint64_t fileoff;  // uint32_t for 32-bit Mach-O
+              vm_size,      // uint64_t filesize; // uint32_t for 32-bit Mach-O
+              vm_prot,      // uint32_t maxprot;
+              vm_prot,      // uint32_t initprot;
               0,            // uint32_t nsects;
               0};           // uint32_t flags;
           segment_load_commands.push_back(segment);
@@ -6622,11 +6550,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
 
         llvm::MachO::mach_header_64 mach_header;
-        if (addr_byte_size == 8) {
-          mach_header.magic = MH_MAGIC_64;
-        } else {
-          mach_header.magic = MH_MAGIC;
-        }
+        mach_header.magic = addr_byte_size == 8 ? MH_MAGIC_64 : MH_MAGIC;
         mach_header.cputype = target_arch.GetMachOCPUType();
         mach_header.cpusubtype = target_arch.GetMachOCPUSubType();
         mach_header.filetype = MH_CORE;
@@ -6911,9 +6835,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
             }
           }
         }
-      } else {
-        error.SetErrorString(
-            "process doesn't support getting memory region info");
       }
     }
     return true; // This is the right plug to handle saving core files for

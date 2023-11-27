@@ -96,8 +96,8 @@ template<typename T> concept Foo = true;
       },
       "location": {
         "position": {
-          "character": 30,
-          "line": 1
+          "character": 29,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },

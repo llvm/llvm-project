@@ -14,6 +14,7 @@
 
 #include "RISCVCallLowering.h"
 #include "RISCVISelLowering.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -185,6 +186,9 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+    if (LocVT.isScalableVector())
+      MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
+
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
                       *Subtarget.getTargetLowering(),
@@ -301,8 +305,31 @@ struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
 RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
+/// Return true if scalable vector with ScalarTy is legal for lowering.
+static bool isLegalElementTypeForRVV(Type *EltTy,
+                                     const RISCVSubtarget &Subtarget) {
+  if (EltTy->isPointerTy())
+    return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
+  if (EltTy->isIntegerTy(1) || EltTy->isIntegerTy(8) ||
+      EltTy->isIntegerTy(16) || EltTy->isIntegerTy(32))
+    return true;
+  if (EltTy->isIntegerTy(64))
+    return Subtarget.hasVInstructionsI64();
+  if (EltTy->isHalfTy())
+    return Subtarget.hasVInstructionsF16();
+  if (EltTy->isBFloatTy())
+    return Subtarget.hasVInstructionsBF16();
+  if (EltTy->isFloatTy())
+    return Subtarget.hasVInstructionsF32();
+  if (EltTy->isDoubleTy())
+    return Subtarget.hasVInstructionsF64();
+  return false;
+}
+
 // TODO: Support all argument types.
-static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
+// TODO: Remove IsLowerArgs argument by adding support for vectors in lowerCall.
+static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
+                                    bool IsLowerArgs = false) {
   // TODO: Integers larger than 2*XLen are passed indirectly which is not
   // supported yet.
   if (T->isIntegerTy())
@@ -311,11 +338,19 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
     return true;
   if (T->isPointerTy())
     return true;
+  // TODO: Support fixed vector types.
+  if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
+      T->isScalableTy() &&
+      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+    return true;
   return false;
 }
 
 // TODO: Only integer, pointer and aggregate types are supported now.
-static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
+// TODO: Remove IsLowerRetVal argument by adding support for vectors in
+// lowerCall.
+static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
+                                  bool IsLowerRetVal = false) {
   // TODO: Integers larger than 2*XLen are passed indirectly which is not
   // supported yet.
   if (T->isIntegerTy())
@@ -336,6 +371,11 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
     return true;
   }
 
+  if (IsLowerRetVal && T->isVectorTy() && Subtarget.hasVInstructions() &&
+      T->isScalableTy() &&
+      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+    return true;
+
   return false;
 }
 
@@ -348,7 +388,7 @@ bool RISCVCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
-  if (!isSupportedReturnType(Val->getType(), Subtarget))
+  if (!isSupportedReturnType(Val->getType(), Subtarget, /*IsLowerRetVal=*/true))
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -398,7 +438,8 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &Arg : F.args()) {
-    if (!isSupportedArgumentType(Arg.getType(), Subtarget))
+    if (!isSupportedArgumentType(Arg.getType(), Subtarget,
+                                 /*IsLowerArgs=*/true))
       return false;
   }
 
@@ -463,15 +504,16 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // TODO: Support tail calls.
   Info.IsTailCall = false;
 
+  // Select the recommended relocation type R_RISCV_CALL_PLT.
   if (!Info.Callee.isReg())
-    Info.Callee.setTargetFlags(RISCVII::MO_CALL);
+    Info.Callee.setTargetFlags(RISCVII::MO_PLT);
 
   MachineInstrBuilder Call =
       MIRBuilder
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   RISCVOutgoingValueAssigner ArgAssigner(
@@ -488,6 +530,15 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildInstr(RISCV::ADJCALLSTACKUP)
       .addImm(ArgAssigner.StackSize)
       .addImm(0);
+
+  // If Callee is a reg, since it is used by a target specific
+  // instruction, it must have a register class matching the
+  // constraint of that instruction.
+  if (Call->getOperand(0).isReg())
+    constrainOperandRegClass(MF, *TRI, MF.getRegInfo(),
+                             *Subtarget.getInstrInfo(),
+                             *Subtarget.getRegBankInfo(), *Call,
+                             Call->getDesc(), Call->getOperand(0), 0);
 
   if (Info.OrigRet.Ty->isVoidTy())
     return true;

@@ -61,7 +61,7 @@ static_assert(!HasSortHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `so
 template <std::size_t N, class T, class Iter>
 constexpr void verify_sorted(const std::array<T, N>& sorted, Iter last, std::array<T, N> expected) {
   assert(sorted == expected);
-  assert(base(last) == sorted.data() + sorted.size());
+  assert(std::to_address(base(last)) == sorted.data() + sorted.size());
   assert(std::is_sorted(sorted.begin(), sorted.end()));
 }
 
@@ -130,14 +130,14 @@ constexpr bool test() {
       auto in = input;
       auto last = std::ranges::sort_heap(in.begin(), in.end(), comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
 
     {
       auto in = input;
       auto last = std::ranges::sort_heap(in, comp);
       assert(in == expected);
-      assert(last == in.data() + in.size());
+      assert(last == in.end());
     }
   }
 

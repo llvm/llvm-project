@@ -32,3 +32,30 @@
 /clang/www/make_cxx_dr_status @Endilll
 
 /lldb/ @JDevlieghere
+
+/mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar
+
+/mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar
+/mlir/lib/Dialect/MemRef/Transforms/EmulateNarrowType.cpp @MaheshRavishankar
+/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar
+/mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar
+
+/mlir/**/*EmulateNarrowType* @hanhanW
+/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @hanhanW
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @hanhanW
+/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @hanhanW
+/mlir/lib/Dialect/Tensor/Transforms/FoldIntoPackAndUnpackPatterns.cpp @hanhanW
+/mlir/lib/Dialect/Vector/Transforms/* @hanhanW
+
+# Transform Dialect in MLIR.
+/mlir/include/mlir/Dialect/Transform/* @ftynse
+/mlir/lib/Dialect/Transform/* @ftynse
+
+# SPIR-V in MLIR.
+/mlir/**/SPIRV/ @antiagainst @kuhar
+/mlir/**/SPIRVTo*/ @antiagainst @kuhar
+/mlir/**/*ToSPIRV/ @antiagainst @kuhar
+/mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar
