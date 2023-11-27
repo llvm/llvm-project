@@ -272,7 +272,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
 }
 
 static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
-                                BitTracker &Bits, bool RetrnOnUninit) {
+                                BitTracker &Bits, bool ReturnOnUninit) {
   const ASTContext &ASTCtx = Ctx.getASTContext();
   uint64_t PointerSizeInBits =
       ASTCtx.getTargetInfo().getPointerWidth(LangAS::Default);
@@ -284,7 +284,7 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
         if (!P.isInitialized()) {
           Bits.markUninitializedUntil(BitOffset +
                                       (primSize(T) * 8)); /// primSize() usage.
-          return RetrnOnUninit;
+          return ReturnOnUninit;
         }
 
         assert(P.isInitialized());
@@ -337,7 +337,8 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
   bool BigEndian = ASTCtx.getTargetInfo().isBigEndian();
 
   BitTracker Bits;
-  bool Success = readPointerToBuffer(S.getContext(), P, Bits, false);
+  bool Success =
+      readPointerToBuffer(S.getContext(), P, Bits, /*ReturnOnUninit=*/false);
 
   Bits.markUninitializedUntil(BuffSize * 8);
   assert(Bits.size() == BuffSize * 8);
@@ -350,13 +351,9 @@ bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
   return Success; // && !HasIndeterminateBits;
 }
 
-//  This function is constexpr if and only if To, From, and the types of
-//  all subobjects of To and From are types T such that...
-//  (3.1) - is_union_v<T> is false;
-//  (3.2) - is_pointer_v<T> is false;
-//  (3.3) - is_member_pointer_v<T> is false;
-//  (3.4) - is_volatile_v<T> is false; and
-//  (3.5) - T has no non-static data members of reference type
+/// Bitcast from a Pointer to a Pointer.
+/// We read all fields from \p P into a buffer, then iterate
+/// over the fields of \p DestPtr and read from the buffer.
 bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
                     CodePtr OpPC) {
   assert(P.isLive());
@@ -376,7 +373,7 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
   bool BigEndian = ASTCtx.getTargetInfo().isBigEndian();
 
   BitTracker Bytes;
-  if (!readPointerToBuffer(Ctx, P, Bytes, true))
+  if (!readPointerToBuffer(Ctx, P, Bytes, /*ReturnOnUninit=*/true))
     return false;
 
   bool Success = enumeratePointerFields(
