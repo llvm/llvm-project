@@ -40,15 +40,6 @@ def SPIRV_GroupFMulKHROp : SPIRV_KhrVendorOp<"GroupFMul", [Pure,
     The type of 'X' must be the same as 'Result Type'.
 
 
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.KHR.GroupFMul` scope operation ssa-use
-                            `:` float-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -100,24 +91,11 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
 
     Execution must be Workgroup or Subgroup Scope.
 
-     The type of Value must be the same as Result Type.
+    The type of Value must be the same as Result Type.
 
     LocalId must be an integer datatype. It can be a scalar, or a vector
     with 2 components or a vector with 3 components. LocalId must be the
     same for all invocations in the group.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    integer-float-scalar-vector-type ::= integer-type | float-type |
-                               `vector<` integer-literal `x` integer-type `>` |
-                               `vector<` integer-literal `x` float-type `>`
-    localid-type ::= integer-type |
-                   `vector<` integer-literal `x` integer-type `>`
-    group-broadcast-op ::= ssa-id `=` `spirv.GroupBroadcast` scope ssa_use,
-                   ssa_use `:` integer-float-scalar-vector-type `,` localid-type
-    ```
 
     #### Example:
 
@@ -176,16 +154,7 @@ def SPIRV_GroupFAddOp : SPIRV_Op<"GroupFAdd", [Pure,
 
     The identity I for Operation is 0.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupFAdd` scope operation ssa-use
-                            `:` float-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -238,16 +207,7 @@ def SPIRV_GroupFMaxOp : SPIRV_Op<"GroupFMax", [Pure,
 
     The identity I for Operation is -INF.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupFMax` scope operation ssa-use
-                            `:` float-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -300,16 +260,7 @@ def SPIRV_GroupFMinOp : SPIRV_Op<"GroupFMin", [Pure,
 
     The identity I for Operation is +INF.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupFMin` scope operation ssa-use
-                            `:` float-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -362,16 +313,7 @@ def SPIRV_GroupIAddOp : SPIRV_Op<"GroupIAdd", [Pure,
 
     The identity I for Operation is 0.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupIAdd` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -426,16 +368,6 @@ def SPIRV_GroupIMulKHROp : SPIRV_KhrVendorOp<"GroupIMul", [Pure,
 
     The type of 'X' must be the same as 'Result Type'.
 
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.KHR.GroupIMul` scope operation ssa-use
-                            `:` integer-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -488,16 +420,7 @@ def SPIRV_GroupSMaxOp : SPIRV_Op<"GroupSMax", [Pure,
     The identity I for Operation is INT_MIN when X is 32 bits wide and
     LONG_MIN when X is 64 bits wide.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupSMax` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -551,16 +474,7 @@ def SPIRV_GroupSMinOp : SPIRV_Op<"GroupSMin", [Pure,
     The identity I for Operation is INT_MAX when X is 32 bits wide and
     LONG_MAX when X is 64 bits wide.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupSMin` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -613,16 +527,7 @@ def SPIRV_GroupUMaxOp : SPIRV_Op<"GroupUMax", [Pure,
 
     The identity I for Operation is 0.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupUMax` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
@@ -676,16 +581,7 @@ def SPIRV_GroupUMinOp : SPIRV_Op<"GroupUMin", [Pure,
     The identity I for Operation is UINT_MAX when X is 32 bits wide and
     ULONG_MAX when X is 64 bits wide.
 
-     The type of X must be the same as Result Type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    scope ::= `"Workgroup"` | `"Subgroup"`
-    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"`
-    op ::= ssa-id `=` `spirv.GroupUMin` scope operation ssa-use
-                            `:` integer-type
-    ```
+    The type of X must be the same as Result Type.
 
     #### Example:
 
