@@ -977,7 +977,7 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
-void tools::addFortranRuntimeLibs(const ToolChain &TC,
+void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
   // These are handled earlier on Windows by telling the frontend driver to add
   // the correct libraries to link against as dependents in the object file.
@@ -998,6 +998,30 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC,
     // Perform regular linkage of the remaining runtime libraries.
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
+  } else {
+    unsigned RTOptionID = options::OPT__SLASH_MT;
+    if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+      RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                       .Case("static", options::OPT__SLASH_MT)
+                       .Case("static_dbg", options::OPT__SLASH_MTd)
+                       .Case("dll", options::OPT__SLASH_MD)
+                       .Case("dll_dbg", options::OPT__SLASH_MDd)
+                       .Default(options::OPT__SLASH_MT);
+    }
+    switch (RTOptionID) {
+    case options::OPT__SLASH_MT:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
+      break;
+    case options::OPT__SLASH_MTd:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
+      break;
+    case options::OPT__SLASH_MD:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
+      break;
+    case options::OPT__SLASH_MDd:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
+      break;
+    }
   }
 }
 
