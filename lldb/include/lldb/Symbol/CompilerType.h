@@ -194,6 +194,55 @@ public:
   bool IsTypedefType() const;
 
   bool IsVoidType() const;
+
+  bool IsSmartPtrType() const;
+
+  bool IsInteger() const;
+
+  bool IsFloat() const;
+
+  bool IsEnumerationType() const;
+
+  bool IsUnscopedEnumerationType() const;
+
+  bool IsIntegerOrUnscopedEnumerationType() const;
+
+  bool IsSigned() const;
+
+  bool IsNullPtrType() const;
+
+  bool IsBoolean() const;
+
+  bool IsEnumerationIntegerTypeSigned() const;
+
+  bool IsScalarOrUnscopedEnumerationType() const;
+
+  bool IsPromotableIntegerType() const;
+
+  bool IsPointerToVoid() const;
+
+  bool IsRecordType() const;
+
+  bool IsVirtualBase(CompilerType target_base,
+                     CompilerType *virtual_base,
+                     bool carry_virtual = false) const;
+
+  bool IsContextuallyConvertibleToBool() const;
+
+  bool IsBasicType() const;
+
+  std::string TypeDescription();
+
+  bool CompareTypes(CompilerType rhs) const;
+
+  const char * GetTypeTag();
+
+  uint32_t GetNumberOfNonEmptyBaseClasses();
+
+  CompilerType GetTemplateArgumentType(uint32_t idx);
+
+  CompilerType GetSmartPtrPointeeType();
+
   /// \}
 
   /// Type Completion.
