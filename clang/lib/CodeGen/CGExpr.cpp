@@ -963,7 +963,7 @@ Expr *CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
 
   // Get the enclosing struct, but not the outermost enclosing struct.
   const DeclContext *DC = CountedByVD->getLexicalDeclContext();
-  const RecordDecl *CountedByRD = dyn_cast<RecordDecl>(DC);
+  const auto *CountedByRD = dyn_cast<RecordDecl>(DC);
   if (!CountedByRD)
     return nullptr;
 
