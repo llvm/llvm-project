@@ -46,6 +46,7 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(StringRef Name) {
           .Case("host_data", OpenACCDirectiveKind::HostData)
           .Case("loop", OpenACCDirectiveKind::Loop)
           .Case("atomic", OpenACCDirectiveKind::Atomic)
+          .Case("routine", OpenACCDirectiveKind::Routine)
           .Case("declare", OpenACCDirectiveKind::Declare)
           .Case("init", OpenACCDirectiveKind::Init)
           .Case("shutdown", OpenACCDirectiveKind::Shutdown)
@@ -97,6 +98,8 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
 
   case OpenACCDirectiveKind::Atomic:
     return Tok == "atomic";
+  case OpenACCDirectiveKind::Routine:
+    return Tok == "routine";
   case OpenACCDirectiveKind::Declare:
     return Tok == "declare";
   case OpenACCDirectiveKind::Init:
@@ -232,23 +235,78 @@ void ParseOpenACCClauseList(Parser &P) {
     P.Diag(P.getCurToken(), diag::warn_pragma_acc_unimplemented_clause_parsing);
 }
 
-void ParseOpenACCDirective(Parser &P) {
-  OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(P);
+} // namespace
+
+// Routine has an optional paren-wrapped name of a function in the local scope.
+// We parse the name, emitting any diagnostics
+ExprResult Parser::ParseOpenACCRoutineName() {
+
+  ExprResult Res;
+  if (getLangOpts().CPlusPlus) {
+    Res = ParseCXXIdExpression(/*isAddressOfOperand=*/false);
+  } else {
+    // There isn't anything quite the same as ParseCXXIdExpression for C, so we
+    // need to get the identifier, then call into Sema ourselves.
+
+    if (expectIdentifier())
+      return ExprError();
+
+    Token FuncName = getCurToken();
+    UnqualifiedId Name;
+    CXXScopeSpec ScopeSpec;
+    SourceLocation TemplateKWLoc;
+    Name.setIdentifier(FuncName.getIdentifierInfo(), ConsumeToken());
+
+    // Ensure this is a valid identifier. We don't accept causing implicit
+    // function declarations per the spec, so always claim to not have trailing
+    // L Paren.
+    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
+                                    Name, /*HasTrailingLParen=*/false,
+                                    /*isAddressOfOperand=*/false);
+  }
+
+  return getActions().CorrectDelayedTyposInExpr(Res);
+}
+
+void Parser::ParseOpenACCDirective() {
+  OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
 
   // Once we've parsed the construct/directive name, some have additional
   // specifiers that need to be taken care of. Atomic has an 'atomic-clause'
   // that needs to be parsed.
   if (DirKind == OpenACCDirectiveKind::Atomic)
-    ParseOpenACCAtomicKind(P);
+    ParseOpenACCAtomicKind(*this);
+
+  // We've successfully parsed the construct/directive name, however a few of
+  // the constructs have optional parens that contain further details.
+  BalancedDelimiterTracker T(*this, tok::l_paren,
+                             tok::annot_pragma_openacc_end);
+
+  if (!T.consumeOpen()) {
+    switch (DirKind) {
+    default:
+      Diag(T.getOpenLocation(), diag::err_acc_invalid_open_paren);
+      T.skipToEnd();
+      break;
+    case OpenACCDirectiveKind::Routine: {
+      ExprResult RoutineName = ParseOpenACCRoutineName();
+      // If the routine name is invalid, just skip until the closing paren to
+      // recover more gracefully.
+      if (RoutineName.isInvalid())
+        T.skipToEnd();
+      else
+        T.consumeClose();
+      break;
+    }
+    }
+  }
 
   // Parses the list of clauses, if present.
-  ParseOpenACCClauseList(P);
+  ParseOpenACCClauseList(*this);
 
-  P.Diag(P.getCurToken(), diag::warn_pragma_acc_unimplemented);
-  P.SkipUntil(tok::annot_pragma_openacc_end);
+  Diag(getCurToken(), diag::warn_pragma_acc_unimplemented);
+  SkipUntil(tok::annot_pragma_openacc_end);
 }
-
-} // namespace
 
 // Parse OpenACC directive on a declaration.
 Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
@@ -257,7 +315,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
   ParsingOpenACCDirectiveRAII DirScope(*this);
   ConsumeAnnotationToken();
 
-  ParseOpenACCDirective(*this);
+  ParseOpenACCDirective();
 
   return nullptr;
 }
@@ -269,7 +327,7 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   ParsingOpenACCDirectiveRAII DirScope(*this);
   ConsumeAnnotationToken();
 
-  ParseOpenACCDirective(*this);
+  ParseOpenACCDirective();
 
   return StmtEmpty();
 }
