@@ -85,6 +85,8 @@ public:
   /// included.
   std::vector<std::string> getRequiredModules(PathRef File);
 
+  std::optional<std::string> getModuleName(PathRef File);
+
 private:
   const GlobalCompilationDatabase &CDB;
   const ThreadsafeFS &TFS;

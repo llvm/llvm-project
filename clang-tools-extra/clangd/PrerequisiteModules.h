@@ -62,9 +62,8 @@ public:
 
   /// Whether or not the built module files are up to date.
   /// Note that this can only be used after building the module files.
-  virtual bool
-  canReuse(const CompilerInvocation &CI,
-           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const = 0;
+  virtual bool canReuse(const CompilerInvocation &CI,
+                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const;
 
   /// Return true if the modile file specified by ModuleName is built.
   /// Note that this interface will only check the existence of the module
@@ -74,11 +73,8 @@ public:
   virtual ~PrerequisiteModules() = default;
 
 private:
-  friend class ModulesBuilder;
-
-  /// Add a module file to the PrerequisiteModules.
-  virtual void addModuleFile(StringRef ModuleName,
-                             StringRef ModuleFilePath) = 0;
+  virtual void
+  getRequiredModuleFiles(llvm::SmallVector<StringRef> &ModuleFiles) const = 0;
 };
 
 } // namespace clangd

@@ -378,7 +378,7 @@ private:
   std::optional<AsyncTaskRunner> PreambleTasks;
   std::optional<AsyncTaskRunner> WorkerThreads;
   // Manages to build module files.
-  std::optional<ModulesBuilder> ModulesManager;
+  std::unique_ptr<ModulesBuilder> ModulesManager;
   // Used to create contexts for operations that are not bound to a particular
   // file (e.g. index queries).
   std::string LastActiveFile;

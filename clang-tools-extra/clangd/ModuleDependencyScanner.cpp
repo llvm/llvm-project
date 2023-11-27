@@ -77,5 +77,14 @@ ModuleDependencyScanner::getRequiredModules(PathRef File) {
   return ScanningResult->RequiredModules;
 }
 
+std::optional<std::string>
+ModuleDependencyScanner::getModuleName(PathRef File) {
+  auto ScanningResult = scan(File);
+  if (!ScanningResult)
+    return std::nullopt;
+
+  return ScanningResult->ModuleName;
+}
+
 } // namespace clangd
 } // namespace clang

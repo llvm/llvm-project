@@ -41,28 +41,18 @@ class PrerequisiteModules;
 /// different versions and different source files.
 class ModulesBuilder {
 public:
-  ModulesBuilder() = delete;
+  enum class ModulesBuilderKind {
+    StandaloneModulesBuilder,
+    ReusableModulesBuilder
+  };
 
-  ModulesBuilder(const GlobalCompilationDatabase &CDB) : CDB(CDB) {}
+  static std::unique_ptr<ModulesBuilder>
+  create(ModulesBuilderKind Kind, const GlobalCompilationDatabase &CDB);
 
-  ModulesBuilder(const ModulesBuilder &) = delete;
-  ModulesBuilder(ModulesBuilder &&) = delete;
+  virtual ~ModulesBuilder() = default;
 
-  ModulesBuilder &operator=(const ModulesBuilder &) = delete;
-  ModulesBuilder &operator=(ModulesBuilder &&) = delete;
-
-  ~ModulesBuilder() = default;
-
-  std::unique_ptr<PrerequisiteModules>
-  buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS *TFS);
-
-private:
-  bool buildModuleFile(StringRef ModuleName, const ThreadsafeFS *TFS,
-                       std::shared_ptr<ProjectModules> MDB,
-                       PathRef ModuleFilesPrefix,
-                       PrerequisiteModules &RequiredModules);
-
-  const GlobalCompilationDatabase &CDB;
+  virtual std::unique_ptr<PrerequisiteModules>
+  buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS *TFS) = 0;
 };
 
 } // namespace clangd

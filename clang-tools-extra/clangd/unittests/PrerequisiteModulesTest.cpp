@@ -21,7 +21,7 @@ using namespace clang::clangd;
 namespace {
 class PrerequisiteModulesTests : public ModuleTestSetup {};
 
-TEST_F(PrerequisiteModulesTests, PrerequisiteModulesTest) {
+TEST_F(PrerequisiteModulesTests, StandalonePrerequisiteModulesTest) {
   addFile("build/compile_commands.json", R"cpp(
 [
 {
@@ -100,19 +100,22 @@ void use() {
   std::unique_ptr<GlobalCompilationDatabase> CDB =
       getGlobalCompilationDatabase();
   EXPECT_TRUE(CDB);
-  ModulesBuilder Builder(*CDB.get());
+  std::unique_ptr<ModulesBuilder> Builder = ModulesBuilder::create(
+      ModulesBuilder::ModulesBuilderKind::StandaloneModulesBuilder, *CDB.get());
 
   // NonModular.cpp is not related to modules. So nothing should be built.
   auto NonModularInfo =
-      Builder.buildPrerequisiteModulesFor(getFullPath("NonModular.cpp"), &TFS);
+      Builder->buildPrerequisiteModulesFor(getFullPath("NonModular.cpp"), &TFS);
   EXPECT_FALSE(NonModularInfo);
 
-  auto MInfo = Builder.buildPrerequisiteModulesFor(getFullPath("M.cppm"), &TFS);
+  auto MInfo =
+      Builder->buildPrerequisiteModulesFor(getFullPath("M.cppm"), &TFS);
   // buildPrerequisiteModulesFor won't built the module itself.
   EXPECT_FALSE(MInfo);
 
   // Module N shouldn't be able to be built.
-  auto NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
+  auto NInfo =
+      Builder->buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
   EXPECT_TRUE(NInfo);
   EXPECT_TRUE(NInfo->isModuleUnitBuilt("M"));
   EXPECT_TRUE(NInfo->isModuleUnitBuilt("N:Part"));
@@ -151,7 +154,7 @@ export int mm = 44;
   )cpp");
     EXPECT_FALSE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
-    NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
+    NInfo = Builder->buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
     EXPECT_TRUE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
     addFile("foo.h", R"cpp(
@@ -160,7 +163,7 @@ inline void foo(int) {}
   )cpp");
     EXPECT_FALSE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
-    NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
+    NInfo = Builder->buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
     EXPECT_TRUE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
   }
 
@@ -170,7 +173,7 @@ export module N:Part;
 export int NPart = 4LIdjwldijaw
   )cpp");
   EXPECT_FALSE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
-  NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
+  NInfo = Builder->buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
   EXPECT_TRUE(NInfo);
   // So NInfo should be unreusable even after rebuild.
   EXPECT_FALSE(NInfo->canReuse(*Invocation, TFS.view(TestDir)));
@@ -181,7 +184,7 @@ export int NPart = 43;
   )cpp");
   EXPECT_TRUE(NInfo);
   EXPECT_FALSE(NInfo->canReuse(*Invocation, TFS.view(TestDir)));
-  NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
+  NInfo = Builder->buildPrerequisiteModulesFor(getFullPath("N.cppm"), &TFS);
   // So NInfo should be unreusable even after rebuild.
   EXPECT_TRUE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 

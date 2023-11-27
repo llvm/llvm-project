@@ -42,6 +42,7 @@ public:
          const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS);
 
   virtual std::vector<std::string> getRequiredModules(PathRef File) = 0;
+  virtual std::optional<std::string> getModuleName(PathRef File) = 0;
   virtual PathRef
   getSourceForModuleName(StringRef ModuleName,
                          PathRef RequiredSrcFile = PathRef()) = 0;

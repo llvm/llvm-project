@@ -239,7 +239,9 @@ public:
 
     auto RequiredModuleBuilder =
         Opts.ExperimentalModulesSupport
-            ? std::make_unique<ModulesBuilder>(*CDB.get())
+            ? ModulesBuilder::create(
+                  ModulesBuilder::ModulesBuilderKind::StandaloneModulesBuilder,
+                  *CDB.get())
             : nullptr;
 
     Preamble = buildPreamble(

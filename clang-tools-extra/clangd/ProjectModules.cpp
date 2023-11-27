@@ -31,6 +31,10 @@ public:
     return Scanner.getRequiredModules(File);
   }
 
+  std::optional<std::string> getModuleName(PathRef File) override {
+    return Scanner.getModuleName(File);
+  }
+
   /// RequiredSourceFile is not used intentionally. See the comments of
   /// ModuleDependencyScanner for detail.
   PathRef
