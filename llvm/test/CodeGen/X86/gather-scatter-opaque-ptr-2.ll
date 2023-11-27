@@ -61,7 +61,7 @@ define <2 x float> @gather_v2f32_scale_3(ptr %result, <2 x i64> %idx, <2 x i1> %
 ; CHECK-LABEL: gather_v2f32_scale_3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpaddq %xmm0, %xmm0, %xmm2
-; CHECK-NEXT:    vpaddq %xmm0, %xmm2, %xmm2
+; CHECK-NEXT:    vpaddq %xmm2, %xmm0, %xmm2
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; CHECK-NEXT:    vpslld $31, %xmm0, %xmm1
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0

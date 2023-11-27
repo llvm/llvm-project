@@ -24,21 +24,21 @@ define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) optsize {
 ; CHECK-NEXT:    .cfi_offset %r15, -16
 ; CHECK-NEXT:    movq %r9, %r14
 ; CHECK-NEXT:    movq %r8, %rbx
-; CHECK-NEXT:    movq %rcx, %r12
-; CHECK-NEXT:    movq %rdx, %r15
-; CHECK-NEXT:    movq %rsi, %r13
+; CHECK-NEXT:    movq %rcx, %r15
+; CHECK-NEXT:    movq %rdx, %r13
+; CHECK-NEXT:    movq %rsi, %r12
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.else
-; CHECK-NEXT:    testq %r13, %r13
-; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    testq %r12, %r12
+; CHECK-NEXT:    movq %r13, %rax
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  .LBB0_4: # %if.end
-; CHECK-NEXT:    addq %r13, %rax
-; CHECK-NEXT:    addq %r12, %r15
-; CHECK-NEXT:    addq %rax, %r15
+; CHECK-NEXT:    addq %r13, %r12
+; CHECK-NEXT:    addq %r15, %rax
+; CHECK-NEXT:    addq %r12, %rax
 ; CHECK-NEXT:    addq %r14, %rbx
-; CHECK-NEXT:    addq %r15, %rbx
+; CHECK-NEXT:    addq %rax, %rbx
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40

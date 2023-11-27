@@ -65,7 +65,7 @@ define void @scatter_scale_3(ptr %result, <4 x i64> %idx, <4 x i1> %mask) {
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vpmovd2m %xmm1, %k1
 ; CHECK-NEXT:    vpaddq %ymm0, %ymm0, %ymm1
-; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vscatterqpd %ymm1, (%rdi,%ymm0) {%k1}
 ; CHECK-NEXT:    vzeroupper
@@ -151,7 +151,7 @@ define <4 x double> @gather_scale_3(ptr %result, <4 x i64> %idx, <4 x i1> %mask)
 ; CHECK-NEXT:    vpslld $31, %xmm1, %xmm1
 ; CHECK-NEXT:    vpmovd2m %xmm1, %k1
 ; CHECK-NEXT:    vpaddq %ymm0, %ymm0, %ymm1
-; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm1
+; CHECK-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vgatherqpd (%rdi,%ymm1), %ymm0 {%k1}
 ; CHECK-NEXT:    retq

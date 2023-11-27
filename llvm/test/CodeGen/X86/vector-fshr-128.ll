@@ -1860,9 +1860,9 @@ define <8 x i16> @constant_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,65535,65535]
 ; SSE2-NEXT:    pandn %xmm1, %xmm2
 ; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    por %xmm1, %xmm2
 ; SSE2-NEXT:    paddw %xmm0, %xmm0
 ; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1952,9 +1952,9 @@ define <8 x i16> @constant_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [0,65535,65535,65535,65535,65535,65535,65535]
 ; X86-SSE2-NEXT:    pandn %xmm1, %xmm2
 ; X86-SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE2-NEXT:    por %xmm1, %xmm2
 ; X86-SSE2-NEXT:    paddw %xmm0, %xmm0
 ; X86-SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    por %xmm1, %xmm0
 ; X86-SSE2-NEXT:    por %xmm2, %xmm0
 ; X86-SSE2-NEXT:    retl
   %res = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)

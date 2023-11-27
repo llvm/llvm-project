@@ -11,7 +11,8 @@ define <16 x i32> @stack_fold_vpdpwssd(<16 x i32> %a0, <16 x i32> %a1, <16 x i32
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vpdpwssd {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm0 # 64-byte Folded Reload
+; CHECK-NEXT:    vpmaddwd {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 64-byte Folded Reload
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %a0, <16 x i32> %a1, <16 x i32> %a2)
@@ -25,7 +26,8 @@ define <16 x i32> @stack_fold_vpdpwssd_commuted(<16 x i32> %a0, <16 x i32> %a1, 
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vpdpwssd {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm0 # 64-byte Folded Reload
+; CHECK-NEXT:    vpmaddwd {{[-0-9]+}}(%r{{[sb]}}p), %zmm1, %zmm1 # 64-byte Folded Reload
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %a0, <16 x i32> %a2, <16 x i32> %a1)

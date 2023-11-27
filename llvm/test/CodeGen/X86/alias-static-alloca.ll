@@ -15,9 +15,9 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    addl %edi, %esi
-; CHECK-NEXT:    leal (%rdx,%rcx), %eax
-; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    leal (%rsi,%rdx), %eax
+; CHECK-NEXT:    addl %edi, %ecx
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %a0 = alloca i32

@@ -817,6 +817,11 @@ updateDepth(MachineTraceMetrics::TraceBlockInfo &TBI, const MachineInstr &UseMI,
         .computeOperandLatency(Dep.DefMI, Dep.DefOp, &UseMI, Dep.UseOp);
     Cycle = std::max(Cycle, DepCycle);
   }
+  // If there are no deps, or all the deps are transient, compute the latency of
+  // the instruction.
+  if (!Cycle)
+    Cycle = MTM.SchedModel.computeInstrLatency(&UseMI);
+
   // Remember the instruction depth.
   InstrCycles &MICycles = Cycles[&UseMI];
   MICycles.Depth = Cycle;
@@ -926,12 +931,11 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
       if (I == RegUnits.end())
         continue;
       unsigned DepHeight = I->Cycle;
-      if (!MI.isTransient()) {
+      if (!MI.isTransient())
         // We may not know the UseMI of this dependency, if it came from the
         // live-in list. SchedModel can handle a NULL UseMI.
         DepHeight += SchedModel.computeOperandLatency(&MI, MO.getOperandNo(),
                                                       I->MI, I->Op);
-      }
       Height = std::max(Height, DepHeight);
       // This regunit is dead above MI.
       RegUnits.erase(I);
@@ -1111,10 +1115,8 @@ computeInstrHeights(const MachineBasicBlock *MBB) {
       // Don't process PHI deps. They depend on the specific predecessor, and
       // we'll get them when visiting the predecessor.
       Deps.clear();
-      bool HasPhysRegs = !MI.isPHI() && getDataDeps(MI, Deps, MTM.MRI);
-
-      // There may also be regunit dependencies to include in the height.
-      if (HasPhysRegs)
+      if (!MI.isPHI() && getDataDeps(MI, Deps, MTM.MRI))
+        // There may also be regunit dependencies to include in the height.
         Cycle = updatePhysDepsUpwards(MI, Cycle, RegUnits, MTM.SchedModel,
                                       MTM.TII, MTM.TRI);
 

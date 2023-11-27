@@ -252,17 +252,16 @@ define void @flag_setting() {
 ; CHECK-NEXT:    ldr x9, [x8]
 ; CHECK-NEXT:    ldr x10, [x10]
 ; CHECK-NEXT:    tst x9, x10
-; CHECK-NEXT:    b.gt .LBB2_4
+; CHECK-NEXT:    b.gt .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %test2
+; CHECK-NEXT:    and x11, x9, x10, asr #12
 ; CHECK-NEXT:    tst x9, x10, lsl #63
-; CHECK-NEXT:    b.lt .LBB2_4
-; CHECK-NEXT:  // %bb.2: // %test3
-; CHECK-NEXT:    and x10, x9, x10, asr #12
-; CHECK-NEXT:    cmp x10, #1
-; CHECK-NEXT:    b.ge .LBB2_4
-; CHECK-NEXT:  // %bb.3: // %other_exit
+; CHECK-NEXT:    ccmp x11, #1, #0, ge
+; CHECK-NEXT:    b.lt .LBB2_3
+; CHECK-NEXT:  .LBB2_2: // %common.ret
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_3: // %other_exit
 ; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:  .LBB2_4: // %common.ret
 ; CHECK-NEXT:    ret
   %val1 = load i64, ptr @var1_64
   %val2 = load i64, ptr @var2_64

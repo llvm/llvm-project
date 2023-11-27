@@ -6,7 +6,8 @@
 define <2 x i64> @foo_reg_128(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2, <2 x i64> %3, <2 x i64> %4, <2 x i64> %5) {
 ; AVX-LABEL: foo_reg_128:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpmaddwd %xmm3, %xmm1, %xmm2
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpmaddwd %xmm4, %xmm1, %xmm2
@@ -17,7 +18,8 @@ define <2 x i64> @foo_reg_128(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2, <2 x i64
 ;
 ; AVX512-LABEL: foo_reg_128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm2
+; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmaddwd %xmm3, %xmm1, %xmm2
 ; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmaddwd %xmm4, %xmm1, %xmm2
@@ -61,7 +63,8 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    {vex} vpdpwssd -48(%rdi), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd -48(%rdi), %xmm1, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpmaddwd -16(%rdi), %xmm1, %xmm2
@@ -82,7 +85,8 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd (%rsi,%rcx), %xmm1, %xmm2
+; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    addq $16, %rcx
 ; AVX-NEXT:    cmpq %rcx, %rax
 ; AVX-NEXT:    jne .LBB1_5
@@ -108,7 +112,8 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vpdpwssd -48(%rdi), %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd -48(%rdi), %xmm1, %xmm2
+; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmaddwd -32(%rdi), %xmm1, %xmm2
 ; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmaddwd -16(%rdi), %xmm1, %xmm2
@@ -129,7 +134,8 @@ define <2 x i64> @foo_128(i32 %0, <2 x i64> %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vpdpwssd (%rsi,%rcx), %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd (%rsi,%rcx), %xmm1, %xmm2
+; AVX512-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB1_5
@@ -346,7 +352,8 @@ declare <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>) #1
 define <4 x i64> @foo_reg_256(<4 x i64> %0, <4 x i64> %1, <4 x i64> %2, <4 x i64> %3, <4 x i64> %4, <4 x i64> %5) {
 ; AVX-LABEL: foo_reg_256:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm2
+; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm2
 ; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vpmaddwd %ymm4, %ymm1, %ymm2
@@ -357,7 +364,8 @@ define <4 x i64> @foo_reg_256(<4 x i64> %0, <4 x i64> %1, <4 x i64> %2, <4 x i64
 ;
 ; AVX512-LABEL: foo_reg_256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm2
+; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm2
 ; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmaddwd %ymm4, %ymm1, %ymm2
@@ -408,7 +416,8 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    {vex} vpdpwssd -96(%rdi), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd -96(%rdi), %ymm1, %ymm2
+; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
 ; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    vpmaddwd -32(%rdi), %ymm1, %ymm2
@@ -429,7 +438,8 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
-; AVX-NEXT:    {vex} vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd (%rsi,%rcx), %ymm1, %ymm2
+; AVX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    addq $32, %rcx
 ; AVX-NEXT:    cmpq %rcx, %rax
 ; AVX-NEXT:    jne .LBB4_5
@@ -455,7 +465,8 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB4_8: # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vpdpwssd -96(%rdi), %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd -96(%rdi), %ymm1, %ymm2
+; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmaddwd -64(%rdi), %ymm1, %ymm2
 ; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmaddwd -32(%rdi), %ymm1, %ymm2
@@ -476,7 +487,8 @@ define <4 x i64> @foo_256(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB4_5: # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vpdpwssd (%rsi,%rcx), %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd (%rsi,%rcx), %ymm1, %ymm2
+; AVX512-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    addq $32, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB4_5

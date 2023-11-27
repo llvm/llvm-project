@@ -497,12 +497,11 @@ define i64 @test_mul_by_16(i64 %x) {
 define i64 @test_mul_by_17(i64 %x) {
 ; X86-LABEL: test_mul_by_17:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $4, %ecx
-; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $17, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    shll $4, %ecx
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    retl
 ;

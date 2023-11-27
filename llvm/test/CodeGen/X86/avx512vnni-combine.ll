@@ -4,7 +4,8 @@
 define <8 x i64> @foo_reg_512(<8 x i64> %0, <8 x i64> %1, <8 x i64> %2, <8 x i64> %3, <8 x i64> %4, <8 x i64> %5) {
 ; CHECK-LABEL: foo_reg_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpdpwssd %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vpmaddwd %zmm2, %zmm1, %zmm2
+; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmaddwd %zmm3, %zmm1, %zmm2
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmaddwd %zmm4, %zmm1, %zmm2
@@ -56,7 +57,8 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_8: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpdpwssd -192(%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vpmaddwd -192(%rdi), %zmm1, %zmm2
+; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmaddwd -128(%rdi), %zmm1, %zmm2
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmaddwd -64(%rdi), %zmm1, %zmm2
@@ -77,7 +79,8 @@ define <8 x i64> @foo_512(i32 %0, <8 x i64> %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_5: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vpdpwssd (%rsi,%rcx), %zmm1, %zmm0
+; CHECK-NEXT:    vpmaddwd (%rsi,%rcx), %zmm1, %zmm2
+; CHECK-NEXT:    vpaddd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    addq $64, %rcx
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    jne .LBB1_5

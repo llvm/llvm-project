@@ -6,12 +6,14 @@
 define <4 x i32> @test_pmaddwd_v8i16_add_v4i32(<4 x i32> %a0, <8 x i16> %a1, <8 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v8i16_add_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v8i16_add_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> %a2)
   %2 = add <4 x i32> %1, %a0
@@ -21,12 +23,14 @@ define <4 x i32> @test_pmaddwd_v8i16_add_v4i32(<4 x i32> %a0, <8 x i16> %a1, <8 
 define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_commute(<4 x i32> %a0, <8 x i16> %a1, <8 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v8i16_add_v4i32_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v8i16_add_v4i32_commute:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> %a2)
   %2 = add <4 x i32> %a0, %1
@@ -36,12 +40,14 @@ define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_commute(<4 x i32> %a0, <8 x i16> 
 define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_load1(<4 x i32> %a0, ptr %p1, <8 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v8i16_add_v4i32_load1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v8i16_add_v4i32_load1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a1 = load <8 x i16>, ptr %p1
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> %a2)
@@ -52,12 +58,14 @@ define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_load1(<4 x i32> %a0, ptr %p1, <8 
 define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_load2(<4 x i32> %a0, <8 x i16> %a1, ptr %p2) {
 ; AVX-LABEL: test_pmaddwd_v8i16_add_v4i32_load2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v8i16_add_v4i32_load2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a2 = load <8 x i16>, ptr %p2
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> %a2)
@@ -68,12 +76,14 @@ define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_load2(<4 x i32> %a0, <8 x i16> %a
 define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_commute_load1(<4 x i32> %a0, ptr %p1, <8 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v8i16_add_v4i32_commute_load1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v8i16_add_v4i32_commute_load1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a1 = load <8 x i16>, ptr %p1
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> %a2)
@@ -84,12 +94,14 @@ define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_commute_load1(<4 x i32> %a0, ptr 
 define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_commute_load2(<4 x i32> %a0, <8 x i16> %a1, ptr %p2) {
 ; AVX-LABEL: test_pmaddwd_v8i16_add_v4i32_commute_load2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v8i16_add_v4i32_commute_load2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %xmm1, %xmm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %a2 = load <8 x i16>, ptr %p2
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a1, <8 x i16> %a2)
@@ -100,12 +112,14 @@ define <4 x i32> @test_pmaddwd_v8i16_add_v4i32_commute_load2(<4 x i32> %a0, <8 x
 define <8 x i32> @test_pmaddwd_v16i16_add_v8i32(<8 x i32> %a0, <16 x i16> %a1, <16 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v16i16_add_v8i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm1
+; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v16i16_add_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a1, <16 x i16> %a2)
   %2 = add <8 x i32> %1, %a0
@@ -115,12 +129,14 @@ define <8 x i32> @test_pmaddwd_v16i16_add_v8i32(<8 x i32> %a0, <16 x i16> %a1, <
 define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_commute(<8 x i32> %a0, <16 x i16> %a1, <16 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v16i16_add_v8i32_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm1
+; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v16i16_add_v8i32_commute:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a1, <16 x i16> %a2)
   %2 = add <8 x i32> %a0, %1
@@ -130,12 +146,14 @@ define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_commute(<8 x i32> %a0, <16 x i16
 define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_load1(<8 x i32> %a0, ptr %p1, <16 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v16i16_add_v8i32_load1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v16i16_add_v8i32_load1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a1 = load <16 x i16>, ptr %p1
   %1 = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a1, <16 x i16> %a2)
@@ -146,12 +164,14 @@ define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_load1(<8 x i32> %a0, ptr %p1, <1
 define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_load2(<8 x i32> %a0, <16 x i16> %a1, ptr %p2) {
 ; AVX-LABEL: test_pmaddwd_v16i16_add_v8i32_load2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v16i16_add_v8i32_load2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a2 = load <16 x i16>, ptr %p2
   %1 = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a1, <16 x i16> %a2)
@@ -162,12 +182,14 @@ define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_load2(<8 x i32> %a0, <16 x i16> 
 define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_commute_load1(<8 x i32> %a0, ptr %p1, <16 x i16> %a2) {
 ; AVX-LABEL: test_pmaddwd_v16i16_add_v8i32_commute_load1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v16i16_add_v8i32_commute_load1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a1 = load <16 x i16>, ptr %p1
   %1 = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a1, <16 x i16> %a2)
@@ -178,12 +200,14 @@ define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_commute_load1(<8 x i32> %a0, ptr
 define <8 x i32> @test_pmaddwd_v16i16_add_v8i32_commute_load2(<8 x i32> %a0, <16 x i16> %a1, ptr %p2) {
 ; AVX-LABEL: test_pmaddwd_v16i16_add_v8i32_commute_load2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    {vex} vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_pmaddwd_v16i16_add_v8i32_commute_load2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpdpwssd (%rdi), %ymm1, %ymm0
+; AVX512-NEXT:    vpmaddwd (%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %a2 = load <16 x i16>, ptr %p2
   %1 = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> %a1, <16 x i16> %a2)

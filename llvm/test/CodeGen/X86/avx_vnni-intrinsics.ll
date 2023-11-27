@@ -73,7 +73,8 @@ declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
 define <8 x i32>@test_int_x86_avx_vpdpwssd_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
 ; AVXVNNI-LABEL: test_int_x86_avx_vpdpwssd_256:
 ; AVXVNNI:       # %bb.0:
-; AVXVNNI-NEXT:    {vex} vpdpwssd %ymm2, %ymm1, %ymm0 # encoding: [0xc4,0xe2,0x75,0x52,0xc2]
+; AVXVNNI-NEXT:    vpmaddwd %ymm2, %ymm1, %ymm1 # encoding: [0xc5,0xf5,0xf5,0xca]
+; AVXVNNI-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xfe,0xc1]
 ; AVXVNNI-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512VNNI-LABEL: test_int_x86_avx_vpdpwssd_256:
@@ -89,7 +90,8 @@ declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
 define <4 x i32>@test_int_x86_avx_vpdpwssd_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
 ; AVXVNNI-LABEL: test_int_x86_avx_vpdpwssd_128:
 ; AVXVNNI:       # %bb.0:
-; AVXVNNI-NEXT:    {vex} vpdpwssd %xmm2, %xmm1, %xmm0 # encoding: [0xc4,0xe2,0x71,0x52,0xc2]
+; AVXVNNI-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0xf5,0xca]
+; AVXVNNI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xfe,0xc1]
 ; AVXVNNI-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512VNNI-LABEL: test_int_x86_avx_vpdpwssd_128:

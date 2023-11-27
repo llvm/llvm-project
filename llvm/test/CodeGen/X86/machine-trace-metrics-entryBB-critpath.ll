@@ -7,15 +7,15 @@
 ; MinInstr strategy is used. The behavior is demonstrated on early if conversion
 ; pass.
 
-; CHECK: TBB: MinInstr trace %bb.0 --> %bb.0 --> %bb.2: 8 instrs. 30 cycles.
+; CHECK: TBB: MinInstr trace %bb.0 --> %bb.0 --> %bb.2: 8 instrs. 31 cycles.
 ; CHECK: %bb.0
 ; CHECK:     -> %bb.2
 
-; CHECK: FBB: MinInstr trace %bb.0 --> %bb.1 --> %bb.2: 10 instrs. 32 cycles.
+; CHECK: FBB: MinInstr trace %bb.0 --> %bb.1 --> %bb.2: 10 instrs. 33 cycles.
 ; CHECK: %bb.1 <- %bb.0
 ; CHECK:     -> %bb.2
 
-; CHECK: Resource length 10, minimal critical path 30
+; CHECK: Resource length 10, minimal critical path 31
 ; CHECK: If-converting
 
 define i32 @_Z3fooiidd(i32 %a, i32 %b, double %d, double %e) #0 {

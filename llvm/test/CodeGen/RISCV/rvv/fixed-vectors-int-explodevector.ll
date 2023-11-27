@@ -518,15 +518,15 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV32-NEXT:    add a2, a2, a3
 ; RV32-NEXT:    add a2, a2, a4
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a5, a5, a6
 ; RV32-NEXT:    add a0, a0, a5
+; RV32-NEXT:    add a0, a0, a6
 ; RV32-NEXT:    add a7, a7, t0
-; RV32-NEXT:    add a7, a7, t1
 ; RV32-NEXT:    add a0, a0, a7
-; RV32-NEXT:    add t2, t2, t3
-; RV32-NEXT:    add t2, t2, t4
-; RV32-NEXT:    add t2, t2, t5
-; RV32-NEXT:    add a0, a0, t2
+; RV32-NEXT:    add t1, t1, t2
+; RV32-NEXT:    add t1, t1, t3
+; RV32-NEXT:    add a0, a0, t1
+; RV32-NEXT:    add t4, t4, t5
+; RV32-NEXT:    add a0, a0, t4
 ; RV32-NEXT:    addi sp, s0, -128
 ; RV32-NEXT:    lw ra, 124(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 120(sp) # 4-byte Folded Reload
@@ -578,15 +578,15 @@ define i32 @explode_16xi32(<16 x i32> %v) {
 ; RV64-NEXT:    add a2, a2, a3
 ; RV64-NEXT:    add a2, a2, a4
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a5, a5, a6
 ; RV64-NEXT:    add a0, a0, a5
+; RV64-NEXT:    add a0, a0, a6
 ; RV64-NEXT:    add a7, a7, t0
-; RV64-NEXT:    add a7, a7, t1
 ; RV64-NEXT:    add a0, a0, a7
-; RV64-NEXT:    add t2, t2, t3
-; RV64-NEXT:    add t2, t2, t4
-; RV64-NEXT:    add t2, t2, t5
-; RV64-NEXT:    addw a0, a0, t2
+; RV64-NEXT:    add t1, t1, t2
+; RV64-NEXT:    add t1, t1, t3
+; RV64-NEXT:    add a0, a0, t1
+; RV64-NEXT:    add t4, t4, t5
+; RV64-NEXT:    addw a0, a0, t4
 ; RV64-NEXT:    addi sp, s0, -128
 ; RV64-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
