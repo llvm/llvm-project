@@ -4642,7 +4642,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512BW-ONLY-NEXT:    # zmm4 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512BW-ONLY-NEXT:    vpermt2q %zmm1, %zmm4, %zmm10
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm0, %zmm9
-; AVX512BW-ONLY-NEXT:    vpermt2q %zmm5, %zmm29, %zmm9
+; AVX512BW-ONLY-NEXT:    vpermt2q %zmm8, %zmm29, %zmm9
 ; AVX512BW-ONLY-NEXT:    vpermt2q %zmm0, %zmm4, %zmm8
 ; AVX512BW-ONLY-NEXT:    vmovdqa64 %zmm7, %zmm1
 ; AVX512BW-ONLY-NEXT:    vpermt2q %zmm12, %zmm7, %zmm3
@@ -5087,7 +5087,7 @@ define void @load_i64_stride7_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQBW-ONLY-NEXT:    # zmm4 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; AVX512DQBW-ONLY-NEXT:    vpermt2q %zmm1, %zmm4, %zmm10
 ; AVX512DQBW-ONLY-NEXT:    vmovdqa64 %zmm0, %zmm9
-; AVX512DQBW-ONLY-NEXT:    vpermt2q %zmm5, %zmm29, %zmm9
+; AVX512DQBW-ONLY-NEXT:    vpermt2q %zmm8, %zmm29, %zmm9
 ; AVX512DQBW-ONLY-NEXT:    vpermt2q %zmm0, %zmm4, %zmm8
 ; AVX512DQBW-ONLY-NEXT:    vmovdqa64 %zmm7, %zmm1
 ; AVX512DQBW-ONLY-NEXT:    vpermt2q %zmm12, %zmm7, %zmm3
