@@ -52,7 +52,6 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <optional>
-#include <string>
 
 using namespace clang;
 using namespace llvm;
