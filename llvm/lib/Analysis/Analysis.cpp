@@ -43,7 +43,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeLazyBranchProbabilityInfoPassPass(Registry);
   initializeLazyBlockFrequencyInfoPassPass(Registry);
   initializeLazyValueInfoWrapperPassPass(Registry);
-  initializeLazyValueInfoPrinterPass(Registry);
   initializeLoopInfoWrapperPassPass(Registry);
   initializeMemoryDependenceWrapperPassPass(Registry);
   initializeModuleSummaryIndexWrapperPassPass(Registry);
