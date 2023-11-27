@@ -308,7 +308,7 @@ struct SemiNCAInfo {
     for (unsigned i = 2; i < NextDFSNum; ++i) {
       auto &WInfo = *NumToInfo[i];
       assert(WInfo.Semi != 0);
-      const unsigned SDomNum = NodeToInfo[NumToNode[WInfo.Semi]].DFSNum;
+      const unsigned SDomNum = NumToInfo[WInfo.Semi]->DFSNum;
       NodePtr WIDomCandidate = WInfo.IDom;
       while (NodeToInfo[WIDomCandidate].DFSNum > SDomNum)
         WIDomCandidate = NodeToInfo[WIDomCandidate].IDom;
