@@ -661,8 +661,7 @@ public:
           SmallVector<Value> srcDcvs;
           srcDcvs.reserve(srcRank);
           for (Dimension d = 0; d < srcRank; d++) {
-            // FIXME: `toStoredDim` is deprecated
-            Level lvl = toStoredDim(encSrc, d);
+            Level lvl = toLvl(encSrc, d);
             srcDcvs.push_back(srcLcvs[lvl]);
           }
 
@@ -766,8 +765,7 @@ public:
           SmallVector<Value> srcDcvs;
           srcDcvs.reserve(dimRank);
           for (Dimension d = 0; d < dimRank; d++) {
-            // FIXME: `toStoredDim` is deprecated
-            Level lvl = toStoredDim(encSrc, d);
+            Level lvl = toLvl(encSrc, d);
             srcDcvs.push_back(srcLcvs[lvl]);
           }
           SmallVector<Value> dstDcvs;
@@ -872,9 +870,8 @@ struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
       return failure();
 
     if (stt.isPermutation()) {
-      // FIXME: `toStoredDim` is deprecated
       rewriter.replaceOpWithNewOp<LvlOp>(op, op.getSource(),
-                                         toStoredDim(stt.getEncoding(), *dim));
+                                         toLvl(stt.getEncoding(), *dim));
       return success();
     }
 
