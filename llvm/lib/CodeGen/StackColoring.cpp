@@ -899,6 +899,13 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   unsigned FixedMemOp = 0;
   unsigned FixedDbg = 0;
 
+  // Remove debug information for deleted slots.
+  erase_if(MF->getVariableDbgInfo(), [&](auto &VI) {
+    int Slot = VI.getStackSlot();
+    return Slot >= 0 && Intervals[Slot]->empty() &&
+           InterestingSlots.test(Slot) && !ConservativeSlots.test(Slot);
+  });
+
   // Remap debug information that refers to stack slots.
   for (auto &VI : MF->getVariableDbgInfo()) {
     if (!VI.Var || !VI.inStackSlot())
