@@ -1105,6 +1105,8 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
 
 bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
+         "Unexpected opcode");
   // Find the intrinsic ID.
   unsigned IntrinID = cast<GIntrinsic>(MI).getIntrinsicID();
 
