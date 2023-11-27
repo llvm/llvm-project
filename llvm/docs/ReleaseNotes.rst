@@ -199,6 +199,9 @@ Changes to the C API
   The option structure exposes an additional setting (i.e., the target ABI) and
   provides default values for unspecified settings.
 
+* Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for setting/getting the new nneg flag
+  on zext instructions
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
