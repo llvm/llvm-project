@@ -700,6 +700,17 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
+                                           ArrayRef<APFloat> Ops) {
+  SmallVector<SrcOp> TmpVec;
+  TmpVec.reserve(Ops.size());
+  LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
+  for (const auto &Op : Ops)
+    TmpVec.push_back(buildFConstant(EltTy, Op));
+  return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
                                                        const SrcOp &Src) {
   SmallVector<SrcOp, 8> TmpVec(Res.getLLTTy(*getMRI()).getNumElements(), Src);

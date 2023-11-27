@@ -31,9 +31,9 @@ define amdgpu_kernel void @v_pack_b32_v2f16(ptr addrspace(1) %in0, ptr addrspace
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_load_ushort v2, v0, s[2:3] glc dlc
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_add_f16_e32 v0, 2.0, v1
-; GISEL-NEXT:    v_add_f16_e32 v1, 2.0, v2
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GISEL-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GISEL-NEXT:    v_pk_add_f16 v0, v0, 2.0 op_sel_hi:[1,0]
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; use v0
 ; GISEL-NEXT:    ;;#ASMEND

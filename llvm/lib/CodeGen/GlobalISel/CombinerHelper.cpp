@@ -6224,3 +6224,88 @@ void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
   MI.getOperand(2).setReg(LHSReg);
   Observer.changedInstr(MI);
 }
+
+// Transform build_vector of binop(_,C) -> binop(BV, constant BV).
+bool CombinerHelper::matchBuildVectorToBinOp(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo) {
+  GBuildVector *BuildVector = cast<GBuildVector>(&MI);
+  Register Dst = BuildVector->getReg(0);
+
+  unsigned NumOfSources = BuildVector->getNumSources();
+  if (NumOfSources == 1)
+    return false;
+
+  LLT ElementTy = MRI.getType(BuildVector->getSourceReg(0));
+  LLT BVTy = MRI.getType(BuildVector->getReg(0));
+
+  MachineInstr *FirstDef = MRI.getVRegDef(BuildVector->getSourceReg(0));
+  const unsigned Opcode = FirstDef->getOpcode();
+  SmallVector<Register> LHS;
+
+  if (isa<GIBinOp>(FirstDef)) {
+    SmallVector<APInt> RHS;
+
+    // Collect registers and constants and check for non-conformance.
+    for (unsigned I = 0; I < NumOfSources; ++I) {
+      // Check for integer binop of the same kind.
+      GIBinOp *BinOp = getOpcodeDef<GIBinOp>(BuildVector->getSourceReg(I), MRI);
+      if (!BinOp || BinOp->getOpcode() != Opcode)
+        return false;
+      // Check for constant on rhs.
+      auto IConstant =
+          getIConstantVRegValWithLookThrough(BinOp->getRHSReg(), MRI);
+      if (!IConstant)
+        return false;
+      LHS.push_back(BinOp->getLHSReg());
+      RHS.push_back(IConstant->Value);
+    }
+
+    if (!isLegalOrBeforeLegalizer({Opcode, {BVTy, ElementTy}}))
+      return false;
+
+    // Binop of build_vector, integer constant build_vector.
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.setInstrAndDebugLoc(*BuildVector);
+      Register First = MRI.createGenericVirtualRegister(BVTy);
+      Register Second = MRI.createGenericVirtualRegister(BVTy);
+      B.buildBuildVector(First, LHS);
+      B.buildBuildVectorConstant(Second, RHS);
+      B.buildInstr(Opcode, {Dst}, {First, Second}); // DEBUG: did not happen
+    };
+    return true;
+  } else if (isa<GFBinOp>(FirstDef)) {
+    SmallVector<APFloat> RHS;
+
+    // Collect registers and constants and check for non-conformance.
+    for (unsigned I = 0; I < NumOfSources; ++I) {
+      // Check for float binop of the same kind.
+      GFBinOp *BinOp = getOpcodeDef<GFBinOp>(BuildVector->getSourceReg(I), MRI);
+      if (!BinOp || BinOp->getOpcode() != Opcode)
+        return false;
+      // Check for float constant on rhs.
+      auto FConstant =
+          getFConstantVRegValWithLookThrough(BinOp->getRHSReg(), MRI);
+      if (!FConstant)
+        return false;
+      LHS.push_back(BinOp->getLHSReg());
+      RHS.push_back(FConstant->Value);
+    }
+
+    if (!isLegalOrBeforeLegalizer({Opcode, {BVTy, ElementTy}}))
+      return false;
+
+    // Binop of build_vector, floating point constant build_vector.
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.setInstrAndDebugLoc(*BuildVector);
+      Register First = MRI.createGenericVirtualRegister(BVTy);
+      Register Second = MRI.createGenericVirtualRegister(BVTy);
+      B.buildBuildVector(First, LHS);
+      B.buildBuildVectorConstant(Second, RHS);
+      B.buildInstr(Opcode, {Dst}, {First, Second});
+    };
+    return true;
+  } else {
+    // Not a binop.
+    return false;
+  }
+}

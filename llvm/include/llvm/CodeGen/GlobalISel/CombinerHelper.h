@@ -812,6 +812,9 @@ public:
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
+  /// Transform build_vector (binop(_, C), ...) -> binop(bv, constant bv)
+  bool matchBuildVectorToBinOp(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
