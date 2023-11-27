@@ -310,5 +310,6 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
            LegalizerHelper::Legalized;
   }
   }
+
   llvm_unreachable("expected switch to return");
 }
