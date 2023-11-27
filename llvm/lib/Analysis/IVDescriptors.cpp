@@ -725,7 +725,7 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
 
     const ConstantRange IVRange = SE->getSignedRange(AR);
     unsigned NumBits = Ty->getIntegerBitWidth();
-    // Keep the minmum value of the recurrence type as the sentinel value.
+    // Keep the minimum value of the recurrence type as the sentinel value.
     // The maximum acceptable range for the increasing induction variable,
     // called the valid range, will be defined as
     //   [<sentinel value> + 1, SignedMin(<recurrence type>))
