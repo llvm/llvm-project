@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
@@ -755,14 +756,33 @@ struct VectorReductionToFPDotProd final
     if (!resultType)
       return rewriter.notifyMatchFailure(op, "result is not a float");
 
-    auto mul = adaptor.getVector().getDefiningOp<arith::MulFOp>();
-    if (!mul)
-      return rewriter.notifyMatchFailure(
-          op, "reduction operand is not 'arith.mulf'");
+    auto vectorType = dyn_cast<VectorType>(adaptor.getVector().getType());
+    if (!vectorType) {
+      assert(isa<FloatType>(adaptor.getVector().getType()) &&
+             "Expected the vector to be scalarized");
+      rewriter.replaceOp(op, adaptor.getVector());
+      return success();
+    }
 
     Location loc = op.getLoc();
-    Value res = rewriter.create<spirv::DotOp>(loc, resultType, mul.getLhs(),
-                                              mul.getRhs());
+    Value lhs;
+    Value rhs;
+    if (auto mul = adaptor.getVector().getDefiningOp<arith::MulFOp>()) {
+      lhs = mul.getLhs();
+      rhs = mul.getRhs();
+    } else {
+      // If the operand is not a mul, use a vector of ones for the dot operand
+      // to just sum up all values.
+      lhs = adaptor.getVector();
+      Attribute oneAttr =
+          rewriter.getFloatAttr(vectorType.getElementType(), 1.0);
+      oneAttr = SplatElementsAttr::get(vectorType, oneAttr);
+      rhs = rewriter.create<spirv::ConstantOp>(loc, vectorType, oneAttr);
+    }
+    assert(lhs);
+    assert(rhs);
+
+    Value res = rewriter.create<spirv::DotOp>(loc, resultType, lhs, rhs);
     if (op.getAcc())
       res = rewriter.create<spirv::FAddOp>(loc, adaptor.getAcc(), res);
 
