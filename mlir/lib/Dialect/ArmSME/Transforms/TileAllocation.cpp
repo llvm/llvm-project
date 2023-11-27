@@ -40,11 +40,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #define DEBUG_TYPE "allocate-arm-sme-tiles"
@@ -149,6 +148,53 @@ static FailureOr<unsigned> allocateTileId(ArmSMETileType tileType,
   return failure();
 }
 
+/// Collects transitive uses of a root value through control flow. This can
+/// handle basic SCF constructs, along with control flow (br and cond_br).
+/// Simple loops work at the SCF level, while more complex control flow can be
+/// delt with after lowering to CF. This can be used to implement basic tile
+/// allocation.
+static void findDependantOps(Value rootValue,
+                             SetVector<Operation *> &dependantOps) {
+  auto traverseCorrespondingValues = [&](auto inputValues, auto exitValues) {
+    for (auto [idx, value] : llvm::enumerate(inputValues)) {
+      if (value != rootValue)
+        continue;
+      findDependantOps(exitValues[idx], dependantOps);
+    }
+  };
+  for (Operation *user : rootValue.getUsers()) {
+    if (dependantOps.contains(user))
+      continue;
+    dependantOps.insert(user);
+    if (auto branchOp = llvm::dyn_cast<cf::BranchOp>(user)) {
+      // (CF) Follow branch.
+      traverseCorrespondingValues(branchOp.getDestOperands(),
+                                  user->getSuccessor(0)->getArguments());
+    } else if (auto condBranchOp = llvm::dyn_cast<cf::CondBranchOp>(user)) {
+      // (CF) Follow true branch.
+      traverseCorrespondingValues(condBranchOp.getTrueOperands(),
+                                  user->getSuccessor(0)->getArguments());
+      // (CF) Follow false branch.
+      traverseCorrespondingValues(condBranchOp.getFalseOperands(),
+                                  user->getSuccessor(1)->getArguments());
+    } else if (auto loop = llvm::dyn_cast<LoopLikeOpInterface>(user)) {
+      // (SCF) Follow iter_args of (basic) loops (e.g. for loops).
+      traverseCorrespondingValues(loop.getInits(), loop.getRegionIterArgs());
+    } else if (user->hasTrait<OpTrait::ReturnLike>()) {
+      // (SCF) Follow yields of (basic) control flow (e.g. for loops).
+      auto parent = user->getParentOp();
+      // Don't traverse outside a function.
+      if (llvm::isa<FunctionOpInterface>(parent))
+        continue;
+      traverseCorrespondingValues(user->getOperands(), parent->getResults());
+    } else {
+      // Otherwise, assume users of _any_ result are dependant.
+      for (Value result : user->getResults())
+        findDependantOps(result, dependantOps);
+    }
+  }
+}
+
 struct AssignTileIDsPattern
     : public OpInterfaceRewritePattern<ArmSMETileOpInterface> {
   using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
@@ -177,7 +223,7 @@ struct AssignTileIDsPattern
 
     // Find all the ops that (transitively) depend on this tile.
     SetVector<Operation *> dependantOps;
-    getForwardSlice(tileOp.getOperation(), &dependantOps);
+    findDependantOps(tileOp->getResult(0), dependantOps);
 
     // Set all operations to use the same tile ID.
     // This is a naive tile allocation scheme, but works for common cases. For
