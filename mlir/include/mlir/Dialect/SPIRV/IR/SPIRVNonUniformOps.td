@@ -997,4 +997,304 @@ def SPIRV_GroupNonUniformUMinOp : SPIRV_GroupNonUniformArithmeticOp<"GroupNonUni
 
 // -----
 
+def SPIRV_GroupNonUniformBitwiseAndOp :
+  SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformBitwiseAnd",
+    SPIRV_Integer, []> {
+  let summary = [{
+    A bitwise `and` group operation of all Value operands contributed by active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is ~0. If Operation is ClusteredReduce,
+    ClusterSize must be present.
+
+    The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %scalar = ... : i32
+    %vector = ... : vector<4xi32>
+    %0 = spirv.GroupNonUniformBitwiseAnd "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformBitwiseAnd "Subgroup" "ClusteredReduce"
+           %vector cluster_size(%four) : vector<4xi32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformArithmetic,
+                SPIRV_C_GroupNonUniformClustered,
+                SPIRV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformBitwiseOrOp :
+  SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformBitwiseOr",
+    SPIRV_Integer, []> {
+  let summary = [{
+    A bitwise `or` group operation of all Value operands contributed by active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0. If Operation is ClusteredReduce,
+    ClusterSize must be present.
+
+    The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %scalar = ... : i32
+    %vector = ... : vector<4xi32>
+    %0 = spirv.GroupNonUniformBitwiseOr "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformBitwiseOr "Subgroup" "ClusteredReduce"
+           %vector cluster_size(%four) : vector<4xi32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformArithmetic,
+                SPIRV_C_GroupNonUniformClustered,
+                SPIRV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformBitwiseXorOp :
+  SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformBitwiseXor",
+    SPIRV_Integer, []> {
+  let summary = [{
+    A bitwise `xor` group operation of all Value operands contributed by active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0. If Operation is ClusteredReduce,
+    ClusterSize must be present.
+
+    The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %scalar = ... : i32
+    %vector = ... : vector<4xi32>
+    %0 = spirv.GroupNonUniformBitwiseXor "Workgroup" "Reduce" %scalar : i32
+    %1 = spirv.GroupNonUniformBitwiseXor "Subgroup" "ClusteredReduce"
+           %vector cluster_size(%four) : vector<4xi32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformArithmetic,
+                SPIRV_C_GroupNonUniformClustered,
+                SPIRV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformLogicalAndOp :
+  SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformLogicalAnd",
+    SPIRV_Bool, []> {
+  let summary = [{
+    A logical `and` group operation of all Value operands contributed by active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is ~0. If Operation is ClusteredReduce,
+    ClusterSize must be present.
+
+    The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %scalar = ... : i1
+    %vector = ... : vector<4xi1>
+    %0 = spirv.GroupNonUniformLogicalAnd "Workgroup" "Reduce" %scalar : i1
+    %1 = spirv.GroupNonUniformLogicalAnd "Subgroup" "ClusteredReduce"
+           %vector cluster_size(%four) : vector<4xi1>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformArithmetic,
+                SPIRV_C_GroupNonUniformClustered,
+                SPIRV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformLogicalOrOp :
+  SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformLogicalOr",
+    SPIRV_Bool, []> {
+  let summary = [{
+    A logical `or` group operation of all Value operands contributed by active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0. If Operation is ClusteredReduce,
+    ClusterSize must be present.
+
+    The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %scalar = ... : i1
+    %vector = ... : vector<4xi1>
+    %0 = spirv.GroupNonUniformLogicalOr "Workgroup" "Reduce" %scalar : i1
+    %1 = spirv.GroupNonUniformLogicalOr "Subgroup" "ClusteredReduce"
+           %vector cluster_size(%four) : vector<4xi1>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformArithmetic,
+                SPIRV_C_GroupNonUniformClustered,
+                SPIRV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformLogicalXorOp :
+  SPIRV_GroupNonUniformArithmeticOp<"GroupNonUniformLogicalXor",
+    SPIRV_Bool, []> {
+  let summary = [{
+    A logical `xor` group operation of all Value operands contributed by active
+    invocations in the group.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The identity I for Operation is 0. If Operation is ClusteredReduce,
+    ClusterSize must be present.
+
+    The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %scalar = ... : i1
+    %vector = ... : vector<4xi1>
+    %0 = spirv.GroupNonUniformLogicalXor "Workgroup" "Reduce" %scalar : i1
+    %1 = spirv.GroupNonUniformLogicalXor "Subgroup" "ClusteredReduce"
+           %vector cluster_size(%four) : vector<4xi>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformArithmetic,
+                SPIRV_C_GroupNonUniformClustered,
+                SPIRV_C_GroupNonUniformPartitionedNV]>
+  ];
+}
+
+// -----
+
 #endif // MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
