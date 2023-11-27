@@ -480,13 +480,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return S1 == S2;
 
   // Check for statements with similar syntax but different AST.
-  // The unary and binary operators (like '+', '&') can be parsed as
-  // CXXOperatorCall too (and UnaryOperator or BinaryOperator).
-  // This depends on arguments with unresolved type and on the name lookup.
-  // The lookup results can be different in a "From" and "To" AST even if the
-  // compared structure is otherwise equivalent. For this reason we must treat
-  // these operators as equivalent even if they are represented by different AST
-  // nodes.
+  // A UnaryOperator node is more lightweight than a CXXOperatorCallExpr node.
+  // The more heavyweight node is only created if the definition-time name
+  // lookup had any results. The lookup results are stored CXXOperatorCallExpr
+  // only. The lookup results can be different in a "From" and "To" AST even if
+  // the compared structure is otherwise equivalent. For this reason we must
+  // treat a similar unary/binary operator node and CXXOperatorCall node as
+  // equivalent.
   if (const auto *E2CXXOperatorCall = dyn_cast<CXXOperatorCallExpr>(S2)) {
     if (const auto *E1Unary = dyn_cast<UnaryOperator>(S1))
       return IsStructurallyEquivalent(Context, E1Unary, E2CXXOperatorCall);
