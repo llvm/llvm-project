@@ -561,6 +561,18 @@ func.func @reduction_addf_one_elem(%arg0: vector<1xf32>) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func @reduction_addf_one_elem_acc
+//  CHECK-SAME:  (%[[ARG0:.+]]: vector<1xf32>, %[[ACC:.+]]: f32)
+//  CHECK:       %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : vector<1xf32> to f32
+//  CHECK:       %[[RES:.+]] = spirv.FAdd %[[ACC]], %[[RHS]] : f32
+//  CHECK:       return %[[RES]] : f32
+func.func @reduction_addf_one_elem_acc(%arg0: vector<1xf32>, %acc: f32) -> f32 {
+  %red = vector.reduction <add>, %arg0, %acc : vector<1xf32> into f32
+  return %red : f32
+}
+
+// -----
+
 // CHECK-LABEL: func @reduction_mul
 //  CHECK-SAME: (%[[V:.+]]: vector<3xf32>, %[[S:.+]]: f32)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>

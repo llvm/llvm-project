@@ -760,6 +760,12 @@ struct VectorReductionToFPDotProd final
     if (!vectorType) {
       assert(isa<FloatType>(adaptor.getVector().getType()) &&
              "Expected the vector to be scalarized");
+      if (op.getAcc()) {
+        rewriter.replaceOpWithNewOp<spirv::FAddOp>(op, adaptor.getAcc(),
+                                                   adaptor.getVector());
+        return success();
+      }
+
       rewriter.replaceOp(op, adaptor.getVector());
       return success();
     }
