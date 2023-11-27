@@ -1899,7 +1899,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
   IRBuilder<> Builder(BB);
   const int AlignmentValue = 32;
   AllocaInst *Alloc1 =
-      Builder.CreateAlloca(Builder.getInt8PtrTy(), Builder.getInt64(1));
+      Builder.CreateAlloca(Builder.getPtrTy(), Builder.getInt64(1));
   LoadInst *Load1 = Builder.CreateLoad(Alloc1->getAllocatedType(), Alloc1);
   MapVector<Value *, Value *> AlignedVars;
   AlignedVars.insert({Load1, Builder.getInt64(AlignmentValue)});
