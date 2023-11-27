@@ -311,14 +311,11 @@ static bool readPointerToBuffer(const Context &Ctx, const Pointer &FromPtr,
           unsigned ValueReprBytes = Val.valueReprBytes(ASTCtx);
           assert(ObjectReprBytes >= ValueReprBytes);
 
-          std::byte *Buff =
-              (std::byte *)std::malloc(ObjectReprChars.getQuantity());
-          Val.bitcastToMemory(Buff);
-
+          llvm::SmallVector<std::byte> Buff(ObjectReprChars.getQuantity());
+          Val.bitcastToMemory(Buff.data());
           if (BigEndian)
-            swapBytes(Buff, BitWidth / 8);
-          Bits.pushData(Buff, BitOffset, BitWidth);
-          std::free(Buff);
+            swapBytes(Buff.data(), BitWidth / 8);
+          Bits.pushData(Buff.data(), BitOffset, BitWidth);
         });
         return true;
       });
@@ -386,17 +383,16 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
           const auto &Sem = ASTCtx.getFloatTypeSemantics(FloatType);
 
           CharUnits ObjectReprChars = ASTCtx.getTypeSizeInChars(P.getType());
-          const std::byte *M = Bytes.getBytes(BitOffset, 1234);
-          std::byte *Buff =
-              (std::byte *)std::malloc(ObjectReprChars.getQuantity());
-          std::memcpy(Buff, M, ObjectReprChars.getQuantity());
+          llvm::SmallVector<std::byte> Buff(ObjectReprChars.getQuantity());
+          const std::byte *M =
+              Bytes.getBytes(BitOffset, ObjectReprChars.getQuantity());
+          std::memcpy(Buff.data(), M, ObjectReprChars.getQuantity());
 
           if (BigEndian)
-            swapBytes(Buff, ObjectReprChars.getQuantity());
+            swapBytes(Buff.data(), ObjectReprChars.getQuantity());
 
-          P.deref<Floating>() = Floating::bitcastFromMemory(Buff, Sem);
+          P.deref<Floating>() = Floating::bitcastFromMemory(Buff.data(), Sem);
           P.initialize();
-          std::free(Buff);
           return true;
         }
         if (T == PT_Ptr) {
@@ -435,16 +431,14 @@ bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
 
           assert(!P.getField()->isBitField());
 
-          std::byte *Copy = (std::byte *)std::malloc(ValueReprBits / 8);
-          const std::byte *M = Bytes.getBytes(BitOffset, 1234);
+          llvm::SmallVector<std::byte> Copy(ValueReprBits / 8);
+          const std::byte *M = Bytes.getBytes(BitOffset, ValueReprBits / 8);
 
-          std::memcpy(Copy, M, ValueReprBits / 8);
+          std::memcpy(Copy.data(), M, ValueReprBits / 8);
 
-          if (BigEndian) {
-            swapBytes(Copy, ValueReprBits / 8);
-          }
-          Val = T::bitcastFromMemory(Copy, Val.bitWidth());
-          std::free(Copy);
+          if (BigEndian)
+            swapBytes(Copy.data(), ValueReprBits / 8);
+          Val = T::bitcastFromMemory(Copy.data(), Val.bitWidth());
 
           if (!HasIndeterminateBits)
             P.initialize();
