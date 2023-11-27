@@ -40,9 +40,11 @@ jobs:
           path: code-format-tools
 
       - name: "Listed files"
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           echo "Formatting files:"
-          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          echo "$CHANGED_FILES"
 
       - name: Install clang-format
         uses: aminya/setup-cpp@v1
