@@ -653,13 +653,10 @@ bool RISCVInstructionSelector::selectMergeValues(
   Register Dst = MI.getOperand(0).getReg();
   Register Lo = MI.getOperand(1).getReg();
   Register Hi = MI.getOperand(2).getReg();
-  if (!isRegInFprb(Dst, MRI) || !(isRegInGprb(Lo, MRI) && isRegInGprb(Hi, MRI)))
+  if (!isRegInFprb(Dst, MRI) || !isRegInGprb(Lo, MRI) || !isRegInGprb(Hi, MRI))
     return false;
-  MachineInstr *Result =
-      MIB.buildInstr(RISCV::BuildPairF64Pseudo, {Dst}, {Lo, Hi});
-
-  MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+  MI.setDesc(TII.get(RISCV::BuildPairF64Pseudo));
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 bool RISCVInstructionSelector::selectUnmergeValues(
@@ -672,12 +669,10 @@ bool RISCVInstructionSelector::selectUnmergeValues(
   Register Src = MI.getOperand(2).getReg();
   Register Lo = MI.getOperand(0).getReg();
   Register Hi = MI.getOperand(1).getReg();
-  if (!isRegInFprb(Src, MRI) || !(isRegInGprb(Lo, MRI) && isRegInGprb(Hi, MRI)))
+  if (!isRegInFprb(Src, MRI) || !isRegInGprb(Lo, MRI) || !isRegInGprb(Hi, MRI))
     return false;
-  MachineInstr *Result = MIB.buildInstr(RISCV::SplitF64Pseudo, {Lo, Hi}, {Src});
-
-  MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+  MI.setDesc(TII.get(RISCV::SplitF64Pseudo));
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
