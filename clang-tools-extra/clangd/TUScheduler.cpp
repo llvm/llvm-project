@@ -1657,7 +1657,7 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
 
   if (Opts.ExperimentalModulesSupport)
     ModulesManager = ModulesBuilder::create(
-        ModulesBuilder::ModulesBuilderKind::StandaloneModulesBuilder, CDB);
+        ModulesBuilder::ModulesBuilderKind::ReusableModulesBuilder, CDB);
 }
 
 TUScheduler::~TUScheduler() {

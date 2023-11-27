@@ -240,7 +240,7 @@ public:
     auto RequiredModuleBuilder =
         Opts.ExperimentalModulesSupport
             ? ModulesBuilder::create(
-                  ModulesBuilder::ModulesBuilderKind::StandaloneModulesBuilder,
+                  ModulesBuilder::ModulesBuilderKind::ReusableModulesBuilder,
                   *CDB.get())
             : nullptr;
 
