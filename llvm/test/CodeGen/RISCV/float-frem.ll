@@ -19,12 +19,7 @@ define float @frem_f32(float %a, float %b) nounwind {
 ;
 ; RV64IF-LABEL: frem_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call fmodf@plt
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    addi sp, sp, 16
-; RV64IF-NEXT:    ret
+; RV64IF-NEXT:    tail fmodf@plt
 ;
 ; RV32IZFINX-LABEL: frem_f32:
 ; RV32IZFINX:       # %bb.0:

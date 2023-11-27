@@ -113,7 +113,7 @@
 // MCPU-SIFIVE-E24: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E24: "-target-feature" "+c"
 // MCPU-SIFIVE-E24: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-E24: "-target-abi" "ilp32"
+// MCPU-SIFIVE-E24: "-target-abi" "ilp32f"
 
 // mcpu with default march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e34 | FileCheck -check-prefix=MCPU-SIFIVE-E34 %s
@@ -121,7 +121,7 @@
 // MCPU-SIFIVE-E34: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E34: "-target-feature" "+c"
 // MCPU-SIFIVE-E34: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-E34: "-target-abi" "ilp32"
+// MCPU-SIFIVE-E34: "-target-abi" "ilp32f"
 
 // mcpu with mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s21 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S21 %s
@@ -178,7 +178,7 @@
 // MCPU-SIFIVE-E76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f"
 // MCPU-SIFIVE-E76: "-target-feature" "+c"
 // MCPU-SIFIVE-E76: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
-// MCPU-SIFIVE-E76: "-target-abi" "ilp32"
+// MCPU-SIFIVE-E76: "-target-abi" "ilp32f"
 
 // mcpu with mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u74 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U74 %s
