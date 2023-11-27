@@ -3532,8 +3532,13 @@ public:
   /// Placeholder for now, should just ignore the directives after emitting a
   /// diagnostic. Eventually will be split into a few functions to parse
   /// different situations.
+public:
   DeclGroupPtrTy ParseOpenACCDirectiveDecl();
   StmtResult ParseOpenACCDirectiveStmt();
+
+private:
+  void ParseOpenACCDirective();
+  ExprResult ParseOpenACCRoutineName();
 
 private:
   //===--------------------------------------------------------------------===//
