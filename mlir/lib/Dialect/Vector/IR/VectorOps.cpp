@@ -191,9 +191,9 @@ bool mlir::vector::isDisjointTransferIndices(
   if (transferA.getVectorType() != transferB.getVectorType())
     return false;
   unsigned rankOffset = transferA.getLeadingShapedRank();
-  for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    Value indexA = transferA.indices()[i];
-    Value indexB = transferB.indices()[i];
+  for (unsigned i = 0, e = transferA.getIndices().size(); i < e; i++) {
+    Value indexA = transferA.getIndices()[i];
+    Value indexB = transferB.getIndices()[i];
     std::optional<int64_t> cstIndexA = getConstantIntValue(indexA);
     std::optional<int64_t> cstIndexB = getConstantIntValue(indexB);
 
@@ -251,7 +251,7 @@ bool mlir::vector::isDisjointTransferIndices(
 bool mlir::vector::isDisjointTransferSet(VectorTransferOpInterface transferA,
                                          VectorTransferOpInterface transferB,
                                          bool testDynamicValueUsingBounds) {
-  if (transferA.source() != transferB.source())
+  if (transferA.getSource() != transferB.getSource())
     return false;
   return isDisjointTransferIndices(transferA, transferB,
                                    testDynamicValueUsingBounds);
@@ -1456,9 +1456,8 @@ LogicalResult ExtractFromInsertTransposeChainState::handleTransposeOp() {
 
   if (!nextTransposeOp)
     return failure();
-  auto permutation = extractVector<unsigned>(nextTransposeOp.getTransp());
-  AffineMap m = inversePermutation(
-      AffineMap::getPermutationMap(permutation, extractOp.getContext()));
+  AffineMap m = inversePermutation(AffineMap::getPermutationMap(
+      nextTransposeOp.getPermutation(), extractOp.getContext()));
   extractPosition = applyPermutationMap(m, ArrayRef(extractPosition));
   return success();
 }
@@ -3740,10 +3739,10 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 3> elidedAttrs;
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.getPermutationMap().isMinorIdentity())
-    elidedAttrs.push_back(op.getPermutationMapAttrStrName());
+    elidedAttrs.push_back(op.getPermutationMapAttrName());
   // Elide in_bounds attribute if all dims are out-of-bounds.
   if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    elidedAttrs.push_back(op.getInBoundsAttrStrName());
+    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -3755,12 +3754,8 @@ void TransferReadOp::print(OpAsmPrinter &p) {
   p << " : " << getShapedType() << ", " << getVectorType();
 }
 
-/// Infers the mask type for a transfer op given its vector type and
-/// permutation map. The mask in a transfer op operation applies to the
-/// tensor/buffer part of it and its type should match the vector shape
-/// *before* any permutation or broadcasting.
-static VectorType inferTransferOpMaskType(VectorType vecType,
-                                          AffineMap permMap) {
+VectorType mlir::vector::inferTransferOpMaskType(VectorType vecType,
+                                                 AffineMap permMap) {
   auto i1Type = IntegerType::get(permMap.getContext(), 1);
   AffineMap invPermMap = inversePermutation(compressUnusedDims(permMap));
   assert(invPermMap && "Inversed permutation map couldn't be computed");
@@ -3802,7 +3797,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   VectorType vectorType = llvm::dyn_cast<VectorType>(types[1]);
   if (!vectorType)
     return parser.emitError(typesLoc, "requires vector type");
-  auto permMapAttrName = TransferReadOp::getPermutationMapAttrStrName();
+  auto permMapAttrName = TransferReadOp::getPermutationMapAttrName(result.name);
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
@@ -3888,7 +3883,7 @@ Type TransferReadOp::getExpectedMaskType() {
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
-  // `op.indices()[indicesIdx] + vectorType < dim(op.source(), indicesIdx)`
+  // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
   Value index = op.getIndices()[indicesIdx];
@@ -3932,8 +3927,7 @@ static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op->setAttr(TransferOp::getInBoundsAttrStrName(),
-              b.getBoolArrayAttr(newInBounds));
+  op.setInBoundsAttr(b.getBoolArrayAttr(newInBounds));
   return success();
 }
 
@@ -4169,7 +4163,8 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   ShapedType shapedType = llvm::dyn_cast<ShapedType>(types[1]);
   if (!shapedType || !llvm::isa<MemRefType, RankedTensorType>(shapedType))
     return parser.emitError(typesLoc, "requires memref or ranked tensor type");
-  auto permMapAttrName = TransferWriteOp::getPermutationMapAttrStrName();
+  auto permMapAttrName =
+      TransferWriteOp::getPermutationMapAttrName(result.name);
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
@@ -5376,20 +5371,20 @@ LogicalResult TypeCastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
-                                Value vector, ArrayRef<int64_t> transp) {
+                                Value vector, ArrayRef<int64_t> permutation) {
   VectorType vt = llvm::cast<VectorType>(vector.getType());
   SmallVector<int64_t, 4> transposedShape(vt.getRank());
   SmallVector<bool, 4> transposedScalableDims(vt.getRank());
-  for (unsigned i = 0; i < transp.size(); ++i) {
-    transposedShape[i] = vt.getShape()[transp[i]];
-    transposedScalableDims[i] = vt.getScalableDims()[transp[i]];
+  for (unsigned i = 0; i < permutation.size(); ++i) {
+    transposedShape[i] = vt.getShape()[permutation[i]];
+    transposedScalableDims[i] = vt.getScalableDims()[permutation[i]];
   }
 
   result.addOperands(vector);
   result.addTypes(VectorType::get(transposedShape, vt.getElementType(),
                                   transposedScalableDims));
-  result.addAttribute(TransposeOp::getTranspAttrName(result.name),
-                      builder.getI64ArrayAttr(transp));
+  result.addAttribute(TransposeOp::getPermutationAttrName(result.name),
+                      builder.getDenseI64ArrayAttr(permutation));
 }
 
 OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
@@ -5401,13 +5396,12 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
 
   // Eliminate identity transpose ops. This happens when the dimensions of the
   // input vector remain in their original order after the transpose operation.
-  SmallVector<int64_t, 4> transp;
-  getTransp(transp);
+  ArrayRef<int64_t> perm = getPermutation();
 
   // Check if the permutation of the dimensions contains sequential values:
   // {0, 1, 2, ...}.
-  for (int64_t i = 0, e = transp.size(); i < e; i++) {
-    if (transp[i] != i)
+  for (int64_t i = 0, e = perm.size(); i < e; i++) {
+    if (perm[i] != i)
       return {};
   }
 
@@ -5421,20 +5415,19 @@ LogicalResult vector::TransposeOp::verify() {
   if (vectorType.getRank() != rank)
     return emitOpError("vector result rank mismatch: ") << rank;
   // Verify transposition array.
-  auto transpAttr = getTransp().getValue();
-  int64_t size = transpAttr.size();
+  ArrayRef<int64_t> perm = getPermutation();
+  int64_t size = perm.size();
   if (rank != size)
     return emitOpError("transposition length mismatch: ") << size;
   SmallVector<bool, 8> seen(rank, false);
-  for (const auto &ta : llvm::enumerate(transpAttr)) {
-    int64_t i = llvm::cast<IntegerAttr>(ta.value()).getInt();
-    if (i < 0 || i >= rank)
-      return emitOpError("transposition index out of range: ") << i;
-    if (seen[i])
-      return emitOpError("duplicate position index: ") << i;
-    seen[i] = true;
-    if (resultType.getDimSize(ta.index()) != vectorType.getDimSize(i))
-      return emitOpError("dimension size mismatch at: ") << i;
+  for (const auto &ta : llvm::enumerate(perm)) {
+    if (ta.value() < 0 || ta.value() >= rank)
+      return emitOpError("transposition index out of range: ") << ta.value();
+    if (seen[ta.value()])
+      return emitOpError("duplicate position index: ") << ta.value();
+    seen[ta.value()] = true;
+    if (resultType.getDimSize(ta.index()) != vectorType.getDimSize(ta.value()))
+      return emitOpError("dimension size mismatch at: ") << ta.value();
   }
   return success();
 }
@@ -5452,13 +5445,6 @@ public:
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    // Wrapper around vector::TransposeOp::getTransp() for cleaner code.
-    auto getPermutation = [](vector::TransposeOp transpose) {
-      SmallVector<int64_t, 4> permutation;
-      transpose.getTransp(permutation);
-      return permutation;
-    };
-
     // Composes two permutations: result[i] = permutation1[permutation2[i]].
     auto composePermutations = [](ArrayRef<int64_t> permutation1,
                                   ArrayRef<int64_t> permutation2) {
@@ -5475,12 +5461,11 @@ public:
       return failure();
 
     SmallVector<int64_t, 4> permutation = composePermutations(
-        getPermutation(parentTransposeOp), getPermutation(transposeOp));
+        parentTransposeOp.getPermutation(), transposeOp.getPermutation());
     // Replace 'transposeOp' with a new transpose operation.
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
-        parentTransposeOp.getVector(),
-        vector::getVectorSubscriptAttr(rewriter, permutation));
+        parentTransposeOp.getVector(), permutation);
     return success();
   }
 };
@@ -5539,8 +5524,7 @@ public:
 
     // Get the transpose permutation and apply it to the vector.create_mask or
     // vector.constant_mask operands.
-    SmallVector<int64_t> permutation;
-    transpOp.getTransp(permutation);
+    ArrayRef<int64_t> permutation = transpOp.getPermutation();
 
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
@@ -5570,10 +5554,6 @@ void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
               TransposeFolder, FoldTransposeSplat>(context);
-}
-
-void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(getTransp(), results);
 }
 
 //===----------------------------------------------------------------------===//

@@ -242,10 +242,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
-  opts.AliasAnalysis =
-      args.hasFlag(clang::driver::options::OPT_falias_analysis,
-                   clang::driver::options::OPT_fno_alias_analysis,
-                   /*default=*/false);
+  opts.AliasAnalysis = opts.OptimizationLevel > 0;
+  if (auto *arg =
+          args.getLastArg(clang::driver::options::OPT_falias_analysis,
+                          clang::driver::options::OPT_fno_alias_analysis))
+    opts.AliasAnalysis =
+        arg->getOption().matches(clang::driver::options::OPT_falias_analysis);
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
@@ -1054,6 +1056,27 @@ static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
   return true;
 }
 
+static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
+                                   llvm::opt::ArgList &args,
+                                   clang::DiagnosticsEngine &diags) {
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+
+  // TODO: support --dependent-lib on other platforms when MLIR supports
+  //       !llvm.dependent.lib
+  if (args.hasArg(clang::driver::options::OPT_dependent_lib) &&
+      !triple.isOSWindows()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "--dependent-lib is only supported on Windows");
+    diags.Report(diagID);
+    return false;
+  }
+
+  invoc.getCodeGenOpts().DependentLibs =
+      args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1162,6 +1185,8 @@ bool CompilerInvocation::createFromArgs(
   success &= parseFloatingPointArgs(res, args, diags);
 
   success &= parseVScaleArgs(res, args, diags);
+
+  success &= parseLinkerOptionsArgs(res, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent

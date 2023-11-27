@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-matmul.h"
 #include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Runtime/magic-numbers.h"
@@ -231,6 +232,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     if (auto *expr{UnwrapExpr<Expr<SomeLogical>>(args[0])}) {
       return Fold(context, ConvertToType<T>(std::move(*expr)));
     }
+  } else if (name == "matmul") {
+    return FoldMatmul(context, std::move(funcRef));
   } else if (name == "out_of_range") {
     if (Expr<SomeType> * cx{UnwrapExpr<Expr<SomeType>>(args[0])}) {
       auto restorer{context.messages().DiscardMessages()};
@@ -367,7 +370,6 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: logical, matmul, parity
   return Expr<T>{std::move(funcRef)};
 }
 

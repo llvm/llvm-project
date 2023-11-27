@@ -17218,10 +17218,10 @@ static bool UsefulToPrintExpr(const Expr *E) {
   if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E))
     return UsefulToPrintExpr(UnaryOp->getSubExpr());
 
-  // Ignore nested binary operators. This could be a FIXME for improvements
-  // to the diagnostics in the future.
-  if (isa<BinaryOperator>(E))
-    return false;
+  // Only print nested arithmetic operators.
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
+    return (BO->isShiftOp() || BO->isAdditiveOp() || BO->isMultiplicativeOp() ||
+            BO->isBitwiseOp());
 
   return true;
 }

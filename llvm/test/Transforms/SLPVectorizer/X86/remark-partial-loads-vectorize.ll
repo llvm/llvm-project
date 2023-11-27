@@ -8,7 +8,7 @@
 ; YAML-NEXT:  Function:        test
 ; YAML-NEXT:  Args:
 ; YAML-NEXT:    - String:          'SLP vectorized with cost '
-; YAML-NEXT:    - Cost:            '-2'
+; YAML-NEXT:    - Cost:            '-4'
 ; YAML-NEXT:    - String:          ' and with tree size '
 ; YAML-NEXT:    - TreeSize:        '4'
 ; YAML-LABEL: --- !Passed

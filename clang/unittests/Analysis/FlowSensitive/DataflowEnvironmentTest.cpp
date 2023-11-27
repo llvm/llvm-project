@@ -134,39 +134,19 @@ TEST_F(EnvironmentTest, JoinRecords) {
     Environment Env1(DAContext);
     auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
     RecordStorageLocation &Loc = Val1.getLoc();
-    Env1.setValue(*ConstructExpr, Val1);
+    Env1.setValue(Loc, Val1);
 
     Environment Env2(DAContext);
     auto &Val2 = Env2.create<RecordValue>(Loc);
     Env2.setValue(Loc, Val2);
-    Env2.setValue(*ConstructExpr, Val2);
+    Env2.setValue(Loc, Val2);
 
     Environment::ValueModel Model;
     Environment EnvJoined = Environment::join(Env1, Env2, Model);
-    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(*ConstructExpr));
+    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(Loc));
     EXPECT_NE(JoinedVal, &Val1);
     EXPECT_NE(JoinedVal, &Val2);
     EXPECT_EQ(&JoinedVal->getLoc(), &Loc);
-  }
-
-  // Two different `RecordValue`s with different locations are joined into a
-  // third `RecordValue` with a location different from the other two.
-  {
-    Environment Env1(DAContext);
-    auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
-    Env1.setValue(*ConstructExpr, Val1);
-
-    Environment Env2(DAContext);
-    auto &Val2 = *cast<RecordValue>(Env2.createValue(Ty));
-    Env2.setValue(*ConstructExpr, Val2);
-
-    Environment::ValueModel Model;
-    Environment EnvJoined = Environment::join(Env1, Env2, Model);
-    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(*ConstructExpr));
-    EXPECT_NE(JoinedVal, &Val1);
-    EXPECT_NE(JoinedVal, &Val2);
-    EXPECT_NE(&JoinedVal->getLoc(), &Val1.getLoc());
-    EXPECT_NE(&JoinedVal->getLoc(), &Val2.getLoc());
   }
 }
 

@@ -375,6 +375,8 @@ enum NodeType : unsigned {
   GLD1_UXTW_SCALED_MERGE_ZERO,
   GLD1_SXTW_SCALED_MERGE_ZERO,
   GLD1_IMM_MERGE_ZERO,
+  GLD1Q_MERGE_ZERO,
+  GLD1Q_INDEX_MERGE_ZERO,
 
   // Signed gather loads
   GLD1S_MERGE_ZERO,
@@ -419,6 +421,8 @@ enum NodeType : unsigned {
   SST1_UXTW_SCALED_PRED,
   SST1_SXTW_SCALED_PRED,
   SST1_IMM_PRED,
+  SST1Q_PRED,
+  SST1Q_INDEX_PRED,
 
   // Non-temporal scatter store
   SSTNT1_PRED,
@@ -441,6 +445,10 @@ enum NodeType : unsigned {
   // Strict (exception-raising) floating point comparison
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,
+
+  // SME ZA loads and stores
+  SME_ZA_LDR,
+  SME_ZA_STR,
 
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -608,8 +616,6 @@ public:
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                  MachineInstr &MI, MachineBasicBlock *BB,
                                  bool HasTile) const;
-  MachineBasicBlock *EmitZTSpillFill(MachineInstr &MI, MachineBasicBlock *BB,
-                                     bool IsSpill) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *

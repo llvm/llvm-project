@@ -967,7 +967,6 @@ public:
 // For more details, see the "Using libc++" documentation page or
 // the documentation for __sanitizer_annotate_contiguous_container.
 #if !defined(_LIBCPP_HAS_NO_ASAN)
-    // TODO LLVM18: Remove the special-casing
     _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
         const void* __beg,
         const void* __end,

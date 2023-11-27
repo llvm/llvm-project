@@ -245,11 +245,17 @@ private:
       {{{"fclose"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{{"fread"}, 4},
-       {std::bind(&StreamChecker::preFreadFwrite, _1, _2, _3, _4, true),
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, true), 3}},
       {{{"fwrite"}, 4},
-       {std::bind(&StreamChecker::preFreadFwrite, _1, _2, _3, _4, false),
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, false), 3}},
+      {{{"fgetc"}, 1},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
+        std::bind(&StreamChecker::evalFgetcFputc, _1, _2, _3, _4, true), 0}},
+      {{{"fputc"}, 2},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
+        std::bind(&StreamChecker::evalFgetcFputc, _1, _2, _3, _4, false), 1}},
       {{{"fseek"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
@@ -305,11 +311,14 @@ private:
   void evalFclose(const FnDescription *Desc, const CallEvent &Call,
                   CheckerContext &C) const;
 
-  void preFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
-                      CheckerContext &C, bool IsFread) const;
+  void preReadWrite(const FnDescription *Desc, const CallEvent &Call,
+                    CheckerContext &C, bool IsRead) const;
 
   void evalFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
                        CheckerContext &C, bool IsFread) const;
+
+  void evalFgetcFputc(const FnDescription *Desc, const CallEvent &Call,
+                      CheckerContext &C, bool IsRead) const;
 
   void preFseek(const FnDescription *Desc, const CallEvent &Call,
                 CheckerContext &C) const;
@@ -634,9 +643,9 @@ void StreamChecker::evalFclose(const FnDescription *Desc, const CallEvent &Call,
   C.addTransition(StateFailure);
 }
 
-void StreamChecker::preFreadFwrite(const FnDescription *Desc,
-                                   const CallEvent &Call, CheckerContext &C,
-                                   bool IsFread) const {
+void StreamChecker::preReadWrite(const FnDescription *Desc,
+                                 const CallEvent &Call, CheckerContext &C,
+                                 bool IsRead) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
   State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
@@ -650,7 +659,7 @@ void StreamChecker::preFreadFwrite(const FnDescription *Desc,
   if (!State)
     return;
 
-  if (!IsFread) {
+  if (!IsRead) {
     C.addTransition(State);
     return;
   }
@@ -719,9 +728,9 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
   ProgramStateRef StateFailed =
       State->BindExpr(CE, C.getLocationContext(), RetVal);
+  SValBuilder &SVB = C.getSValBuilder();
   auto Cond =
-      C.getSValBuilder()
-          .evalBinOpNN(State, BO_LT, RetVal, *NMembVal, C.getASTContext().IntTy)
+      SVB.evalBinOpNN(State, BO_LT, RetVal, *NMembVal, SVB.getConditionType())
           .getAs<DefinedOrUnknownSVal>();
   if (!Cond)
     return;
@@ -740,6 +749,90 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   StreamState NewSS = StreamState::getOpened(Desc, NewES, !NewES.isFEof());
   StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
   if (IsFread && OldSS->ErrorState != ErrorFEof)
+    C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
+  else
+    C.addTransition(StateFailed);
+}
+
+void StreamChecker::evalFgetcFputc(const FnDescription *Desc,
+                                   const CallEvent &Call, CheckerContext &C,
+                                   bool IsRead) const {
+  ProgramStateRef State = C.getState();
+  SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
+  if (!StreamSym)
+    return;
+
+  const CallExpr *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
+    return;
+
+  const StreamState *OldSS = State->get<StreamMap>(StreamSym);
+  if (!OldSS)
+    return;
+
+  assertStreamStateOpened(OldSS);
+
+  // `fgetc` returns the read character on success, otherwise returns EOF.
+  // `fputc` returns the written character on success, otherwise returns EOF.
+
+  // Generate a transition for the success state of fputc.
+  if (!IsRead) {
+    std::optional<NonLoc> PutVal = Call.getArgSVal(0).getAs<NonLoc>();
+    if (!PutVal)
+      return;
+    ProgramStateRef StateNotFailed =
+        State->BindExpr(CE, C.getLocationContext(), *PutVal);
+    StateNotFailed =
+        StateNotFailed->set<StreamMap>(StreamSym, StreamState::getOpened(Desc));
+    C.addTransition(StateNotFailed);
+  }
+  // Generate a transition for the success state of fgetc.
+  // If we know the state to be FEOF at fgetc, do not add a success state.
+  else if (OldSS->ErrorState != ErrorFEof) {
+    NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+    ProgramStateRef StateNotFailed =
+        State->BindExpr(CE, C.getLocationContext(), RetVal);
+    SValBuilder &SVB = C.getSValBuilder();
+    auto &ASTC = C.getASTContext();
+    // The returned 'unsigned char' of `fgetc` is converted to 'int',
+    // so we need to check if it is in range [0, 255].
+    auto CondLow =
+        SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(ASTC.IntTy),
+                      SVB.getConditionType())
+            .getAs<DefinedOrUnknownSVal>();
+    auto CondHigh =
+        SVB.evalBinOp(State, BO_LE, RetVal,
+                      SVB.makeIntVal(SVB.getBasicValueFactory()
+                                         .getMaxValue(ASTC.UnsignedCharTy)
+                                         .getLimitedValue(),
+                                     ASTC.IntTy),
+                      SVB.getConditionType())
+            .getAs<DefinedOrUnknownSVal>();
+    if (!CondLow || !CondHigh)
+      return;
+    StateNotFailed = StateNotFailed->assume(*CondLow, true);
+    if (!StateNotFailed)
+      return;
+    StateNotFailed = StateNotFailed->assume(*CondHigh, true);
+    if (!StateNotFailed)
+      return;
+    C.addTransition(StateNotFailed);
+  }
+
+  // Add transition for the failed state.
+  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+
+  // If a (non-EOF) error occurs, the resulting value of the file position
+  // indicator for the stream is indeterminate.
+  StreamErrorState NewES;
+  if (IsRead)
+    NewES =
+        OldSS->ErrorState == ErrorFEof ? ErrorFEof : ErrorFEof | ErrorFError;
+  else
+    NewES = ErrorFError;
+  StreamState NewSS = StreamState::getOpened(Desc, NewES, !NewES.isFEof());
+  StateFailed = StateFailed->set<StreamMap>(StreamSym, NewSS);
+  if (IsRead && OldSS->ErrorState != ErrorFEof)
     C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
   else
     C.addTransition(StateFailed);

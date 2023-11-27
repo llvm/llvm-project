@@ -90,8 +90,10 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_markup.cpp
   sanitizer_symbolizer_posix_libcdep.cpp
   sanitizer_symbolizer_report.cpp
+  sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
   sanitizer_unwind_linux_libcdep.cpp
+  sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
   )
 
@@ -189,7 +191,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_stoptheworld.h
   sanitizer_suppressions.h
   sanitizer_symbolizer.h
-  sanitizer_symbolizer_fuchsia.h
+  sanitizer_symbolizer_markup_constants.h
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h
   sanitizer_symbolizer_mac.h

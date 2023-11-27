@@ -413,18 +413,18 @@ struct MappingRiscv64_39 {
 
 /*
 C/C++ on linux/riscv64 (48-bit VMA)
-0000 0000 1000 - 0500 0000 0000: main binary                      ( 5 TB)
+0000 0000 1000 - 0400 0000 0000: main binary                      ( 4 TB)
 0500 0000 0000 - 2000 0000 0000: -
 2000 0000 0000 - 4000 0000 0000: shadow memory                    (32 TB)
 4000 0000 0000 - 4800 0000 0000: metainfo                         ( 8 TB)
 4800 0000 0000 - 5555 5555 5000: -
 5555 5555 5000 - 5a00 0000 0000: main binary (PIE)                (~5 TB)
 5a00 0000 0000 - 7a00 0000 0000: -
-7a00 0000 0000 - 7fff ffff ffff: libraries and main thread stack  ( 5 TB)
+7a00 0000 0000 - 7fff ffff ffff: libraries and main thread stack  ( 6 TB)
 */
 struct MappingRiscv64_48 {
   static const uptr kLoAppMemBeg = 0x000000001000ull;
-  static const uptr kLoAppMemEnd = 0x050000000000ull;
+  static const uptr kLoAppMemEnd = 0x040000000000ull;
   static const uptr kShadowBeg = 0x200000000000ull;
   static const uptr kShadowEnd = 0x400000000000ull;
   static const uptr kMetaShadowBeg = 0x400000000000ull;
@@ -967,7 +967,7 @@ struct RestoreAddrImpl {
         Mapping::kMidAppMemEnd, Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd,
         Mapping::kHeapMemBeg,   Mapping::kHeapMemEnd,
     };
-    const uptr indicator = 0x0f0000000000ull;
+    const uptr indicator = 0x0e0000000000ull;
     const uptr ind_lsb = 1ull << LeastSignificantSetBitIndex(indicator);
     for (uptr i = 0; i < ARRAY_SIZE(ranges); i += 2) {
       uptr beg = ranges[i];

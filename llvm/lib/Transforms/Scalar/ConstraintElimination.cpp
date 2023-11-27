@@ -366,7 +366,54 @@ struct Decomposition {
   }
 };
 
+// Variable and constant offsets for a chain of GEPs, with base pointer BasePtr.
+struct OffsetResult {
+  Value *BasePtr;
+  APInt ConstantOffset;
+  MapVector<Value *, APInt> VariableOffsets;
+  bool AllInbounds;
+
+  OffsetResult() : BasePtr(nullptr), ConstantOffset(0, uint64_t(0)) {}
+
+  OffsetResult(GEPOperator &GEP, const DataLayout &DL)
+      : BasePtr(GEP.getPointerOperand()), AllInbounds(GEP.isInBounds()) {
+    ConstantOffset = APInt(DL.getIndexTypeSizeInBits(BasePtr->getType()), 0);
+  }
+};
 } // namespace
+
+// Try to collect variable and constant offsets for \p GEP, partly traversing
+// nested GEPs. Returns an OffsetResult with nullptr as BasePtr of collecting
+// the offset fails.
+static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
+  OffsetResult Result(GEP, DL);
+  unsigned BitWidth = Result.ConstantOffset.getBitWidth();
+  if (!GEP.collectOffset(DL, BitWidth, Result.VariableOffsets,
+                         Result.ConstantOffset))
+    return {};
+
+  // If we have a nested GEP, check if we can combine the constant offset of the
+  // inner GEP with the outer GEP.
+  if (auto *InnerGEP = dyn_cast<GetElementPtrInst>(Result.BasePtr)) {
+    MapVector<Value *, APInt> VariableOffsets2;
+    APInt ConstantOffset2(BitWidth, 0);
+    bool CanCollectInner = InnerGEP->collectOffset(
+        DL, BitWidth, VariableOffsets2, ConstantOffset2);
+    // TODO: Support cases with more than 1 variable offset.
+    if (!CanCollectInner || Result.VariableOffsets.size() > 1 ||
+        VariableOffsets2.size() > 1 ||
+        (Result.VariableOffsets.size() >= 1 && VariableOffsets2.size() >= 1)) {
+      // More than 1 variable index, use outer result.
+      return Result;
+    }
+    Result.BasePtr = InnerGEP->getPointerOperand();
+    Result.ConstantOffset += ConstantOffset2;
+    if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
+      Result.VariableOffsets = VariableOffsets2;
+    Result.AllInbounds &= InnerGEP->isInBounds();
+  }
+  return Result;
+}
 
 static Decomposition decompose(Value *V,
                                SmallVectorImpl<ConditionTy> &Preconditions,
@@ -385,43 +432,14 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
   if (DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()) > 64)
     return &GEP;
 
-  if (!GEP.isInBounds())
-    return &GEP;
-
   assert(!IsSigned && "The logic below only supports decomposition for "
                       "unsinged predicates at the moment.");
-  Type *PtrTy = GEP.getType()->getScalarType();
-  unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
-  MapVector<Value *, APInt> VariableOffsets;
-  APInt ConstantOffset(BitWidth, 0);
-  if (!GEP.collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
+  const auto &[BasePtr, ConstantOffset, VariableOffsets, AllInbounds] =
+      collectOffsets(GEP, DL);
+  if (!BasePtr || !AllInbounds)
     return &GEP;
 
-  // Handle the (gep (gep ....), C) case by incrementing the constant
-  // coefficient of the inner GEP, if C is a constant.
-  auto *InnerGEP = dyn_cast<GEPOperator>(GEP.getPointerOperand());
-  if (VariableOffsets.empty() && InnerGEP && InnerGEP->getNumOperands() == 2) {
-    auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
-    Result.add(ConstantOffset.getSExtValue());
-
-    if (ConstantOffset.isNegative()) {
-      unsigned Scale = DL.getTypeAllocSize(InnerGEP->getResultElementType());
-      int64_t ConstantOffsetI = ConstantOffset.getSExtValue();
-      if (ConstantOffsetI % Scale != 0)
-        return &GEP;
-      // Add pre-condition ensuring the GEP is increasing monotonically and
-      // can be de-composed.
-      // Both sides are normalized by being divided by Scale.
-      Preconditions.emplace_back(
-          CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
-          ConstantInt::get(InnerGEP->getOperand(1)->getType(),
-                           -1 * (ConstantOffsetI / Scale)));
-    }
-    return Result;
-  }
-
-  Decomposition Result(ConstantOffset.getSExtValue(),
-                       DecompEntry(1, GEP.getPointerOperand()));
+  Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
   for (auto [Index, Scale] : VariableOffsets) {
     auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
     IdxResult.mul(Scale.getSExtValue());
@@ -455,6 +473,9 @@ static Decomposition decompose(Value *V,
   if (Ty->isPointerTy() && !IsSigned) {
     if (auto *GEP = dyn_cast<GEPOperator>(V))
       return decomposeGEP(*GEP, Preconditions, IsSigned, DL);
+    if (isa<ConstantPointerNull>(V))
+      return int64_t(0);
+
     return V;
   }
 
@@ -773,6 +794,10 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
 void ConstraintInfo::transferToOtherSystem(
     CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
     unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
+  auto IsKnownNonNegative = [this](Value *V) {
+    return doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0)) ||
+           isKnownNonNegative(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1);
+  };
   // Check if we can combine facts from the signed and unsigned systems to
   // derive additional facts.
   if (!A->getType()->isIntegerTy())
@@ -786,7 +811,7 @@ void ConstraintInfo::transferToOtherSystem(
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
     //  If B is a signed positive constant, then A >=s 0 and A <s (or <=s) B.
-    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
+    if (IsKnownNonNegative(B)) {
       addFact(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
       addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
@@ -796,7 +821,7 @@ void ConstraintInfo::transferToOtherSystem(
   case CmpInst::ICMP_UGE:
   case CmpInst::ICMP_UGT:
     //  If A is a signed positive constant, then B >=s 0 and A >s (or >=s) B.
-    if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0))) {
+    if (IsKnownNonNegative(A)) {
       addFact(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
       addFact(CmpInst::getSignedPredicate(Pred), A, B, NumIn, NumOut,
@@ -804,22 +829,21 @@ void ConstraintInfo::transferToOtherSystem(
     }
     break;
   case CmpInst::ICMP_SLT:
-    if (doesHold(CmpInst::ICMP_SGE, A, ConstantInt::get(B->getType(), 0)))
+    if (IsKnownNonNegative(A))
       addFact(CmpInst::ICMP_ULT, A, B, NumIn, NumOut, DFSInStack);
     break;
   case CmpInst::ICMP_SGT: {
     if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), -1)))
       addFact(CmpInst::ICMP_UGE, A, ConstantInt::get(B->getType(), 0), NumIn,
               NumOut, DFSInStack);
-    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0)))
+    if (IsKnownNonNegative(B))
       addFact(CmpInst::ICMP_UGT, A, B, NumIn, NumOut, DFSInStack);
 
     break;
   }
   case CmpInst::ICMP_SGE:
-    if (doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(B->getType(), 0))) {
+    if (IsKnownNonNegative(B))
       addFact(CmpInst::ICMP_UGE, A, B, NumIn, NumOut, DFSInStack);
-    }
     break;
   }
 }

@@ -1404,29 +1404,78 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   AttrSizedOperandSegments]>,
   Arguments<(ins  LLVM_PointerShared:$dstMem,
                   LLVM_AnyPointer:$tmaDescriptor,
-                  LLVM_PointerShared:$mbar,
                   Variadic<I32>:$coordinates,
+                  LLVM_PointerShared:$mbar,                  
+                  Variadic<I16>:$im2colOffsets,
+                  Optional<I16>:$multicastMask,
+                  Optional<I64>:$l2CacheHint,
                   PtxPredicate:$predicate)> {
+  let description = [{
+    Initiates an asynchronous copy operation on the tensor data from global 
+    memory to shared memory. 
+
+    The Op operates has two load modes:
+    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor 
+    layout is preserved at the destination. 
+
+    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
+    the elements in the Bounding Box of the source tensor are rearranged into
+    columns at the destination. In this mode, the tensor has to be at least 
+    3-dimensional. 
+
+    The `multicastMask` operand is optional. When it is present, the Op copies
+    data from global memory to shared memory of multiple CTAs in the cluster.
+    Operand `multicastMask` specifies the destination CTAs in the cluster such 
+    that each bit position in the 16-bit `multicastMask` operand corresponds to
+    the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.     
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache 
+    eviction policy that may be used during the memory access.
+    
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+  }];
+
   let assemblyFormat = [{ 
     $dstMem `,` 
     $tmaDescriptor `,` 
     $mbar `,` 
     `box` `[`$coordinates `]` 
-    (`,` `predicate` `=` $predicate^)? 
-    attr-dict  `:` type(operands)
+    (`im2col` `[` $im2colOffsets^ `]` )?
+    (`multicast_mask` `=` $multicastMask^ )?
+    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    (`predicate` `=` $predicate^)? 
+    attr-dict  `:` type($dstMem) `,` type($tmaDescriptor)
   }];
 
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
+      int im2colDim = getIm2colOffsets().size();
       int dim = getCoordinates().size();
       std::string ptx = "cp.async.bulk.tensor.";
       ptx += std::to_string(dim) + "d.";
-      ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";
-      if(dim == 1) ptx += " [%0], [%1, {%3} ], [%2];";
-      if(dim == 2) ptx += " [%0], [%1, {%3, %4} ], [%2];";
-      if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5} ], [%2];";
-      if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6} ], [%2];";
-      if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7} ], [%2];";
+      ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";      
+      if(im2colDim) ptx += ".im2col";
+      if(getMulticastMask()) ptx += ".multicast::cluster";      
+      if(getL2CacheHint()) ptx += ".L2::cache_hint";
+      
+      auto preg = [](int r) { return "%" + std::to_string(r); };
+
+      // Build Registers
+      ptx += " [%0], [%1, {";
+      int r = 2;      
+      for(int i = 0; i < dim; i++) ptx += preg(r+i) + ",";
+      ptx.pop_back(); r += dim;
+      ptx += "} ], [%" + std::to_string(r++) + "]";
+      if(im2colDim) {
+        ptx += ",{";
+        for(int i = 0; i < im2colDim; i++) ptx += preg(r+i) + ",";
+        ptx.pop_back(); r += im2colDim;
+        ptx += "}";
+      }
+      if(getMulticastMask()) ptx += ", " + preg(r++);
+      if(getL2CacheHint()) ptx += ", " + preg(r++);
+      ptx += ";";
       return ptx;
     }
   }];

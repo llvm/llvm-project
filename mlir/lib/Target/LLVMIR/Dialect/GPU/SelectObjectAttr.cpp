@@ -136,6 +136,9 @@ public:
   // Get the kernel launch callee.
   FunctionCallee getKernelLaunchFn();
 
+  // Get the kernel launch callee.
+  FunctionCallee getClusterKernelLaunchFn();
+
   // Get the module function callee.
   FunctionCallee getModuleFunctionFn();
 
@@ -228,6 +231,17 @@ llvm::FunctionCallee llvm::LaunchKernel::getKernelLaunchFn() {
                                           intPtrTy, intPtrTy, intPtrTy, i32Ty,
                                           ptrTy, ptrTy, ptrTy, i64Ty}),
                         false));
+}
+
+llvm::FunctionCallee llvm::LaunchKernel::getClusterKernelLaunchFn() {
+  return module.getOrInsertFunction(
+      "mgpuLaunchClusterKernel",
+      FunctionType::get(
+          voidTy,
+          ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
+                            intPtrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
+                            i32Ty, ptrTy, ptrTy, ptrTy}),
+          false));
 }
 
 llvm::FunctionCallee llvm::LaunchKernel::getModuleFunctionFn() {
@@ -420,10 +434,22 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
 
   // Create the launch call.
   Value *nullPtr = ConstantPointerNull::get(ptrTy);
-  builder.CreateCall(getKernelLaunchFn(),
-                     ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by, bz,
-                                        dynamicMemorySize, stream, argArray,
-                                        nullPtr, paramsCount}));
+
+  // Launch kernel with clusters if cluster size is specified.
+  if (op.hasClusterSize()) {
+    mlir::gpu::KernelDim3 cluster = op.getClusterSizeOperandValues();
+    Value *cx = llvmValue(cluster.x), *cy = llvmValue(cluster.y),
+          *cz = llvmValue(cluster.z);
+    builder.CreateCall(
+        getClusterKernelLaunchFn(),
+        ArrayRef<Value *>({moduleFunction, cx, cy, cz, gx, gy, gz, bx, by, bz,
+                           dynamicMemorySize, stream, argArray, nullPtr}));
+  } else {
+    builder.CreateCall(getKernelLaunchFn(),
+                       ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by,
+                                          bz, dynamicMemorySize, stream,
+                                          argArray, nullPtr, paramsCount}));
+  }
 
   // Sync & destroy the stream, for synchronous launches.
   if (handleStream) {

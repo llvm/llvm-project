@@ -158,7 +158,8 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
                      // it was omitted by the patch that added
                      // ICK_Zero_Queue_Conversion
     ICR_C_Conversion,
-    ICR_C_Conversion_Extension
+    ICR_C_Conversion_Extension,
+    ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -197,7 +198,8 @@ static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
     "OpenCL Zero Event Conversion",
     "OpenCL Zero Queue Conversion",
     "C specific type conversion",
-    "Incompatible pointer conversion"
+    "Incompatible pointer conversion",
+    "Fixed point conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -2188,6 +2190,9 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   } else if (ToType->isSamplerT() &&
              From->isIntegerConstantExpr(S.getASTContext())) {
     SCS.Second = ICK_Compatible_Conversion;
+    FromType = ToType;
+  } else if (ToType->isFixedPointType() || FromType->isFixedPointType()) {
+    SCS.Second = ICK_Fixed_Point_Conversion;
     FromType = ToType;
   } else {
     // No second conversion required.
@@ -5947,6 +5952,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Zero_Event_Conversion:
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
+  case ICK_Fixed_Point_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
