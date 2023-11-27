@@ -48,7 +48,7 @@ template <class T>
 struct StrictComparable {
   StrictComparable() = default;
 
-  // this shouldn't be explicit to make it easier to initlaize inside arrays (which it almost always is)
+  // this shouldn't be explicit to make it easier to initialize inside arrays (which it almost always is)
   constexpr StrictComparable(T value) : value_{value} {}
 
   friend constexpr BooleanTestable const& operator==(StrictComparable const& a, StrictComparable const& b) {
