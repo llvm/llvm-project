@@ -472,14 +472,14 @@ void RISCVCallLowering::saveVarArgRegisters(
   // to the vararg save area.
   const LLT p0 = LLT::pointer(0, Subtarget.getXLen());
   const LLT sXLen = LLT::scalar(Subtarget.getXLen());
-  const MVT XLenMVT = MVT::getIntegerVT(Subtarget.getXLen());
+  const MVT XLenVT = Subtarget.getXLenVT();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += XLenInBytes) {
     const Register VReg = MRI.createGenericVirtualRegister(sXLen);
     Handler.assignValueToReg(
         VReg, ArgRegs[I],
-        CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenMVT,
-                            ArgRegs[I], XLenMVT, CCValAssign::Full));
+        CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,
+                            ArgRegs[I], XLenVT, CCValAssign::Full));
     FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
     auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
     auto MPO = MachinePointerInfo::getFixedStack(MF, FI);
