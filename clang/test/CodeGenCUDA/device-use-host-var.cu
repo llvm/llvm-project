@@ -2,6 +2,8 @@
 // RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck %s
 // RUN: %clang_cc1 -std=c++14 -triple amdgcn-amd-amdhsa \
 // RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck -check-prefix=NEG %s
+// RUN: %clang_cc1 -std=c++14 -triple nvptx64-nvidia-cuda  \
+// RUN:   -fcuda-is-device -emit-llvm -o - -x hip %s | FileCheck -check-prefix=NEG -implicit-check-not=external_ %s
 
 #include "Inputs/cuda.h"
 
@@ -103,4 +105,15 @@ void fun() {
   temp_fun(1);
   (void) b<double>;
   (void) var_host_only;
+}
+
+extern __global__ void external_func();
+extern void* const external_dep[] = {
+  (void*)(external_func)
+};
+extern void* const external_arr[] = {};
+
+void* host_fun() {
+  (void) external_dep;
+  (void) external_arr;
 }
