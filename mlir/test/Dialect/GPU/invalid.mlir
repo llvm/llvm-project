@@ -57,7 +57,7 @@ module attributes {gpu.container_module} {
   func.func @launch_func_missing_callee_attribute(%sz : index) {
     // expected-error@+1 {{'gpu.launch_func' op requires attribute 'kernel'}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
-        {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0>}
+        {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0>}
         : (index, index, index, index, index, index) -> ()
     return
   }
