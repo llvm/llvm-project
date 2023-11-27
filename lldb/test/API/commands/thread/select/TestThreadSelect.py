@@ -13,16 +13,33 @@ class TestCase(TestBase):
         )
 
         self.expect(
-            "thread select -1", error=True, startstr="error: Invalid thread index '-1'"
-        )
-        self.expect(
             "thread select 0x1ffffffff",
             error=True,
             startstr="error: Invalid thread index '0x1ffffffff'",
+        )
+        self.expect(
+            "thread select -t 0x1ffffffff",
+            error=True,
+            startstr="error: Invalid thread ID '0x1ffffffff'",
         )
         # Parses but not a valid thread id.
         self.expect(
             "thread select 0xffffffff",
             error=True,
             startstr="error: invalid thread #0xffffffff.",
+        )
+        self.expect(
+            "thread select -t 0xffffffff",
+            error=True,
+            startstr="error: invalid thread ID 0xffffffff.",
+        )
+
+    def test_thread_select_tid(self):
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+        self.runCmd(
+            "thread select -t %d" % self.thread().GetThreadID(),
         )

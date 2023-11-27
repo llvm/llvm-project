@@ -1117,6 +1117,11 @@ let Command = "thread plan list" in {
     Desc<"Display thread plans for unreported threads">;
 }
 
+let Command = "thread select" in {
+  def thread_thread_id : Option<"thread_id", "t">,
+    Desc<"Provide a thread ID instead of a thread index.">;
+}
+
 let Command = "thread trace dump function calls" in {
   def thread_trace_dump_function_calls_file : Option<"file", "F">, Group<1>,
     Arg<"Filename">,

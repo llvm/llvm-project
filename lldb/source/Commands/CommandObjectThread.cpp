@@ -1129,8 +1129,44 @@ protected:
 
 // CommandObjectThreadSelect
 
+#define LLDB_OPTIONS_thread_select
+#include "CommandOptions.inc"
+
 class CommandObjectThreadSelect : public CommandObjectParsed {
 public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() { OptionParsingStarting(nullptr); }
+
+    ~CommandOptions() override = default;
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_thread_id = false;
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      const int short_option = m_getopt_table[option_idx].val;
+      switch (short_option) {
+      case 't': {
+        m_thread_id = true;
+        break;
+      }
+
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return {};
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_thread_select_options);
+    }
+
+    bool m_thread_id;
+  };
+
   CommandObjectThreadSelect(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "thread select",
                             "Change the currently selected thread.", nullptr,
@@ -1165,6 +1201,8 @@ public:
         nullptr);
   }
 
+  Options *GetOptions() override { return &m_options; }
+
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
@@ -1173,22 +1211,29 @@ protected:
       return;
     } else if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one thread index argument:\nUsage: %s\n",
-          m_cmd_name.c_str(), m_cmd_syntax.c_str());
+          "'%s' takes exactly one thread %s argument:\nUsage: %s\n",
+          m_cmd_name.c_str(), m_options.m_thread_id ? "ID" : "index",
+          m_cmd_syntax.c_str());
       return;
     }
 
     uint32_t index_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), index_id)) {
-      result.AppendErrorWithFormat("Invalid thread index '%s'",
+      result.AppendErrorWithFormat("Invalid thread %s '%s'",
+                                   m_options.m_thread_id ? "ID" : "index",
                                    command.GetArgumentAtIndex(0));
       return;
     }
 
-    Thread *new_thread =
-        process->GetThreadList().FindThreadByIndexID(index_id).get();
+    Thread *new_thread = nullptr;
+    if (m_options.m_thread_id) {
+        new_thread = process->GetThreadList().FindThreadByID(index_id).get();
+    } else {
+        new_thread = process->GetThreadList().FindThreadByIndexID(index_id).get();
+    }
     if (new_thread == nullptr) {
-      result.AppendErrorWithFormat("invalid thread #%s.\n",
+      result.AppendErrorWithFormat("invalid thread %s%s.\n",
+                                   m_options.m_thread_id ? "ID " : "#",
                                    command.GetArgumentAtIndex(0));
       return;
     }
@@ -1196,6 +1241,8 @@ protected:
     process->GetThreadList().SetSelectedThreadByID(new_thread->GetID(), true);
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
+
+  CommandOptions m_options;
 };
 
 // CommandObjectThreadList
