@@ -5231,6 +5231,7 @@ cc_library(
         ":MemRefDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
