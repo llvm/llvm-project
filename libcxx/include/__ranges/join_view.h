@@ -265,7 +265,7 @@ namespace ranges {
       __satisfy();
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent)
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(_Parent& __parent)
       requires(!forward_range<_Base>)
         : __parent_(std::addressof(__parent)) {
       __satisfy();
