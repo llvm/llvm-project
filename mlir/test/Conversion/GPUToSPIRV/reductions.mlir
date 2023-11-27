@@ -647,7 +647,6 @@ gpu.module @kernels {
     // CHECK: %{{.*}} = spirv.GroupNonUniformUMax "Subgroup" "Reduce" %[[ARG]] : i32
     %r0 = gpu.subgroup_reduce maxsi %arg : (i32) -> (i32)
     %r1 = gpu.subgroup_reduce maxui %arg : (i32) -> (i32)
-    %r3 = gpu.subgroup_reduce maxui %arg : (i32) -> (i32)
     gpu.return
   }
 }
