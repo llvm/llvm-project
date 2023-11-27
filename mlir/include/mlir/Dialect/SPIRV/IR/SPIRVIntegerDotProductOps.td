@@ -39,9 +39,9 @@ class SPIRV_IntegerDotProductBinaryOp<string mnemonic,
       SPIRV_IntegerDotProductOp<mnemonic,
         !listconcat(traits, [AllTypesMatch<["vector1", "vector2"]>])> {
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector2,
-    OptionalAttr<SPIRV_PackedVectorFormatAttr>:$format
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector1,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector2,
+    OptionalAttr<SPIRV_PackedVectorFormatAttr> :$format
   );
 
   let assemblyFormat = [{
@@ -56,10 +56,10 @@ class SPIRV_IntegerDotProductTernaryOp<string mnemonic,
         !listconcat(traits, [AllTypesMatch<["vector1", "vector2"]>,
                              AllTypesMatch<["accumulator", "result"]>])> {
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$vector2,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector1,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer> :$vector2,
     SPIRV_Integer:$accumulator,
-    OptionalAttr<SPIRV_PackedVectorFormatAttr>:$format
+    OptionalAttr<SPIRV_PackedVectorFormatAttr> :$format
   );
 
   let assemblyFormat = [{
@@ -101,9 +101,9 @@ def SPIRV_SDotOp : SPIRV_IntegerDotProductBinaryOp<"SDot",
     #### Example:
 
     ```mlir
-    %r = spirv.SDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
-    %r = spirv.SDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i64
-    %r = spirv.SDot %a, %b : (vector<4xi8>, vector<4xi8>) -> i32
+    %r = spirv.SDot %a, %b, <PackedVectorFormat4x8Bit> : i32 -> i32
+    %r = spirv.SDot %a, %b, <PackedVectorFormat4x8Bit> : i32 -> i64
+    %r = spirv.SDot %a, %b : vector<4xi8> -> i32
     ```
   }];
 }
@@ -147,9 +147,9 @@ def SPIRV_SUDotOp : SPIRV_IntegerDotProductBinaryOp<"SUDot",
     #### Example:
 
     ```mlir
-    %r = spirv.SUDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
-    %r = spirv.SUDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i64
-    %r = spirv.SUDot %a, %b : (vector<4xi8>, vector<4xi8>) -> i32
+    %r = spirv.SUDot %a, %b, <PackedVectorFormat4x8Bit> : i32 -> i32
+    %r = spirv.SUDot %a, %b, <PackedVectorFormat4x8Bit> : i32 -> i64
+    %r = spirv.SUDot %a, %b : vector<4xi8> -> i32
     ```
   }];
 }
@@ -189,9 +189,9 @@ def SPIRV_UDotOp : SPIRV_IntegerDotProductBinaryOp<"UDot",
     #### Example:
 
     ```mlir
-    %r = spirv.UDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i32
-    %r = spirv.UDot %a, %b {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32) -> i64
-    %r = spirv.UDot %a, %b : (vector<4xi8>, vector<4xi8>) -> i32
+    %r = spirv.UDot %a, %b, <PackedVectorFormat4x8Bit> : i32 -> i32
+    %r = spirv.UDot %a, %b, <PackedVectorFormat4x8Bit> : i32 -> i64
+    %r = spirv.UDot %a, %b : vector<4xi8> -> i32
     ```
   }];
 }
@@ -237,9 +237,9 @@ def SPIRV_SDotAccSatOp : SPIRV_IntegerDotProductTernaryOp<"SDotAccSat",
     #### Example:
 
     ```mlir
-    %r = spirv.SDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> i32
-    %r = spirv.SDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i64) -> i64
-    %r = spirv.SDotAccSat %a, %b, %acc : (vector<4xi8>, vector<4xi8>, i32) -> i32
+    %r = spirv.SDotAccSat %a, %b, %acc, <PackedVectorFormat4x8Bit> : i32 -> i32
+    %r = spirv.SDotAccSat %a, %b, %acc, <PackedVectorFormat4x8Bit> : i32 -> i64
+    %r = spirv.SDotAccSat %a, %b, %acc : vector<4xi8> -> i32
     ```
   }];
 }
@@ -289,9 +289,9 @@ def SPIRV_SUDotAccSatOp : SPIRV_IntegerDotProductTernaryOp<"SUDotAccSat",
     #### Example:
 
     ```mlir
-    %r = spirv.SUDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> i32
-    %r = spirv.SUDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i64) -> i64
-    %r = spirv.SUDotAccSat %a, %b, %acc : (vector<4xi8>, vector<4xi8>, i32) -> i32
+    %r = spirv.SUDotAccSat %a, %b, %acc, <PackedVectorFormat4x8Bit> : i32 -> i32
+    %r = spirv.SUDotAccSat %a, %b, %acc, <PackedVectorFormat4x8Bit> : i32 -> i64
+    %r = spirv.SUDotAccSat %a, %b, %acc : vector<4xi8> -> i32
     ```
   }];
 }
@@ -339,9 +339,9 @@ def SPIRV_UDotAccSatOp :
     #### Example:
 
     ```mlir
-    %r = spirv.UDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i32) -> i32
-    %r = spirv.UDotAccSat %a, %b, %acc {format = #spirv.packed_vector_format<PackedVectorFormat4x8Bit>}: (i32, i32, i64) -> i64
-    %r = spirv.UDotAccSat %a, %b, %acc : (vector<4xi8>, vector<4xi8>, i32) -> i32
+    %r = spirv.UDotAccSat %a, %b, %acc, <PackedVectorFormat4x8Bit> : i32 -> i32
+    %r = spirv.UDotAccSat %a, %b, %acc, <PackedVectorFormat4x8Bit> : i32 -> i64
+    %r = spirv.UDotAccSat %a, %b, %acc : vector<4xi8> -> i32
     ```
   }];
 }
