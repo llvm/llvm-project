@@ -165,11 +165,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       dumped_something = true;
       if (symbol->GetType() == eSymbolTypeTrampoline)
         s->PutCString("symbol stub for: ");
-      if (pattern)
-        s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(),
-                                      pattern);
-      else
-        symbol->GetName().Dump(s);
+      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), pattern);
     }
 
     if (addr.IsValid() && symbol->ValueIsAddress()) {
