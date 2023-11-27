@@ -11,28 +11,20 @@
 // template<class T>
 // constexpr T& as-lvalue(T&& t) { // exposition only
 
-#include <concepts>
+#include <cassert>
+#include <type_traits>
 #include <utility>
 
-constexpr bool test() {
-  // Check glvalue
-  {
-    int lvalue{};
-    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(lvalue);
-  }
+constexpr bool test(int value = 0) {
+  static_assert(std::is_same<decltype(std::__as_lvalue(value)), int&>::value, "");
+  static_assert(std::is_same<decltype(std::__as_lvalue(std::move(value))), int&>::value, "");
 
-  // Check xvalue
-  {
-    int xvalue{};
-    [[maybe_unused]] std::same_as<int&> decltype(auto) check = std::__as_lvalue(std::move(xvalue));
-  }
-
-  return true;
+  return (assert(&std::__as_lvalue(value) == &value), assert(&std::__as_lvalue(std::move(value)) == &value), true);
 }
 
 int main(int, char**) {
   test();
-  static_assert(test());
+  static_assert(test(), "");
 
   return 0;
 }
