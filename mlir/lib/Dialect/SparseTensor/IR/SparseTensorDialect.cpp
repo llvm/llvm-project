@@ -924,7 +924,7 @@ RankedTensorType sparse_tensor::getCOOFromType(RankedTensorType src,
 
 Dimension mlir::sparse_tensor::toDim(SparseTensorEncodingAttr enc, Level l) {
   if (enc) {
-    assert(enc.isPermutation() && "Non permutation map");
+    assert(enc.isPermutation() && "Non permutation map not supported");
     if (const auto dimToLvl = enc.getDimToLvl())
       return dimToLvl.getDimPosition(l);
   }
@@ -933,7 +933,7 @@ Dimension mlir::sparse_tensor::toDim(SparseTensorEncodingAttr enc, Level l) {
 
 Level mlir::sparse_tensor::toLvl(SparseTensorEncodingAttr enc, Dimension d) {
   if (enc) {
-    assert(enc.isPermutation() && "");
+    assert(enc.isPermutation() && "Non permutation map not supported");
     if (const auto lvlToDim = enc.getLvlToDim())
       return lvlToDim.getDimPosition(d);
   }
