@@ -2907,6 +2907,11 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // to the use.
   auto UpdateLiveInCheckCanKill = [&](Register Reg) {
     const MachineRegisterInfo &MRI = MF.getRegInfo();
+    // Do not set a kill flag on values that are also marked as live-in. This
+    // happens with the @llvm-returnaddress intrinsic and with arguments
+    // passed in callee saved registers.
+    // Omitting the kill flags is conservatively correct even if the live-in
+    // is not used after all.
     if (MRI.isLiveIn(Reg))
       return false;
     MBB.addLiveIn(Reg);
@@ -2916,7 +2921,6 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
         return false;
     return true;
   };
-
   auto UpdateLiveInGetKillRegState = [&](Register Reg) {
     return getKillRegState(UpdateLiveInCheckCanKill(Reg));
   };
@@ -2933,11 +2937,6 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
           .addReg(Reg2, UpdateLiveInGetKillRegState(Reg2))
           .setMIFlag(MachineInstr::FrameSetup);
     } else {
-      // Do not set a kill flag on values that are also marked as live-in. This
-      // happens with the @llvm-returnaddress intrinsic and with arguments
-      // passed in callee saved registers.
-      // Omitting the kill flags is conservatively correct even if the live-in
-      // is not used after all.
       BuildMI(MBB, MI, DL, TII.get(getPUSHOpcode(STI)))
           .addReg(Reg, UpdateLiveInGetKillRegState(Reg))
           .setMIFlag(MachineInstr::FrameSetup);
@@ -3064,15 +3063,13 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
     if (!X86::GR64RegClass.contains(Reg) && !X86::GR32RegClass.contains(Reg))
       continue;
 
-    if (X86FI->isCandidateForPush2Pop2(Reg)) {
-      Register Reg2 = (++I)->getReg();
+    if (X86FI->isCandidateForPush2Pop2(Reg))
       BuildMI(MBB, MI, DL, TII.get(getPOP2Opcode(STI)), Reg)
-          .addReg(Reg2, RegState::Define)
+          .addReg((++I)->getReg(), RegState::Define)
           .setMIFlag(MachineInstr::FrameDestroy);
-    } else {
+    else
       BuildMI(MBB, MI, DL, TII.get(getPOPOpcode(STI)), Reg)
           .setMIFlag(MachineInstr::FrameDestroy);
-    }
   }
   if (X86FI->padForPush2Pop2())
     emitSPUpdate(MBB, MI, DL, SlotSize, /*InEpilogue=*/true);
