@@ -142,9 +142,9 @@ void SBWatchpoint::SetEnabled(bool enabled) {
     const bool notify = true;
     if (process_sp) {
       if (enabled)
-        process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->EnableWatchpoint(watchpoint_sp, notify);
       else
-        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
+        process_sp->DisableWatchpoint(watchpoint_sp, notify);
     } else {
       watchpoint_sp->SetEnabled(enabled, notify);
     }
