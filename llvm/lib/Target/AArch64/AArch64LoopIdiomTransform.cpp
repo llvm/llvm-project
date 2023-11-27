@@ -1,9 +1,35 @@
-
 //===- AArch64LoopIdiomTransform.cpp - Loop idiom recognition -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements a pass that recognises certain loop idioms and
+// transforms them into more optimised versions of the same loop. In cases
+// where this happens, it can be a significant performance win.
+//
+// We currently only recognise one loop that finds the first mismatched byte
+// in an array and returns the index, i.e. something like:
+//
+//  while (++i != n) {
+//    if (a[i] != b[i])
+//      break;
+//  }
+//
+// In this example we can actually vectorise the loop despite the early exit,
+// although the loop vectorizer does not support it. It requires some extra
+// checks to deal with the possibility of faulting loads when crossing page
+// boundaries. However, even with these checks it is still profitable to do the
+// transformation.
+//
+//===----------------------------------------------------------------------===//
+//
+// TODO List:
+//
+// * When optimising for code size we may want to avoid some transformations.
+// * We can also support the inverse case where we scan for a matching element.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,7 +47,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "aarch64-lit"
+#define DEBUG_TYPE "aarch64-loop-idiom-transform"
 
 static cl::opt<bool>
     DisableAll("disable-aarch64-lit-all", cl::Hidden, cl::init(false),
@@ -192,6 +218,12 @@ inline match_LoopInvariant<Ty> m_LoopInvariant(const Ty &M, const Loop *L) {
 }
 
 bool AArch64LoopIdiomTransform::recognizeByteCompare() {
+  // Currently the transformation only works on scalable vector types, although
+  // there is no fundamental reason why it cannot be made to work for fixed
+  // width too.
+
+  // We also need to know the minimum page size for the target in order to
+  // generate runtime memory checks to ensure the vector version won't fault.
   if (!TTI->supportsScalableVectors() || !TTI->getMinPageSize().has_value() ||
       DisableByteCmp)
     return false;
@@ -241,19 +273,20 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
   using namespace PatternMatch;
 
   // The incoming value to the PHI node from the loop should be an add of 1.
-  Instruction *Index = nullptr;
   Value *StartIdx = nullptr;
-  for (BasicBlock *BB : PN->blocks()) {
-    if (!CurLoop->contains(BB)) {
-      StartIdx = PN->getIncomingValueForBlock(BB);
-      continue;
-    }
-    Index = dyn_cast<Instruction>(PN->getIncomingValueForBlock(BB));
-    // Limit to 32-bit types for now
-    if (!Index || !Index->getType()->isIntegerTy(32) ||
-        !match(Index, m_c_Add(m_Specific(PN), m_One())))
-      return false;
+  Instruction *Index = nullptr;
+  if (!CurLoop->contains(PN->getIncomingBlock(0))) {
+    StartIdx = PN->getIncomingValue(0);
+    Index = dyn_cast<Instruction>(PN->getIncomingValue(1));
+  } else {
+    StartIdx = PN->getIncomingValue(1);
+    Index = dyn_cast<Instruction>(PN->getIncomingValue(0));
   }
+
+  // Limit to 32-bit types for now
+  if (!Index || !Index->getType()->isIntegerTy(32) ||
+      !match(Index, m_c_Add(m_Specific(PN), m_One())))
+    return false;
 
   // If we match the pattern, PN and Index will be replaced with the result of
   // the cttz.elts intrinsic. If any other instructions are used outside of
@@ -328,8 +361,8 @@ bool AArch64LoopIdiomTransform::recognizeByteCompare() {
 
   // The index is incremented before the GEP/Load pair so we need to
   // add 1 to the start value.
-  transformByteCompare(GEPA, GEPB, MaxLen, Index, StartIdx, /*IncIdx=*/true, FoundBB,
-                       EndBB);
+  transformByteCompare(GEPA, GEPB, MaxLen, Index, StartIdx, /*IncIdx=*/true,
+                       FoundBB, EndBB);
   return true;
 }
 
@@ -447,9 +480,18 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
   // page.
   Builder.SetInsertPoint(MemCheckBlock);
 
-  // For each start address calculate the offset into the min architecturally
-  // allowed page size. Then determine how many bytes there are left on the
-  // page and see if this is >= MaxLen.
+  // The early exit in the original loop means that when performing vector
+  // loads we are potentially reading ahead of the early exit. So we could
+  // fault if crossing a page boundary. Therefore, we create runtime memory
+  // checks based on the minimum page size as follows:
+  //   1. Calculate the addresses of the first memory accesses in the loop,
+  //      i.e. LhsStart and RhsStart.
+  //   2. Get the last accessed addresses in the loop, i.e. LhsEnd and RhsEnd.
+  //   3. Determine which pages correspond to all the memory accesses, i.e
+  //      LhsStartPage, LhsEndPage, RhsStartPage, RhsEndPage.
+  //   4. If LhsStartPage == LhsEndPage and RhsStartPage == RhsEndPage, then
+  //      we know we won't cross any page boundaries in the loop so we can
+  //      enter the vector loop! Otherwise we fall back on the scalar loop.
   Value *LhsStartGEP = Builder.CreateGEP(LoadType, PtrA, ExtStart);
   Value *RhsStartGEP = Builder.CreateGEP(LoadType, PtrB, ExtStart);
   Value *RhsStart = Builder.CreatePtrToInt(RhsStartGEP, I64Type);
@@ -487,7 +529,7 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(IRBuilder<> &Builder,
 
   // At this point we know two things must be true:
   //  1. Start <= End
-  //  2. ExtMaxLen <= 4096 due to the page checks.
+  //  2. ExtMaxLen <= MinPageSize due to the page checks.
   // Therefore, we know that we can use a 64-bit induction variable that
   // starts from 0 -> ExtMaxLen and it will not overflow.
   ScalableVectorType *PredVTy =

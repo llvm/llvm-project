@@ -37,6 +37,10 @@ static cl::opt<unsigned> CacheLineSize(
     cl::desc("Use this to override the target cache line size when "
              "specified by the user."));
 
+static cl::opt<unsigned> MinPageSize(
+    "min-page-size", cl::init(0), cl::Hidden,
+    cl::desc("Use this to override the target's minimum page size."));
+
 static cl::opt<unsigned> PredictableBranchThreshold(
     "predictable-branch-threshold", cl::init(99), cl::Hidden,
     cl::desc(
@@ -754,7 +758,8 @@ TargetTransformInfo::getCacheAssociativity(CacheLevel Level) const {
 }
 
 std::optional<unsigned> TargetTransformInfo::getMinPageSize() const {
-  return TTIImpl->getMinPageSize();
+  return MinPageSize.getNumOccurrences() > 0 ? MinPageSize
+                                             : TTIImpl->getMinPageSize();
 }
 
 unsigned TargetTransformInfo::getPrefetchDistance() const {
