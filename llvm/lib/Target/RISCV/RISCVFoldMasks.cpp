@@ -157,6 +157,7 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI,
          "Masked and unmasked pseudos are inconsistent");
   assert(HasPolicyOp == HasPassthru && "Unexpected pseudo structure");
 #endif
+  (void)HasPolicyOp;
 
   MI.setDesc(MCID);
 
