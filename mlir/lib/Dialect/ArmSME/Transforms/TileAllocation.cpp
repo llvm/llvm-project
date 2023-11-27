@@ -169,14 +169,14 @@ static void findDependantOps(Value rootValue,
     if (auto branchOp = llvm::dyn_cast<cf::BranchOp>(user)) {
       // (CF) Follow branch.
       traverseCorrespondingValues(branchOp.getDestOperands(),
-                                  user->getSuccessor(0)->getArguments());
+                                  branchOp.getDest()->getArguments());
     } else if (auto condBranchOp = llvm::dyn_cast<cf::CondBranchOp>(user)) {
       // (CF) Follow true branch.
       traverseCorrespondingValues(condBranchOp.getTrueOperands(),
-                                  user->getSuccessor(0)->getArguments());
+                                  condBranchOp.getTrueDest()->getArguments());
       // (CF) Follow false branch.
       traverseCorrespondingValues(condBranchOp.getFalseOperands(),
-                                  user->getSuccessor(1)->getArguments());
+                                  condBranchOp.getFalseDest()->getArguments());
     } else if (auto loop = llvm::dyn_cast<LoopLikeOpInterface>(user)) {
       // (SCF) Follow iter_args of (basic) loops (e.g. for loops).
       traverseCorrespondingValues(loop.getInits(), loop.getRegionIterArgs());
