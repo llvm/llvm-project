@@ -1144,6 +1144,11 @@ class Plugin {
   static Error deinit() {
     assert(SpecificPlugin && "Plugin no longer valid");
 
+    for (int32_t DevNo = 0, NumDev = SpecificPlugin->getNumDevices();
+         DevNo < NumDev; ++DevNo)
+      if (auto Err = SpecificPlugin->deinitDevice(DevNo))
+        return Err;
+
     // Deinitialize the plugin.
     if (auto Err = SpecificPlugin->deinit())
       return Err;
