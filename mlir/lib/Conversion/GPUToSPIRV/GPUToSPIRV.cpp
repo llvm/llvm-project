@@ -503,53 +503,26 @@ static std::optional<Value> createGroupReduceOp(OpBuilder &builder,
     return std::nullopt;
   }
 
-  // TODO(https://github.com/llvm/llvm-project/issues/73459): The SPIR-V spec
-  // does not specify how -0.0 / +0.0 and NaN values are handled in *FMin/*FMax
-  // reduction ops. We should account possible precision requirements in this
-  // conversion.
-
   using ReduceType = gpu::AllReduceOperation;
+  namespace spv = spirv;
   const OpHandler handlers[] = {
       {ReduceType::ADD,
-       &createGroupReduceOpImpl<spirv::GroupIAddOp,
-                                spirv::GroupNonUniformIAddOp>,
-       &createGroupReduceOpImpl<spirv::GroupFAddOp,
-                                spirv::GroupNonUniformFAddOp>},
+       &createGroupReduceOpImpl<spv::GroupIAddOp, spv::GroupNonUniformIAddOp>,
+       &createGroupReduceOpImpl<spv::GroupFAddOp, spv::GroupNonUniformFAddOp>},
       {ReduceType::MUL,
-       &createGroupReduceOpImpl<spirv::GroupIMulKHROp,
-                                spirv::GroupNonUniformIMulOp>,
-       &createGroupReduceOpImpl<spirv::GroupFMulKHROp,
-                                spirv::GroupNonUniformFMulOp>},
-      {ReduceType::MINUI,
-       &createGroupReduceOpImpl<spirv::GroupUMinOp,
-                                spirv::GroupNonUniformUMinOp>,
-       nullptr},
-      {ReduceType::MINSI,
-       &createGroupReduceOpImpl<spirv::GroupSMinOp,
-                                spirv::GroupNonUniformSMinOp>,
-       nullptr},
-      {ReduceType::MINF, nullptr,
-       &createGroupReduceOpImpl<spirv::GroupFMinOp,
-                                spirv::GroupNonUniformFMinOp>},
-      {ReduceType::MAXUI,
-       &createGroupReduceOpImpl<spirv::GroupUMaxOp,
-                                spirv::GroupNonUniformUMaxOp>,
-       nullptr},
-      {ReduceType::MAXSI,
-       &createGroupReduceOpImpl<spirv::GroupSMaxOp,
-                                spirv::GroupNonUniformSMaxOp>,
-       nullptr},
-      {ReduceType::MAXF, nullptr,
-       &createGroupReduceOpImpl<spirv::GroupFMaxOp,
-                                spirv::GroupNonUniformFMaxOp>},
-      {ReduceType::MINIMUMF, nullptr,
-       &createGroupReduceOpImpl<spirv::GroupFMinOp,
-                                spirv::GroupNonUniformFMinOp>},
-      {ReduceType::MAXIMUMF, nullptr,
-       &createGroupReduceOpImpl<spirv::GroupFMaxOp,
-                                spirv::GroupNonUniformFMaxOp>}};
+       &createGroupReduceOpImpl<spv::GroupIMulKHROp,
+                                spv::GroupNonUniformIMulOp>,
+       &createGroupReduceOpImpl<spv::GroupFMulKHROp,
+                                spv::GroupNonUniformFMulOp>},
+      {ReduceType::MIN,
+       &createGroupReduceOpImpl<spv::GroupSMinOp, spv::GroupNonUniformSMinOp>,
+       &createGroupReduceOpImpl<spv::GroupFMinOp, spv::GroupNonUniformFMinOp>},
+      {ReduceType::MAX,
+       &createGroupReduceOpImpl<spv::GroupSMaxOp, spv::GroupNonUniformSMaxOp>,
+       &createGroupReduceOpImpl<spv::GroupFMaxOp, spv::GroupNonUniformFMaxOp>},
+  };
 
-  for (const OpHandler &handler : handlers)
+  for (auto &handler : handlers)
     if (handler.type == opType)
       return (handler.*handlerPtr)(builder, loc, arg, isGroup, isUniform);
 
