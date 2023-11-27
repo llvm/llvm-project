@@ -60,8 +60,8 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-NEXT:    .cfi_def_cfa_offset 48
 ; LIN-NEXT:    push2 %rbx, %r12
 ; LIN-NEXT:    .cfi_def_cfa_offset 64
-; LIN-NEXT:    subq $16, %rsp
-; LIN-NEXT:    .cfi_def_cfa_offset 80
+; LIN-NEXT:    subq $32, %rsp
+; LIN-NEXT:    .cfi_def_cfa_offset 96
 ; LIN-NEXT:    .cfi_offset %rbx, -64
 ; LIN-NEXT:    .cfi_offset %r12, -56
 ; LIN-NEXT:    .cfi_offset %r13, -48
@@ -73,7 +73,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-NEXT:    xorl %ecx, %ecx
 ; LIN-NEXT:    xorl %eax, %eax
 ; LIN-NEXT:    callq *%rcx
-; LIN-NEXT:    addq $16, %rsp
+; LIN-NEXT:    addq $32, %rsp
 ; LIN-NEXT:    .cfi_def_cfa_offset 64
 ; LIN-NEXT:    pop2 %r12, %rbx
 ; LIN-NEXT:    .cfi_def_cfa_offset 48
@@ -95,8 +95,8 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 48
 ; LIN-PPX-NEXT:    push2p %rbx, %r12
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 64
-; LIN-PPX-NEXT:    subq $16, %rsp
-; LIN-PPX-NEXT:    .cfi_def_cfa_offset 80
+; LIN-PPX-NEXT:    subq $32, %rsp
+; LIN-PPX-NEXT:    .cfi_def_cfa_offset 96
 ; LIN-PPX-NEXT:    .cfi_offset %rbx, -64
 ; LIN-PPX-NEXT:    .cfi_offset %r12, -56
 ; LIN-PPX-NEXT:    .cfi_offset %r13, -48
@@ -108,7 +108,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-PPX-NEXT:    xorl %ecx, %ecx
 ; LIN-PPX-NEXT:    xorl %eax, %eax
 ; LIN-PPX-NEXT:    callq *%rcx
-; LIN-PPX-NEXT:    addq $16, %rsp
+; LIN-PPX-NEXT:    addq $32, %rsp
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 64
 ; LIN-PPX-NEXT:    pop2p %r12, %rbx
 ; LIN-PPX-NEXT:    .cfi_def_cfa_offset 48
@@ -165,15 +165,15 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-NEXT:    push2 %rbx, %rbp
 ; WIN-NEXT:    .seh_pushreg %rbp
 ; WIN-NEXT:    .seh_pushreg %rbx
-; WIN-NEXT:    subq $48, %rsp
-; WIN-NEXT:    .seh_stackalloc 48
+; WIN-NEXT:    subq $64, %rsp
+; WIN-NEXT:    .seh_stackalloc 64
 ; WIN-NEXT:    .seh_endprologue
 ; WIN-NEXT:    #APP
 ; WIN-NEXT:    #NO_APP
 ; WIN-NEXT:    xorl %eax, %eax
 ; WIN-NEXT:    callq *%rax
 ; WIN-NEXT:    nop
-; WIN-NEXT:    addq $48, %rsp
+; WIN-NEXT:    addq $64, %rsp
 ; WIN-NEXT:    pop2 %rbp, %rbx
 ; WIN-NEXT:    pop2 %r13, %r12
 ; WIN-NEXT:    pop2 %r15, %r14
@@ -194,15 +194,15 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX-NEXT:    push2p %rbx, %rbp
 ; WIN-PPX-NEXT:    .seh_pushreg %rbp
 ; WIN-PPX-NEXT:    .seh_pushreg %rbx
-; WIN-PPX-NEXT:    subq $48, %rsp
-; WIN-PPX-NEXT:    .seh_stackalloc 48
+; WIN-PPX-NEXT:    subq $64, %rsp
+; WIN-PPX-NEXT:    .seh_stackalloc 64
 ; WIN-PPX-NEXT:    .seh_endprologue
 ; WIN-PPX-NEXT:    #APP
 ; WIN-PPX-NEXT:    #NO_APP
 ; WIN-PPX-NEXT:    xorl %eax, %eax
 ; WIN-PPX-NEXT:    callq *%rax
 ; WIN-PPX-NEXT:    nop
-; WIN-PPX-NEXT:    addq $48, %rsp
+; WIN-PPX-NEXT:    addq $64, %rsp
 ; WIN-PPX-NEXT:    pop2p %rbp, %rbx
 ; WIN-PPX-NEXT:    pop2p %r13, %r12
 ; WIN-PPX-NEXT:    pop2p %r15, %r14
@@ -211,7 +211,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-PPX-NEXT:    .seh_endproc
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{r12},~{rbx},~{dirflag},~{fpsr},~{flags}"()
-  %a = alloca [2 x ptr], align 8
+  %a = alloca [3 x ptr], align 8
   %b = call ptr (...) null()
   ret i32 undef
 }
