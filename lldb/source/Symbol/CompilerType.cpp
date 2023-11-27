@@ -54,7 +54,7 @@ bool CompilerType::IsArrayType(CompilerType *element_type_ptr, uint64_t *size,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->IsArrayType(m_type, element_type_ptr, size,
-                                         is_incomplete);
+                                      is_incomplete);
 
   if (element_type_ptr)
     element_type_ptr->Clear();
@@ -157,8 +157,7 @@ bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsBlockPointerType(m_type,
-                                                function_pointer_type_ptr);
+      return type_system_sp->IsBlockPointerType(m_type, function_pointer_type_ptr);
   return false;
 }
 
@@ -250,7 +249,7 @@ bool CompilerType::IsPossibleDynamicType(CompilerType *dynamic_pointee_type,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->IsPossibleDynamicType(m_type, dynamic_pointee_type,
-                                                   check_cplusplus, check_objc);
+                                                check_cplusplus, check_objc);
   return false;
 }
 
@@ -303,256 +302,6 @@ bool CompilerType::IsBeingDefined() const {
   return false;
 }
 
-bool CompilerType::IsSmartPtrType() const {
-  // These regular expressions cover shared, unique and weak pointers both from
-  // stdlibc++ and libc+++.
-
-  static llvm::Regex k_libcxx_std_unique_ptr_regex(
-      "^std::__[[:alnum:]]+::unique_ptr<.+>(( )?&)?$");
-  static llvm::Regex k_libcxx_std_shared_ptr_regex(
-      "^std::__[[:alnum:]]+::shared_ptr<.+>(( )?&)?$");
-  static llvm::Regex k_libcxx_std_weak_ptr_regex(
-      "^std::__[[:alnum:]]+::weak_ptr<.+>(( )?&)?$");
-  //
-  static llvm::Regex k_libcxx_std_unique_ptr_regex_2(
-      "^std::unique_ptr<.+>(( )?&)?$");
-  static llvm::Regex k_libcxx_std_shared_ptr_regex_2(
-      "^std::shared_ptr<.+>(( )?&)?$");
-  static llvm::Regex k_libcxx_std_weak_ptr_regex_2(
-      "^std::weak_ptr<.+>(( )?&)?$");
-  //
-  llvm::StringRef name = GetTypeName();
-  return k_libcxx_std_unique_ptr_regex.match(name) ||
-         k_libcxx_std_shared_ptr_regex.match(name) ||
-         k_libcxx_std_weak_ptr_regex.match(name) ||
-         k_libcxx_std_unique_ptr_regex_2.match(name) ||
-         k_libcxx_std_shared_ptr_regex_2.match(name) ||
-         k_libcxx_std_weak_ptr_regex_2.match(name);
-}
-
-bool CompilerType::IsInteger() const {
-  // This is used when you don't care about the signedness of the integer.
-  bool is_signed;
-  return IsIntegerType(is_signed);
-}
-
-bool CompilerType::IsFloat() const {
-  uint32_t count = 0;
-  bool is_complex = false;
-  return IsFloatingPointType(count, is_complex);
-}
-
-bool CompilerType::IsEnumerationType() const {
-  // This is used when you don't care about the signedness of the enum.
-  bool is_signed;
-  return IsEnumerationType(is_signed);
-}
-
-bool CompilerType::IsUnscopedEnumerationType() const {
-  return IsEnumerationType() && !IsScopedEnumerationType();
-}
-
-bool CompilerType::IsIntegerOrUnscopedEnumerationType() const {
-  return IsInteger() || IsUnscopedEnumerationType();
-}
-
-bool CompilerType::IsSigned() const {
-  if (IsEnumerationType()) {
-    return IsEnumerationIntegerTypeSigned();
-  }
-  return GetTypeInfo() & lldb::eTypeIsSigned;
-}
-
-bool CompilerType::IsNullPtrType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() ==
-         lldb::eBasicTypeNullPtr;
-}
-
-bool CompilerType::IsBoolean() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
-}
-
-bool CompilerType::IsEnumerationIntegerTypeSigned() const {
-  if (IsValid()) {
-    return GetEnumerationIntegerType().GetTypeInfo() & lldb::eTypeIsSigned;
-  }
-  return false;
-}
-
-bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
-  return IsScalarType() || IsUnscopedEnumerationType();
-}
-
-bool CompilerType::IsPromotableIntegerType() const {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  if (IsUnscopedEnumerationType()) {
-    return true;
-  }
-
-  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-}
-
-bool CompilerType::IsPointerToVoid() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() &&
-         GetPointeeType().GetBasicTypeEnumeration() == lldb::eBasicTypeVoid;
-}
-
-bool CompilerType::IsRecordType() const {
-  if (!IsValid())
-    return false;
-
-  return GetCanonicalType().GetTypeClass() &
-         (lldb::eTypeClassClass | lldb::eTypeClassStruct |
-          lldb::eTypeClassUnion);
-}
-
-// Checks whether `target_base` is a virtual base of `type` (direct or
-// indirect). If it is, stores the first virtual base type on the path from
-// `type` to `target_type`.
-bool CompilerType::IsVirtualBase(CompilerType target_base,
-                                 CompilerType *virtual_base,
-                                 bool carry_virtual) const {
-  if (CompareTypes(target_base)) {
-    return carry_virtual;
-  }
-
-  if (!carry_virtual) {
-    uint32_t num_virtual_bases = GetNumVirtualBaseClasses();
-    for (uint32_t i = 0; i < num_virtual_bases; ++i) {
-      uint32_t bit_offset;
-      auto base = GetVirtualBaseClassAtIndex(i, &bit_offset);
-      if (base.IsVirtualBase(target_base, virtual_base,
-                             /*carry_virtual*/ true)) {
-        if (virtual_base) {
-          *virtual_base = base;
-        }
-        return true;
-      }
-    }
-  }
-
-  uint32_t num_direct_bases = GetNumDirectBaseClasses();
-  for (uint32_t i = 0; i < num_direct_bases; ++i) {
-    uint32_t bit_offset;
-    auto base = GetDirectBaseClassAtIndex(i, &bit_offset);
-    if (base.IsVirtualBase(target_base, virtual_base, carry_virtual)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool CompilerType::IsContextuallyConvertibleToBool() const {
-  return IsScalarType() || IsUnscopedEnumerationType() || IsPointerType() ||
-         IsNullPtrType() || IsArrayType();
-}
-
-bool CompilerType::IsBasicType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() !=
-         lldb::eBasicTypeInvalid;
-}
-
-std::string CompilerType::TypeDescription() {
-  auto name = GetTypeName();
-  auto canonical_name = GetCanonicalType().GetTypeName();
-  if (name.IsEmpty() || canonical_name.IsEmpty()) {
-    return "''"; // should not happen
-  }
-  if (name == canonical_name) {
-    return llvm::formatv("'{0}'", name);
-  }
-  return llvm::formatv("'{0}' (aka '{1}')", name, canonical_name);
-}
-
-bool CompilerType::CompareTypes(CompilerType rhs) const {
-  if (*this == rhs)
-    return true;
-
-  const ConstString name = GetFullyUnqualifiedType().GetTypeName();
-  const ConstString rhs_name = rhs.GetFullyUnqualifiedType().GetTypeName();
-  return name == rhs_name;
-}
-
-const char *CompilerType::GetTypeTag() {
-  switch (GetTypeClass()) {
-    // clang-format off
-    case lldb::eTypeClassClass:       return "class";
-    case lldb::eTypeClassEnumeration: return "enum";
-    case lldb::eTypeClassStruct:      return "struct";
-    case lldb::eTypeClassUnion:       return "union";
-    // clang-format on
-  default:
-    return "unknown";
-  }
-}
-
-uint32_t CompilerType::GetNumberOfNonEmptyBaseClasses() {
-  // Go through the base classes and count non-empty ones.
-  uint32_t ret = 0;
-  uint32_t num_direct_bases = GetNumDirectBaseClasses();
-
-  for (uint32_t i = 0; i < num_direct_bases; ++i) {
-    uint32_t bit_offset;
-    CompilerType base_type = GetDirectBaseClassAtIndex(i, &bit_offset);
-    if (base_type.GetNumFields() > 0 ||
-        base_type.GetNumberOfNonEmptyBaseClasses() > 0) {
-      ret += 1;
-    }
-  }
-  return ret;
-}
-
-CompilerType CompilerType::GetTemplateArgumentType(uint32_t idx) {
-  CompilerType empty_type;
-  if (!IsValid())
-    return empty_type;
-
-  CompilerType type;
-  const bool expand_pack = true;
-  switch (GetTemplateArgumentKind(idx, true)) {
-  case lldb::eTemplateArgumentKindType:
-    type = GetTypeTemplateArgument(idx, expand_pack);
-    break;
-  case lldb::eTemplateArgumentKindIntegral:
-    type = GetIntegralTemplateArgument(idx, expand_pack)->type;
-    break;
-  default:
-    break;
-  }
-  if (type.IsValid())
-    return type;
-  return empty_type;
-}
-
-CompilerType CompilerType::GetSmartPtrPointeeType() {
-  assert(IsSmartPtrType() &&
-         "the type should be a smart pointer (std::unique_ptr, std::shared_ptr "
-         "or std::weak_ptr");
-
-  return GetTemplateArgumentType(0);
-}
-
 // Type Completion
 
 bool CompilerType::GetCompleteType() const {
@@ -587,9 +336,9 @@ ConstString CompilerType::GetDisplayTypeName() const {
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {
   if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetTypeInfo(m_type,
-                                         pointee_or_element_compiler_type);
+  if (auto type_system_sp = GetTypeSystem())
+    return type_system_sp->GetTypeInfo(m_type,
+                                       pointee_or_element_compiler_type);
   return 0;
 }
 
@@ -613,9 +362,8 @@ void CompilerType::SetCompilerType(lldb::TypeSystemWP type_system,
   m_type = type;
 }
 
-void CompilerType::SetCompilerType(
-    CompilerType::TypeSystemSPWrapper type_system,
-    lldb::opaque_compiler_type_t type) {
+void CompilerType::SetCompilerType(CompilerType::TypeSystemSPWrapper type_system,
+                                   lldb::opaque_compiler_type_t type) {
   m_type_system = type_system.GetSharedPointer();
   m_type = type;
 }
@@ -841,7 +589,7 @@ uint32_t CompilerType::GetNumChildren(bool omit_empty_base_classes,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetNumChildren(m_type, omit_empty_base_classes,
-                                            exe_ctx);
+                                       exe_ctx);
   return 0;
 }
 
@@ -853,7 +601,8 @@ lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {
 }
 
 void CompilerType::ForEachEnumerator(
-    std::function<bool(const CompilerType &integer_type, ConstString name,
+    std::function<bool(const CompilerType &integer_type,
+                       ConstString name,
                        const llvm::APSInt &value)> const &callback) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -874,8 +623,7 @@ CompilerType CompilerType::GetFieldAtIndex(size_t idx, std::string &name,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetFieldAtIndex(m_type, idx, name, bit_offset_ptr,
-                                             bitfield_bit_size_ptr,
-                                             is_bitfield_ptr);
+                                        bitfield_bit_size_ptr, is_bitfield_ptr);
   return CompilerType();
 }
 
@@ -899,7 +647,7 @@ CompilerType::GetDirectBaseClassAtIndex(size_t idx,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetDirectBaseClassAtIndex(m_type, idx,
-                                                       bit_offset_ptr);
+                                                    bit_offset_ptr);
   return CompilerType();
 }
 
@@ -909,7 +657,7 @@ CompilerType::GetVirtualBaseClassAtIndex(size_t idx,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetVirtualBaseClassAtIndex(m_type, idx,
-                                                        bit_offset_ptr);
+                                                     bit_offset_ptr);
   return CompilerType();
 }
 
@@ -990,7 +738,7 @@ size_t CompilerType::GetIndexOfChildMemberWithName(
   if (IsValid() && !name.empty()) {
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetIndexOfChildMemberWithName(
-          m_type, name, omit_empty_base_classes, child_indexes);
+        m_type, name, omit_empty_base_classes, child_indexes);
   }
   return 0;
 }
@@ -1024,8 +772,7 @@ std::optional<CompilerType::IntegralTemplateArgument>
 CompilerType::GetIntegralTemplateArgument(size_t idx, bool expand_pack) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetIntegralTemplateArgument(m_type, idx,
-                                                         expand_pack);
+      return type_system_sp->GetIntegralTemplateArgument(m_type, idx, expand_pack);
   return std::nullopt;
 }
 
