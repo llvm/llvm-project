@@ -205,7 +205,7 @@ def main():
         levels = list(
             itertools.product(
                 *itertools.repeat(
-                    [st.DimLevelType.dense, st.DimLevelType.compressed], rank
+                    [st.LevelType.dense, st.LevelType.compressed], rank
                 )
             )
         )

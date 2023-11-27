@@ -676,7 +676,7 @@ private:
   /// Input and (optional) output tensors.
   std::vector<Value> tensors;
   /// Level-types for each `(TensorId, Level)` pair.
-  std::vector<std::vector<DimLevelType>> lvlTypes;
+  std::vector<std::vector<LevelType>> lvlTypes;
   // Sparse iteration information for each `(TensorId, Level)` pair.
   // These arrays are updated to remain current within the current loop.
   // TODO: Clarify which of these are indexed by dstLvl vs srcLvl.
