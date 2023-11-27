@@ -254,10 +254,10 @@ private:
   ///  - A symbol marking the call instruction.
   ///  - A symbol marking the return address of the call (if it were to return
   ///    by conventional means)
-  ///  - If it's a direct call, a symbol marking the target of the call, or
-  ///    `nullptr` if the call is indirect.
+  ///  - A symbol marking the target of the call, if known.
+  ///  - A boolean indicating if it's a direct call (true) or not (false).
   std::map<const MachineBasicBlock *,
-           SmallVector<std::tuple<MCSymbol *, MCSymbol *, MCSymbol *>>>
+           SmallVector<std::tuple<MCSymbol *, MCSymbol *, MCSymbol *, bool>>>
       YkCallMarkerSyms;
 
 protected:
