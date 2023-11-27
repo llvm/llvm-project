@@ -1674,7 +1674,8 @@ static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
       return 0;
     break;
   case SelectTypeKind::FP:
-    if (EltVT != MVT::f16 && EltVT != MVT::f32 && EltVT != MVT::f64)
+    if (EltVT != MVT::bf16 && EltVT != MVT::f16 && EltVT != MVT::f32 &&
+        EltVT != MVT::f64)
       return 0;
     break;
   }
@@ -5110,12 +5111,23 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::LUTI2_4ZTZI_S}))
         // Second Immediate must be <= 3:
         SelectMultiVectorLuti<3>(Node, 4, Opc);
+      else if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+                   Node->getValueType(0),
+                   {AArch64::LUTI2_4ZTZI_B, AArch64::LUTI2_4ZTZI_H,
+                    AArch64::LUTI2_4ZTZI_S}))
+        // Second Immediate must be <= 3:
+        SelectMultiVectorLuti<3>(Node, 4, Opc);
       return;
     }
     case Intrinsic::aarch64_sme_luti4_lane_zt_x4: {
       if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::Int>(
               Node->getValueType(0),
               {0, AArch64::LUTI4_4ZTZI_H, AArch64::LUTI4_4ZTZI_S}))
+        // Second Immediate must be <= 1:
+        SelectMultiVectorLuti<1>(Node, 4, Opc);
+      else if (auto Opc = SelectOpcodeFromVT<SelectTypeKind::FP>(
+                   Node->getValueType(0),
+                   {0, AArch64::LUTI4_4ZTZI_H, AArch64::LUTI4_4ZTZI_S}))
         // Second Immediate must be <= 1:
         SelectMultiVectorLuti<1>(Node, 4, Opc);
       return;
