@@ -36,13 +36,13 @@ static constexpr int MaxCompositeValueDepth = 3;
 static constexpr int MaxCompositeValueSize = 1000;
 
 /// Returns a map consisting of key-value entries that are present in both maps.
-template <typename K, typename V>
-llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
-                                        const llvm::DenseMap<K, V> &Map2) {
-  llvm::DenseMap<K, V> Result;
-  for (auto &Entry : Map1) {
-    auto It = Map2.find(Entry.first);
-    if (It != Map2.end() && Entry.second == It->second)
+static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc1,
+    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc2) {
+  llvm::DenseMap<const ValueDecl *, StorageLocation *> Result;
+  for (auto &Entry : DeclToLoc1) {
+    auto It = DeclToLoc2.find(Entry.first);
+    if (It != DeclToLoc2.end() && Entry.second == It->second)
       Result.insert({Entry.first, Entry.second});
   }
   return Result;
@@ -157,12 +157,25 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
                                   Environment &CurrentEnv,
                                   Environment::ValueModel &Model) {
   // Boolean-model widening.
-  if (isa<BoolValue>(&Prev)) {
-    assert(isa<BoolValue>(Current));
-    // Widen to Top, because we know they are different values. If previous was
-    // already Top, re-use that to (implicitly) indicate that no change occured.
+  if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
+    // If previous value was already Top, re-use that to (implicitly) indicate
+    // that no change occurred.
     if (isa<TopBoolValue>(Prev))
       return Prev;
+
+    // We may need to widen to Top, but before we do so, check whether both
+    // values are implied to be either true or false in the current environment.
+    // In that case, we can simply return a literal instead.
+    auto &CurBool = cast<BoolValue>(Current);
+    bool TruePrev = PrevEnv.proves(PrevBool->formula());
+    bool TrueCur = CurrentEnv.proves(CurBool.formula());
+    if (TruePrev && TrueCur)
+      return CurrentEnv.getBoolLiteralValue(true);
+    if (!TruePrev && !TrueCur &&
+        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
+        CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
+      return CurrentEnv.getBoolLiteralValue(false);
+
     return CurrentEnv.makeTopBoolValue();
   }
 
@@ -203,39 +216,37 @@ bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
   return true;
 }
 
-// Perform a join on either `LocToVal` or `ExprToVal`. `Key` must be either
-// `const StorageLocation *` or `const Expr *`.
-template <typename Key>
-llvm::MapVector<Key, Value *>
-joinKeyToValueMap(const llvm::MapVector<Key, Value *> &Map1,
-                  const llvm::MapVector<Key, Value *> &Map2,
-                  const Environment &Env1, const Environment &Env2,
-                  Environment &JoinedEnv, Environment::ValueModel &Model) {
-  llvm::MapVector<Key, Value *> MergedMap;
-  for (auto &Entry : Map1) {
-    Key K = Entry.first;
-    assert(K != nullptr);
+// Perform a join on two `LocToVal` maps.
+static llvm::MapVector<const StorageLocation *, Value *>
+joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
+             const llvm::MapVector<const StorageLocation *, Value *> &LocToVal2,
+             const Environment &Env1, const Environment &Env2,
+             Environment &JoinedEnv, Environment::ValueModel &Model) {
+  llvm::MapVector<const StorageLocation *, Value *> Result;
+  for (auto &Entry : LocToVal) {
+    const StorageLocation *Loc = Entry.first;
+    assert(Loc != nullptr);
 
     Value *Val = Entry.second;
     assert(Val != nullptr);
 
-    auto It = Map2.find(K);
-    if (It == Map2.end())
+    auto It = LocToVal2.find(Loc);
+    if (It == LocToVal2.end())
       continue;
     assert(It->second != nullptr);
 
     if (areEquivalentValues(*Val, *It->second)) {
-      MergedMap.insert({K, Val});
+      Result.insert({Loc, Val});
       continue;
     }
 
     if (Value *MergedVal = mergeDistinctValues(
-            K->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
-      MergedMap.insert({K, MergedVal});
+            Loc->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
+      Result.insert({Loc, MergedVal});
     }
   }
 
-  return MergedMap;
+  return Result;
 }
 
 // Perform widening on either `LocToVal` or `ExprToVal`. `Key` must be either
@@ -648,20 +659,19 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   else
     JoinedEnv.ReturnLoc = nullptr;
 
-  JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
-
-  JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
+  JoinedEnv.DeclToLoc = intersectDeclToLoc(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
   JoinedEnv.FlowConditionToken = EnvA.DACtx->joinFlowConditions(
       EnvA.FlowConditionToken, EnvB.FlowConditionToken);
 
-  JoinedEnv.ExprToVal = joinKeyToValueMap(EnvA.ExprToVal, EnvB.ExprToVal, EnvA,
-                                          EnvB, JoinedEnv, Model);
+  JoinedEnv.LocToVal =
+      joinLocToVal(EnvA.LocToVal, EnvB.LocToVal, EnvA, EnvB, JoinedEnv, Model);
 
-  JoinedEnv.LocToVal = joinKeyToValueMap(EnvA.LocToVal, EnvB.LocToVal, EnvA,
-                                         EnvB, JoinedEnv, Model);
+  // We intentionally leave `JoinedEnv.ExprToLoc` and `JoinedEnv.ExprToVal`
+  // empty, as we never need to access entries in these maps outside of the
+  // basic block that sets them.
 
   return JoinedEnv;
 }

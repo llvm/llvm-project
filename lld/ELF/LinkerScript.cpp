@@ -51,11 +51,8 @@ static bool isSectionPrefix(StringRef prefix, StringRef name) {
 }
 
 static StringRef getOutputSectionName(const InputSectionBase *s) {
-  if (config->relocatable)
-    return s->name;
-
-  // This is for --emit-relocs. If .text.foo is emitted as .text.bar, we want
-  // to emit .rela.text.foo as .rela.text.bar for consistency (this is not
+  // This is for --emit-relocs and -r. If .text.foo is emitted as .text.bar, we
+  // want to emit .rela.text.foo as .rela.text.bar for consistency (this is not
   // technically required, but not doing it is odd). This code guarantees that.
   if (auto *isec = dyn_cast<InputSection>(s)) {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
@@ -65,6 +62,9 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
       return saver().save(".rel" + out->name);
     }
   }
+
+  if (config->relocatable)
+    return s->name;
 
   // A BssSection created for a common symbol is identified as "COMMON" in
   // linker scripts. It should go to .bss section.

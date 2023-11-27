@@ -11628,16 +11628,18 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
     return EvaluateBuiltinClassifyType(
         CanTy->castAs<AtomicType>()->getValueType(), LangOpts);
 
-  case Type::BlockPointer:
   case Type::Vector:
   case Type::ExtVector:
+    return GCCTypeClass::Vector;
+
+  case Type::BlockPointer:
   case Type::ConstantMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-    // GCC classifies vectors as None. We follow its lead and classify all
-    // other types that don't fit into the regular classification the same way.
+    // Classify all other types that don't fit into the regular
+    // classification the same way.
     return GCCTypeClass::None;
 
   case Type::BitInt:

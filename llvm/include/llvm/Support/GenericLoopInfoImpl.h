@@ -581,10 +581,9 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     // Check each predecessor of the potential loop header.
     for (const auto Backedge : children<Inverse<BlockT *>>(Header)) {
       // If Header dominates predBB, this is a new loop. Collect the backedges.
-      if (DomTree.dominates(Header, Backedge) &&
-          DomTree.isReachableFromEntry(Backedge)) {
+      const DomTreeNodeBase<BlockT> *BackedgeNode = DomTree.getNode(Backedge);
+      if (BackedgeNode && DomTree.dominates(DomNode, BackedgeNode))
         Backedges.push_back(Backedge);
-      }
     }
     // Perform a backward CFG traversal to discover and map blocks in this loop.
     if (!Backedges.empty()) {

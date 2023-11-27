@@ -1582,7 +1582,9 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
   case Triple::r600:
     return EM_AMDGPU;
   case Triple::arm:
+  case Triple::armeb:
   case Triple::thumb:
+  case Triple::thumbeb:
     return EM_ARM;
   case Triple::avr:
     return EM_AVR;
@@ -1607,6 +1609,8 @@ static uint16_t getBitcodeMachineKind(StringRef path, const Triple &t) {
   case Triple::riscv32:
   case Triple::riscv64:
     return EM_RISCV;
+  case Triple::sparcv9:
+    return EM_SPARCV9;
   case Triple::x86:
     return t.isOSIAMCU() ? EM_IAMCU : EM_386;
   case Triple::x86_64:

@@ -816,7 +816,6 @@ set(files
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
   __type_traits/operation_traits.h
-  __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -850,6 +849,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/move.h
+  __utility/no_destroy.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h

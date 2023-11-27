@@ -313,17 +313,20 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
   patterns.add<GPUPrintfOpToVPrintfLowering>(converter);
-  patterns
-      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                       NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                       NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                       NVVM::GridDimYOp, NVVM::GridDimZOp>,
-           GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(
-          converter);
+  patterns.add<
+      GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
+                                  NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
+                                  NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::ClusterIdOp, NVVM::ClusterIdXOp,
+                                  NVVM::ClusterIdYOp, NVVM::ClusterIdZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::ClusterDimOp, NVVM::ClusterDimXOp,
+                                  NVVM::ClusterDimYOp, NVVM::ClusterDimZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
+                                  NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
+      GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
+                                  NVVM::GridDimYOp, NVVM::GridDimZOp>,
+      GPULaneIdOpToNVVM, GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
 
   patterns.add<GPUDynamicSharedMemoryOpLowering>(
       converter, NVVM::kSharedMemoryAlignmentBit);

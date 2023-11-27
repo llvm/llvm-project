@@ -1374,7 +1374,7 @@ namespace {
     const AlwaysInlineAttr *
     TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
                                   const AlwaysInlineAttr *A);
-
+    const CodeAlignAttr *TransformCodeAlignAttr(const CodeAlignAttr *CA);
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
     ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
@@ -1904,6 +1904,12 @@ const AlwaysInlineAttr *TemplateInstantiator::TransformStmtAlwaysInlineAttr(
     return nullptr;
 
   return A;
+}
+
+const CodeAlignAttr *
+TemplateInstantiator::TransformCodeAlignAttr(const CodeAlignAttr *CA) {
+  Expr *TransformedExpr = getDerived().TransformExpr(CA->getAlignment()).get();
+  return getSema().BuildCodeAlignAttr(*CA, TransformedExpr);
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(

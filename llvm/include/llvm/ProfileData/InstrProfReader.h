@@ -340,11 +340,7 @@ private:
   const uint8_t *ValueDataStart;
   uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
-
-  /// Total size of binary ids.
-  uint64_t BinaryIdsSize{0};
-  /// Start address of binary id length and data pairs.
-  const uint8_t *BinaryIdsStart;
+  std::vector<llvm::object::BuildID> BinaryIds;
 
   std::function<void(Error)> Warn;
 

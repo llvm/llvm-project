@@ -1725,7 +1725,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
         if (auto *C = dyn_cast<CallInst>(MI)) {
           if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
-                                   TypeSize::Fixed(CopySize->getZExtValue()),
+                                   TypeSize::getFixed(CopySize->getZExtValue()),
                                    M->getDestAlign().valueOrOne(), BAA,
                                    [C]() -> CallInst * { return C; })) {
             LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
@@ -1771,7 +1771,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (Len == nullptr)
     return false;
   if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
-                            TypeSize::Fixed(Len->getZExtValue()), BAA)) {
+                            TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
     BBI = M->getNextNonDebugInstruction()->getIterator();
     eraseInstruction(M);
@@ -1834,7 +1834,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // The length of the memcpy must be larger or equal to the size of the byval.
   auto *C1 = dyn_cast<ConstantInt>(MDep->getLength());
   if (!C1 || !TypeSize::isKnownGE(
-                 TypeSize::Fixed(C1->getValue().getZExtValue()), ByValSize))
+                 TypeSize::getFixed(C1->getValue().getZExtValue()), ByValSize))
     return false;
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,

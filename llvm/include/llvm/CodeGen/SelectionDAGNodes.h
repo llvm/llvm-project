@@ -454,7 +454,7 @@ public:
     NoUnsignedWrap &= Flags.NoUnsignedWrap;
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
-    NonNeg &= Flags.Exact;
+    NonNeg &= Flags.NonNeg;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
     NoSignedZeros &= Flags.NoSignedZeros;
