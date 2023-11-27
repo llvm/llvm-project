@@ -49,17 +49,17 @@ func.func @main() {
   memref.store %cst10, %data[%c1, %c4] : memref<2x6xi32>
   memref.store %cst11, %data[%c1, %c5] : memref<2x6xi32>
 
-  // MIN
+  // MAX
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c2, %grid_y = %c1, %grid_z = %c1)
              threads(%tx, %ty, %tz) in (%block_x = %c6, %block_y = %c1, %block_z = %c1) {
     %val = memref.load %data[%bx, %tx] : memref<2x6xi32>
-    %reduced = gpu.all_reduce min %val uniform {} : (i32) -> (i32)
+    %reduced = gpu.all_reduce maxsi %val uniform {} : (i32) -> (i32)
     memref.store %reduced, %sum[%bx] : memref<2xi32>
     gpu.terminator
   }
 
   call @printMemrefI32(%cast_sum) : (memref<*xi32>) -> ()
-  // CHECK: [0, 2]
+  // CHECK: [16, 11]
 
   return
 }
