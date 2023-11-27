@@ -2,7 +2,7 @@
 ; RUN:   llc -O0 -filetype=obj - -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s
 
-; RUN: opt --try-experimental-debginfo-iterators < %s -passes=asan -asan-use-after-return=never -S | \
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes=asan -asan-use-after-return=never -S | \
 ; RUN:   llc -O0 -filetype=obj - -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s
 
