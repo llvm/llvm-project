@@ -23,19 +23,19 @@ void indirect(void) {
 }
 
 static inline void a(int x) {
-    if (x == 10)
-        foo(); // expected-error {{call to 'foo' declared with 'error' attribute: oh no foo}}
-               // expected-note@* {{called by function 'a'}}
-               // expected-note@* {{inlined by function 'b'}}
-               // expected-note@* {{inlined by function 'd'}}
+  if (x == 10)
+    foo(); // expected-error {{call to 'foo' declared with 'error' attribute: oh no foo}}
+           // expected-note@* {{called by function 'a'}}
+           // expected-note@* {{inlined by function 'b'}}
+           // expected-note@* {{inlined by function 'd'}}
 }
 
 static inline void b() {
-    a(10);
+  a(10);
 }
 
 void c() {
-    a(9);
+  a(9);
 }
 
 void d() {
