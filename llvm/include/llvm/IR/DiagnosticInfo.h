@@ -1119,8 +1119,7 @@ public:
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;
   }
-  void
-  getInliningDecisions(SmallVectorImpl<std::string> &InliningDecisions) const;
+  SmallVector<std::string> getInliningDecisions() const;
 };
 
 } // end namespace llvm
