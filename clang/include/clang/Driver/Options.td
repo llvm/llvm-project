@@ -114,11 +114,6 @@ def IncludePath_Group : OptionGroup<"<I/i group>">, Group<Preprocessor_Group>,
                         DocBrief<[{
 Flags controlling how ``#include``\s are resolved to files.}]>;
 
-def EmbedPath_Group : OptionGroup<"<Embed group>">, Group<Preprocessor_Group>,
-                        DocName<"Embed path management">,
-                        DocBrief<[{
-Flags controlling how ``#embed``\s and similar are resolved to files.}]>;
-
 def I_Group : OptionGroup<"<I group>">, Group<IncludePath_Group>, DocFlatten;
 def i_Group : OptionGroup<"<i group>">, Group<IncludePath_Group>, DocFlatten;
 def clang_i_Group : OptionGroup<"<clang i group>">, Group<i_Group>, DocFlatten;
@@ -830,10 +825,9 @@ will be ignored}]>;
 def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     Visibility<[ClangOption, FlangOption]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
-def embed_dir_EQ : Joined<["--"], "embed-dir=">,
-    Flags<[RenderJoined]>, Group<EmbedPath_Group>,
-    Visibility<[ClangOption, CC1Option]>,
-    MetaVarName<"<dir>">, HelpText<"Add directory to embed search path">;
+def embed_dir_EQ : Joined<["--"], "embed-dir=">, Group<Preprocessor_Group>,
+    Visibility<[ClangOption, CC1Option]>, MetaVarName<"<dir>">,
+    HelpText<"Add directory to embed search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
 def MMD : Flag<["-"], "MMD">, Group<M_Group>,
