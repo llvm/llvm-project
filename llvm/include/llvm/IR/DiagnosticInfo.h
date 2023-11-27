@@ -29,7 +29,6 @@
 #include <functional>
 #include <iterator>
 #include <optional>
-#include <string>
 
 namespace llvm {
 
@@ -1119,7 +1118,7 @@ public:
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;
   }
-  SmallVector<std::string> getInliningDecisions() const;
+  SmallVector<StringRef> getInliningDecisions() const;
 };
 
 } // end namespace llvm

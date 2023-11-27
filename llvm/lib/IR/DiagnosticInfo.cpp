@@ -452,14 +452,14 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
     DP << ": " << getNote();
 }
 
-SmallVector<std::string> DiagnosticInfoDontCall::getInliningDecisions() const {
-  SmallVector<std::string> InliningDecisions;
+SmallVector<StringRef> DiagnosticInfoDontCall::getInliningDecisions() const {
+  SmallVector<StringRef> InliningDecisions;
 
   if (MDN)
     if (auto *MDT = dyn_cast<MDTuple>(MDN->getOperand(0)))
       for (const MDOperand &MO : MDT->operands())
         if (auto *S = dyn_cast<MDString>(MO))
-          InliningDecisions.push_back(S->getString().str());
+          InliningDecisions.push_back(S->getString());
 
   return InliningDecisions;
 }
