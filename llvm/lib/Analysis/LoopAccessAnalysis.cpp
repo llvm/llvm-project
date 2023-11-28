@@ -2009,8 +2009,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     // couldPreventStoreLoadForward, even if it changed MinDepDistBytes,
     // since a forward dependency will allow vectorization using any width.
     if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-        (couldPreventStoreLoadForward(Val.abs().getZExtValue(), TypeByteSize) ||
-         !HasSameSize)) {
+        (!HasSameSize || couldPreventStoreLoadForward(Val.abs().getZExtValue(),
+                                                      TypeByteSize))) {
       LLVM_DEBUG(dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
       return Dependence::ForwardButPreventsForwarding;
     }

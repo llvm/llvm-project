@@ -1422,6 +1422,11 @@ bool MachineLICMBase::EliminateCSE(
   if (MI->isImplicitDef())
     return false;
 
+  // Do not CSE normal loads because between them could be store instructions
+  // that change the loaded value
+  if (MI->mayLoad() && !MI->isDereferenceableInvariantLoad())
+    return false;
+
   if (MachineInstr *Dup = LookForDuplicate(MI, CI->second)) {
     LLVM_DEBUG(dbgs() << "CSEing " << *MI << " with " << *Dup);
 
@@ -1475,6 +1480,9 @@ bool MachineLICMBase::EliminateCSE(
 /// Return true if the given instruction will be CSE'd if it's hoisted out of
 /// the loop.
 bool MachineLICMBase::MayCSE(MachineInstr *MI) {
+  if (MI->mayLoad() && !MI->isDereferenceableInvariantLoad())
+    return false;
+
   unsigned Opcode = MI->getOpcode();
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.

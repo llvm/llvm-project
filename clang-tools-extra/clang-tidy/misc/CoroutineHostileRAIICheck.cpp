@@ -52,27 +52,42 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
   }
   return IsHostile;
 }
+
+// Matches the expression awaited by the `co_await`.
+AST_MATCHER_P(CoawaitExpr, awaitable, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  if (Expr *E = Node.getCommonExpr())
+    return InnerMatcher.matches(*E, Finder, Builder);
+  return false;
+}
+
+auto typeWithNameIn(const std::vector<StringRef> &Names) {
+  return hasType(
+      hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(Names)))));
+}
 } // namespace
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RAIITypesList(utils::options::parseStringList(
-          Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))) {}
+          Options.get("RAIITypesList", "std::lock_guard;std::scoped_lock"))),
+      AllowedAwaitablesList(utils::options::parseStringList(
+          Options.get("AllowedAwaitablesList", ""))) {}
 
 void CoroutineHostileRAIICheck::registerMatchers(MatchFinder *Finder) {
   // A suspension happens with co_await or co_yield.
   auto ScopedLockable = varDecl(hasType(hasCanonicalType(hasDeclaration(
                                     hasAttr(attr::Kind::ScopedLockable)))))
                             .bind("scoped-lockable");
-  auto OtherRAII = varDecl(hasType(hasCanonicalType(hasDeclaration(
-                               namedDecl(hasAnyName(RAIITypesList))))))
-                       .bind("raii");
-  Finder->addMatcher(expr(anyOf(coawaitExpr(), coyieldExpr()),
-                          forEachPrevStmt(declStmt(forEach(
-                              varDecl(anyOf(ScopedLockable, OtherRAII))))))
-                         .bind("suspension"),
-                     this);
+  auto OtherRAII = varDecl(typeWithNameIn(RAIITypesList)).bind("raii");
+  auto AllowedSuspend = awaitable(typeWithNameIn(AllowedAwaitablesList));
+  Finder->addMatcher(
+      expr(anyOf(coawaitExpr(unless(AllowedSuspend)), coyieldExpr()),
+           forEachPrevStmt(
+               declStmt(forEach(varDecl(anyOf(ScopedLockable, OtherRAII))))))
+          .bind("suspension"),
+      this);
 }
 
 void CoroutineHostileRAIICheck::check(const MatchFinder::MatchResult &Result) {
@@ -94,5 +109,7 @@ void CoroutineHostileRAIICheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "RAIITypesList",
                 utils::options::serializeStringList(RAIITypesList));
+  Options.store(Opts, "SafeAwaitableList",
+                utils::options::serializeStringList(AllowedAwaitablesList));
 }
 } // namespace clang::tidy::misc
