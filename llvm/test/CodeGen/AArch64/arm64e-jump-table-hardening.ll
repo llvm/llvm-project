@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-ios -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-ios -aarch64-min-jump-table-entries=1 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 
 ; CHECK-LABEL: test_jumptable:
 ; CHECK: mov   w[[INDEX:[0-9]+]], w0
