@@ -531,7 +531,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
                       GV->hasExternalWeakLinkage());
   }
   case TargetOpcode::G_JUMP_TABLE:
-    return selectAddr(MI, MIB, MRI);
   case TargetOpcode::G_CONSTANT_POOL:
     return selectAddr(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
