@@ -6,35 +6,27 @@
 name:            implicit_def_gpr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-
 body:             |
   bb.0:
     ; RV64D-LABEL: name: implicit_def_gpr
     ; RV64D: [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
     ; RV64D-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[DEF]], [[DEF]]
     ; RV64D-NEXT: $x10 = COPY [[ADD]]
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s64) = G_ADD %0, %0
+    %0:gprb(s64) = G_IMPLICIT_DEF
+    %1:gprb(s64) = G_ADD %0, %0
     $x10 = COPY %1(s64)
 ...
 ---
 name:            implicit_def_copy_gpr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-
 body:             |
   bb.0:
     ; RV64D-LABEL: name: implicit_def_copy_gpr
     ; RV64D: [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
     ; RV64D-NEXT: $x10 = COPY [[DEF]]
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s64) = COPY %0(s64)
+    %0:gprb(s64) = G_IMPLICIT_DEF
+    %1:gprb(s64) = COPY %0(s64)
     $x10 = COPY %1(s64)
 ...
 
@@ -42,34 +34,26 @@ body:             |
 name:            implicit_def_fpr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-
 body:             |
   bb.0:
     ; RV64D-LABEL: name: implicit_def_fpr
     ; RV64D: [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
     ; RV64D-NEXT: [[FADD_D:%[0-9]+]]:fpr64 = nofpexcept FADD_D [[DEF]], [[DEF]], 7
     ; RV64D-NEXT: $f10_d = COPY [[FADD_D]]
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s64) = G_FADD %0, %0
+    %0:fprb(s64) = G_IMPLICIT_DEF
+    %1:fprb(s64) = G_FADD %0, %0
     $f10_d = COPY %1(s64)
 ...
 ---
 name:            implicit_def_copy_fpr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fprb }
-  - { id: 1, class: fprb }
-
 body:             |
   bb.0:
     ; RV64D-LABEL: name: implicit_def_copy_fpr
     ; RV64D: [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
     ; RV64D-NEXT: $f10_d = COPY [[DEF]]
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s64) = COPY %0(s64)
+    %0:fprb(s64) = G_IMPLICIT_DEF
+    %1:fprb(s64) = COPY %0(s64)
     $f10_d = COPY %1(s64)
 ...
