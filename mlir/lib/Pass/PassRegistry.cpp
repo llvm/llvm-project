@@ -373,7 +373,7 @@ llvm::cl::OptionValue<OpPassManager>::operator=(
   return *this;
 }
 
-llvm::cl::OptionValue<OpPassManager>::~OptionValue<OpPassManager>() = default;
+llvm::cl::OptionValue<OpPassManager>::~OptionValue() = default;
 
 void llvm::cl::OptionValue<OpPassManager>::setValue(
     const OpPassManager &newValue) {
