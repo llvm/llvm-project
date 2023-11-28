@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <set>
 
 namespace llvm {
 
@@ -117,6 +118,12 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// determine if we should insert tilerelease in frame lowering.
   bool HasVirtualTileReg = false;
 
+  /// Ajust stack for push2/pop2
+  bool PadForPush2Pop2 = false;
+
+  /// Candidate registers for push2/pop2
+  std::set<Register> CandidatesForPush2Pop2;
+
   /// True if this function has CFI directives that adjust the CFA.
   /// This is used to determine if we should direct the debugger to use
   /// the CFA instead of the stack pointer.
@@ -165,7 +172,9 @@ public:
   const DenseMap<int, unsigned>& getWinEHXMMSlotInfo() const {
     return WinEHXMMSlotInfo; }
 
-  unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
+  unsigned getCalleeSavedFrameSize() const {
+    return CalleeSavedFrameSize + 8 * padForPush2Pop2();
+  }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
@@ -231,6 +240,19 @@ public:
 
   bool hasVirtualTileReg() const { return HasVirtualTileReg; }
   void setHasVirtualTileReg(bool v) { HasVirtualTileReg = v; }
+
+  bool padForPush2Pop2() const { return PadForPush2Pop2; }
+  void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }
+
+  bool isCandidateForPush2Pop2(Register Reg) const {
+    return CandidatesForPush2Pop2.find(Reg) != CandidatesForPush2Pop2.end();
+  }
+  void addCandidateForPush2Pop2(Register Reg) {
+    CandidatesForPush2Pop2.insert(Reg);
+  }
+  size_t getNumCandidatesForPush2Pop2() const {
+    return CandidatesForPush2Pop2.size();
+  }
 
   bool hasCFIAdjustCfa() const { return HasCFIAdjustCfa; }
   void setHasCFIAdjustCfa(bool v) { HasCFIAdjustCfa = v; }

@@ -33,12 +33,12 @@ template <class H, class M, class A>
 constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
   using MDS = std::mdspan<typename A::element_type, typename M::extents_type, typename M::layout_type, A>;
 
-  if !consteval {
+  if (!std::is_constant_evaluated()) {
     move_counted_handle<typename MDS::element_type>::move_counter() = 0;
   }
   // use formulation of constructor which tests that it is not explicit
   MDS m = {handle, map, acc};
-  if !consteval {
+  if (!std::is_constant_evaluated()) {
     if constexpr (std::is_same_v<H, move_counted_handle<typename MDS::element_type>>) {
       assert((H::move_counter() == 1));
     }

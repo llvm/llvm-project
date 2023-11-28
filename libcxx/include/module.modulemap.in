@@ -517,41 +517,16 @@ module std_wctype_h [system] {
 
 // Experimental C++ standard library interfaces
 module std_experimental [system] {
-  module deque {
-    header "experimental/deque"
-    export *
-  }
-  module forward_list {
-    header "experimental/forward_list"
-    export *
-  }
   module iterator {
     header "experimental/iterator"
-    export *
-  }
-  module list {
-    header "experimental/list"
-    export *
-  }
-  module map {
-    header "experimental/map"
     export *
   }
   module memory {
     header "experimental/memory"
     export *
   }
-  module memory_resource {
-    header "experimental/memory_resource"
-    export *
-  }
   module propagate_const {
     header "experimental/propagate_const"
-    export *
-  }
-  module regex {
-    @requires_LIBCXX_ENABLE_LOCALIZATION@
-    header "experimental/regex"
     export *
   }
   module simd {
@@ -570,32 +545,12 @@ module std_experimental [system] {
     header "experimental/simd"
     export *
   }
-  module set {
-    header "experimental/set"
-    export *
-  }
-  module string {
-    header "experimental/string"
-    export *
-  }
   module type_traits {
     header "experimental/type_traits"
     export *
   }
-  module unordered_map {
-    header "experimental/unordered_map"
-    export *
-  }
-  module unordered_set {
-    header "experimental/unordered_set"
-    export *
-  }
   module utility {
     header "experimental/utility"
-    export *
-  }
-  module vector {
-    header "experimental/vector"
     export *
   }
   module __config {

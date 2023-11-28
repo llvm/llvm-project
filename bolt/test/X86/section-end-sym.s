@@ -5,7 +5,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q
-# RUN: llvm-bolt %t.exe -o /dev/null --print-cfg --debug-only=bolt 2>&1 \
+# RUN: llvm-bolt %t.exe -o %t.null --print-cfg --debug-only=bolt 2>&1 \
 # RUN:   | FileCheck %s
 
 # CHECK: considering symbol etext for function
