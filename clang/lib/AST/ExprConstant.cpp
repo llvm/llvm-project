@@ -4623,10 +4623,12 @@ struct IncDecSubobjectHandler {
     if (Old) *Old = APValue(Value);
 
     APFloat One(Value.getSemantics(), 1);
+    llvm::RoundingMode RM =
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
     if (AccessKind == AK_Increment)
-      Value.add(One, APFloat::rmNearestTiesToEven);
+      Value.add(One, RM);
     else
-      Value.subtract(One, APFloat::rmNearestTiesToEven);
+      Value.subtract(One, RM);
     return true;
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
