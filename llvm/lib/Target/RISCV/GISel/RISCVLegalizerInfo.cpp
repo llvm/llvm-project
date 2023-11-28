@@ -325,10 +325,55 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(0, s32, sXLen)
       .lowerForCartesianProduct({s32, sXLen, p0}, {p0});
 
-  // The va_list arguments must be a pointer
-  getActionDefinitionsBuilder(G_VACOPY).lowerFor({p0});
-
   getLegacyLegalizerInfo().computeTables();
+}
+
+static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
+  return IntegerType::get(C, Ty.getSizeInBits());
+}
+
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                           MachineInstr &MI) const {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  switch (IntrinsicID) {
+  default:
+    return false;
+  case Intrinsic::vacopy: {
+    // vacopy arguments must be legal because of the intrinsic signature.
+    // No need to check here.
+
+    MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+    MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+    MachineFunction &MF = *MI.getMF();
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    LLVMContext &Ctx = MF.getFunction().getContext();
+
+    Register DstLst = MI.getOperand(0).getReg();
+    LLT PtrTy = MRI.getType(DstLst);
+
+    // Load the source va_list
+    Align Alignment = Align(DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx)));
+    MachineMemOperand *LoadMMO =
+        MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
+                                MachineMemOperand::MOLoad, PtrTy, Alignment);
+    Register Tmp = MRI.createGenericVirtualRegister(PtrTy);
+    Register SrcLst = MI.getOperand(1).getReg();
+    MIRBuilder.buildLoad(Tmp, SrcLst, *LoadMMO);
+
+    // Store the result in the destination va_list
+    MachineMemOperand *StoreMMO =
+        MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
+                                MachineMemOperand::MOStore, PtrTy, Alignment);
+    MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
+
+    MI.eraseFromParent();
+    return true;
+  }
+  }
 }
 
 bool RISCVLegalizerInfo::legalizeShlAshrLshr(

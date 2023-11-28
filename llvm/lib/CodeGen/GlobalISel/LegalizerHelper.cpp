@@ -3795,8 +3795,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerVectorReduction(MI);
   case G_VAARG:
     return lowerVAArg(MI);
-  case G_VACOPY:
-    return lowerVACopy(MI);
   }
 }
 
@@ -7937,35 +7935,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
       MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
 
-  MI.eraseFromParent();
-  return Legalized;
-}
-
-LegalizerHelper::LegalizeResult LegalizerHelper::lowerVACopy(MachineInstr &MI) {
-  MachineFunction &MF = *MI.getMF();
-  const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLVMContext &Ctx = MF.getFunction().getContext();
-
-  Register DstLst = MI.getOperand(0).getReg();
-  LLT PtrTy = MRI.getType(DstLst);
-
-  // Load the source va_list
-  Align Alignment = Align(DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx)));
-  MachineMemOperand *LoadMMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                              MachineMemOperand::MOLoad, PtrTy, Alignment);
-  Register Tmp = MRI.createGenericVirtualRegister(PtrTy);
-  Register SrcLst = MI.getOperand(1).getReg();
-  MIRBuilder.buildLoad(Tmp, SrcLst, *LoadMMO);
-
-  // Store the result in the destination va_list
-  MachineMemOperand *StoreMMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                              MachineMemOperand::MOStore, PtrTy, Alignment);
-  MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
-
-  Observer.changedInstr(MI);
-  Observer.erasingInstr(MI);
   MI.eraseFromParent();
   return Legalized;
 }

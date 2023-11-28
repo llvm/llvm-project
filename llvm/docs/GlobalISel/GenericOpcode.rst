@@ -899,17 +899,6 @@ G_VAARG
 
   I found no documentation for this instruction at the time of writing.
 
-G_VACOPY
-^^^^^^^^
-
-In a target-dependent way, it copies the source va_list element into the
-destination va_list element. This opcode is necessary because the copy may be
-arbitrarily complex.
-
-.. code-block:: none
-
-  G_VACOPY %2(p0), %3(p0)
-
 Other Operations
 ----------------
 
