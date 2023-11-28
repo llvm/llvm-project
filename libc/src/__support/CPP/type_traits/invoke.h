@@ -38,7 +38,8 @@ struct invoke_dispatcher<FunctionReturnType Class::*> {
   using FunctionPtrType = FunctionReturnType Class::*;
 
   template <class T, class... Args, class DecayT = cpp::decay_t<T>>
-  LIBC_INLINE static decltype(auto) call(FunctionPtrType fun, T &&t1, Args &&...args) {
+  LIBC_INLINE static decltype(auto) call(FunctionPtrType fun, T &&t1,
+                                         Args &&...args) {
     if constexpr (cpp::is_base_of_v<Class, DecayT>) {
       // T is a (possibly cv ref) type.
       return (cpp::forward<T>(t1).*fun)(cpp::forward<Args>(args)...);
