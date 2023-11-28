@@ -21,12 +21,12 @@ define dso_local signext i32 @f1() nounwind {
 ; RV64I-NEXT:    ret
   %1 = alloca [32 x i8], align 4
   %2 = alloca [32 x i8], align 4
-  %3 = getelementptr inbounds [32 x i8], [32 x i8]* %1, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %3)
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %3)
+  %3 = getelementptr inbounds [32 x i8], ptr %1, i64 0, i64 0
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %3)
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %3)
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
