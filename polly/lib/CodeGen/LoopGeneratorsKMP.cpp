@@ -81,7 +81,7 @@ Function *ParallelLoopGeneratorKMP::prepareSubFnDefinition(Function *F) const {
                                    LongType,
                                    LongType,
                                    LongType,
-                                   Builder.getInt8PtrTy()};
+                                   Builder.getPtrTy()};
 
   FunctionType *FT = FunctionType::get(Builder.getVoidTy(), Arguments, false);
   Function *SubFn = Function::Create(FT, Function::InternalLinkage,
@@ -512,7 +512,7 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
     if (!IdentTy) {
       Type *LocMembers[] = {Builder.getInt32Ty(), Builder.getInt32Ty(),
                             Builder.getInt32Ty(), Builder.getInt32Ty(),
-                            Builder.getInt8PtrTy()};
+                            Builder.getPtrTy()};
 
       IdentTy =
           StructType::create(M->getContext(), LocMembers, StructName, false);
