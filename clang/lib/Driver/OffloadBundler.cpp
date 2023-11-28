@@ -132,13 +132,8 @@ bool OffloadTargetInfo::isTripleValid() const {
 
 bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {
   return OffloadKind == Target.OffloadKind &&
-    Triple.isCompatibleWith(Target.Triple) &&
-    TargetID == Target.TargetID;
+         Triple.isCompatibleWith(Target.Triple) && TargetID == Target.TargetID;
 }
-
-//std::string OffloadTargetInfo::str() {
-//         Triple.isCompatibleWith(Target.Triple) && TargetID == Target.TargetID;
-//}
 
 std::string OffloadTargetInfo::str() const {
   return Twine(OffloadKind + "-" + Triple.str() + "-" + TargetID).str();
@@ -557,7 +552,8 @@ class ObjectFileHandler final : public FileHandler {
 
 public:
   // TODO: Add error checking from ClangOffloadBundler.cpp
-  ObjectFileHandler(std::unique_ptr<ObjectFile> ObjIn, const OffloadBundlerConfig &BC)
+  ObjectFileHandler(std::unique_ptr<ObjectFile> ObjIn,
+                    const OffloadBundlerConfig &BC)
       : Obj(std::move(ObjIn)), CurrentSection(Obj->section_begin()),
         NextSection(Obj->section_begin()), BundlerConfig(BC) {}
 
@@ -1574,7 +1570,8 @@ Error OffloadBundler::UnbundleArchive() {
       return FileHandlerOrErr.takeError();
 
     std::unique_ptr<FileHandler> &FileHandler = *FileHandlerOrErr;
-    assert(FileHandler);
+    assert(FileHandler &&
+           "FileHandle creation failed for file in the archive!");
 
     if (Error ReadErr = FileHandler->ReadHeader(CodeObjectBuffer))
       return ReadErr;

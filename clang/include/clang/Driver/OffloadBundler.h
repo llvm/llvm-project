@@ -56,13 +56,14 @@ public:
   // TODO: Add error checking from ClangOffloadBundler.cpp
   OffloadBundler(const OffloadBundlerConfig &BC) : BundlerConfig(BC) {}
 
+  // List bundle IDs. Return true if an error was found.
+  static llvm::Error
+  ListBundleIDsInFile(llvm::StringRef InputFileName,
+                      const OffloadBundlerConfig &BundlerConfig);
+
   llvm::Error BundleFiles();
   llvm::Error UnbundleFiles();
   llvm::Error UnbundleArchive();
-
-  // List bundle IDs. Return true if an error was found.
-  static llvm::Error ListBundleIDsInFile(llvm::StringRef InputFileName,
-                                const OffloadBundlerConfig &BundlerConfig);
 };
 
 /// Obtain the offload kind, real machine triple, and an optional TargetID
@@ -78,7 +79,8 @@ struct OffloadTargetInfo {
 
   const OffloadBundlerConfig &BundlerConfig;
 
-  OffloadTargetInfo(const llvm::StringRef Target, const OffloadBundlerConfig &BC);
+  OffloadTargetInfo(const llvm::StringRef Target,
+                    const OffloadBundlerConfig &BC);
   bool hasHostKind() const;
   bool isOffloadKindValid() const;
   bool isOffloadKindCompatible(const llvm::StringRef TargetOffloadKind) const;

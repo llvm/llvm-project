@@ -274,8 +274,9 @@ int main(int argc, const char **argv) {
                                     "-targets option is invalid for -list"));
     }
 
-    doWork([&]() { return OffloadBundler::ListBundleIDsInFile(InputFileNames.front(),
-                                              BundlerConfig); });
+    doWork([&]() { return OffloadBundler::ListBundleIDsInFile(
+          InputFileNames.front(),
+          BundlerConfig); });
     return 0;
   }
 
