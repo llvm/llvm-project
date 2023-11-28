@@ -388,7 +388,8 @@ private:
   SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
   finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap, uint32_t maxSize);
   void addEntry(const Symbol *symbol,
-                llvm::DenseMap<const Symbol *, int> &entriesList, int csReduction);
+                llvm::DenseMap<const Symbol *, int> &entriesList,
+                int csReduction);
   uint32_t getIndex(const Symbol *symbol, uint32_t maxSize,
                     SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>,
                                 0> &entriesList);

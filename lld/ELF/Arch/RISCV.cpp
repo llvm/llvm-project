@@ -754,7 +754,7 @@ static bool relax(InputSection &sec) {
       if (i + 1 != sec.relocs().size() &&
           sec.relocs()[i + 1].type == R_RISCV_RELAX)
         relaxHi20Lo12(sec, i, loc, r, remove);
-        break;
+      break;
     case R_RISCV_JAL:
       if (i + 1 != sec.relocations.size() &&
           sec.relocations[i + 1].type == R_RISCV_RELAX)
@@ -1133,7 +1133,8 @@ TableJumpSection::TableJumpSection()
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS,
                        config->wordsize, ".riscv.jvt") {}
 
-void TableJumpSection::addCMJTEntryCandidate(const Symbol *symbol, int csReduction) {
+void TableJumpSection::addCMJTEntryCandidate(const Symbol *symbol,
+                                             int csReduction) {
   addEntry(symbol, CMJTEntryCandidates, csReduction);
 }
 
@@ -1143,7 +1144,8 @@ int TableJumpSection::getCMJTEntryIndex(const Symbol *symbol) {
                                              : -1;
 }
 
-void TableJumpSection::addCMJALTEntryCandidate(const Symbol *symbol, int csReduction) {
+void TableJumpSection::addCMJALTEntryCandidate(const Symbol *symbol,
+                                               int csReduction) {
   addEntry(symbol, CMJALTEntryCandidates, csReduction);
 }
 
@@ -1166,12 +1168,12 @@ uint32_t TableJumpSection::getIndex(
         &entriesList) {
   // Find this symbol in the ordered list of entries if it exists.
   assert(maxSize >= entriesList.size() &&
-       "Finalized vector of entries exceeds maximum");
+         "Finalized vector of entries exceeds maximum");
   auto idx = std::find_if(
-    entriesList.begin(), entriesList.end(),
-    [symbol](llvm::detail::DenseMapPair<const Symbol *, int> &e) {
-      return e.first == symbol;
-    });
+      entriesList.begin(), entriesList.end(),
+      [symbol](llvm::detail::DenseMapPair<const Symbol *, int> &e) {
+        return e.first == symbol;
+      });
 
   if (idx == entriesList.end())
     return entriesList.size();
@@ -1274,7 +1276,7 @@ size_t TableJumpSection::getSize() const {
   }
 }
 
-size_t TableJumpSection::getSizeReduction(){
+size_t TableJumpSection::getSizeReduction() {
   // The total reduction in code size is J + JA - JTS - JAE.
   // Where:
   // J = number of bytes saved for all the cm.jt instructions emitted
@@ -1282,7 +1284,7 @@ size_t TableJumpSection::getSizeReduction(){
   // JTS = size of the part of the table for cm.jt jumps (i.e. 32 x wordsize)
   // JAE = number of entries emitted for the cm.jalt jumps x wordsize
 
-  size_t sizeReduction = - getSize();
+  size_t sizeReduction = -getSize();
   for (auto entry : finalizedCMJTEntries) {
     sizeReduction += entry.second;
   }
@@ -1296,12 +1298,12 @@ void TableJumpSection::writeTo(uint8_t *buf) {
   target->writeTableJumpHeader(buf);
   writeEntries(buf + startCMJTEntryIdx * config->wordsize,
                finalizedCMJTEntries);
-  if (finalizedCMJALTEntries.size() > 0){
+  if (finalizedCMJALTEntries.size() > 0) {
     padWords(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) *
-                  config->wordsize),
-           startCMJALTEntryIdx);
+                    config->wordsize),
+             startCMJALTEntryIdx);
     writeEntries(buf + (startCMJALTEntryIdx * config->wordsize),
-                finalizedCMJALTEntries);
+                 finalizedCMJALTEntries);
   }
 }
 
@@ -1319,7 +1321,7 @@ void TableJumpSection::writeEntries(
     SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
         &entriesList) {
   for (const auto &entry : entriesList) {
-    assert (entry.second > 0);
+    assert(entry.second > 0);
     // Use the symbol from in.symTab to ensure we have the final adjusted
     // symbol.
     if (!entry.first->isDefined())
