@@ -49,7 +49,7 @@ define ptr @mtm_depth_height(ptr %ptr, i64 %size) {
 ; CHECK-NEXT: 9	[[R39:%[0-9]+]]:gpr = AND killed [[R38]]:gpr, killed [[R37]]:gpr
 ; CHECK-NEXT: 10	[[R40:%[0-9]+]]:gpr = ADD killed [[R33]]:gpr, [[R39]]:gpr
 ; CHECK-NEXT: 10	[[R1:%[0-9]+]]:gpr = ADD [[R30]]:gpr, [[R39:%[0-9]+]]:gpr
-; CHECK-NEXT: 11	SD killed [[R40]]:gpr, [[R31]]:gpr, target-flags(riscv-lo) @heap_requested 
+; CHECK-NEXT: 1	SD killed [[R40]]:gpr, [[R31]]:gpr, target-flags(riscv-lo) @heap_requested 
 ; CHECK-NEXT: 0	[[R41:%[0-9]+]]:gpr = LUI target-flags(riscv-hi) @heap_end
 ; CHECK-NEXT: 1	[[R42:%[0-9]+]]:gpr = LD killed [[R41]]:gpr, target-flags(riscv-lo) @heap_end 
 ; CHECK-NEXT: 11	BGEU killed [[R42]]:gpr, [[R1]]:gpr, [[BB2]]
@@ -73,16 +73,16 @@ define ptr @mtm_depth_height(ptr %ptr, i64 %size) {
 ; CHECK-NEXT: 11	5	[[R41]]:gpr = LUI target-flags(riscv-hi) @heap_end
 ; CHECK-NEXT: 11	0	SD killed [[R40]]:gpr, [[R31]]:gpr, target-flags(riscv-lo) @heap_requested 
 ; CHECK-NEXT: 11	1	[[R1]]:gpr = ADD [[R30]]:gpr, [[R39]]:gpr
-; CHECK-NEXT: 11	1	[[R40]]:gpr = ADD killed [[R33]]:gpr, [[R39]]:gpr
+; CHECK-NEXT: 11	0	[[R40]]:gpr = ADD killed [[R33]]:gpr, [[R39]]:gpr
 ; CHECK-NEXT: 11	2	[[R39]]:gpr = AND killed [[R38]]:gpr, killed [[R37]]:gpr
 ; CHECK-NEXT: 11	3	[[R38]]:gpr = ADDI killed [[R35]]:gpr, -1
 ; CHECK-NEXT: 11	3	[[R37]]:gpr = nuw nsw SUB killed [[R36]]:gpr, [[R34]]:gpr
 ; CHECK-NEXT: 11	4	[[R36]]:gpr = ADDI [[X0]], 8
 ; CHECK-NEXT: 11	4	[[R35]]:gpr = SLTIU [[R34]]:gpr, 1
 ; CHECK-NEXT: 11	5	[[R34]]:gpr = ANDI [[R30]]:gpr, 7
-; CHECK-NEXT: 11	2	[[R33]]:gpr = ADD killed [[R32]]:gpr, [[R22]]:gpr
-; CHECK-NEXT: 11	6	[[R32]]:gpr = LD [[R31]]:gpr, target-flags(riscv-lo) @heap_requested 
-; CHECK-NEXT: 11	7	[[R31]]:gpr = LUI target-flags(riscv-hi) @heap_requested
+; CHECK-NEXT: 11	1	[[R33]]:gpr = ADD killed [[R32]]:gpr, [[R22]]:gpr
+; CHECK-NEXT: 11	5	[[R32]]:gpr = LD [[R31]]:gpr, target-flags(riscv-lo) @heap_requested 
+; CHECK-NEXT: 11	6	[[R31]]:gpr = LUI target-flags(riscv-hi) @heap_requested
 ; CHECK-NEXT: 11	6	[[R30]]:gpr = ADD [[R0]]:gpr, [[R22]]:gpr
 ; CHECK-NEXT: 11	10	[[R0]]:gpr = LD [[R29]]:gpr, target-flags(riscv-lo) @heap_ptr 
 ; CHECK-NEXT: 11	11	[[R29]]:gpr = LUI target-flags(riscv-hi) @heap_ptr

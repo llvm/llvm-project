@@ -664,6 +664,15 @@ struct DataDep {
 
 } // end anonymous namespace
 
+// The first operand of stores are incorrectly reported as a use of the
+// MachineInstr, when they're actually defs. They are additionally reported
+// incorrectly as a read of MachineOperand, when they're actually writes.
+// Although there is no fool-proof way of guarding against this, use
+// MachineInstr::mayStore as an approximation.
+static bool mayWriteReg(const MachineInstr &MI, Register Reg) {
+  return MI.mayStore() && MI.findRegisterUseOperandIdx(Reg) == 0;
+}
+
 // Get the input data dependencies that must be ready before UseMI can issue.
 // Return true if UseMI has any physreg operands.
 static bool getDataDeps(const MachineInstr &UseMI,
@@ -685,7 +694,7 @@ static bool getDataDeps(const MachineInstr &UseMI,
       continue;
     }
     // Collect virtual register reads.
-    if (MO.readsReg())
+    if (MO.readsReg() && !mayWriteReg(UseMI, Reg))
       Deps.push_back(DataDep(MRI, Reg, MO.getOperandNo()));
   }
   return HasPhysRegs;
@@ -725,7 +734,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
       continue;
     MCRegister Reg = MO.getReg().asMCReg();
     // Track live defs and kills for updating RegUnits.
-    if (MO.isDef()) {
+    if (MO.isDef() || mayWriteReg(*UseMI, MO.getReg())) {
       if (MO.isDead())
         Kills.push_back(Reg);
       else
@@ -733,7 +742,7 @@ static void updatePhysDepsDownwards(const MachineInstr *UseMI,
     } else if (MO.isKill())
       Kills.push_back(Reg);
     // Identify dependencies.
-    if (!MO.readsReg())
+    if (!MO.readsReg() || mayWriteReg(*UseMI, MO.getReg()))
       continue;
     for (MCRegUnit Unit : TRI->regunits(Reg)) {
       SparseSet<LiveRegUnit>::iterator I = RegUnits.find(Unit);
@@ -915,9 +924,9 @@ static unsigned updatePhysDepsUpwards(const MachineInstr &MI, unsigned Height,
     Register Reg = MO.getReg();
     if (!Reg.isPhysical())
       continue;
-    if (MO.readsReg())
+    if (MO.readsReg() && !mayWriteReg(MI, Reg))
       ReadOps.push_back(MO.getOperandNo());
-    if (!MO.isDef())
+    if (!MO.isDef() && !mayWriteReg(MI, Reg))
       continue;
     // This is a def of Reg. Remove corresponding entries from RegUnits, and
     // update MI Height to consider the physreg dependencies.
