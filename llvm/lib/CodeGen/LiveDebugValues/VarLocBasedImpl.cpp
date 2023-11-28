@@ -2203,33 +2203,6 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
   OpenRanges.insert(EntryValLocIDs, EntryValLocAsBackup);
 }
 
-static bool isSwiftAsyncContext(const MachineInstr &MI) {
-  const llvm::MachineFunction *MF = MI.getParent()->getParent();
-  const llvm::Function &F = MF->getFunction();
-  // FIXME: Missing patch.
-  //if (F.getCallingConv() != CallingConv::SwiftTail)
-  //  return false;
-  for (const MachineOperand &Op : MI.debug_operands()) {
-    if (!Op.isReg())
-      return false;
-    bool found = false;
-    unsigned Reg = Op.getReg();
-    unsigned I = 0;
-    if (MF->getProperties().hasProperty(
-            MachineFunctionProperties::Property::TracksLiveness))
-      for (auto R : MF->getRegInfo().liveins()) {
-        if (R.first == Reg && F.hasParamAttribute(I, Attribute::SwiftAsync)) {
-          found = true;
-          break;
-        }
-        ++I;
-      }
-    if (!found)
-      return false;
-  }
-  return true;
-}
-
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
 bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
