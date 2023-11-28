@@ -989,17 +989,14 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     // --whole-archive flag to the link line.  If it's not, add a proper
     // --whole-archive/--no-whole-archive bracket to the link line.
     bool WholeArchiveActive = false;
-    for (auto &&Arg : Args)
-      if (Arg && Arg->getSpelling().str() == "-Wl,")
-        for (auto &&ArgValue : Arg->getValues())
-          if (ArgValue) {
-            if (ArgValue && !strncmp(ArgValue, "--whole-archive",
-                                     sizeof("--whole-archive")))
-              WholeArchiveActive = true;
-            if (ArgValue && !strncmp(ArgValue, "--no-whole-archive",
-                                     sizeof("--no-whole-archive")))
-              WholeArchiveActive = false;
-          }
+    for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA))
+      if (Arg)
+        for (StringRef ArgValue : Arg->getValues()) {
+          if (ArgValue == "--whole-archive")
+            WholeArchiveActive = true;
+          if (ArgValue == "--no-whole-archive")
+            WholeArchiveActive = false;
+        }
 
     if (!WholeArchiveActive)
       CmdArgs.push_back("--whole-archive");
