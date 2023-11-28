@@ -71,6 +71,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
     if(NOT DEFINED CMAKE_INSTALL_RPATH)
       set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
         INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+        POSITION_INDEPENDENT_CODE ON
         CXX_VISIBILITY_PRESET protected)
     endif()
 

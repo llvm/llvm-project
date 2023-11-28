@@ -4266,7 +4266,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                    TargetCXXABI::usesRelativeVTables(T));
 
   // RTTI is on by default.
-  bool HasRTTI = Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, true);
+  bool HasRTTI = !Args.hasArg(options::OPT_fno_rtti);
   Opts.OmitVTableRTTI =
       Args.hasFlag(options::OPT_fexperimental_omit_vtable_rtti,
                    options::OPT_fno_experimental_omit_vtable_rtti, false);

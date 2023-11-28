@@ -837,7 +837,7 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
       // of which lane is responsible for which element is captured strictly
       // by shape information on the warp op, and thus requires materializing
       // the permutation in IR.
-      if (!read.getPermutationMap().isMinorIdentity())
+      if (!mlir::compressUnusedDims(read.getPermutationMap()).isIdentity())
         return failure();
       VectorType maskType =
           getDistributedType(read.getMaskType(), map, warpOp.getWarpSize());
