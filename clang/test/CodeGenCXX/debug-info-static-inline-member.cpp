@@ -53,11 +53,11 @@ int main() {
 
 // CHECK:      ![[INT_DECL2:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int2",
 // CHECK-SAME:                         flags: DIFlagStaticMember
-// CHECK-SAME:                         extraData: 26
+// CHECK-SAME:                         extraData: i32 26
 
 // CHECK:      ![[FLOAT_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_float",
 // CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-NOT:                           extraData:
+// CHECK-SAME:                          extraData: float
 
 // CHECK:      ![[ENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_enum",
 // CHECK-SAME:                         flags: DIFlagStaticMember
@@ -73,7 +73,7 @@ int main() {
 
 // CHECK:      ![[EMPTY_TEMPLATED_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "empty_templated",
 // CHECK-SAME:                                    flags: DIFlagStaticMember
-// CHECK-NOT:                                     extraData:
+// CHECK-SAME:                                    extraData: i32 1
 
 // CHECK:      ![[TEMPLATE_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_template",
 // CHECK-SAME:                             flags: DIFlagStaticMember

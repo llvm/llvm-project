@@ -74,7 +74,7 @@ int C::a = 4;
 // CHECK-NOT:                           align:
 // CHECK-NOT:                           offset:
 // CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-SAME:                          extraData: i32 1
+// CHECK-SAME:                          extraData: i1 true
 
 // DWARF4:     ![[CONST_B_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "const_b"
 // DWARF5:     ![[CONST_B_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_variable, name: "const_b"
@@ -82,7 +82,7 @@ int C::a = 4;
 // CHECK-NOT:                            align:
 // CHECK-NOT:                            offset:
 // CHECK-SAME:                           flags: DIFlagProtected | DIFlagStaticMember
-// CHECK-SAME:                           extraData: i32 1
+// CHECK-SAME:                           extraData: float
 
 // DWARF4: ![[DECL_C:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "c"
 // DWARF5: ![[DECL_C:[0-9]+]] = !DIDerivedType(tag: DW_TAG_variable, name: "c"
