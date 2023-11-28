@@ -329,6 +329,60 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
 
 #if (CUDA_VERSION >= 12000)
 
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchClusterKernel(
+    CUfunction function, intptr_t clusterX, intptr_t clusterY,
+    intptr_t clusterZ, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
+    intptr_t blockX, intptr_t blockY, intptr_t blockZ, int32_t smem,
+    CUstream stream, void **params, void **extra, size_t /*paramsCount*/) {
+  ScopedContext scopedContext;
+  if (smem > 0) {
+    // Avoid checking driver as it's more expensive than if statement
+    int32_t maxShmem = 0;
+    CUdevice device = getDefaultCuDevice();
+    CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
+    CUDA_REPORT_IF_ERROR(cuDeviceGetAttribute(
+        &maxShmem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
+        device));
+    if (maxShmem < smem) {
+      fprintf(stderr,
+              "Requested shared memory (%dkb) is larger than maximum allowed "
+              "shared memory (%dkb) for this device\n",
+              smem, maxShmem);
+    }
+    CUDA_REPORT_IF_ERROR(cuFuncSetAttribute(
+        function, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, smem));
+  }
+  CUlaunchConfig config;
+  config.gridDimX = gridX;
+  config.gridDimY = gridY;
+  config.gridDimZ = gridZ;
+  config.blockDimX = blockX;
+  config.blockDimY = blockY;
+  config.blockDimZ = blockZ;
+  config.sharedMemBytes = smem;
+  config.hStream = stream;
+  CUlaunchAttribute launchAttr[2];
+  launchAttr[0].id = CU_LAUNCH_ATTRIBUTE_CLUSTER_DIMENSION;
+  launchAttr[0].value.clusterDim.x = clusterX;
+  launchAttr[0].value.clusterDim.y = clusterY;
+  launchAttr[0].value.clusterDim.z = clusterZ;
+  launchAttr[1].id = CU_LAUNCH_ATTRIBUTE_CLUSTER_SCHEDULING_POLICY_PREFERENCE;
+  launchAttr[1].value.clusterSchedulingPolicyPreference =
+      CU_CLUSTER_SCHEDULING_POLICY_SPREAD;
+  config.numAttrs = 2;
+  config.attrs = launchAttr;
+
+  debug_print("Launching kernel,"
+              "cluster: %ld, %ld, %ld, "
+              "grid=%ld,%ld,%ld, "
+              "threads: %ld, %ld, %ld, "
+              "smem: %dkb\n",
+              clusterX, clusterY, clusterZ, gridX, gridY, gridZ, blockX, blockY,
+              blockZ, smem);
+
+  CUDA_REPORT_IF_ERROR(cuLaunchKernelEx(&config, function, params, extra));
+}
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuTensorMapEncodeTiled(
     CUtensorMap *tensorMap,             // Tensor map object
     CUtensorMapDataType tensorDataType, // Tensor data type

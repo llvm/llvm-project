@@ -31,6 +31,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -145,6 +146,7 @@ public:
   Value *mapValue(const Value *V);
   void remapInstruction(Instruction *I);
   void remapFunction(Function &F);
+  void remapDPValue(DPValue &DPV);
 
   Constant *mapConstant(const Constant *C) {
     return cast_or_null<Constant>(mapValue(C));
@@ -533,6 +535,39 @@ Value *Mapper::mapValue(const Value *V) {
     return getVM()[V] = Constant::getNullValue(NewTy);
   assert(isa<ConstantPointerNull>(C));
   return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
+}
+
+void Mapper::remapDPValue(DPValue &V) {
+  // Remap variables and DILocations.
+  auto *MappedVar = mapMetadata(V.getVariable());
+  auto *MappedDILoc = mapMetadata(V.getDebugLoc());
+  V.setVariable(cast<DILocalVariable>(MappedVar));
+  V.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
+
+  // Find Value operands and remap those.
+  SmallVector<Value *, 4> Vals, NewVals;
+  for (Value *Val : V.location_ops())
+    Vals.push_back(Val);
+  for (Value *Val : Vals)
+    NewVals.push_back(mapValue(Val));
+
+  // If there are no changes to the Value operands, finished.
+  if (Vals == NewVals)
+    return;
+
+  bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
+
+  // Otherwise, do some replacement.
+  if (!IgnoreMissingLocals &&
+      llvm::any_of(NewVals, [&](Value *V) { return V == nullptr; })) {
+    V.setKillLocation();
+  } else {
+    // Either we have all non-empty NewVals, or we're permitted to ignore
+    // missing locals.
+    for (unsigned int I = 0; I < Vals.size(); ++I)
+      if (NewVals[I])
+        V.replaceVariableLocationOp(I, NewVals[I]);
+  }
 }
 
 Value *Mapper::mapBlockAddress(const BlockAddress &BA) {
@@ -1177,6 +1212,17 @@ MDNode *ValueMapper::mapMDNode(const MDNode &N) {
 
 void ValueMapper::remapInstruction(Instruction &I) {
   FlushingMapper(pImpl)->remapInstruction(&I);
+}
+
+void ValueMapper::remapDPValue(Module *M, DPValue &V) {
+  FlushingMapper(pImpl)->remapDPValue(V);
+}
+
+void ValueMapper::remapDPValueRange(
+    Module *M, iterator_range<DPValue::self_iterator> Range) {
+  for (DPValue &DPV : Range) {
+    remapDPValue(M, DPV);
+  }
 }
 
 void ValueMapper::remapFunction(Function &F) {

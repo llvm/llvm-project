@@ -351,4 +351,14 @@ namespace Diagnostics {
     ""
   );
 
+  static_assert(1 + 1 != 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '2 != 2'}}
+  static_assert(1 - 1 == 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '0 == 2'}}
+  static_assert(1 * 1 == 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '1 == 2'}}
+  static_assert(1 / 1 == 2, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '1 == 2'}}
+  static_assert(1 << 3 != 8, ""); // expected-error {{failed}} \
+                                 // expected-note {{evaluates to '8 != 8'}}
 }

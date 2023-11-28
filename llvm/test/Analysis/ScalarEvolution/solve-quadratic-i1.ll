@@ -22,7 +22,7 @@ define void @f0() {
 ; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %b1: Trip multiple is 2
+; CHECK-NEXT:  Loop %b1: Trip multiple is 2
 ;
 b0:
   br label %b1
@@ -73,7 +73,7 @@ define void @f1() #0 {
 ; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 2
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %b1: Trip multiple is 3
+; CHECK-NEXT:  Loop %b1: Trip multiple is 3
 ;
 b0:
   store i16 0, ptr @g0, align 2

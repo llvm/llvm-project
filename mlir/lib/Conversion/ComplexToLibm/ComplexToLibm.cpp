@@ -55,10 +55,8 @@ template <typename Op, typename TypeResolver = ComplexTypeResolver>
 struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
-  ScalarOpToLibmCall<Op, TypeResolver>(MLIRContext *context,
-                                       StringRef floatFunc,
-                                       StringRef doubleFunc,
-                                       PatternBenefit benefit)
+  ScalarOpToLibmCall(MLIRContext *context, StringRef floatFunc,
+                     StringRef doubleFunc, PatternBenefit benefit)
       : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 

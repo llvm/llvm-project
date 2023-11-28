@@ -12,8 +12,11 @@
 
 #include <__bit/bit_ceil.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <cstddef>
+#include <experimental/__config>
 #include <experimental/__simd/internal_declaration.h>
+#include <experimental/__simd/traits.h>
 #include <experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
@@ -26,6 +29,9 @@ struct __vec_ext {
   static constexpr size_t __simd_size = _Np;
 };
 } // namespace simd_abi
+
+template <int _Np>
+inline constexpr bool is_abi_tag_v<simd_abi::__vec_ext<_Np>> = _Np > 0 && _Np <= 32;
 
 template <class _Tp, int _Np>
 struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {

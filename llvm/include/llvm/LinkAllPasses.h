@@ -97,13 +97,11 @@ namespace {
       (void) llvm::createNaryReassociatePass();
       (void) llvm::createObjCARCContractPass();
       (void) llvm::createPromoteMemoryToRegisterPass();
-      (void) llvm::createDemoteRegisterToMemoryPass();
       (void)llvm::createPostDomOnlyPrinterWrapperPassPass();
       (void)llvm::createPostDomPrinterWrapperPassPass();
       (void)llvm::createPostDomOnlyViewerWrapperPassPass();
       (void)llvm::createPostDomViewerWrapperPassPass();
       (void) llvm::createReassociatePass();
-      (void) llvm::createRedundantDbgInstEliminationPass();
       (void) llvm::createRegionInfoPass();
       (void) llvm::createRegionOnlyPrinterPass();
       (void) llvm::createRegionOnlyViewerPass();

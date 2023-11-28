@@ -473,6 +473,13 @@ def right_identity_zero: GICombineRule<
   (apply (GIReplaceReg $dst, $lhs))
 >;
 
+def right_identity_neg_zero_fp: GICombineRule<
+  (defs root:$dst),
+  (match (G_FADD $dst, $x, $y):$root,
+    [{ return Helper.matchConstantFPOp(${y}, -0.0); }]),
+  (apply (GIReplaceReg $dst, $x))
+>;
+
 // Fold x op 1 -> x
 def right_identity_one_int: GICombineRule<
   (defs root:$dst),
@@ -1250,7 +1257,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold, fptrunc_fpext_fold]>;
+                                        bitcast_bitcast_fold, fptrunc_fpext_fold,
+                                        right_identity_neg_zero_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,

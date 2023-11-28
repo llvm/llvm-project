@@ -448,6 +448,56 @@ for.exit:                                 ; preds = %for.body
   ret i64 %spec.select
 }
 
+; See issue https://github.com/llvm/llvm-project/issues/72855
+;
+; When hoisting instruction out of the loop, ensure that loads are not common
+; subexpressions eliminated. In this example pointer %c may alias pointer %b,
+; so when hoisting `%y = load i64, ptr %b` instruction we can't replace it with
+; `%b.val = load i64, ptr %b`
+;
+define i64 @hoisting_no_cse(ptr %a, ptr %b, ptr %c, i64 %N) {
+; CHECK-LABEL: hoisting_no_cse:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x8, [x1]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    ldr x9, [x1]
+; CHECK-NEXT:  .LBB7_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x10, [x0], #8
+; CHECK-NEXT:    ldr x10, [x10]
+; CHECK-NEXT:    cmp x10, x9
+; CHECK-NEXT:    cinc x8, x8, eq
+; CHECK-NEXT:    subs x3, x3, #1
+; CHECK-NEXT:    b.ne .LBB7_1
+; CHECK-NEXT:  // %bb.2: // %for.exit
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %b.val = load i64, ptr %b
+  %b.val.changed = add i64 %b.val, 1
+  store i64 %b.val.changed, ptr %c
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %idx = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %sum = phi i64 [ %spec.select, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds ptr, ptr %a, i64 %idx
+  %0 = load ptr, ptr %arrayidx, align 8
+  %x = load i64, ptr %0
+  %y = load i64, ptr %b
+  %cmp = icmp eq i64 %x, %y
+  %add = zext i1 %cmp to i64
+  %spec.select = add i64 %sum, %add
+  %inc = add nuw i64 %idx, 1
+  %exitcond = icmp eq i64 %inc, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:                                 ; preds = %for.body
+  ret i64 %spec.select
+}
+
 declare i32 @bcmp(ptr, ptr, i64)
 declare i32 @memcmp(ptr, ptr, i64)
 declare void @func()

@@ -368,7 +368,7 @@ define i32 @test16(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[Y:%.*]], 11
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[AND]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[AND]], 3
 ; CHECK-NEXT:    [[REM:%.*]] = and i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[REM]]
 ;

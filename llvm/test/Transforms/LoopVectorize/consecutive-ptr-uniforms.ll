@@ -84,9 +84,9 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %tmp2 = getelementptr inbounds %pair, ptr %p, i64 %i, i32 1
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %[[I1:.+]] = or i64 %index, 1
-; CHECK:       %[[I2:.+]] = or i64 %index, 2
-; CHECK:       %[[I3:.+]] = or i64 %index, 3
+; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
+; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
+; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
 ; CHECK:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
@@ -202,11 +202,11 @@ for.end:
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, {{.*}} ]
 ; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
 ; INTER:       %wide.vec = load <8 x i32>, ptr %[[G0]], align 8
-; INTER:       %[[I1:.+]] = or i64 %index, 1
+; INTER:       %[[I1:.+]] = or disjoint i64 %index, 1
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; INTER:       %[[I2:.+]] = or i64 %index, 2
+; INTER:       %[[I2:.+]] = or disjoint i64 %index, 2
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; INTER:       %[[I3:.+]] = or i64 %index, 3
+; INTER:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -243,9 +243,9 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %tmp1 = getelementptr inbounds x86_fp80, ptr %a, i64 %i
 ; CHECK:     vector.body
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:       %[[I1:.+]] = or i64 %index, 1
-; CHECK:       %[[I2:.+]] = or i64 %index, 2
-; CHECK:       %[[I3:.+]] = or i64 %index, 3
+; CHECK:       %[[I1:.+]] = or disjoint i64 %index, 1
+; CHECK:       %[[I2:.+]] = or disjoint i64 %index, 2
+; CHECK:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %index
 ; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I1]]
 ; CHECK:       getelementptr inbounds x86_fp80, ptr %a, i64 %[[I2]]

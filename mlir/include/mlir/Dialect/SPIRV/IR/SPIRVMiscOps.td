@@ -66,12 +66,6 @@ def SPIRV_UndefOp : SPIRV_Op<"Undef", [Pure]> {
     bit pattern or abstract value resulting in possibly different concrete,
     abstract, or opaque values.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    undef-op ::= `spirv.Undef` `:` spirv-type
-    ```
-
     #### Example:
 
     ```mlir

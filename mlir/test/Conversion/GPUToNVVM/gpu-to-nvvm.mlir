@@ -582,22 +582,22 @@ gpu.module @test_module_30 {
     %result = gpu.subgroup_reduce add %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
+  // CHECK-LABEL: @subgroup_reduce_minsi
+  gpu.func @subgroup_reduce_minsi(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync min {{.*}}
+    %result = gpu.subgroup_reduce minsi %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
+  // CHECK-LABEL:  @subgroup_reduce_maxsi
+  gpu.func @subgroup_reduce_maxsi(%arg0 : i32) {
+    // CHECK: nvvm.redux.sync max {{.*}}
+    %result = gpu.subgroup_reduce maxsi %arg0 uniform {} : (i32) -> (i32)
+    gpu.return
+  }
   // CHECK-LABEL: func @subgroup_reduce_and
   gpu.func @subgroup_reduce_and(%arg0 : i32) {
     // CHECK: nvvm.redux.sync and {{.*}}
     %result = gpu.subgroup_reduce and %arg0 uniform {} : (i32) -> (i32)
-    gpu.return
-  }
-  // CHECK-LABEL:  @subgroup_reduce_max
-  gpu.func @subgroup_reduce_max(%arg0 : i32) {
-    // CHECK: nvvm.redux.sync max {{.*}}
-    %result = gpu.subgroup_reduce max %arg0 uniform {} : (i32) -> (i32)
-    gpu.return
-  }
-  // CHECK-LABEL: @subgroup_reduce_min
-  gpu.func @subgroup_reduce_min(%arg0 : i32) {
-    // CHECK: nvvm.redux.sync min {{.*}}
-    %result = gpu.subgroup_reduce min %arg0 uniform {} : (i32) -> (i32)
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_or

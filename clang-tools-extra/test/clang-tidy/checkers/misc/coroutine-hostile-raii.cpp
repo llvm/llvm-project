@@ -1,7 +1,8 @@
 // RUN: %check_clang_tidy -std=c++20 %s misc-coroutine-hostile-raii %t \
-// RUN:   -config="{CheckOptions: \
-// RUN:             {misc-coroutine-hostile-raii.RAIITypesList: \
-// RUN:               'my::Mutex; ::my::other::Mutex'}}"
+// RUN:   -config="{CheckOptions: {\
+// RUN:             misc-coroutine-hostile-raii.RAIITypesList: 'my::Mutex; ::my::other::Mutex', \
+// RUN:             misc-coroutine-hostile-raii.AllowedAwaitablesList: 'safe::awaitable; ::my::other::awaitable' \
+// RUN:             }}"
 
 namespace std {
 
@@ -134,6 +135,20 @@ ReturnObject scopedLockableTest() {
     }
     absl::Mutex no_warning_5;
 }
+
+namespace safe {
+  struct awaitable {
+  bool await_ready() noexcept { return false; }
+  void await_suspend(std::coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
+};
+} // namespace safe
+ReturnObject RAIISafeSuspendTest() {
+  absl::Mutex a;
+  co_await safe::awaitable{};
+  using other = safe::awaitable;
+  co_await other{};
+} 
 
 void lambda() {
   absl::Mutex no_warning;

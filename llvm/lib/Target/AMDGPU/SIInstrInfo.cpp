@@ -8749,6 +8749,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
@@ -8807,6 +8809,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  // TODO-GFX12: Remove this.
+  // Hack to allow some GFX12 codegen tests to run before all the encodings are
+  // implemented.
+  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
