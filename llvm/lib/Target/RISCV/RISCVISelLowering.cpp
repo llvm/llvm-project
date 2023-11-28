@@ -14347,7 +14347,7 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
                               InVecLHS, InValLHS, EltNo);
     SDValue RHS = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
                               InVecRHS, InValRHS, EltNo);
-    return DAG.getNode(InVec->getOpcode(), DL, VT, LHS, RHS);
+    return DAG.getNode(InVecOpcode, DL, VT, LHS, RHS);
   }
 
   // Given insert_vector_elt (concat_vectors ...), InVal, Elt
