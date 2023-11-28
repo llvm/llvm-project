@@ -2203,12 +2203,6 @@ def Vector_TypeCastOp :
     super-vectorization operational. It can be seen as a special case of the
     `view` operation but scoped in the super-vectorization context.
 
-    Syntax:
-
-    ```
-    operation ::= `vector.type_cast` ssa-use : memref-type to memref-type
-    ```
-
     Example:
 
     ```mlir

@@ -130,36 +130,7 @@ Changes to the RISC-V Backend
 
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
-* Assembler support for version 1.0.1 of the Zcb extension was added.
-* Zca, Zcf, and Zcd extensions were upgraded to version 1.0.1.
-* vsetvli intrinsics no longer have side effects. They may now be combined,
-  moved, deleted, etc. by optimizations.
-* Adds support for the vendor-defined XTHeadBa (address-generation) extension.
-* Adds support for the vendor-defined XTHeadBb (basic bit-manipulation) extension.
-* Adds support for the vendor-defined XTHeadBs (single-bit) extension.
-* Adds support for the vendor-defined XTHeadCondMov (conditional move) extension.
-* Adds support for the vendor-defined XTHeadMac (multiply-accumulate instructions) extension.
-* Added support for the vendor-defined XTHeadMemPair (two-GPR memory operations)
-  extension disassembler/assembler.
-* Added support for the vendor-defined XTHeadMemIdx (indexed memory operations)
-  extension disassembler/assembler.
-* Added support for the vendor-defined Xsfvcp (SiFive VCIX) extension
-  disassembler/assembler.
-* Support for the now-ratified Zawrs extension is no longer experimental.
-* Adds support for the vendor-defined XTHeadCmo (cache management operations) extension.
-* Adds support for the vendor-defined XTHeadSync (multi-core synchronization instructions) extension.
-* Added support for the vendor-defined XTHeadFMemIdx (indexed memory operations for floating point) extension.
-* Assembler support for RV64E was added.
-* Assembler support was added for the experimental Zicond (integer conditional
-  operations) extension.
-* I, F, D, and A extension versions have been update to the 20191214 spec versions.
-  New version I2.1, F2.2, D2.2, A2.1. This should not impact code generation.
-  Immpacts versions accepted in ``-march`` and reported in ELF attributes.
-* Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
-  been removed.
-* i32 is now a native type in the datalayout string. This enables
-  LoopStrengthReduce for loops with i32 induction variables, among other
-  optimizations.
+* Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
 
 Changes to the WebAssembly Backend
 ----------------------------------

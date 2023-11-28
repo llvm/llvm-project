@@ -8,13 +8,13 @@
 
 // <string>
 
-// void reserve(); // Deprecated in C++20
+// void reserve(); // Removed in C++26
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++26
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 #include <string>
 
 void f() {
   std::string s;
-  s.reserve(); // expected-warning {{'reserve' is deprecated}}
+  s.reserve(); // expected-error {{too few arguments to function call}}
 }

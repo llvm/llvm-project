@@ -4143,10 +4143,6 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
   if (!requiresAddressMap())
     return;
 
-  // Output ranges should match the input if the body hasn't changed.
-  if (!isSimple() && !BC.HasRelocations)
-    return;
-
   // AArch64 may have functions that only contains a constant island (no code).
   if (getLayout().block_empty())
     return;
@@ -4193,6 +4189,12 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
     PrevBB->setOutputEndAddress(PrevBB->isSplit()
                                     ? FF.getAddress() + FF.getImageSize()
                                     : getOutputAddress() + getOutputSize());
+  }
+
+  // Reset output addresses for deleted blocks.
+  for (BinaryBasicBlock *BB : DeletedBasicBlocks) {
+    BB->setOutputStartAddress(0);
+    BB->setOutputEndAddress(0);
   }
 }
 
