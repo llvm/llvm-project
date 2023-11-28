@@ -14,7 +14,6 @@
 // [format.formatter.spec]:
 // Each header that declares the template `formatter` provides the following
 // enabled specializations:
-// The specializations
 //   template<> struct formatter<char, char>;
 //   template<> struct formatter<char, wchar_t>;
 //   template<> struct formatter<wchar_t, wchar_t>;
