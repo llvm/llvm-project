@@ -85,179 +85,6 @@ private:
   llvm::DenseMap<const clang::LabelDecl *, JumpDest> LabelMap;
   JumpDest &getJumpDestForLabel(const clang::LabelDecl *D);
 
-  /// -------
-  /// Lexical Scope: to be read as in the meaning in CIR, a scope is always
-  /// related with initialization and destruction of objects.
-  /// -------
-
-public:
-  // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
-  // scopes that require cleanups.
-  struct LexicalScopeContext {
-  private:
-    // Block containing cleanup code for things initialized in this
-    // lexical context (scope).
-    mlir::Block *CleanupBlock = nullptr;
-
-    // Points to scope entry block. This is useful, for instance, for
-    // helping to insert allocas before finalizing any recursive codegen
-    // from switches.
-    mlir::Block *EntryBlock;
-
-    // On a coroutine body, the OnFallthrough sub stmt holds the handler
-    // (CoreturnStmt) for control flow falling off the body. Keep track
-    // of emitted co_return in this scope and allow OnFallthrough to be
-    // skipeed.
-    bool HasCoreturn = false;
-
-    // FIXME: perhaps we can use some info encoded in operations.
-    enum Kind {
-      Regular, // cir.if, cir.scope, if_regions
-      Ternary, // cir.ternary
-      Switch   // cir.switch
-    } ScopeKind = Regular;
-
-  public:
-    unsigned Depth = 0;
-    bool HasReturn = false;
-
-    LexicalScopeContext(mlir::Location loc, mlir::Block *eb)
-        : EntryBlock(eb), BeginLoc(loc), EndLoc(loc) {
-      // Has multiple locations: overwrite with separate start and end locs.
-      if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
-        assert(fusedLoc.getLocations().size() == 2 && "too many locations");
-        BeginLoc = fusedLoc.getLocations()[0];
-        EndLoc = fusedLoc.getLocations()[1];
-      }
-
-      assert(EntryBlock && "expected valid block");
-    }
-
-    ~LexicalScopeContext() = default;
-
-    // ---
-    // Coroutine tracking
-    // ---
-    bool hasCoreturn() const { return HasCoreturn; }
-    void setCoreturn() { HasCoreturn = true; }
-
-    // ---
-    // Kind
-    // ---
-    bool isRegular() { return ScopeKind == Kind::Regular; }
-    bool isSwitch() { return ScopeKind == Kind::Switch; }
-    bool isTernary() { return ScopeKind == Kind::Ternary; }
-
-    void setAsSwitch() { ScopeKind = Kind::Switch; }
-    void setAsTernary() { ScopeKind = Kind::Ternary; }
-
-    // ---
-    // Goto handling
-    // ---
-
-    // Lazy create cleanup block or return what's available.
-    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
-      if (CleanupBlock)
-        return getCleanupBlock(builder);
-      return createCleanupBlock(builder);
-    }
-
-    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
-      return CleanupBlock;
-    }
-    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
-      {
-        // Create the cleanup block but dont hook it up around just yet.
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        CleanupBlock = builder.createBlock(builder.getBlock()->getParent());
-      }
-      assert(builder.getInsertionBlock() && "Should be valid");
-      return CleanupBlock;
-    }
-
-    // Goto's introduced in this scope but didn't get fixed.
-    llvm::SmallVector<std::pair<mlir::Operation *, const clang::LabelDecl *>, 4>
-        PendingGotos;
-
-    // Labels solved inside this scope.
-    llvm::SmallPtrSet<const clang::LabelDecl *, 4> SolvedLabels;
-
-    // ---
-    // Return handling
-    // ---
-
-  private:
-    // On switches we need one return block per region, since cases don't
-    // have their own scopes but are distinct regions nonetheless.
-    llvm::SmallVector<mlir::Block *> RetBlocks;
-    llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
-    unsigned int CurrentSwitchRegionIdx = -1;
-
-    // There's usually only one ret block per scope, but this needs to be
-    // get or create because of potential unreachable return statements, note
-    // that for those, all source location maps to the first one found.
-    mlir::Block *createRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      assert((isSwitch() || RetBlocks.size() == 0) &&
-             "only switches can hold more than one ret block");
-
-      // Create the cleanup block but dont hook it up around just yet.
-      mlir::OpBuilder::InsertionGuard guard(CGF.builder);
-      auto *b = CGF.builder.createBlock(CGF.builder.getBlock()->getParent());
-      RetBlocks.push_back(b);
-      RetLocs.push_back(loc);
-      return b;
-    }
-
-  public:
-    void updateCurrentSwitchCaseRegion() { CurrentSwitchRegionIdx++; }
-    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return RetBlocks; }
-    llvm::ArrayRef<std::optional<mlir::Location>> getRetLocs() {
-      return RetLocs;
-    }
-
-    mlir::Block *getOrCreateRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
-      unsigned int regionIdx = 0;
-      if (isSwitch())
-        regionIdx = CurrentSwitchRegionIdx;
-      if (regionIdx >= RetBlocks.size())
-        return createRetBlock(CGF, loc);
-      return &*RetBlocks.back();
-    }
-
-    // Scope entry block tracking
-    mlir::Block *getEntryBlock() { return EntryBlock; }
-
-    mlir::Location BeginLoc, EndLoc;
-  };
-
-private:
-  class LexicalScopeGuard {
-    CIRGenFunction &CGF;
-    LexicalScopeContext *OldVal = nullptr;
-
-  public:
-    LexicalScopeGuard(CIRGenFunction &c, LexicalScopeContext *L) : CGF(c) {
-      if (CGF.currLexScope) {
-        OldVal = CGF.currLexScope;
-        L->Depth++;
-      }
-      CGF.currLexScope = L;
-    }
-
-    LexicalScopeGuard(const LexicalScopeGuard &) = delete;
-    LexicalScopeGuard &operator=(const LexicalScopeGuard &) = delete;
-    LexicalScopeGuard &operator=(LexicalScopeGuard &&other) = delete;
-
-    void cleanup();
-    void restore() { CGF.currLexScope = OldVal; }
-    ~LexicalScopeGuard() {
-      cleanup();
-      restore();
-    }
-  };
-
-  LexicalScopeContext *currLexScope = nullptr;
-
   // ---------------------
   // Opaque value handling
   // ---------------------
@@ -1825,6 +1652,178 @@ public:
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator CurrentCleanupScopeDepth =
       EHScopeStack::stable_end();
+
+  /// -------
+  /// Lexical Scope: to be read as in the meaning in CIR, a scope is always
+  /// related with initialization and destruction of objects.
+  /// -------
+
+public:
+  // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
+  // scopes that require cleanups.
+  struct LexicalScopeContext {
+  private:
+    // Block containing cleanup code for things initialized in this
+    // lexical context (scope).
+    mlir::Block *CleanupBlock = nullptr;
+
+    // Points to scope entry block. This is useful, for instance, for
+    // helping to insert allocas before finalizing any recursive codegen
+    // from switches.
+    mlir::Block *EntryBlock;
+
+    // On a coroutine body, the OnFallthrough sub stmt holds the handler
+    // (CoreturnStmt) for control flow falling off the body. Keep track
+    // of emitted co_return in this scope and allow OnFallthrough to be
+    // skipeed.
+    bool HasCoreturn = false;
+
+    // FIXME: perhaps we can use some info encoded in operations.
+    enum Kind {
+      Regular, // cir.if, cir.scope, if_regions
+      Ternary, // cir.ternary
+      Switch   // cir.switch
+    } ScopeKind = Regular;
+
+  public:
+    unsigned Depth = 0;
+    bool HasReturn = false;
+
+    LexicalScopeContext(mlir::Location loc, mlir::Block *eb)
+        : EntryBlock(eb), BeginLoc(loc), EndLoc(loc) {
+      // Has multiple locations: overwrite with separate start and end locs.
+      if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
+        assert(fusedLoc.getLocations().size() == 2 && "too many locations");
+        BeginLoc = fusedLoc.getLocations()[0];
+        EndLoc = fusedLoc.getLocations()[1];
+      }
+
+      assert(EntryBlock && "expected valid block");
+    }
+
+    ~LexicalScopeContext() = default;
+
+    // ---
+    // Coroutine tracking
+    // ---
+    bool hasCoreturn() const { return HasCoreturn; }
+    void setCoreturn() { HasCoreturn = true; }
+
+    // ---
+    // Kind
+    // ---
+    bool isRegular() { return ScopeKind == Kind::Regular; }
+    bool isSwitch() { return ScopeKind == Kind::Switch; }
+    bool isTernary() { return ScopeKind == Kind::Ternary; }
+
+    void setAsSwitch() { ScopeKind = Kind::Switch; }
+    void setAsTernary() { ScopeKind = Kind::Ternary; }
+
+    // ---
+    // Goto handling
+    // ---
+
+    // Lazy create cleanup block or return what's available.
+    mlir::Block *getOrCreateCleanupBlock(mlir::OpBuilder &builder) {
+      if (CleanupBlock)
+        return getCleanupBlock(builder);
+      return createCleanupBlock(builder);
+    }
+
+    mlir::Block *getCleanupBlock(mlir::OpBuilder &builder) {
+      return CleanupBlock;
+    }
+    mlir::Block *createCleanupBlock(mlir::OpBuilder &builder) {
+      {
+        // Create the cleanup block but dont hook it up around just yet.
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        CleanupBlock = builder.createBlock(builder.getBlock()->getParent());
+      }
+      assert(builder.getInsertionBlock() && "Should be valid");
+      return CleanupBlock;
+    }
+
+    // Goto's introduced in this scope but didn't get fixed.
+    llvm::SmallVector<std::pair<mlir::Operation *, const clang::LabelDecl *>, 4>
+        PendingGotos;
+
+    // Labels solved inside this scope.
+    llvm::SmallPtrSet<const clang::LabelDecl *, 4> SolvedLabels;
+
+    // ---
+    // Return handling
+    // ---
+
+  private:
+    // On switches we need one return block per region, since cases don't
+    // have their own scopes but are distinct regions nonetheless.
+    llvm::SmallVector<mlir::Block *> RetBlocks;
+    llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
+    unsigned int CurrentSwitchRegionIdx = -1;
+
+    // There's usually only one ret block per scope, but this needs to be
+    // get or create because of potential unreachable return statements, note
+    // that for those, all source location maps to the first one found.
+    mlir::Block *createRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
+      assert((isSwitch() || RetBlocks.size() == 0) &&
+             "only switches can hold more than one ret block");
+
+      // Create the cleanup block but dont hook it up around just yet.
+      mlir::OpBuilder::InsertionGuard guard(CGF.builder);
+      auto *b = CGF.builder.createBlock(CGF.builder.getBlock()->getParent());
+      RetBlocks.push_back(b);
+      RetLocs.push_back(loc);
+      return b;
+    }
+
+  public:
+    void updateCurrentSwitchCaseRegion() { CurrentSwitchRegionIdx++; }
+    llvm::ArrayRef<mlir::Block *> getRetBlocks() { return RetBlocks; }
+    llvm::ArrayRef<std::optional<mlir::Location>> getRetLocs() {
+      return RetLocs;
+    }
+
+    mlir::Block *getOrCreateRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
+      unsigned int regionIdx = 0;
+      if (isSwitch())
+        regionIdx = CurrentSwitchRegionIdx;
+      if (regionIdx >= RetBlocks.size())
+        return createRetBlock(CGF, loc);
+      return &*RetBlocks.back();
+    }
+
+    // Scope entry block tracking
+    mlir::Block *getEntryBlock() { return EntryBlock; }
+
+    mlir::Location BeginLoc, EndLoc;
+  };
+
+  class LexicalScopeGuard {
+    CIRGenFunction &CGF;
+    LexicalScopeContext *OldVal = nullptr;
+
+  public:
+    LexicalScopeGuard(CIRGenFunction &c, LexicalScopeContext *L) : CGF(c) {
+      if (CGF.currLexScope) {
+        OldVal = CGF.currLexScope;
+        L->Depth++;
+      }
+      CGF.currLexScope = L;
+    }
+
+    LexicalScopeGuard(const LexicalScopeGuard &) = delete;
+    LexicalScopeGuard &operator=(const LexicalScopeGuard &) = delete;
+    LexicalScopeGuard &operator=(LexicalScopeGuard &&other) = delete;
+
+    void cleanup();
+    void restore() { CGF.currLexScope = OldVal; }
+    ~LexicalScopeGuard() {
+      cleanup();
+      restore();
+    }
+  };
+
+  LexicalScopeContext *currLexScope = nullptr;
 
   /// CIR build helpers
   /// -----------------
