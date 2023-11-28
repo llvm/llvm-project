@@ -486,7 +486,7 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
 
   uint64_t Imm = MI->getOperand(OpNo).getImm() << 2;
   if (!TT.isPPC64())
-    Imm &= 0xffffffff;
+    Imm = static_cast<uint32_t>(Imm);
   O << formatHex(Imm);
 }
 
