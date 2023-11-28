@@ -72,7 +72,6 @@ const char *MarkupSymbolizerTool::Demangle(const char *name) {
 // symbolization and pretty-print the markup.
 #if !SANITIZER_FUCHSIA
 
-
 static bool ModulesEq(const LoadedModule &module,
                       const RenderedModule &renderedModule) {
   return module.base_address() == renderedModule.base_address &&
@@ -152,7 +151,8 @@ void MarkupStackTracePrinter::RenderContext(InternalScopedString *buffer) {
 
     // kModuleUUIDSize is the size of curModule.uuid
     CHECK_GE(kModuleUUIDSize, module.uuid_size());
-    internal_memcpy(renderedModules_.back().uuid, module.uuid(), module.uuid_size());
+    internal_memcpy(renderedModules_.back().uuid, module.uuid(),
+                    module.uuid_size());
   }
 }
 #endif  // !SANITIZER_FUCHSIA
