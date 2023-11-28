@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
+/// \file Contains utilities related to handling C++ code in MIR patterns for
+///   GlobalISel. C++ predicates need to be expanded, and then stored in a
+///   static pool until they can be emitted.
 //
 //===----------------------------------------------------------------------===//
 

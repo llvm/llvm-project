@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
+/// \file Contains utilities related to handling "match data" for GlobalISel
+///  Combiners. Match data allows for setting some arbitrary data in the "match"
+///  phase and pass it down to the "apply" phase.
 //
 //===----------------------------------------------------------------------===//
 
