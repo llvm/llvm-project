@@ -639,6 +639,8 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
 endfunction()
 
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+add_library(cxx-sanitizer-flags INTERFACE)
+target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
@@ -821,6 +823,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
+  target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)
 endfunction()
 
 #===============================================================================
