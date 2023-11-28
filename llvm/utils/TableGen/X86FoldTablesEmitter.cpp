@@ -171,7 +171,7 @@ private:
   // the appropriate flags - then adds it to Table.
   void addEntryWithFlags(FoldTable &Table, const CodeGenInstruction *RegInst,
                          const CodeGenInstruction *MemInst, uint16_t S,
-                         unsigned FoldedIdx, bool isManual);
+                         unsigned FoldedIdx, bool IsManual);
 
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
@@ -391,8 +391,10 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
                                              const CodeGenInstruction *RegInst,
                                              const CodeGenInstruction *MemInst,
                                              uint16_t S, unsigned FoldedIdx,
-                                             bool isManual) {
+                                             bool IsManual) {
 
+  assert((IsManual || Table.find(RegInst) == Table.end()) &&
+         "Override entry unexpectedly");
   X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
   Record *RegRec = RegInst->TheDef;
   Record *MemRec = MemInst->TheDef;
@@ -402,7 +404,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Result.FoldLoad = S & TB_FOLDED_LOAD;
   Result.FoldStore = S & TB_FOLDED_STORE;
   Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
-  if (isManual) {
+  if (IsManual) {
     Table[RegInst] = Result;
     return;
   }
