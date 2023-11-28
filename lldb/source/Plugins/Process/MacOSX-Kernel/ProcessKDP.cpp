@@ -671,6 +671,20 @@ Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   return DisableSoftwareBreakpoint(bp_site);
 }
 
+Status ProcessKDP::EnableWatchpoint(Watchpoint *wp, bool notify) {
+  Status error;
+  error.SetErrorString(
+      "watchpoints are not supported in kdp remote debugging");
+  return error;
+}
+
+Status ProcessKDP::DisableWatchpoint(Watchpoint *wp, bool notify) {
+  Status error;
+  error.SetErrorString(
+      "watchpoints are not supported in kdp remote debugging");
+  return error;
+}
+
 void ProcessKDP::Clear() { m_thread_list.Clear(); }
 
 Status ProcessKDP::DoSignal(int signo) {

@@ -473,10 +473,10 @@ bool BreakpointLocation::ClearBreakpointSite() {
     // physical implementation of the breakpoint as well if there are no more
     // owners.  Otherwise just remove this owner.
     if (process_sp)
-      process_sp->RemoveConstituentFromBreakpointSite(GetBreakpoint().GetID(),
-                                                      GetID(), m_bp_site_sp);
+      process_sp->RemoveOwnerFromBreakpointSite(GetBreakpoint().GetID(),
+                                                GetID(), m_bp_site_sp);
     else
-      m_bp_site_sp->RemoveConstituent(GetBreakpoint().GetID(), GetID());
+      m_bp_site_sp->RemoveOwner(GetBreakpoint().GetID(), GetID());
 
     m_bp_site_sp.reset();
     return true;

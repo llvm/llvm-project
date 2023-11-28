@@ -71,6 +71,10 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
+  bool selectIntrinsicWithSideEffects(MachineInstr &MI, MachineIRBuilder &MIB,
+                                      MachineRegisterInfo &MRI) const;
+  void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
+                 MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -608,6 +612,17 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    return selectIntrinsicWithSideEffects(MI, MIB, MRI);
+  case TargetOpcode::G_FENCE: {
+    AtomicOrdering FenceOrdering =
+        static_cast<AtomicOrdering>(MI.getOperand(0).getImm());
+    SyncScope::ID FenceSSID =
+        static_cast<SyncScope::ID>(MI.getOperand(1).getImm());
+    emitFence(FenceOrdering, FenceSSID, MIB);
+    MI.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }
@@ -1058,6 +1073,86 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
+         "Unexpected opcode");
+  // Find the intrinsic ID.
+  unsigned IntrinID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+  // Select the instruction.
+  switch (IntrinID) {
+  default:
+    return false;
+  case Intrinsic::trap:
+    MIB.buildInstr(RISCV::UNIMP, {}, {});
+    break;
+  case Intrinsic::debugtrap:
+    MIB.buildInstr(RISCV::EBREAK, {}, {});
+    break;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+void RISCVInstructionSelector::emitFence(AtomicOrdering FenceOrdering,
+                                         SyncScope::ID FenceSSID,
+                                         MachineIRBuilder &MIB) const {
+  if (STI.hasStdExtZtso()) {
+    // The only fence that needs an instruction is a sequentially-consistent
+    // cross-thread fence.
+    if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
+        FenceSSID == SyncScope::System) {
+      // fence rw, rw
+      MIB.buildInstr(RISCV::FENCE, {}, {})
+          .addImm(RISCVFenceField::R | RISCVFenceField::W)
+          .addImm(RISCVFenceField::R | RISCVFenceField::W);
+      return;
+    }
+
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    MIB.buildInstr(TargetOpcode::MEMBARRIER, {}, {});
+    return;
+  }
+
+  // singlethread fences only synchronize with signal handlers on the same
+  // thread and thus only need to preserve instruction order, not actually
+  // enforce memory ordering.
+  if (FenceSSID == SyncScope::SingleThread) {
+    MIB.buildInstr(TargetOpcode::MEMBARRIER, {}, {});
+    return;
+  }
+
+  // Refer to Table A.6 in the version 2.3 draft of the RISC-V Instruction Set
+  // Manual: Volume I.
+  unsigned Pred, Succ;
+  switch (FenceOrdering) {
+  default:
+    llvm_unreachable("Unexpected ordering");
+  case AtomicOrdering::AcquireRelease:
+    // fence acq_rel -> fence.tso
+    MIB.buildInstr(RISCV::FENCE_TSO, {}, {});
+    return;
+  case AtomicOrdering::Acquire:
+    // fence acquire -> fence r, rw
+    Pred = RISCVFenceField::R;
+    Succ = RISCVFenceField::R | RISCVFenceField::W;
+    break;
+  case AtomicOrdering::Release:
+    // fence release -> fence rw, w
+    Pred = RISCVFenceField::R | RISCVFenceField::W;
+    Succ = RISCVFenceField::W;
+    break;
+  case AtomicOrdering::SequentiallyConsistent:
+    // fence seq_cst -> fence rw, rw
+    Pred = RISCVFenceField::R | RISCVFenceField::W;
+    Succ = RISCVFenceField::R | RISCVFenceField::W;
+    break;
+  }
+  MIB.buildInstr(RISCV::FENCE, {}, {}).addImm(Pred).addImm(Succ);
 }
 
 namespace llvm {
