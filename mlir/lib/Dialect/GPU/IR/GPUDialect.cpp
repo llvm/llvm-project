@@ -27,9 +27,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -488,23 +486,12 @@ static LogicalResult verifyAttributions(Operation *op,
 // AllReduceOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyReduceOpAndType(gpu::AllReduceOperation opName,
-                                           Type resType) {
-  using Kind = gpu::AllReduceOperation;
-  if (llvm::is_contained(
-          {Kind::MINF, Kind::MAXF, Kind::MINIMUMF, Kind::MAXIMUMF}, opName)) {
-    if (!isa<FloatType>(resType))
-      return failure();
-  }
-
-  if (llvm::is_contained({Kind::MINSI, Kind::MINUI, Kind::MAXSI, Kind::MAXUI,
-                          Kind::AND, Kind::OR, Kind::XOR},
-                         opName)) {
-    if (!isa<IntegerType>(resType))
-      return failure();
-  }
-
-  return success();
+static bool verifyReduceOpAndType(gpu::AllReduceOperation opName,
+                                  Type resType) {
+  return (opName != gpu::AllReduceOperation::AND &&
+          opName != gpu::AllReduceOperation::OR &&
+          opName != gpu::AllReduceOperation::XOR) ||
+         llvm::isa<IntegerType>(resType);
 }
 
 LogicalResult gpu::AllReduceOp::verifyRegions() {
@@ -531,13 +518,12 @@ LogicalResult gpu::AllReduceOp::verifyRegions() {
       return emitError("expected gpu.yield op in region");
   } else {
     gpu::AllReduceOperation opName = *getOp();
-    if (failed(verifyReduceOpAndType(opName, getType()))) {
-      return emitError() << '`' << gpu::stringifyAllReduceOperation(opName)
-                         << "` reduction operation is not compatible with type "
-                         << getType();
+    if (!verifyReduceOpAndType(opName, getType())) {
+      return emitError()
+             << '`' << gpu::stringifyAllReduceOperation(opName)
+             << "` accumulator is only compatible with Integer type";
     }
   }
-
   return success();
 }
 
@@ -588,10 +574,9 @@ static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
 
 LogicalResult gpu::SubgroupReduceOp::verify() {
   gpu::AllReduceOperation opName = getOp();
-  if (failed(verifyReduceOpAndType(opName, getType()))) {
+  if (!verifyReduceOpAndType(opName, getType())) {
     return emitError() << '`' << gpu::stringifyAllReduceOperation(opName)
-                       << "` reduction operation is not compatible with type "
-                       << getType();
+                       << "` accumulator is only compatible with Integer type";
   }
   return success();
 }
