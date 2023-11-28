@@ -16070,6 +16070,20 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                           AM.Scale);
 }
 
+// Check whether the 2 offsets belong to the same imm24 range, and their high
+// 12bits are same, then their high part can be decoded with the offset of add.
+int64_t
+AArch64TargetLowering::getPreferredLargeGEPBaseOffset(int64_t MinOffset,
+                                                      int64_t MaxOffset) const {
+  int64_t HighPart = MinOffset & ~0xfffULL;
+  if (MinOffset >> 12 == MaxOffset >> 12 && isLegalAddImmediate(HighPart)) {
+    // Rebase the value to an integer multiple of imm12.
+    return HighPart;
+  }
+
+  return 0;
+}
+
 bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
   // Consider splitting large offset of struct or array.
   return true;
