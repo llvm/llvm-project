@@ -1722,3 +1722,8 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
   add_subdirectory(differential_testing)
 endif()
+
+# The GPU build uses special case exhaustive math tests.
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_subdirectory(gpu)
+endif()
