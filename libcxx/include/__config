@@ -1182,6 +1182,12 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_CONSTINIT
 #  endif
 
+#  if __has_attribute(__noinline__)
+#    define _LIBCPP_NOINLINE __attribute__((__noinline__))
+#  else
+#    define _LIBCPP_NOINLINE
+#  endif
+
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger
