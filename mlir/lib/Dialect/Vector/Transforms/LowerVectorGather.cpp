@@ -100,14 +100,15 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
 /// MemRef with updated indices that model the strided access.
 ///
 /// ```mlir
-/// %subview = memref.subview %M (...) memref<100x3xf32> to memref<100xf32, strided<[3]>>
-/// %gather = vector.gather %subview (...) : memref<100xf32, strided<[3]>>
+/// %subview = memref.subview %M (...) memref<100x3xf32> to memref<100xf32,
+/// strided<[3]>> %gather = vector.gather %subview (...) : memref<100xf32,
+/// strided<[3]>>
 /// ```
 /// ==>
 /// ```mlir
-/// %collapse_shape = memref.collapse_shape %M (...) memref<100x3xf32> into memref<300xf32>
-/// %1 = arith.muli %idxs, %c3 : vector<4xindex>
-/// %gather = vector.gather %collapse_shape (...) : memref<300xf32> (...)
+/// %collapse_shape = memref.collapse_shape %M (...) memref<100x3xf32> into
+/// memref<300xf32> %1 = arith.muli %idxs, %c3 : vector<4xindex> %gather =
+/// vector.gather %collapse_shape (...) : memref<300xf32> (...)
 /// ```
 ///
 /// ATM this is effectively limited to reading a 1D Vector from a 2D MemRef,
