@@ -10,7 +10,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/DataExtractor.h"
-#include <type_traits>
 
 using namespace llvm;
 using namespace object;
