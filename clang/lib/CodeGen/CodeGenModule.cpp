@@ -633,7 +633,7 @@ static void checkAliasForTocData(llvm::GlobalVariable *GVar,
                                  DiagnosticsEngine &Diags,
                                  SourceLocation Location) {
   if (GVar->hasAttribute("toc-data")) {
-    auto GVId = GVar->getGlobalIdentifier();
+    auto GVId = GVar->getName();
     // Is this a global variable specified by the user as local?
     if ((llvm::binary_search(CodeGenOpts.TocDataVarsUserSpecified, GVId))) {
       Diags.Report(Location, diag::warn_toc_unsupported_type)

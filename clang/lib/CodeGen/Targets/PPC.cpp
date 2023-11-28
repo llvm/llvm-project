@@ -275,7 +275,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     return;
 
   auto *GVar = dyn_cast<llvm::GlobalVariable>(GV);
-  auto GVId = M.getMangledName(dyn_cast<NamedDecl>(D));
+  auto GVId = GV->getName();
 
   // Is this a global variable specified by the user as toc-data?
   bool UserSpecifiedTOC =
@@ -287,10 +287,10 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
        !llvm::binary_search(M.getCodeGenOpts().NoTocDataVars, GVId))) {
     const unsigned long PointerSize =
         GV->getParent()->getDataLayout().getPointerSizeInBits() / 8;
-    ASTContext &Context = D->getASTContext();
     auto *VarD = dyn_cast<VarDecl>(D);
     assert(VarD && "Invalid declaration of global variable.");
 
+    ASTContext &Context = D->getASTContext();
     unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
     const auto *Ty = VarD->getType().getTypePtr();
     const RecordDecl *RDecl =
@@ -318,7 +318,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     } else if (D->hasAttr<SectionAttr>()) {
       reportUnsupportedWarning(EmitDiagnostic, "of a section attribute");
     } else if ((GV->hasExternalLinkage() || M.getCodeGenOpts().AllTocData) &&
-               !GV->hasInternalLinkage()) {
+               !GV->hasLocalLinkage()) {
       GVar->addAttribute("toc-data");
     }
   }

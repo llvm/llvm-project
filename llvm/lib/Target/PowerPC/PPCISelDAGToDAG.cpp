@@ -510,7 +510,8 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
 }
 
 // Check if a SDValue has the toc-data attribute.
-static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
+static bool hasTocDataAttr(SDValue Val, unsigned PointerSize,
+                           const PPCSubtarget *Subtarget) {
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
   if (!GA)
     return false;
@@ -522,30 +523,7 @@ static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
   if (!GV->hasAttribute("toc-data"))
     return false;
 
-  // TODO: These asserts should be updated as more support for the toc data
-  // transformation is added (struct support, etc.).
-
-  assert(
-      PointerSize >= GV->getAlign().valueOrOne().value() &&
-      "GlobalVariables with an alignment requirement stricter than TOC entry "
-      "size not supported by the toc data transformation.");
-
-  Type *GVType = GV->getValueType();
-
-  assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
-                              "supported by the toc data transformation.");
-
-  if (GV->getParent()->getDataLayout().getTypeSizeInBits(GVType) >
-      PointerSize * 8)
-    report_fatal_error(
-        "A GlobalVariable with size larger than a TOC entry is not currently "
-        "supported by the toc data transformation.");
-
-  if (GV->hasPrivateLinkage())
-    report_fatal_error("A GlobalVariable with private linkage is not "
-                       "currently supported by the toc data transformation.");
-
-  return true;
+  return Subtarget->tocDataChecks(PointerSize, GV);
 }
 
 /// isInt32Immediate - This method tests to see if the node is a 32-bit constant
@@ -6121,7 +6099,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       assert(isAIXABI && "ELF ABI already handled");
 
       if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+                         CurDAG->getDataLayout().getPointerSize(), Subtarget)) {
         replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
@@ -6134,7 +6112,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       assert(isAIXABI && "ELF ABI handled in common SelectCode");
 
       if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+                         CurDAG->getDataLayout().getPointerSize(), Subtarget)) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }

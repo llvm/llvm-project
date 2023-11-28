@@ -511,7 +511,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
 
   const char *TocDataListOption =
       TOCDataGloballyinEffect ? "-mno-tocdata=" : "-mtocdata=";
-  if (const bool HasExplicitValues = !ExplicitlySpecifiedGlobals.empty())
+  if (!ExplicitlySpecifiedGlobals.empty())
     CC1Args.push_back(Args.MakeArgString(llvm::Twine(
         buildExceptionList(ExplicitlySpecifiedGlobals, TocDataListOption))));
 }

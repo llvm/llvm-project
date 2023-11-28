@@ -245,6 +245,30 @@ public:
   /// True if the GV will be accessed via an indirect symbol.
   bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
+  bool tocDataChecks(unsigned PointerSize, const GlobalVariable *GV) const {
+    // TODO: These asserts should be updated as more support for the toc data
+    // transformation is added (struct support, etc.).
+    assert(
+        PointerSize >= GV->getAlign().valueOrOne().value() &&
+        "GlobalVariables with an alignment requirement stricter than TOC entry "
+        "size not supported by the toc data transformation.");
+
+    Type *GVType = GV->getValueType();
+    assert(GVType->isSized() && "A GlobalVariable's size must be known to be "
+                                "supported by the toc data transformation.");
+    if (GV->getParent()->getDataLayout().getTypeSizeInBits(GVType) >
+        PointerSize * 8)
+      report_fatal_error(
+          "A GlobalVariable with size larger than a TOC entry is not currently "
+          "supported by the toc data transformation.");
+    if (GV->hasLocalLinkage() || GV->hasPrivateLinkage())
+      report_fatal_error(
+          "A GlobalVariable with private or local linkage is not "
+          "currently supported by the toc data transformation.");
+    assert(!GV->hasCommonLinkage() &&
+           "Tentative definitions cannot have the mapping class XMC_TD.");
+    return true;
+  }
   /// True if the ABI is descriptor based.
   bool usesFunctionDescriptors() const {
     // Both 32-bit and 64-bit AIX are descriptor based. For ELF only the 64-bit

@@ -61,4 +61,5 @@ int func_a() {
 // CHECK64: @b = global [2 x i16] zeroinitializer, align 2 #0
 // CHECK64: @c = global [3 x i16] zeroinitializer, align 2 #0
 // CHECK64: @d = global [4 x i16] zeroinitializer, align 2 #0
+// CHECK64: @e = global [5 x i16] zeroinitializer, align 2
 // CHECK64: attributes #0 = { "toc-data" }
