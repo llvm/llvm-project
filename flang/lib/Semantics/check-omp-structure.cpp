@@ -10,6 +10,7 @@
 #include "definable.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace Fortran::semantics {
 
@@ -2650,6 +2651,20 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
           .Attach(
               GetContext().directiveSource, "Cannot apply to directive"_en_US);
     }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::Call &c) {
+  const parser::Name *name =
+      std::get_if<parser::Name>(&std::get<parser::ProcedureDesignator>(c.t).u);
+  llvm::StringSet rtlfns{"omp_set_default_device", "omp_get_default_device",
+      "omp_get_num_devices"};
+  if (context_.ShouldWarn(common::UsageWarning::Portability) &&
+      GetContext().directive == llvm::omp::OMPD_target && name &&
+      rtlfns.contains(name->ToString())) {
+    context_.Say("The result of an %s routine called within a TARGET region is "
+                 "unspecified."_port_en_US,
+        parser::ToUpperCaseLetters(name->ToString()));
   }
 }
 
