@@ -1,42 +1,22 @@
-# The LLVM Compiler Infrastructure
+# AMD Fork of The LLVM Compiler Infrastructure
 
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
+The AMD fork aims to contain all of [upstream LLVM](https://github.com/llvm/llvm-project), and also includes several AMD-specific additions in the `llvm-project/amd directory`:
 
-Welcome to the LLVM project!
+- **amd/comgr** - The Code Object Manager API, designed to simplify linking, compiling, and inspecting code objects
+- **amd/device-libs** -The sources and CMake build system for a set of AMD-specific device-side language runtime libraries
+- **amd/hipcc** - A compiler driver utility that wraps clang and passes the appropriate include and library options for the target compiler and HIP infrastructure
 
-This repository contains the source code for LLVM, a toolkit for the
-construction of highly optimized compilers, optimizers, and run-time
-environments.
+See the README files in respective subdirectories for more information on these AMD-specific projects. While the AMD fork aims to otherwise follow upstream as closely as possible, there are several outstanding differences.
 
-The LLVM project has multiple components. The core of the project is
-itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and convert them into
-object files. Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.
+- *OpenMP* - The AMD fork contains several changes:
+    * Additional optimizations for OpenMP offload
+    * Host-exec services for printing on-device and doing malloc/free from device
+    * Improved support for OMPT, the OpenMP tools interface
+    * Driver improvements for multi-image and Target ID features
+    * OMPD support, implements OpenMP D interfaces.
+    * ASAN support for OpenMP. 
+    * MI300A Unified Shared Memory support
 
-C-like languages use the [Clang](http://clang.llvm.org/) frontend. This
-component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
--- and from there into object files, using LLVM.
-
-Other components include:
-the [libc++ C++ standard library](https://libcxx.llvm.org),
-the [LLD linker](https://lld.llvm.org), and more.
-
-## Getting the Source Code and Building LLVM
-
-Consult the
-[Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html#getting-the-source-code-and-building-llvm)
-page for information on building and running LLVM.
-
-For information on how to contribute to the LLVM project, please take a look at
-the [Contributing to LLVM](https://llvm.org/docs/Contributing.html) guide.
-
-## Getting in touch
-
-Join the [LLVM Discourse forums](https://discourse.llvm.org/), [Discord
-chat](https://discord.gg/xS7Z362),
-[LLVM Office Hours](https://llvm.org/docs/GettingInvolved.html#office-hours) or
-[Regular sync-ups](https://llvm.org/docs/GettingInvolved.html#online-sync-ups).
-
-The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
-participants to all modes of communication within the project.
+- *Heterogeneous Debugging* - A prototype of debug-info supporting AMDGPU targets, affecting most parts of the compiler, is implemented as documented in docs/AMDGPULLVMExtensionsForHeterogeneousDebugging.rst but is an ongoing work-in-progress. Fundamental changes are expected as parts of the design are adapted for upstreaming.
+- *Address Sanitizer* - Changes were added to `santizer_common` and `asan` libraries in `compiler-rt` to support AMD GPU address sanitizer error detection and reports.  These changes are intended to be upstreamed.  The instrumentation pass changes have already been upstreamed.
+- *Reverted Patches* - For upstream patches that break internal testing, we may temporarily revert these patches until the testing issues are resolved. We maintain a list of reverted upstream patches in `llvm-project/revert_patches.txt`.
