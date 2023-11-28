@@ -118,8 +118,8 @@ declare void @f3() unnamed_addr
 @a1 = alias i32, i32* @g1
 @a2 = internal local_unnamed_addr alias i32, i32* @g2
 
-@i1 = ifunc void(), void()* ()* @f1
-@i2 = internal local_unnamed_addr ifunc void(), void()* ()* @f2
+@i1 = external ifunc void(), void()* ()* @f1
+@i2 = external local_unnamed_addr ifunc void(), void()* ()* @f2
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
