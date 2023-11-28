@@ -44,9 +44,6 @@ public:
   virtual ~SplitStrategy() = default;
   virtual bool canSplit(const BinaryFunction &BF) = 0;
   virtual bool keepEmpty() = 0;
-  // When autoReversal() == true, check if the new main fragment after splitting
-  // is of a smaller size; if not, revert splitting.
-  virtual bool autoReversal() = 0;
   virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
 };
 

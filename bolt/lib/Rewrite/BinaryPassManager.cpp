@@ -52,7 +52,6 @@ extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
-extern bool threeWaySplit();
 
 static cl::opt<bool>
 DynoStatsAll("dyno-stats-all",
@@ -431,11 +430,7 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
 
-  if (opts::threeWaySplit()) {
-    Manager.registerPass(std::make_unique<SplitFunctions>(PrintSplit));
-    Manager.registerPass(
-        std::make_unique<FixupBranches>(PrintAfterBranchFixup));
-  }
+  Manager.registerPass(std::make_unique<SplitFunctions>(PrintSplit));
 
   // Print final dyno stats right while CFG and instruction analysis are intact.
   Manager.registerPass(

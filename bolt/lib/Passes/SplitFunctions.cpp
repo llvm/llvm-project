@@ -109,11 +109,6 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
         "fragment contains exactly a single basic block")),
     cl::desc("strategy used to partition blocks into fragments"),
     cl::cat(BoltOptCategory));
-
-bool threeWaySplit() {
-  return opts::SplitFunctions &&
-         opts::SplitStrategy == SplitFunctionsStrategy::CDSplit;
-}
 } // namespace opts
 
 namespace {
@@ -134,12 +129,7 @@ struct SplitProfile2 final : public SplitStrategy {
     return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
   }
 
-  bool keepEmpty() override {
-    return opts::SplitStrategy != SplitFunctionsStrategy::CDSplit ? false
-                                                                  : true;
-  }
-
-  bool autoReversal() override { return true; }
+  bool keepEmpty() override { return false; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
@@ -150,20 +140,16 @@ struct SplitProfile2 final : public SplitStrategy {
 };
 
 struct SplitCacheDirected final : public SplitStrategy {
-  BinaryContext &BC;
   using BasicBlockOrder = BinaryFunction::BasicBlockOrderType;
-
-  explicit SplitCacheDirected(BinaryContext &BC) : BC(BC) {}
 
   bool canSplit(const BinaryFunction &BF) override {
     return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
   }
 
+  // When some functions are hot-warm split and others are hot-warm-cold split,
+  // we do not want to change the fragment numbers of the blocks in the hot-warm
+  // split functions.
   bool keepEmpty() override { return true; }
-
-  // This strategy does not require that the new hot fragment size strictly
-  // decreases after splitting.
-  bool autoReversal() override { return false; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     BasicBlockOrder BlockOrder(Start, End);
@@ -176,8 +162,8 @@ struct SplitCacheDirected final : public SplitStrategy {
     // All remaining blocks are warm / cold depending on if count is
     // greater than 0 or not.
     FragmentNum Main(0);
-    FragmentNum Warm(1);
-    FragmentNum Cold(2);
+    FragmentNum Cold(1);
+    FragmentNum Warm(2);
     for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
       BinaryBasicBlock *BB = BlockOrder[Index];
       if (Index <= BestSplitIndex)
@@ -207,8 +193,6 @@ struct SplitRandom2 final : public SplitStrategy {
 
   bool keepEmpty() override { return false; }
 
-  bool autoReversal() override { return true; }
-
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
     const DiffT NumBlocks = End - Start;
@@ -235,8 +219,6 @@ struct SplitRandomN final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
   bool keepEmpty() override { return false; }
-
-  bool autoReversal() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
@@ -289,8 +271,6 @@ struct SplitAll final : public SplitStrategy {
     return true;
   }
 
-  bool autoReversal() override { return true; }
-
   void fragment(const BlockIt Start, const BlockIt End) override {
     unsigned Fragment = 0;
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End))
@@ -314,6 +294,12 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
     return;
 
+  // If split strategy is not CDSplit, then a second run of the pass is not
+  // needed after function reordering.
+  if (BC.HasFinalizedFunctionOrder &&
+      opts::SplitStrategy != SplitFunctionsStrategy::CDSplit)
+    return;
+
   std::unique_ptr<SplitStrategy> Strategy;
   bool ForceSequential = false;
 
@@ -323,7 +309,7 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
     // before function reordering and hot-warm-cold splitting
     // (SplitCacheDirected) after function reordering.
     if (BC.HasFinalizedFunctionOrder)
-      Strategy = std::make_unique<SplitCacheDirected>(BC);
+      Strategy = std::make_unique<SplitCacheDirected>();
     else
       Strategy = std::make_unique<SplitProfile2>();
     opts::AggressiveSplitting = true;
@@ -472,7 +458,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
     }
   }
 
-  BF.getLayout().update(NewLayout);
+  const bool LayoutUpdated = BF.getLayout().update(NewLayout);
 
   // For shared objects, invoke instructions and corresponding landing pads
   // have to be placed in the same fragment. When we split them, create
@@ -482,15 +468,13 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
     Trampolines = createEHTrampolines(BF);
 
   // Check the new size to see if it's worth splitting the function.
-  if (BC.isX86() && BF.isSplit()) {
+  if (BC.isX86() && LayoutUpdated) {
     std::tie(HotSize, ColdSize) = BC.calculateEmittedSize(BF);
     LLVM_DEBUG(dbgs() << "Estimated size for function " << BF
                       << " post-split is <0x" << Twine::utohexstr(HotSize)
                       << ", 0x" << Twine::utohexstr(ColdSize) << ">\n");
-    if (S.autoReversal() &&
-        alignTo(OriginalHotSize, opts::SplitAlignThreshold) <=
-            alignTo(HotSize, opts::SplitAlignThreshold) +
-                opts::SplitThreshold) {
+    if (alignTo(OriginalHotSize, opts::SplitAlignThreshold) <=
+        alignTo(HotSize, opts::SplitAlignThreshold) + opts::SplitThreshold) {
       if (opts::Verbosity >= 2) {
         outs() << "BOLT-INFO: Reversing splitting of function "
                << formatv("{0}:\n  {1:x}, {2:x} -> {3:x}\n", BF, HotSize,
@@ -511,6 +495,11 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
       SplitBytesCold += ColdSize;
     }
   }
+
+  // Fix branches if the splitting decision of the pass after function
+  // reordering is different from that of the pass before function reordering.
+  if (LayoutUpdated && BC.HasFinalizedFunctionOrder)
+    BF.fixBranches();
 }
 
 SplitFunctions::TrampolineSetType
