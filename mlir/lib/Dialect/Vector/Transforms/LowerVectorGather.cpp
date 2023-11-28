@@ -196,6 +196,17 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
     Value condMask = op.getMask();
     Value base = op.getBase();
+
+    // vector.load requires the most minor memref dim to have unit stride
+    if (auto memType = dyn_cast<MemRefType>(base.getType())) {
+      memType.getLayout();
+      if (auto stridesAttr =
+              dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
+        if (stridesAttr.getStrides().back() != 1)
+          return failure();
+      }
+    }
+
     Value indexVec = rewriter.createOrFold<arith::IndexCastOp>(
         loc, op.getIndexVectorType().clone(rewriter.getIndexType()),
         op.getIndexVec());
