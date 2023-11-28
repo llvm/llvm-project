@@ -8,7 +8,6 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PlatformDefs.h"
 
 #include "src/stdio/sscanf.h"
 

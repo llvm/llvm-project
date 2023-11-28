@@ -52,3 +52,18 @@ body:             |
     %4:vgpr_32 = nnan ninf nsz arcp contract afn reassoc V_FMAC_F32_e64 2, %1, 0, 1073741824, 0, %3, 0, 0, implicit $mode, implicit $exec
     DS_WRITE2_B32_gfx9 undef %5:vgpr_32, killed %4, undef %6:vgpr_32, 0, 1, 0, implicit $exec
 ...
+
+# GCN-LABEL: name: fma_sgpr_sgpr_use
+# GCN:      %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = V_MOV_B32_e32 1234567, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 0, 1234567, 0, %2, 0, 0, implicit $mode, implicit $exec
+---
+name: fma_sgpr_sgpr_use
+body: |
+  bb.0:
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:sgpr_32 = S_MOV_B32 1234567
+    %2:vgpr_32 = COPY %1
+    %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %3
+...

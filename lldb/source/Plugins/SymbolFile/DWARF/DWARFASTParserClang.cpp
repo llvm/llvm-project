@@ -144,7 +144,7 @@ static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName) {
 
 std::optional<DWARFFormValue>
 DWARFASTParserClang::FindConstantOnVariableDefinition(DWARFDIE die) {
-  assert(die.Tag() == llvm::dwarf::DW_TAG_member);
+  assert(die.Tag() == DW_TAG_member || die.Tag() == DW_TAG_variable);
 
   auto *dwarf = die.GetDWARF();
   if (!dwarf)
@@ -353,6 +353,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
 
     case DW_AT_byte_size:
       byte_size = form_value.Unsigned();
+      break;
+
+    case DW_AT_alignment:
+      alignment = form_value.Unsigned();
       break;
 
     case DW_AT_byte_stride:
@@ -1921,17 +1925,21 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             die.GetOffset(), attrs.name.GetCString());
       }
 
-      // If the byte size of the record is specified then overwrite the size
-      // that would be computed by Clang. This is only needed as LLDB's
-      // TypeSystemClang is always in C++ mode, but some compilers such as
-      // GCC and Clang give empty structs a size of 0 in C mode (in contrast to
-      // the size of 1 for empty structs that would be computed in C++ mode).
-      if (attrs.byte_size) {
+      // Setting authority byte size and alignment for empty structures.
+      //
+      // If the byte size or alignmenet of the record is specified then
+      // overwrite the ones that would be computed by Clang.
+      // This is only needed as LLDB's TypeSystemClang is always in C++ mode,
+      // but some compilers such as GCC and Clang give empty structs a size of 0
+      // in C mode (in contrast to the size of 1 for empty structs that would be
+      // computed in C++ mode).
+      if (attrs.byte_size || attrs.alignment) {
         clang::RecordDecl *record_decl =
             TypeSystemClang::GetAsRecordDecl(clang_type);
         if (record_decl) {
           ClangASTImporter::LayoutInfo layout;
-          layout.bit_size = *attrs.byte_size * 8;
+          layout.bit_size = attrs.byte_size.value_or(0) * 8;
+          layout.alignment = attrs.alignment.value_or(0) * 8;
           GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
@@ -2270,6 +2278,9 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (layout_info.bit_size == 0)
       layout_info.bit_size =
           die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+    if (layout_info.alignment == 0)
+      layout_info.alignment =
+          die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
 
     clang::CXXRecordDecl *record_decl =
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
@@ -2889,7 +2900,7 @@ void DWARFASTParserClang::CreateStaticMemberVariable(
     const DWARFDIE &die, const MemberAttributes &attrs,
     const lldb_private::CompilerType &class_clang_type) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
-  assert(die.Tag() == DW_TAG_member);
+  assert(die.Tag() == DW_TAG_member || die.Tag() == DW_TAG_variable);
 
   Type *var_type = die.ResolveTypeUID(attrs.encoding_form.Reference());
 
@@ -2963,7 +2974,8 @@ void DWARFASTParserClang::ParseSingleMember(
   // whereas GCC emits it only for static data members if not part of an
   // anonymous namespace. The flag that is consistently emitted for static
   // data members is DW_AT_declaration, so we check it instead.
-  // FIXME: Since DWARFv5, static data members are marked DW_AT_variable so we
+  // The following block is only necessary to support DWARFv4 and earlier.
+  // Starting with DWARFv5, static data members are marked DW_AT_variable so we
   // can consistently detect them on both GCC and Clang without below heuristic.
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
@@ -3195,6 +3207,10 @@ bool DWARFASTParserClang::ParseChildMembers(
       }
       break;
 
+    case DW_TAG_variable: {
+      const MemberAttributes attrs(die, parent_die, module_sp);
+      CreateStaticMemberVariable(die, attrs, class_clang_type);
+    } break;
     case DW_TAG_member:
       ParseSingleMember(die, parent_die, class_clang_type,
                         default_accessibility, layout_info, last_field_info);

@@ -19,14 +19,14 @@
 }
 
 // CHECK-LABEL:   func.func @SDDMM_block(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>,
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xf32, #sparse{{[0-9]*}}>,
 // CHECK-SAME:      %[[VAL_1:.*]]: tensor<?x?xf32>,
-// CHECK-SAME:      %[[VAL_2:.*]]: tensor<?x?xf32>) -> tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>> {
+// CHECK-SAME:      %[[VAL_2:.*]]: tensor<?x?xf32>) -> tensor<?x?xf32, #sparse{{[0-9]*}}> {
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 4 : index
-// CHECK:           %[[VAL_7:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_7:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<?x?xf32, #sparse{{[0-9]*}}>
 // CHECK:           %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_9:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?xf32>
 // CHECK:           %[[VAL_10:.*]] = tensor.dim %[[VAL_2]], %[[VAL_4]] : tensor<?x?xf32>
@@ -79,8 +79,8 @@
 // CHECK:           %[[VAL_66:.*]] = gpu.memcpy async {{\[}}%[[VAL_65]]] %[[VAL_27]], %[[VAL_40]] : memref<?xf32>, memref<?xf32>
 // CHECK:           %[[VAL_67:.*]] = gpu.dealloc async {{\[}}%[[VAL_66]]] %[[VAL_40]] : memref<?xf32>
 // CHECK:           gpu.wait {{\[}}%[[VAL_67]]]
-// CHECK:           %[[VAL_68:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:           return %[[VAL_68]] : tensor<?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:           %[[VAL_68:.*]] = sparse_tensor.load %[[VAL_0]] : tensor<?x?xf32, #sparse{{[0-9]*}}>
+// CHECK:           return %[[VAL_68]] : tensor<?x?xf32, #sparse{{[0-9]*}}>
 // CHECK:         }
 func.func @SDDMM_block(%args: tensor<?x?xf32, #BSR>,
                        %arga: tensor<?x?xf32>,

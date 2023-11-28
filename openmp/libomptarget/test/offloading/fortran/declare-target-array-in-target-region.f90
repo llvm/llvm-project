@@ -1,8 +1,7 @@
 ! Offloading test with a target region mapping a declare target
 ! Fortran array writing some values to it and checking the host
 ! correctly receives the updates made on the device.
-! REQUIRES: flang, amdgcn-amd-amdhsa
-! UNSUPPORTED: nvptx64-nvidia-cuda
+! REQUIRES: flang, amdgcn-amd-amdhsa, nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
 ! UNSUPPORTED: aarch64-unknown-linux-gnu-LTO

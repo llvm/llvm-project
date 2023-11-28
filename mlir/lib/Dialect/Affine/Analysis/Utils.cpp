@@ -199,10 +199,15 @@ bool MemRefDependenceGraph::init() {
           continue;
         SmallVector<AffineForOp, 4> loops;
         getAffineForIVs(*user, &loops);
-        if (loops.empty())
+        // Find the surrounding affine.for nested immediately within the
+        // block.
+        auto *it = llvm::find_if(loops, [&](AffineForOp loop) {
+          return loop->getBlock() == &block;
+        });
+        if (it == loops.end())
           continue;
-        assert(forToNodeMap.count(loops[0]) > 0 && "missing mapping");
-        unsigned userLoopNestId = forToNodeMap[loops[0]];
+        assert(forToNodeMap.count(*it) > 0 && "missing mapping");
+        unsigned userLoopNestId = forToNodeMap[*it];
         addEdge(node.id, userLoopNestId, value);
       }
     }
@@ -631,8 +636,8 @@ void mlir::affine::getAffineForIVs(Operation &op,
   AffineForOp currAffineForOp;
   // Traverse up the hierarchy collecting all 'affine.for' operation while
   // skipping over 'affine.if' operations.
-  while (currOp) {
-    if (AffineForOp currAffineForOp = dyn_cast<AffineForOp>(currOp))
+  while (currOp && !currOp->hasTrait<OpTrait::AffineScope>()) {
+    if (auto currAffineForOp = dyn_cast<AffineForOp>(currOp))
       loops->push_back(currAffineForOp);
     currOp = currOp->getParentOp();
   }
@@ -646,7 +651,7 @@ void mlir::affine::getEnclosingAffineOps(Operation &op,
 
   // Traverse up the hierarchy collecting all `affine.for`, `affine.if`, and
   // affine.parallel operations.
-  while (currOp) {
+  while (currOp && !currOp->hasTrait<OpTrait::AffineScope>()) {
     if (isa<AffineIfOp, AffineForOp, AffineParallelOp>(currOp))
       ops->push_back(currOp);
     currOp = currOp->getParentOp();

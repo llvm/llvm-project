@@ -436,8 +436,7 @@ protected:
           error = process_sp->LoadCore();
 
           if (error.Fail()) {
-            result.AppendError(
-                error.AsCString("can't find plug-in for core file"));
+            result.AppendError(error.AsCString("unknown core file format"));
             return;
           } else {
             result.AppendMessageWithFormatv(
@@ -447,9 +446,8 @@ protected:
             on_error.release();
           }
         } else {
-          result.AppendErrorWithFormatv(
-              "Unable to find process plug-in for core file '{0}'\n",
-              core_file.GetPath());
+          result.AppendErrorWithFormatv("Unknown core file format '{0}'\n",
+                                        core_file.GetPath());
         }
       } else {
         result.AppendMessageWithFormat(

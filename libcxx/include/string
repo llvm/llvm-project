@@ -173,7 +173,7 @@ public:
     constexpr void resize_and_overwrite(size_type n, Operation op); // since C++23
 
     void reserve(size_type res_arg);                                                            // constexpr since C++20
-    void reserve(); // deprecated in C++20
+    void reserve();                                                                             // deprecated in C++20, removed in C++26
     void shrink_to_fit();                                                                       // constexpr since C++20
     void clear() noexcept;                                                                      // constexpr since C++20
     bool empty() const noexcept;                                                                // constexpr since C++20
@@ -1187,7 +1187,9 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __resize_default_init(size_type __n);
 
+#if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE)
     _LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void reserve() _NOEXCEPT { shrink_to_fit(); }
+#endif
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void shrink_to_fit() _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void clear() _NOEXCEPT;
 

@@ -1,0 +1,13 @@
+; RUN: llvm-readtapi --help 2>&1 | FileCheck %s 
+; RUN: llvm-readtapi -help 2>&1 | FileCheck %s 
+; RUN: not llvm-readtapi -merge -compare -compact %t/tmp.tbd %t/tmp2.tbd 2>&1 | FileCheck %s --check-prefix MULTI_ACTION
+; RUN: not llvm-readtapi -merge -compact %t/tmp.tbd %t/tmp2.tbd --filetype=tbd-v2 2>&1 | FileCheck %s --check-prefix FILE_FORMAT 
+
+CHECK: OVERVIEW: LLVM TAPI file reader and manipulator
+CHECK: USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o <output>]*
+CHECK: OPTIONS:
+CHECK:   -help    display this help
+
+MULTI_ACTION: error: only one of the following actions can be specified: -merge -compare
+FILE_FORMAT: error: deprecated filetype 'tbd-v2' is not supported to write
+

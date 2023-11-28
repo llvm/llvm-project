@@ -946,6 +946,12 @@ ANNOTATION(attr_openmp)
 PRAGMA_ANNOTATION(pragma_openmp)
 PRAGMA_ANNOTATION(pragma_openmp_end)
 
+// Annotations for OpenACC pragma directives - #pragma acc.
+// Like with OpenMP, these are produced by the lexer when it parses a
+// #pragma acc directive so it can be handled during parsing of the directives.
+PRAGMA_ANNOTATION(pragma_openacc)
+PRAGMA_ANNOTATION(pragma_openacc_end)
+
 // Annotations for loop pragma directives #pragma clang loop ...
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma loop ... directives.

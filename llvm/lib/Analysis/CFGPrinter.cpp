@@ -19,8 +19,6 @@
 
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
@@ -92,37 +90,6 @@ static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
   ViewGraph(&CFGInfo, "cfg." + F.getName(), CFGOnly);
 }
 
-namespace {
-struct CFGViewerLegacyPass : public FunctionPass {
-  static char ID; // Pass identifcation, replacement for typeid
-  CFGViewerLegacyPass() : FunctionPass(ID) {
-    initializeCFGViewerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-      return false;
-    auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
-    return false;
-  }
-
-  void print(raw_ostream &OS, const Module * = nullptr) const override {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char CFGViewerLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGViewerLegacyPass, "view-cfg", "View CFG of function", false,
-                true)
-
 PreservedAnalyses CFGViewerPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
     return PreservedAnalyses::all();
@@ -131,37 +98,6 @@ PreservedAnalyses CFGViewerPass::run(Function &F, FunctionAnalysisManager &AM) {
   viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
   return PreservedAnalyses::all();
 }
-
-namespace {
-struct CFGOnlyViewerLegacyPass : public FunctionPass {
-  static char ID; // Pass identifcation, replacement for typeid
-  CFGOnlyViewerLegacyPass() : FunctionPass(ID) {
-    initializeCFGOnlyViewerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-      return false;
-    auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
-    return false;
-  }
-
-  void print(raw_ostream &OS, const Module * = nullptr) const override {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char CFGOnlyViewerLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGOnlyViewerLegacyPass, "view-cfg-only",
-                "View CFG of function (with no function bodies)", false, true)
 
 PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
@@ -173,37 +109,6 @@ PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-namespace {
-struct CFGPrinterLegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  CFGPrinterLegacyPass() : FunctionPass(ID) {
-    initializeCFGPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-      return false;
-    auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
-    return false;
-  }
-
-  void print(raw_ostream &OS, const Module * = nullptr) const override {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char CFGPrinterLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
-                "Print CFG of function to 'dot' file", false, true)
-
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
   if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
@@ -213,37 +118,6 @@ PreservedAnalyses CFGPrinterPass::run(Function &F,
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
   return PreservedAnalyses::all();
 }
-
-namespace {
-struct CFGOnlyPrinterLegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  CFGOnlyPrinterLegacyPass() : FunctionPass(ID) {
-    initializeCFGOnlyPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
-      return false;
-    auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
-    writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
-    return false;
-  }
-  void print(raw_ostream &OS, const Module * = nullptr) const override {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<BlockFrequencyInfoWrapperPass>();
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-};
-} // namespace
-
-char CFGOnlyPrinterLegacyPass::ID = 0;
-INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
-                "Print CFG of function to 'dot' file (with no function bodies)",
-                false, true)
 
 PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
@@ -280,14 +154,6 @@ void Function::viewCFGOnly() const { viewCFGOnly(nullptr, nullptr); }
 void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
                            const BranchProbabilityInfo *BPI) const {
   viewCFG(true, BFI, BPI);
-}
-
-FunctionPass *llvm::createCFGPrinterLegacyPassPass() {
-  return new CFGPrinterLegacyPass();
-}
-
-FunctionPass *llvm::createCFGOnlyPrinterLegacyPassPass() {
-  return new CFGOnlyPrinterLegacyPass();
 }
 
 /// Find all blocks on the paths which terminate with a deoptimize or 

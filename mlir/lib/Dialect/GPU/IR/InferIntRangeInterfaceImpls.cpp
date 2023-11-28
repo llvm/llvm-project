@@ -19,6 +19,8 @@ using namespace mlir::gpu;
 
 // Maximum grid and block dimensions of all known GPUs are less than 2^32.
 static constexpr uint64_t kMaxDim = std::numeric_limits<uint32_t>::max();
+// Maximum cluster size
+static constexpr uint64_t kMaxClusterDim = 8;
 // Maximum subgroups are no larger than 128.
 static constexpr uint64_t kMaxSubgroupSize = 128;
 
@@ -80,6 +82,17 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
     }
   }
   return std::nullopt;
+}
+
+void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                     SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), getIndexRange(1, kMaxClusterDim));
+}
+
+void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                    SetIntRangeFn setResultRange) {
+  uint64_t max = kMaxClusterDim;
+  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
 }
 
 void BlockDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,

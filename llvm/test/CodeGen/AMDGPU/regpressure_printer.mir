@@ -17,11 +17,15 @@ body:             |
   ; RP-NEXT:   2     1      %1:sgpr_64 = IMPLICIT_DEF
   ; RP-NEXT:   2     1
   ; RP-NEXT:   Live-out: %0:0000000000000003 %1:000000000000000F
+  ; RP-NEXT:   Live-thr:
+  ; RP-NEXT:   0     0
   ; RP-NEXT: bb.1:
   ; RP-NEXT:   Live-in:  %0:0000000000000003 %1:000000000000000F
   ; RP-NEXT:   SGPR  VGPR
   ; RP-NEXT:   2     1
   ; RP-NEXT:   Live-out: %0:0000000000000003 %1:000000000000000F
+  ; RP-NEXT:   Live-thr: %0:0000000000000003 %1:000000000000000F
+  ; RP-NEXT:   2     1
   ; RP-NEXT: bb.2:
   ; RP-NEXT:   Live-in:  %0:0000000000000003 %1:000000000000000F
   ; RP-NEXT:   SGPR  VGPR
@@ -29,6 +33,8 @@ body:             |
   ; RP-NEXT:   2     1      S_NOP 0, implicit %0:vgpr_32, implicit %1:sgpr_64
   ; RP-NEXT:   0     0
   ; RP-NEXT:   Live-out:
+  ; RP-NEXT:   Live-thr:
+  ; RP-NEXT:   0     0
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
     %1:sgpr_64 = IMPLICIT_DEF
@@ -49,6 +55,8 @@ body:             |
   ; RPU-NEXT:   3     0      %0:sgpr_128 = IMPLICIT_DEF
   ; RPU-NEXT:   3     0
   ; RPU-NEXT:   Live-out: %0:00000000000000F3
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ; RPU-NEXT: bb.1:
   ; RPU-NEXT:   Live-in:  %0:00000000000000F3
   ; RPU-NEXT:   SGPR  VGPR
@@ -68,6 +76,8 @@ body:             |
   ; RPU-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128
   ; RPU-NEXT:   2     0
   ; RPU-NEXT:   Live-out: %0:00000000000000C3
+  ; RPU-NEXT:   Live-thr: %0:00000000000000C0
+  ; RPU-NEXT:   1     0
   ; RPU-NEXT: bb.2:
   ; RPU-NEXT:   Live-in:  %0:00000000000000C3
   ; RPU-NEXT:   SGPR  VGPR
@@ -75,6 +85,8 @@ body:             |
   ; RPU-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128, implicit %0.sub0:sgpr_128
   ; RPU-NEXT:   0     0
   ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ;
   ; RPD-LABEL: name: live_through_test
   ; RPD: bb.0:
@@ -84,6 +96,8 @@ body:             |
   ; RPD-NEXT:   4     0      %0:sgpr_128 = IMPLICIT_DEF
   ; RPD-NEXT:   3     0
   ; RPD-NEXT:   Live-out: %0:00000000000000F3
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   ; RPD-NEXT: bb.1:
   ; RPD-NEXT:   Live-in:  %0:00000000000000F3
   ; RPD-NEXT:   SGPR  VGPR
@@ -103,6 +117,8 @@ body:             |
   ; RPD-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128
   ; RPD-NEXT:   2     0
   ; RPD-NEXT:   Live-out: %0:00000000000000C3
+  ; RPD-NEXT:   Live-thr: %0:00000000000000C0
+  ; RPD-NEXT:   1     0
   ; RPD-NEXT: bb.2:
   ; RPD-NEXT:   Live-in:  %0:00000000000000C3
   ; RPD-NEXT:   SGPR  VGPR
@@ -110,6 +126,8 @@ body:             |
   ; RPD-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128, implicit %0.sub0:sgpr_128
   ; RPD-NEXT:   0     0
   ; RPD-NEXT:   Live-out:
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   bb.0:
     %0:sgpr_128 = IMPLICIT_DEF
   bb.1:
@@ -146,11 +164,15 @@ body:             |
   ; RP-NEXT:   0     2      undef %1.sub1:vreg_64 = V_MOV_B32_e32 33, implicit $exec
   ; RP-NEXT:   0     2
   ; RP-NEXT:   Live-out: %0:0000000000000003 %1:000000000000000C
+  ; RP-NEXT:   Live-thr:
+  ; RP-NEXT:   0     0
   ; RP-NEXT: bb.1:
   ; RP-NEXT:   Live-in:  %0:0000000000000003 %1:000000000000000C
   ; RP-NEXT:   SGPR  VGPR
   ; RP-NEXT:   0     2
   ; RP-NEXT:   Live-out: %0:0000000000000003 %1:000000000000000C
+  ; RP-NEXT:   Live-thr: %0:0000000000000003 %1:000000000000000C
+  ; RP-NEXT:   0     2
   ; RP-NEXT: bb.2:
   ; RP-NEXT:   Live-in:  %0:0000000000000003 %1:000000000000000C
   ; RP-NEXT:   SGPR  VGPR
@@ -158,6 +180,8 @@ body:             |
   ; RP-NEXT:   0     2      S_NOP 0, implicit %0:vreg_64, implicit %1:vreg_64
   ; RP-NEXT:   0     0
   ; RP-NEXT:   Live-out:
+  ; RP-NEXT:   Live-thr:
+  ; RP-NEXT:   0     0
   bb.0:
     undef %0.sub0:vreg_64 = V_MOV_B32_e32 42, implicit $exec
     undef %1.sub1:vreg_64 = V_MOV_B32_e32 33, implicit $exec
@@ -247,6 +271,8 @@ body:             |
   ; RPU-NEXT:   0     5      GLOBAL_STORE_DWORD %15:vreg_64, %18:vgpr_32, 0, 0, implicit $exec
   ; RPU-NEXT:   0     2
   ; RPU-NEXT:   Live-out: %0:0000000000000003 %16:0000000000000003
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ; RPU-NEXT: bb.1:
   ; RPU-NEXT:   Live-in:  %0:0000000000000003 %16:0000000000000003
   ; RPU-NEXT:   SGPR  VGPR
@@ -260,11 +286,15 @@ body:             |
   ; RPU-NEXT:                DBG_VALUE
   ; RPU-NEXT:   0     2
   ; RPU-NEXT:   Live-out: %0:0000000000000003 %16:0000000000000003
+  ; RPU-NEXT:   Live-thr: %0:0000000000000003 %16:0000000000000003
+  ; RPU-NEXT:   0     2
   ; RPU-NEXT: bb.2:
   ; RPU-NEXT:   Live-in:  %0:0000000000000003 %16:0000000000000003
   ; RPU-NEXT:   SGPR  VGPR
   ; RPU-NEXT:   0     2
   ; RPU-NEXT:   Live-out: %0:0000000000000003 %16:0000000000000003
+  ; RPU-NEXT:   Live-thr: %0:0000000000000003 %16:0000000000000003
+  ; RPU-NEXT:   0     2
   ; RPU-NEXT: bb.3:
   ; RPU-NEXT:   Live-in:  %0:0000000000000003 %16:0000000000000003
   ; RPU-NEXT:   SGPR  VGPR
@@ -276,6 +306,8 @@ body:             |
   ; RPU-NEXT:   0     0      S_ENDPGM 0
   ; RPU-NEXT:   0     0
   ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ;
   ; RPD-LABEL: name: only_dbg_value_sched_region
   ; RPD: bb.0:
@@ -350,6 +382,8 @@ body:             |
   ; RPD-NEXT:   0     5      GLOBAL_STORE_DWORD %15:vreg_64, %18:vgpr_32, 0, 0, implicit $exec
   ; RPD-NEXT:   0     2
   ; RPD-NEXT:   Live-out: %0:0000000000000003 %16:0000000000000003
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   ; RPD-NEXT: bb.1:
   ; RPD-NEXT:   Live-in:  %0:0000000000000003 %16:0000000000000003
   ; RPD-NEXT:   SGPR  VGPR
@@ -363,11 +397,15 @@ body:             |
   ; RPD-NEXT:                DBG_VALUE
   ; RPD-NEXT:   0     2
   ; RPD-NEXT:   Live-out: %0:0000000000000003 %16:0000000000000003
+  ; RPD-NEXT:   Live-thr: %0:0000000000000003 %16:0000000000000003
+  ; RPD-NEXT:   0     2
   ; RPD-NEXT: bb.2:
   ; RPD-NEXT:   Live-in:  %0:0000000000000003 %16:0000000000000003
   ; RPD-NEXT:   SGPR  VGPR
   ; RPD-NEXT:   0     2
   ; RPD-NEXT:   Live-out: %0:0000000000000003 %16:0000000000000003
+  ; RPD-NEXT:   Live-thr: %0:0000000000000003 %16:0000000000000003
+  ; RPD-NEXT:   0     2
   ; RPD-NEXT: bb.3:
   ; RPD-NEXT:   Live-in:  %0:0000000000000003 %16:0000000000000003
   ; RPD-NEXT:   SGPR  VGPR
@@ -379,6 +417,8 @@ body:             |
   ; RPD-NEXT:   0     0      S_ENDPGM 0
   ; RPD-NEXT:   0     0
   ; RPD-NEXT:   Live-out:
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   bb.0:
     liveins: $vgpr0
 
@@ -449,6 +489,8 @@ body:             |
     ; RP-NEXT: 0     1      S_NOP 0, implicit %1:vgpr_32
     ; RP-NEXT: 0     0
     ; RP-NEXT: Live-out:
+    ; RP-NEXT: Live-thr:
+    ; RP-NEXT: 0     0
     %0:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
     early-clobber %1:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
     S_NOP 0, implicit %1
@@ -469,6 +511,8 @@ body:             |
     ; RPU-NEXT: 0     1      S_NOP 0, implicit %1:vgpr_32
     ; RPU-NEXT: 0     0
     ; RPU-NEXT: Live-out:
+    ; RPU-NEXT: Live-thr:
+    ; RPU-NEXT: 0     0
     ;
     ; RPD-LABEL: name: test_not_early_clobber_trivial
     ; RPD: Live-in:
@@ -481,6 +525,8 @@ body:             |
     ; RPD-NEXT: 0     1      S_NOP 0, implicit %1:vgpr_32
     ; RPD-NEXT: 0     0
     ; RPD-NEXT: Live-out:
+    ; RPD-NEXT: Live-thr:
+    ; RPD-NEXT: 0     0
     %0:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
     S_NOP 0, implicit %1

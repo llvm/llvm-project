@@ -3533,3 +3533,103 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 }
 
 declare void @bat(i16 signext)
+
+define i64 @single_bit(i64 %x) {
+; RV32I-LABEL: single_bit:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    slli a2, a0, 21
+; RV32I-NEXT:    srai a2, a2, 31
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: single_bit:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a1, a0, 53
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: single_bit:
+; RV64XVENTANACONDOPS:       # %bb.0: # %entry
+; RV64XVENTANACONDOPS-NEXT:    andi a1, a0, 1024
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: single_bit:
+; RV64XTHEADCONDMOV:       # %bb.0: # %entry
+; RV64XTHEADCONDMOV-NEXT:    slli a1, a0, 53
+; RV64XTHEADCONDMOV-NEXT:    srai a1, a1, 63
+; RV64XTHEADCONDMOV-NEXT:    and a0, a1, a0
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: single_bit:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    andi a2, a0, 1024
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
+; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: single_bit:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    andi a1, a0, 1024
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
+; RV64ZICOND-NEXT:    ret
+entry:
+  %and = and i64 %x, 1024
+  %tobool.not = icmp eq i64 %and, 0
+  %cond = select i1 %tobool.not, i64 0, i64 %x
+  ret i64 %cond
+}
+
+; Test to fold select with single bit check to (and (sra (shl x))).
+define i64 @single_bit2(i64 %x) {
+; RV32I-LABEL: single_bit2:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    slli a2, a0, 20
+; RV32I-NEXT:    srai a2, a2, 31
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: single_bit2:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a1, a0, 52
+; RV64I-NEXT:    srai a1, a1, 63
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64XVENTANACONDOPS-LABEL: single_bit2:
+; RV64XVENTANACONDOPS:       # %bb.0: # %entry
+; RV64XVENTANACONDOPS-NEXT:    slli a1, a0, 52
+; RV64XVENTANACONDOPS-NEXT:    srai a1, a1, 63
+; RV64XVENTANACONDOPS-NEXT:    and a0, a1, a0
+; RV64XVENTANACONDOPS-NEXT:    ret
+;
+; RV64XTHEADCONDMOV-LABEL: single_bit2:
+; RV64XTHEADCONDMOV:       # %bb.0: # %entry
+; RV64XTHEADCONDMOV-NEXT:    slli a1, a0, 52
+; RV64XTHEADCONDMOV-NEXT:    srai a1, a1, 63
+; RV64XTHEADCONDMOV-NEXT:    and a0, a1, a0
+; RV64XTHEADCONDMOV-NEXT:    ret
+;
+; RV32ZICOND-LABEL: single_bit2:
+; RV32ZICOND:       # %bb.0: # %entry
+; RV32ZICOND-NEXT:    slli a2, a0, 20
+; RV32ZICOND-NEXT:    srai a2, a2, 31
+; RV32ZICOND-NEXT:    and a0, a2, a0
+; RV32ZICOND-NEXT:    and a1, a2, a1
+; RV32ZICOND-NEXT:    ret
+;
+; RV64ZICOND-LABEL: single_bit2:
+; RV64ZICOND:       # %bb.0: # %entry
+; RV64ZICOND-NEXT:    slli a1, a0, 52
+; RV64ZICOND-NEXT:    srai a1, a1, 63
+; RV64ZICOND-NEXT:    and a0, a1, a0
+; RV64ZICOND-NEXT:    ret
+entry:
+  %and = and i64 %x, 2048
+  %tobool.not = icmp eq i64 %and, 0
+  %cond = select i1 %tobool.not, i64 0, i64 %x
+  ret i64 %cond
+}

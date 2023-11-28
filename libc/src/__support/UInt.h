@@ -13,9 +13,10 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/builtin_wrappers.h"
+#include "src/__support/bit.h" // unsafe_clz
 #include "src/__support/integer_utils.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math_extras.h"         // SumCarry, DiffBorrow
 #include "src/__support/number_pair.h"
 
 #include <stddef.h> // For size_t
@@ -33,7 +34,9 @@ template <size_t Bits, bool Signed> struct BigInt {
   static LIBC_INLINE_VAR constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
   static LIBC_INLINE constexpr uint64_t low(uint64_t v) { return v & MASK32; }
-  static LIBC_INLINE constexpr uint64_t high(uint64_t v) { return (v >> 32) & MASK32; }
+  static LIBC_INLINE constexpr uint64_t high(uint64_t v) {
+    return (v >> 32) & MASK32;
+  }
 
   LIBC_INLINE constexpr BigInt() = default;
 
@@ -93,7 +96,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     }
   }
 
-  LIBC_INLINE constexpr explicit BigInt(const cpp::array<uint64_t, WORDCOUNT> &words) {
+  LIBC_INLINE constexpr explicit BigInt(
+      const cpp::array<uint64_t, WORDCOUNT> &words) {
     for (size_t i = 0; i < WORDCOUNT; ++i)
       val[i] = words[i];
   }
@@ -143,7 +147,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return s.carry;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed> operator+(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr BigInt<Bits, Signed>
+  operator+(const BigInt<Bits, Signed> &other) const {
     BigInt<Bits, Signed> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
@@ -155,7 +160,8 @@ template <size_t Bits, bool Signed> struct BigInt {
 
   // This will only apply when initializing a variable from constant values, so
   // it will always use the constexpr version of add_with_carry.
-  LIBC_INLINE constexpr BigInt<Bits, Signed> operator+(BigInt<Bits, Signed> &&other) const {
+  LIBC_INLINE constexpr BigInt<Bits, Signed>
+  operator+(BigInt<Bits, Signed> &&other) const {
     BigInt<Bits, Signed> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
@@ -182,7 +188,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return d.borrow;
   }
 
-  LIBC_INLINE BigInt<Bits, Signed> operator-(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE BigInt<Bits, Signed>
+  operator-(const BigInt<Bits, Signed> &other) const {
     BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
@@ -192,7 +199,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return result;
   }
 
-  LIBC_INLINE constexpr BigInt<Bits, Signed> operator-(BigInt<Bits, Signed> &&other) const {
+  LIBC_INLINE constexpr BigInt<Bits, Signed>
+  operator-(BigInt<Bits, Signed> &&other) const {
     BigInt<Bits, Signed> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
@@ -317,7 +325,7 @@ template <size_t Bits, bool Signed> struct BigInt {
   //    256      4        16          10            3
   //    512      8        64          36            7
   constexpr BigInt<Bits, Signed>
-  LIBC_INLINE quick_mul_hi(const BigInt<Bits, Signed> &other) const {
+      LIBC_INLINE quick_mul_hi(const BigInt<Bits, Signed> &other) const {
     BigInt<Bits, Signed> result(0);
     BigInt<128, Signed> partial_sum(0);
     uint64_t carry = 0;
@@ -407,8 +415,8 @@ template <size_t Bits, bool Signed> struct BigInt {
   //   Since the remainder of each division step < x < 2^32, the computation of
   // each step is now properly contained within uint64_t.
   //   And finally we perform some extra alignment steps for the remaining bits.
-  LIBC_INLINE constexpr optional<BigInt<Bits, Signed>> div_uint32_times_pow_2(uint32_t x,
-                                                                  size_t e) {
+  LIBC_INLINE constexpr optional<BigInt<Bits, Signed>>
+  div_uint32_times_pow_2(uint32_t x, size_t e) {
     BigInt<Bits, Signed> remainder(0);
 
     if (x == 0) {
@@ -729,7 +737,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return result;
   }
 
-  LIBC_INLINE constexpr bool operator==(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr bool
+  operator==(const BigInt<Bits, Signed> &other) const {
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       if (val[i] != other.val[i])
         return false;
@@ -737,7 +746,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return true;
   }
 
-  LIBC_INLINE constexpr bool operator!=(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr bool
+  operator!=(const BigInt<Bits, Signed> &other) const {
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       if (val[i] != other.val[i])
         return true;
@@ -745,7 +755,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return false;
   }
 
-  LIBC_INLINE constexpr bool operator>(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr bool
+  operator>(const BigInt<Bits, Signed> &other) const {
     if constexpr (Signed) {
       // Check for different signs;
       bool a_sign = val[WORDCOUNT - 1] >> 63;
@@ -766,7 +777,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return false;
   }
 
-  LIBC_INLINE constexpr bool operator>=(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr bool
+  operator>=(const BigInt<Bits, Signed> &other) const {
     if constexpr (Signed) {
       // Check for different signs;
       bool a_sign = val[WORDCOUNT - 1] >> 63;
@@ -787,7 +799,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return true;
   }
 
-  LIBC_INLINE constexpr bool operator<(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr bool
+  operator<(const BigInt<Bits, Signed> &other) const {
     if constexpr (Signed) {
       // Check for different signs;
       bool a_sign = val[WORDCOUNT - 1] >> 63;
@@ -809,7 +822,8 @@ template <size_t Bits, bool Signed> struct BigInt {
     return false;
   }
 
-  LIBC_INLINE constexpr bool operator<=(const BigInt<Bits, Signed> &other) const {
+  LIBC_INLINE constexpr bool
+  operator<=(const BigInt<Bits, Signed> &other) const {
     if constexpr (Signed) {
       // Check for different signs;
       bool a_sign = val[WORDCOUNT - 1] >> 63;
@@ -857,7 +871,9 @@ template <size_t Bits, bool Signed> struct BigInt {
   }
 
   // Return the i-th 64-bit word of the number.
-  LIBC_INLINE constexpr const uint64_t &operator[](size_t i) const { return val[i]; }
+  LIBC_INLINE constexpr const uint64_t &operator[](size_t i) const {
+    return val[i];
+  }
 
   // Return the i-th 64-bit word of the number.
   LIBC_INLINE constexpr uint64_t &operator[](size_t i) { return val[i]; }

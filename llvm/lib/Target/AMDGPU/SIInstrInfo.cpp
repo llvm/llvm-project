@@ -3445,11 +3445,26 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         (Src1->isReg() && Src1->getReg() == Reg)) {
       MachineOperand *RegSrc =
           Src1->isReg() && Src1->getReg() == Reg ? Src0 : Src1;
-      if (!RegSrc->isReg() ||
-          RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())))
+      if (!RegSrc->isReg())
+        return false;
+      if (RI.isSGPRClass(MRI->getRegClass(RegSrc->getReg())) &&
+          ST.getConstantBusLimit(Opc) < 2)
         return false;
 
       if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
+        return false;
+
+      // If src2 is also a literal constant then we have to choose which one to
+      // fold. In general it is better to choose madak so that the other literal
+      // can be materialized in an sgpr instead of a vgpr:
+      //   s_mov_b32 s0, literal
+      //   v_madak_f32 v0, s0, v0, literal
+      // Instead of:
+      //   v_mov_b32 v1, literal
+      //   v_madmk_f32 v0, v0, literal, v1
+      MachineInstr *Def = MRI->getUniqueVRegDef(Src2->getReg());
+      if (Def && Def->isMoveImmediate() &&
+          !isInlineConstant(Def->getOperand(1)))
         return false;
 
       unsigned NewOpc =
@@ -8474,16 +8489,25 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
   return AMDGPU::COPY;
 }
 
-bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
+bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI,
+                                       Register Reg) const {
   // We need to handle instructions which may be inserted during register
   // allocation to handle the prolog. The initial prolog instruction may have
   // been separated from the start of the block by spills and copies inserted
-  // needed by the prolog.
-  uint16_t Opc = MI.getOpcode();
+  // needed by the prolog. However, the insertions for scalar registers can
+  // always be placed at the BB top as they are independent of the exec mask
+  // value.
+  bool IsNullOrVectorRegister = true;
+  if (Reg) {
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    IsNullOrVectorRegister = !RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg));
+  }
 
+  uint16_t Opc = MI.getOpcode();
   // FIXME: Copies inserted in the block prolog for live-range split should also
   // be included.
-  return (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
+  return IsNullOrVectorRegister &&
+         (isSpillOpcode(Opc) || (!MI.isTerminator() && Opc != AMDGPU::COPY &&
                                  MI.modifiesRegister(AMDGPU::EXEC, &RI)));
 }
 
@@ -8725,6 +8749,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
@@ -8783,6 +8809,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  // TODO-GFX12: Remove this.
+  // Hack to allow some GFX12 codegen tests to run before all the encodings are
+  // implemented.
+  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

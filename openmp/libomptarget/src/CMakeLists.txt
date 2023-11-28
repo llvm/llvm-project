@@ -46,5 +46,8 @@ endif()
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
-set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
+set_target_properties(omptarget PROPERTIES
+                      POSITION_INDEPENDENT_CODE ON
+                      INSTALL_RPATH "$ORIGIN"
+                      BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OPENMP_INSTALL_LIBDIR}")

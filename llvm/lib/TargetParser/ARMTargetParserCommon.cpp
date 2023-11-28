@@ -44,6 +44,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v9.2a", "v9.2-a")
       .Case("v9.3a", "v9.3-a")
       .Case("v9.4a", "v9.4-a")
+      .Case("v9.5a", "v9.5-a")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
       .Case("v8.1m.main", "v8.1-m.main")

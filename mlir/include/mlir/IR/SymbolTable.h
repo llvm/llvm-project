@@ -103,6 +103,24 @@ public:
     Nested,
   };
 
+  /// Generate a unique symbol name. Iteratively increase uniquingCounter
+  /// and use it as a suffix for symbol names until uniqueChecker does not
+  /// detect any conflict.
+  template <unsigned N, typename UniqueChecker>
+  static SmallString<N> generateSymbolName(StringRef name,
+                                           UniqueChecker uniqueChecker,
+                                           unsigned &uniquingCounter) {
+    SmallString<N> nameBuffer(name);
+    unsigned originalLength = nameBuffer.size();
+    do {
+      nameBuffer.resize(originalLength);
+      nameBuffer += '_';
+      nameBuffer += std::to_string(uniquingCounter++);
+    } while (uniqueChecker(nameBuffer));
+
+    return nameBuffer;
+  }
+
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.
   static StringAttr getSymbolName(Operation *symbol);

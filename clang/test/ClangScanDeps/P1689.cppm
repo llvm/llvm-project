@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
+//
 // The slash direction in linux and windows are different.
 // UNSUPPORTED: system-windows
 //

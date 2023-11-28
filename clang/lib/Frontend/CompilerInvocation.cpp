@@ -3267,6 +3267,16 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
+static void GenerateAPINotesArgs(const APINotesOptions &Opts,
+                                 ArgumentConsumer Consumer) {
+  if (!Opts.SwiftVersion.empty())
+    GenerateArg(Consumer, OPT_fapinotes_swift_version,
+                Opts.SwiftVersion.getAsString());
+
+  for (const auto &Path : Opts.ModuleSearchPaths)
+    GenerateArg(Consumer, OPT_iapinotes_modules, Path);
+}
+
 static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
                               DiagnosticsEngine &diags) {
   if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
@@ -3548,6 +3558,13 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
 
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
+
+  if (Opts.OpenACC) {
+    GenerateArg(Consumer, OPT_fopenacc);
+    if (!Opts.OpenACCMacroOverride.empty())
+      GenerateArg(Consumer, OPT_openacc_macro_override,
+                  Opts.OpenACCMacroOverride);
+  }
 
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
@@ -4018,6 +4035,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                         (T.isNVPTX() || T.isAMDGCN()) &&
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
+  // OpenACC Configuration.
+  if (Args.hasArg(options::OPT_fopenacc)) {
+    Opts.OpenACC = true;
+
+    if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override))
+      Opts.OpenACCMacroOverride = A->getValue();
+  }
+
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
        OptSize = getOptimizationLevelSize(Args);
@@ -4153,7 +4178,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                    TargetCXXABI::usesRelativeVTables(T));
 
   // RTTI is on by default.
-  bool HasRTTI = Args.hasFlag(options::OPT_frtti, options::OPT_fno_rtti, true);
+  bool HasRTTI = !Args.hasArg(options::OPT_fno_rtti);
   Opts.OmitVTableRTTI =
       Args.hasFlag(options::OPT_fexperimental_omit_vtable_rtti,
                    options::OPT_fno_experimental_omit_vtable_rtti, false);
@@ -4731,6 +4756,18 @@ std::string CompilerInvocation::getModuleHash() const {
   for (const auto &ext : getFrontendOpts().ModuleFileExtensions)
     ext->hashExtension(HBuilder);
 
+  // Extend the signature with the Swift version for API notes.
+  const APINotesOptions &APINotesOpts = getAPINotesOpts();
+  if (!APINotesOpts.SwiftVersion.empty()) {
+    HBuilder.add(APINotesOpts.SwiftVersion.getMajor());
+    if (auto Minor = APINotesOpts.SwiftVersion.getMinor())
+      HBuilder.add(*Minor);
+    if (auto Subminor = APINotesOpts.SwiftVersion.getSubminor())
+      HBuilder.add(*Subminor);
+    if (auto Build = APINotesOpts.SwiftVersion.getBuild())
+      HBuilder.add(*Build);
+  }
+
   // When compiling with -gmodules, also hash -fdebug-prefix-map as it
   // affects the debug info in the PCM.
   if (getCodeGenOpts().DebugTypeExtRefs)
@@ -4761,6 +4798,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);
   GenerateTargetArgs(getTargetOpts(), Consumer);
   GenerateHeaderSearchArgs(getHeaderSearchOpts(), Consumer);
+  GenerateAPINotesArgs(getAPINotesOpts(), Consumer);
   GenerateLangArgs(getLangOpts(), Consumer, T, getFrontendOpts().DashX);
   GenerateCodeGenArgs(getCodeGenOpts(), Consumer, T,
                       getFrontendOpts().OutputFile, &getLangOpts());

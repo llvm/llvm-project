@@ -103,6 +103,8 @@ public:
   /// (i.e. `[1,1,2]` is an invalid permutation).
   static AffineMap getPermutationMap(ArrayRef<unsigned> permutation,
                                      MLIRContext *context);
+  static AffineMap getPermutationMap(ArrayRef<int64_t> permutation,
+                                     MLIRContext *context);
 
   /// Returns an affine map with `numDims` input dimensions and results
   /// specified by `targets`.
@@ -310,7 +312,8 @@ public:
   /// Folds the results of the application of an affine map on the provided
   /// operands to a constant if possible.
   LogicalResult constantFold(ArrayRef<Attribute> operandConstants,
-                             SmallVectorImpl<Attribute> &results) const;
+                             SmallVectorImpl<Attribute> &results,
+                             bool *hasPoison = nullptr) const;
 
   /// Propagates the constant operands into this affine map. Operands are
   /// allowed to be null, at which point they are treated as non-constant. This
@@ -318,9 +321,9 @@ public:
   /// which may be equal to the old map if no folding happened. If `results` is
   /// provided and if all expressions in the map were folded to constants,
   /// `results` will contain the values of these constants.
-  AffineMap
-  partialConstantFold(ArrayRef<Attribute> operandConstants,
-                      SmallVectorImpl<int64_t> *results = nullptr) const;
+  AffineMap partialConstantFold(ArrayRef<Attribute> operandConstants,
+                                SmallVectorImpl<int64_t> *results = nullptr,
+                                bool *hasPoison = nullptr) const;
 
   /// Returns the AffineMap resulting from composing `this` with `map`.
   /// The resulting AffineMap has as many AffineDimExpr as `map` and as many

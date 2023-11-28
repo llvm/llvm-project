@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Debug.h"
 
@@ -62,13 +63,18 @@ private:
   // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
-  bool selectGlobalValue(MachineInstr &MI, MachineIRBuilder &MIB,
-                         MachineRegisterInfo &MRI) const;
+  bool selectAddr(MachineInstr &MI, MachineIRBuilder &MIB,
+                  MachineRegisterInfo &MRI, bool IsLocal = true,
+                  bool IsExternWeak = false) const;
   bool selectSExtInreg(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
+  bool selectIntrinsicWithSideEffects(MachineInstr &MI, MachineIRBuilder &MIB,
+                                      MachineRegisterInfo &MRI) const;
+  void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
+                 MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -290,6 +296,39 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
 
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
+  MachineFunction &MF = *Root.getParent()->getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (!Root.isReg())
+    return std::nullopt;
+
+  MachineInstr *RootDef = MRI.getVRegDef(Root.getReg());
+  if (RootDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+    }};
+  }
+
+  if (isBaseWithConstantOffset(Root, MRI)) {
+    MachineOperand &LHS = RootDef->getOperand(1);
+    MachineOperand &RHS = RootDef->getOperand(2);
+    MachineInstr *LHSDef = MRI.getVRegDef(LHS.getReg());
+    MachineInstr *RHSDef = MRI.getVRegDef(RHS.getReg());
+
+    int64_t RHSC = RHSDef->getOperand(1).getCImm()->getSExtValue();
+    if (isInt<12>(RHSC)) {
+      if (LHSDef->getOpcode() == TargetOpcode::G_FRAME_INDEX)
+        return {{
+            [=](MachineInstrBuilder &MIB) { MIB.add(LHSDef->getOperand(1)); },
+            [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); },
+        }};
+
+      return {{[=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
+               [=](MachineInstrBuilder &MIB) { MIB.addImm(RHSC); }}};
+    }
+  }
+
   // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
   // the combiner?
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
@@ -391,7 +430,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   preISelLower(MI, MIB, MRI);
   const unsigned Opc = MI.getOpcode();
 
-  if (!isPreISelGenericOpcode(Opc) || Opc == TargetOpcode::G_PHI) {
+  if (!MI.isPreISelOpcode() || Opc == TargetOpcode::G_PHI) {
     if (Opc == TargetOpcode::PHI || Opc == TargetOpcode::G_PHI) {
       const Register DefReg = MI.getOperand(0).getReg();
       const LLT DefTy = MRI.getType(DefReg);
@@ -481,8 +520,18 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
-  case TargetOpcode::G_GLOBAL_VALUE:
-    return selectGlobalValue(MI, MIB, MRI);
+  case TargetOpcode::G_GLOBAL_VALUE: {
+    auto *GV = MI.getOperand(1).getGlobal();
+    if (GV->isThreadLocal()) {
+      // TODO: implement this case.
+      return false;
+    }
+
+    return selectAddr(MI, MIB, MRI, GV->isDSOLocal(),
+                      GV->hasExternalWeakLinkage());
+  }
+  case TargetOpcode::G_JUMP_TABLE:
+    return selectAddr(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
     Register LHS, RHS;
     RISCVCC::CondCode CC;
@@ -493,6 +542,62 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
   }
+  case TargetOpcode::G_BRJT: {
+    // FIXME: Move to legalization?
+    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+    unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
+    assert((EntrySize == 4 || (Subtarget->is64Bit() && EntrySize == 8)) &&
+           "Unsupported jump-table entry size");
+    assert(
+        (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_Custom32 ||
+         MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress) &&
+        "Unexpected jump-table entry kind");
+
+    auto SLL =
+        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {MI.getOperand(2)})
+            .addImm(Log2_32(EntrySize));
+    if (!SLL.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // TODO: Use SHXADD. Moving to legalization would fix this automatically.
+    auto ADD = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
+                              {MI.getOperand(0), SLL.getReg(0)});
+    if (!ADD.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    unsigned LdOpc = EntrySize == 8 ? RISCV::LD : RISCV::LW;
+    auto Dest =
+        MIB.buildInstr(LdOpc, {&RISCV::GPRRegClass}, {ADD.getReg(0)})
+            .addImm(0)
+            .addMemOperand(MF.getMachineMemOperand(
+                MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
+                EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout()))));
+    if (!Dest.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // If the Kind is EK_LabelDifference32, the table stores an offset from
+    // the location of the table. Add the table address to get an absolute
+    // address.
+    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
+      Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
+                            {Dest.getReg(0), MI.getOperand(0)});
+      if (!Dest.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    auto Branch =
+        MIB.buildInstr(RISCV::PseudoBRIND, {}, {Dest.getReg(0)}).addImm(0);
+    if (!Branch.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    MI.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_BRINDIRECT:
+    MI.setDesc(TII.get(RISCV::PseudoBRIND));
+    MI.addOperand(MachineOperand::CreateImm(0));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
   case TargetOpcode::G_SEXT_INREG:
     return selectSExtInreg(MI, MIB);
   case TargetOpcode::G_FRAME_INDEX: {
@@ -507,6 +612,17 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    return selectIntrinsicWithSideEffects(MI, MIB, MRI);
+  case TargetOpcode::G_FENCE: {
+    AtomicOrdering FenceOrdering =
+        static_cast<AtomicOrdering>(MI.getOperand(0).getImm());
+    SyncScope::ID FenceSSID =
+        static_cast<SyncScope::ID>(MI.getOperand(1).getImm());
+    emitFence(FenceOrdering, FenceSSID, MIB);
+    MI.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }
@@ -670,48 +786,47 @@ bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
   return true;
 }
 
-bool RISCVInstructionSelector::selectGlobalValue(
-    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
-         "Expected G_GLOBAL_VALUE");
+bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
+                                          MachineIRBuilder &MIB,
+                                          MachineRegisterInfo &MRI,
+                                          bool IsLocal,
+                                          bool IsExternWeak) const {
+  assert((MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+          MI.getOpcode() == TargetOpcode::G_JUMP_TABLE) &&
+         "Unexpected opcode");
 
-  auto *GV = MI.getOperand(1).getGlobal();
-  if (GV->isThreadLocal()) {
-    // TODO: implement this case.
-    return false;
-  }
+  const MachineOperand &DispMO = MI.getOperand(1);
 
   Register DefReg = MI.getOperand(0).getReg();
   const LLT DefTy = MRI.getType(DefReg);
-  MachineInstr *Result = nullptr;
 
   // When HWASAN is used and tagging of global variables is enabled
   // they should be accessed via the GOT, since the tagged address of a global
   // is incompatible with existing code models. This also applies to non-pic
   // mode.
   if (TM.isPositionIndependent() || Subtarget->allowTaggedGlobals()) {
-    if (GV->isDSOLocal() && !Subtarget->allowTaggedGlobals()) {
+    if (IsLocal && !Subtarget->allowTaggedGlobals()) {
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
-      Result =
-          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
-    } else {
-      // Use PC-relative addressing to access the GOT for this symbol, then
-      // load the address from the GOT. This generates the pattern (PseudoLGA
-      // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
-      // %pcrel_lo(auipc))).
-      MachineFunction &MF = *MI.getParent()->getParent();
-      MachineMemOperand *MemOp = MF.getMachineMemOperand(
-          MachinePointerInfo::getGOT(MF),
-          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-              MachineMemOperand::MOInvariant,
-          DefTy, Align(DefTy.getSizeInBits() / 8));
-
-      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
-                   .addGlobalAddress(GV)
-                   .addMemOperand(MemOp);
+      MI.setDesc(TII.get(RISCV::PseudoLLA));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
     }
+
+    // Use PC-relative addressing to access the GOT for this symbol, then
+    // load the address from the GOT. This generates the pattern (PseudoLGA
+    // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
+    // %pcrel_lo(auipc))).
+    MachineFunction &MF = *MI.getParent()->getParent();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        DefTy, Align(DefTy.getSizeInBits() / 8));
+
+    auto Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                      .addDisp(DispMO, 0)
+                      .addMemOperand(MemOp);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
@@ -732,13 +847,13 @@ bool RISCVInstructionSelector::selectGlobalValue(
     // (lui %hi(sym)) %lo(sym)).
     Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
-                               .addGlobalAddress(GV, 0, RISCVII::MO_HI);
+                               .addDisp(DispMO, 0, RISCVII::MO_HI);
 
     if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
       return false;
 
-    Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
-                 .addGlobalAddress(GV, 0, RISCVII::MO_LO);
+    auto Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
+                      .addDisp(DispMO, 0, RISCVII::MO_LO);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
@@ -746,12 +861,12 @@ bool RISCVInstructionSelector::selectGlobalValue(
     MI.eraseFromParent();
     return true;
   }
-  case CodeModel::Medium: {
+  case CodeModel::Medium:
     // Emit LGA/LLA instead of the sequence it expands to because the pcrel_lo
     // relocation needs to reference a label that points to the auipc
     // instruction itself, not the global. This cannot be done inside the
     // instruction selector.
-    if (GV->hasExternalWeakLinkage()) {
+    if (IsExternWeak) {
       // An extern weak symbol may be undefined, i.e. have value 0, which may
       // not be within 2GiB of PC, so use GOT-indirect addressing to access the
       // symbol. This generates the pattern (PseudoLGA sym), which expands to
@@ -763,24 +878,24 @@ bool RISCVInstructionSelector::selectGlobalValue(
               MachineMemOperand::MOInvariant,
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
-      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
-                   .addGlobalAddress(GV)
-                   .addMemOperand(MemOp);
-    } else {
-      // Generate a sequence for accessing addresses within any 2GiB range
-      // within the address space. This generates the pattern (PseudoLLA sym),
-      // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
-      Result =
-          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
+      auto Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                        .addDisp(DispMO, 0)
+                        .addMemOperand(MemOp);
+
+      if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+        return false;
+
+      MI.eraseFromParent();
+      return true;
     }
 
-    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
-      return false;
+    // Generate a sequence for accessing addresses within any 2GiB range
+    // within the address space. This generates the pattern (PseudoLLA sym),
+    // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    MI.setDesc(TII.get(RISCV::PseudoLLA));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+  }
 
-    MI.eraseFromParent();
-    return true;
-  }
-  }
   return false;
 }
 
@@ -816,8 +931,17 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
   RISCVCC::CondCode CC;
   getOperandsForBranch(SelectMI.getCondReg(), MRI, CC, LHS, RHS);
 
-  MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
-                             .addDef(SelectMI.getReg(0))
+  Register DstReg = SelectMI.getReg(0);
+
+  unsigned Opc = RISCV::Select_GPR_Using_CC_GPR;
+  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() == RISCV::FPRBRegBankID) {
+    unsigned Size = MRI.getType(DstReg).getSizeInBits();
+    Opc = Size == 32 ? RISCV::Select_FPR32_Using_CC_GPR
+                     : RISCV::Select_FPR64_Using_CC_GPR;
+  }
+
+  MachineInstr *Result = MIB.buildInstr(Opc)
+                             .addDef(DstReg)
                              .addReg(LHS)
                              .addReg(RHS)
                              .addImm(CC)
@@ -949,6 +1073,86 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
+         "Unexpected opcode");
+  // Find the intrinsic ID.
+  unsigned IntrinID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+  // Select the instruction.
+  switch (IntrinID) {
+  default:
+    return false;
+  case Intrinsic::trap:
+    MIB.buildInstr(RISCV::UNIMP, {}, {});
+    break;
+  case Intrinsic::debugtrap:
+    MIB.buildInstr(RISCV::EBREAK, {}, {});
+    break;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+void RISCVInstructionSelector::emitFence(AtomicOrdering FenceOrdering,
+                                         SyncScope::ID FenceSSID,
+                                         MachineIRBuilder &MIB) const {
+  if (STI.hasStdExtZtso()) {
+    // The only fence that needs an instruction is a sequentially-consistent
+    // cross-thread fence.
+    if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
+        FenceSSID == SyncScope::System) {
+      // fence rw, rw
+      MIB.buildInstr(RISCV::FENCE, {}, {})
+          .addImm(RISCVFenceField::R | RISCVFenceField::W)
+          .addImm(RISCVFenceField::R | RISCVFenceField::W);
+      return;
+    }
+
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    MIB.buildInstr(TargetOpcode::MEMBARRIER, {}, {});
+    return;
+  }
+
+  // singlethread fences only synchronize with signal handlers on the same
+  // thread and thus only need to preserve instruction order, not actually
+  // enforce memory ordering.
+  if (FenceSSID == SyncScope::SingleThread) {
+    MIB.buildInstr(TargetOpcode::MEMBARRIER, {}, {});
+    return;
+  }
+
+  // Refer to Table A.6 in the version 2.3 draft of the RISC-V Instruction Set
+  // Manual: Volume I.
+  unsigned Pred, Succ;
+  switch (FenceOrdering) {
+  default:
+    llvm_unreachable("Unexpected ordering");
+  case AtomicOrdering::AcquireRelease:
+    // fence acq_rel -> fence.tso
+    MIB.buildInstr(RISCV::FENCE_TSO, {}, {});
+    return;
+  case AtomicOrdering::Acquire:
+    // fence acquire -> fence r, rw
+    Pred = RISCVFenceField::R;
+    Succ = RISCVFenceField::R | RISCVFenceField::W;
+    break;
+  case AtomicOrdering::Release:
+    // fence release -> fence rw, w
+    Pred = RISCVFenceField::R | RISCVFenceField::W;
+    Succ = RISCVFenceField::W;
+    break;
+  case AtomicOrdering::SequentiallyConsistent:
+    // fence seq_cst -> fence rw, rw
+    Pred = RISCVFenceField::R | RISCVFenceField::W;
+    Succ = RISCVFenceField::R | RISCVFenceField::W;
+    break;
+  }
+  MIB.buildInstr(RISCV::FENCE, {}, {}).addImm(Pred).addImm(Succ);
 }
 
 namespace llvm {

@@ -233,49 +233,45 @@ public:
                                                 PatternMatch::m_Value()));
   }
 
+  /// Return nonnull value if V is free to invert under the condition of
+  /// WillInvertAllUses.
+  /// If Builder is nonnull, it will return a simplified ~V.
+  /// If Builder is null, it will return an arbitrary nonnull value (not
+  /// dereferenceable).
+  /// If the inversion will consume instructions, `DoesConsume` will be set to
+  /// true. Otherwise it will be false.
+  static Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                      BuilderTy *Builder, bool &DoesConsume,
+                                      unsigned Depth);
+
+  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder, bool &DoesConsume) {
+    DoesConsume = false;
+    return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
+                                 /*Depth*/ 0);
+  }
+
+  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder) {
+    bool Unused;
+    return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
+  }
+
   /// Return true if the specified value is free to invert (apply ~ to).
   /// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
   /// is true, work under the assumption that the caller intends to remove all
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
+  static bool isFreeToInvert(Value *V, bool WillInvertAllUses,
+                             bool &DoesConsume) {
+    return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
+                             DoesConsume) != nullptr;
+  }
+
   static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
-    // ~(~(X)) -> X.
-    if (match(V, m_Not(PatternMatch::m_Value())))
-      return true;
-
-    // Constants can be considered to be not'ed values.
-    if (match(V, PatternMatch::m_AnyIntegralConstant()))
-      return true;
-
-    // Compares can be inverted if all of their uses are being modified to use
-    // the ~V.
-    if (isa<CmpInst>(V))
-      return WillInvertAllUses;
-
-    // If `V` is of the form `A + Constant` then `-1 - V` can be folded into
-    // `(-1 - Constant) - A` if we are willing to invert all of the uses.
-    if (match(V, m_Add(PatternMatch::m_Value(), PatternMatch::m_ImmConstant())))
-      return WillInvertAllUses;
-
-    // If `V` is of the form `Constant - A` then `-1 - V` can be folded into
-    // `A + (-1 - Constant)` if we are willing to invert all of the uses.
-    if (match(V, m_Sub(PatternMatch::m_ImmConstant(), PatternMatch::m_Value())))
-      return WillInvertAllUses;
-
-    // Selects with invertible operands are freely invertible
-    if (match(V,
-              m_Select(PatternMatch::m_Value(), m_Not(PatternMatch::m_Value()),
-                       m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    // Min/max may be in the form of intrinsics, so handle those identically
-    // to select patterns.
-    if (match(V, m_MaxOrMin(m_Not(PatternMatch::m_Value()),
-                            m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    return false;
+    bool Unused;
+    return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
 
   /// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
@@ -468,12 +464,12 @@ public:
 
   void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
                         const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
+    llvm::computeKnownBits(V, Known, Depth, SQ.getWithInstruction(CxtI));
   }
 
   KnownBits computeKnownBits(const Value *V, unsigned Depth,
                              const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
+    return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,

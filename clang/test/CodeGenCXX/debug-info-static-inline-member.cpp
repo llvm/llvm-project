@@ -1,5 +1,5 @@
-// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -debug-info-kind=standalone %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
-// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -debug-info-kind=limited %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -gdwarf-4 -debug-info-kind=standalone %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -gdwarf-4 -debug-info-kind=limited %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
 
 enum class Enum : int {
   VAL = -1

@@ -1223,7 +1223,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
   if (!Zext.hasNonNeg()) {
     // If this zero extend is only used by a shift, add nneg flag.
-    if (Zext.hasOneUse() && SrcTy->getScalarSizeInBits() > 2 &&
+    if (Zext.hasOneUse() &&
+        SrcTy->getScalarSizeInBits() >
+            Log2_64_Ceil(DestTy->getScalarSizeInBits()) &&
         match(Zext.user_back(), m_Shift(m_Value(), m_Specific(&Zext)))) {
       Zext.setNonNeg();
       return &Zext;
