@@ -2286,11 +2286,11 @@ createAlteredByCaptureMap(MapInfoData &mapData,
           auto curInsert = builder.saveIP();
           builder.restoreIP(findAllocaInsertPoint(builder, moduleTranslation));
           auto *memTempAlloc =
-              builder.CreateAlloca(builder.getInt8PtrTy(), nullptr, ".casted");
+              builder.CreateAlloca(builder.getPtrTy(), nullptr, ".casted");
           builder.restoreIP(curInsert);
 
           builder.CreateStore(newV, memTempAlloc);
-          newV = builder.CreateLoad(builder.getInt8PtrTy(), memTempAlloc);
+          newV = builder.CreateLoad(builder.getPtrTy(), memTempAlloc);
         }
 
         mapData.Pointers[i] = newV;
