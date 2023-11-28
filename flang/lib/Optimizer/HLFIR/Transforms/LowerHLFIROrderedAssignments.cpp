@@ -414,8 +414,7 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
   if (input.isValue() && mold.isVariable()) {
     // T to fir.ref<T>, or hlfir.expr<T> to fir.ref<T>.
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-        loc, builder, input, mold.getFortranElementType(), ".tmp.val2ref",
-        std::nullopt);
+        loc, builder, input, mold.getFortranElementType(), ".tmp.val2ref");
     cleanups.emplace_back(
         [=]() { b->create<hlfir::EndAssociateOp>(loc, associate); });
     return hlfir::Entity{associate.getBase()};

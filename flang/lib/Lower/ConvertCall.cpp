@@ -562,7 +562,7 @@ static hlfir::EntityWithAttributes genStmtFunctionRef(
       mlir::Type argType = converter.genType(*arg);
       auto associate =
           hlfir::genAssociateExpr(loc, builder, loweredArg, argType,
-                                  toStringRef(arg->name()), std::nullopt);
+                                  toStringRef(arg->name()));
       exprAssociations.push_back(associate);
       variableIface = associate;
     }
@@ -960,8 +960,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
       mlir::Type storageType = entity.getType();
-      mlir::NamedAttribute byRefAttr =
-          Fortran::lower::getAdaptToByRefAttr(builder);
+      mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
       hlfir::AssociateOp associate = hlfir::genAssociateExpr(
           loc, builder, hlfir::Entity{copy}, storageType, "", byRefAttr);
       entity = hlfir::Entity{associate.getBase()};
@@ -990,8 +989,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // The actual is an expression value, place it into a temporary
     // and register the temporary destruction after the call.
     mlir::Type storageType = converter.genType(expr);
-    mlir::NamedAttribute byRefAttr =
-        Fortran::lower::getAdaptToByRefAttr(builder);
+    mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, storageType, "", byRefAttr);
     entity = hlfir::Entity{associate.getBase()};
@@ -1182,7 +1180,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // Load the __address component and pass it by value.
         if (value.isValue()) {
           auto associate = hlfir::genAssociateExpr(
-              loc, builder, value, eleTy, "adapt.cptrbyval", std::nullopt);
+              loc, builder, value, eleTy, "adapt.cptrbyval");
           value = hlfir::Entity{genRecordCPtrValueArg(
               builder, loc, associate.getFirBase(), eleTy)};
           builder.create<hlfir::EndAssociateOp>(loc, associate);

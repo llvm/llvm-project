@@ -1212,9 +1212,7 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
                                llvm::StringRef uniq_name, mlir::Value shape,
                                mlir::ValueRange typeparams,
                                fir::FortranVariableFlagsAttr fortran_attrs) {
-  mlir::StringAttr nameAttr;
-  if (!uniq_name.empty())
-    nameAttr = builder.getStringAttr(uniq_name);
+  auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type dataType = getFortranElementOrSequenceType(source.getType());
 
   // Preserve polymorphism of polymorphic expr.
@@ -1230,6 +1228,29 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
   mlir::Type i1Type = builder.getI1Type();
   build(builder, result, {hlfirVariableType, firVarType, i1Type}, source, shape,
         typeparams, nameAttr, fortran_attrs);
+}
+
+void hlfir::AssociateOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Value source,
+    mlir::Value shape, mlir::ValueRange typeparams,
+    fir::FortranVariableFlagsAttr fortran_attrs,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::Type dataType = getFortranElementOrSequenceType(source.getType());
+
+  // Preserve polymorphism of polymorphic expr.
+  mlir::Type firVarType;
+  auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
+  if (sourceExprType && sourceExprType.isPolymorphic())
+    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+  else
+    firVarType = fir::ReferenceType::get(dataType);
+
+  mlir::Type hlfirVariableType =
+      DeclareOp::getHLFIRVariableType(firVarType, /*hasExplicitLbs=*/false);
+  mlir::Type i1Type = builder.getI1Type();
+  build(builder, result, {hlfirVariableType, firVarType, i1Type}, source, shape,
+        typeparams, {}, fortran_attrs);
+  result.addAttributes(attributes);
 }
 
 //===----------------------------------------------------------------------===//

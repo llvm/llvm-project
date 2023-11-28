@@ -260,11 +260,14 @@ hlfir::genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
   }
   llvm::SmallVector<mlir::Value> lenParams;
   genLengthParameters(loc, builder, value, lenParams);
-  auto res = builder.create<hlfir::AssociateOp>(
-      loc, source, name, shape, lenParams, fir::FortranVariableFlagsAttr{});
-  if (attr)
-    res->setAttrs({*attr});
-  return res;
+  if (attr) {
+    assert(name.empty() && "It attribute is provided, no-name is expected");
+    return builder.create<hlfir::AssociateOp>(loc, source, shape, lenParams,
+                                              fir::FortranVariableFlagsAttr{},
+                                              llvm::ArrayRef{*attr});
+  }
+  return builder.create<hlfir::AssociateOp>(loc, source, name, shape, lenParams,
+                                            fir::FortranVariableFlagsAttr{});
 }
 
 mlir::Value hlfir::genVariableRawAddress(mlir::Location loc,
@@ -918,8 +921,7 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   }
 
   if (entity.getType().isa<hlfir::ExprType>()) {
-    mlir::NamedAttribute byRefAttr =
-        Fortran::lower::getAdaptToByRefAttr(builder);
+    mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, entity.getType(), "", byRefAttr);
     auto *bldr = &builder;
@@ -1168,7 +1170,7 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
   if (preserveLowerBounds && source.hasNonDefaultLowerBounds()) {
     hlfir::AssociateOp associate = genAssociateExpr(
         loc, builder, hlfir::Entity{convertedRhs}, convertedRhs.getType(),
-        ".tmp.keeplbounds", std::nullopt);
+        ".tmp.keeplbounds");
     fir::ShapeOp shapeOp = associate.getShape().getDefiningOp<fir::ShapeOp>();
     assert(shapeOp && "associate shape must be a fir.shape");
     const unsigned rank = shapeOp.getExtents().size();
