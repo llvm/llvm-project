@@ -7889,13 +7889,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   auto HeadOfList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
   Register VAList = HeadOfList;
 
-  const MaybeAlign MA(MI.getOperand(2).getImm());
+  const Align A(MI.getOperand(2).getImm());
   LLT PtrTyAsScalarTy = LLT::scalar(PtrTy.getSizeInBits());
-  if (MA && *MA > TLI.getMinStackArgumentAlignment()) {
+  if (A > TLI.getMinStackArgumentAlignment()) {
     Register AlignAmt =
-        MIRBuilder.buildConstant(PtrTyAsScalarTy, MA->value() - 1).getReg(0);
+        MIRBuilder.buildConstant(PtrTyAsScalarTy, A.value() - 1).getReg(0);
     auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, HeadOfList, AlignAmt);
-    auto AndDst = MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(*MA));
+    auto AndDst = MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(A));
     VAList = AndDst.getReg(0);
   }
 
