@@ -19,7 +19,6 @@
 #include "sanitizer_symbolizer_markup.h"
 
 #include "sanitizer_common.h"
-#include "sanitizer_stacktrace_printer.h"
 #include "sanitizer_symbolizer.h"
 #include "sanitizer_symbolizer_markup_constants.h"
 
@@ -73,13 +72,6 @@ const char *MarkupSymbolizerTool::Demangle(const char *name) {
 // symbolization and pretty-print the markup.
 #if !SANITIZER_FUCHSIA
 
-// Simplier view of a LoadedModule. It only holds information necessary to
-// identify unique modules.
-struct RenderedModule {
-  char *full_name;
-  uptr base_address;
-  u8 uuid[kModuleUUIDSize];  // BuildId
-};
 
 static bool ModulesEq(const LoadedModule &module,
                       const RenderedModule &renderedModule) {
@@ -136,39 +128,31 @@ static void RenderMmaps(InternalScopedString *buffer,
 }
 
 void MarkupStackTracePrinter::RenderContext(InternalScopedString *buffer) {
-  // Keeps track of the modules that have been rendered.
-  static bool initialized = false;
-  static InternalMmapVectorNoCtor<RenderedModule> renderedModules;
-  if (!initialized) {
-    // arbitrary initial size, counting the main module plus some important libs
-    // like libc.
-    renderedModules.Initialize(3);
-    initialized = true;
-  }
-
-  if (renderedModules.size() == 0)
+  if (renderedModules_.size() == 0)
     buffer->Append("{{{reset}}}\n");
 
   const auto &modules = Symbolizer::GetOrInit()->GetRefreshedListOfModules();
 
   for (const auto &module : modules) {
-    if (ModuleHasBeenRendered(module, renderedModules))
+    if (ModuleHasBeenRendered(module, renderedModules_))
       continue;
 
     // symbolizer markup id, used to refer to this modules from other contextual
     // elements
-    uptr moduleId = renderedModules.size();
+    uptr moduleId = renderedModules_.size();
 
     RenderModule(buffer, module, moduleId);
     RenderMmaps(buffer, module, moduleId);
 
-    RenderedModule renderedModule{
-        internal_strdup(module.full_name()), module.base_address(), {}};
+    renderedModules_.push_back({
+        internal_strdup(module.full_name()),
+        module.base_address(),
+        {},
+    });
 
     // kModuleUUIDSize is the size of curModule.uuid
     CHECK_GE(kModuleUUIDSize, module.uuid_size());
-    internal_memcpy(renderedModule.uuid, module.uuid(), module.uuid_size());
-    renderedModules.push_back(renderedModule);
+    internal_memcpy(renderedModules_.back().uuid, module.uuid(), module.uuid_size());
   }
 }
 #endif  // !SANITIZER_FUCHSIA
