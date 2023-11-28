@@ -559,7 +559,7 @@ public:
 };
 
 // Represents an integer binary operation.
-class GIBinOp : public GenericMachineInstr {
+class GIntBinOp : public GenericMachineInstr {
 public:
   Register getLHSReg() const { return getReg(1); }
   Register getRHSReg() const { return getReg(2); }

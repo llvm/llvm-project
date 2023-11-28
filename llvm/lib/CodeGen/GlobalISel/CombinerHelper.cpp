@@ -6242,13 +6242,14 @@ bool CombinerHelper::matchBuildVectorToBinOp(MachineInstr &MI,
   const unsigned Opcode = FirstDef->getOpcode();
   SmallVector<Register> LHS;
 
-  if (isa<GIBinOp>(FirstDef)) {
+  if (isa<GIntBinOp>(FirstDef)) {
     SmallVector<APInt> RHS;
 
     // Collect registers and constants and check for non-conformance.
     for (unsigned I = 0; I < NumOfSources; ++I) {
       // Check for integer binop of the same kind.
-      GIBinOp *BinOp = getOpcodeDef<GIBinOp>(BuildVector->getSourceReg(I), MRI);
+      GIntBinOp *BinOp =
+          getOpcodeDef<GIntBinOp>(BuildVector->getSourceReg(I), MRI);
       if (!BinOp || BinOp->getOpcode() != Opcode)
         return false;
       // Check for constant on rhs.
@@ -6304,8 +6305,8 @@ bool CombinerHelper::matchBuildVectorToBinOp(MachineInstr &MI,
       B.buildInstr(Opcode, {Dst}, {First, Second});
     };
     return true;
-  } else {
-    // Not a binop.
-    return false;
   }
+
+  // Not a binop.
+  return false;
 }
