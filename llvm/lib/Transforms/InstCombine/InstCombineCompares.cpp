@@ -626,32 +626,34 @@ static Value *rewriteGEPAsOffset(Value *Start, Value *Base, GEPNoWrapFlags NW,
   return NewInsts[Start];
 }
 
-/// Converts (CMP GEPLHS, RHS) if this change would make RHS a constant.
+/// Converts (CMP LHS, RHS) if this change would make RHS a constant.
 /// We can look through PHIs, GEPs and casts in order to determine a common base
-/// between GEPLHS and RHS.
-static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
-                                              CmpPredicate Cond,
+/// between LHS and RHS.
+static Instruction *transformToIndexedCompare(Value *LHS, Value *RHS,
+                                              ICmpInst::Predicate Cond,
                                               const DataLayout &DL,
                                               InstCombiner &IC) {
+  if (ICmpInst::isSigned(Cond))
+    return nullptr;
+
   // FIXME: Support vector of pointers.
-  if (GEPLHS->getType()->isVectorTy())
+  if (!LHS->getType()->isPointerTy())
     return nullptr;
 
-  if (!GEPLHS->hasAllConstantIndices())
-    return nullptr;
-
-  APInt Offset(DL.getIndexTypeSizeInBits(GEPLHS->getType()), 0);
+  APInt Offset(DL.getIndexTypeSizeInBits(LHS->getType()), 0);
   Value *PtrBase =
-      GEPLHS->stripAndAccumulateConstantOffsets(DL, Offset,
-                                                /*AllowNonInbounds*/ false);
+      LHS->stripAndAccumulateConstantOffsets(DL, Offset,
+                                             /*AllowNonInbounds*/ false);
 
   // Bail if we looked through addrspacecast.
-  if (PtrBase->getType() != GEPLHS->getType())
+  if (PtrBase->getType() != LHS->getType())
     return nullptr;
 
   // The set of nodes that will take part in this transformation.
   SetVector<Value *> Nodes;
-  GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags();
+  GEPNoWrapFlags NW = GEPNoWrapFlags::all();
+  if (auto *GEPLHS = dyn_cast<GEPOperator>(LHS))
+    NW = GEPLHS->getNoWrapFlags();
   if (!canRewriteGEPAsOffset(RHS, PtrBase, NW, DL, Nodes))
     return nullptr;
 
@@ -800,10 +802,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         return replaceInstUsesWith(I, Cmp);
       }
 
-      // Otherwise, the base pointers are different and the indices are
-      // different. Try convert this to an indexed compare by looking through
-      // PHIs/casts.
-      return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
+      return nullptr;
     }
 
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
@@ -851,9 +850,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     }
   }
 
-  // Try convert this to an indexed compare by looking through PHIs/casts as a
-  // last resort.
-  return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
+  return nullptr;
 }
 
 bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
@@ -7311,6 +7308,10 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
   if (auto *GEP = dyn_cast<GEPOperator>(Op0))
     if (Instruction *NI = foldGEPICmp(GEP, Op1, Pred, CxtI))
       return NI;
+
+  if (Instruction *Res =
+          transformToIndexedCompare(Op0, Op1, Pred, getDataLayout(), *this))
+    return Res;
 
   if (auto *SI = dyn_cast<SelectInst>(Op0))
     if (Instruction *NI = foldSelectICmp(Pred, SI, Op1, CxtI))
