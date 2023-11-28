@@ -1370,15 +1370,15 @@ bool TargetInstrInfo::getMemOperandWithOffset(
 //  SelectionDAG latency interface.
 //===----------------------------------------------------------------------===//
 
-int
+std::optional<unsigned>
 TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
                                    SDNode *DefNode, unsigned DefIdx,
                                    SDNode *UseNode, unsigned UseIdx) const {
   if (!ItinData || ItinData->isEmpty())
-    return -1;
+    return std::nullopt;
 
   if (!DefNode->isMachineOpcode())
-    return -1;
+    return std::nullopt;
 
   unsigned DefClass = get(DefNode->getMachineOpcode()).getSchedClass();
   if (!UseNode->isMachineOpcode())
@@ -1387,8 +1387,8 @@ TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
 }
 
-int TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
-                                     SDNode *N) const {
+unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
+                                          SDNode *N) const {
   if (!ItinData || ItinData->isEmpty())
     return 1;
 
@@ -1452,8 +1452,9 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     return false;
 
   unsigned DefClass = DefMI.getDesc().getSchedClass();
-  int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
-  return (DefCycle != -1 && DefCycle <= 1);
+  std::optional<unsigned> DefCycle =
+      ItinData->getOperandCycle(DefClass, DefIdx);
+  return DefCycle <= 1;
 }
 
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
@@ -1571,11 +1572,9 @@ unsigned TargetInstrInfo::getCallFrameSizeAt(MachineInstr &MI) const {
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the
 /// itinerary. This may be overriden by the target.
-int TargetInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                       const MachineInstr &DefMI,
-                                       unsigned DefIdx,
-                                       const MachineInstr &UseMI,
-                                       unsigned UseIdx) const {
+std::optional<unsigned> TargetInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   unsigned UseClass = UseMI.getDesc().getSchedClass();
   return ItinData->getOperandLatency(DefClass, DefIdx, UseClass, UseIdx);
