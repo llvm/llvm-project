@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #include "Patterns.h"
 #include "../CodeGenInstruction.h"
@@ -249,7 +246,7 @@ bool InstructionPattern::checkSemantics(ArrayRef<SMLoc> Loc) {
 void InstructionPattern::print(raw_ostream &OS, bool PrintName) const {
   printImpl(OS, PrintName, [&OS, this] {
     OS << getInstName() << " operands:[";
-    StringRef Sep = "";
+    StringRef Sep;
     for (const auto &Op : Operands) {
       OS << Sep;
       Op.print(OS);
