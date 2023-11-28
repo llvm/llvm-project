@@ -18,11 +18,11 @@
 #ifdef _WIN32
 #define LEAN_AND_MEAN
 #define NOMINMAX
+#include <stdio.h>
 #include <windows.h>
 #else
 #include <unistd.h>
 #endif
-
 
 namespace Fortran::runtime {
 
@@ -56,16 +56,19 @@ static bool IsValidIntDescriptor(const Descriptor *length) {
       length->type().IsInteger() && typeCode && typeCode->second != 1;
 }
 
+void CopyToDescriptor(const Descriptor &value, const char *rawValue,
+    std::int64_t rawValueLength, std::size_t offset = 0) {
+  std::int64_t toCopy{std::min(rawValueLength,
+      static_cast<std::int64_t>(value.ElementBytes() - offset))};
+
+  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+}
+
 void CheckAndCopyToDescriptor(const Descriptor *value, const char *rawValue,
     std::int64_t rawValueLength, std::size_t offset = 0) {
-  if (!value) {
-    return;
+  if (value) {
+    CopyToDescriptor(*value, rawValue, rawValueLength, offset);
   }
-
-  std::int64_t toCopy{std::min(rawValueLength,
-      static_cast<std::int64_t>(value->ElementBytes() - offset))};
-
-  std::memcpy(value->OffsetElement(offset), rawValue, toCopy);
 }
 
 static void StoreIntToDescriptor(
@@ -99,34 +102,51 @@ template <int KIND> struct FitsInIntegerKind {
 int TerminationCheck(int status, const Descriptor *command,
     const Descriptor *cmdstat, const Descriptor *cmdmsg,
     Terminator &terminator) {
+  if (status == -1) {
+    if (!cmdstat) {
+      terminator.Crash("Execution error with system status code: %d",
+          command->OffsetElement(), status);
+    } else {
+      CheckAndStoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
+      CopyToDescriptor(*cmdmsg, "Execution error", 15);
+    }
+  }
+#ifdef _WIN32
+  // On WIN32 API std::system directly returns exit status
+  int exitStatusVal = status;
+  if (exitStatusVal == 1) {
+#else
   int exitStatusVal = WEXITSTATUS(status);
   if (exitStatusVal == 127 || exitStatusVal == 126) {
+#endif
     if (!cmdstat) {
       terminator.Crash("\'%s\' not found with exit status code: %d",
           command->OffsetElement(), exitStatusVal);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
-      CheckAndCopyToDescriptor(cmdmsg, "Invalid command line", 20);
+      CopyToDescriptor(*cmdmsg, "Invalid command line", 20);
     }
   }
-
+#if defined(_WIFSIGNALED) && defined(_WTERMSIG)
   if (WIFSIGNALED(status)) {
     if (!cmdstat) {
       terminator.Crash("killed by signal: %d", WTERMSIG(status));
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyToDescriptor(cmdmsg, "killed by signal", 18);
+      CopyToDescriptor(*cmdmsg, "killed by signal", 18);
     }
   }
-
+#endif
+#if defined(_WIFSTOPPED) && defined(_WSTOPSIG)
   if (WIFSTOPPED(status)) {
     if (!cmdstat) {
       terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
-      CheckAndCopyToDescriptor(cmdmsg, "stopped by signal", 17);
+      CopyToDescriptor(*cmdmsg, "stopped by signal", 17);
     }
   }
+#endif
   return exitStatusVal;
 }
 
@@ -169,7 +189,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
-    // append "cmd.exe /c " to the begining of command
+    // append "cmd.exe /c " to the beginning of command
     const char *cmd = command->OffsetElement();
     const char *prefix = "cmd.exe /c ";
     char *newCmd = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
@@ -183,21 +203,24 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     // Convert the narrow string to a wide string
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, NULL, 0);
     wchar_t *wcmd = new wchar_t[size_needed];
-    if (MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, wcmd, size_needed) != 0) {
+    if (MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, wcmd, size_needed) == 0) {
       terminator.Crash(
           "Char to wider char conversion failed with error code: %lu.",
           GetLastError());
     }
     free(newCmd);
 
-    if (!CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
+    if (CreateProcess(nullptr, wcmd, nullptr, nullptr, FALSE, 0, nullptr,
             nullptr, &si, &pi)) {
+      CloseHandle(pi.hProcess);
+      CloseHandle(pi.hThread);
+    } else {
       if (!cmdstat) {
         terminator.Crash(
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
         StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
-        CopyToDescriptor(*cmdmsg, "CreateProcess failed.", 21, nullptr);
+        CopyToDescriptor(*cmdmsg, "CreateProcess failed.", 21);
       }
     }
     delete[] wcmd;

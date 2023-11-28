@@ -2816,7 +2816,7 @@ void IntrinsicLibrary::genExecuteCommandLine(
           ? fir::getBase(cmdmsg)
           : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
   fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
-                                      cmdstatBox, exitstatBox, cmdmsgBox);
+                                      exitstatBox, cmdstatBox, cmdmsgBox);
 }
 
 // EXIT
