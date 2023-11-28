@@ -379,6 +379,7 @@ private:
   /// But, we are still not able to compare operands of PHI nodes, since those
   /// could be operands from further BBs we didn't scan yet.
   /// So it's impossible to use dominance properties in general.
+protected:
   mutable DenseMap<const Value*, int> sn_mapL, sn_mapR;
 
   // The global state we will use

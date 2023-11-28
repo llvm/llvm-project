@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMTransformUtils
   FixIrreducible.cpp
   FlattenCFG.cpp
   FunctionComparator.cpp
+  FunctionComparatorIgnoringConst.cpp
   FunctionImportUtils.cpp
   GlobalStatus.cpp
   GuardUtils.cpp
