@@ -76,6 +76,16 @@ class X86FoldTablesEmitter {
     bool NoForward = false;
     bool FoldLoad = false;
     bool FoldStore = false;
+    enum BcastType {
+      BCAST_NONE,
+      BCAST_D,
+      BCAST_Q,
+      BCAST_SS,
+      BCAST_SD,
+      BCAST_SH,
+    };
+    BcastType BroadcastKind = BCAST_NONE;
+
     Align Alignment;
 
     X86FoldTableEntry() = default;
@@ -99,6 +109,25 @@ class X86FoldTablesEmitter {
         Attrs += "TB_NO_FORWARD|";
       if (Alignment != Align(1))
         Attrs += "TB_ALIGN_" + std::to_string(Alignment.value()) + "|";
+      switch (BroadcastKind) {
+      case BCAST_NONE:
+        break;
+      case BCAST_D:
+        Attrs += "TB_BCAST_D|";
+        break;
+      case BCAST_Q:
+        Attrs += "TB_BCAST_Q|";
+        break;
+      case BCAST_SS:
+        Attrs += "TB_BCAST_SS|";
+        break;
+      case BCAST_SD:
+        Attrs += "TB_BCAST_SD|";
+        break;
+      case BCAST_SH:
+        Attrs += "TB_BCAST_SH|";
+        break;
+      }
 
       StringRef SimplifiedAttrs = StringRef(Attrs).rtrim("|");
       if (SimplifiedAttrs.empty())
@@ -148,12 +177,19 @@ class X86FoldTablesEmitter {
   //
   // Table#i - Holds instructions which the their memory form
   //           performs a load OR a store, and their #i'th operand is folded.
+  //
+  // BroadcastTable#i - Holds instructions which the their memory form performs
+  //                    a broadcat load and their #i'th operand is folded.
   FoldTable Table2Addr;
   FoldTable Table0;
   FoldTable Table1;
   FoldTable Table2;
   FoldTable Table3;
   FoldTable Table4;
+  FoldTable BroadcastTable1;
+  FoldTable BroadcastTable2;
+  FoldTable BroadcastTable3;
+  FoldTable BroadcastTable4;
 
 public:
   X86FoldTablesEmitter(RecordKeeper &R) : Records(R), Target(R) {}
@@ -166,13 +202,17 @@ private:
   // S sets the strategy of adding the TB_NO_REVERSE flag.
   void updateTables(const CodeGenInstruction *RegInst,
                     const CodeGenInstruction *MemInst, uint16_t S = 0,
-                    bool IsManual = false);
+                    bool IsManual = false, bool IsBroadcast = false);
 
   // Generates X86FoldTableEntry with the given instructions and fill it with
   // the appropriate flags, then adds it to a memory fold table.
   void addEntryWithFlags(FoldTable &Table, const CodeGenInstruction *RegInst,
                          const CodeGenInstruction *MemInst, uint16_t S,
                          unsigned FoldedIdx, bool IsManual);
+  // Generates X86FoldTableEntry with the given instructions and adds it to a
+  // broadcast table.
+  void addBroadcastEntry(FoldTable &Table, const CodeGenInstruction *RegInst,
+                         const CodeGenInstruction *MemInst);
 
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
@@ -289,11 +329,12 @@ static bool isNOREXRegClass(const Record *Op) {
 class IsMatch {
   const CodeGenInstruction *MemInst;
   const X86Disassembler::RecognizableInstrBase MemRI;
+  bool IsBroadcast;
   const unsigned Variant;
 
 public:
-  IsMatch(const CodeGenInstruction *Inst, unsigned V)
-      : MemInst(Inst), MemRI(*MemInst), Variant(V) {}
+  IsMatch(const CodeGenInstruction *Inst, bool IsBroadcast, unsigned V)
+      : MemInst(Inst), MemRI(*MemInst), IsBroadcast(IsBroadcast), Variant(V) {}
 
   bool operator()(const CodeGenInstruction *RegInst) {
     X86Disassembler::RecognizableInstrBase RegRI(*RegInst);
@@ -303,7 +344,9 @@ public:
     // EVEX_B means different things for memory and register forms.
     // register form: rounding control or SAE
     // memory form: broadcast
-    if (RegRI.HasEVEX_B || MemRI.HasEVEX_B)
+    if (IsBroadcast && (RegRI.HasEVEX_B || !MemRI.HasEVEX_B))
+      return false;
+    if (!IsBroadcast && (RegRI.HasEVEX_B || MemRI.HasEVEX_B))
       return false;
 
     if (!mayFoldFromLeftToRight(RegRI.Form, MemRI.Form))
@@ -475,9 +518,65 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Table[RegInst] = Result;
 }
 
+void X86FoldTablesEmitter::addBroadcastEntry(
+    FoldTable &Table, const CodeGenInstruction *RegInst,
+    const CodeGenInstruction *MemInst) {
+
+  assert(Table.find(RegInst) == Table.end() && "Override entry unexpectedly");
+  X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
+
+  Record *RegRec = RegInst->TheDef;
+  StringRef RegInstName = RegRec->getName();
+  StringRef MemInstName = MemInst->TheDef->getName();
+  Record *Domain = RegRec->getValueAsDef("ExeDomain");
+  bool IsSSEPackedInt = Domain->getName() == "SSEPackedInt";
+  // TODO: Rename AVX512 instructions to simplify conditions, e.g.
+  //         D128 -> DZ128
+  //         D256 -> DZ256
+  //         VPERMI2Drr -> VPERMI2DZrr
+  //         VPERMI2Drmb -> VPERMI2DZrmb
+  if ((RegInstName.contains("DZ") || RegInstName.contains("DWZ") ||
+       RegInstName.contains("D128") || RegInstName.contains("D256") ||
+       RegInstName.contains("Dr") || RegInstName.contains("I32")) &&
+      IsSSEPackedInt) {
+    assert((MemInstName.contains("DZ") || RegInstName.contains("DWZ") ||
+            MemInstName.contains("D128") || MemInstName.contains("D256") ||
+            MemInstName.contains("Dr") || MemInstName.contains("I32")) &&
+           "Unmatched names for broadcast");
+    Result.BroadcastKind = X86FoldTableEntry::BCAST_D;
+  } else if ((RegInstName.contains("QZ") || RegInstName.contains("QBZ") ||
+              RegInstName.contains("Q128") || RegInstName.contains("Q256") ||
+              RegInstName.contains("Qr") || RegInstName.contains("I64")) &&
+             IsSSEPackedInt) {
+    assert((MemInstName.contains("QZ") || MemInstName.contains("QBZ") ||
+            MemInstName.contains("Q128") || MemInstName.contains("Q256") ||
+            MemInstName.contains("Qr") || MemInstName.contains("I64")) &&
+           "Unmatched names for broadcast");
+    Result.BroadcastKind = X86FoldTableEntry::BCAST_Q;
+  } else if (RegInstName.contains("PS") || RegInstName.contains("F32")) {
+    assert((MemInstName.contains("PS") || MemInstName.contains("F32")) &&
+           "Unmatched names for broadcast");
+    Result.BroadcastKind = X86FoldTableEntry::BCAST_SS;
+  } else if (RegInstName.contains("PD") || RegInstName.contains("F64")) {
+    assert((MemInstName.contains("PD") || MemInstName.contains("F64")) &&
+           "Unmatched names for broadcast");
+    Result.BroadcastKind = X86FoldTableEntry::BCAST_SD;
+  } else if (RegInstName.contains("PH")) {
+    assert(MemInstName.contains("PH") && "Unmatched names for broadcast");
+    Result.BroadcastKind = X86FoldTableEntry::BCAST_SH;
+  } else {
+    errs() << RegInstName << ", " << MemInstName << "\n";
+    llvm_unreachable("Name is not canoicalized for broadcast or "
+                     "ExeDomain is incorrect");
+  }
+
+  Table[RegInst] = Result;
+}
+
 void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
                                         const CodeGenInstruction *MemInst,
-                                        uint16_t S, bool IsManual) {
+                                        uint16_t S, bool IsManual,
+                                        bool IsBroadcast) {
 
   Record *RegRec = RegInst->TheDef;
   Record *MemRec = MemInst->TheDef;
@@ -488,6 +587,7 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
 
   // Instructions which Read-Modify-Write should be added to Table2Addr.
   if (!MemOutSize && RegOutSize == 1 && MemInSize == RegInSize) {
+    assert(!IsBroadcast && "Read-Modify-Write can not be broadcast");
     // X86 would not unfold Read-Modify-Write instructions so add TB_NO_REVERSE.
     addEntryWithFlags(Table2Addr, RegInst, MemInst, S | TB_NO_REVERSE, 0,
                       IsManual);
@@ -508,19 +608,28 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
           isMemoryOperand(MemOpRec)) {
         switch (I) {
         case 0:
+          assert(!IsBroadcast && "BroadcastTable0 needs to be added");
           addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
           return;
         case 1:
-          addEntryWithFlags(Table1, RegInst, MemInst, S, 1, IsManual);
+          IsBroadcast
+              ? addBroadcastEntry(BroadcastTable1, RegInst, MemInst)
+              : addEntryWithFlags(Table1, RegInst, MemInst, S, 1, IsManual);
           return;
         case 2:
-          addEntryWithFlags(Table2, RegInst, MemInst, S, 2, IsManual);
+          IsBroadcast
+              ? addBroadcastEntry(BroadcastTable2, RegInst, MemInst)
+              : addEntryWithFlags(Table2, RegInst, MemInst, S, 2, IsManual);
           return;
         case 3:
-          addEntryWithFlags(Table3, RegInst, MemInst, S, 3, IsManual);
+          IsBroadcast
+              ? addBroadcastEntry(BroadcastTable3, RegInst, MemInst)
+              : addEntryWithFlags(Table3, RegInst, MemInst, S, 3, IsManual);
           return;
         case 4:
-          addEntryWithFlags(Table4, RegInst, MemInst, S, 4, IsManual);
+          IsBroadcast
+              ? addBroadcastEntry(BroadcastTable4, RegInst, MemInst)
+              : addEntryWithFlags(Table4, RegInst, MemInst, S, 4, IsManual);
           return;
         }
       }
@@ -536,8 +645,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     Record *RegOpRec = RegInst->Operands[RegOutSize - 1].Rec;
     Record *MemOpRec = MemInst->Operands[RegOutSize - 1].Rec;
     if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
-        getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec))
+        getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec)) {
+      assert(!IsBroadcast && "Store can not be broadcast");
       addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
+    }
   }
 }
 
@@ -583,6 +694,10 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
     }
   }
 
+  // Create a copy b/c the register instruction will removed when a new entry is
+  // added into memory fold tables.
+  auto RegInstsForBroadcast = RegInsts;
+
   Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   auto FixUp = [&](const CodeGenInstruction *RegInst) {
@@ -606,10 +721,29 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
     // opcode.
     std::vector<const CodeGenInstruction *> &OpcRegInsts = RegInstsIt->second;
 
-    auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Variant));
+    // Memory fold tables
+    auto Match =
+        find_if(OpcRegInsts, IsMatch(MemInst, /*IsBroadcast=*/false, Variant));
     if (Match != OpcRegInsts.end()) {
       updateTables(FixUp(*Match), MemInst);
       OpcRegInsts.erase(Match);
+    }
+
+    // Broadcast tables
+    StringRef MemInstName = MemInst->TheDef->getName();
+    if (!MemInstName.contains("mb") && !MemInstName.contains("mib"))
+      continue;
+    RegInstsIt = RegInstsForBroadcast.find(Opc);
+    assert(RegInstsIt != RegInstsForBroadcast.end() &&
+           "Unexpected control flow");
+    std::vector<const CodeGenInstruction *> &OpcRegInstsForBroadcast =
+        RegInstsIt->second;
+    Match = find_if(OpcRegInstsForBroadcast,
+                    IsMatch(MemInst, /*IsBroadcast=*/true, Variant));
+    if (Match != OpcRegInstsForBroadcast.end()) {
+      updateTables(FixUp(*Match), MemInst, 0, /*IsMannual=*/false,
+                   /*IsBroadcast=*/true);
+      OpcRegInstsForBroadcast.erase(Match);
     }
   }
 
@@ -635,6 +769,10 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
   CheckMemFoldTable(Table2);
   CheckMemFoldTable(Table3);
   CheckMemFoldTable(Table4);
+  CheckMemFoldTable(BroadcastTable1);
+  CheckMemFoldTable(BroadcastTable2);
+  CheckMemFoldTable(BroadcastTable3);
+  CheckMemFoldTable(BroadcastTable4);
 #endif
 #define PRINT_TABLE(TABLE) printTable(TABLE, #TABLE, OS);
   // Print all tables.
@@ -644,6 +782,10 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
   PRINT_TABLE(Table2)
   PRINT_TABLE(Table3)
   PRINT_TABLE(Table4)
+  PRINT_TABLE(BroadcastTable1)
+  PRINT_TABLE(BroadcastTable2)
+  PRINT_TABLE(BroadcastTable3)
+  PRINT_TABLE(BroadcastTable4)
 }
 
 static TableGen::Emitter::OptClass<X86FoldTablesEmitter>
