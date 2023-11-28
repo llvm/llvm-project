@@ -1,4 +1,4 @@
-//===------- VectorFunctionABITest.cpp - VFABI Unittests  ---------===//
+//===------- VectorFunctionABITest.cpp - VFABI unit tests  ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/InstIterator.h"
@@ -14,7 +15,7 @@
 using namespace llvm;
 
 namespace {
-// Test fixture needed that holds the veariables needed by the parser.
+// Test fixture needed that holds the variables needed by the parser.
 class VFABIParserTest : public ::testing::Test {
 private:
   // Parser output.
@@ -34,6 +35,7 @@ private:
         << "The function must be present in the module\n";
     // Reset the VFInfo
     Info = VFInfo();
+    ScalarParametersNum = 0;
   }
 
   // Data needed to load the optional IR passed to invokeParser
@@ -44,10 +46,11 @@ private:
   FunctionCallee F;
 
 protected:
-  // Referencies to the parser output field.
+  // References to the parser output field.
   ElementCount &VF = Info.Shape.VF;
   VFISAKind &ISA = Info.ISA;
   SmallVector<VFParameter, 8> &Parameters = Info.Shape.Parameters;
+  size_t ScalarParametersNum;
   std::string &ScalarName = Info.ScalarName;
   std::string &VectorName = Info.VectorName;
   // Invoke the parser. We need to make sure that a function exist in
@@ -78,24 +81,22 @@ protected:
 
     // Fake the arguments to the CallInst.
     SmallVector<Value *> Args;
-    for (Type *ParamTy : FTy->params()) {
+    for (Type *ParamTy : FTy->params())
       Args.push_back(Constant::getNullValue(ParamTy->getScalarType()));
-    }
     std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
     const auto OptInfo =
         VFABI::tryDemangleForVFABI(MangledName, CI->getFunctionType());
     if (OptInfo) {
       Info = *OptInfo;
+      ScalarParametersNum = Info.Shape.getScalarShape(*CI).Parameters.size();
       return true;
     }
-
     return false;
   }
 
   // Checks that 1. the last Parameter in the Shape is of type
-  // VFParamKind::GlobalPredicate and 2. it is the only one of such
-  // type.
-  bool IsMasked() const {
+  // VFParamKind::GlobalPredicate and 2. it is the only one of such type.
+  bool isMasked() const {
     const auto NGlobalPreds =
         std::count_if(Info.Shape.Parameters.begin(),
                       Info.Shape.Parameters.end(), [](const VFParameter PK) {
@@ -103,6 +104,12 @@ protected:
                       });
     return NGlobalPreds == 1 && Info.Shape.Parameters.back().ParamKind ==
                                     VFParamKind::GlobalPredicate;
+  }
+
+  // Checks that the number of vectorized parameters matches the scalar ones.
+  // Takes into account that vectorized calls may also have a Mask.
+  bool matchScalarParametersNum() {
+    return (Parameters.size() - isMasked()) == ScalarParametersNum;
   }
 };
 } // unnamed namespace
@@ -141,8 +148,10 @@ TEST_F(VFABIParserTest, OnlyValidNames) {
 }
 
 TEST_F(VFABIParserTest, ParamListParsing) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo", "",
+                           "void(double, i32, i32, ptr, i32)"));
   EXPECT_EQ(Parameters.size(), (unsigned)5);
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_Linear, 16}));
   EXPECT_EQ(Parameters[2], VFParameter({2, VFParamKind::OMP_LinearValPos, 32}));
@@ -169,9 +178,12 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_03) {
 }
 
 TEST_F(VFABIParserTest, Parse) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_sin", "sin",
+                   "void(double, i32, i32, i32, ptr, i32, i32, i32, ptr)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_FALSE(IsMasked());
+  EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)9);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -188,9 +200,11 @@ TEST_F(VFABIParserTest, Parse) {
 }
 
 TEST_F(VFABIParserTest, ParseVectorName) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2v_sin(my_v_sin)", "my_v_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVnN2v_sin(my_v_sin)", "my_v_sin", "double(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_FALSE(IsMasked());
+  EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
@@ -199,9 +213,11 @@ TEST_F(VFABIParserTest, ParseVectorName) {
 }
 
 TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2ln1Ln10Un100Rn1000_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2ln1Ln10Un100Rn1000_sin", "",
+                           "double(i32, i32, i32, ptr)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_FALSE(IsMasked());
+  EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, -1}));
@@ -214,17 +230,19 @@ TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
 
 TEST_F(VFABIParserTest, ParseScalableSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsMxv_sin(custom_vg)", "sin", "i32(i32)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getScalable(4));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(ScalarName, "sin");
   EXPECT_EQ(VectorName, "custom_vg");
 }
 
 TEST_F(VFABIParserTest, ParseFixedWidthSVE) {
-  EXPECT_TRUE(invokeParser("_ZGVsM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVsM2v_sin", "", "double(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(ScalarName, "sin");
   EXPECT_EQ(VectorName, "_ZGVsM2v_sin");
@@ -251,7 +269,9 @@ TEST_F(VFABIParserTest, LinearWithRuntimeStep) {
 }
 
 TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
-  EXPECT_TRUE(invokeParser("_ZGVnN3lLRUlnLnRnUn_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN3lLRUlnLnRnUn_sin", "",
+                           "void(i32, i32, ptr, i32, i32, i32, ptr, i32)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(Parameters.size(), (unsigned)8);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, 1}));
@@ -301,7 +321,8 @@ TEST_F(VFABIParserTest, InvalidParameter) {
 }
 
 TEST_F(VFABIParserTest, Align) {
-  EXPECT_TRUE(invokeParser("_ZGVsN2l2a2_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVsN2l2a2_sin", "", "void(i32)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0].Alignment, Align(2));
 
@@ -319,9 +340,10 @@ TEST_F(VFABIParserTest, Align) {
 }
 
 TEST_F(VFABIParserTest, ParseUniform) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2u_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2u_sin", "", "void(i32)"));
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_FALSE(IsMasked());
+  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)1);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));
@@ -351,58 +373,70 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
 #define __COMMON_CHECKS                                                        \
   do {                                                                         \
     EXPECT_EQ(VF, ElementCount::getFixed(2));                                  \
-    EXPECT_FALSE(IsMasked());                                                  \
+    EXPECT_FALSE(isMasked());                                                  \
+    EXPECT_TRUE(matchScalarParametersNum());                                   \
     EXPECT_EQ(Parameters.size(), (unsigned)10);                                \
     EXPECT_EQ(Parameters, ExpectedParams);                                     \
     EXPECT_EQ(ScalarName, "sin");                                              \
   } while (0)
 
+  const StringRef IRTy =
+      "void(double, i32, i32, i32, ptr, i32, i32, i32, i32, i32)";
+
   // Advanced SIMD: <isa> = "n"
-  EXPECT_TRUE(invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // SVE: <isa> = "s"
-  EXPECT_TRUE(invokeParser("_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // SSE: <isa> = "b"
-  EXPECT_TRUE(invokeParser("_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::SSE);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX: <isa> = "c"
-  EXPECT_TRUE(invokeParser("_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AVX);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX2: <isa> = "d"
-  EXPECT_TRUE(invokeParser("_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX512: <isa> = "e"
-  EXPECT_TRUE(invokeParser("_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // LLVM: <isa> = "_LLVM_" internal vector function.
-  EXPECT_TRUE(invokeParser(
-      "_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u_sin(vectorf)", "vectorf"));
+  EXPECT_TRUE(
+      invokeParser("_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u_sin(vectorf)",
+                   "vectorf", IRTy));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "vectorf");
 
   // Unknown ISA (randomly using "q"). This test will need update if
   // some targets decide to use "q" as their ISA token.
-  EXPECT_TRUE(invokeParser("_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
   EXPECT_EQ(ISA, VFISAKind::Unknown);
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
@@ -423,9 +457,10 @@ TEST_F(VFABIParserTest, MissingVectorNameTermination) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingNEON) {
-  EXPECT_TRUE(invokeParser("_ZGVnM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnM2v_sin", "", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -434,9 +469,10 @@ TEST_F(VFABIParserTest, ParseMaskingNEON) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingSVE) {
-  EXPECT_TRUE(invokeParser("_ZGVsM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVsM2v_sin", "", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -445,9 +481,10 @@ TEST_F(VFABIParserTest, ParseMaskingSVE) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingSSE) {
-  EXPECT_TRUE(invokeParser("_ZGVbM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVbM2v_sin", "", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SSE);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -456,9 +493,10 @@ TEST_F(VFABIParserTest, ParseMaskingSSE) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingAVX) {
-  EXPECT_TRUE(invokeParser("_ZGVcM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVcM2v_sin", "", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AVX);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -467,9 +505,10 @@ TEST_F(VFABIParserTest, ParseMaskingAVX) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingAVX2) {
-  EXPECT_TRUE(invokeParser("_ZGVdM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVdM2v_sin", "", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -478,9 +517,10 @@ TEST_F(VFABIParserTest, ParseMaskingAVX2) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingAVX512) {
-  EXPECT_TRUE(invokeParser("_ZGVeM2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVeM2v_sin", "", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -490,9 +530,10 @@ TEST_F(VFABIParserTest, ParseMaskingAVX512) {
 
 TEST_F(VFABIParserTest, ParseMaskingLLVM) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_M2v_sin(custom_vector_sin)",
-                           "custom_vector_sin"));
+                           "custom_vector_sin", "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -504,12 +545,14 @@ TEST_F(VFABIParserTest, ParseMaskingLLVM) {
 TEST_F(VFABIParserTest, ParseScalableMaskingLLVM) {
   EXPECT_FALSE(
       invokeParser("_ZGV_LLVM_Mxv_sin(custom_vector_sin)", "sin", "i32(i32)"));
+  EXPECT_TRUE(matchScalarParametersNum());
 }
 
 TEST_F(VFABIParserTest, ParseScalableMaskingSVE) {
   EXPECT_TRUE(
       invokeParser("_ZGVsMxv_sin(custom_vector_sin)", "sin", "i32(i32)"));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(VF, ElementCount::getScalable(4));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
@@ -521,9 +564,10 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVE) {
 
 TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
   EXPECT_TRUE(invokeParser("_ZGVsMxvl8l8_sincos(custom_vector_sincos)",
-                           "sincos", "void(double, double *, double *)"));
+                           "sincos", "void(double, ptr, ptr)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getScalable(2));
-  EXPECT_TRUE(IsMasked());
+  EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
   EXPECT_EQ(Parameters.size(), (unsigned)4);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -539,12 +583,14 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
 TEST_F(VFABIParserTest, ParseWiderReturnTypeSVE) {
   EXPECT_TRUE(
       invokeParser("_ZGVsMxvv_foo(vector_foo)", "foo", "i64(i32, i32)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getScalable(2));
 }
 
 // Make sure we handle void return types.
 TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
   EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "void(i16)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getScalable(8));
 }
 
@@ -557,7 +603,6 @@ TEST_F(VFABIParserTest, ParseUnsupportedElementTypeSVE) {
 TEST_F(VFABIParserTest, ParseUnsupportedReturnTypeSVE) {
   EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "fp128(float)"));
 }
-
 class VFABIAttrTest : public testing::Test {
 protected:
   void SetUp() override {
@@ -594,15 +639,18 @@ TEST_F(VFABIAttrTest, Read) {
 
 TEST_F(VFABIParserTest, LLVM_InternalISA) {
   EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_sin"));
-  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)", "vector_name"));
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)", "vector_name",
+                           "void(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(ISA, VFISAKind::LLVM);
 }
 
 TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
   EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)",
-                           "__svml_powf4"));
+                           "__svml_powf4", "void(float, float)"));
+  EXPECT_TRUE(matchScalarParametersNum());
   EXPECT_EQ(VF, ElementCount::getFixed(4));
-  EXPECT_FALSE(IsMasked());
+  EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   EXPECT_EQ(Parameters.size(), (unsigned)2);
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
@@ -616,6 +664,7 @@ TEST_F(VFABIParserTest, ParseScalableRequiresDeclaration) {
   // `custom_vg` is added to the module.
   EXPECT_FALSE(invokeParser(MangledName));
   EXPECT_TRUE(invokeParser(MangledName, "sin", "double(double)"));
+  EXPECT_TRUE(matchScalarParametersNum());
 }
 
 TEST_F(VFABIParserTest, ZeroIsInvalidVLEN) {
@@ -642,9 +691,9 @@ entry:
   ret void
 }
 )IR");
-  auto F = dyn_cast_or_null<Function>(M->getNamedValue("call"));
+  auto *F = dyn_cast_or_null<Function>(M->getNamedValue("call"));
   ASSERT_TRUE(F);
-  auto CI = dyn_cast<CallInst>(&F->front().front());
+  auto *CI = dyn_cast<CallInst>(&F->front().front());
   ASSERT_TRUE(CI);
   ASSERT_TRUE(CI->isIndirectCall());
   auto Mappings = VFDatabase::getMappings(*CI);
