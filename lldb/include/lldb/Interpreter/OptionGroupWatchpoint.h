@@ -9,7 +9,6 @@
 #ifndef LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
 #define LLDB_INTERPRETER_OPTIONGROUPWATCHPOINT_H
 
-#include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
 
 namespace lldb_private {
@@ -21,6 +20,8 @@ public:
   OptionGroupWatchpoint() = default;
 
   ~OptionGroupWatchpoint() override = default;
+
+  static bool IsWatchSizeSupported(uint32_t watch_size);
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
@@ -42,7 +43,7 @@ public:
   };
 
   WatchType watch_type;
-  OptionValueUInt64 watch_size;
+  uint32_t watch_size;
   bool watch_type_specified;
   lldb::LanguageType language_type;
 
