@@ -71,10 +71,15 @@ using namespace llvm;
 
 namespace {
 
-enum class IFuncLowering { SymbolResolverIfSupported, SymbolResolverAlways, SymbolResolverNever };
+enum class IFuncLowering {
+  SymbolResolverIfSupported,
+  SymbolResolverAlways,
+  SymbolResolverNever
+};
 
 static cl::opt<IFuncLowering> PreferredIFuncLowering(
-    "arm64-darwin-ifunc-symbol_resolver", cl::init(IFuncLowering::SymbolResolverNever),
+    "arm64-darwin-ifunc-symbol_resolver",
+    cl::init(IFuncLowering::SymbolResolverNever),
     cl::desc("Pick the lowering for ifuncs on darwin platforms"), cl::Hidden,
     cl::values(
         clEnumValN(
@@ -1853,8 +1858,8 @@ void AArch64AsmPrinter::emitLinkerSymbolResolver(Module &M,
   OutStreamer->emitSymbolAttribute(Name, MCSA_SymbolResolver);
   emitVisibility(Name, GI.getVisibility());
 
-  // ld-prime does not seem to support aliases of symbol resolvers, so we have to
-  // tail call the resolver manually.
+  // ld-prime does not seem to support aliases of symbol resolvers, so we have
+  // to tail call the resolver manually.
   OutStreamer->emitInstruction(
       MCInstBuilder(AArch64::B)
           .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))),
@@ -1887,8 +1892,9 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
       assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
   };
 
-  MCSymbol *LazyPointer = TM.getObjFileLowering()->getContext().getOrCreateSymbol(
-      "_" + GI.getName() + ".lazy_pointer");
+  MCSymbol *LazyPointer =
+      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
+          "_" + GI.getName() + ".lazy_pointer");
   MCSymbol *StubHelper =
       TM.getObjFileLowering()->getContext().getOrCreateSymbol(
           "_" + GI.getName() + ".stub_helper");
@@ -1943,9 +1949,10 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
   }
 
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRXui)
-    .addReg(AArch64::X16)
-    .addReg(AArch64::X16)
-    .addImm(0), *STI);
+                                   .addReg(AArch64::X16)
+                                   .addReg(AArch64::X16)
+                                   .addImm(0),
+                               *STI);
 
   OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
                                                  ? AArch64::BRAAZ
