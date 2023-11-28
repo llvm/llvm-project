@@ -23,7 +23,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
@@ -124,11 +124,10 @@ public:
 
 private:
   ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
-                     std::unique_ptr<ExecutionEngine> EE,
-                     StringRef FunctionBytes);
+                     std::unique_ptr<orc::LLJIT> EJIT, StringRef FunctionBytes);
 
   std::unique_ptr<LLVMContext> Context;
-  std::unique_ptr<ExecutionEngine> ExecEngine;
+  std::unique_ptr<orc::LLJIT> ExecJIT;
 };
 
 // Copies benchmark function's bytes from benchmark object.
