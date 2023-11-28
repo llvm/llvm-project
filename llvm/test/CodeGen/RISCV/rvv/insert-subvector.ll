@@ -505,7 +505,7 @@ define <vscale x 2 x i64> @insert_nxv2i64_nxv3i64(<3 x i64> %sv) #0 {
   ret <vscale x 2 x i64> %vec
 }
 
-; FIXME: This shows a case where we are miscompiling because the index of the
+; This shows a case where we were miscompiling because the index of the
 ; outer expects a scalable inner and the inner most subvector is fixed length.
 ; The code generated happens to be correct if VLEN=128, but is wrong if
 ; VLEN=256.
