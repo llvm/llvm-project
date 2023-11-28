@@ -870,8 +870,8 @@ class mul24_64_Pat<SDPatternOperator Op, Instruction InstLo, Instruction InstHi>
     (InstHi $src0, $src1), sub1)
 >;
 
-def : mul24_64_Pat<AMDGPUmul_i24, V_MUL_I32_I24_e64, V_MUL_HI_I32_I24_e32>;
-def : mul24_64_Pat<AMDGPUmul_u24, V_MUL_U32_U24_e64, V_MUL_HI_U32_U24_e32>;
+def : mul24_64_Pat<AMDGPUmul_i24, V_MUL_I32_I24_e64, V_MUL_HI_I32_I24_e64>;
+def : mul24_64_Pat<AMDGPUmul_u24, V_MUL_U32_U24_e64, V_MUL_HI_U32_U24_e64>;
 
 //===----------------------------------------------------------------------===//
 // 16-Bit Operand Instructions
