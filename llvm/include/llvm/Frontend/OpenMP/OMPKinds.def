@@ -668,22 +668,10 @@ __OMP_RTL_ATTRS(__kmpc_distribute_for_static_loop_4, AlwaysInlineAttrs, Attribut
 __OMP_RTL_ATTRS(__kmpc_distribute_for_static_loop_4u, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
                            ZExt, ZExt, ZExt, ZExt))
-__OMP_RTL_ATTRS(__kmpc_distribute_for_static_loop_8, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
-                           SExt, SExt, SExt, SExt))
-__OMP_RTL_ATTRS(__kmpc_distribute_for_static_loop_8u, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
-                           ZExt, ZExt, ZExt, ZExt))
 __OMP_RTL_ATTRS(__kmpc_distribute_static_loop_4, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
                            SExt, SExt))
 __OMP_RTL_ATTRS(__kmpc_distribute_static_loop_4u, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
-                           ZExt, ZExt))
-__OMP_RTL_ATTRS(__kmpc_distribute_static_loop_8, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
-                           SExt, SExt))
-__OMP_RTL_ATTRS(__kmpc_distribute_static_loop_8u, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
                            ZExt, ZExt))
 __OMP_RTL_ATTRS(__kmpc_for_static_loop_4, AlwaysInlineAttrs, AttributeSet(),
@@ -692,13 +680,6 @@ __OMP_RTL_ATTRS(__kmpc_for_static_loop_4, AlwaysInlineAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__kmpc_for_static_loop_4u, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
                            ZExt, ZExt, ZExt))
-__OMP_RTL_ATTRS(__kmpc_for_static_loop_8, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
-                           SExt, SExt, SExt))
-__OMP_RTL_ATTRS(__kmpc_for_static_loop_8u, AlwaysInlineAttrs, AttributeSet(),
-                ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), AttributeSet(),
-                           ZExt, ZExt, ZExt))
-
 __OMP_RTL_ATTRS(__kmpc_error, AttributeSet(), AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__kmpc_flush, BarrierAttrs, AttributeSet(),
