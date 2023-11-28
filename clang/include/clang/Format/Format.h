@@ -3034,8 +3034,9 @@ struct FormatStyle {
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
   bool isVerilog() const { return Language == LK_Verilog; }
-  bool isProtoBuf() const { return Language == LK_Proto; }
-  bool isProto() const { return isProtoBuf() || Language == LK_TextProto; }
+  bool isProto() const {
+    return Language == LK_Proto || Language == LK_TextProto;
+  }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
