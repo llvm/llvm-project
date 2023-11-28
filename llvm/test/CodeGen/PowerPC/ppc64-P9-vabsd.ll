@@ -923,9 +923,9 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR7-NEXT:    stb r12, 176(r1)
 ; CHECK-PWR7-NEXT:    sub r0, r0, r30
 ; CHECK-PWR7-NEXT:    lbz r30, 314(r1)
-; CHECK-PWR7-NEXT:    stb r11, 160(r1)
-; CHECK-PWR7-NEXT:    sub r30, r30, r29
 ; CHECK-PWR7-NEXT:    stb r0, 192(r1)
+; CHECK-PWR7-NEXT:    sub r30, r30, r29
+; CHECK-PWR7-NEXT:    stb r11, 160(r1)
 ; CHECK-PWR7-NEXT:    stb r10, 144(r1)
 ; CHECK-PWR7-NEXT:    stb r9, 128(r1)
 ; CHECK-PWR7-NEXT:    stb r8, 112(r1)

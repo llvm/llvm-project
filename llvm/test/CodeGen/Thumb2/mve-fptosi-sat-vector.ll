@@ -4258,14 +4258,14 @@ define arm_aapcs_vfpcc <8 x i1> @test_signed_v8f16_v8i1(<8 x half> %f) {
 ; CHECK-NEXT:    .vsave {d8}
 ; CHECK-NEXT:    vpush {d8}
 ; CHECK-NEXT:    vcvtb.f32.f16 s15, s0
-; CHECK-NEXT:    vmov.f32 s5, #-1.000000e+00
 ; CHECK-NEXT:    vldr s7, .LCPI42_0
+; CHECK-NEXT:    vmov.f32 s5, #-1.000000e+00
 ; CHECK-NEXT:    vmaxnm.f32 s16, s15, s5
-; CHECK-NEXT:    vcvtt.f32.f16 s12, s2
-; CHECK-NEXT:    vcvtt.f32.f16 s9, s1
 ; CHECK-NEXT:    vminnm.f32 s16, s16, s7
-; CHECK-NEXT:    vcvtt.f32.f16 s4, s3
+; CHECK-NEXT:    vcvtt.f32.f16 s12, s2
 ; CHECK-NEXT:    vcvt.s32.f32 s16, s16
+; CHECK-NEXT:    vcvtt.f32.f16 s9, s1
+; CHECK-NEXT:    vcvtt.f32.f16 s4, s3
 ; CHECK-NEXT:    vcvtb.f32.f16 s8, s3
 ; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vcvtb.f32.f16 s1, s1

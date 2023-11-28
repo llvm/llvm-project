@@ -528,16 +528,18 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-LABEL: lshr_32bytes:
 ; LE-32BIT:       # %bb.0:
 ; LE-32BIT-NEXT:    stwu 1, -112(1)
-; LE-32BIT-NEXT:    lwz 7, 0(3)
+; LE-32BIT-NEXT:    stw 30, 104(1) # 4-byte Folded Spill
 ; LE-32BIT-NEXT:    li 6, 0
+; LE-32BIT-NEXT:    lwz 7, 0(3)
 ; LE-32BIT-NEXT:    lwz 8, 4(3)
 ; LE-32BIT-NEXT:    lwz 9, 8(3)
 ; LE-32BIT-NEXT:    lwz 10, 12(3)
 ; LE-32BIT-NEXT:    lwz 11, 16(3)
 ; LE-32BIT-NEXT:    lwz 12, 20(3)
 ; LE-32BIT-NEXT:    lwz 0, 24(3)
-; LE-32BIT-NEXT:    lwz 3, 28(3)
-; LE-32BIT-NEXT:    lwz 4, 28(4)
+; LE-32BIT-NEXT:    lwz 30, 28(3)
+; LE-32BIT-NEXT:    lwz 3, 28(4)
+; LE-32BIT-NEXT:    addi 4, 1, 52
 ; LE-32BIT-NEXT:    stw 6, 48(1)
 ; LE-32BIT-NEXT:    stw 6, 44(1)
 ; LE-32BIT-NEXT:    stw 6, 40(1)
@@ -546,16 +548,14 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    stw 6, 28(1)
 ; LE-32BIT-NEXT:    stw 6, 24(1)
 ; LE-32BIT-NEXT:    stw 6, 20(1)
-; LE-32BIT-NEXT:    rlwinm 6, 4, 29, 27, 31
-; LE-32BIT-NEXT:    stw 3, 80(1)
-; LE-32BIT-NEXT:    addi 3, 1, 52
+; LE-32BIT-NEXT:    rlwinm 6, 3, 29, 27, 31
 ; LE-32BIT-NEXT:    stw 25, 84(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    sub 3, 3, 6
+; LE-32BIT-NEXT:    sub 4, 4, 6
 ; LE-32BIT-NEXT:    stw 26, 88(1) # 4-byte Folded Spill
 ; LE-32BIT-NEXT:    stw 27, 92(1) # 4-byte Folded Spill
 ; LE-32BIT-NEXT:    stw 28, 96(1) # 4-byte Folded Spill
 ; LE-32BIT-NEXT:    stw 29, 100(1) # 4-byte Folded Spill
-; LE-32BIT-NEXT:    stw 30, 104(1) # 4-byte Folded Spill
+; LE-32BIT-NEXT:    stw 30, 80(1)
 ; LE-32BIT-NEXT:    stw 0, 76(1)
 ; LE-32BIT-NEXT:    stw 12, 72(1)
 ; LE-32BIT-NEXT:    stw 11, 68(1)
@@ -563,51 +563,51 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    stw 9, 60(1)
 ; LE-32BIT-NEXT:    li 9, 7
 ; LE-32BIT-NEXT:    stw 8, 56(1)
-; LE-32BIT-NEXT:    nand 9, 4, 9
+; LE-32BIT-NEXT:    nand 9, 3, 9
 ; LE-32BIT-NEXT:    stw 7, 52(1)
-; LE-32BIT-NEXT:    clrlwi 4, 4, 29
-; LE-32BIT-NEXT:    lwz 6, 4(3)
-; LE-32BIT-NEXT:    subfic 30, 4, 32
-; LE-32BIT-NEXT:    lwz 7, 8(3)
+; LE-32BIT-NEXT:    clrlwi 3, 3, 29
+; LE-32BIT-NEXT:    lwz 6, 28(4)
+; LE-32BIT-NEXT:    subfic 30, 3, 32
+; LE-32BIT-NEXT:    lwz 7, 4(4)
 ; LE-32BIT-NEXT:    clrlwi 9, 9, 27
-; LE-32BIT-NEXT:    lwz 8, 12(3)
-; LE-32BIT-NEXT:    slwi 29, 6, 1
-; LE-32BIT-NEXT:    lwz 10, 16(3)
-; LE-32BIT-NEXT:    srw 28, 7, 4
-; LE-32BIT-NEXT:    lwz 11, 20(3)
-; LE-32BIT-NEXT:    slwi 27, 8, 1
-; LE-32BIT-NEXT:    lwz 12, 24(3)
-; LE-32BIT-NEXT:    srw 26, 10, 4
-; LE-32BIT-NEXT:    lwz 0, 0(3)
-; LE-32BIT-NEXT:    srw 6, 6, 4
-; LE-32BIT-NEXT:    lwz 3, 28(3)
-; LE-32BIT-NEXT:    srw 25, 12, 4
-; LE-32BIT-NEXT:    slw 12, 12, 30
-; LE-32BIT-NEXT:    slw 7, 7, 30
-; LE-32BIT-NEXT:    srw 3, 3, 4
-; LE-32BIT-NEXT:    slw 10, 10, 30
-; LE-32BIT-NEXT:    slw 30, 0, 30
-; LE-32BIT-NEXT:    srw 8, 8, 4
-; LE-32BIT-NEXT:    srw 0, 0, 4
-; LE-32BIT-NEXT:    srw 4, 11, 4
-; LE-32BIT-NEXT:    or 3, 12, 3
-; LE-32BIT-NEXT:    stw 3, 28(5)
-; LE-32BIT-NEXT:    or 3, 10, 4
-; LE-32BIT-NEXT:    slwi 11, 11, 1
+; LE-32BIT-NEXT:    lwz 8, 8(4)
+; LE-32BIT-NEXT:    srw 6, 6, 3
+; LE-32BIT-NEXT:    lwz 10, 12(4)
+; LE-32BIT-NEXT:    slwi 29, 7, 1
+; LE-32BIT-NEXT:    lwz 11, 16(4)
+; LE-32BIT-NEXT:    srw 28, 8, 3
+; LE-32BIT-NEXT:    lwz 12, 20(4)
+; LE-32BIT-NEXT:    slwi 27, 10, 1
+; LE-32BIT-NEXT:    lwz 0, 24(4)
+; LE-32BIT-NEXT:    srw 26, 11, 3
+; LE-32BIT-NEXT:    lwz 4, 0(4)
+; LE-32BIT-NEXT:    srw 7, 7, 3
+; LE-32BIT-NEXT:    srw 25, 0, 3
+; LE-32BIT-NEXT:    slw 8, 8, 30
+; LE-32BIT-NEXT:    slw 11, 11, 30
+; LE-32BIT-NEXT:    slw 0, 0, 30
+; LE-32BIT-NEXT:    slw 30, 4, 30
+; LE-32BIT-NEXT:    srw 10, 10, 3
+; LE-32BIT-NEXT:    srw 4, 4, 3
+; LE-32BIT-NEXT:    srw 3, 12, 3
+; LE-32BIT-NEXT:    or 3, 11, 3
 ; LE-32BIT-NEXT:    stw 3, 20(5)
-; LE-32BIT-NEXT:    or 3, 7, 8
-; LE-32BIT-NEXT:    slw 29, 29, 9
+; LE-32BIT-NEXT:    or 3, 8, 10
+; LE-32BIT-NEXT:    slwi 12, 12, 1
 ; LE-32BIT-NEXT:    slw 27, 27, 9
-; LE-32BIT-NEXT:    slw 9, 11, 9
 ; LE-32BIT-NEXT:    stw 3, 12(5)
-; LE-32BIT-NEXT:    or 3, 30, 6
+; LE-32BIT-NEXT:    or 3, 30, 7
+; LE-32BIT-NEXT:    slw 29, 29, 9
+; LE-32BIT-NEXT:    slw 9, 12, 9
 ; LE-32BIT-NEXT:    stw 3, 4(5)
-; LE-32BIT-NEXT:    or 3, 25, 9
-; LE-32BIT-NEXT:    stw 3, 24(5)
 ; LE-32BIT-NEXT:    or 3, 26, 27
 ; LE-32BIT-NEXT:    stw 3, 16(5)
+; LE-32BIT-NEXT:    or 3, 25, 9
+; LE-32BIT-NEXT:    stw 4, 0(5)
+; LE-32BIT-NEXT:    or 4, 0, 6
+; LE-32BIT-NEXT:    stw 3, 24(5)
 ; LE-32BIT-NEXT:    or 3, 28, 29
-; LE-32BIT-NEXT:    stw 0, 0(5)
+; LE-32BIT-NEXT:    stw 4, 28(5)
 ; LE-32BIT-NEXT:    stw 3, 8(5)
 ; LE-32BIT-NEXT:    lwz 30, 104(1) # 4-byte Folded Reload
 ; LE-32BIT-NEXT:    lwz 29, 100(1) # 4-byte Folded Reload
@@ -755,19 +755,19 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    clrlwi 4, 4, 29
 ; LE-32BIT-NEXT:    subfic 0, 4, 32
 ; LE-32BIT-NEXT:    clrlwi 8, 8, 27
-; LE-32BIT-NEXT:    lwz 7, 8(6)
-; LE-32BIT-NEXT:    slw 3, 3, 4
 ; LE-32BIT-NEXT:    lwz 9, 4(6)
+; LE-32BIT-NEXT:    slw 3, 3, 4
 ; LE-32BIT-NEXT:    lwz 10, 16(6)
-; LE-32BIT-NEXT:    srwi 29, 7, 1
-; LE-32BIT-NEXT:    lwz 11, 12(6)
+; LE-32BIT-NEXT:    lwz 7, 8(6)
 ; LE-32BIT-NEXT:    slw 28, 9, 4
-; LE-32BIT-NEXT:    lwz 12, 24(6)
+; LE-32BIT-NEXT:    lwz 11, 12(6)
 ; LE-32BIT-NEXT:    srwi 27, 10, 1
-; LE-32BIT-NEXT:    lwz 30, 20(6)
-; LE-32BIT-NEXT:    slw 26, 11, 4
-; LE-32BIT-NEXT:    lwz 6, 28(6)
+; LE-32BIT-NEXT:    lwz 12, 24(6)
 ; LE-32BIT-NEXT:    srw 9, 9, 0
+; LE-32BIT-NEXT:    lwz 30, 20(6)
+; LE-32BIT-NEXT:    srwi 29, 7, 1
+; LE-32BIT-NEXT:    lwz 6, 28(6)
+; LE-32BIT-NEXT:    slw 26, 11, 4
 ; LE-32BIT-NEXT:    slw 25, 30, 4
 ; LE-32BIT-NEXT:    srw 11, 11, 0
 ; LE-32BIT-NEXT:    slw 7, 7, 4
@@ -777,20 +777,20 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    slw 6, 6, 4
 ; LE-32BIT-NEXT:    slw 4, 12, 4
 ; LE-32BIT-NEXT:    srwi 12, 12, 1
-; LE-32BIT-NEXT:    srw 29, 29, 8
 ; LE-32BIT-NEXT:    srw 27, 27, 8
-; LE-32BIT-NEXT:    srw 8, 12, 8
 ; LE-32BIT-NEXT:    or 3, 3, 9
+; LE-32BIT-NEXT:    srw 29, 29, 8
+; LE-32BIT-NEXT:    srw 8, 12, 8
 ; LE-32BIT-NEXT:    or 4, 4, 0
 ; LE-32BIT-NEXT:    stw 3, 0(5)
-; LE-32BIT-NEXT:    or 3, 25, 8
+; LE-32BIT-NEXT:    or 3, 26, 27
 ; LE-32BIT-NEXT:    stw 4, 24(5)
 ; LE-32BIT-NEXT:    or 4, 10, 30
-; LE-32BIT-NEXT:    stw 3, 20(5)
-; LE-32BIT-NEXT:    or 3, 26, 27
+; LE-32BIT-NEXT:    stw 3, 12(5)
+; LE-32BIT-NEXT:    or 3, 25, 8
 ; LE-32BIT-NEXT:    stw 4, 16(5)
 ; LE-32BIT-NEXT:    or 4, 7, 11
-; LE-32BIT-NEXT:    stw 3, 12(5)
+; LE-32BIT-NEXT:    stw 3, 20(5)
 ; LE-32BIT-NEXT:    or 3, 28, 29
 ; LE-32BIT-NEXT:    stw 6, 28(5)
 ; LE-32BIT-NEXT:    stw 4, 8(5)
@@ -967,19 +967,19 @@ define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-NEXT:    or 3, 12, 3
 ; LE-32BIT-NEXT:    stw 3, 28(5)
 ; LE-32BIT-NEXT:    or 3, 10, 4
-; LE-32BIT-NEXT:    slwi 11, 11, 1
 ; LE-32BIT-NEXT:    stw 3, 20(5)
 ; LE-32BIT-NEXT:    or 3, 7, 8
-; LE-32BIT-NEXT:    slw 29, 29, 9
+; LE-32BIT-NEXT:    slwi 11, 11, 1
 ; LE-32BIT-NEXT:    slw 27, 27, 9
-; LE-32BIT-NEXT:    slw 9, 11, 9
 ; LE-32BIT-NEXT:    stw 3, 12(5)
 ; LE-32BIT-NEXT:    or 3, 30, 6
+; LE-32BIT-NEXT:    slw 29, 29, 9
+; LE-32BIT-NEXT:    slw 9, 11, 9
 ; LE-32BIT-NEXT:    stw 3, 4(5)
-; LE-32BIT-NEXT:    or 3, 25, 9
-; LE-32BIT-NEXT:    stw 3, 24(5)
 ; LE-32BIT-NEXT:    or 3, 26, 27
 ; LE-32BIT-NEXT:    stw 3, 16(5)
+; LE-32BIT-NEXT:    or 3, 25, 9
+; LE-32BIT-NEXT:    stw 3, 24(5)
 ; LE-32BIT-NEXT:    or 3, 28, 29
 ; LE-32BIT-NEXT:    stw 0, 0(5)
 ; LE-32BIT-NEXT:    stw 3, 8(5)

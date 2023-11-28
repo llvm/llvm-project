@@ -1429,7 +1429,6 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(ptr %ptr){
 ; AVX2-NEXT:    vpshufb %ymm10, %ymm3, %ymm3
 ; AVX2-NEXT:    vpshufb %ymm11, %ymm4, %ymm4
 ; AVX2-NEXT:    vpor %ymm4, %ymm3, %ymm3
-; AVX2-NEXT:    vpaddb %ymm3, %ymm8, %ymm3
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm4 = ymm7[5,6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,21,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20]
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [8,11,14,0,0,0,2,5,8,11,14,0,0,0,2,5,8,11,14,0,0,0,2,5,8,11,14,0,0,0,2,5]
 ; AVX2-NEXT:    vpshufb %ymm6, %ymm0, %ymm0
@@ -1440,7 +1439,8 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(ptr %ptr){
 ; AVX2-NEXT:    vpalignr {{.*#+}} ymm2 = ymm5[5,6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,21,22,23,24,25,26,27,28,29,30,31,16,17,18,19,20]
 ; AVX2-NEXT:    vpshufb %ymm6, %ymm1, %ymm1
 ; AVX2-NEXT:    vpblendvb %ymm7, %ymm2, %ymm1, %ymm1
-; AVX2-NEXT:    vpaddb %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vpaddb %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddb %ymm1, %ymm8, %ymm1
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_load_vf64_i8_stride3:

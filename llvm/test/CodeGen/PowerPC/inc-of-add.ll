@@ -65,90 +65,90 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; PPC32-LABEL: vector_i128_i8:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    stwu 1, -64(1)
-; PPC32-NEXT:    stw 21, 20(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    stw 22, 24(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    lbz 4, 115(1)
 ; PPC32-NEXT:    lbz 22, 119(1)
-; PPC32-NEXT:    lbz 21, 123(1)
 ; PPC32-NEXT:    add 4, 4, 5
+; PPC32-NEXT:    stw 21, 20(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    add 5, 22, 6
-; PPC32-NEXT:    lbz 22, 131(1)
-; PPC32-NEXT:    add 6, 21, 7
-; PPC32-NEXT:    lbz 21, 135(1)
-; PPC32-NEXT:    addi 6, 6, 1
-; PPC32-NEXT:    stw 20, 16(1) # 4-byte Folded Spill
-; PPC32-NEXT:    add 9, 22, 9
-; PPC32-NEXT:    lbz 20, 127(1)
-; PPC32-NEXT:    add 10, 21, 10
-; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 22, 135(1)
 ; PPC32-NEXT:    addi 5, 5, 1
-; PPC32-NEXT:    lbz 25, 83(1)
-; PPC32-NEXT:    add 7, 20, 8
-; PPC32-NEXT:    lbz 21, 147(1)
-; PPC32-NEXT:    addi 7, 7, 1
-; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
+; PPC32-NEXT:    lbz 6, 131(1)
 ; PPC32-NEXT:    addi 4, 4, 1
+; PPC32-NEXT:    stw 25, 36(1) # 4-byte Folded Spill
+; PPC32-NEXT:    add 10, 22, 10
+; PPC32-NEXT:    lbz 25, 83(1)
+; PPC32-NEXT:    add 6, 6, 9
+; PPC32-NEXT:    lbz 21, 123(1)
+; PPC32-NEXT:    addi 6, 6, 1
+; PPC32-NEXT:    lbz 22, 147(1)
+; PPC32-NEXT:    stw 24, 32(1) # 4-byte Folded Spill
+; PPC32-NEXT:    add 7, 21, 7
 ; PPC32-NEXT:    lbz 24, 79(1)
-; PPC32-NEXT:    add 25, 21, 25
-; PPC32-NEXT:    lbz 22, 143(1)
+; PPC32-NEXT:    add 25, 22, 25
+; PPC32-NEXT:    lbz 9, 143(1)
 ; PPC32-NEXT:    stw 23, 28(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 23, 75(1)
-; PPC32-NEXT:    add 24, 22, 24
-; PPC32-NEXT:    lbz 8, 139(1)
 ; PPC32-NEXT:    stw 28, 48(1) # 4-byte Folded Spill
+; PPC32-NEXT:    add 9, 9, 24
 ; PPC32-NEXT:    lbz 28, 95(1)
-; PPC32-NEXT:    add 8, 8, 23
-; PPC32-NEXT:    lbz 21, 159(1)
-; PPC32-NEXT:    addi 8, 8, 1
+; PPC32-NEXT:    addi 9, 9, 1
+; PPC32-NEXT:    lbz 23, 75(1)
+; PPC32-NEXT:    lbz 21, 139(1)
+; PPC32-NEXT:    lbz 22, 159(1)
 ; PPC32-NEXT:    stw 27, 44(1) # 4-byte Folded Spill
+; PPC32-NEXT:    add 23, 21, 23
 ; PPC32-NEXT:    lbz 27, 91(1)
-; PPC32-NEXT:    add 28, 21, 28
-; PPC32-NEXT:    lbz 22, 155(1)
+; PPC32-NEXT:    add 28, 22, 28
+; PPC32-NEXT:    lbz 24, 155(1)
 ; PPC32-NEXT:    stw 26, 40(1) # 4-byte Folded Spill
-; PPC32-NEXT:    lbz 26, 87(1)
-; PPC32-NEXT:    add 27, 22, 27
-; PPC32-NEXT:    lbz 23, 151(1)
 ; PPC32-NEXT:    lbz 11, 111(1)
-; PPC32-NEXT:    lbz 21, 175(1)
-; PPC32-NEXT:    add 26, 23, 26
+; PPC32-NEXT:    add 27, 24, 27
+; PPC32-NEXT:    lbz 26, 87(1)
+; PPC32-NEXT:    lbz 21, 151(1)
+; PPC32-NEXT:    lbz 22, 175(1)
 ; PPC32-NEXT:    lbz 12, 107(1)
+; PPC32-NEXT:    add 26, 21, 26
 ; PPC32-NEXT:    lbz 0, 171(1)
-; PPC32-NEXT:    add 11, 21, 11
+; PPC32-NEXT:    add 11, 22, 11
 ; PPC32-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
-; PPC32-NEXT:    addi 11, 11, 1
 ; PPC32-NEXT:    lbz 30, 103(1)
 ; PPC32-NEXT:    add 12, 0, 12
-; PPC32-NEXT:    lbz 22, 167(1)
+; PPC32-NEXT:    lbz 24, 167(1)
 ; PPC32-NEXT:    stw 29, 52(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    lbz 29, 99(1)
-; PPC32-NEXT:    add 30, 22, 30
-; PPC32-NEXT:    lbz 23, 163(1)
-; PPC32-NEXT:    stb 11, 15(3)
-; PPC32-NEXT:    addi 11, 12, 1
-; PPC32-NEXT:    add 29, 23, 29
-; PPC32-NEXT:    stb 11, 14(3)
-; PPC32-NEXT:    addi 11, 30, 1
-; PPC32-NEXT:    stb 11, 13(3)
-; PPC32-NEXT:    addi 11, 29, 1
-; PPC32-NEXT:    stb 11, 12(3)
-; PPC32-NEXT:    addi 11, 28, 1
-; PPC32-NEXT:    stb 11, 11(3)
-; PPC32-NEXT:    addi 11, 27, 1
-; PPC32-NEXT:    stb 11, 10(3)
-; PPC32-NEXT:    addi 11, 26, 1
-; PPC32-NEXT:    stb 11, 9(3)
-; PPC32-NEXT:    addi 11, 25, 1
-; PPC32-NEXT:    stb 8, 6(3)
-; PPC32-NEXT:    addi 8, 10, 1
-; PPC32-NEXT:    stb 11, 8(3)
-; PPC32-NEXT:    addi 11, 24, 1
-; PPC32-NEXT:    stb 8, 5(3)
-; PPC32-NEXT:    addi 8, 9, 1
-; PPC32-NEXT:    stb 11, 7(3)
-; PPC32-NEXT:    stb 8, 4(3)
-; PPC32-NEXT:    stb 7, 3(3)
-; PPC32-NEXT:    stb 6, 2(3)
+; PPC32-NEXT:    add 30, 24, 30
+; PPC32-NEXT:    lbz 21, 163(1)
+; PPC32-NEXT:    stw 20, 16(1) # 4-byte Folded Spill
 ; PPC32-NEXT:    stb 5, 1(3)
+; PPC32-NEXT:    addi 5, 11, 1
+; PPC32-NEXT:    stb 5, 15(3)
+; PPC32-NEXT:    addi 5, 12, 1
+; PPC32-NEXT:    lbz 20, 127(1)
+; PPC32-NEXT:    add 29, 21, 29
+; PPC32-NEXT:    stb 5, 14(3)
+; PPC32-NEXT:    addi 5, 30, 1
+; PPC32-NEXT:    stb 5, 13(3)
+; PPC32-NEXT:    addi 5, 29, 1
+; PPC32-NEXT:    stb 5, 12(3)
+; PPC32-NEXT:    addi 5, 28, 1
+; PPC32-NEXT:    stb 5, 11(3)
+; PPC32-NEXT:    addi 5, 27, 1
+; PPC32-NEXT:    add 8, 20, 8
+; PPC32-NEXT:    stb 9, 7(3)
+; PPC32-NEXT:    addi 9, 23, 1
+; PPC32-NEXT:    stb 6, 4(3)
+; PPC32-NEXT:    addi 6, 8, 1
+; PPC32-NEXT:    stb 5, 10(3)
+; PPC32-NEXT:    addi 5, 26, 1
+; PPC32-NEXT:    stb 9, 6(3)
+; PPC32-NEXT:    addi 9, 10, 1
+; PPC32-NEXT:    stb 6, 3(3)
+; PPC32-NEXT:    addi 6, 7, 1
+; PPC32-NEXT:    stb 5, 9(3)
+; PPC32-NEXT:    addi 5, 25, 1
+; PPC32-NEXT:    stb 9, 5(3)
+; PPC32-NEXT:    stb 6, 2(3)
+; PPC32-NEXT:    stb 5, 8(3)
 ; PPC32-NEXT:    stb 4, 0(3)
 ; PPC32-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    lwz 29, 52(1) # 4-byte Folded Reload
@@ -184,70 +184,70 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; AIX-PPC64-NEXT:    add 5, 23, 5
 ; AIX-PPC64-NEXT:    lbz 23, 223(1)
 ; AIX-PPC64-NEXT:    add 4, 24, 4
-; AIX-PPC64-NEXT:    lbz 24, 215(1)
-; AIX-PPC64-NEXT:    add 9, 22, 9
 ; AIX-PPC64-NEXT:    lbz 26, 127(1)
+; AIX-PPC64-NEXT:    add 9, 22, 9
+; AIX-PPC64-NEXT:    lbz 24, 215(1)
 ; AIX-PPC64-NEXT:    add 8, 23, 8
 ; AIX-PPC64-NEXT:    lbz 22, 255(1)
-; AIX-PPC64-NEXT:    add 7, 24, 7
+; AIX-PPC64-NEXT:    addi 5, 5, 1
 ; AIX-PPC64-NEXT:    lbz 25, 119(1)
-; AIX-PPC64-NEXT:    addi 9, 9, 1
+; AIX-PPC64-NEXT:    add 7, 24, 7
 ; AIX-PPC64-NEXT:    lbz 23, 247(1)
 ; AIX-PPC64-NEXT:    add 26, 22, 26
-; AIX-PPC64-NEXT:    lbz 24, 239(1)
-; AIX-PPC64-NEXT:    addi 8, 8, 1
 ; AIX-PPC64-NEXT:    lbz 29, 151(1)
+; AIX-PPC64-NEXT:    addi 9, 9, 1
+; AIX-PPC64-NEXT:    lbz 24, 239(1)
 ; AIX-PPC64-NEXT:    add 25, 23, 25
 ; AIX-PPC64-NEXT:    lbz 22, 279(1)
-; AIX-PPC64-NEXT:    add 10, 24, 10
+; AIX-PPC64-NEXT:    addi 8, 8, 1
 ; AIX-PPC64-NEXT:    lbz 28, 143(1)
-; AIX-PPC64-NEXT:    addi 10, 10, 1
+; AIX-PPC64-NEXT:    add 10, 24, 10
 ; AIX-PPC64-NEXT:    lbz 23, 271(1)
 ; AIX-PPC64-NEXT:    add 29, 22, 29
-; AIX-PPC64-NEXT:    lbz 27, 135(1)
-; AIX-PPC64-NEXT:    addi 7, 7, 1
-; AIX-PPC64-NEXT:    lbz 24, 263(1)
-; AIX-PPC64-NEXT:    add 28, 23, 28
 ; AIX-PPC64-NEXT:    lbz 11, 183(1)
-; AIX-PPC64-NEXT:    addi 6, 6, 1
+; AIX-PPC64-NEXT:    addi 10, 10, 1
+; AIX-PPC64-NEXT:    lbz 27, 135(1)
+; AIX-PPC64-NEXT:    add 28, 23, 28
+; AIX-PPC64-NEXT:    lbz 24, 263(1)
+; AIX-PPC64-NEXT:    addi 7, 7, 1
 ; AIX-PPC64-NEXT:    lbz 22, 311(1)
-; AIX-PPC64-NEXT:    add 27, 24, 27
+; AIX-PPC64-NEXT:    addi 6, 6, 1
 ; AIX-PPC64-NEXT:    lbz 12, 175(1)
-; AIX-PPC64-NEXT:    addi 5, 5, 1
+; AIX-PPC64-NEXT:    add 27, 24, 27
 ; AIX-PPC64-NEXT:    lbz 0, 303(1)
 ; AIX-PPC64-NEXT:    add 11, 22, 11
 ; AIX-PPC64-NEXT:    lbz 31, 167(1)
-; AIX-PPC64-NEXT:    addi 11, 11, 1
+; AIX-PPC64-NEXT:    addi 4, 4, 1
 ; AIX-PPC64-NEXT:    lbz 23, 295(1)
 ; AIX-PPC64-NEXT:    add 12, 0, 12
 ; AIX-PPC64-NEXT:    lbz 30, 159(1)
-; AIX-PPC64-NEXT:    addi 4, 4, 1
+; AIX-PPC64-NEXT:    addi 0, 25, 1
 ; AIX-PPC64-NEXT:    lbz 24, 287(1)
 ; AIX-PPC64-NEXT:    add 31, 23, 31
-; AIX-PPC64-NEXT:    stb 11, 15(3)
-; AIX-PPC64-NEXT:    addi 11, 12, 1
+; AIX-PPC64-NEXT:    stb 5, 1(3)
+; AIX-PPC64-NEXT:    addi 5, 11, 1
+; AIX-PPC64-NEXT:    stb 5, 15(3)
+; AIX-PPC64-NEXT:    addi 5, 12, 1
+; AIX-PPC64-NEXT:    stb 5, 14(3)
+; AIX-PPC64-NEXT:    addi 5, 31, 1
 ; AIX-PPC64-NEXT:    add 30, 24, 30
-; AIX-PPC64-NEXT:    stb 11, 14(3)
-; AIX-PPC64-NEXT:    addi 11, 31, 1
-; AIX-PPC64-NEXT:    stb 11, 13(3)
-; AIX-PPC64-NEXT:    addi 11, 30, 1
-; AIX-PPC64-NEXT:    stb 11, 12(3)
-; AIX-PPC64-NEXT:    addi 11, 29, 1
-; AIX-PPC64-NEXT:    stb 11, 11(3)
-; AIX-PPC64-NEXT:    addi 11, 28, 1
-; AIX-PPC64-NEXT:    stb 11, 10(3)
-; AIX-PPC64-NEXT:    addi 11, 27, 1
-; AIX-PPC64-NEXT:    stb 11, 9(3)
-; AIX-PPC64-NEXT:    addi 11, 26, 1
-; AIX-PPC64-NEXT:    stb 11, 8(3)
-; AIX-PPC64-NEXT:    addi 11, 25, 1
-; AIX-PPC64-NEXT:    stb 11, 7(3)
+; AIX-PPC64-NEXT:    stb 5, 13(3)
+; AIX-PPC64-NEXT:    addi 5, 30, 1
+; AIX-PPC64-NEXT:    stb 5, 12(3)
+; AIX-PPC64-NEXT:    addi 5, 29, 1
+; AIX-PPC64-NEXT:    stb 5, 11(3)
+; AIX-PPC64-NEXT:    addi 5, 28, 1
+; AIX-PPC64-NEXT:    stb 5, 10(3)
+; AIX-PPC64-NEXT:    addi 5, 27, 1
+; AIX-PPC64-NEXT:    stb 5, 9(3)
+; AIX-PPC64-NEXT:    addi 5, 26, 1
+; AIX-PPC64-NEXT:    stb 0, 7(3)
 ; AIX-PPC64-NEXT:    stb 10, 6(3)
 ; AIX-PPC64-NEXT:    stb 9, 5(3)
 ; AIX-PPC64-NEXT:    stb 8, 4(3)
 ; AIX-PPC64-NEXT:    stb 7, 3(3)
 ; AIX-PPC64-NEXT:    stb 6, 2(3)
-; AIX-PPC64-NEXT:    stb 5, 1(3)
+; AIX-PPC64-NEXT:    stb 5, 8(3)
 ; AIX-PPC64-NEXT:    stb 4, 0(3)
 ; AIX-PPC64-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; AIX-PPC64-NEXT:    ld 30, -16(1) # 8-byte Folded Reload

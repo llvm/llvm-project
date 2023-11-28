@@ -1854,87 +1854,87 @@ define void @caller_mix() {
   ; 32BIT-NEXT:   renamable $r7 = LIS 16313
   ; 32BIT-NEXT:   renamable $r8 = LIS 16329
   ; 32BIT-NEXT:   renamable $r9 = LIS 13107
-  ; 32BIT-NEXT:   renamable $r10 = LIS 16339
   ; 32BIT-NEXT:   STW renamable $r3, 92, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r11 = LIS 16345
+  ; 32BIT-NEXT:   renamable $r10 = LIS 16339
   ; 32BIT-NEXT:   STW killed renamable $r4, 88, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r4 = LIS 16355
+  ; 32BIT-NEXT:   renamable $r4 = LIS 16345
   ; 32BIT-NEXT:   STW killed renamable $r3, 132, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r3 = LIS 26214
+  ; 32BIT-NEXT:   renamable $r3 = LIS 16355
   ; 32BIT-NEXT:   STW killed renamable $r5, 128, $r1 :: (store (s32), align 8)
   ; 32BIT-NEXT:   renamable $r5 = ORI killed renamable $r6, 39322
-  ; 32BIT-NEXT:   STW renamable $r5, 60, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r6 = ORI killed renamable $r7, 39321
-  ; 32BIT-NEXT:   STW killed renamable $r6, 56, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r6 = LIS 16358
-  ; 32BIT-NEXT:   STW renamable $r5, 68, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r7 = ORI killed renamable $r8, 39321
-  ; 32BIT-NEXT:   STW killed renamable $r7, 64, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r7 = ORI killed renamable $r9, 13107
-  ; 32BIT-NEXT:   STW renamable $r7, 76, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r8 = ORI killed renamable $r10, 13107
-  ; 32BIT-NEXT:   STW killed renamable $r8, 72, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r8 = LIS 16361
-  ; 32BIT-NEXT:   STW renamable $r5, 84, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r9 = ORI killed renamable $r11, 39321
-  ; 32BIT-NEXT:   STW killed renamable $r9, 80, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r9 = LIS 52428
-  ; 32BIT-NEXT:   STW renamable $r7, 100, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r4, 13107
-  ; 32BIT-NEXT:   STW killed renamable $r4, 96, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r3 = ORI killed renamable $r3, 26214
-  ; 32BIT-NEXT:   STW renamable $r3, 108, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r6, 26214
-  ; 32BIT-NEXT:   STW killed renamable $r4, 104, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r4 = LIS 16364
   ; 32BIT-NEXT:   STW renamable $r5, 116, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r6 = ORI killed renamable $r8, 39321
-  ; 32BIT-NEXT:   STW killed renamable $r6, 112, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r6 = ORI killed renamable $r9, 52429
-  ; 32BIT-NEXT:   STW renamable $r6, 124, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r4, 52428
-  ; 32BIT-NEXT:   STW killed renamable $r4, 120, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r6 = LIS 26214
+  ; 32BIT-NEXT:   STW renamable $r5, 140, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r9 = ORI killed renamable $r9, 13107
+  ; 32BIT-NEXT:   STW renamable $r9, 148, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r6 = ORI killed renamable $r6, 26214
+  ; 32BIT-NEXT:   STW renamable $r6, 164, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r11 = LIS 16358
+  ; 32BIT-NEXT:   STW renamable $r5, 60, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r7 = ORI killed renamable $r7, 39321
+  ; 32BIT-NEXT:   STW killed renamable $r7, 56, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r7 = LIS 16361
+  ; 32BIT-NEXT:   STW renamable $r5, 68, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r8 = ORI killed renamable $r8, 39321
+  ; 32BIT-NEXT:   STW killed renamable $r8, 64, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r8 = LIS 52428
+  ; 32BIT-NEXT:   STW renamable $r9, 76, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r10 = ORI killed renamable $r10, 13107
+  ; 32BIT-NEXT:   STW killed renamable $r10, 72, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r10 = LIS 16364
+  ; 32BIT-NEXT:   STW killed renamable $r5, 84, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r4, 39321
+  ; 32BIT-NEXT:   STW killed renamable $r4, 80, $r1 :: (store (s32), align 8)
   ; 32BIT-NEXT:   renamable $r4 = LIS 16369
-  ; 32BIT-NEXT:   STW killed renamable $r5, 140, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   STW killed renamable $r9, 100, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r3 = ORI killed renamable $r3, 13107
+  ; 32BIT-NEXT:   STW killed renamable $r3, 96, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r3 = LIS 16371
+  ; 32BIT-NEXT:   STW killed renamable $r6, 108, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r5 = ORI killed renamable $r11, 26214
+  ; 32BIT-NEXT:   STW killed renamable $r5, 104, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r5 = ORI killed renamable $r7, 39321
+  ; 32BIT-NEXT:   STW killed renamable $r5, 112, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r5 = ORI killed renamable $r8, 52429
+  ; 32BIT-NEXT:   STW renamable $r5, 124, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r6 = ORI killed renamable $r10, 52428
+  ; 32BIT-NEXT:   STW killed renamable $r6, 120, $r1 :: (store (s32), align 8)
   ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r4, 39321
   ; 32BIT-NEXT:   STW killed renamable $r4, 136, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r4 = LIS 16371
-  ; 32BIT-NEXT:   STW killed renamable $r7, 148, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r4, 13107
-  ; 32BIT-NEXT:   STW killed renamable $r4, 144, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r4 = LIS 16372
-  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.0, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   STW killed renamable $r6, 156, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
-  ; 32BIT-NEXT:   renamable $r4 = ORI killed renamable $r4, 52428
-  ; 32BIT-NEXT:   STW killed renamable $r4, 152, $r1 :: (store (s32), align 8)
-  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.1, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   STW killed renamable $r3, 164, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r3 = ORI killed renamable $r3, 13107
+  ; 32BIT-NEXT:   STW killed renamable $r3, 144, $r1 :: (store (s32), align 8)
+  ; 32BIT-NEXT:   renamable $r3 = LIS 16372
+  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.0, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $r6 = LWZtoc %const.1, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   STW killed renamable $r5, 156, $r1 :: (store (s32) into unknown-address + 4, basealign 8)
+  ; 32BIT-NEXT:   renamable $r3 = ORI killed renamable $r3, 52428
+  ; 32BIT-NEXT:   STW killed renamable $r3, 152, $r1 :: (store (s32), align 8)
   ; 32BIT-NEXT:   renamable $r3 = LWZtoc %const.2, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f1 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.3, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f2 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.4, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f1 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.3, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f2 = LFD 0, killed renamable $r6 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.4, $r2 :: (load (s32) from got)
   ; 32BIT-NEXT:   renamable $f3 = LFD 0, killed renamable $r3 :: (load (s64) from constant-pool)
   ; 32BIT-NEXT:   renamable $r3 = LWZtoc %const.5, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f4 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.6, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f6 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.7, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f4 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.6, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f6 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.7, $r2 :: (load (s32) from got)
   ; 32BIT-NEXT:   renamable $f7 = LFD 0, killed renamable $r3 :: (load (s64) from constant-pool)
   ; 32BIT-NEXT:   renamable $r3 = LWZtoc %const.8, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f8 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.9, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f9 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.10, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f8 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.9, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f9 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.10, $r2 :: (load (s32) from got)
   ; 32BIT-NEXT:   renamable $f11 = LFD 0, killed renamable $r3 :: (load (s64) from constant-pool)
   ; 32BIT-NEXT:   renamable $r3 = LWZtoc %const.11, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f12 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r5 = LWZtoc %const.12, $r2 :: (load (s32) from got)
-  ; 32BIT-NEXT:   renamable $f13 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r4 = LIS 16374
+  ; 32BIT-NEXT:   renamable $f12 = LFD 0, killed renamable $r4 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r4 = LWZtoc %const.12, $r2 :: (load (s32) from got)
+  ; 32BIT-NEXT:   renamable $f13 = LFD 0, killed renamable $r5 :: (load (s64) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r5 = LIS 16374
   ; 32BIT-NEXT:   renamable $f5 = LFS 0, killed renamable $r3 :: (load (s32) from constant-pool)
-  ; 32BIT-NEXT:   renamable $r11 = ORI killed renamable $r4, 26214
-  ; 32BIT-NEXT:   renamable $f10 = LFS 0, killed renamable $r5 :: (load (s32) from constant-pool)
+  ; 32BIT-NEXT:   renamable $r11 = ORI killed renamable $r5, 26214
+  ; 32BIT-NEXT:   renamable $f10 = LFS 0, killed renamable $r4 :: (load (s32) from constant-pool)
   ; 32BIT-NEXT:   $r3 = LI 1
   ; 32BIT-NEXT:   $r4 = LI 2
   ; 32BIT-NEXT:   $r5 = LI 3

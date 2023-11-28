@@ -82,52 +82,52 @@ define i64 @testBitReverseIntrinsicI64(i64 %arg) {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    lis 5, -21846
 ; PPC32-NEXT:    lis 6, 21845
+; PPC32-NEXT:    slwi 10, 3, 1
 ; PPC32-NEXT:    ori 5, 5, 43690
-; PPC32-NEXT:    slwi 10, 4, 1
-; PPC32-NEXT:    slwi 11, 3, 1
+; PPC32-NEXT:    slwi 11, 4, 1
+; PPC32-NEXT:    srwi 3, 3, 1
 ; PPC32-NEXT:    ori 6, 6, 21845
 ; PPC32-NEXT:    srwi 4, 4, 1
-; PPC32-NEXT:    srwi 3, 3, 1
 ; PPC32-NEXT:    and 10, 10, 5
 ; PPC32-NEXT:    and 5, 11, 5
-; PPC32-NEXT:    and 4, 4, 6
 ; PPC32-NEXT:    and 3, 3, 6
+; PPC32-NEXT:    and 4, 4, 6
 ; PPC32-NEXT:    lis 7, -13108
 ; PPC32-NEXT:    lis 8, 13107
-; PPC32-NEXT:    or 4, 4, 10
-; PPC32-NEXT:    or 3, 3, 5
+; PPC32-NEXT:    or 3, 3, 10
+; PPC32-NEXT:    or 4, 4, 5
 ; PPC32-NEXT:    ori 7, 7, 52428
 ; PPC32-NEXT:    ori 8, 8, 13107
-; PPC32-NEXT:    slwi 5, 4, 2
-; PPC32-NEXT:    srwi 4, 4, 2
-; PPC32-NEXT:    slwi 6, 3, 2
+; PPC32-NEXT:    slwi 5, 3, 2
 ; PPC32-NEXT:    srwi 3, 3, 2
+; PPC32-NEXT:    slwi 6, 4, 2
+; PPC32-NEXT:    srwi 4, 4, 2
 ; PPC32-NEXT:    and 5, 5, 7
-; PPC32-NEXT:    and 4, 4, 8
-; PPC32-NEXT:    and 6, 6, 7
 ; PPC32-NEXT:    and 3, 3, 8
+; PPC32-NEXT:    and 6, 6, 7
+; PPC32-NEXT:    and 4, 4, 8
 ; PPC32-NEXT:    lis 9, -3856
 ; PPC32-NEXT:    lis 11, 3855
-; PPC32-NEXT:    or 4, 4, 5
-; PPC32-NEXT:    or 3, 3, 6
+; PPC32-NEXT:    or 3, 3, 5
+; PPC32-NEXT:    or 4, 4, 6
 ; PPC32-NEXT:    ori 9, 9, 61680
 ; PPC32-NEXT:    ori 11, 11, 3855
-; PPC32-NEXT:    slwi 5, 4, 4
-; PPC32-NEXT:    srwi 4, 4, 4
-; PPC32-NEXT:    slwi 6, 3, 4
+; PPC32-NEXT:    slwi 5, 3, 4
 ; PPC32-NEXT:    srwi 3, 3, 4
+; PPC32-NEXT:    slwi 6, 4, 4
+; PPC32-NEXT:    srwi 4, 4, 4
 ; PPC32-NEXT:    and 5, 5, 9
-; PPC32-NEXT:    and 4, 4, 11
-; PPC32-NEXT:    and 6, 6, 9
 ; PPC32-NEXT:    and 3, 3, 11
-; PPC32-NEXT:    or 5, 4, 5
-; PPC32-NEXT:    or 6, 3, 6
-; PPC32-NEXT:    rotlwi 3, 5, 24
-; PPC32-NEXT:    rotlwi 4, 6, 24
-; PPC32-NEXT:    rlwimi 3, 5, 8, 8, 15
-; PPC32-NEXT:    rlwimi 4, 6, 8, 8, 15
-; PPC32-NEXT:    rlwimi 3, 5, 8, 24, 31
-; PPC32-NEXT:    rlwimi 4, 6, 8, 24, 31
+; PPC32-NEXT:    and 6, 6, 9
+; PPC32-NEXT:    and 4, 4, 11
+; PPC32-NEXT:    or 5, 3, 5
+; PPC32-NEXT:    or 6, 4, 6
+; PPC32-NEXT:    rotlwi 4, 5, 24
+; PPC32-NEXT:    rotlwi 3, 6, 24
+; PPC32-NEXT:    rlwimi 4, 5, 8, 8, 15
+; PPC32-NEXT:    rlwimi 3, 6, 8, 8, 15
+; PPC32-NEXT:    rlwimi 3, 6, 8, 24, 31
+; PPC32-NEXT:    rlwimi 4, 5, 8, 24, 31
 ; PPC32-NEXT:    blr
 ;
 ; CHECK-LABEL: testBitReverseIntrinsicI64:

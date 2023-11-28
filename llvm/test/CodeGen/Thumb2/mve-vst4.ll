@@ -442,11 +442,11 @@ define void @vst4_v8i16_align1(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmovx.f16 s6, s14
 ; CHECK-NEXT:    vmovx.f16 s4, s18
 ; CHECK-NEXT:    vins.f16 s14, s18
-; CHECK-NEXT:    vins.f16 s2, s0
-; CHECK-NEXT:    vmov.f32 s0, s13
 ; CHECK-NEXT:    vmov.f32 s24, s15
 ; CHECK-NEXT:    vins.f16 s6, s4
 ; CHECK-NEXT:    vmov.f32 s4, s14
+; CHECK-NEXT:    vins.f16 s2, s0
+; CHECK-NEXT:    vmov.f32 s0, s13
 ; CHECK-NEXT:    vstrb.8 q6, [r1, #48]
 ; CHECK-NEXT:    vstrb.8 q1, [r1, #32]
 ; CHECK-NEXT:    vstrb.8 q0, [r1, #16]
@@ -1191,8 +1191,8 @@ define void @vst4_v8f16_align1(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmovx.f16 s23, s6
 ; CHECK-NEXT:    vmovx.f16 s1, s22
 ; CHECK-NEXT:    vins.f16 s6, s22
-; CHECK-NEXT:    vins.f16 s5, s21
 ; CHECK-NEXT:    vins.f16 s4, s20
+; CHECK-NEXT:    vins.f16 s5, s21
 ; CHECK-NEXT:    vins.f16 s23, s1
 ; CHECK-NEXT:    vmovx.f16 s22, s10
 ; CHECK-NEXT:    vins.f16 s10, s26

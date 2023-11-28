@@ -124,19 +124,19 @@ define i8 @explode_16xi8(<16 x i8> %v) {
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s t6, v8
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a0, t6, a0
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a5, a5, a6
-; CHECK-NEXT:    add a5, a5, a7
-; CHECK-NEXT:    add a5, a5, t0
-; CHECK-NEXT:    add a0, a0, a5
-; CHECK-NEXT:    add t1, t1, t2
-; CHECK-NEXT:    add t1, t1, t3
-; CHECK-NEXT:    add t1, t1, t4
-; CHECK-NEXT:    add t1, t1, t5
-; CHECK-NEXT:    add a0, a0, t1
+; CHECK-NEXT:    add a0, t6, a0
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    add a3, a3, a5
+; CHECK-NEXT:    add a3, a3, a6
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a7, a7, t0
+; CHECK-NEXT:    add a7, a7, t1
+; CHECK-NEXT:    add a7, a7, t2
+; CHECK-NEXT:    add a0, a0, a7
+; CHECK-NEXT:    add t3, t3, t4
+; CHECK-NEXT:    add t3, t3, t5
+; CHECK-NEXT:    add a0, a0, t3
 ; CHECK-NEXT:    ret
   %e0 = extractelement <16 x i8> %v, i32 0
   %e1 = extractelement <16 x i8> %v, i32 1
@@ -295,19 +295,19 @@ define i16 @explode_16xi16(<16 x i16> %v) {
 ; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s t6, v8
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a0, t6, a0
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a5, a5, a6
-; CHECK-NEXT:    add a5, a5, a7
-; CHECK-NEXT:    add a5, a5, t0
-; CHECK-NEXT:    add a0, a0, a5
-; CHECK-NEXT:    add t1, t1, t2
-; CHECK-NEXT:    add t1, t1, t3
-; CHECK-NEXT:    add t1, t1, t4
-; CHECK-NEXT:    add t1, t1, t5
-; CHECK-NEXT:    add a0, a0, t1
+; CHECK-NEXT:    add a0, t6, a0
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    add a3, a3, a5
+; CHECK-NEXT:    add a3, a3, a6
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a7, a7, t0
+; CHECK-NEXT:    add a7, a7, t1
+; CHECK-NEXT:    add a7, a7, t2
+; CHECK-NEXT:    add a0, a0, a7
+; CHECK-NEXT:    add t3, t3, t4
+; CHECK-NEXT:    add t3, t3, t5
+; CHECK-NEXT:    add a0, a0, t3
 ; CHECK-NEXT:    ret
   %e0 = extractelement <16 x i16> %v, i32 0
   %e1 = extractelement <16 x i16> %v, i32 1
@@ -1119,19 +1119,19 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
 ; RV32-NEXT:    vredxor.vs v8, v8, v9
 ; RV32-NEXT:    vmv.x.s t6, v8
 ; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add a0, t6, a0
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    add a2, a2, a4
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a5, a5, a6
-; RV32-NEXT:    add a5, a5, a7
-; RV32-NEXT:    add a5, a5, t0
-; RV32-NEXT:    add a0, a0, a5
-; RV32-NEXT:    add t1, t1, t2
-; RV32-NEXT:    add t1, t1, t3
-; RV32-NEXT:    add t1, t1, t4
-; RV32-NEXT:    add t1, t1, t5
-; RV32-NEXT:    add a0, a0, t1
+; RV32-NEXT:    add a0, t6, a0
+; RV32-NEXT:    add a3, a3, a4
+; RV32-NEXT:    add a3, a3, a5
+; RV32-NEXT:    add a3, a3, a6
+; RV32-NEXT:    add a0, a0, a3
+; RV32-NEXT:    add a7, a7, t0
+; RV32-NEXT:    add a7, a7, t1
+; RV32-NEXT:    add a7, a7, t2
+; RV32-NEXT:    add a0, a0, a7
+; RV32-NEXT:    add t3, t3, t4
+; RV32-NEXT:    add t3, t3, t5
+; RV32-NEXT:    add a0, a0, t3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: explode_16xi32_exact_vlen:
@@ -1167,19 +1167,19 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
 ; RV64-NEXT:    vredxor.vs v8, v8, v9
 ; RV64-NEXT:    vmv.x.s t6, v8
 ; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    add a0, t6, a0
-; RV64-NEXT:    add a2, a2, a3
-; RV64-NEXT:    add a2, a2, a4
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a5, a5, a6
-; RV64-NEXT:    add a5, a5, a7
-; RV64-NEXT:    add a5, a5, t0
-; RV64-NEXT:    add a0, a0, a5
-; RV64-NEXT:    add t1, t1, t2
-; RV64-NEXT:    add t1, t1, t3
-; RV64-NEXT:    add t1, t1, t4
-; RV64-NEXT:    add t1, t1, t5
-; RV64-NEXT:    addw a0, a0, t1
+; RV64-NEXT:    add a0, t6, a0
+; RV64-NEXT:    add a3, a3, a4
+; RV64-NEXT:    add a3, a3, a5
+; RV64-NEXT:    add a3, a3, a6
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    add a7, a7, t0
+; RV64-NEXT:    add a7, a7, t1
+; RV64-NEXT:    add a7, a7, t2
+; RV64-NEXT:    add a0, a0, a7
+; RV64-NEXT:    add t3, t3, t4
+; RV64-NEXT:    add t3, t3, t5
+; RV64-NEXT:    addw a0, a0, t3
 ; RV64-NEXT:    ret
   %e0 = extractelement <16 x i32> %v, i32 0
   %e1 = extractelement <16 x i32> %v, i32 1

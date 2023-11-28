@@ -174,8 +174,31 @@ unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *DefMI, unsigned DefOperIdx,
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
-  const unsigned InstrLatency = computeInstrLatency(DefMI);
-  const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+  unsigned InstrLatency = computeInstrLatency(DefMI);
+  unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+
+  // We fall back to computing the default latency in many cases. However, this
+  // doesn't take into account the distance between DefMI and UseMI, which would
+  // approximately be the number of cycles elapsed between the def and the use
+  // (quite an approximate, since we don't have the SchedModel). A conservative
+  // approximation would then be to check that this fallback latency is much
+  // less than this distance, and set it to zero if so.
+  const MachineBasicBlock *DefBB = DefMI->getParent();
+  const MachineBasicBlock *UseBB = UseMI ? UseMI->getParent() : nullptr;
+  if (DefBB && DefBB == UseBB) {
+    auto DefIt = find_if(DefBB->instrs(), [DefMI](const MachineInstr &MI) {
+      return &MI == DefMI;
+    });
+    auto UseIt = find_if(DefBB->instrs(), [UseMI](const MachineInstr &MI) {
+      return &MI == UseMI;
+    });
+    unsigned DefUseDist = std::distance(DefIt, UseIt) - 1;
+    const unsigned MulFactor = 22; // Chosen experimentally
+    if (MulFactor * InstrLatency < DefUseDist)
+      InstrLatency = 0;
+    if (MulFactor * DefaultDefLatency < DefUseDist)
+      DefaultDefLatency = 0;
+  }
 
   if (!hasInstrSchedModel() && !hasInstrItineraries())
     return InstrLatency;

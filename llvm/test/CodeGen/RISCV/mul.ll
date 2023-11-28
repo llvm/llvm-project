@@ -1440,11 +1440,11 @@ define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a4, s9, s5
 ; RV32I-NEXT:    sltu a5, s8, s7
 ; RV32I-NEXT:    add a5, s6, a5
-; RV32I-NEXT:    add a4, a5, a4
 ; RV32I-NEXT:    add a1, a1, s3
 ; RV32I-NEXT:    sltu a0, s2, a0
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    add a0, a4, a0
+; RV32I-NEXT:    add a0, a5, a0
+; RV32I-NEXT:    add a0, a0, a4
 ; RV32I-NEXT:    add a1, a0, a3
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload

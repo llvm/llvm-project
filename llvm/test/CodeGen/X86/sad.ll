@@ -383,6 +383,7 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:  # %bb.2: # %middle.block
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
+; AVX1-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm4, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm7
@@ -393,9 +394,9 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm6, %xmm2
-; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm6, %xmm1
+; AVX1-NEXT:    vpaddd %xmm5, %xmm3, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

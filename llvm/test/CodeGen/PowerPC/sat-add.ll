@@ -780,8 +780,8 @@ define <4 x i128> @sadd(<4 x i128> %a, <4 x i128> %b) local_unnamed_addr {
 ; CHECK-NEXT:    cmpd 7, 3, 4
 ; CHECK-NEXT:    mfvsrd 4, 42
 ; CHECK-NEXT:    sradi 3, 3, 63
-; CHECK-NEXT:    mtocrf 32, 12
 ; CHECK-NEXT:    crnor 21, 22, 21
+; CHECK-NEXT:    mtocrf 32, 12
 ; CHECK-NEXT:    crandc 23, 28, 26
 ; CHECK-NEXT:    crand 24, 26, 0
 ; CHECK-NEXT:    cmpld 4, 5

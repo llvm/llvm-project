@@ -224,30 +224,30 @@ define arm_aapcs_vfpcc <12 x float> @abp90c12(<12 x float> %a, <12 x float> %b, 
 ; CHECK-NEXT:    vldr s31, [sp, #188]
 ; CHECK-NEXT:    vmov.f32 s10, s4
 ; CHECK-NEXT:    vldr s30, [sp, #180]
-; CHECK-NEXT:    vmov.f32 s21, s15
-; CHECK-NEXT:    vldr s29, [sp, #172]
 ; CHECK-NEXT:    vmov.f32 s5, s3
-; CHECK-NEXT:    vldr s28, [sp, #164]
+; CHECK-NEXT:    vldr s29, [sp, #172]
 ; CHECK-NEXT:    vmov.f32 s4, s1
+; CHECK-NEXT:    vldr s28, [sp, #164]
 ; CHECK-NEXT:    vmov.f32 s24, s9
 ; CHECK-NEXT:    vmov.f32 s16, s12
 ; CHECK-NEXT:    vstrw.32 q6, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vmov.f32 s12, s8
 ; CHECK-NEXT:    vldr s27, [sp, #184]
-; CHECK-NEXT:    vmov.f32 s17, s14
+; CHECK-NEXT:    vmov.f32 s21, s15
 ; CHECK-NEXT:    vldr s26, [sp, #176]
 ; CHECK-NEXT:    vmov.f32 s9, s2
 ; CHECK-NEXT:    vldr s25, [sp, #168]
 ; CHECK-NEXT:    vmov.f32 s8, s0
 ; CHECK-NEXT:    vmul.f32 q0, q5, q1
+; CHECK-NEXT:    vmov.f32 s17, s14
 ; CHECK-NEXT:    vmul.f32 q1, q4, q1
 ; CHECK-NEXT:    vneg.f32 q0, q0
 ; CHECK-NEXT:    vldr s24, [sp, #160]
 ; CHECK-NEXT:    vfma.f32 q1, q5, q2
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q3, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vsub.f32 q6, q6, q1
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q3, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vldr s13, [sp, #156]
 ; CHECK-NEXT:    vfma.f32 q1, q4, q2
 ; CHECK-NEXT:    vldr s12, [sp, #148]

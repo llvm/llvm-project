@@ -12088,38 +12088,38 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 2
 ; PWR5-NEXT:    subfic 3, 3, 2
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -12133,38 +12133,38 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 2
 ; PWR6-NEXT:    subfic 3, 3, 2
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -12222,39 +12222,39 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 3
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -12267,39 +12267,39 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 3
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -12356,38 +12356,38 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 3
 ; PWR5-NEXT:    subfic 3, 3, 3
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -12401,38 +12401,38 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 3
 ; PWR6-NEXT:    subfic 3, 3, 3
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -12490,39 +12490,39 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 4
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -12535,39 +12535,39 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 4
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -12624,38 +12624,38 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 4
 ; PWR5-NEXT:    subfic 3, 3, 4
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -12669,38 +12669,38 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 4
 ; PWR6-NEXT:    subfic 3, 3, 4
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -12758,39 +12758,39 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 5
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -12803,39 +12803,39 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 5
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -12892,38 +12892,38 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 5
 ; PWR5-NEXT:    subfic 3, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -12937,38 +12937,38 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 5
 ; PWR6-NEXT:    subfic 3, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -13026,39 +13026,39 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 6
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -13071,39 +13071,39 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 6
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -13160,38 +13160,38 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 6
 ; PWR5-NEXT:    subfic 3, 3, 6
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -13205,38 +13205,38 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 6
 ; PWR6-NEXT:    subfic 3, 3, 6
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -13294,39 +13294,39 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 7
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -13339,39 +13339,39 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 7
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -13428,38 +13428,38 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 7
 ; PWR5-NEXT:    subfic 3, 3, 7
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -13473,38 +13473,38 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 7
 ; PWR6-NEXT:    subfic 3, 3, 7
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -13562,39 +13562,39 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 8
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -13607,39 +13607,39 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 8
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -13696,38 +13696,38 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 8
 ; PWR5-NEXT:    subfic 3, 3, 8
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -13741,38 +13741,38 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 8
 ; PWR6-NEXT:    subfic 3, 3, 8
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -13830,39 +13830,39 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 9
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -13875,39 +13875,39 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 9
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -13964,38 +13964,38 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 9
 ; PWR5-NEXT:    subfic 3, 3, 9
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -14009,38 +14009,38 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 9
 ; PWR6-NEXT:    subfic 3, 3, 9
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -14098,39 +14098,39 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 10
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -14143,39 +14143,39 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 10
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -14232,38 +14232,38 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 10
 ; PWR5-NEXT:    subfic 3, 3, 10
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -14277,38 +14277,38 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 10
 ; PWR6-NEXT:    subfic 3, 3, 10
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -14366,39 +14366,39 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 11
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -14411,39 +14411,39 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 11
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -14500,38 +14500,38 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 11
 ; PWR5-NEXT:    subfic 3, 3, 11
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -14545,38 +14545,38 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 11
 ; PWR6-NEXT:    subfic 3, 3, 11
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -14634,39 +14634,39 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 12
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -14679,39 +14679,39 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 12
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -14768,38 +14768,38 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 12
 ; PWR5-NEXT:    subfic 3, 3, 12
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -14813,38 +14813,38 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 12
 ; PWR6-NEXT:    subfic 3, 3, 12
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -14902,39 +14902,39 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 13
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -14947,39 +14947,39 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 13
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -15036,38 +15036,38 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 13
 ; PWR5-NEXT:    subfic 3, 3, 13
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -15081,38 +15081,38 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 13
 ; PWR6-NEXT:    subfic 3, 3, 13
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -15170,39 +15170,39 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 14
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -15215,39 +15215,39 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 14
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -15304,38 +15304,38 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 14
 ; PWR5-NEXT:    subfic 3, 3, 14
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -15349,38 +15349,38 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 14
 ; PWR6-NEXT:    subfic 3, 3, 14
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -15438,39 +15438,39 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 15
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -15483,39 +15483,39 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 15
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -15572,38 +15572,38 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 15
 ; PWR5-NEXT:    subfic 3, 3, 15
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -15617,38 +15617,38 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 15
 ; PWR6-NEXT:    subfic 3, 3, 15
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -15706,39 +15706,39 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 16
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -15751,39 +15751,39 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 16
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -15840,38 +15840,38 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 16
 ; PWR5-NEXT:    subfic 3, 3, 16
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -15885,38 +15885,38 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 16
 ; PWR6-NEXT:    subfic 3, 3, 16
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -15974,39 +15974,39 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 17
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -16019,39 +16019,39 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 17
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -16108,38 +16108,38 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 17
 ; PWR5-NEXT:    subfic 3, 3, 17
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -16153,38 +16153,38 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 17
 ; PWR6-NEXT:    subfic 3, 3, 17
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -16242,39 +16242,39 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 18
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -16287,39 +16287,39 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 18
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -16376,38 +16376,38 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 18
 ; PWR5-NEXT:    subfic 3, 3, 18
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -16421,38 +16421,38 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 18
 ; PWR6-NEXT:    subfic 3, 3, 18
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -16510,39 +16510,39 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 19
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -16555,39 +16555,39 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 19
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -16644,38 +16644,38 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 19
 ; PWR5-NEXT:    subfic 3, 3, 19
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -16689,38 +16689,38 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 19
 ; PWR6-NEXT:    subfic 3, 3, 19
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -16778,39 +16778,39 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 20
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -16823,39 +16823,39 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 20
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -16912,38 +16912,38 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 20
 ; PWR5-NEXT:    subfic 3, 3, 20
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -16957,38 +16957,38 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 20
 ; PWR6-NEXT:    subfic 3, 3, 20
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -17046,39 +17046,39 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 21
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -17091,39 +17091,39 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 21
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -17180,38 +17180,38 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 21
 ; PWR5-NEXT:    subfic 3, 3, 21
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -17225,38 +17225,38 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 21
 ; PWR6-NEXT:    subfic 3, 3, 21
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -17314,39 +17314,39 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 22
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -17359,39 +17359,39 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 22
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -17448,38 +17448,38 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 22
 ; PWR5-NEXT:    subfic 3, 3, 22
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -17493,38 +17493,38 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 22
 ; PWR6-NEXT:    subfic 3, 3, 22
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -17582,39 +17582,39 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 23
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -17627,39 +17627,39 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 23
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -17716,38 +17716,38 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 23
 ; PWR5-NEXT:    subfic 3, 3, 23
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -17761,38 +17761,38 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 23
 ; PWR6-NEXT:    subfic 3, 3, 23
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -17850,39 +17850,39 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 24
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -17895,39 +17895,39 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 24
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -17984,38 +17984,38 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 24
 ; PWR5-NEXT:    subfic 3, 3, 24
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -18029,38 +18029,38 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 24
 ; PWR6-NEXT:    subfic 3, 3, 24
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -18118,39 +18118,39 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 25
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -18163,39 +18163,39 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 25
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -18252,38 +18252,38 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 25
 ; PWR5-NEXT:    subfic 3, 3, 25
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -18297,38 +18297,38 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 25
 ; PWR6-NEXT:    subfic 3, 3, 25
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -18386,39 +18386,39 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 26
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -18431,39 +18431,39 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 26
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -18520,38 +18520,38 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 26
 ; PWR5-NEXT:    subfic 3, 3, 26
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -18565,38 +18565,38 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 26
 ; PWR6-NEXT:    subfic 3, 3, 26
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -18654,39 +18654,39 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 27
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -18699,39 +18699,39 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 27
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -18788,38 +18788,38 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 27
 ; PWR5-NEXT:    subfic 3, 3, 27
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -18833,38 +18833,38 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 27
 ; PWR6-NEXT:    subfic 3, 3, 27
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -18922,39 +18922,39 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 28
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -18967,39 +18967,39 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 28
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -19056,38 +19056,38 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 28
 ; PWR5-NEXT:    subfic 3, 3, 28
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -19101,38 +19101,38 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 28
 ; PWR6-NEXT:    subfic 3, 3, 28
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -19190,39 +19190,39 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 29
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -19235,39 +19235,39 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 29
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -19324,38 +19324,38 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 29
 ; PWR5-NEXT:    subfic 3, 3, 29
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -19369,38 +19369,38 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 29
 ; PWR6-NEXT:    subfic 3, 3, 29
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -19458,39 +19458,39 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 30
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -19503,39 +19503,39 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 30
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -19592,38 +19592,38 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 30
 ; PWR5-NEXT:    subfic 3, 3, 30
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -19637,38 +19637,38 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 30
 ; PWR6-NEXT:    subfic 3, 3, 30
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -19726,39 +19726,39 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 31
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -19771,39 +19771,39 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 31
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -19860,38 +19860,38 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 31
 ; PWR5-NEXT:    subfic 3, 3, 31
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -19905,38 +19905,38 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 31
 ; PWR6-NEXT:    subfic 3, 3, 31
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -19994,39 +19994,39 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 32
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -20039,39 +20039,39 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 32
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -20128,38 +20128,38 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 32
 ; PWR5-NEXT:    subfic 3, 3, 32
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -20173,38 +20173,38 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 32
 ; PWR6-NEXT:    subfic 3, 3, 32
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -20262,39 +20262,39 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 33
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -20307,39 +20307,39 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 33
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -20396,38 +20396,38 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 33
 ; PWR5-NEXT:    subfic 3, 3, 33
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -20441,38 +20441,38 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 33
 ; PWR6-NEXT:    subfic 3, 3, 33
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -20530,39 +20530,39 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 34
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -20575,39 +20575,39 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 34
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -20664,38 +20664,38 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 34
 ; PWR5-NEXT:    subfic 3, 3, 34
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -20709,38 +20709,38 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 34
 ; PWR6-NEXT:    subfic 3, 3, 34
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -20798,39 +20798,39 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 35
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -20843,39 +20843,39 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 35
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -20932,38 +20932,38 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 35
 ; PWR5-NEXT:    subfic 3, 3, 35
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -20977,38 +20977,38 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 35
 ; PWR6-NEXT:    subfic 3, 3, 35
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -21066,39 +21066,39 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 36
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -21111,39 +21111,39 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 36
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -21200,38 +21200,38 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 36
 ; PWR5-NEXT:    subfic 3, 3, 36
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -21245,38 +21245,38 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 36
 ; PWR6-NEXT:    subfic 3, 3, 36
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -21334,39 +21334,39 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 37
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -21379,39 +21379,39 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 37
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -21468,38 +21468,38 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 37
 ; PWR5-NEXT:    subfic 3, 3, 37
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -21513,38 +21513,38 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 37
 ; PWR6-NEXT:    subfic 3, 3, 37
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -21602,39 +21602,39 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 38
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -21647,39 +21647,39 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 38
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -21736,38 +21736,38 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 38
 ; PWR5-NEXT:    subfic 3, 3, 38
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -21781,38 +21781,38 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 38
 ; PWR6-NEXT:    subfic 3, 3, 38
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -21870,39 +21870,39 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 39
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -21915,39 +21915,39 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 39
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -22004,38 +22004,38 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 39
 ; PWR5-NEXT:    subfic 3, 3, 39
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -22049,38 +22049,38 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 39
 ; PWR6-NEXT:    subfic 3, 3, 39
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -22138,39 +22138,39 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 40
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -22183,39 +22183,39 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 40
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -22272,38 +22272,38 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 40
 ; PWR5-NEXT:    subfic 3, 3, 40
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -22317,38 +22317,38 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 40
 ; PWR6-NEXT:    subfic 3, 3, 40
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -22406,39 +22406,39 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 41
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -22451,39 +22451,39 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 41
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -22540,38 +22540,38 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 41
 ; PWR5-NEXT:    subfic 3, 3, 41
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -22585,38 +22585,38 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 41
 ; PWR6-NEXT:    subfic 3, 3, 41
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -22674,39 +22674,39 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 42
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -22719,39 +22719,39 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 42
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -22808,38 +22808,38 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 42
 ; PWR5-NEXT:    subfic 3, 3, 42
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -22853,38 +22853,38 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 42
 ; PWR6-NEXT:    subfic 3, 3, 42
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -22942,39 +22942,39 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 43
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -22987,39 +22987,39 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 43
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -23076,38 +23076,38 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 43
 ; PWR5-NEXT:    subfic 3, 3, 43
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -23121,38 +23121,38 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 43
 ; PWR6-NEXT:    subfic 3, 3, 43
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -23210,39 +23210,39 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 44
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -23255,39 +23255,39 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 44
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -23344,38 +23344,38 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 44
 ; PWR5-NEXT:    subfic 3, 3, 44
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -23389,38 +23389,38 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 44
 ; PWR6-NEXT:    subfic 3, 3, 44
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -23478,39 +23478,39 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 45
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -23523,39 +23523,39 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 45
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -23612,38 +23612,38 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 45
 ; PWR5-NEXT:    subfic 3, 3, 45
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -23657,38 +23657,38 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 45
 ; PWR6-NEXT:    subfic 3, 3, 45
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -23746,39 +23746,39 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 46
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -23791,39 +23791,39 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 46
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -23880,38 +23880,38 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 46
 ; PWR5-NEXT:    subfic 3, 3, 46
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -23925,38 +23925,38 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 46
 ; PWR6-NEXT:    subfic 3, 3, 46
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -24014,39 +24014,39 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 47
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -24059,39 +24059,39 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 47
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -24148,38 +24148,38 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 47
 ; PWR5-NEXT:    subfic 3, 3, 47
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -24193,38 +24193,38 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 47
 ; PWR6-NEXT:    subfic 3, 3, 47
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -24282,39 +24282,39 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 48
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -24327,39 +24327,39 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 48
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -24416,38 +24416,38 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 48
 ; PWR5-NEXT:    subfic 3, 3, 48
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -24461,38 +24461,38 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 48
 ; PWR6-NEXT:    subfic 3, 3, 48
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -24550,39 +24550,39 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 49
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -24595,39 +24595,39 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 49
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -24684,38 +24684,38 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 49
 ; PWR5-NEXT:    subfic 3, 3, 49
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -24729,38 +24729,38 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 49
 ; PWR6-NEXT:    subfic 3, 3, 49
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -24818,39 +24818,39 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 50
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -24863,39 +24863,39 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 50
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -24952,38 +24952,38 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 50
 ; PWR5-NEXT:    subfic 3, 3, 50
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -24997,38 +24997,38 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 50
 ; PWR6-NEXT:    subfic 3, 3, 50
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -25086,39 +25086,39 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 51
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -25131,39 +25131,39 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 51
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -25220,38 +25220,38 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 51
 ; PWR5-NEXT:    subfic 3, 3, 51
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -25265,38 +25265,38 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 51
 ; PWR6-NEXT:    subfic 3, 3, 51
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -25354,39 +25354,39 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 52
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -25399,39 +25399,39 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 52
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -25488,38 +25488,38 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 52
 ; PWR5-NEXT:    subfic 3, 3, 52
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -25533,38 +25533,38 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 52
 ; PWR6-NEXT:    subfic 3, 3, 52
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -25622,39 +25622,39 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 53
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -25667,39 +25667,39 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 53
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -25756,38 +25756,38 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 53
 ; PWR5-NEXT:    subfic 3, 3, 53
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -25801,38 +25801,38 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 53
 ; PWR6-NEXT:    subfic 3, 3, 53
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -25890,39 +25890,39 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 54
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -25935,39 +25935,39 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 54
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -26024,38 +26024,38 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 54
 ; PWR5-NEXT:    subfic 3, 3, 54
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -26069,38 +26069,38 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 54
 ; PWR6-NEXT:    subfic 3, 3, 54
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -26158,39 +26158,39 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 55
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -26203,39 +26203,39 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 55
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -26292,38 +26292,38 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 55
 ; PWR5-NEXT:    subfic 3, 3, 55
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -26337,38 +26337,38 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 55
 ; PWR6-NEXT:    subfic 3, 3, 55
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -26426,39 +26426,39 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -26471,39 +26471,39 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -26560,38 +26560,38 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 56
 ; PWR5-NEXT:    subfic 3, 3, 56
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -26605,38 +26605,38 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 56
 ; PWR6-NEXT:    subfic 3, 3, 56
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -26694,39 +26694,39 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 57
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -26739,39 +26739,39 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 57
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -26828,38 +26828,38 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 57
 ; PWR5-NEXT:    subfic 3, 3, 57
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -26873,38 +26873,38 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 57
 ; PWR6-NEXT:    subfic 3, 3, 57
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -26962,39 +26962,39 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 58
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -27007,39 +27007,39 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 58
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -27096,38 +27096,38 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 58
 ; PWR5-NEXT:    subfic 3, 3, 58
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -27141,38 +27141,38 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 58
 ; PWR6-NEXT:    subfic 3, 3, 58
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -27230,39 +27230,39 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 59
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -27275,39 +27275,39 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 59
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -27364,38 +27364,38 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 59
 ; PWR5-NEXT:    subfic 3, 3, 59
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -27409,38 +27409,38 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 59
 ; PWR6-NEXT:    subfic 3, 3, 59
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -27498,39 +27498,39 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 60
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -27543,39 +27543,39 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 60
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -27632,38 +27632,38 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 60
 ; PWR5-NEXT:    subfic 3, 3, 60
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -27677,38 +27677,38 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 60
 ; PWR6-NEXT:    subfic 3, 3, 60
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -27766,39 +27766,39 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 61
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -27811,39 +27811,39 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 61
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -27900,38 +27900,38 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 61
 ; PWR5-NEXT:    subfic 3, 3, 61
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -27945,38 +27945,38 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 61
 ; PWR6-NEXT:    subfic 3, 3, 61
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -28034,39 +28034,39 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 62
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -28079,39 +28079,39 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 62
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3
@@ -28168,38 +28168,38 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    li 5, 62
 ; PWR5-NEXT:    subfic 3, 3, 62
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
@@ -28213,38 +28213,38 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    li 5, 62
 ; PWR6-NEXT:    subfic 3, 3, 62
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
@@ -28302,39 +28302,39 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ; PWR5-NEXT:    lis 5, 21845
 ; PWR5-NEXT:    lis 6, 13107
 ; PWR5-NEXT:    ori 5, 5, 21845
-; PWR5-NEXT:    rotldi 8, 4, 63
-; PWR5-NEXT:    rotldi 9, 3, 63
+; PWR5-NEXT:    rotldi 8, 3, 63
+; PWR5-NEXT:    rotldi 9, 4, 63
 ; PWR5-NEXT:    rldimi 5, 5, 32, 0
-; PWR5-NEXT:    and 8, 8, 5
-; PWR5-NEXT:    and 5, 9, 5
+; PWR5-NEXT:    and 9, 9, 5
+; PWR5-NEXT:    and 5, 8, 5
 ; PWR5-NEXT:    ori 6, 6, 13107
 ; PWR5-NEXT:    sub 3, 3, 5
 ; PWR5-NEXT:    rldimi 6, 6, 32, 0
-; PWR5-NEXT:    sub 4, 4, 8
-; PWR5-NEXT:    and 8, 3, 6
+; PWR5-NEXT:    sub 4, 4, 9
+; PWR5-NEXT:    and 9, 3, 6
 ; PWR5-NEXT:    rotldi 3, 3, 62
 ; PWR5-NEXT:    and 3, 3, 6
 ; PWR5-NEXT:    lis 7, 3855
 ; PWR5-NEXT:    and 5, 4, 6
 ; PWR5-NEXT:    rotldi 4, 4, 62
-; PWR5-NEXT:    add 3, 8, 3
-; PWR5-NEXT:    lis 9, 257
+; PWR5-NEXT:    add 3, 9, 3
+; PWR5-NEXT:    lis 8, 257
 ; PWR5-NEXT:    ori 7, 7, 3855
 ; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    rldicl 6, 3, 60, 4
-; PWR5-NEXT:    ori 9, 9, 257
+; PWR5-NEXT:    ori 8, 8, 257
 ; PWR5-NEXT:    rldimi 7, 7, 32, 0
 ; PWR5-NEXT:    add 4, 5, 4
 ; PWR5-NEXT:    add 3, 3, 6
-; PWR5-NEXT:    rldimi 9, 9, 32, 0
+; PWR5-NEXT:    rldimi 8, 8, 32, 0
 ; PWR5-NEXT:    rldicl 5, 4, 60, 4
 ; PWR5-NEXT:    and 3, 3, 7
 ; PWR5-NEXT:    add 4, 4, 5
-; PWR5-NEXT:    mulld 3, 3, 9
+; PWR5-NEXT:    mulld 3, 3, 8
 ; PWR5-NEXT:    and 4, 4, 7
 ; PWR5-NEXT:    rldicl 3, 3, 8, 56
 ; PWR5-NEXT:    li 5, 63
-; PWR5-NEXT:    mulld 4, 4, 9
+; PWR5-NEXT:    mulld 4, 4, 8
 ; PWR5-NEXT:    subc 6, 3, 5
 ; PWR5-NEXT:    rldicl 4, 4, 8, 56
 ; PWR5-NEXT:    subfe 3, 3, 3
@@ -28347,39 +28347,39 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ; PWR6-NEXT:    lis 5, 21845
 ; PWR6-NEXT:    lis 6, 13107
 ; PWR6-NEXT:    ori 5, 5, 21845
-; PWR6-NEXT:    rotldi 8, 4, 63
-; PWR6-NEXT:    rotldi 9, 3, 63
+; PWR6-NEXT:    rotldi 8, 3, 63
+; PWR6-NEXT:    rotldi 9, 4, 63
 ; PWR6-NEXT:    rldimi 5, 5, 32, 0
-; PWR6-NEXT:    and 8, 8, 5
-; PWR6-NEXT:    and 5, 9, 5
+; PWR6-NEXT:    and 9, 9, 5
+; PWR6-NEXT:    and 5, 8, 5
 ; PWR6-NEXT:    ori 6, 6, 13107
 ; PWR6-NEXT:    sub 3, 3, 5
 ; PWR6-NEXT:    rldimi 6, 6, 32, 0
-; PWR6-NEXT:    sub 4, 4, 8
-; PWR6-NEXT:    and 8, 3, 6
+; PWR6-NEXT:    sub 4, 4, 9
+; PWR6-NEXT:    and 9, 3, 6
 ; PWR6-NEXT:    rotldi 3, 3, 62
 ; PWR6-NEXT:    and 3, 3, 6
 ; PWR6-NEXT:    lis 7, 3855
 ; PWR6-NEXT:    and 5, 4, 6
 ; PWR6-NEXT:    rotldi 4, 4, 62
-; PWR6-NEXT:    add 3, 8, 3
-; PWR6-NEXT:    lis 9, 257
+; PWR6-NEXT:    add 3, 9, 3
+; PWR6-NEXT:    lis 8, 257
 ; PWR6-NEXT:    ori 7, 7, 3855
 ; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    rldicl 6, 3, 60, 4
-; PWR6-NEXT:    ori 9, 9, 257
+; PWR6-NEXT:    ori 8, 8, 257
 ; PWR6-NEXT:    rldimi 7, 7, 32, 0
 ; PWR6-NEXT:    add 4, 5, 4
 ; PWR6-NEXT:    add 3, 3, 6
-; PWR6-NEXT:    rldimi 9, 9, 32, 0
+; PWR6-NEXT:    rldimi 8, 8, 32, 0
 ; PWR6-NEXT:    rldicl 5, 4, 60, 4
 ; PWR6-NEXT:    and 3, 3, 7
 ; PWR6-NEXT:    add 4, 4, 5
-; PWR6-NEXT:    mulld 3, 3, 9
+; PWR6-NEXT:    mulld 3, 3, 8
 ; PWR6-NEXT:    and 4, 4, 7
 ; PWR6-NEXT:    rldicl 3, 3, 8, 56
 ; PWR6-NEXT:    li 5, 63
-; PWR6-NEXT:    mulld 4, 4, 9
+; PWR6-NEXT:    mulld 4, 4, 8
 ; PWR6-NEXT:    subc 6, 3, 5
 ; PWR6-NEXT:    rldicl 4, 4, 8, 56
 ; PWR6-NEXT:    subfe 3, 3, 3

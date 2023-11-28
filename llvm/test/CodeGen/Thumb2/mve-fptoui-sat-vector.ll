@@ -3352,8 +3352,8 @@ define arm_aapcs_vfpcc <8 x i1> @test_unsigned_v8f16_v8i1(<8 x half> %f) {
 ; CHECK-NEXT:    vcvtt.f32.f16 s8, s3
 ; CHECK-NEXT:    vcvtb.f32.f16 s10, s3
 ; CHECK-NEXT:    vcvtb.f32.f16 s3, s0
-; CHECK-NEXT:    vmov.f32 s6, #1.000000e+00
 ; CHECK-NEXT:    vmaxnm.f32 s3, s3, s4
+; CHECK-NEXT:    vmov.f32 s6, #1.000000e+00
 ; CHECK-NEXT:    vminnm.f32 s3, s3, s6
 ; CHECK-NEXT:    vcvtt.f32.f16 s0, s0
 ; CHECK-NEXT:    vcvt.u32.f32 s3, s3
