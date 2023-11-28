@@ -1727,8 +1727,9 @@ void llvm::SplitBlockAndInsertForEachLane(
   }
 }
 
-BranchInst *llvm::GetIfConditionFromMergePoint(BasicBlock *BB, BasicBlock *&IfTrue,
-                                 BasicBlock *&IfFalse) {
+BranchInst *llvm::GetIfConditionFromMergePoint(BasicBlock *BB,
+                                               BasicBlock *&IfTrue,
+                                               BasicBlock *&IfFalse) {
   PHINode *SomePHI = dyn_cast<PHINode>(BB->begin());
   BasicBlock *Pred1 = nullptr;
   BasicBlock *Pred2 = nullptr;
@@ -1821,19 +1822,12 @@ BranchInst *llvm::GetIfConditionFromMergePoint(BasicBlock *BB, BasicBlock *&IfTr
 
 BasicBlock *llvm::GetIfConditionFromDom(BasicBlock *DomBB, BasicBlock *&IfTrue,
                                         BasicBlock *&IfFalse) {
-  BranchInst* BI = cast<BranchInst>(DomBB->getTerminator());
+  BranchInst *BI = cast<BranchInst>(DomBB->getTerminator());
   BasicBlock *Succ1 = BI->getSuccessor(0);
   BasicBlock *Succ2 = BI->getSuccessor(1);
 
   if (!Succ1->getSinglePredecessor() || !Succ2->getSinglePredecessor() ||
       Succ1 == Succ2 || Succ1 == DomBB || Succ2 == DomBB)
-    return nullptr;
-
-  // We can only handle branches.  Other control flow will be lowered to
-  // branches if possible anyway.
-  BranchInst *Succ1Br = dyn_cast<BranchInst>(Succ1->getTerminator());
-  BranchInst *Succ2Br = dyn_cast<BranchInst>(Succ2->getTerminator());
-  if (!Succ1Br || !Succ2Br)
     return nullptr;
 
   if (Succ1->getSingleSuccessor() == Succ2) {
@@ -1847,6 +1841,13 @@ BasicBlock *llvm::GetIfConditionFromDom(BasicBlock *DomBB, BasicBlock *&IfTrue,
     IfFalse = Succ2;
     return Succ1;
   }
+
+  // We can only handle branches.  Other control flow will be lowered to
+  // branches if possible anyway.
+  BranchInst *Succ1Br = dyn_cast<BranchInst>(Succ1->getTerminator());
+  BranchInst *Succ2Br = dyn_cast<BranchInst>(Succ2->getTerminator());
+  if (!Succ1Br || !Succ2Br)
+    return nullptr;
 
   auto *CommonDest = Succ1->getSingleSuccessor();
   if (CommonDest && CommonDest != DomBB &&

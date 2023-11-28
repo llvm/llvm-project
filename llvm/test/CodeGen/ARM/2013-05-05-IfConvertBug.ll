@@ -309,16 +309,15 @@ define i32 @wrapDistance(i32 %tx, i32 %sx, i32 %w) {
 ; CHECK-NEXT:    suble r0, r2, #1
 ; CHECK-NEXT:    bxle lr
 ; CHECK-NEXT:  LBB4_1: @ %if.else
-; CHECK-NEXT:    subs r2, #120
+; CHECK-NEXT:    subs r3, r1, r0
+; CHECK-NEXT:    cmp r0, #120
+; CHECK-NEXT:    sub.w r2, r2, #120
+; CHECK-NEXT:    mov r0, r3
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    addlt r0, r1, #1
 ; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    bge LBB4_3
-; CHECK-NEXT:  @ %bb.2: @ %if.else
-; CHECK-NEXT:    cmp r0, #119
-; CHECK-NEXT:    itt le
-; CHECK-NEXT:    addle r0, r1, #1
-; CHECK-NEXT:    bxle lr
-; CHECK-NEXT:  LBB4_3: @ %if.end5
-; CHECK-NEXT:    subs r0, r1, r0
+; CHECK-NEXT:    it ge
+; CHECK-NEXT:    movge r0, r3
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-V8-LABEL: wrapDistance:
@@ -328,16 +327,15 @@ define i32 @wrapDistance(i32 %tx, i32 %sx, i32 %w) {
 ; CHECK-V8-NEXT:    suble r0, r2, #1
 ; CHECK-V8-NEXT:    bxle lr
 ; CHECK-V8-NEXT:  .LBB4_1: @ %if.else
-; CHECK-V8-NEXT:    subs r2, #120
+; CHECK-V8-NEXT:    subs r3, r1, r0
+; CHECK-V8-NEXT:    cmp r0, #120
+; CHECK-V8-NEXT:    sub.w r2, r2, #120
+; CHECK-V8-NEXT:    mov r0, r3
+; CHECK-V8-NEXT:    it lt
+; CHECK-V8-NEXT:    addlt r0, r1, #1
 ; CHECK-V8-NEXT:    cmp r2, r1
-; CHECK-V8-NEXT:    bge .LBB4_3
-; CHECK-V8-NEXT:  @ %bb.2: @ %if.else
-; CHECK-V8-NEXT:    cmp r0, #119
-; CHECK-V8-NEXT:    itt le
-; CHECK-V8-NEXT:    addle r0, r1, #1
-; CHECK-V8-NEXT:    bxle lr
-; CHECK-V8-NEXT:  .LBB4_3: @ %if.end5
-; CHECK-V8-NEXT:    subs r0, r1, r0
+; CHECK-V8-NEXT:    it ge
+; CHECK-V8-NEXT:    movge r0, r3
 ; CHECK-V8-NEXT:    bx lr
 ;
 ; CHECK-RESTRICT-IT-LABEL: wrapDistance:
@@ -348,17 +346,16 @@ define i32 @wrapDistance(i32 %tx, i32 %sx, i32 %w) {
 ; CHECK-RESTRICT-IT-NEXT:    subs r0, r2, #1
 ; CHECK-RESTRICT-IT-NEXT:    bx lr
 ; CHECK-RESTRICT-IT-NEXT:  .LBB4_2: @ %if.else
+; CHECK-RESTRICT-IT-NEXT:    subs r3, r1, r0
+; CHECK-RESTRICT-IT-NEXT:    mov r12, r0
+; CHECK-RESTRICT-IT-NEXT:    adds r0, r1, #1
+; CHECK-RESTRICT-IT-NEXT:    cmp.w r12, #120
+; CHECK-RESTRICT-IT-NEXT:    it ge
+; CHECK-RESTRICT-IT-NEXT:    movge r0, r3
 ; CHECK-RESTRICT-IT-NEXT:    subs r2, #120
 ; CHECK-RESTRICT-IT-NEXT:    cmp r2, r1
-; CHECK-RESTRICT-IT-NEXT:    bge .LBB4_5
-; CHECK-RESTRICT-IT-NEXT:  @ %bb.3: @ %if.else
-; CHECK-RESTRICT-IT-NEXT:    cmp r0, #119
-; CHECK-RESTRICT-IT-NEXT:    bgt .LBB4_5
-; CHECK-RESTRICT-IT-NEXT:  @ %bb.4: @ %if.then4
-; CHECK-RESTRICT-IT-NEXT:    adds r0, r1, #1
-; CHECK-RESTRICT-IT-NEXT:    bx lr
-; CHECK-RESTRICT-IT-NEXT:  .LBB4_5: @ %if.end5
-; CHECK-RESTRICT-IT-NEXT:    subs r0, r1, r0
+; CHECK-RESTRICT-IT-NEXT:    it ge
+; CHECK-RESTRICT-IT-NEXT:    movge r0, r3
 ; CHECK-RESTRICT-IT-NEXT:    bx lr
 entry:
   %cmp = icmp slt i32 %sx, 60

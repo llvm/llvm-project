@@ -693,8 +693,8 @@ define zeroext i1 @test17(i32 %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[FLAG:%.*]], label [[IF_END:%.*]] [
-; CHECK-NEXT:    i32 0, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 1, label [[IF_THEN2:%.*]]
+; CHECK-NEXT:      i32 0, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF_THEN2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[BLKSA:%.*]], [[NBLKS:%.*]]
@@ -744,8 +744,8 @@ define zeroext i1 @test18(i32 %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[FLAG:%.*]], label [[IF_THEN3:%.*]] [
-; CHECK-NEXT:    i32 0, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 1, label [[IF_THEN2:%.*]]
+; CHECK-NEXT:      i32 0, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF_THEN2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[BLKSA:%.*]], [[NBLKS:%.*]]
@@ -1285,11 +1285,11 @@ define void @test_sink_void_calls(i32 %x) {
 ; CHECK-LABEL: @test_sink_void_calls(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -1563,7 +1563,7 @@ end:
 define void @nontemporal(ptr %ptr, i1 %cond) {
 ; CHECK-LABEL: @nontemporal(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8, !nontemporal !7
+; CHECK-NEXT:    store i64 0, ptr [[PTR:%.*]], align 8, !nontemporal [[META7:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

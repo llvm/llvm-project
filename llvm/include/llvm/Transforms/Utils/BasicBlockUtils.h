@@ -596,7 +596,7 @@ void SplitBlockAndInsertForEachLane(
 /// This does no checking to see if the true/false blocks have large or unsavory
 /// instructions in them.
 BranchInst *GetIfConditionFromMergePoint(BasicBlock *BB, BasicBlock *&IfTrue,
-                           BasicBlock *&IfFalse);
+                                         BasicBlock *&IfFalse);
 
 /// Check whether BB is the dominant point of a if-region.
 /// If so, return the merge point of the if-region. Also, return by references
@@ -606,7 +606,8 @@ BranchInst *GetIfConditionFromMergePoint(BasicBlock *BB, BasicBlock *&IfTrue,
 /// This does no checking to see if the true/false blocks have large or unsavory
 /// instructions in them.
 ///
-/// NOTE: we assume that the terminator of DomBB is a conditional branch instruction. 
+/// NOTE: we assume that the terminator of DomBB is a conditional branch
+/// instruction.
 BasicBlock *GetIfConditionFromDom(BasicBlock *DomBB, BasicBlock *&IfTrue,
                                   BasicBlock *&IfFalse);
 

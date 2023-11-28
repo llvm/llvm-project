@@ -3422,7 +3422,7 @@ static bool FoldPHIOfIfRegion(BasicBlock *BB, BasicBlock *DomBlock,
     return false;
 
   // Track BBs that jumps into phi unconditionally, to handle the cases where
-  // one of {IfTrue, IfFalse} is DomBlock. 
+  // one of {IfTrue, IfFalse} is DomBlock.
   SmallVector<BasicBlock *, 2> UncondEnterBlocks;
   llvm::copy_if(
       SmallVector<BasicBlock *, 2>{IfTrue, IfFalse},
@@ -3570,23 +3570,21 @@ static bool FoldPHIOfIfRegion(BasicBlock *BB, BasicBlock *DomBlock,
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
   IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-  while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
+  for (PHINode &PN : make_early_inc_range(BB->phis())) {
     if (isa<FPMathOperator>(PN))
-      Builder.setFastMathFlags(PN->getFastMathFlags());
+      Builder.setFastMathFlags(PN.getFastMathFlags());
 
     // Change the PHI node into a select instruction.
-    Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
-    Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
+    Value *TrueVal = PN.getIncomingValueForBlock(IfTrue);
+    Value *FalseVal = PN.getIncomingValueForBlock(IfFalse);
 
     Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
-    if (PN->getNumIncomingValues() == 2) {
-      PN->replaceAllUsesWith(Sel);
-      Sel->takeName(PN);
-      PN->eraseFromParent();
+    if (PN.getNumIncomingValues() == 2) {
+      PN.replaceAllUsesWith(Sel);
+      Sel->takeName(&PN);
+      PN.eraseFromParent();
     } else {
-      PN->removeIncomingValue(IfTrue);
-      PN->removeIncomingValue(IfFalse);
-      PN->addIncoming(Sel, DomBlock);
+      PN.addIncoming(Sel, DomBlock);
     }
   }
 
@@ -7385,6 +7383,19 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
         if (PBI != BI && PBI->isConditional())
           if (mergeConditionalStores(PBI, BI, DTU, DL, TTI))
             return requestResimplify();
+
+  // Fold the merge-point phi of if-region.
+  BasicBlock *IfTrue;
+  BasicBlock *IfFalse;
+  if (Options.SpeculateBlocks)
+    if (BasicBlock *MergePoint = GetIfConditionFromDom(BB, IfTrue, IfFalse)) {
+      // Guarantee that the merge point is simplified before dominant point.
+      // FIXME: Prevent recursive calls.
+      if (simplifyOnce(MergePoint))
+        return requestResimplify();
+      if (FoldPHIOfIfRegion(MergePoint, BB, IfTrue, IfFalse, TTI, DTU, DL))
+        return requestResimplify();
+    }
 
   return false;
 }

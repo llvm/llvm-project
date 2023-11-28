@@ -420,7 +420,8 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
     return false;
 
   BasicBlock *IfTrue1, *IfFalse1;
-  BranchInst *DomBI1 = GetIfConditionFromMergePoint(SecondEntryBlock, IfTrue1, IfFalse1);
+  BranchInst *DomBI1 =
+      GetIfConditionFromMergePoint(SecondEntryBlock, IfTrue1, IfFalse1);
   if (!DomBI1)
     return false;
   Instruction *CInst1 = dyn_cast<Instruction>(DomBI1->getCondition());
