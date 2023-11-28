@@ -275,3 +275,7 @@ COMMON_FLAG(bool, test_only_emulate_no_memorymap, false,
 // program.
 COMMON_FLAG(bool, test_only_replace_dlopen_main_program, false,
             "TEST ONLY replace dlopen(<main program>,...) with dlopen(NULL)")
+
+COMMON_FLAG(bool, enable_symbolizer_markup, SANITIZER_FUCHSIA,
+            "Use sanitizer symbolizer markup, available on Linux "
+            "and always set true for Fuchsia.")

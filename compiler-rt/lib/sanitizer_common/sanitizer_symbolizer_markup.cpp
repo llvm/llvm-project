@@ -45,4 +45,23 @@ void MarkupStackTracePrinter::RenderFrame(InternalScopedString *buffer,
   buffer->AppendF(kFormatFrame, frame_no, address);
 }
 
+bool MarkupSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *stack) {
+  char buffer[kFormatFunctionMax];
+  internal_snprintf(buffer, sizeof(buffer), kFormatFunction, addr);
+  stack->info.function = internal_strdup(buffer);
+  return true;
+}
+
+bool MarkupSymbolizerTool::SymbolizeData(uptr addr, DataInfo *info) {
+  info->Clear();
+  info->start = addr;
+  return true;
+}
+
+const char *MarkupSymbolizerTool::Demangle(const char *name) {
+  static char buffer[kFormatDemangleMax];
+  internal_snprintf(buffer, sizeof(buffer), kFormatDemangle, name);
+  return buffer;
+}
+
 }  // namespace __sanitizer
