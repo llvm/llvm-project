@@ -4900,10 +4900,10 @@ the configuration (without a prefix: ``Auto``).
        int bar;                           int bar;
      } // namespace b                   } // namespace b
 
-.. _SkipMacroDefinition:
+.. _SkipMacroDefinitionBody:
 
-**SkipMacroDefinition** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinition>`
-  Do not format macro definitions.
+**SkipMacroDefinitionBody** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <SkipMacroDefinitionBody>`
+  Do not format macro definition body.
 
 .. _SortIncludes:
 

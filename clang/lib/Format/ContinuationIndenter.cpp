@@ -739,7 +739,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 
   if (!DryRun) {
-    if (Style.SkipMacroDefinition && CurrentState.IsPPDefineBody &&
+    if (Style.SkipMacroDefinitionBody && CurrentState.IsPPDefineBody &&
         !Current.is(tok::comment)) {
       Whitespaces.addUntouchableToken(Current, State.Line->InPPDirective);
     } else {
@@ -748,7 +748,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     }
   }
 
-  if (Style.SkipMacroDefinition && Previous.is(tok::pp_define)) {
+  if (Style.SkipMacroDefinitionBody && Previous.is(tok::pp_define)) {
     CurrentState.NoLineBreak = true;
     CurrentState.IsPPDefineBody = true;
   }

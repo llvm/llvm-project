@@ -24219,9 +24219,9 @@ TEST_F(FormatTest, WhitespaceSensitiveMacros) {
   verifyNoChange("FOO(String-ized&Messy+But: :Still=Intentional);", Style);
 }
 
-TEST_F(FormatTest, SkipMacroDefinition) {
+TEST_F(FormatTest, SkipMacroDefinitionBody) {
   auto Style = getLLVMStyle();
-  Style.SkipMacroDefinition = true;
+  Style.SkipMacroDefinitionBody = true;
 
   verifyFormat("#define A", "#define  A", Style);
   verifyFormat("#define A       a   aa", "#define   A       a   aa", Style);
@@ -24322,7 +24322,7 @@ TEST_F(FormatTest, SkipMacroDefinition) {
                Style);
 
   Style.IndentPPDirectives = FormatStyle::PPDIS_None;
-  // SkipMacroDefinition should not affect other PP directives
+  // SkipMacroDefinitionBody should not affect other PP directives
   verifyFormat("#if !defined(A)\n"
                "#define A  a\n"
                "#endif",

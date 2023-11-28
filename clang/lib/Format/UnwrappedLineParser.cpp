@@ -1158,7 +1158,7 @@ void UnwrappedLineParser::parsePPDefine() {
   FormatTok->Tok.setKind(tok::identifier);
   FormatTok->Tok.setIdentifierInfo(Keywords.kw_internal_ident_after_define);
 
-  if (Style.SkipMacroDefinition) {
+  if (Style.SkipMacroDefinitionBody) {
     do {
       nextToken();
     } while (!eof());
