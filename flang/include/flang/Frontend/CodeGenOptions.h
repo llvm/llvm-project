@@ -49,7 +49,6 @@ protected:
 class CodeGenOptions : public CodeGenOptionsBase {
 
 public:
-
   /// The paths to the pass plugins that were registered using -fpass-plugin.
   std::vector<std::string> LLVMPassPlugins;
 

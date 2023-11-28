@@ -13,8 +13,8 @@
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
-#include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/LangOptions.h"
+#include "flang/Frontend/CodeGenOptions.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -44,8 +44,6 @@ struct MLIRToLLVMPassPipelineConfig {
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR
   llvm::codegenoptions::DebugInfoKind DebugInfo =
       llvm::codegenoptions::NoDebugInfo; ///< Debug info generation.
-  llvm::FramePointerKind FramePointer =
-      llvm::FramePointerKind::None; ///< FramePointerInfo
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
 };
