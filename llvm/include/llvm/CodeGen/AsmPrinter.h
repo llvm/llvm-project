@@ -887,7 +887,6 @@ protected:
   virtual void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
 private:
-
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 

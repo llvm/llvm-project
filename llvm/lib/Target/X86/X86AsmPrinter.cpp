@@ -556,6 +556,8 @@ void X86AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   JMP.setOpcode(X86::JMP_4);
   JMP.addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver())));
   OutStreamer->emitInstruction(JMP, *Subtarget);
+
+  // FIXME: do the manual .symbol_resolver lowering that we did in AArch64AsmPrinter.
 }
 
 static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,

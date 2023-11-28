@@ -959,7 +959,6 @@ void Verifier::visitGlobalIFunc(const GlobalIFunc &GI) {
       GlobalIFunc::getResolverFunctionType(GI.getValueType());
   Check(ResolverTy == ResolverFuncTy->getPointerTo(GI.getAddressSpace()),
         "IFunc resolver has incorrect type", &GI);
-
 }
 
 void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
@@ -2240,7 +2239,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   }
 
   // Check EVEX512 feature.
-  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features") && TT.isX86()) {
+  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features") &&
+      TT.isX86()) {
     StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
     Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
           "512-bit vector arguments require 'evex512' for AVX512", V);
