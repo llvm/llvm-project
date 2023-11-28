@@ -151,7 +151,9 @@ endif()
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
 
+# Handle common options used by all runtimes.
 include(AddLLVM)
+include(HandleLLVMOptions)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 

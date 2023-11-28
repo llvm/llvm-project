@@ -1059,28 +1059,20 @@ static bool translateBitsToTidLvlPairs(
       }
       if (isUndefLT(lt)) {
         // An undefined lt in the lattices, we probably mean to
-        // iterate based on the level of output tensor.  E.g., this
-        // could be a synthetic tensor (for invariants and sparse
-        // output tensor).
-        auto itType = env.op().getIteratorTypesArray()[ldx];
-        if (linalg::isReductionIterator(itType) &&
-            env.merger().getSynTensorID() == tid) {
-          // Coiterating with an invariant, and this is a reduction loop
+        // generate a dense loop according to the synthetic tensor (for
+        // invariants and sparse output tensor).
+        if (env.merger().getSynTensorID() == tid) {
+          // Coiterating with an invariant
           // e.g., out = prod(in[i][j] op invariant);
-          // In this case, we can not infer the loop bound from output
-          // (whose level is reduced). Instead we use the synthetic tensor
-          // to infer the bound.
+          // or a broadcast
+          // e.g., out[i][j] = in[i] (j is undef for input)
+          //
           // The level of the synthetic tensor is the current loop depth;
           // the rank of the synthetic tensor equals to number of loops.
           lvl = env.emitter().getCurrentDepth();
-        } else {
-          // or a broadcast
-          // out[i][j] = in[i] (j is undef for input)
-          tid = outTid;
-          lvl = outLvl;
+        } else if (!lvl) {
           // Skips invalid lvl (e.g., when this is a zero ranked tensor).
-          if (!lvl)
-            return;
+          return;
         }
       }
       hasNonUnique = !isUniqueLT(lt) || hasNonUnique;

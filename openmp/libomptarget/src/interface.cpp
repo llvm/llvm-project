@@ -319,9 +319,8 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   if (KernelArgs->Flags.NoWait)
     return targetKernel<TaskAsyncInfoWrapperTy>(
         Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
-  else
-    return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
-                                     HostPtr, KernelArgs);
+  return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
+                                   HostPtr, KernelArgs);
 }
 
 /// Activates the record replay mechanism.

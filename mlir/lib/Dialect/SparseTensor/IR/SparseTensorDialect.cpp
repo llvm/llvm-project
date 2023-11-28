@@ -375,14 +375,12 @@ SparseTensorEncodingAttr::getStaticDimSliceStride(Dimension dim) const {
 
 std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticLvlSliceOffset(Level lvl) const {
-  // FIXME: `toOrigDim` is deprecated.
-  return getStaticDimSliceOffset(toOrigDim(*this, lvl));
+  return getStaticDimSliceOffset(toDim(*this, lvl));
 }
 
 std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
-  // FIXME: `toOrigDim` is deprecated.
-  return getStaticDimSliceStride(toOrigDim(*this, lvl));
+  return getStaticDimSliceStride(toDim(*this, lvl));
 }
 
 SmallVector<int64_t>
@@ -398,10 +396,8 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
 
   if (isPermutation()) {
     for (unsigned r = 0; r < rank; r++) {
-      // FIXME: `toOrigDim` and `toStoredDim` are deprecated.
-      unsigned trans = dir == CrdTransDirectionKind::dim2lvl
-                           ? toOrigDim(*this, r)
-                           : toStoredDim(*this, r);
+      unsigned trans = dir == CrdTransDirectionKind::dim2lvl ? toDim(*this, r)
+                                                             : toLvl(*this, r);
       ret.push_back(srcShape[trans]);
     }
     return ret;
@@ -882,7 +878,7 @@ Level mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
   return lvlRank;
 }
 
-// Helpers to setup a COO type.
+// Helper to setup a COO type.
 RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
                                                            AffineMap lvlPerm,
                                                            bool ordered) {
@@ -915,38 +911,20 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
   return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
 }
 
-RankedTensorType sparse_tensor::getCOOFromType(RankedTensorType src,
-                                               bool ordered) {
-  return getCOOFromTypeWithOrdering(
-      src, AffineMap::getMultiDimIdentityMap(src.getRank(), src.getContext()),
-      ordered);
-}
-
-// TODO: Remove this definition once all use-sites have been fixed to
-// properly handle non-permutations.
-Dimension mlir::sparse_tensor::toOrigDim(SparseTensorEncodingAttr enc,
-                                         Level l) {
+Dimension mlir::sparse_tensor::toDim(SparseTensorEncodingAttr enc, Level l) {
   if (enc) {
-    if (const auto dimToLvl = enc.getDimToLvl()) {
-      assert(enc.isPermutation());
+    assert(enc.isPermutation() && "Non permutation map not supported");
+    if (const auto dimToLvl = enc.getDimToLvl())
       return dimToLvl.getDimPosition(l);
-    }
   }
   return l;
 }
 
-// TODO: Remove this definition once all use-sites have been fixed to
-// properly handle non-permutations.
-Level mlir::sparse_tensor::toStoredDim(SparseTensorEncodingAttr enc,
-                                       Dimension d) {
+Level mlir::sparse_tensor::toLvl(SparseTensorEncodingAttr enc, Dimension d) {
   if (enc) {
-    if (const auto dimToLvl = enc.getDimToLvl()) {
-      assert(enc.isPermutation());
-      auto maybePos =
-          dimToLvl.getResultPosition(getAffineDimExpr(d, enc.getContext()));
-      assert(maybePos.has_value());
-      return *maybePos;
-    }
+    assert(enc.isPermutation() && "Non permutation map not supported");
+    if (const auto lvlToDim = enc.getLvlToDim())
+      return lvlToDim.getDimPosition(d);
   }
   return d;
 }
