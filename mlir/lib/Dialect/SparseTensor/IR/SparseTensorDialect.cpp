@@ -718,15 +718,15 @@ RankedTensorType
 mlir::sparse_tensor::SparseTensorType::getCOOType(bool ordered) const {
   SmallVector<LevelType> lvlTypes;
   lvlTypes.reserve(lvlRank);
-  // An unordered and non-unique compressed level at beginning.
-  // If this is also the last level, then it is unique.
+  // A non-unique compressed level at beginning (unless this is
+  // also the last level, then it is unique).
   lvlTypes.push_back(
       *buildLevelType(LevelFormat::Compressed, ordered, lvlRank == 1));
   if (lvlRank > 1) {
-    // Followed by unordered non-unique n-2 singleton levels.
+    // Followed by n-2 non-unique singleton levels.
     std::fill_n(std::back_inserter(lvlTypes), lvlRank - 2,
                 *buildLevelType(LevelFormat::Singleton, ordered, false));
-    // Ends by a unique singleton level unless the lvlRank is 1.
+    // Ends by a unique singleton level.
     lvlTypes.push_back(*buildLevelType(LevelFormat::Singleton, ordered, true));
   }
   auto enc = SparseTensorEncodingAttr::get(getContext(), lvlTypes,
