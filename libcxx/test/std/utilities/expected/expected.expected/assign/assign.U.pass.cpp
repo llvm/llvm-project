@@ -52,7 +52,7 @@ static_assert(std::is_assignable_v<std::expected<int, int>&, int>);
 static_assert(std::is_assignable_v<std::expected<int, int>&, std::expected<int, int>>);
 
 // remove_cvref_t<U> is a specialization of unexpected
-// it is true because it covered the unepxected overload
+// it is true because it covered the unexpected overload
 static_assert(std::is_assignable_v<std::expected<int, int>&, std::unexpected<int>>);
 
 // !is_constructible_v<T, U>

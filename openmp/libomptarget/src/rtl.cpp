@@ -224,12 +224,8 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   DP("Registering RTL %s supporting %d devices!\n", Name, RTL.NumberOfDevices);
 
   // Optional functions
-  *((void **)&RTL.deinit_plugin) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
   *((void **)&RTL.is_valid_binary_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-  *((void **)&RTL.deinit_device) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
   *((void **)&RTL.init_requires) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
   *((void **)&RTL.data_submit_async) =
@@ -246,10 +242,6 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
   *((void **)&RTL.is_data_exchangable) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
-  *((void **)&RTL.register_lib) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_register_lib");
-  *((void **)&RTL.unregister_lib) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_unregister_lib");
   *((void **)&RTL.supports_empty_images) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
   *((void **)&RTL.set_info_flag) =
@@ -678,15 +670,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
   }
 
   PM->TblMapMtx.unlock();
-
-  // TODO: Write some RTL->unload_image(...) function?
-  for (auto *R : UsedRTLs) {
-    if (R->deinit_plugin) {
-      if (R->deinit_plugin() != OFFLOAD_SUCCESS) {
-        DP("Failure deinitializing RTL %s!\n", R->RTLName.c_str());
-      }
-    }
-  }
 
   DP("Done unregistering library!\n");
 }
