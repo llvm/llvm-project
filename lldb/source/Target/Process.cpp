@@ -732,7 +732,8 @@ static bool
 BreakpointSiteMatchesREPLBreakpoint(const BreakpointSiteSP &bp_site_sp) {
   if (bp_site_sp) {
     size_t owner_idx = 0;
-    BreakpointLocationSP bp_loc_sp = bp_site_sp->GetOwnerAtIndex(owner_idx);
+    BreakpointLocationSP bp_loc_sp =
+        bp_site_sp->GetConstituentAtIndex(owner_idx);
     while (bp_loc_sp) {
       Breakpoint &bp = bp_loc_sp->GetBreakpoint();
       if (bp.IsInternal()) {
@@ -740,7 +741,7 @@ BreakpointSiteMatchesREPLBreakpoint(const BreakpointSiteSP &bp_site_sp) {
         if (kind && strcmp(kind, "REPL") == 0)
           return true;
       }
-      bp_loc_sp = bp_site_sp->GetOwnerAtIndex(++owner_idx);
+      bp_loc_sp = bp_site_sp->GetConstituentAtIndex(++owner_idx);
     }
   }
   return false;

@@ -489,7 +489,7 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
   }
   if (m_error_backstop_bp_sp) {
     uint64_t break_site_id = stop_info_sp->GetValue();
-    if (m_process.GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
+    if (m_process.GetBreakpointSiteList().StopPointSiteContainsBreakpoint(
             break_site_id, m_error_backstop_bp_sp->GetID())) {
       // Our expression threw an uncaught exception.  That will happen in REPL
       // & Playground, though not in
