@@ -40,7 +40,6 @@ void MappingTraits<GOFFYAML::FileHeader>::mapping(
 void MappingTraits<GOFFYAML::Object>::mapping(IO &IO, GOFFYAML::Object &Obj) {
   IO.mapTag("!GOFF", true);
   IO.mapRequired("FileHeader", Obj.Header);
-  IO.mapRequired("Records", Obj.Records);
 }
 
 } // namespace yaml

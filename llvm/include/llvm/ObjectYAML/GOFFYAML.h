@@ -25,20 +25,6 @@ namespace llvm {
 // to use yaml::IO, we use these structures which are closer to the source.
 namespace GOFFYAML {
 
-struct RecordBase {
-  enum RecordBaseKind { RBK_Relocations, RBK_Symbol, RBK_Section };
-
-private:
-  const RecordBaseKind Kind;
-
-protected:
-  RecordBase(RecordBaseKind Kind) : Kind(Kind) {}
-
-public:
-  RecordBaseKind getKind() const { return Kind; }
-};
-typedef std::unique_ptr<RecordBase> RecordPtr;
-
 struct FileHeader {
   uint32_t TargetEnvironment;
   uint32_t TargetOperatingSystem;
@@ -52,7 +38,6 @@ struct FileHeader {
 
 struct Object {
   FileHeader Header;
-  std::vector<RecordPtr> Records;
 
   Object();
 };
@@ -61,7 +46,6 @@ struct Object {
 
 } // end namespace llvm
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(GOFFYAML::RecordPtr)
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::FileHeader)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Object)
@@ -69,10 +53,6 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Object)
 namespace llvm {
 namespace yaml {
 
-template <> struct CustomMappingTraits<GOFFYAML::RecordPtr> {
-  static void inputOne(IO &IO, StringRef Key, GOFFYAML::RecordPtr &Elem) {};
-  static void output(IO &IO, GOFFYAML::RecordPtr &Elem) {};
-};
 
 } // end namespace yaml
 } // end namespace llvm
