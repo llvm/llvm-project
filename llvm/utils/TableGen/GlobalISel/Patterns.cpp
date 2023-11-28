@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Patterns.h"
-#include "../CodeGenInstruction.h"
+#include "CodeGenInstruction.h"
 #include "CXXPredicates.h"
 #include "CodeExpander.h"
 #include "CodeExpansions.h"

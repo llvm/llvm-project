@@ -1,5 +1,3 @@
-add_subdirectory(GlobalISel)
-
 add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   Attributes.cpp
   CodeGenIntrinsics.cpp
@@ -33,6 +31,10 @@ set(LLVM_LINK_COMPONENTS
 add_tablegen(llvm-tblgen LLVM
   DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
   EXPORT LLVM
+  GlobalISel/CodeExpander.cpp
+  GlobalISel/CXXPredicates.cpp
+  GlobalISel/MatchDataInfo.cpp
+  GlobalISel/Patterns.cpp
   AsmMatcherEmitter.cpp
   AsmWriterEmitter.cpp
   AsmWriterInst.cpp
@@ -92,5 +94,5 @@ add_tablegen(llvm-tblgen LLVM
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen
   )
-target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenGlobalISel)
+target_include_directories(llvm-tblgen PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")
