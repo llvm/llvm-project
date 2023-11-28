@@ -709,7 +709,7 @@ let SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1 in {
   defm V_MFMA_F32_32X32X16_BF8_FP8 : MAIInst<"v_mfma_f32_32x32x16_bf8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_fp8>;
   defm V_MFMA_F32_32X32X16_FP8_BF8 : MAIInst<"v_mfma_f32_32x32x16_fp8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_bf8>;
   defm V_MFMA_F32_32X32X16_FP8_FP8 : MAIInst<"v_mfma_f32_32x32x16_fp8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_fp8>;
-} // End Predicates = [isGFX940Plus], is_gfx940_xdl = 1
+} // End SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
   let Constraints = "$vdst = $src2", DisableEncoding = "$src2",
@@ -1058,7 +1058,7 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
   let SubtargetPredicate = isGFX940Plus,
-      AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940",
+      DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
   def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_ACD.Pfl, 1>;
@@ -1067,8 +1067,7 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
                     VOP3Pe_MAI <op, PS_VCD.Pfl, 0>;
   } // End AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940"
 
-  let SubtargetPredicate = isGFX940Plus,
-      AssemblerPredicate = isGFX940Plus in {
+  let SubtargetPredicate = isGFX940Plus in {
     defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
 
     if !ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic) then
