@@ -14,8 +14,8 @@
 #define _OMPTARGET_PRIVATE_H
 
 #include "Shared/Debug.h"
+#include "Shared/SourceInfo.h"
 
-#include "SourceInfo.h"
 #include "device.h"
 #include "omptarget.h"
 
