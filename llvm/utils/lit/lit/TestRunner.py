@@ -1966,7 +1966,7 @@ class IntegratedTestKeywordParser(object):
         """A parser for SPACE_LIST type keywords"""
         if output is None:
             output = []
-        output.extend([s.strip() for s in line.split(" ")])
+        output.extend([s.strip() for s in line.split(" ") if s.strip() != ""])
         return output
 
     @staticmethod
