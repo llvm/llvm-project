@@ -23,7 +23,24 @@
 #include <unistd.h>
 #endif
 
+
 namespace Fortran::runtime {
+
+// cmdstat specified in 16.9.73
+// −1 if the processor does not support command line execution,
+// a processor-dependent positive value if an error condition occurs
+// −2 if no error condition occurs but WAIT is present with the value false
+// and the processor does not support asynchronous execution. Otherwise it is
+// assigned the value 0
+enum CMD_STAT {
+  ASYNC_NO_SUPPORT_ERR = -2,
+  NO_SUPPORT_ERR = -1,
+  CMD_EXECUTED = 0,
+  FORK_ERR = 1,
+  EXECL_ERR = 2,
+  INVALID_CL_ERR = 3,
+  SIGNAL_ERR = 4
+};
 
 static bool IsValidCharDescriptor(const Descriptor *value) {
   return value && value->IsAllocated() &&
@@ -39,30 +56,16 @@ static bool IsValidIntDescriptor(const Descriptor *length) {
       length->type().IsInteger() && typeCode && typeCode->second != 1;
 }
 
-static void FillWithSpaces(const Descriptor &value, std::size_t offset = 0) {
-  if (offset < value.ElementBytes()) {
-    std::memset(
-        value.OffsetElement(offset), ' ', value.ElementBytes() - offset);
+void CheckAndCopyToDescriptor(const Descriptor *value, const char *rawValue,
+    std::int64_t rawValueLength, std::size_t offset = 0) {
+  if (!value) {
+    return;
   }
-}
-
-static std::int32_t CopyToDescriptor(const Descriptor &value,
-    const char *rawValue, std::int64_t rawValueLength, const Descriptor *errmsg,
-    std::size_t offset = 0) {
 
   std::int64_t toCopy{std::min(rawValueLength,
-      static_cast<std::int64_t>(value.ElementBytes() - offset))};
-  if (toCopy < 0) {
-    return ToErrmsg(errmsg, StatValueTooShort);
-  }
+      static_cast<std::int64_t>(value->ElementBytes() - offset))};
 
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
-
-  if (rawValueLength > toCopy) {
-    return ToErrmsg(errmsg, StatValueTooShort);
-  }
-
-  return StatOk;
+  std::memcpy(value->OffsetElement(offset), rawValue, toCopy);
 }
 
 static void StoreIntToDescriptor(
@@ -71,6 +74,13 @@ static void StoreIntToDescriptor(
   int kind{typeCode->second};
   Fortran::runtime::ApplyIntegerKind<Fortran::runtime::StoreIntegerAt, void>(
       kind, terminator, *intVal, /* atIndex = */ 0, value);
+}
+
+static void CheckAndStoreIntToDescriptor(
+    const Descriptor *intVal, std::int64_t value, Terminator &terminator) {
+  if (intVal) {
+    StoreIntToDescriptor(intVal, value, terminator);
+  }
 }
 
 template <int KIND> struct FitsInIntegerKind {
@@ -84,29 +94,51 @@ template <int KIND> struct FitsInIntegerKind {
   }
 };
 
+// If a condition occurs that would assign a nonzero value to CMDSTAT but
+// the CMDSTAT variable is not present, error termination is initiated.
+int TerminationCheck(int status, const Descriptor *command,
+    const Descriptor *cmdstat, const Descriptor *cmdmsg,
+    Terminator &terminator) {
+  int exitStatusVal = WEXITSTATUS(status);
+  if (exitStatusVal == 127 || exitStatusVal == 126) {
+    if (!cmdstat) {
+      terminator.Crash("\'%s\' not found with exit status code: %d",
+          command->OffsetElement(), exitStatusVal);
+    } else {
+      CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
+      CheckAndCopyToDescriptor(cmdmsg, "Invalid command line", 20);
+    }
+  }
+
+  if (WIFSIGNALED(status)) {
+    if (!cmdstat) {
+      terminator.Crash("killed by signal: %d", WTERMSIG(status));
+    } else {
+      CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyToDescriptor(cmdmsg, "killed by signal", 18);
+    }
+  }
+
+  if (WIFSTOPPED(status)) {
+    if (!cmdstat) {
+      terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
+    } else {
+      CheckAndStoreIntToDescriptor(cmdstat, SIGNAL_ERR, terminator);
+      CheckAndCopyToDescriptor(cmdmsg, "stopped by signal", 17);
+    }
+  }
+  return exitStatusVal;
+}
+
 void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     const Descriptor *exitstat, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
-  // cmdstat specified in 16.9.73
-  // −1 if the processor does not support command line execution,
-  // a processor-dependent positive value if an error condition occurs
-  // −2 if no error condition occurs but WAIT is present with the value false
-  // and the processor does not support asynchronous execution. Otherwise it is
-  // assigned the value 0
-  enum CMD_STAT {
-    ASYNC_NO_SUPPORT_ERR = -2,
-    NO_SUPPORT_ERR = -1,
-    CMD_EXECUTED = 0,
-    FORK_ERR = 1,
-    EXECL_ERR = 2,
-    SIGNAL_ERR = 3
-  };
-
   if (command) {
     RUNTIME_CHECK(terminator, IsValidCharDescriptor(command));
   }
+
   if (exitstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(exitstat));
     // If sync, assigned processor-dependent exit status. Otherwise unchanged
@@ -114,8 +146,6 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
 
   if (cmdstat) {
     RUNTIME_CHECK(terminator, IsValidIntDescriptor(cmdstat));
-    // If a condition occurs that would assign a nonzero value to CMDSTAT but
-    // the CMDSTAT variable is not present, error termination is initiated.
     // Assigned 0 as specifed in standard, if error then overwrite
     StoreIntToDescriptor(cmdstat, CMD_EXECUTED, terminator);
   }
@@ -126,8 +156,10 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
 
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
-    int exitstatVal = std::system(command->OffsetElement());
-    StoreIntToDescriptor(exitstat, exitstatVal, terminator);
+    int status{std::system(command->OffsetElement())};
+    int exitStatusVal =
+        TerminationCheck(status, command, cmdstat, cmdmsg, terminator);
+    CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
 // Asynchronous mode
 #ifdef _WIN32
@@ -173,13 +205,15 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     pid_t pid = fork();
     if (pid < 0) {
       if (!cmdstat) {
-        terminator.Crash("Fork failed with error code: %d.", FORK_ERR);
+        terminator.Crash("Fork failed with pid: %d.", pid);
       } else {
         StoreIntToDescriptor(cmdstat, FORK_ERR, terminator);
-        CopyToDescriptor(*cmdmsg, "Fork failed", 11, nullptr);
+        CheckAndCopyToDescriptor(cmdmsg, "Fork failed", 11);
       }
     } else if (pid == 0) {
-      execl("/bin/sh", "sh", "-c", command->OffsetElement(), (char *)NULL);
+      int status = std::system(command->OffsetElement());
+      TerminationCheck(status, command, cmdstat, cmdmsg, terminator);
+      exit(status);
     }
 #endif
   }

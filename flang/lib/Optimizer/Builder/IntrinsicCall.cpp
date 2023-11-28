@@ -2802,7 +2802,7 @@ void IntrinsicLibrary::genExecuteCommandLine(
 
   mlir::Value waitBool = isStaticallyPresent(wait)
                              ? fir::getBase(wait)
-                             : builder.createBool(loc, false);
+                             : builder.createBool(loc, true);
   mlir::Value exitstatBox =
       isStaticallyPresent(exitstat)
           ? fir::getBase(exitstat)
