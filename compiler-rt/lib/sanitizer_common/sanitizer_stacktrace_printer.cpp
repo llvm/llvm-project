@@ -16,6 +16,7 @@
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
 #include "sanitizer_fuchsia.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
@@ -62,6 +63,9 @@ const char *StackTracePrinter::StripFunctionName(const char *function) {
 #if !SANITIZER_SYMBOLIZER_MARKUP
 
 StackTracePrinter *StackTracePrinter::NewStackTracePrinter() {
+  if (common_flags()->enable_symbolizer_markup)
+    return new (GetGlobalLowLevelAllocator()) MarkupStackTracePrinter();
+
   return new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
 }
 
