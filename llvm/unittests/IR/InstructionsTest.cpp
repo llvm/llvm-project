@@ -855,7 +855,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 
   {
-    Value *GEPBase = Constant::getNullValue(B.getInt8PtrTy());
+    Value *GEPBase = Constant::getNullValue(B.getPtrTy());
     auto *GI = cast<GetElementPtrInst>(
         B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
@@ -1746,14 +1746,14 @@ TEST(InstructionsTest, AllocaInst) {
   AllocaInst &F = cast<AllocaInst>(*It++);
   AllocaInst &G = cast<AllocaInst>(*It++);
   AllocaInst &H = cast<AllocaInst>(*It++);
-  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::Fixed(32));
-  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::Fixed(128));
+  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
   EXPECT_FALSE(C.getAllocationSizeInBits(DL));
-  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::Fixed(512));
-  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::Scalable(512));
-  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::Fixed(32));
-  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::Fixed(768));
-  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::Fixed(160));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
+  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
+  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
 }
 
 TEST(InstructionsTest, InsertAtBegin) {

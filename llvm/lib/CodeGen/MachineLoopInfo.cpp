@@ -88,7 +88,7 @@ MachineBasicBlock *MachineLoop::getBottomBlock() {
   return BotMBB;
 }
 
-MachineBasicBlock *MachineLoop::findLoopControlBlock() {
+MachineBasicBlock *MachineLoop::findLoopControlBlock() const {
   if (MachineBasicBlock *Latch = getLoopLatch()) {
     if (isLoopExiting(Latch))
       return Latch;
@@ -149,6 +149,53 @@ MachineLoopInfo::findLoopPreheader(MachineLoop *L, bool SpeculativePreheader,
     }
   }
   return Preheader;
+}
+
+MDNode *MachineLoop::getLoopID() const {
+  MDNode *LoopID = nullptr;
+  if (const auto *MBB = findLoopControlBlock()) {
+    // If there is a single latch block, then the metadata
+    // node is attached to its terminating instruction.
+    const auto *BB = MBB->getBasicBlock();
+    if (!BB)
+      return nullptr;
+    if (const auto *TI = BB->getTerminator())
+      LoopID = TI->getMetadata(LLVMContext::MD_loop);
+  } else if (const auto *MBB = getHeader()) {
+    // There seem to be multiple latch blocks, so we have to
+    // visit all predecessors of the loop header and check
+    // their terminating instructions for the metadata.
+    if (const auto *Header = MBB->getBasicBlock()) {
+      // Walk over all blocks in the loop.
+      for (const auto *MBB : this->blocks()) {
+        const auto *BB = MBB->getBasicBlock();
+        if (!BB)
+          return nullptr;
+        const auto *TI = BB->getTerminator();
+        if (!TI)
+          return nullptr;
+        MDNode *MD = nullptr;
+        // Check if this terminating instruction jumps to the loop header.
+        for (const auto *Succ : successors(TI)) {
+          if (Succ == Header) {
+            // This is a jump to the header - gather the metadata from it.
+            MD = TI->getMetadata(LLVMContext::MD_loop);
+            break;
+          }
+        }
+        if (!MD)
+          return nullptr;
+        if (!LoopID)
+          LoopID = MD;
+        else if (MD != LoopID)
+          return nullptr;
+      }
+    }
+  }
+  if (LoopID &&
+      (LoopID->getNumOperands() == 0 || LoopID->getOperand(0) != LoopID))
+    LoopID = nullptr;
+  return LoopID;
 }
 
 bool MachineLoop::isLoopInvariant(MachineInstr &I) const {

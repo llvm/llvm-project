@@ -6,7 +6,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKSH
 
-#include <stdint.h>
+#include <riscv_crypto.h>
 
 // RV32ZKSH-LABEL: @sm3p0(
 // RV32ZKSH-NEXT:  entry:
@@ -19,7 +19,7 @@
 // RV64ZKSH-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sm3p0(uint32_t rs1) {
-  return __builtin_riscv_sm3p0(rs1);
+  return __riscv_sm3p0(rs1);
 }
 
 
@@ -34,5 +34,5 @@ uint32_t sm3p0(uint32_t rs1) {
 // RV64ZKSH-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t sm3p1(uint32_t rs1) {
-  return __builtin_riscv_sm3p1(rs1);
+  return __riscv_sm3p1(rs1);
 }

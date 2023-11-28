@@ -10,7 +10,7 @@
 
 // During the review D130295 it was noticed libc++'s implementation uses
 // std::common_type. When users specialize this template for their own types the
-// comparisions would fail. This tests with a specialized std::common_type.
+// comparisons would fail. This tests with a specialized std::common_type.
 
 // <string_view>
 

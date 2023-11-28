@@ -1251,6 +1251,54 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+# FIXME: These tests are currently spurious for the GPU.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_fp_unittest(
+    nexttoward_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttoward_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nexttoward
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+
+  add_fp_unittest(
+    nexttowardf_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      nexttowardf_test.cpp
+    HDRS
+      NextTowardTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nexttowardf
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+endif()
+
+add_fp_unittest(
+  nexttowardl_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    nexttowardl_test.cpp
+  HDRS
+    NextTowardTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nexttowardl
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.fp_bits
+)
+
 # TODO(lntue): The current implementation of fputil::general::fma<float> is only
 # correctly rounded for the default rounding mode round-to-nearest tie-to-even.
 add_fp_unittest(

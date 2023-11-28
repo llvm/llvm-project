@@ -39,7 +39,7 @@
 #include "../CustomTestLayouts.h"
 
 // Calculated expected size of an mdspan
-// Note this expectes that only default_accessor is empty
+// Note this expects that only default_accessor is empty
 template<class MDS>
 constexpr size_t expected_size() {
   size_t sizeof_dht = sizeof(typename MDS::data_handle_type);

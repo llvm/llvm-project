@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sme" \
+// RUN: mlir-opt %s -convert-arm-sme-to-llvm \
 // RUN:           -allocate-arm-sme-tiles -canonicalize      \
 // RUN:           -allow-unregistered-dialect                \
 // RUN: | FileCheck %s

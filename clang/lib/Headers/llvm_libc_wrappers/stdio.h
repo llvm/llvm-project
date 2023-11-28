@@ -21,6 +21,17 @@
 #define __LIBC_ATTRS __attribute__((device))
 #endif
 
+// Some headers provide these as macros. Temporarily undefine them so they do
+// not conflict with any definitions for the GPU.
+
+#pragma push_macro("stdout")
+#pragma push_macro("stdin")
+#pragma push_macro("stderr")
+
+#undef stdout
+#undef stderr
+#undef stdin
+
 #pragma omp begin declare target
 
 #include <llvm-libc-decls/stdio.h>
@@ -28,6 +39,13 @@
 #pragma omp end declare target
 
 #undef __LIBC_ATTRS
+
+// Restore the original macros when compiling on the host.
+#if !defined(__NVPTX__) && !defined(__AMDGPU__)
+#pragma pop_macro("stdout")
+#pragma pop_macro("stderr")
+#pragma pop_macro("stdin")
+#endif
 
 #endif
 

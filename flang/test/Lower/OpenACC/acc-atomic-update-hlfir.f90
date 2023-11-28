@@ -1,6 +1,6 @@
 ! This test checks lowering of atomic and atomic update constructs with HLFIR
 ! RUN: bbc -hlfir -fopenacc -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenacc %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenacc %s -o - | FileCheck %s
 
 !CHECK-LABEL: @_QPsb
 subroutine sb

@@ -520,20 +520,20 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-let CodeSize = 1, hasSideEffects = 0 in {
+let hasSideEffects = 0 in {
 def INC16r_alt : INCDECR_ALT<0x40, "inc", Xi16>;
 def INC32r_alt : INCDECR_ALT<0x40, "inc", Xi32>;
-} // CodeSize = 1, hasSideEffects = 0
+} // hasSideEffects = 0
 
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
+let isConvertibleToThreeAddress = 1 in { // Can xform into LEA.
 def INC8r  : INCDECR<MRM0r, "inc", Xi8, X86add_flag_nocf>;
 def INC16r : INCDECR<MRM0r, "inc", Xi16, X86add_flag_nocf>;
 def INC32r : INCDECR<MRM0r, "inc", Xi32, X86add_flag_nocf>;
 def INC64r : INCDECR<MRM0r, "inc", Xi64, X86add_flag_nocf>;
-} // isConvertibleToThreeAddress = 1, CodeSize = 2
+} // isConvertibleToThreeAddress = 1
 } // Constraints = "$src1 = $dst", SchedRW
 
-let CodeSize = 2, SchedRW = [WriteALURMW] in {
+let SchedRW = [WriteALURMW] in {
 let Predicates = [UseIncDec] in {
   def INC8m  : INCDECM<MRM0m, "inc", Xi8, 1>;
   def INC16m : INCDECM<MRM0m, "inc", Xi16, 1>;
@@ -542,24 +542,24 @@ let Predicates = [UseIncDec] in {
 let Predicates = [UseIncDec, In64BitMode] in {
   def INC64m : INCDECM<MRM0m, "inc", Xi64, 1>;
 } // Predicates
-} // CodeSize = 2, SchedRW
+} // SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
-let CodeSize = 1, hasSideEffects = 0 in {
+let hasSideEffects = 0 in {
 def DEC16r_alt : INCDECR_ALT<0x48, "dec", Xi16>;
 def DEC32r_alt : INCDECR_ALT<0x48, "dec", Xi32>;
-} // CodeSize = 1, hasSideEffects = 0
+} // hasSideEffects = 0
 
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
+let isConvertibleToThreeAddress = 1 in { // Can xform into LEA.
 def DEC8r  : INCDECR<MRM1r, "dec", Xi8, X86sub_flag_nocf>;
 def DEC16r : INCDECR<MRM1r, "dec", Xi16, X86sub_flag_nocf>;
 def DEC32r : INCDECR<MRM1r, "dec", Xi32, X86sub_flag_nocf>;
 def DEC64r : INCDECR<MRM1r, "dec", Xi64, X86sub_flag_nocf>;
-} // isConvertibleToThreeAddress = 1, CodeSize = 2
+} // isConvertibleToThreeAddress = 1
 } // Constraints = "$src1 = $dst", SchedRW
 
-let CodeSize = 2, SchedRW = [WriteALURMW] in {
+let SchedRW = [WriteALURMW] in {
 let Predicates = [UseIncDec] in {
   def DEC8m  : INCDECM<MRM1m, "dec", Xi8, -1>;
   def DEC16m : INCDECM<MRM1m, "dec", Xi16, -1>;
@@ -568,7 +568,7 @@ let Predicates = [UseIncDec] in {
 let Predicates = [UseIncDec, In64BitMode] in {
   def DEC64m : INCDECM<MRM1m, "dec", Xi64, -1>;
 } // Predicates
-} // CodeSize = 2, SchedRW
+} // SchedRW
 } // Defs = [EFLAGS]
 
 // Extra precision multiplication
@@ -764,7 +764,6 @@ def IDIV64m: MulOpM<0xF7, MRM7m, "idiv", Xi64, WriteIDiv64, []>,
 //
 
 // unary instructions
-let CodeSize = 2 in {
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 def NEG8r  : NegOpR<0xF6, "neg", Xi8>;
@@ -798,7 +797,6 @@ def NOT16m : NotOpM<0xF7, "not", Xi16>;
 def NOT32m : NotOpM<0xF7, "not", Xi32>;
 def NOT64m : NotOpM<0xF7, "not", Xi64>, Requires<[In64BitMode]>;
 } // SchedRW
-} // CodeSize
 
 /// ArithBinOp_RF - This is an arithmetic binary operator where the pattern is
 /// defined with "(set GPR:$dst, EFLAGS, (...".

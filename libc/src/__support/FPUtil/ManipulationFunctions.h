@@ -10,12 +10,13 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_MANIPULATIONFUNCTIONS_H
 
 #include "FPBits.h"
+#include "FloatProperties.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
-#include "PlatformDefs.h"
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -169,8 +170,50 @@ LIBC_INLINE T nextafter(T from, T to) {
     int_val = (to_bits.uintval() & sign_mask) + UIntType(1);
   }
 
+  UIntType exponent_bits = int_val & FloatProperties<T>::EXPONENT_MASK;
+  if (exponent_bits == UIntType(0))
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+  else if (exponent_bits == FloatProperties<T>::EXPONENT_MASK)
+    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+
   return cpp::bit_cast<T>(int_val);
-  // TODO: Raise floating point exceptions as required by the standard.
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+nexttoward(T from, long double to) {
+  FPBits<T> from_bits(from);
+  if (from_bits.is_nan())
+    return from;
+
+  FPBits<long double> to_bits(to);
+  if (to_bits.is_nan())
+    return to;
+
+  if ((long double)from == to)
+    return to;
+
+  using UIntType = typename FPBits<T>::UIntType;
+  UIntType int_val = from_bits.uintval();
+  if (from != T(0.0)) {
+    if ((from < to) == (from > T(0.0))) {
+      ++int_val;
+    } else {
+      --int_val;
+    }
+  } else {
+    int_val = FPBits<T>::MIN_SUBNORMAL;
+    if (to_bits.get_sign())
+      int_val |= FloatProperties<T>::SIGN_MASK;
+  }
+
+  UIntType exponent_bits = int_val & FloatProperties<T>::EXPONENT_MASK;
+  if (exponent_bits == UIntType(0))
+    raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+  else if (exponent_bits == FloatProperties<T>::EXPONENT_MASK)
+    raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+
+  return cpp::bit_cast<T>(int_val);
 }
 
 } // namespace fputil

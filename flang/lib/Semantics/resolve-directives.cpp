@@ -1183,13 +1183,23 @@ void AccAttributeVisitor::CheckAssociatedLoopIndex(
   }
 
   const auto getNextDoConstruct =
-      [this](const parser::Block &block) -> const parser::DoConstruct * {
+      [this](const parser::Block &block,
+          std::int64_t &level) -> const parser::DoConstruct * {
     for (const auto &entry : block) {
       if (const auto *doConstruct = GetDoConstructIf(entry)) {
         return doConstruct;
       } else if (parser::Unwrap<parser::CompilerDirective>(entry)) {
         // It is allowed to have a compiler directive associated with the loop.
         continue;
+      } else if (const auto &accLoop{
+                     parser::Unwrap<parser::OpenACCLoopConstruct>(entry)}) {
+        if (level == 0)
+          break;
+        const auto &beginDir{
+            std::get<parser::AccBeginLoopDirective>(accLoop->t)};
+        context_.Say(beginDir.source,
+            "LOOP directive not expected in COLLAPSE loop nest"_err_en_US);
+        level = 0;
       } else {
         break;
       }
@@ -1198,11 +1208,12 @@ void AccAttributeVisitor::CheckAssociatedLoopIndex(
   };
 
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
+  for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;) {
     // Go through all nested loops to ensure index variable exists.
     GetLoopIndex(*loop);
     const auto &block{std::get<parser::Block>(loop->t)};
-    loop = getNextDoConstruct(block);
+    --level;
+    loop = getNextDoConstruct(block, level);
   }
   CHECK(level == 0);
 }
@@ -1744,6 +1755,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareTargetConstruct &x) {
       } else if (const auto *linkClause{
                      std::get_if<parser::OmpClause::Link>(&clause.u)}) {
         ResolveOmpObjectList(linkClause->v, Symbol::Flag::OmpDeclareTarget);
+      } else if (const auto *enterClause{
+                     std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
+        ResolveOmpObjectList(enterClause->v, Symbol::Flag::OmpDeclareTarget);
       }
     }
   }

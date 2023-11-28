@@ -117,10 +117,7 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 7
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], [[B1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], [[A2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[B1]], [[A2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

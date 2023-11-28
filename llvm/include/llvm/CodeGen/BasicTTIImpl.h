@@ -714,7 +714,7 @@ public:
   /// @{
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::Fixed(32);
+    return TypeSize::getFixed(32);
   }
 
   std::optional<unsigned> getMaxVScale() const { return std::nullopt; }

@@ -116,7 +116,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool Shared = Args.hasArg(options::OPT_shared);
   const bool Profiling = Args.hasArg(options::OPT_pg);
   const bool Pie = Args.hasArg(options::OPT_pie);
-  const bool Nopie = Args.hasArg(options::OPT_nopie);
+  const bool Nopie = Args.hasArg(options::OPT_no_pie, options::OPT_nopie);
   const bool Relocatable = Args.hasArg(options::OPT_r);
   ArgStringList CmdArgs;
 
@@ -237,7 +237,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else

@@ -42,7 +42,7 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
       stt,
       [&fields](Type fieldType, FieldIndex fieldIdx,
                 SparseTensorFieldKind /*fieldKind*/, Level /*lvl*/,
-                DimLevelType /*dlt*/) -> bool {
+                LevelType /*lt*/) -> bool {
         assert(fieldIdx == fields.size());
         fields.push_back(fieldType);
         return true;

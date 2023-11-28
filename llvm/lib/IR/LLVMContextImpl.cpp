@@ -82,8 +82,11 @@ LLVMContextImpl::~LLVMContextImpl() {
     Pair.second->dropUse();
   // Do not untrack ValueAsMetadata references for DIArgLists, as they have
   // already been more efficiently untracked above.
-  for (DIArgList *AL : DIArgLists)
+  for (DIArgList *AL : DIArgLists) {
     AL->dropAllReferences(/* Untrack */ false);
+    delete AL;
+  }
+  DIArgLists.clear();
 
   // Destroy MDNodes.
   for (MDNode *I : DistinctMDNodes)

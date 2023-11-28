@@ -191,10 +191,11 @@ subroutine omp_target
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
    !CHECK: %[[MAP:.*]] = omp.map_info var_ptr(%[[VAL_1]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %[[ARG_1:.*]] : !fir.ref<!fir.array<1024xi32>>, index) {
-   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>, %[[ARG_1]]: index):
+   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>):
    !$omp target map(tofrom: a)
-      !CHECK: %[[VAL_2:.*]] = fir.shape %[[ARG_1]] : (index) -> !fir.shape<1>
+      !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : index
+      !CHECK: %[[VAL_2:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
       !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[ARG_0]](%[[VAL_2]]) {uniq_name = "_QFomp_targetEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
       !CHECK: %[[VAL_4:.*]] = arith.constant 10 : i32
       !CHECK: %[[VAL_5:.*]] = arith.constant 1 : index
@@ -218,10 +219,10 @@ subroutine omp_target_implicit
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFomp_target_implicitEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
    !CHECK: %[[VAL_4:.*]] = omp.map_info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: %[[VAL_5:.*]] = omp.map_info val(%[[VAL_0]] : index)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> index {name = ""}
-   !CHECK: omp.target   map_entries(%[[VAL_4]] -> %[[VAL_6:.*]], %[[VAL_5]] -> %[[VAL_7:.*]] : !fir.ref<!fir.array<1024xi32>>, index) {
-   !CHECK: ^bb0(%[[VAL_6]]: !fir.ref<!fir.array<1024xi32>>, %[[VAL_7]]: index):
+   !CHECK: omp.target   map_entries(%[[VAL_4]] -> %[[VAL_6:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: ^bb0(%[[VAL_6]]: !fir.ref<!fir.array<1024xi32>>):
    !$omp target
+      !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : index
       !CHECK: %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
       !CHECK: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_8]]) {uniq_name = "_QFomp_target_implicitEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
       !CHECK: %[[VAL_10:.*]] = arith.constant 10 : i32
@@ -265,29 +266,45 @@ end subroutine omp_target_implicit_nested
 ! Target implicit capture with bounds
 !===============================================================================
 
-!CHECK-LABEL: func.func @_QPomp_target_implicit_bounds(%{{.*}}: !fir.ref<i32> {fir.bindc_name = "n"}) {
+!CHECK-LABEL: func.func @_QPomp_target_implicit_bounds(
+!CHECK: %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 subroutine omp_target_implicit_bounds(n)
-   !CHECK: %[[VAL_1:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
-   !CHECK: %[[VAL_2:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
-   !CHECK: %[[VAL_3:.*]] = fir.alloca !fir.array<?x1024xi32>, %[[VAL_1]] {bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}
-   !CHECK: %[[VAL_4:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-   !CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_3]](%[[VAL_4]]) {uniq_name = "_QFomp_target_implicit_boundsEa"} : (!fir.ref<!fir.array<?x1024xi32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x1024xi32>>, !fir.ref<!fir.array<?x1024xi32>>)
+   !CHECK: %[[VAL_COPY:.*]] = fir.alloca i32
+   !CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFomp_target_implicit_boundsEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+   !CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
+   !CHECK: fir.store %[[VAL_2]] to %[[VAL_COPY]] : !fir.ref<i32>
+   !CHECK: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
+   !CHECK: %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
+   !CHECK: %[[VAL_5:.*]] = arith.constant 0 : index
+   !CHECK: %[[VAL_6:.*]] = arith.cmpi sgt, %[[VAL_4]], %[[VAL_5]] : index
+   !CHECK: %[[VAL_7:.*]] = arith.select %[[VAL_6]], %[[VAL_4]], %[[VAL_5]] : index
+   !CHECK: %[[VAL_8:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_7]] {bindc_name = "a", uniq_name = "_QFomp_target_implicit_boundsEa"}
+   !CHECK: %[[VAL_9:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
+   !CHECK: %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_9]]) {uniq_name = "_QFomp_target_implicit_boundsEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+   !CHECK: %[[VAL_11:.*]] = arith.constant 1 : index
+   !CHECK: %[[VAL_12:.*]] = arith.constant 0 : index
+   !CHECK: %[[VAL_13:.*]] = arith.subi %[[VAL_7]], %[[VAL_11]] : index
    integer :: n
-   integer :: a(n, 1024)
-   !CHECK: %[[VAL_6:.*]] = omp.map_info var_ptr(%[[VAL_5]]#1 : !fir.ref<!fir.array<?x1024xi32>>, !fir.array<?x1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<?x1024xi32>> {name = "a"}
-   !CHECK: %[[VAL_7:.*]] = omp.map_info val(%[[VAL_1]] : index)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> index {name = ""}
-   !CHECK: %[[VAL_8:.*]] = omp.map_info val(%[[VAL_2]] : index)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> index {name = ""}
-   !CHECK: omp.target   map_entries(%[[VAL_6]] -> %[[ARG_1:.*]], %[[VAL_7]] -> %[[ARG_2:.*]], %[[VAL_8]] -> %[[ARG_3:.*]] : !fir.ref<!fir.array<?x1024xi32>>, index, index) {
-   !CHECK: ^bb0(%[[ARG_1]]: !fir.ref<!fir.array<?x1024xi32>>, %[[ARG_2]]: index, %[[ARG_3]]: index):
+   integer :: a(n)
+   !CHECK: %[[VAL_14:.*]] = omp.bounds lower_bound(%[[VAL_12]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_7]] : index) stride(%[[VAL_11]] : index) start_idx(%[[VAL_11]] : index)
+   !CHECK: %[[VAL_15:.*]] = omp.map_info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_14]]) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
+   !CHECK: %[[VAL_16:.*]] = omp.map_info var_ptr(%[[VAL_COPY]] : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
+   !CHECK: omp.target map_entries(%[[VAL_15]] -> %[[VAL_17:.*]], %[[VAL_16]] -> %[[VAL_18:.*]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
+   !CHECK: ^bb0(%[[VAL_17]]: !fir.ref<!fir.array<?xi32>>, %[[VAL_18]]: !fir.ref<i32>):
    !$omp target
-      !CHECK: %[[VAL_9:.*]] = fir.shape %[[ARG_2]], %[[ARG_3]] : (index, index) -> !fir.shape<2>
-      !CHECK: %[[VAL_10:.*]]:2 = hlfir.declare %[[ARG_1]](%[[VAL_9]]) {uniq_name = "_QFomp_target_implicit_boundsEa"} : (!fir.ref<!fir.array<?x1024xi32>>, !fir.shape<2>) -> (!fir.box<!fir.array<?x1024xi32>>, !fir.ref<!fir.array<?x1024xi32>>)
-      !CHECK: %[[VAL_11:.*]] = arith.constant 33 : i32
-      !CHECK: %[[VAL_12:.*]] = arith.constant 11 : index
-      !CHECK: %[[VAL_13:.*]] = arith.constant 22 : index
-      !CHECK: %[[VAL_14:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_12]], %[[VAL_13]])  : (!fir.box<!fir.array<?x1024xi32>>, index, index) -> !fir.ref<i32>
-      !CHECK: hlfir.assign %[[VAL_11]] to %[[VAL_14]] : i32, !fir.ref<i32>
-      a(11, 22) = 33
+      !CHECK: %[[VAL_19:.*]] = fir.load %[[VAL_18]] : !fir.ref<i32>
+      !CHECK: %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> i64
+      !CHECK: %[[VAL_21:.*]] = arith.constant 0 : index
+      !CHECK: %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (i64) -> index
+      !CHECK: %[[VAL_23:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_21]] : index
+      !CHECK: %[[VAL_24:.*]] = arith.select %[[VAL_23]], %[[VAL_22]], %[[VAL_21]] : index
+      !CHECK: %[[VAL_25:.*]] = fir.shape %[[VAL_24]] : (index) -> !fir.shape<1>
+      !CHECK: %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_17]](%[[VAL_25]]) {uniq_name = "_QFomp_target_implicit_boundsEa"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
+      !CHECK: %[[VAL_27:.*]] = arith.constant 22 : i32
+      !CHECK: %[[VAL_28:.*]] = arith.constant 11 : index
+      !CHECK: %[[VAL_29:.*]] = hlfir.designate %[[VAL_26]]#0 (%[[VAL_28]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+      !CHECK: hlfir.assign %[[VAL_27]] to %[[VAL_29]] : i32, !fir.ref<i32>
+      a(11) = 22
       !CHECK: omp.terminator
    !$omp end target
 !CHECK: }
@@ -396,8 +413,8 @@ subroutine omp_target_parallel_do
    !CHECK: %[[SUB:.*]] = arith.subi %[[C1024]], %[[C1]] : index
    !CHECK: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C0]] : index) upper_bound(%[[SUB]] : index) extent(%[[C1024]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
    !CHECK: %[[MAP:.*]] = omp.map_info var_ptr(%[[VAL_0_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}}, %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>, index) {
-   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>, %{{.*}}: !fir.ref<i32>, %{{.*}}: index):
+   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>) {
+   !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<!fir.array<1024xi32>>, %{{.*}}: !fir.ref<i32>):
       !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[ARG_0]](%{{.*}}) {uniq_name = "_QFomp_target_parallel_doEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
       !CHECK: omp.parallel
       !$omp target parallel do map(tofrom: a)

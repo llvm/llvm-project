@@ -2,6 +2,9 @@
 ; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck --check-prefixes=CHECK %s
 ; RUN: opt < %s -passes=debugify,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck --check-prefixes=DBGINFO %s
 
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -passes=debugify,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S --try-experimental-debuginfo-iterators | FileCheck --check-prefixes=DBGINFO %s
+
 define i32 @test1(i1 %C) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:

@@ -19,6 +19,14 @@ subroutine declaretarget()
     call implicit_invocation()
 end subroutine declaretarget
 
+! MLIR: func.func @{{.*}}declaretarget_enter() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>}
+! MLIR: return
+! LLVM: define {{.*}} @{{.*}}declaretarget_enter{{.*}}(
+subroutine declaretarget_enter()
+!$omp declare target enter(declaretarget_enter) device_type(nohost)
+    call implicit_invocation()
+end subroutine declaretarget_enter
+
 ! MLIR: func.func @{{.*}}no_declaretarget() attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>}
 ! MLIR: return
 ! LLVM: define {{.*}} @{{.*}}no_declaretarget{{.*}}(

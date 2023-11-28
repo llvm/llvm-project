@@ -1,7 +1,6 @@
 ! This test checks correct lowering when OpenACC routine directive is placed
 ! before implicit none.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 module dummy_mod

@@ -1,0 +1,431 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '---' > %t2.map
+# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t2.map
+# RUN: echo 'objects:'  >> %t2.map
+# RUN: echo " -  filename: '%t.o'" >> %t2.map
+# RUN: echo '    symbols:' >> %t2.map
+# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
+# RUN: echo '...' >> %t2.map
+# RUN: dsymutil --linker=llvm -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+
+## This test checks debug info for the types located into the subprograms.
+## Subprogram "float foo(int)" contains type "clas1". First compile unit
+## contains partially defined class "Container" which has parametrized
+## subprogram "ParametrizedFunc" which template parameter is the type
+## "clas1" defined in the subprogram "foo". The second compilation unit
+## contains partially defined class "Container" which has parametrized
+## subprogram "ParametrizedFunc" which template parameter is the type
+## "int". The type table in the final debug info should contain class
+## "Container" which has two "ParametrizedFunc"(one has template parameter
+## "clas1" and another has template parameter "int").
+
+## class Container {
+##   template<T> void ParametrizedFunc ();
+## };
+##
+## CU1:
+##
+## int foo (float) {
+##   class clas1 {
+##     char first;
+##     float second;
+##   } clas1;
+## };
+##
+## class Container {
+##   template<foo:clas1> void ParametrizedFunc ();
+## };
+##
+## CU2:
+##
+## class Container {
+##   template<int> void ParametrizedFunc ();
+## };
+##
+##
+## The final type table :
+##
+## class Container {
+##   template<int> void ParametrizedFunc ();
+## };
+##
+## CU1:
+##
+## int foo (float) {
+##   class clas1 {
+##     char first;
+##     float second;
+##   } clas1;
+## };
+##
+## class Container {
+##   template<foo:clas1> void ParametrizedFunc ();
+## };
+##
+##
+
+
+# CHECK: file format Mach-O 64-bit x86-64
+# CHECK: .debug_info contents:
+# CHECK: Compile Unit:
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"__artificial_type_unit"
+
+# CHECK: 0x[[CHAR:[0-9a-f]*]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"char"
+
+# CHECK: 0x[[FLOAT:[0-9a-f]*]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"float"
+
+# CHECK: 0x[[INT:[0-9a-f]*]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"int"
+
+# CHECK: 0x[[CONTAINER:[0-9a-f]*]]: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"Container"
+
+# CHECK: DW_TAG_subprogram{{.*[[:space:]].*}}DW_AT_name{{.*}}"ParametrizedFunc"
+# CHECK: DW_AT_type{{.*}}[[INT]] "int"
+# CHECK: DW_TAG_template_type_parameter{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[INT]] "int"
+
+# CHECK: DW_TAG_subprogram{{.*[[:space:]].*}}DW_AT_name{{.*}}"ParametrizedFunc"
+# CHECK: DW_AT_type{{.*}}[[INT]] "int"
+# CHECK: DW_TAG_template_type_parameter{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[INNER_CLASS:[0-9a-f]*]] "clas1"
+
+# CHECK: 0x[[GLOBAL_CLASS:[0-9a-f]*]]: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"clas1"
+
+# CHECK: DW_TAG_member{{.*[[:space:]].*}}DW_AT_name{{.*}}"first"
+
+# CHECK: DW_AT_type{{.*}}[[FLOAT]] "float"
+
+# CHECK: DW_TAG_subprogram{{.*[[:space:]].*}}DW_AT_name{{.*}}"foo"
+# CHECK: DW_AT_type{{.*}}[[FLOAT]] "float"
+# CHECK: DW_TAG_formal_parameter{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[INT]] "int"
+
+# CHECK: 0x[[INNER_CLASS]]: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"clas1"
+# CHECK: DW_TAG_member{{.*[[:space:]].*}}DW_AT_name{{.*}}"first"
+# CHECK: DW_AT_type{{.*}}[[CHAR]] "char"
+# CHECK: DW_TAG_member{{.*[[:space:]].*}}DW_AT_name{{.*}}"second"
+# CHECK: DW_AT_type{{.*}}[[FLOAT]] "float"
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU1"
+
+# CHECK: DW_TAG_subprogram{{.*[[:space:]].*}}DW_AT_name{{.*}}"foo"
+# CHECK: DW_AT_type{{.*}}[[FLOAT]] "float"
+# CHECK: DW_AT_low_pc
+# CHECK: DW_AT_high_pc
+# CHECK: DW_TAG_formal_parameter{{.*[[:space:]].*}}DW_AT_type{{.*}}[[INT]] "int"
+
+# CHECK-NOT: DW_TAG_class_type
+# CHECK-NOT: DW_TAG_member
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"
+# CHECK: DW_AT_type{{.*}}0x00000000[[GLOBAL_CLASS]] "clas1"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var2"
+# CHECK: DW_AT_type{{.*}}0x00000000[[CONTAINER]] "Container"
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU2"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"
+# CHECK: DW_AT_type{{.*}}0x00000000[[CONTAINER]] "Container"
+
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 376
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x90
+        offset:    0x00000380
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x000000000000100
+        size:      0x124
+        offset:    0x00000410
+        align:     0
+        reloff:    0x00000600
+        nreloc:    1
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x2C
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           2
+    stroff:          0x720
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_linkage_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data4
+      - Tag:      DW_TAG_formal_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+        - AbbrCode: 2
+          Values:
+            - CStr: foo
+            - CStr: __Z3foov
+            - Value:  0x000000a3
+            - Value:  0x00010000
+            - Value:  0x00000010
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000098
+        - AbbrCode: 4
+          Values:
+            - CStr: clas1
+        - AbbrCode: 5
+          Values:
+            - CStr: first
+            - Value:  0x0000009d
+        - AbbrCode: 5
+          Values:
+            - CStr: second
+            - Value:  0x000000a3
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: clas1
+        - AbbrCode: 5
+          Values:
+            - CStr: first
+            - Value:  0x000000a3
+        - AbbrCode: 0
+        - AbbrCode: 4
+          Values:
+            - CStr: Container
+        - AbbrCode: 6
+          Values:
+            - CStr: ParametrizedFunc
+            - Value:  0x00000098
+        - AbbrCode: 7
+          Values:
+            - Value:  0x0000003d
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 8
+          Values:
+            - CStr: int
+        - AbbrCode: 8
+          Values:
+            - CStr: char
+        - AbbrCode: 8
+          Values:
+            - CStr: float
+        - AbbrCode: 10
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x0000005d
+        - AbbrCode: 10
+          Values:
+            - CStr: var2
+            - Value:  0x00000000
+            - Value:  0x00000070
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU2
+        - AbbrCode: 2
+          Values:
+            - CStr: Container
+        - AbbrCode: 3
+          Values:
+            - CStr: ParametrizedFunc
+            - Value:  0x00000109
+        - AbbrCode: 4
+          Values:
+            - Value:  0x00000109
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+        - AbbrCode: 5
+          Values:
+            - CStr: float
+        - AbbrCode: 6
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x000000e1
+        - AbbrCode: 0
+...

@@ -57,7 +57,7 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
                           llvm::StringRef defaultValue) {
   if (obj == nullptr)
     return defaultValue;
-  return GetString(*obj, key);
+  return GetString(*obj, key, defaultValue);
 }
 
 // Gets an unsigned integer from a JSON object using the key, or returns the

@@ -18,7 +18,7 @@ define void @test_trip_multiple_4(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -53,7 +53,7 @@ define void @test_trip_multiple_4_guard(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -89,7 +89,7 @@ define void @test_trip_multiple_4_ugt_5(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -125,7 +125,7 @@ define void @test_trip_multiple_4_ugt_5_order_swapped(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -160,7 +160,7 @@ define void @test_trip_multiple_4_sgt_5(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -196,7 +196,7 @@ define void @test_trip_multiple_4_sgt_5_order_swapped(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -231,7 +231,7 @@ define void @test_trip_multiple_4_uge_5(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -267,7 +267,7 @@ define void @test_trip_multiple_4_uge_5_order_swapped(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -303,7 +303,7 @@ define void @test_trip_multiple_4_sge_5(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -338,7 +338,7 @@ define void @test_trip_multiple_4_sge_5_order_swapped(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -374,7 +374,7 @@ define void @test_trip_multiple_4_icmp_ops_swapped(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %u = urem i32 %num, 4
@@ -409,7 +409,7 @@ define void @test_trip_multiple_4_upper_lower_bounds(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %cmp.1 = icmp uge i32 %num, 5
@@ -446,7 +446,7 @@ define void @test_trip_multiple_4_upper_lower_bounds_swapped1(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %cmp.1 = icmp uge i32 %num, 5
@@ -483,7 +483,7 @@ define void @test_trip_multiple_4_upper_lower_bounds_swapped2(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 4
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 4
 ;
 entry:
   %cmp.1 = icmp uge i32 %num, 5
@@ -520,7 +520,7 @@ define void @test_trip_multiple_5(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 5
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 5
 ;
 entry:
   %u = urem i32 %num, 5
@@ -557,7 +557,7 @@ define void @test_trunc_operand_larger_than_urem_expr(i64 %N) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %conv = trunc i64 %N to i32

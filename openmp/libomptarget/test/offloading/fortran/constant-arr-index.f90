@@ -1,5 +1,5 @@
 ! Basic offloading test with a target region
-! that checks constant indexing on device 
+! that checks constant indexing on device
 ! correctly works (regression test for prior
 ! bug).
 ! REQUIRES: flang, amdgcn-amd-amdhsa
@@ -19,8 +19,8 @@ program main
      sp(5) = 10
   !$omp end target
 
-   ! print *, sp(1)
-   ! print *, sp(5)
+   print *, sp(1)
+   print *, sp(5)
 end program
 
 ! CHECK: 20

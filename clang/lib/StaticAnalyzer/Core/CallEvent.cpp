@@ -517,6 +517,26 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
   return nullptr;
 }
 
+const CallEventRef<> CallEvent::getCaller() const {
+  const auto *CallLocationContext = this->getLocationContext();
+  if (!CallLocationContext || CallLocationContext->inTopFrame())
+    return nullptr;
+
+  const auto *CallStackFrameContext = CallLocationContext->getStackFrame();
+  if (!CallStackFrameContext)
+    return nullptr;
+
+  CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
+  return CEMgr.getCaller(CallStackFrameContext, State);
+}
+
+bool CallEvent::isCalledFromSystemHeader() const {
+  if (const CallEventRef<> Caller = getCaller())
+    return Caller->isInSystemHeader();
+
+  return false;
+}
+
 std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
   const auto *CC = getConstructionContext();
   if (!CC)

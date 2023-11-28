@@ -20,6 +20,7 @@
 
 #include "omptarget.h"
 
+#include <cstdint>
 #include <list>
 #include <map>
 #include <mutex>
@@ -31,13 +32,11 @@ struct __tgt_bin_desc;
 
 struct RTLInfoTy {
   typedef int32_t(init_plugin_ty)();
-  typedef int32_t(deinit_plugin_ty)();
   typedef int32_t(is_valid_binary_ty)(void *);
   typedef int32_t(is_valid_binary_info_ty)(void *, void *);
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
   typedef int32_t(number_of_devices_ty)();
   typedef int32_t(init_device_ty)(int32_t);
-  typedef int32_t(deinit_device_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
   typedef void *(data_alloc_ty)(int32_t, int64_t, void *, int32_t);
   typedef int32_t(data_submit_ty)(int32_t, void *, void *, int64_t);
@@ -55,7 +54,6 @@ struct RTLInfoTy {
   typedef int64_t(init_requires_ty)(int64_t);
   typedef int32_t(synchronize_ty)(int32_t, __tgt_async_info *);
   typedef int32_t(query_async_ty)(int32_t, __tgt_async_info *);
-  typedef int32_t (*register_lib_ty)(__tgt_bin_desc *);
   typedef int32_t(supports_empty_images_ty)();
   typedef void(print_device_info_ty)(int32_t);
   typedef void(set_info_flag_ty)(uint32_t);
@@ -74,7 +72,7 @@ struct RTLInfoTy {
   typedef int32_t(data_notify_unmapped_ty)(int32_t, void *);
   typedef int32_t(set_device_offset_ty)(int32_t);
   typedef int32_t(activate_record_replay_ty)(int32_t, uint64_t, void *, bool,
-                                             bool);
+                                             bool, uint64_t &);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -90,13 +88,11 @@ struct RTLInfoTy {
 
   // Functions implemented in the RTL.
   init_plugin_ty *init_plugin = nullptr;
-  deinit_plugin_ty *deinit_plugin = nullptr;
   is_valid_binary_ty *is_valid_binary = nullptr;
   is_valid_binary_info_ty *is_valid_binary_info = nullptr;
   is_data_exchangable_ty *is_data_exchangable = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
   init_device_ty *init_device = nullptr;
-  deinit_device_ty *deinit_device = nullptr;
   load_binary_ty *load_binary = nullptr;
   data_alloc_ty *data_alloc = nullptr;
   data_submit_ty *data_submit = nullptr;
@@ -110,8 +106,6 @@ struct RTLInfoTy {
   init_requires_ty *init_requires = nullptr;
   synchronize_ty *synchronize = nullptr;
   query_async_ty *query_async = nullptr;
-  register_lib_ty register_lib = nullptr;
-  register_lib_ty unregister_lib = nullptr;
   supports_empty_images_ty *supports_empty_images = nullptr;
   set_info_flag_ty *set_info_flag = nullptr;
   print_device_info_ty *print_device_info = nullptr;

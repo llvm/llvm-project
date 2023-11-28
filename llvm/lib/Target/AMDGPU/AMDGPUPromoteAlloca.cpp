@@ -469,6 +469,7 @@ static Value *promoteAllocaUserToVector(
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
       const unsigned NumWrittenElts =
           AccessSize / DL.getTypeStoreSize(VecEltTy);
+      const unsigned NumVecElts = VectorTy->getNumElements();
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
@@ -480,7 +481,8 @@ static Value *promoteAllocaUserToVector(
       Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
 
       Value *CurVec = GetOrLoadCurrentVectorValue();
-      for (unsigned K = 0; K < NumWrittenElts; ++K) {
+      for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
+           K < NumElts; ++K) {
         Value *CurIdx =
             Builder.CreateAdd(Index, ConstantInt::get(Index->getType(), K));
         CurVec = Builder.CreateInsertElement(

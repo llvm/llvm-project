@@ -17,7 +17,7 @@ bfminnm z23.h, p3/m, z23.h, z13.h  // 01100101-00000101-10001101-10110111
 // CHECK-INST:  movprfx  z23.h, p3/m, z31.h
 // CHECK-INST: bfminnm z23.h, p3/m, z23.h, z13.h
 // CHECK-ENCODING: [0xb7,0x8d,0x05,0x65]
-// CHECK-ERROR: instruction requires: b16b16 sme2p1 or sve2p1
+// CHECK-ERROR: instruction requires: b16b16 sve2p1
 // CHECK-UNKNOWN: 65058db7 <unknown>
 
 movprfx z23, z31
@@ -25,30 +25,30 @@ bfminnm z23.h, p3/m, z23.h, z13.h  // 01100101-00000101-10001101-10110111
 // CHECK-INST:  movprfx z23, z31
 // CHECK-INST: bfminnm z23.h, p3/m, z23.h, z13.h
 // CHECK-ENCODING: [0xb7,0x8d,0x05,0x65]
-// CHECK-ERROR: instruction requires: b16b16 sme2p1 or sve2p1
+// CHECK-ERROR: instruction requires: b16b16 sve2p1
 // CHECK-UNKNOWN: 65058db7 <unknown>
 
 bfminnm z0.h, p0/m, z0.h, z0.h  // 01100101-00000101-10000000-00000000
 // CHECK-INST: bfminnm z0.h, p0/m, z0.h, z0.h
 // CHECK-ENCODING: [0x00,0x80,0x05,0x65]
-// CHECK-ERROR: instruction requires: b16b16 sme2p1 or sve2p1
+// CHECK-ERROR: instruction requires: b16b16 sve2p1
 // CHECK-UNKNOWN: 65058000 <unknown>
 
 bfminnm z21.h, p5/m, z21.h, z10.h  // 01100101-00000101-10010101-01010101
 // CHECK-INST: bfminnm z21.h, p5/m, z21.h, z10.h
 // CHECK-ENCODING: [0x55,0x95,0x05,0x65]
-// CHECK-ERROR: instruction requires: b16b16 sme2p1 or sve2p1
+// CHECK-ERROR: instruction requires: b16b16 sve2p1
 // CHECK-UNKNOWN: 65059555 <unknown>
 
 bfminnm z23.h, p3/m, z23.h, z13.h  // 01100101-00000101-10001101-10110111
 // CHECK-INST: bfminnm z23.h, p3/m, z23.h, z13.h
 // CHECK-ENCODING: [0xb7,0x8d,0x05,0x65]
-// CHECK-ERROR: instruction requires: b16b16 sme2p1 or sve2p1
+// CHECK-ERROR: instruction requires: b16b16 sve2p1
 // CHECK-UNKNOWN: 65058db7 <unknown>
 
 bfminnm z31.h, p7/m, z31.h, z31.h  // 01100101-00000101-10011111-11111111
 // CHECK-INST: bfminnm z31.h, p7/m, z31.h, z31.h
 // CHECK-ENCODING: [0xff,0x9f,0x05,0x65]
-// CHECK-ERROR: instruction requires: b16b16 sme2p1 or sve2p1
+// CHECK-ERROR: instruction requires: b16b16 sve2p1
 // CHECK-UNKNOWN: 65059fff <unknown>
 

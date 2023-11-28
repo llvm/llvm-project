@@ -334,7 +334,7 @@ define <2 x i1> @foo1_or_commuted_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> 
 define i1 @foo1_and_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_and_signbit_lshr(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr i32 -2147483648, [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne i32 [[TMP2]], [[TMP1]]
@@ -353,7 +353,7 @@ define i1 @foo1_and_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
 define i1 @foo1_and_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_and_signbit_lshr_logical(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr i32 -2147483648, [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
@@ -373,7 +373,7 @@ define i1 @foo1_and_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 define <2 x i1> @foo1_and_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_and_signbit_lshr_vector(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
@@ -392,7 +392,7 @@ define <2 x i1> @foo1_and_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x 
 define i1 @foo1_or_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr i32 -2147483648, [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[K:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq i32 [[TMP2]], [[TMP1]]
@@ -411,7 +411,7 @@ define i1 @foo1_or_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
 define i1 @foo1_or_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr_logical(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw i32 1, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr i32 -2147483648, [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact i32 -2147483648, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[T]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[K:%.*]]
@@ -431,7 +431,7 @@ define i1 @foo1_or_signbit_lshr_logical(i32 %k, i32 %c1, i32 %c2) {
 define <2 x i1> @foo1_or_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr_vector(
 ; CHECK-NEXT:    [[T:%.*]] = shl nuw <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = lshr exact <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]

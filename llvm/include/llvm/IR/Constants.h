@@ -975,6 +975,11 @@ public:
     return cast<GlobalValue>(Op<0>().get());
   }
 
+  /// NoCFIValue is always a pointer.
+  PointerType *getType() const {
+    return cast<PointerType>(Value::getType());
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {
     return V->getValueID() == NoCFIValueVal;

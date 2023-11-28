@@ -977,47 +977,11 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
-void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
+void tools::addFortranRuntimeLibs(const ToolChain &TC,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back(Args.MakeArgString(
-        "/DEFAULTLIB:" + TC.getCompilerRTBasename(Args, "builtins")));
-    unsigned RTOptionID = options::OPT__SLASH_MT;
-    if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
-      RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
-                       .Case("static", options::OPT__SLASH_MT)
-                       .Case("static_dbg", options::OPT__SLASH_MTd)
-                       .Case("dll", options::OPT__SLASH_MD)
-                       .Case("dll_dbg", options::OPT__SLASH_MDd)
-                       .Default(options::OPT__SLASH_MT);
-    }
-    switch (RTOptionID) {
-    case options::OPT__SLASH_MT:
-      CmdArgs.push_back("/DEFAULTLIB:libcmt");
-      CmdArgs.push_back("Fortran_main.static.lib");
-      CmdArgs.push_back("FortranRuntime.static.lib");
-      CmdArgs.push_back("FortranDecimal.static.lib");
-      break;
-    case options::OPT__SLASH_MTd:
-      CmdArgs.push_back("/DEFAULTLIB:libcmtd");
-      CmdArgs.push_back("Fortran_main.static_dbg.lib");
-      CmdArgs.push_back("FortranRuntime.static_dbg.lib");
-      CmdArgs.push_back("FortranDecimal.static_dbg.lib");
-      break;
-    case options::OPT__SLASH_MD:
-      CmdArgs.push_back("/DEFAULTLIB:msvcrt");
-      CmdArgs.push_back("Fortran_main.dynamic.lib");
-      CmdArgs.push_back("FortranRuntime.dynamic.lib");
-      CmdArgs.push_back("FortranDecimal.dynamic.lib");
-      break;
-    case options::OPT__SLASH_MDd:
-      CmdArgs.push_back("/DEFAULTLIB:msvcrtd");
-      CmdArgs.push_back("Fortran_main.dynamic_dbg.lib");
-      CmdArgs.push_back("FortranRuntime.dynamic_dbg.lib");
-      CmdArgs.push_back("FortranDecimal.dynamic_dbg.lib");
-      break;
-    }
-  } else {
+  // These are handled earlier on Windows by telling the frontend driver to add
+  // the correct libraries to link against as dependents in the object file.
+  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back("-lFortran_main");
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");

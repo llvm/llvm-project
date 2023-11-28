@@ -19,7 +19,7 @@ struct iterator_traits_cpp17_proxy_iterator {
   int operator*();
   iterator_traits_cpp17_proxy_iterator& operator++();
 
-  // this returns legcay_iterator, not iterator_traits_cpp17_proxy_iterator
+  // this returns legacy_iterator, not iterator_traits_cpp17_proxy_iterator
   iterator_traits_cpp17_iterator operator++(int);
 };
 
@@ -41,7 +41,7 @@ struct iterator_traits_cpp17_proxy_input_iterator {
   int operator*();
   iterator_traits_cpp17_proxy_input_iterator& operator++();
 
-  // this returns legcay_input_iterator, not iterator_traits_cpp17_proxy_input_iterator
+  // this returns legacy_input_iterator, not iterator_traits_cpp17_proxy_input_iterator
   iterator_traits_cpp17_input_iterator operator++(int);
 
   bool operator==(iterator_traits_cpp17_proxy_input_iterator const&) const;

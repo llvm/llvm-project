@@ -9,37 +9,35 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_COMPILER_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_COMPILER_H
 
+// Example usage of compiler version checks
+// #if defined(LIBC_COMPILER_CLANG_VER)
+// #  if LIBC_COMPILER_CLANG_VER < 1500
+// #    warning "Libc only supports Clang 15 and later"
+// #  endif
+// #elif defined(LIBC_COMPILER_GCC_VER)
+// #  if LIBC_COMPILER_GCC_VER < 1500
+// #    warning "Libc only supports GCC 15 and later"
+// #  endif
+// #elif defined(LIBC_COMPILER_MSC_VER)
+// #  if LIBC_COMPILER_MSC_VER < 1930
+// #    warning "Libc only supports Visual Studio 2022 RTW (17.0) and later"
+// #  endif
+// #endif
+
 #if defined(__clang__)
 #define LIBC_COMPILER_IS_CLANG
+#define LIBC_COMPILER_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)
 #define LIBC_COMPILER_IS_GCC
+#define LIBC_COMPILER_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
 #endif
 
 #if defined(_MSC_VER)
 #define LIBC_COMPILER_IS_MSC
-#endif
-
-// Check compiler features
-#if defined(FLT128_MANT_DIG)
-// C23 _Float128 type is available.
-#define LIBC_COMPILER_HAS_FLOAT128
-#define LIBC_FLOAT128_IS_C23
-using float128 = _Float128;
-
-#elif defined(__SIZEOF_FLOAT128__)
-// Builtin __float128 is available.
-#define LIBC_COMPILER_HAS_FLOAT128
-#define LIBC_FLOAT128_IS_BUILTIN
-using float128 = __float128;
-
-#elif (defined(__linux__) && defined(__aarch64__))
-// long double on Linux aarch64 is 128-bit floating point.
-#define LIBC_COMPILER_HAS_FLOAT128
-#define LIBC_FLOAT128_IS_LONG_DOUBLE
-using float128 = long double;
-
+// https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros
+#define LIBC_COMPILER_MSC_VER (_MSC_VER)
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_COMPILER_H

@@ -142,6 +142,7 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_64BIT_REXW_XS:
   case IC_64BIT_REXW_OPSIZE:
   case IC_64BIT_REXW_ADSIZE:
+  case IC_64BIT_REX2:
     return false;
   case IC_VEX:
     return (VEX_LIG && WIG && inheritsFrom(child, IC_VEX_L_W)) ||
@@ -908,6 +909,8 @@ void DisassemblerTables::emitContextTable(raw_ostream &o, unsigned &i) const {
           o << "_B";
       }
     }
+    else if ((index & ATTR_64BIT) && (index & ATTR_REX2))
+      o << "IC_64BIT_REX2";
     else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XS))
       o << "IC_64BIT_REXW_XS";
     else if ((index & ATTR_64BIT) && (index & ATTR_REXW) && (index & ATTR_XD))
@@ -980,9 +983,10 @@ void DisassemblerTables::emitContextDecisions(raw_ostream &o1, raw_ostream &o2,
   emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[5], XOP9_MAP_STR);
   emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[6], XOPA_MAP_STR);
   emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[7], THREEDNOW_MAP_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[8], MAP5_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[9], MAP6_STR);
-  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[10], MAP7_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[8], MAP4_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[9], MAP5_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[10], MAP6_STR);
+  emitContextDecision(o1, o2, i1, i2, ModRMTableNum, *Tables[11], MAP7_STR);
 }
 
 void DisassemblerTables::emit(raw_ostream &o) const {

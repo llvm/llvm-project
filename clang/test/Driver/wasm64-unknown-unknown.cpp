@@ -1,4 +1,4 @@
-// RUN: %clang -target wasm64-unknown-unknown -### %s -emit-llvm-only -c 2>&1 \
+// RUN: %clang --target=wasm64-unknown-unknown -### %s -c 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=ECHO
 // RUN: %clang -target wasm64-unknown-unknown %s -emit-llvm -S -o - \
 // RUN:   | FileCheck %s

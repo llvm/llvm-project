@@ -44,6 +44,8 @@ struct RISCVTuneInfo {
   uint16_t PrefetchDistance;
   uint16_t MinPrefetchStride;
   unsigned MaxPrefetchIterationsAhead;
+
+  unsigned MinimumJumpTableEntries;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -270,6 +272,8 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return TuneInfo->MaxPrefetchIterationsAhead;
   };
+
+  unsigned getMinimumJumpTableEntries() const;
 };
 } // End llvm namespace
 

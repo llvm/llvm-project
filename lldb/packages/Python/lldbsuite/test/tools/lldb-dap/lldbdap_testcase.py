@@ -354,7 +354,7 @@ class DAPTestCaseBase(TestBase):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
     ):
@@ -434,7 +434,7 @@ class DAPTestCaseBase(TestBase):
         lldbDAPEnv=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
     ):

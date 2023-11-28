@@ -2,16 +2,16 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=debug.ErrnoTest \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
-// RUN:   -analyzer-config alpha.unix.Errno:AllowErrnoReadOutsideConditionExpressions=false \
+// RUN:   -analyzer-checker=unix.Errno \
+// RUN:   -analyzer-config unix.Errno:AllowErrnoReadOutsideConditionExpressions=false \
 // RUN:   -DERRNO_VAR
 
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=debug.ErrnoTest \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
-// RUN:   -analyzer-config alpha.unix.Errno:AllowErrnoReadOutsideConditionExpressions=false \
+// RUN:   -analyzer-checker=unix.Errno \
+// RUN:   -analyzer-config unix.Errno:AllowErrnoReadOutsideConditionExpressions=false \
 // RUN:   -DERRNO_FUNC
 
 #include "Inputs/system-header-simulator.h"

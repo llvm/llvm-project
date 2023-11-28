@@ -140,7 +140,7 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
   temlate <class _ExecutionPolicy, class _Iterator>
   optional<__iter_value_type<_Iterator>> __pstl_reduce(_Backend, _Iterator __first, _Iterator __last);
 
-  template <class _ExecuitonPolicy, class _Iterator, class _Tp>
+  template <class _ExecutionPolicy, class _Iterator, class _Tp>
   optional<__iter_diff_t<_Iterator>> __pstl_count(_Backend, _Iterator __first, _Iterator __last, const _Tp& __value);
 
   template <class _ExecutionPolicy, class _Iterator, class _Predicate>
