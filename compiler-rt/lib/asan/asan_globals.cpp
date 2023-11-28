@@ -80,14 +80,17 @@ static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
 }
 
 static void ReportGlobal(const Global &g, const char *prefix) {
+  DataInfo info;
+  bool symbolized = Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
   Report(
-      "%s Global[%p]: beg=%p size=%zu/%zu name=%s module=%s dyn_init=%zu "
+      "%s Global[%p]: beg=%p size=%zu/%zu name=%s source=%s module=%s "
+      "dyn_init=%zu "
       "odr_indicator=%p\n",
       prefix, (void *)&g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
-      g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
+      g.module_name, (symbolized ? info.module : "?"), g.has_dynamic_init,
+      (void *)g.odr_indicator);
 
-  DataInfo info;
-  if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
+  if (symbolized && info.line != 0) {
     Report("  location: name=%s, %d\n", info.file, static_cast<int>(info.line));
   } else if (g.gcc_location != 0) {
     // Fallback to Global::gcc_location
@@ -297,7 +300,8 @@ void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
                (char *)g.beg);
 }
 
-void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g,
+                         bool print_module_name) {
   DataInfo info;
   if (Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info) && info.line != 0) {
     str->AppendF("%s:%d", info.file, static_cast<int>(info.line));
@@ -312,6 +316,8 @@ void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
   } else {
     str->AppendF("%s", g.module_name);
   }
+  if (print_module_name && info.module)
+    str->AppendF(" in %s", info.module);
 }
 
 } // namespace __asan

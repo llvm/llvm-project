@@ -1380,7 +1380,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   llvm::PointerType *DstPtrTy = llvm::dyn_cast<llvm::PointerType>(DstTy);
   if (SrcPtrTy && DstPtrTy &&
       SrcPtrTy->getAddressSpace() != DstPtrTy->getAddressSpace()) {
-    Src = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Src, DstTy);
+    Src = CGF.Builder.CreateAddrSpaceCast(Src, DstTy);
     CGF.Builder.CreateStore(Src, Dst, DstIsVolatile);
     return;
   }

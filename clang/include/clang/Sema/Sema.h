@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SEMA_SEMA_H
 #define LLVM_CLANG_SEMA_SEMA_H
 
+#include "clang/APINotes/APINotesManager.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
@@ -408,6 +409,7 @@ public:
   ASTConsumer &Consumer;
   DiagnosticsEngine &Diags;
   SourceManager &SourceMgr;
+  api_notes::APINotesManager APINotes;
 
   /// Flag indicating whether or not to collect detailed statistics.
   bool CollectStats;
@@ -710,9 +712,13 @@ public:
     return result;
   }
 
+  // Saves the current floating-point pragma stack and clear it in this Sema.
   class FpPragmaStackSaveRAII {
   public:
-    FpPragmaStackSaveRAII(Sema &S) : S(S), SavedStack(S.FpPragmaStack) {}
+    FpPragmaStackSaveRAII(Sema &S)
+        : S(S), SavedStack(std::move(S.FpPragmaStack)) {
+      S.FpPragmaStack.Stack.clear();
+    }
     ~FpPragmaStackSaveRAII() { S.FpPragmaStack = std::move(SavedStack); }
 
   private:
@@ -722,7 +728,6 @@ public:
 
   void resetFPOptions(FPOptions FPO) {
     CurFPFeatures = FPO;
-    FpPragmaStack.Stack.clear();
     FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
   }
 
@@ -2095,6 +2100,9 @@ public:
   /// Same as above, but constructs the AddressSpace index if not provided.
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
+
+  CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
+  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
 
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
@@ -3841,6 +3849,12 @@ public:
                                   const FunctionProtoType *NewType,
                                   unsigned *ArgPos = nullptr,
                                   bool Reversed = false);
+
+  bool FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
+                                           const FunctionDecl *NewFunction,
+                                           unsigned *ArgPos = nullptr,
+                                           bool Reversed = false);
+
   void HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                                   QualType FromType, QualType ToType);
 
@@ -5449,7 +5463,7 @@ public:
   bool DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *PD,
                                         ObjCMethodDecl *Getter,
                                         SourceLocation Loc);
-  void DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
+  void DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
                              ArrayRef<Expr *> Args);
 
   void PushExpressionEvaluationContext(
@@ -8461,6 +8475,8 @@ public:
       ArrayRef<TemplateArgument> SugaredConverted,
       ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
 
+  SourceLocation getTopMostPointOfInstantiation(const NamedDecl *) const;
+
   /// Specifies the context in which a particular template
   /// argument is being checked.
   enum CheckTemplateArgumentKind {
@@ -8838,6 +8854,9 @@ public:
 
     /// The type of an exception.
     UPPC_ExceptionType,
+
+    /// Explicit specialization.
+    UPPC_ExplicitSpecialization,
 
     /// Partial specialization.
     UPPC_PartialSpecialization,
@@ -10983,7 +11002,10 @@ public:
 
   /// Called on well formed
   /// \#pragma clang fp reassociate
-  void ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled);
+  /// or
+  /// \#pragma clang fp reciprocal
+  void ActOnPragmaFPValueChangingOption(SourceLocation Loc, PragmaFPKind Kind,
+                                        bool IsEnabled);
 
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
@@ -11183,6 +11205,12 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+
+  // As a clang extension, enforces that a non-coroutine function must be marked
+  // with [[clang::coro_wrapper]] if it returns a type marked with
+  // [[clang::coro_return_type]].
+  // Expects that FD is not a coroutine.
+  void CheckCoroutineWrapper(FunctionDecl *FD);
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
@@ -12179,6 +12207,13 @@ public:
   /// Called on well-formed 'compare' clause.
   OMPClause *ActOnOpenMPCompareClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'fail' clause.
+  OMPClause *ActOnOpenMPFailClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPFailClause(
+      OpenMPClauseKind Kind, SourceLocation KindLoc,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+
   /// Called on well-formed 'seq_cst' clause.
   OMPClause *ActOnOpenMPSeqCstClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);
@@ -13476,6 +13511,10 @@ public:
   /// CUDA lambdas by default is host device function unless it has explicit
   /// host or device attribute.
   void CUDASetLambdaAttrs(CXXMethodDecl *Method);
+
+  /// Record \p FD if it is a CUDA/HIP implicit host device function used on
+  /// device side in device compilation.
+  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
 
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower

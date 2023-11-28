@@ -231,13 +231,15 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
   //        InvalidateNameMap;
   //        InvalidateNameMap invalidate_map;
   for (uint32_t i = 0; i < num_regs; ++i) {
-    StructuredData::Dictionary *reg_info_dict = nullptr;
-    if (!regs->GetItemAtIndexAsDictionary(i, reg_info_dict)) {
+    std::optional<StructuredData::Dictionary *> maybe_reg_info_dict =
+        regs->GetItemAtIndexAsDictionary(i);
+    if (!maybe_reg_info_dict) {
       Clear();
       printf("error: items in the 'registers' array must be dictionaries\n");
       regs->DumpToStdout();
       return 0;
     }
+    StructuredData::Dictionary *reg_info_dict = *maybe_reg_info_dict;
 
     // { 'name':'rcx'       , 'bitsize' :  64, 'offset' :  16,
     // 'encoding':'uint' , 'format':'hex'         , 'set': 0, 'ehframe' : 2,

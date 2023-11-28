@@ -2037,20 +2037,21 @@ TypeSize
 AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::Fixed(64);
+    return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
     if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::Fixed(0);
+      return TypeSize::getFixed(0);
 
     if (ST->hasSVE())
-      return TypeSize::Fixed(std::max(ST->getMinSVEVectorSizeInBits(), 128u));
+      return TypeSize::getFixed(
+          std::max(ST->getMinSVEVectorSizeInBits(), 128u));
 
-    return TypeSize::Fixed(ST->hasNEON() ? 128 : 0);
+    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
-      return TypeSize::Scalable(0);
+      return TypeSize::getScalable(0);
 
-    return TypeSize::Scalable(ST->hasSVE() ? 128 : 0);
+    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }

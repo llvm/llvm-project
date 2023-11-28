@@ -4536,6 +4536,11 @@ public:
   void registerGlobalDtorWithAtExit(const VarDecl &D, llvm::FunctionCallee fn,
                                     llvm::Constant *addr);
 
+  /// Registers the dtor using 'llvm.global_dtors' for platforms that do not
+  /// support an 'atexit()' function.
+  void registerGlobalDtorWithLLVM(const VarDecl &D, llvm::FunctionCallee fn,
+                                  llvm::Constant *addr);
+
   /// Call atexit() with function dtorStub.
   void registerGlobalDtorWithAtExit(llvm::Constant *dtorStub);
 
@@ -4824,6 +4829,9 @@ private:
                                      llvm::IntegerType *ResType,
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
+
+  llvm::Value *emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
+                                           llvm::IntegerType *ResType);
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);

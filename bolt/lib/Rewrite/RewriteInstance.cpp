@@ -1784,13 +1784,6 @@ void RewriteInstance::relocateEHFrameSection() {
   check_error(std::move(E), "failed to patch EH frame");
 }
 
-ArrayRef<uint8_t> RewriteInstance::getLSDAData() {
-  return ArrayRef<uint8_t>(LSDASection->getData(),
-                           LSDASection->getContents().size());
-}
-
-uint64_t RewriteInstance::getLSDAAddress() { return LSDASection->getAddress(); }
-
 Error RewriteInstance::readSpecialSections() {
   NamedRegionTimer T("readSpecialSections", "read special sections",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
@@ -1829,7 +1822,6 @@ Error RewriteInstance::readSpecialSections() {
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(".rela.text");
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
-  LSDASection = BC->getUniqueSectionByName(".gcc_except_table");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
 
@@ -2217,6 +2209,19 @@ void RewriteInstance::processDynamicRelocations() {
   }
 
   // The rest of dynamic relocations - DT_RELA.
+  // The static executable might have .rela.dyn secion and not have PT_DYNAMIC
+  if (!DynamicRelocationsSize && BC->IsStaticExecutable) {
+    ErrorOr<BinarySection &> DynamicRelSectionOrErr =
+        BC->getUniqueSectionByName(getRelaDynSectionName());
+    if (DynamicRelSectionOrErr) {
+      DynamicRelocationsAddress = DynamicRelSectionOrErr->getAddress();
+      DynamicRelocationsSize = DynamicRelSectionOrErr->getSize();
+      const SectionRef &SectionRef = DynamicRelSectionOrErr->getSectionRef();
+      DynamicRelativeRelocationsCount = std::distance(
+          SectionRef.relocation_begin(), SectionRef.relocation_end());
+    }
+  }
+
   if (DynamicRelocationsSize > 0) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getSectionForAddress(*DynamicRelocationsAddress);
@@ -3187,8 +3192,14 @@ void RewriteInstance::disassembleFunctions() {
 
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
-        !BC->getFragmentsToSkip().count(&Function))
-      Function.parseLSDA(getLSDAData(), getLSDAAddress());
+        !BC->getFragmentsToSkip().count(&Function)) {
+      ErrorOr<BinarySection &> LSDASection =
+          BC->getSectionForAddress(Function.getLSDAAddress());
+      check_error(LSDASection.getError(), "failed to get LSDA section");
+      ArrayRef<uint8_t> LSDAData = ArrayRef<uint8_t>(
+          LSDASection->getData(), LSDASection->getContents().size());
+      Function.parseLSDA(LSDAData, LSDASection->getAddress());
+    }
   }
 }
 
@@ -3199,7 +3210,6 @@ void RewriteInstance::buildFunctionsCFG() {
   // Create annotation indices to allow lock-free execution
   BC->MIB->getOrCreateAnnotationIndex("JTIndexReg");
   BC->MIB->getOrCreateAnnotationIndex("NOP");
-  BC->MIB->getOrCreateAnnotationIndex("Size");
 
   ParallelUtilities::WorkFuncWithAllocTy WorkFun =
       [&](BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId) {

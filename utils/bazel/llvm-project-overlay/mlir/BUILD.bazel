@@ -925,6 +925,7 @@ cc_library(
         ":CAPIIR",
         ":CAPIInterfaces",
         ":MLIRBindingsPythonHeadersAndDeps",
+        ":Support",
         "//llvm:Support",
         "@pybind11",
         "@python_runtime//:headers",
@@ -1021,6 +1022,7 @@ cc_binary(
         ":CAPIIR",
         ":CAPIQuant",
         ":MLIRBindingsPythonHeadersAndDeps",
+        "@pybind11",
     ],
 )
 
@@ -1039,6 +1041,7 @@ cc_binary(
         ":CAPIIR",
         ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
+        "@pybind11",
     ],
 )
 
@@ -1835,16 +1838,29 @@ td_library(
 
 gentbl_cc_library(
     name = "ArmSMETransformsPassIncGen",
-    tbl_outs = [(
-        [
-            "-gen-pass-decls",
-            "-name=ArmSME",
-        ],
-        "include/mlir/Dialect/ArmSME/Transforms/Passes.h.inc",
-    )],
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=ArmSME",
+            ],
+            "include/mlir/Dialect/ArmSME/Transforms/Passes.h.inc",
+        ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/ArmSME/Transforms/PassesEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/ArmSME/Transforms/PassesEnums.cpp.inc",
+        ),
+    ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/ArmSME/Transforms/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":PassBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -2026,6 +2042,26 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":Transforms",
+    ],
+)
+
+cc_library(
+    name = "ArmSMEToLLVM",
+    srcs = glob(["lib/Conversion/ArmSMEToLLVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArmSMEToLLVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArmSMEDialect",
+        ":ArmSMETransforms",
+        ":ArmSMEUtils",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":Transforms",
+        ":VectorDialect",
     ],
 )
 
@@ -2646,7 +2682,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":PDLDialect",
-        ":TransformDialectTdFiles",
+        ":TransformLoopExtensionTdFiles",
     ],
 )
 
@@ -3549,6 +3585,7 @@ cc_library(
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":Support",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
@@ -3771,6 +3808,7 @@ cc_library(
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
+        ":ArmSMEToLLVM",
         ":ArmSMEToSCF",
         ":AsyncToLLVM",
         ":BufferizationToMemRef",
@@ -3817,6 +3855,7 @@ cc_library(
         ":TensorToSPIRV",
         ":TosaToArith",
         ":TosaToLinalg",
+        ":TosaToMLProgram",
         ":TosaToSCF",
         ":TosaToTensor",
         ":UBToLLVM",
@@ -5174,6 +5213,7 @@ cc_library(
         ":MemRefDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -5256,6 +5296,7 @@ cc_library(
         ":Support",
         ":ToLLVMIRTranslation",
         ":Transforms",
+        ":VectorDialect",
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
@@ -11209,6 +11250,30 @@ cc_library(
         ":TosaDialect",
         ":Transforms",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TosaToMLProgram",
+    srcs = glob([
+        "lib/Conversion/TosaToMLProgram/*.cpp",
+        "lib/Conversion/TosaToMLProgram/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/TosaToMLProgram/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/TosaToMLProgram",
+    ],
+    deps = [
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":MLProgramDialect",
+        ":Pass",
+        ":TosaDialect",
+        ":Transforms",
     ],
 )
 

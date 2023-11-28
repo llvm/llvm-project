@@ -2133,13 +2133,13 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::FRem:
   case Instruction::And:
   case Instruction::Or:
+  case Instruction::LShr:
+  case Instruction::AShr:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
   case Instruction::Xor:
     return true;
   default:
@@ -2160,13 +2160,13 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::FRem:
   case Instruction::And:
   case Instruction::Or:
+  case Instruction::LShr:
+  case Instruction::AShr:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
   case Instruction::Xor:
     return true;
   default:
@@ -2480,16 +2480,6 @@ Constant *ConstantExpr::getShl(Constant *C1, Constant *C2,
   unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
                    (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
   return get(Instruction::Shl, C1, C2, Flags);
-}
-
-Constant *ConstantExpr::getLShr(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::LShr, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
-}
-
-Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
-  return get(Instruction::AShr, C1, C2,
-             isExact ? PossiblyExactOperator::IsExact : 0);
 }
 
 Constant *ConstantExpr::getExactLogBase2(Constant *C) {

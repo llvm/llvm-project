@@ -4693,10 +4693,6 @@ The following is the syntax for constant expressions:
     Perform a multiplication on constants.
 ``shl (LHS, RHS)``
     Perform a left shift on constants.
-``lshr (LHS, RHS)``
-    Perform a logical right shift on constants.
-``ashr (LHS, RHS)``
-    Perform an arithmetic right shift on constants.
 ``xor (LHS, RHS)``
     Perform a bitwise xor on constants.
 
@@ -9985,6 +9981,7 @@ Syntax:
 ::
 
       <result> = or <ty> <op1>, <op2>   ; yields ty:result
+      <result> = or disjoint <ty> <op1>, <op2>   ; yields ty:result
 
 Overview:
 """""""""
@@ -10015,6 +10012,12 @@ The truth table used for the '``or``' instruction is:
 +-----+-----+-----+
 |   1 |   1 |   1 |
 +-----+-----+-----+
+
+``disjoint`` means that for each bit, that bit is zero in at least one of the
+inputs. This allows the Or to be treated as an Add since no carry can occur from
+any bit. If the disjoint keyword is present, the result value of the ``or`` is a
+:ref:`poison value <poisonvalues>` if both inputs have a one in the same bit
+position. For vectors, only the element containing the bit is poison.
 
 Example:
 """"""""

@@ -289,7 +289,13 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
 
 void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  if (getBufferizeDestinationOnly()) {
+    // The destination is replaced with a newly allocated buffer, but the op
+    // itself remains in place.
+    onlyReadsHandle(getTarget(), effects);
+  } else {
+    consumesHandle(getTarget(), effects);
+  }
   producesHandle(getAllocatedBuffer(), effects);
   producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
@@ -3160,6 +3166,33 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
   results.push_back(maybeTransformed->first);
   // Handle to the operation that replaces the original convolution.
   results.push_back(maybeTransformed->second);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeConv2DOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TransposeConv2DOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+          .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+            return transposeConv2D(rewriter, op);
+          })
+          .Case([&](linalg::Conv2DNhwcFhwcQOp op) {
+            return transposeConv2D(rewriter, op);
+          })
+          .Default([&](Operation *op) {
+            return rewriter.notifyMatchFailure(op, "not supported");
+          });
+  if (failed(maybeTransformed))
+    return emitDefaultSilenceableFailure(target);
+  // Handle to the new Conv2D operation with transposed filters
+  results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
 }
 

@@ -256,24 +256,24 @@ public:
       return {};
     }
 
-    bool GetItemAtIndexAsDictionary(size_t idx, Dictionary *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsDictionary();
-        return (result != nullptr);
+    /// Retrieves the element at index \a idx from a StructuredData::Array if it
+    /// is a Dictionary.
+    ///
+    /// \param[in] idx
+    ///   The index of the element to retrieve.
+    ///
+    /// \return
+    ///   If the element at index \a idx is a Dictionary, this method returns a
+    ///   valid pointer to the Dictionary wrapped in a std::optional. If the
+    ///   element is not a Dictionary or the index is invalid, this returns
+    ///   std::nullopt. Note that the underlying Dictionary pointer is never
+    ///   nullptr.
+    std::optional<Dictionary *> GetItemAtIndexAsDictionary(size_t idx) const {
+      if (auto item_sp = GetItemAtIndex(idx)) {
+        if (auto *dict = item_sp->GetAsDictionary())
+          return dict;
       }
-      return false;
-    }
-
-    bool GetItemAtIndexAsArray(size_t idx, Array *&result) const {
-      result = nullptr;
-      ObjectSP value_sp = GetItemAtIndex(idx);
-      if (value_sp.get()) {
-        result = value_sp->GetAsArray();
-        return (result != nullptr);
-      }
-      return false;
+      return {};
     }
 
     void Push(const ObjectSP &item) { m_items.push_back(item); }

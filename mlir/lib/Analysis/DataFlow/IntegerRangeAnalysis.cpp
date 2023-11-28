@@ -79,22 +79,6 @@ void IntegerRangeAnalysis::visitOperation(
     return;
   }
 
-  // Ignore non-integer outputs - return early if the op has no scalar
-  // integer results
-  bool hasIntegerResult = false;
-  for (auto it : llvm::zip(results, op->getResults())) {
-    Value value = std::get<1>(it);
-    if (value.getType().isIntOrIndex()) {
-      hasIntegerResult = true;
-    } else {
-      IntegerValueRangeLattice *lattice = std::get<0>(it);
-      propagateIfChanged(lattice,
-                         lattice->join(IntegerValueRange::getMaxRange(value)));
-    }
-  }
-  if (!hasIntegerResult)
-    return;
-
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
   if (!inferrable)
     return setAllToEntryStates(results);

@@ -609,7 +609,8 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
           [&](const auto &c) {},
       },
       c.u);
-  if (!eligibleTarget) {
+  if (!eligibleTarget &&
+      context_.ShouldWarn(common::UsageWarning::Portability)) {
     context_.Say(parser::FindSourceLocation(c),
         "If %s directive is nested inside TARGET region, the behaviour "
         "is unspecified"_port_en_US,
@@ -1164,13 +1165,31 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithClause &x) {
+  SetClauseSets(llvm::omp::Directive::OMPD_declare_target);
+}
+
+void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
+  if (x.v.v.size() > 0) {
+    const parser::OmpClause *enterClause =
+        FindClause(llvm::omp::Clause::OMPC_enter);
+    const parser::OmpClause *toClause = FindClause(llvm::omp::Clause::OMPC_to);
+    const parser::OmpClause *linkClause =
+        FindClause(llvm::omp::Clause::OMPC_link);
+    if (!enterClause && !toClause && !linkClause) {
+      context_.Say(x.source,
+          "If the DECLARE TARGET directive has a clause, it must contain at lease one ENTER clause or LINK clause"_err_en_US);
+    }
+    if (toClause) {
+      context_.Say(toClause->source,
+          "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
-  const auto &spec{std::get<parser::OmpDeclareTargetSpecifier>(x.t)};
-  if (std::holds_alternative<parser::OmpDeclareTargetWithClause>(spec.u)) {
-    SetClauseSets(llvm::omp::Directive::OMPD_declare_target);
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareTargetWithList &x) {
@@ -1244,7 +1263,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
     CheckThreadprivateOrDeclareTargetVar(*objectList);
   } else if (const auto *clauseList{
                  parser::Unwrap<parser::OmpClauseList>(spec.u)}) {
-    bool toClauseFound{false}, deviceTypeClauseFound{false};
+    bool toClauseFound{false}, deviceTypeClauseFound{false},
+        enterClauseFound{false};
     for (const auto &clause : clauseList->v) {
       common::visit(
           common::visitors{
@@ -1259,6 +1279,12 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
                 CheckIsVarPartOfAnotherVar(dir.source, linkClause.v);
                 CheckThreadprivateOrDeclareTargetVar(linkClause.v);
               },
+              [&](const parser::OmpClause::Enter &enterClause) {
+                enterClauseFound = true;
+                CheckSymbolNames(dir.source, enterClause.v);
+                CheckIsVarPartOfAnotherVar(dir.source, enterClause.v);
+                CheckThreadprivateOrDeclareTargetVar(enterClause.v);
+              },
               [&](const parser::OmpClause::DeviceType &deviceTypeClause) {
                 deviceTypeClauseFound = true;
                 if (deviceTypeClause.v.v !=
@@ -1272,7 +1298,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
           },
           clause.u);
 
-      if (toClauseFound && !deviceTypeClauseFound) {
+      if ((toClauseFound || enterClauseFound) && !deviceTypeClauseFound) {
         deviceConstructFound_ = true;
       }
     }
@@ -2227,6 +2253,8 @@ CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
 CHECK_SIMPLE_CLAUSE(Doacross, OMPC_doacross)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(OmpxBare, OMPC_ompx_bare)
+CHECK_SIMPLE_CLAUSE(Enter, OMPC_enter)
+CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
@@ -2747,6 +2775,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Device &x) {
   const auto &device{std::get<1>(deviceClause.t)};
   RequiresPositiveParameter(
       llvm::omp::Clause::OMPC_device, device, "device expression");
+  std::optional<parser::OmpDeviceClause::DeviceModifier> modifier =
+      std::get<0>(deviceClause.t);
+  if (modifier &&
+      *modifier == parser::OmpDeviceClause::DeviceModifier::Ancestor) {
+    if (GetContext().directive != llvm::omp::OMPD_target) {
+      context_.Say(GetContext().clauseSource,
+          "The ANCESTOR device-modifier must not appear on the DEVICE clause on"
+          " any directive other than the TARGET construct. Found on %s construct."_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(GetContext().directive)));
+    }
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
@@ -2769,15 +2808,17 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 
 void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
     SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
-  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
-    const auto *symbol{it->first};
-    const auto source{it->second};
-    if (IsPolymorphicAllocatable(*symbol)) {
-      context_.Say(source,
-          "If a polymorphic variable with allocatable attribute '%s' is in "
-          "%s clause, the behavior is unspecified"_port_en_US,
-          symbol->name(),
-          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+  if (context_.ShouldWarn(common::UsageWarning::Portability)) {
+    for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+      const auto *symbol{it->first};
+      const auto source{it->second};
+      if (IsPolymorphicAllocatable(*symbol)) {
+        context_.Say(source,
+            "If a polymorphic variable with allocatable attribute '%s' is in "
+            "%s clause, the behavior is unspecified"_port_en_US,
+            symbol->name(),
+            parser::ToUpperCaseLetters(getClauseName(clause).str()));
+      }
     }
   }
 }
@@ -3226,12 +3267,13 @@ const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
     const parser::OmpClause &clause) {
 
   // Clauses with OmpObjectList as its data member
-  using MemberObjectListClauses = std::tuple<parser::OmpClause::Copyprivate,
-      parser::OmpClause::Copyin, parser::OmpClause::Firstprivate,
-      parser::OmpClause::From, parser::OmpClause::Lastprivate,
-      parser::OmpClause::Link, parser::OmpClause::Private,
-      parser::OmpClause::Shared, parser::OmpClause::To,
-      parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
+  using MemberObjectListClauses =
+      std::tuple<parser::OmpClause::Copyprivate, parser::OmpClause::Copyin,
+          parser::OmpClause::Firstprivate, parser::OmpClause::From,
+          parser::OmpClause::Lastprivate, parser::OmpClause::Link,
+          parser::OmpClause::Private, parser::OmpClause::Shared,
+          parser::OmpClause::To, parser::OmpClause::Enter,
+          parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
 
   // Clauses with OmpObjectList in the tuple
   using TupleObjectListClauses =

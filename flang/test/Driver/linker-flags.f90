@@ -12,11 +12,10 @@
 ! RUN: %flang -### --target=x86_64-unknown-haiku %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,HAIKU
 ! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
-! NOTE: Clang's driver library, clangDriver, usually adds 'libcmt' and
-!       'oldnames' on Windows, but they are not needed when compiling
-!       Fortran code and they might bring in additional dependencies.
-!       Make sure they're not added.
-! RUN: %flang -### --target=aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
+! NOTE: Clang's driver library, clangDriver, usually adds 'oldnames' on Windows,
+!       but it is not needed when compiling Fortran code and they might bring in
+!       additional dependencies. Make sure its not added.
+! RUN: %flang -### --target=aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not oldnames
 
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"
@@ -52,8 +51,5 @@
 !       (lld-)link.exe on Windows platforms. The suffix may not be added
 !       when the executable is not found or on non-Windows platforms.
 ! MSVC-LABEL: link
-! MSVC-SAME: Fortran_main.lib
-! MSVC-SAME: FortranRuntime.lib
-! MSVC-SAME: FortranDecimal.lib
 ! MSVC-SAME: /subsystem:console
 ! MSVC-SAME: "[[object_file]]"

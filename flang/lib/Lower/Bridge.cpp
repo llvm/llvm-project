@@ -603,6 +603,10 @@ public:
         std::nullopt);
   }
 
+  bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) override final {
+    return bool(shallowLookupSymbol(sym));
+  }
+
   bool createHostAssociateVarClone(
       const Fortran::semantics::Symbol &sym) override final {
     mlir::Location loc = genLocation(sym.name());
@@ -1427,6 +1431,7 @@ private:
             resultRef = builder->createConvert(loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
+    bridge.openAccCtx().finalizeAndPop();
     bridge.fctCtx().finalizeAndPop();
     builder->create<mlir::func::ReturnOp>(loc, resultVal);
   }
@@ -1454,9 +1459,11 @@ private:
     } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
       mlir::Value retval = builder->create<fir::LoadOp>(
           toLocation(), getAltReturnResult(symbol));
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       builder->create<mlir::func::ReturnOp>(toLocation(), retval);
     } else {
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       genExitRoutine();
     }
@@ -2384,7 +2391,8 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), accDecl, accRoutineInfos);
+                                   bridge.openAccCtx(), accDecl,
+                                   accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
@@ -3087,6 +3095,17 @@ private:
       const Fortran::lower::SomeExpr *expr =
           Fortran::semantics::GetExpr(pointerObject);
       assert(expr);
+      if (Fortran::evaluate::IsProcedurePointer(*expr)) {
+        Fortran::lower::StatementContext stmtCtx;
+        hlfir::Entity pptr = Fortran::lower::convertExprToHLFIR(
+            loc, *this, *expr, localSymbols, stmtCtx);
+        auto boxTy{
+            Fortran::lower::getUntypedBoxProcType(builder->getContext())};
+        hlfir::Entity nullBoxProc(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, nullBoxProc, pptr);
+        return;
+      }
       fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
       fir::factory::disassociateMutableBox(*builder, loc, box);
     }
@@ -3233,8 +3252,24 @@ private:
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
-    if (Fortran::evaluate::IsProcedure(assign.rhs))
+
+    if (!lowerToHighLevelFIR() && Fortran::evaluate::IsProcedure(assign.rhs))
       TODO(loc, "procedure pointer assignment");
+    if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
+      hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
+          loc, *this, assign.lhs, localSymbols, stmtCtx);
+      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        hlfir::Entity rhs(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, rhs, lhs);
+        return;
+      }
+      hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, stmtCtx)));
+      builder->createStoreWithConvert(loc, rhs, lhs);
+      return;
+    }
 
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
@@ -4200,6 +4235,7 @@ private:
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
     bridge.fctCtx().pushScope();
+    bridge.openAccCtx().pushScope();
     const Fortran::semantics::Scope &scope = funit.getScope();
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
                if (auto *sym = scope.symbol()) llvm::dbgs() << " " << *sym;
@@ -4440,6 +4476,7 @@ private:
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
     if (funit.isMainProgram()) {
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       genExitRoutine();
     } else {
@@ -4910,7 +4947,8 @@ private:
 
 Fortran::evaluate::FoldingContext
 Fortran::lower::LoweringBridge::createFoldingContext() const {
-  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics()};
+  return {getDefaultKinds(), getIntrinsicTable(), getTargetCharacteristics(),
+          getLanguageFeatures()};
 }
 
 void Fortran::lower::LoweringBridge::lower(
@@ -4940,11 +4978,13 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
     fir::KindMapping &kindMap,
     const Fortran::lower::LoweringOptions &loweringOptions,
-    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults)
+    const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
+    const Fortran::common::LanguageFeatureControl &languageFeatures)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
       intrinsics{intrinsics}, targetCharacteristics{targetCharacteristics},
       cooked{&cooked}, context{context}, kindMap{kindMap},
-      loweringOptions{loweringOptions}, envDefaults{envDefaults} {
+      loweringOptions{loweringOptions}, envDefaults{envDefaults},
+      languageFeatures{languageFeatures} {
   // Register the diagnostic handler.
   context.getDiagEngine().registerHandler([](mlir::Diagnostic &diag) {
     llvm::raw_ostream &os = llvm::errs();

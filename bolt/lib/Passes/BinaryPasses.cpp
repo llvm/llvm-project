@@ -582,65 +582,50 @@ bool CheckLargeFunctions::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
-  std::vector<std::pair<MCInst *, uint32_t>> PreservedOffsetAnnotations;
-  std::vector<std::pair<MCInst *, MCSymbol *>> PreservedLabelAnnotations;
-
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &BF = It.second;
-
-    for (FunctionFragment &FF : BF.getLayout().fragments()) {
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    for (FunctionFragment &FF : BF->getLayout().fragments()) {
+      // Reset at the start of the new fragment.
       int64_t CurrentGnuArgsSize = 0;
 
       for (BinaryBasicBlock *const BB : FF) {
-        // First convert GnuArgsSize annotations into CFIs. This may change
-        // instr pointers, so do it before recording ptrs for preserved
-        // annotations
-        if (BF.usesGnuArgsSize()) {
-          for (auto II = BB->begin(); II != BB->end(); ++II) {
-            if (!BC.MIB->isInvoke(*II))
-              continue;
+        for (auto II = BB->begin(); II != BB->end(); ++II) {
+
+          // Convert GnuArgsSize annotations into CFIs.
+          if (BF->usesGnuArgsSize() && BC.MIB->isInvoke(*II)) {
             const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
             assert(NewGnuArgsSize >= 0 &&
-                   "expected non-negative GNU_args_size");
+                   "Expected non-negative GNU_args_size.");
             if (NewGnuArgsSize != CurrentGnuArgsSize) {
-              auto InsertII = BF.addCFIInstruction(
+              auto InsertII = BF->addCFIInstruction(
                   BB, II,
                   MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
               CurrentGnuArgsSize = NewGnuArgsSize;
               II = std::next(InsertII);
             }
           }
-        }
 
-        // Now record preserved annotations separately and then strip
-        // annotations.
-        for (auto II = BB->begin(); II != BB->end(); ++II) {
-          if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
-            PreservedOffsetAnnotations.emplace_back(&(*II),
-                                                    *BC.MIB->getOffset(*II));
-          if (MCSymbol *Label = BC.MIB->getLabel(*II))
-            PreservedLabelAnnotations.emplace_back(&*II, Label);
+          // Preserve selected annotations and strip the rest.
+          std::optional<uint32_t> Offset = BF->requiresAddressTranslation()
+                                               ? BC.MIB->getOffset(*II)
+                                               : std::nullopt;
+          std::optional<uint32_t> Size = BC.MIB->getSize(*II);
+          MCSymbol *Label = BC.MIB->getLabel(*II);
+
           BC.MIB->stripAnnotations(*II);
+
+          if (Offset)
+            BC.MIB->setOffset(*II, *Offset);
+          if (Size)
+            BC.MIB->setSize(*II, *Size);
+          if (Label)
+            BC.MIB->setLabel(*II, Label);
         }
       }
     }
   }
-  for (BinaryFunction *BF : BC.getInjectedBinaryFunctions())
-    for (BinaryBasicBlock &BB : *BF)
-      for (MCInst &Instruction : BB) {
-        if (MCSymbol *Label = BC.MIB->getLabel(Instruction))
-          PreservedLabelAnnotations.emplace_back(&Instruction, Label);
-        BC.MIB->stripAnnotations(Instruction);
-      }
 
   // Release all memory taken by annotations
   BC.MIB->freeAnnotations();
-
-  // Reinsert preserved annotations we need during code emission.
-  for (const std::pair<MCInst *, uint32_t> &Item : PreservedOffsetAnnotations)
-    BC.MIB->setOffset(*Item.first, Item.second);
-  for (auto [Instr, Label] : PreservedLabelAnnotations)
-    BC.MIB->setLabel(*Instr, Label);
 }
 
 // Check for dirty state in MCSymbol objects that might be a consequence

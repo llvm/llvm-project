@@ -307,6 +307,7 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
+  case CallingConv::GRAAL:         Out << "graalcc"; break;
   case CallingConv::CFGuard_Check: Out << "cfguard_checkcc"; break;
   case CallingConv::X86_StdCall:   Out << "x86_stdcallcc"; break;
   case CallingConv::X86_FastCall:  Out << "x86_fastcallcc"; break;
@@ -1265,9 +1266,8 @@ void SlotTracker::CreateFunctionSlot(const Value *V) {
 void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   assert(N && "Can't insert a null Value into SlotTracker!");
 
-  // Don't make slots for DIExpressions or DIArgLists. We just print them inline
-  // everywhere.
-  if (isa<DIExpression>(N) || isa<DIArgList>(N))
+  // Don't make slots for DIExpressions. We just print them inline everywhere.
+  if (isa<DIExpression>(N))
     return;
 
   unsigned DestSlot = mdnNext;
@@ -1355,6 +1355,10 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
                dyn_cast<PossiblyExactOperator>(U)) {
     if (Div->isExact())
       Out << " exact";
+  } else if (const PossiblyDisjointInst *PDI =
+                 dyn_cast<PossiblyDisjointInst>(U)) {
+    if (PDI->isDisjoint())
+      Out << " disjoint";
   } else if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
     if (GEP->isInBounds())
       Out << " inbounds";
@@ -3516,8 +3520,6 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
     // Write DIExpressions inline.
     // FIXME: Ban DIExpressions in NamedMDNodes, they will serve no purpose.
     MDNode *Op = NMD->getOperand(i);
-    assert(!isa<DIArgList>(Op) &&
-           "DIArgLists should not appear in NamedMDNodes");
     if (auto *Expr = dyn_cast<DIExpression>(Op)) {
       writeDIExpression(Out, Expr, AsmWriterContext::getEmpty());
       continue;
@@ -4918,7 +4920,7 @@ static void printMetadataImplRec(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (!N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
+  if (!N || isa<DIExpression>(MD))
     return;
 
   OS << " = ";
@@ -4986,7 +4988,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
+  if (OnlyAsOperand || !N || isa<DIExpression>(MD))
     return;
 
   OS << " = ";

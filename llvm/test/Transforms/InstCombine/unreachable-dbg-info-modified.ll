@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=instcombine -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; When removing the llvm.dbg.value intrinsic in the unreachable block
 ; InstCombine would incorrectly return a false Modified status.

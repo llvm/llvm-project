@@ -904,23 +904,27 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
+unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    return get(RISCV::BEQ);
+    return RISCV::BEQ;
   case RISCVCC::COND_NE:
-    return get(RISCV::BNE);
+    return RISCV::BNE;
   case RISCVCC::COND_LT:
-    return get(RISCV::BLT);
+    return RISCV::BLT;
   case RISCVCC::COND_GE:
-    return get(RISCV::BGE);
+    return RISCV::BGE;
   case RISCVCC::COND_LTU:
-    return get(RISCV::BLTU);
+    return RISCV::BLTU;
   case RISCVCC::COND_GEU:
-    return get(RISCV::BGEU);
+    return RISCV::BGEU;
   }
+}
+
+const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
+  return get(RISCVCC::getBrCond(CC));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1606,15 +1610,6 @@ MachineTraceStrategy RISCVInstrInfo::getMachineCombinerTraceStrategy() const {
   return ForceMachineCombinerStrategy;
 }
 
-void RISCVInstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
-                                           MachineInstr &OldMI2,
-                                           MachineInstr &NewMI1,
-                                           MachineInstr &NewMI2) const {
-  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
-  NewMI1.setFlags(IntersectedFlags);
-  NewMI2.setFlags(IntersectedFlags);
-}
-
 void RISCVInstrInfo::finalizeInsInstrs(
     MachineInstr &Root, MachineCombinerPattern &P,
     SmallVectorImpl<MachineInstr *> &InsInstrs) const {
@@ -2198,8 +2193,11 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       .setMIFlags(MemI.getFlags());
 }
 
-// Return true if get the base operand, byte offset of an instruction and the
-// memory width. Width is the size of memory that is being loaded/stored.
+// Set BaseReg (the base register operand), Offset (the byte offset being
+// accessed) and the access Width of the passed instruction that reads/writes
+// memory. Returns false if the instruction does not read/write memory or the
+// BaseReg/Offset/Width can't be determined. Is not guaranteed to always
+// recognise base operands and offsets in all cases.
 bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
     const MachineInstr &LdSt, const MachineOperand *&BaseReg, int64_t &Offset,
     unsigned &Width, const TargetRegisterInfo *TRI) const {
@@ -2208,7 +2206,7 @@ bool RISCVInstrInfo::getMemOperandWithOffsetWidth(
 
   // Here we assume the standard RISC-V ISA, which uses a base+offset
   // addressing mode. You'll need to relax these conditions to support custom
-  // load/stores instructions.
+  // load/store instructions.
   if (LdSt.getNumExplicitOperands() != 3)
     return false;
   if (!LdSt.getOperand(1).isReg() || !LdSt.getOperand(2).isImm())
@@ -2432,6 +2430,23 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
                       .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
                                         RISCVII::MO_CALL));
   return It;
+}
+
+std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                                         Register Reg) const {
+  // TODO: Handle cases where Reg is a super- or sub-register of the
+  // destination register.
+  const MachineOperand &Op0 = MI.getOperand(0);
+  if (!Op0.isReg() || Reg != Op0.getReg())
+    return std::nullopt;
+
+  // Don't consider ADDIW as a candidate because the caller may not be aware
+  // of its sign extension behaviour.
+  if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&
+      MI.getOperand(2).isImm())
+    return RegImmPair{MI.getOperand(1).getReg(), MI.getOperand(2).getImm()};
+
+  return std::nullopt;
 }
 
 // MIR printer helper function to annotate Operands with a comment.

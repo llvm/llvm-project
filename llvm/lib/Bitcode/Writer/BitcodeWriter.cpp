@@ -336,8 +336,7 @@ private:
                     unsigned Abbrev);
   void writeDIMacroFile(const DIMacroFile *N, SmallVectorImpl<uint64_t> &Record,
                         unsigned Abbrev);
-  void writeDIArgList(const DIArgList *N, SmallVectorImpl<uint64_t> &Record,
-                      unsigned Abbrev);
+  void writeDIArgList(const DIArgList *N, SmallVectorImpl<uint64_t> &Record);
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
   void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
@@ -1541,6 +1540,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *PEO = dyn_cast<PossiblyExactOperator>(V)) {
     if (PEO->isExact())
       Flags |= 1 << bitc::PEO_EXACT;
+  } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(V)) {
+    if (PDI->isDisjoint())
+      Flags |= 1 << bitc::PDI_DISJOINT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
     if (FPMO->hasAllowReassoc())
       Flags |= bitc::AllowReassoc;
@@ -1975,13 +1977,12 @@ void ModuleBitcodeWriter::writeDIMacroFile(const DIMacroFile *N,
 }
 
 void ModuleBitcodeWriter::writeDIArgList(const DIArgList *N,
-                                         SmallVectorImpl<uint64_t> &Record,
-                                         unsigned Abbrev) {
+                                         SmallVectorImpl<uint64_t> &Record) {
   Record.reserve(N->getArgs().size());
   for (ValueAsMetadata *MD : N->getArgs())
     Record.push_back(VE.getMetadataID(MD));
 
-  Stream.EmitRecord(bitc::METADATA_ARG_LIST, Record, Abbrev);
+  Stream.EmitRecord(bitc::METADATA_ARG_LIST, Record);
   Record.clear();
 }
 
@@ -2263,6 +2264,10 @@ void ModuleBitcodeWriter::writeMetadataRecords(
     continue;
 #include "llvm/IR/Metadata.def"
       }
+    }
+    if (auto *AL = dyn_cast<DIArgList>(MD)) {
+      writeDIArgList(AL, Record);
+      continue;
     }
     writeValueAsMetadata(cast<ValueAsMetadata>(MD), Record);
   }

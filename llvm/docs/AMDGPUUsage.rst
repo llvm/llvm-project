@@ -504,6 +504,20 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     ``gfx1201``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      =========== =============== ============ ===== ================= =============== =============== ======================
 
 .. _amdgpu-target-features:
@@ -1667,11 +1681,13 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1036``    0x045      ``gfx1036``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1101``    0x046      ``gfx1101``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1102``    0x047      ``gfx1102``
-     *reserved*                           0x048      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1200``    0x048      ``gfx1200``
      *reserved*                           0x049      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``    0x04a      ``gfx1151``
      ``EF_AMDGPU_MACH_AMDGCN_GFX941``     0x04b      ``gfx941``
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``     0x04c      ``gfx942``
+     *reserved*                           0x04d      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1201``    0x04e      ``gfx1201``
      ==================================== ========== =============================
 
 Sections
@@ -2017,7 +2033,8 @@ Kernel entry point
 Relocation Records
 ------------------
 
-AMDGPU backend generates ``Elf64_Rela`` relocation records. Supported
+The AMDGPU backend generates ``Elf64_Rela`` relocation records for
+AMDHSA or ``Elf64_Rel`` relocation records for Mesa/AMDPAL. Supported
 relocatable fields are:
 
 ``word32``

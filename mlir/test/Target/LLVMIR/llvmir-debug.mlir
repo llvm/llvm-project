@@ -74,7 +74,7 @@ llvm.func @func_no_debug() {
 #variableAddr = #llvm.di_local_variable<scope = #blockScope, name = "alloc">
 #noNameVariable = #llvm.di_local_variable<scope = #blockScope>
 #module = #llvm.di_module<
-  file = #file, scope = #file, name = "module", 
+  file = #file, scope = #file, name = "module",
   configMacros = "bar", includePath = "/",
   apinotes = "/", line = 42, isDecl = true
 >
@@ -91,12 +91,12 @@ llvm.func @func_with_debug(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression())
-  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression())
+  // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 8, 8))
+  // CHECK: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 8))
   // CHECK: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
-  llvm.intr.dbg.value #variable = %arg : i64
-  llvm.intr.dbg.declare #variableAddr = %alloc : !llvm.ptr
-  llvm.intr.dbg.value #noNameVariable= %arg : i64
+  llvm.intr.dbg.value #variable #llvm.di_expr<[4096, 8, 8]> = %arg : i64
+  llvm.intr.dbg.declare #variableAddr #llvm.di_expr<[4096, 0, 8]> = %alloc : !llvm.ptr
+  llvm.intr.dbg.value #noNameVariable = %arg : i64
 
   // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("mysource.cc":3:4 at "mysource.cc":5:6))

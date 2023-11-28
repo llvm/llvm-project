@@ -440,6 +440,7 @@ getDWOName(llvm::DWARFUnit &CU,
   assert(!DWOName.empty() &&
          "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exists.");
   if (!opts::DwarfOutputPath.empty()) {
+    DWOName = std::string(sys::path::filename(DWOName));
     auto Iter = NameToIndexMap.find(DWOName);
     if (Iter == NameToIndexMap.end())
       Iter = NameToIndexMap.insert({DWOName, 0}).first;

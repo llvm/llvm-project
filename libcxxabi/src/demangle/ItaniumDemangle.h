@@ -21,7 +21,6 @@
 #include "Utility.h"
 #include <__cxxabi_config.h>
 #include <algorithm>
-#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -129,12 +128,12 @@ public:
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   void pop_back() {
-    assert(Last != First && "Popping empty vector!");
+    DEMANGLE_ASSERT(Last != First, "Popping empty vector!");
     --Last;
   }
 
   void shrinkToSize(size_t Index) {
-    assert(Index <= size() && "shrinkToSize() can't expand!");
+    DEMANGLE_ASSERT(Index <= size(), "shrinkToSize() can't expand!");
     Last = First + Index;
   }
 
@@ -144,11 +143,11 @@ public:
   bool empty() const { return First == Last; }
   size_t size() const { return static_cast<size_t>(Last - First); }
   T &back() {
-    assert(Last != First && "Calling back() on empty vector!");
+    DEMANGLE_ASSERT(Last != First, "Calling back() on empty vector!");
     return *(Last - 1);
   }
   T &operator[](size_t Index) {
-    assert(Index < size() && "Invalid access!");
+    DEMANGLE_ASSERT(Index < size(), "Invalid access!");
     return *(begin() + Index);
   }
   void clear() { Last = First; }
@@ -1678,7 +1677,7 @@ public:
     std::string_view SV = ExpandedSpecialSubstitution::getBaseName();
     if (isInstantiation()) {
       // The instantiations are typedefs that drop the "basic_" prefix.
-      assert(starts_with(SV, "basic_"));
+      DEMANGLE_ASSERT(starts_with(SV, "basic_"), "");
       SV.remove_prefix(sizeof("basic_") - 1);
     }
     return SV;
@@ -2569,7 +2568,7 @@ void Node::visit(Fn F) const {
     return F(static_cast<const X *>(this));
 #include "ItaniumNodes.def"
   }
-  assert(0 && "unknown mangling node kind");
+  DEMANGLE_ASSERT(0, "unknown mangling node kind");
 }
 
 /// Determine the kind of a node from its type.
@@ -2611,7 +2610,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       Parser->TemplateParams.push_back(&Params);
     }
     ~ScopedTemplateParamList() {
-      assert(Parser->TemplateParams.size() >= OldNumTemplateParamLists);
+      DEMANGLE_ASSERT(Parser->TemplateParams.size() >= OldNumTemplateParamLists,
+                      "");
       Parser->TemplateParams.shrinkToSize(OldNumTemplateParamLists);
     }
     TemplateParamList *params() { return &Params; }
@@ -2692,7 +2692,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   }
 
   NodeArray popTrailingNodeArray(size_t FromPosition) {
-    assert(FromPosition <= Names.size());
+    DEMANGLE_ASSERT(FromPosition <= Names.size(), "");
     NodeArray res =
         makeNodeArray(Names.begin() + (long)FromPosition, Names.end());
     Names.shrinkToSize(FromPosition);
@@ -2859,8 +2859,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     std::string_view getSymbol() const {
       std::string_view Res = Name;
       if (Kind < Unnameable) {
-        assert(starts_with(Res, "operator") &&
-               "operator name does not start with 'operator'");
+        DEMANGLE_ASSERT(starts_with(Res, "operator"),
+                        "operator name does not start with 'operator'");
         Res.remove_prefix(sizeof("operator") - 1);
         if (starts_with(Res, ' '))
           Res.remove_prefix(1);
@@ -3694,7 +3694,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName(bool Global) {
     }
   }
 
-  assert(SoFar != nullptr);
+  DEMANGLE_ASSERT(SoFar != nullptr, "");
 
   Node *Base = getDerived().parseBaseUnresolvedName();
   if (Base == nullptr)
@@ -5635,7 +5635,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
     Node *ForwardRef = make<ForwardTemplateReference>(Index);
     if (!ForwardRef)
       return nullptr;
-    assert(ForwardRef->getKind() == Node::KForwardTemplateReference);
+    DEMANGLE_ASSERT(ForwardRef->getKind() == Node::KForwardTemplateReference,
+                    "");
     ForwardTemplateRefs.push_back(
         static_cast<ForwardTemplateReference *>(ForwardRef));
     return ForwardRef;

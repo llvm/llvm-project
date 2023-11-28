@@ -60,7 +60,7 @@ static_assert(!HasPushHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `so
 template <std::size_t N, class T, class Iter>
 constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
   assert(heapified == expected);
-  assert(base(last) == heapified.data() + heapified.size());
+  assert(std::to_address(base(last)) == heapified.data() + heapified.size());
   assert(std::is_heap(heapified.begin(), heapified.end()));
 }
 

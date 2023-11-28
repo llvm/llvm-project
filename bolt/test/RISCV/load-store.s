@@ -1,6 +1,6 @@
 // RUN: %clang %cflags -o %t %s
 // RUN: link_fdata --no-lbr %s %t %t.fdata
-// RUN: llvm-bolt %t -o /dev/null --data=%t.fdata --dyno-stats | FileCheck %s
+// RUN: llvm-bolt %t -o %t.null --data=%t.fdata --dyno-stats | FileCheck %s
 
 // CHECK: BOLT-INFO: program-wide dynostats after all optimizations before SCTC and FOP (no change):
 // CHECK: 3000 : executed instructions

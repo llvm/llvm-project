@@ -106,11 +106,12 @@ Expected<JThreadsInfo> JThreadsInfo::create(StringRef Response,
     return make_parsing_error("JThreadsInfo: JSON array");
 
   for (size_t i = 0; i < array->GetSize(); i++) {
-    StructuredData::Dictionary *thread_info;
-    array->GetItemAtIndexAsDictionary(i, thread_info);
-    if (!thread_info)
+    std::optional<StructuredData::Dictionary *> maybe_thread_info =
+        array->GetItemAtIndexAsDictionary(i);
+    if (!maybe_thread_info)
       return make_parsing_error("JThreadsInfo: JSON obj at {0}", i);
 
+    StructuredData::Dictionary *thread_info = *maybe_thread_info;
     StringRef name, reason;
     thread_info->GetValueForKeyAsString("name", name);
     thread_info->GetValueForKeyAsString("reason", reason);

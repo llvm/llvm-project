@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! C1030 - assignment of pointers to intrinsic procedures
 ! C1515 - interface definition for procedure pointers
 ! C1519 - initialization of pointers to intrinsic procedures

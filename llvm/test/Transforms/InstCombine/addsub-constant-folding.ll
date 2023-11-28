@@ -175,11 +175,21 @@ define i8 @add_nsw_const_const_sub_nsw_ov(i8 %arg) {
 
 define i8 @add_nuw_const_const_sub_nuw(i8 %arg) {
 ; CHECK-LABEL: @add_nuw_const_const_sub_nuw(
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 -128, [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nuw i8 -128, [[ARG:%.*]]
 ; CHECK-NEXT:    ret i8 [[T1]]
 ;
   %t0 = add nuw i8 %arg, 1
   %t1 = sub nuw i8 -127, %t0
+  ret i8 %t1
+}
+
+define i8 @add_nuw_const_const_sub(i8 %arg) {
+; CHECK-LABEL: @add_nuw_const_const_sub(
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 -128, [[ARG:%.*]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = add nuw i8 %arg, 1
+  %t1 = sub i8 -127, %t0
   ret i8 %t1
 }
 
@@ -203,11 +213,9 @@ define <2 x i8> @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov1(<2 x i8> %arg
   ret <2 x i8> %t1
 }
 
-
-; TODO: We can add nsw on sub, current Value Tracking use [max element,min element] constant range, to check overflow for vector?
 define <2 x i8> @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov2(<2 x i8> %arg) {
 ; CHECK-LABEL: @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov2(
-; CHECK-NEXT:    [[T1:%.*]] = sub <2 x i8> <i8 -126, i8 -128>, [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nsw <2 x i8> <i8 -126, i8 -128>, [[ARG:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[T1]]
 ;
   %t0 = add nsw <2 x i8> %arg, <i8 1, i8 2>
@@ -215,10 +223,9 @@ define <2 x i8> @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov2(<2 x i8> %arg
   ret <2 x i8> %t1
 }
 
-; TODO: We can add nsw on sub, curret Value Tracking can't decide this is not overflowed?
 define <2 x i8> @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov3(<2 x i8> %arg) {
 ; CHECK-LABEL: @non_splat_vec_add_nsw_const_const_sub_nsw_not_ov3(
-; CHECK-NEXT:    [[T1:%.*]] = sub <2 x i8> <i8 -120, i8 -127>, [[ARG:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub nsw <2 x i8> <i8 -120, i8 -127>, [[ARG:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[T1]]
 ;
   %t0 = add nsw <2 x i8> %arg, <i8 0, i8 1>

@@ -857,6 +857,9 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     case TypeModifier::Float:
       ScalarType = ScalarTypeKind::Float;
       break;
+    case TypeModifier::BFloat:
+      ScalarType = ScalarTypeKind::BFloat;
+      break;
     case TypeModifier::LMUL1:
       LMUL = LMULType(0);
       // Update ElementBitwidth need to update Scale too.

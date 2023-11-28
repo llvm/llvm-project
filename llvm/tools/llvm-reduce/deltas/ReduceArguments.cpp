@@ -113,7 +113,7 @@ static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
     // Rename Cloned Function to Old's name
     std::string FName = std::string(F->getName());
-    F->replaceAllUsesWith(ConstantExpr::getBitCast(ClonedFunc, F->getType()));
+    F->replaceAllUsesWith(ClonedFunc);
     F->eraseFromParent();
     ClonedFunc->setName(FName);
   }

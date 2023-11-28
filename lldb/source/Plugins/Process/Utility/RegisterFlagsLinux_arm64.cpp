@@ -25,9 +25,35 @@
 using namespace lldb_private;
 
 LinuxArm64RegisterFlags::Fields
+LinuxArm64RegisterFlags::DetectSVCRFields(uint64_t hwcap, uint64_t hwcap2) {
+  (void)hwcap;
+  (void)hwcap2;
+  // Represents the pseudo register that lldb-server builds, which itself
+  // matches the architectural register SCVR. The fields match SVCR in the Arm
+  // manual.
+  return {
+      {"ZA", 1},
+      {"SM", 0},
+  };
+}
+
+LinuxArm64RegisterFlags::Fields
+LinuxArm64RegisterFlags::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2) {
+  (void)hwcap;
+  (void)hwcap2;
+  // Represents the contents of NT_ARM_TAGGED_ADDR_CTRL and the value passed
+  // to prctl(PR_TAGGED_ADDR_CTRL...). Fields are derived from the defines
+  // used to build the value.
+  return {{"TAGS", 3, 18}, // 16 bit bitfield shifted up by PR_MTE_TAG_SHIFT.
+          {"TCF_ASYNC", 2},
+          {"TCF_SYNC", 1},
+          {"TAGGED_ADDR_ENABLE", 0}};
+}
+
+LinuxArm64RegisterFlags::Fields
 LinuxArm64RegisterFlags::DetectFPCRFields(uint64_t hwcap, uint64_t hwcap2) {
   std::vector<RegisterFlags::Field> fpcr_fields{
-      {"AHP", 26}, {"DN", 25}, {"FZ", 24}, {"RMMode", 22, 23},
+      {"AHP", 26}, {"DN", 25}, {"FZ", 24}, {"RMode", 22, 23},
       // Bits 21-20 are "Stride" which is unused in AArch64 state.
   };
 

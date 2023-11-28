@@ -87,7 +87,7 @@
 template <class M, size_t... Idxs>
 void test_mapping_requirements(std::index_sequence<Idxs...>) {
   using E = typename M::extents_type;
-  static_assert(std::__mdspan_detail::__is_extents_v<E>);
+  LIBCPP_STATIC_ASSERT(std::__mdspan_detail::__is_extents_v<E>);
   static_assert(std::is_copy_constructible_v<M>);
   static_assert(std::is_nothrow_move_constructible_v<M>);
   static_assert(std::is_nothrow_move_assignable_v<M>);
