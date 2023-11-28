@@ -409,64 +409,54 @@ class I<bits<8> o, Format f, dag outs, dag ins, string asm,
         list<dag> pattern, Domain d = GenericDomain>
   : X86Inst<o, f, NoImm, outs, ins, asm, d> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 class Ii8<bits<8> o, Format f, dag outs, dag ins, string asm,
           list<dag> pattern, Domain d = GenericDomain>
   : X86Inst<o, f, Imm8, outs, ins, asm, d> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 class Ii8Reg<bits<8> o, Format f, dag outs, dag ins, string asm,
              list<dag> pattern, Domain d = GenericDomain>
   : X86Inst<o, f, Imm8Reg, outs, ins, asm, d> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 class Ii8PCRel<bits<8> o, Format f, dag outs, dag ins, string asm,
                list<dag> pattern>
   : X86Inst<o, f, Imm8PCRel, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 class Ii16<bits<8> o, Format f, dag outs, dag ins, string asm,
            list<dag> pattern>
   : X86Inst<o, f, Imm16, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 class Ii32<bits<8> o, Format f, dag outs, dag ins, string asm,
            list<dag> pattern>
   : X86Inst<o, f, Imm32, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 class Ii32S<bits<8> o, Format f, dag outs, dag ins, string asm,
             list<dag> pattern>
   : X86Inst<o, f, Imm32S, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 
 class Ii64<bits<8> o, Format f, dag outs, dag ins, string asm,
            list<dag> pattern>
   : X86Inst<o, f, Imm64, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 
 class Ii16PCRel<bits<8> o, Format f, dag outs, dag ins, string asm,
            list<dag> pattern>
            : X86Inst<o, f, Imm16PCRel, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 
 class Ii32PCRel<bits<8> o, Format f, dag outs, dag ins, string asm,
            list<dag> pattern>
   : X86Inst<o, f, Imm32PCRel, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 
 // FPStack Instruction Templates:
@@ -495,14 +485,12 @@ class Iseg16 <bits<8> o, Format f, dag outs, dag ins, string asm,
               list<dag> pattern>
       : X86Inst<o, f, Imm16, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 
 class Iseg32 <bits<8> o, Format f, dag outs, dag ins, string asm,
               list<dag> pattern>
       : X86Inst<o, f, Imm32, outs, ins, asm> {
   let Pattern = pattern;
-  let CodeSize = 3;
 }
 
 // SI - SSE 1 & 2 scalar instructions
