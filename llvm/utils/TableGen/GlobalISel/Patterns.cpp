@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Patterns.h"
-#include "CodeGenInstruction.h"
 #include "CXXPredicates.h"
 #include "CodeExpander.h"
 #include "CodeExpansions.h"
+#include "CodeGenInstruction.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
