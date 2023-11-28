@@ -563,11 +563,6 @@ int32_t DeviceTy::initOnce() {
   return OFFLOAD_FAIL;
 }
 
-void DeviceTy::deinit() {
-  if (RTL->deinit_device)
-    RTL->deinit_device(RTLDeviceID);
-}
-
 // Load binary to device.
 __tgt_target_table *DeviceTy::loadBinary(void *Img) {
   std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);

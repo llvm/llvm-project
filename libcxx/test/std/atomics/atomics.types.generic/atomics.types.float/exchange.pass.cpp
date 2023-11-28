@@ -9,8 +9,7 @@
 // UNSUPPORTED: target={{.+}}-windows-gnu
 // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
 // XFAIL: tsan
-// Hangs with msan.
-// UNSUPPORTED: msan
+// XFAIL: target={{x86_64-.*}} && msan
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 
 //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;

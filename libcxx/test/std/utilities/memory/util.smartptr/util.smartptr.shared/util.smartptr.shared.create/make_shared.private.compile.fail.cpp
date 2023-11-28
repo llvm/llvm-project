@@ -20,7 +20,7 @@
 
 struct S {
 private:
-   S () {};  // ctor is private
+  S() {} // ctor is private
 };
 
 int main(int, char**)

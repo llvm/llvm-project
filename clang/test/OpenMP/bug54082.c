@@ -69,7 +69,9 @@ void foo() {
 // CHECK-NEXT:    [[X_TRAITS:%.*]] = alloca [1 x %struct.omp_alloctrait_t], align 16
 // CHECK-NEXT:    [[X_ALLOC:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[X_TRAITS]]) #[[ATTR5:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) [[X_TRAITS]], ptr noundef nonnull align 16 dereferenceable(16) @__const.foo.x_traits, i64 16, i1 false)
+// CHECK-NEXT:    store i32 2, ptr [[X_TRAITS]], align 16
+// CHECK-NEXT:    [[LOC0:%.*]] = getelementptr inbounds i8, ptr [[X_TRAITS]], i64 8
+// CHECK-NEXT:    store i64 64, ptr [[LOC0]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[X_ALLOC]]) #[[ATTR5]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i64 @omp_init_allocator(i64 noundef 0, i32 noundef 1, ptr noundef nonnull [[X_TRAITS]]) #[[ATTR5]]
 // CHECK-NEXT:    store i64 [[CALL]], ptr [[X_ALLOC]], align 8, !tbaa [[TBAA3:![0-9]+]]

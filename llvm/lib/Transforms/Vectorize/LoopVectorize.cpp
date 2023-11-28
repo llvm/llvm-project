@@ -7773,9 +7773,9 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
   //===------------------------------------------------===//
 
   // 2. Copy and widen instructions from the old loop into the new loop.
-  BestVPlan.prepareToExecute(
-      ILV.getTripCount(), ILV.getOrCreateVectorTripCount(nullptr),
-      CanonicalIVStartValue, State, IsEpilogueVectorization);
+  BestVPlan.prepareToExecute(ILV.getTripCount(),
+                             ILV.getOrCreateVectorTripCount(nullptr),
+                             CanonicalIVStartValue, State);
 
   BestVPlan.execute(&State);
 

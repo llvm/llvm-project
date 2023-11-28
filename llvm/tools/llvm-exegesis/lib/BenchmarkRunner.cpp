@@ -89,13 +89,25 @@ BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
 namespace {
 class InProcessFunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
 public:
-  InProcessFunctionExecutorImpl(const LLVMState &State,
-                                object::OwningBinary<object::ObjectFile> Obj,
-                                BenchmarkRunner::ScratchSpace *Scratch)
-      : State(State), Function(State.createTargetMachine(), std::move(Obj)),
-        Scratch(Scratch) {}
+  static Expected<std::unique_ptr<InProcessFunctionExecutorImpl>>
+  create(const LLVMState &State, object::OwningBinary<object::ObjectFile> Obj,
+         BenchmarkRunner::ScratchSpace *Scratch) {
+    Expected<ExecutableFunction> EF =
+        ExecutableFunction::create(State.createTargetMachine(), std::move(Obj));
+
+    if (!EF)
+      return EF.takeError();
+
+    return std::unique_ptr<InProcessFunctionExecutorImpl>(
+        new InProcessFunctionExecutorImpl(State, std::move(*EF), Scratch));
+  }
 
 private:
+  InProcessFunctionExecutorImpl(const LLVMState &State,
+                                ExecutableFunction Function,
+                                BenchmarkRunner::ScratchSpace *Scratch)
+      : State(State), Function(std::move(Function)), Scratch(Scratch) {}
+
   static void
   accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
                           llvm::SmallVector<int64_t, 4> *Result) {
@@ -161,13 +173,24 @@ private:
 class SubProcessFunctionExecutorImpl
     : public BenchmarkRunner::FunctionExecutor {
 public:
-  SubProcessFunctionExecutorImpl(const LLVMState &State,
-                                 object::OwningBinary<object::ObjectFile> Obj,
-                                 const BenchmarkKey &Key)
-      : State(State), Function(State.createTargetMachine(), std::move(Obj)),
-        Key(Key) {}
+  static Expected<std::unique_ptr<SubProcessFunctionExecutorImpl>>
+  create(const LLVMState &State, object::OwningBinary<object::ObjectFile> Obj,
+         const BenchmarkKey &Key) {
+    Expected<ExecutableFunction> EF =
+        ExecutableFunction::create(State.createTargetMachine(), std::move(Obj));
+    if (!EF)
+      return EF.takeError();
+
+    return std::unique_ptr<SubProcessFunctionExecutorImpl>(
+        new SubProcessFunctionExecutorImpl(State, std::move(*EF), Key));
+  }
 
 private:
+  SubProcessFunctionExecutorImpl(const LLVMState &State,
+                                 ExecutableFunction Function,
+                                 const BenchmarkKey &Key)
+      : State(State), Function(std::move(Function)), Key(Key) {}
+
   enum ChildProcessExitCodeE {
     CounterFDReadFailed = 1,
     RSeqDisableFailed,
@@ -497,17 +520,27 @@ BenchmarkRunner::createFunctionExecutor(
     object::OwningBinary<object::ObjectFile> ObjectFile,
     const BenchmarkKey &Key) const {
   switch (ExecutionMode) {
-  case ExecutionModeE::InProcess:
-    return std::make_unique<InProcessFunctionExecutorImpl>(
+  case ExecutionModeE::InProcess: {
+    auto InProcessExecutorOrErr = InProcessFunctionExecutorImpl::create(
         State, std::move(ObjectFile), Scratch.get());
-  case ExecutionModeE::SubProcess:
+    if (!InProcessExecutorOrErr)
+      return InProcessExecutorOrErr.takeError();
+
+    return std::move(*InProcessExecutorOrErr);
+  }
+  case ExecutionModeE::SubProcess: {
 #ifdef __linux__
-    return std::make_unique<SubProcessFunctionExecutorImpl>(
+    auto SubProcessExecutorOrErr = SubProcessFunctionExecutorImpl::create(
         State, std::move(ObjectFile), Key);
+    if (!SubProcessExecutorOrErr)
+      return SubProcessExecutorOrErr.takeError();
+
+    return std::move(*SubProcessExecutorOrErr);
 #else
     return make_error<Failure>(
         "The subprocess execution mode is only supported on Linux");
 #endif
+  }
   }
   llvm_unreachable("ExecutionMode is outside expected range");
 }

@@ -1540,6 +1540,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *PEO = dyn_cast<PossiblyExactOperator>(V)) {
     if (PEO->isExact())
       Flags |= 1 << bitc::PEO_EXACT;
+  } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(V)) {
+    if (PDI->isDisjoint())
+      Flags |= 1 << bitc::PDI_DISJOINT;
   } else if (const auto *FPMO = dyn_cast<FPMathOperator>(V)) {
     if (FPMO->hasAllowReassoc())
       Flags |= bitc::AllowReassoc;

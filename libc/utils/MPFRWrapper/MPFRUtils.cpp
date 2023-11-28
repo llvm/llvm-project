@@ -12,7 +12,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
-#include "src/__support/FPUtil/PlatformDefs.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "test/UnitTest/FPMatcher.h"
 

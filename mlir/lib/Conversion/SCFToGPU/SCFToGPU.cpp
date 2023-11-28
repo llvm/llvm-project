@@ -195,7 +195,8 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
                                                 upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
     if (getConstantIntValue(step) != static_cast<int64_t>(1))
-      range = builder.create<arith::DivSIOp>(currentLoop.getLoc(), range, step);
+      range =
+          builder.create<arith::CeilDivSIOp>(currentLoop.getLoc(), range, step);
     dims.push_back(range);
 
     lbs.push_back(lowerBound);

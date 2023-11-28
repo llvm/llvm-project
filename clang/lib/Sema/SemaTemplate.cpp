@@ -2250,10 +2250,24 @@ public:
 struct ConvertConstructorToDeductionGuideTransform {
   ConvertConstructorToDeductionGuideTransform(Sema &S,
                                               ClassTemplateDecl *Template)
-      : SemaRef(S), Template(Template) {}
+      : SemaRef(S), Template(Template) {
+    // If the template is nested, then we need to use the original
+    // pattern to iterate over the constructors.
+    ClassTemplateDecl *Pattern = Template;
+    while (Pattern->getInstantiatedFromMemberTemplate()) {
+      if (Pattern->isMemberSpecialization())
+        break;
+      Pattern = Pattern->getInstantiatedFromMemberTemplate();
+      NestedPattern = Pattern;
+    }
+
+    if (NestedPattern)
+      OuterInstantiationArgs = SemaRef.getTemplateInstantiationArgs(Template);
+  }
 
   Sema &SemaRef;
   ClassTemplateDecl *Template;
+  ClassTemplateDecl *NestedPattern = nullptr;
 
   DeclContext *DC = Template->getDeclContext();
   CXXRecordDecl *Primary = Template->getTemplatedDecl();
@@ -2265,6 +2279,10 @@ struct ConvertConstructorToDeductionGuideTransform {
   // Index adjustment to apply to convert depth-1 template parameters into
   // depth-0 template parameters.
   unsigned Depth1IndexAdjustment = Template->getTemplateParameters()->size();
+
+  // Instantiation arguments for the outermost depth-1 templates
+  // when the template is nested
+  MultiLevelTemplateArgumentList OuterInstantiationArgs;
 
   /// Transform a constructor declaration into a deduction guide.
   NamedDecl *transformConstructor(FunctionTemplateDecl *FTD,
@@ -2284,21 +2302,43 @@ struct ConvertConstructorToDeductionGuideTransform {
     if (FTD) {
       TemplateParameterList *InnerParams = FTD->getTemplateParameters();
       SmallVector<NamedDecl *, 16> AllParams;
+      SmallVector<TemplateArgument, 16> Depth1Args;
       AllParams.reserve(TemplateParams->size() + InnerParams->size());
       AllParams.insert(AllParams.begin(),
                        TemplateParams->begin(), TemplateParams->end());
       SubstArgs.reserve(InnerParams->size());
+      Depth1Args.reserve(InnerParams->size());
 
       // Later template parameters could refer to earlier ones, so build up
       // a list of substituted template arguments as we go.
       for (NamedDecl *Param : *InnerParams) {
         MultiLevelTemplateArgumentList Args;
         Args.setKind(TemplateSubstitutionKind::Rewrite);
-        Args.addOuterTemplateArguments(SubstArgs);
+        Args.addOuterTemplateArguments(Depth1Args);
         Args.addOuterRetainedLevel();
+        if (NestedPattern)
+          Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         NamedDecl *NewParam = transformTemplateParameter(Param, Args);
         if (!NewParam)
           return nullptr;
+
+        // Constraints require that we substitute depth-1 arguments
+        // to match depths when substituted for evaluation later
+        Depth1Args.push_back(SemaRef.Context.getCanonicalTemplateArgument(
+            SemaRef.Context.getInjectedTemplateArg(NewParam)));
+
+        if (NestedPattern) {
+          TemplateDeclInstantiator Instantiator(SemaRef, DC,
+                                                OuterInstantiationArgs);
+          Instantiator.setEvaluateConstraints(false);
+          SemaRef.runWithSufficientStackSpace(NewParam->getLocation(), [&] {
+            NewParam = cast<NamedDecl>(Instantiator.Visit(NewParam));
+          });
+        }
+
+        assert(NewParam->getTemplateDepth() == 0 &&
+               "Unexpected template parameter depth");
+
         AllParams.push_back(NewParam);
         SubstArgs.push_back(SemaRef.Context.getCanonicalTemplateArgument(
             SemaRef.Context.getInjectedTemplateArg(NewParam)));
@@ -2309,8 +2349,10 @@ struct ConvertConstructorToDeductionGuideTransform {
       if (Expr *InnerRC = InnerParams->getRequiresClause()) {
         MultiLevelTemplateArgumentList Args;
         Args.setKind(TemplateSubstitutionKind::Rewrite);
-        Args.addOuterTemplateArguments(SubstArgs);
+        Args.addOuterTemplateArguments(Depth1Args);
         Args.addOuterRetainedLevel();
+        if (NestedPattern)
+          Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
         ExprResult E = SemaRef.SubstExpr(InnerRC, Args);
         if (E.isInvalid())
           return nullptr;
@@ -2332,6 +2374,9 @@ struct ConvertConstructorToDeductionGuideTransform {
       Args.addOuterTemplateArguments(SubstArgs);
       Args.addOuterRetainedLevel();
     }
+
+    if (NestedPattern)
+      Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
 
     FunctionProtoTypeLoc FPTL = CD->getTypeSourceInfo()->getTypeLoc()
                                    .getAsAdjusted<FunctionProtoTypeLoc>();
@@ -2394,7 +2439,7 @@ private:
       // substitute it directly.
       auto *NewTTP = TemplateTypeParmDecl::Create(
           SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(),
-          /*Depth*/ 0, Depth1IndexAdjustment + TTP->getIndex(),
+          TTP->getDepth() - 1, Depth1IndexAdjustment + TTP->getIndex(),
           TTP->getIdentifier(), TTP->wasDeclaredWithTypename(),
           TTP->isParameterPack(), TTP->hasTypeConstraint(),
           TTP->isExpandedParameterPack()
@@ -2429,7 +2474,8 @@ private:
     // the index of the parameter once it's done.
     auto *NewParam =
         cast<TemplateParmDecl>(SemaRef.SubstDecl(OldParam, DC, Args));
-    assert(NewParam->getDepth() == 0 && "unexpected template param depth");
+    assert(NewParam->getDepth() == OldParam->getDepth() - 1 &&
+           "unexpected template param depth");
     NewParam->setPosition(NewParam->getPosition() + Depth1IndexAdjustment);
     return NewParam;
   }
@@ -2446,6 +2492,9 @@ private:
     for (auto *OldParam : TL.getParams()) {
       ParmVarDecl *NewParam =
           transformFunctionTypeParam(OldParam, Args, MaterializedTypedefs);
+      if (NestedPattern && NewParam)
+        NewParam = transformFunctionTypeParam(NewParam, OuterInstantiationArgs,
+                                              MaterializedTypedefs);
       if (!NewParam)
         return QualType();
       ParamTypes.push_back(NewParam->getType());
@@ -2655,9 +2704,12 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   // FIXME: Skip constructors for which deduction must necessarily fail (those
   // for which some class template parameter without a default argument never
   // appears in a deduced context).
+  ClassTemplateDecl *Pattern =
+      Transform.NestedPattern ? Transform.NestedPattern : Transform.Template;
+  ContextRAII SavedContext(*this, Pattern->getTemplatedDecl());
   llvm::SmallPtrSet<NamedDecl *, 8> ProcessedCtors;
   bool AddedAny = false;
-  for (NamedDecl *D : LookupConstructors(Transform.Primary)) {
+  for (NamedDecl *D : LookupConstructors(Pattern->getTemplatedDecl())) {
     D = D->getUnderlyingDecl();
     if (D->isInvalidDecl() || D->isImplicit())
       continue;
@@ -2703,6 +2755,8 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
           Transform.buildSimpleDeductionGuide(Transform.DeducedType))
           ->getTemplatedDecl())
       ->setDeductionCandidateKind(DeductionCandidate::Copy);
+
+  SavedContext.pop();
 }
 
 /// Diagnose the presence of a default template argument on a

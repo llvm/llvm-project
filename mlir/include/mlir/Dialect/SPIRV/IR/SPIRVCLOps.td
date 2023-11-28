@@ -125,14 +125,6 @@ def SPIRV_CLAtan2Op : SPIRV_CLBinaryArithmeticOp<"atan2", 7, SPIRV_Float > {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-        ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    atan2-op ::= ssa-id `=` `spirv.CL.atan2` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -155,15 +147,6 @@ def SPIRV_CLAcosOp : SPIRV_CLUnaryArithmeticOp<"acos", 0, SPIRV_Float > {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    acos-op ::= ssa-id `=` `spirv.CL.acos` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -188,15 +171,6 @@ def SPIRV_CLAcoshOp : SPIRV_CLUnaryArithmeticOp<"acosh", 1, SPIRV_Float > {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    acosh-op ::= ssa-id `=` `spirv.CL.acosh` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -219,15 +193,6 @@ def SPIRV_CLAsinOp : SPIRV_CLUnaryArithmeticOp<"asin", 3, SPIRV_Float > {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    asin-op ::= ssa-id `=` `spirv.CL.asin` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -252,15 +217,6 @@ def SPIRV_CLAsinhOp : SPIRV_CLUnaryArithmeticOp<"asinh", 4, SPIRV_Float > {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    asinh-op ::= ssa-id `=` `spirv.CL.asinh` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -284,15 +240,6 @@ def SPIRV_CLAtanOp : SPIRV_CLUnaryArithmeticOp<"atan", 6, SPIRV_Float > {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    atan-op ::= ssa-id `=` `spirv.CL.atan` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -315,15 +262,6 @@ def SPIRV_CLAtanhOp : SPIRV_CLUnaryArithmeticOp<"atanh", 8, SPIRV_Float > {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    atanh-op ::= ssa-id `=` `spirv.CL.atanh` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -349,15 +287,6 @@ def SPIRV_CLCeilOp : SPIRV_CLUnaryArithmeticOp<"ceil", 12, SPIRV_Float> {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    ceil-op ::= ssa-id `=` `spirv.CL.ceil` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -379,15 +308,6 @@ def SPIRV_CLCosOp : SPIRV_CLUnaryArithmeticOp<"cos", 14, SPIRV_Float> {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    cos-op ::= ssa-id `=` `spirv.CL.cos` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -408,15 +328,6 @@ def SPIRV_CLCoshOp : SPIRV_CLUnaryArithmeticOp<"cosh", 15, SPIRV_Float > {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    cosh-op ::= ssa-id `=` `spirv.CL.cosh` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -441,15 +352,6 @@ def SPIRV_CLErfOp : SPIRV_CLUnaryArithmeticOp<"erf", 18, SPIRV_Float> {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    erf-op ::= ssa-id `=` `spirv.CL.erf` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -473,13 +375,6 @@ def SPIRV_CLExpOp : SPIRV_CLUnaryArithmeticOp<"exp", 19, SPIRV_Float> {
     All of the operands, including the Result Type operand,
     must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    exp-op ::= ssa-id `=` `spirv.CL.exp` ssa-use `:`
-               float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -503,13 +398,6 @@ def SPIRV_CLFAbsOp : SPIRV_CLUnaryArithmeticOp<"fabs", 23, SPIRV_Float> {
     All of the operands, including the Result Type operand,
     must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    abs-op ::= ssa-id `=` `spirv.CL.fabs` ssa-use `:`
-               float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -534,13 +422,6 @@ def SPIRV_CLFMaxOp : SPIRV_CLBinaryArithmeticOp<"fmax", 27, SPIRV_Float> {
     All of the operands, including the Result Type operand,
     must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fmax-op ::= ssa-id `=` `spirv.CL.fmax` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -563,14 +444,6 @@ def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the same type.
 
-
-    <!-- End of AutoGen section -->
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    fmin-op ::= ssa-id `=` `spirv.CL.fmin` ssa-use `:`
-                float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -594,15 +467,6 @@ def SPIRV_CLFloorOp : SPIRV_CLUnaryArithmeticOp<"floor", 25, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    floor-op ::= ssa-id `=` `spirv.CL.floor` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -630,13 +494,6 @@ def SPIRV_CLFmaOp : SPIRV_CLTernaryArithmeticOp<"fma", 26, SPIRV_Float> {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    fma-op ::= ssa-id `=` `spirv.CL.fma` ssa-use, ssa-use, ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -657,15 +514,6 @@ def SPIRV_CLLogOp : SPIRV_CLUnaryArithmeticOp<"log", 37, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    log-op ::= ssa-id `=` `spirv.CL.log` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -691,13 +539,6 @@ def SPIRV_CLMixOp : SPIRV_CLTernaryArithmeticOp<"mix", 99, SPIRV_Float> {
     Note: This instruction can be implemented using contractions such as mad
     or fma.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    mix-op ::= ssa-id `=` `spirv.CL.mix` ssa-use, ssa-use, ssa-use `:`
-           float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -719,16 +560,6 @@ def SPIRV_CLPowOp : SPIRV_CLBinaryArithmeticOp<"pow", 48, SPIRV_Float> {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    restricted-float-scalar-type ::=  `f16` | `f32`
-    restricted-float-scalar-vector-type ::=
-      restricted-float-scalar-type |
-      `vector<` integer-literal `x` restricted-float-scalar-type `>`
-    pow-op ::= ssa-id `=` `spirv.CL.pow` ssa-use `:`
-               restricted-float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -752,15 +583,6 @@ def SPIRV_CLRintOp : SPIRV_CLUnaryArithmeticOp<"rint", 53, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    rint-op ::= ssa-id `=` `spirv.CL.rint` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -786,14 +608,6 @@ def SPIRV_CLRoundOp : SPIRV_CLUnaryArithmeticOp<"round", 55, SPIRV_Float> {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    round-op ::= ssa-id `=` `spirv.CL.round` ssa-use `:`
-               float-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -814,15 +628,6 @@ def SPIRV_CLRsqrtOp : SPIRV_CLUnaryArithmeticOp<"rsqrt", 56, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    rsqrt-op ::= ssa-id `=` `spirv.CL.rsqrt` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -847,13 +652,6 @@ def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
     All of the operands, including the Result Type operand,
     must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    abs-op ::= ssa-id `=` `spirv.CL.s_abs` ssa-use `:`
-               integer-scalar-vector-type
-    ```
     #### Example:
 
     ```mlir
@@ -875,14 +673,8 @@ def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
 
     All of the operands, including the Result Type operand, must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smax-op ::= ssa-id `=` `spirv.CL.s_max` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
+
     ```mlir
     %2 = spirv.CL.s_max %0, %1 : i32
     %3 = spirv.CL.s_max %0, %1 : vector<3xi16>
@@ -902,14 +694,8 @@ def SPIRV_CLSMinOp : SPIRV_CLBinaryArithmeticOp<"s_min", 158, SPIRV_Integer> {
 
     All of the operands, including the Result Type operand, must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    smin-op ::= ssa-id `=` `spirv.CL.s_min` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
+
     ```mlir
     %2 = spirv.CL.s_min %0, %1 : i32
     %3 = spirv.CL.s_min %0, %1 : vector<3xi16>
@@ -928,15 +714,6 @@ def SPIRV_CLSinOp : SPIRV_CLUnaryArithmeticOp<"sin", 57, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sin-op ::= ssa-id `=` `spirv.CL.sin` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -959,15 +736,6 @@ def SPIRV_CLSinhOp : SPIRV_CLUnaryArithmeticOp<"sinh", 59, SPIRV_Float > {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sinh-op ::= ssa-id `=` `spirv.CL.sinh` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -988,15 +756,6 @@ def SPIRV_CLSqrtOp : SPIRV_CLUnaryArithmeticOp<"sqrt", 61, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    sqrt-op ::= ssa-id `=` `spirv.CL.sqrt` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -1019,15 +778,6 @@ def SPIRV_CLTanOp : SPIRV_CLUnaryArithmeticOp<"tan", 62, SPIRV_Float > {
     All of the operands, including the Result Type operand, must be of the
     same type.
 
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    tan-op ::= ssa-id `=` `spirv.CL.tan` ssa-use `:`
-               float-scalar-vector-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -1048,15 +798,6 @@ def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
 
     All of the operands, including the Result Type operand, must be of the
     same type.
-
-    <!-- End of AutoGen section -->
-
-    ```
-    float-scalar-vector-type ::= float-type |
-                                 `vector<` integer-literal `x` float-type `>`
-    tanh-op ::= ssa-id `=` `spirv.CL.tanh` ssa-use `:`
-               float-scalar-vector-type
-    ```
 
     #### Example:
 
@@ -1079,14 +820,8 @@ def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
 
     All of the operands, including the Result Type operand, must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    umax-op ::= ssa-id `=` `spirv.CL.u_max` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
+
     ```mlir
     %2 = spirv.CL.u_max %0, %1 : i32
     %3 = spirv.CL.u_max %0, %1 : vector<3xi16>
@@ -1106,14 +841,8 @@ def SPIRV_CLUMinOp : SPIRV_CLBinaryArithmeticOp<"u_min", 159, SPIRV_Integer> {
 
     All of the operands, including the Result Type operand, must be of the same type.
 
-    <!-- End of AutoGen section -->
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    umin-op ::= ssa-id `=` `spirv.CL.u_min` ssa-use `:`
-                integer-scalar-vector-type
-    ```
     #### Example:
+
     ```mlir
     %2 = spirv.CL.u_min %0, %1 : i32
     %3 = spirv.CL.u_min %0, %1 : vector<3xi16>

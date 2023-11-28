@@ -100,14 +100,22 @@ protected:
       : Quantity(Quantity), Scalable(Scalable) {}
 
   friend constexpr LeafTy &operator+=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity += RHS.Quantity;
+    if (!RHS.isZero())
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
   friend constexpr LeafTy &operator-=(LeafTy &LHS, const LeafTy &RHS) {
-    assert(LHS.Scalable == RHS.Scalable && "Incompatible types");
+    assert((LHS.Quantity == 0 || RHS.Quantity == 0 ||
+            LHS.Scalable == RHS.Scalable) &&
+           "Incompatible types");
     LHS.Quantity -= RHS.Quantity;
+    if (!RHS.isZero())
+      LHS.Scalable = RHS.Scalable;
     return LHS;
   }
 
@@ -315,6 +323,8 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
+  constexpr TypeSize() : FixedOrScalableQuantity(0, false) {}
+
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 

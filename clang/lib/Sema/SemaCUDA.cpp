@@ -772,22 +772,6 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
   NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
 }
 
-// If a trivial ctor/dtor has no host/device
-// attributes, make it implicitly host device function.
-void Sema::maybeAddCUDAHostDeviceAttrsToTrivialCtorDtor(FunctionDecl *FD) {
-  bool IsTrivialCtor = false;
-  if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
-    IsTrivialCtor = isEmptyCudaConstructor(SourceLocation(), CD);
-  bool IsTrivialDtor = false;
-  if (auto *DD = dyn_cast<CXXDestructorDecl>(FD))
-    IsTrivialDtor = isEmptyCudaDestructor(SourceLocation(), DD);
-  if ((IsTrivialCtor || IsTrivialDtor) && !FD->hasAttr<CUDAHostAttr>() &&
-      !FD->hasAttr<CUDADeviceAttr>()) {
-    FD->addAttr(CUDAHostAttr::CreateImplicit(Context));
-    FD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
-  }
-}
-
 // TODO: `__constant__` memory may be a limited resource for certain targets.
 // A safeguard may be needed at the end of compilation pipeline if
 // `__constant__` memory usage goes beyond limit.

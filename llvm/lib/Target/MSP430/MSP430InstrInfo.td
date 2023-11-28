@@ -305,11 +305,12 @@ def POP16r   : IForm16<0b0100, DstReg, SrcPostInc, 2,
   let rs = 1;
 }
 
-let mayStore = 1 in
+let mayStore = 1 in {
 def PUSH8r :  II8r<0b100, (outs), (ins GR8:$rs), "push.b\t$rs", []>;
 def PUSH16r : II16r<0b100, (outs), (ins GR16:$rs), "push\t$rs", []>;
 def PUSH16c : II16c<0b100, (outs), (ins cg16imm:$imm), "push\t$imm", []>;
 def PUSH16i : II16i<0b100, (outs), (ins i16imm:$imm), "push\t$imm", []>;
+}
 }
 
 //===----------------------------------------------------------------------===//
