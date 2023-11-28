@@ -99,6 +99,48 @@ define void @combine_st1_masked_casted_predicate(<vscale x 8 x i16> %vec, ptr %p
   ret void
 }
 
+define <vscale x 4 x i32> @combine_ld1_superalign(ptr %ptr) #0 {
+; CHECK-LABEL: @combine_ld1_superalign(
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
+;
+  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr null)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @combine_ld1_masked_superalign(ptr %ptr) #0 {
+; CHECK-LABEL: @combine_ld1_masked_superalign(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 16)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr null, i32 -2147483648, <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
+;
+  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 16)
+  %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1.nxv4i32(<vscale x 4 x i1> %1, ptr null)
+  ret <vscale x 4 x i32> %2
+}
+
+define void @combine_st1_superalign(<vscale x 4 x i32> %vec, ptr %ptr) #0 {
+; CHECK-LABEL: @combine_st1_superalign(
+; CHECK-NEXT:    store <vscale x 4 x i32> poison, ptr null, align 16
+; CHECK-NEXT:    ret void
+;
+  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  call void @llvm.aarch64.sve.st1.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %1, ptr null)
+  ret void
+}
+
+define void @combine_st1_masked_superalign(<vscale x 4 x i32> %vec, ptr %ptr) #0 {
+; CHECK-LABEL: @combine_st1_masked_superalign(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 16)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[VEC:%.*]], ptr null, i32 -2147483648, <vscale x 4 x i1> [[TMP1]])
+; CHECK-NEXT:    ret void
+;
+  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 16)
+  call void @llvm.aarch64.sve.st1.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %1, ptr null)
+  ret void
+}
+
 declare <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1>)
 
