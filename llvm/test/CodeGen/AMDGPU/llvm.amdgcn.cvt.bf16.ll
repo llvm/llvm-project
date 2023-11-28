@@ -119,6 +119,16 @@ define amdgpu_ps float @cvt_sr_pk_bf16_f32_vvi_mods(float %src0, float %src1) #1
   ret float %ret
 }
 
+define amdgpu_ps float @cvt_sr_pk_bf16_f32_ssi(float inreg %src0, float inreg %src1) #1 {
+; GCN-LABEL: cvt_sr_pk_bf16_f32_ssi:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cvt_sr_pk_bf16_f32 v0, s0, s1, 0x10001
+; GCN-NEXT:    ; return to shader part epilog
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.sr.pk.bf16.f32(float %src0, float %src1, <2 x i16> <i16 1, i16 1>) #0
+  %ret = bitcast <2 x i16> %cvt to float
+  ret float %ret
+}
+
 declare float @llvm.fabs.f32(float) #0
 
 attributes #0 = { nounwind readnone }

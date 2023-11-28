@@ -2589,8 +2589,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // the asm operand name via this HasModifiers flag
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
-   HasModifiers, DstVT>.ret;
+   HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasSrc0Mods, HasSrc1Mods,
+   HasSrc2Mods, DstVT>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
@@ -2726,7 +2726,7 @@ def VOP_I32_I32_I32_ARITH : VOPProfile <[i32, i32, i32, untyped], /*EnableClamp=
 def VOP_I64_I64_I64_ARITH : VOPProfile <[i64, i64, i64, untyped], /*EnableClamp=*/1>;
 def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
-def VOP_V2F16_F32_F32_V2F16 : VOPProfile <[v2f16, f32, f32, v2f16]>;
+def VOP_V2F16_F32_F32_V2I16 : VOPProfile <[v2f16, f32, f32, v2i16]>;
 
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
