@@ -366,18 +366,8 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 
     // Special case 0-rank memref stores. We compute the mask at compile time.
     if (convertedType.getRank() == 0) {
-      // Create mask to clear destination bits
-      auto writeMaskValAttr =
-          rewriter.getIntegerAttr(dstIntegerType, ~(1 << (srcBits)) - 1);
-      Value writeMask = rewriter.create<arith::ConstantOp>(loc, dstIntegerType,
-                                                           writeMaskValAttr);
-
-      // Clear destination bits
-      rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::andi,
-                                           writeMask, adaptor.getMemref(),
-                                           ValueRange{});
       // Write srcs bits to destination
-      rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::ori,
+      rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::assign,
                                            extendedInput, adaptor.getMemref(),
                                            ValueRange{});
       rewriter.eraseOp(op);

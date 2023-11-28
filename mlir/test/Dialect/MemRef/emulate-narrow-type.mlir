@@ -421,16 +421,12 @@ func.func @rank_zero_memref_store(%arg0: i4) -> () {
 //  CHECK-SAME:     %[[ARG0:.+]]: i4
 //       CHECK:   %[[ALLOC:.+]] = memref.alloc() : memref<i8>
 //       CHECK:   %[[EXTUI:.+]] = arith.extui %[[ARG0]] : i4 to i8
-//       CHECK:   %[[MASK:.+]] = arith.constant -18 : i8
-//       CHECK:   %[[CLEAR_RMW:.+]] = memref.atomic_rmw andi %[[MASK]], %[[ALLOC]][] : (i8, memref<i8>) -> i8
-//       CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[EXTUI]], %[[ALLOC]][] : (i8, memref<i8>) -> i8
+//       CHECK:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i8, memref<i8>) -> i8
 //       CHECK:   return
 
 // CHECK32-LABEL: func @rank_zero_memref
 //  CHECK32-SAME:     %[[ARG0:.+]]: i4
 //       CHECK32:   %[[ALLOC:.+]] = memref.alloc() : memref<i32>
 //       CHECK32:   %[[EXTUI:.+]] = arith.extui %[[ARG0]] : i4 to i32
-//       CHECK32:   %[[MASK:.+]] = arith.constant -18 : i32
-//       CHECK32:   %[[CLEAR_RMW:.+]] = memref.atomic_rmw andi %[[MASK]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
-//       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw ori %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
+//       CHECK32:   %[[WRITE_RMW:.+]] = memref.atomic_rmw assign %[[EXTUI]], %[[ALLOC]][] : (i32, memref<i32>) -> i32
 //       CHECK32:   return
