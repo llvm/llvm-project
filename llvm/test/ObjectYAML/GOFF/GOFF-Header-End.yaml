@@ -7,34 +7,13 @@
 # CHECK: 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
-# Verify that the symbol is written correctly.
-# CHECK: 03 00 00 01 00 00 00 01 00 00 00 00 00 00 00 00
-# CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# CHECK: 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00
-# CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# CHECK: 00 00 00 00 00 00 00 01 a7 00 00 00 00 00 00 00
-
 # Verify GOFF Module end.
-# CHECK: 03 40 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+# CHECK: 03 40 00 00 00 00 00 00 00 00 00 02 00 00 00 00
 # CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-
-
-
 --- !GOFF
 FileHeader:
   ArchitectureLevel: 1
 Records:
-  - Symbol:
-      Name:            'x'
-      Type:            ESD_ST_ElementDefinition
-      ID:              1
-      OwnerID:         0
-      Address:         0
-      Length:          0
-      NameSpace:       ESD_NS_NormalName
-      Flags:           []
-      FillByteValue:   0
-

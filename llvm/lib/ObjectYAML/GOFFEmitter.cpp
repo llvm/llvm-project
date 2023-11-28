@@ -269,8 +269,6 @@ void GOFFState::writeEnd() {
 }
 
 bool GOFFState::writeObject() {
-  // We follow a strict, recommended order:
-  // header, symbols, sections, relocations, end.
   writeHeader(Doc.Header);
   if (HasError)
     return false;
