@@ -17,7 +17,7 @@
 #include "../ConvertibleToIntegral.h"
 #include "test_macros.h"
 
-// Helper file to implement combinatorical testing of extents constructor
+// Helper file to implement combinatorial testing of extents constructor
 //
 // std::extents can be constructed from just indices, a std::array, or a std::span
 // In each of those cases one can either provide all extents, or just the dynamic ones

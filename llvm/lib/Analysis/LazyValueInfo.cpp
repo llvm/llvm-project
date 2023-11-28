@@ -2087,6 +2087,15 @@ void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
 
 }
 
+PreservedAnalyses LazyValueInfoPrinterPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  OS << "LVI for function '" << F.getName() << "':\n";
+  auto &LVI = AM.getResult<LazyValueAnalysis>(F);
+  auto &DTree = AM.getResult<DominatorTreeAnalysis>(F);
+  LVI.printLVI(F, DTree, OS);
+  return PreservedAnalyses::all();
+}
+
 namespace {
 // Printer class for LazyValueInfo results.
 class LazyValueInfoPrinter : public FunctionPass {

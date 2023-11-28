@@ -536,6 +536,24 @@ Improvements to Clang's diagnostics
   with GCC.
 - Clang will warn on deprecated specializations used in system headers when their instantiation
   is caused by user code.
+- Clang will now print ``static_assert`` failure details for arithmetic binary operators.
+  Example:
+
+  .. code-block:: cpp
+
+    static_assert(1 << 4 == 15);
+
+  will now print:
+
+  .. code-block:: text
+
+    error: static assertion failed due to requirement '1 << 4 == 15'
+       48 | static_assert(1 << 4 == 15);
+          |               ^~~~~~~~~~~~
+    note: expression evaluates to '16 == 15'
+       48 | static_assert(1 << 4 == 15);
+          |               ~~~~~~~^~~~~
+
 
 Improvements to Clang's time-trace
 ----------------------------------

@@ -27,9 +27,6 @@ int32_t __tgt_rtl_number_of_team_procs(int32_t device_num);
 // First method called on the plugin
 int32_t __tgt_rtl_init_plugin();
 
-// Last method called on the plugin
-int32_t __tgt_rtl_deinit_plugin();
-
 // Return the number of available devices of the type supported by the
 // target RTL.
 int32_t __tgt_rtl_number_of_devices(void);
@@ -78,10 +75,6 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
 // Initialize the specified device. In case of success return 0; otherwise
 // return an error code.
 int32_t __tgt_rtl_init_device(int32_t ID);
-
-// Deinitialize the specified device. In case of success return 0; otherwise
-// return an error code.
-int32_t __tgt_rtl_deinit_device(int32_t ID);
 
 // Pass an executable image section described by image to the specified
 // device and prepare an address table of target entities. In case of error,

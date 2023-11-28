@@ -639,14 +639,11 @@ struct PluginManager {
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
   // vector until the plugins are all initialised and then register them.
-  bool maybeDelayRegisterLib(__tgt_bin_desc *Desc) {
-    if (!RTLsLoaded) {
-      // Only reachable from libomptarget constructor
-      DelayedBinDesc.push_back(Desc);
-      return true;
-    } else {
+  bool delayRegisterLib(__tgt_bin_desc *Desc) {
+    if (RTLsLoaded)
       return false;
-    }
+    DelayedBinDesc.push_back(Desc);
+    return true;
   }
 
   void registerDelayedLibraries() {

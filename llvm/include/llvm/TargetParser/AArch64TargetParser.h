@@ -588,29 +588,29 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"apple-a13", ARMV8_4A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
     {"apple-a14", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
     {"apple-a15", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML,
           AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
     {"apple-a16", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML,
           AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
     {"apple-m1", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
     {"apple-m2", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML,
           AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
     {"apple-s4", ARMV8_3A,
      (AArch64::ExtensionBitset(

@@ -1,4 +1,4 @@
-if (OPENMP_STANDALONE_BUILD)
+if (NOT COMMAND append_if)
   # From HandleLLVMOptions.cmake
   function(append_if condition value)
     if (${condition})

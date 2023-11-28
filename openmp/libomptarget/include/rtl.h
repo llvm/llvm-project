@@ -34,7 +34,6 @@ struct __tgt_bin_desc;
 
 struct RTLInfoTy {
   typedef int32_t(init_plugin_ty)();
-  typedef int32_t(deinit_plugin_ty)();
   typedef int32_t(is_valid_binary_ty)(void *);
   typedef int32_t(is_valid_binary_info_ty)(void *, void *);
   typedef bool(exists_valid_binary_for_RTL_ty)(void *, void *);
@@ -48,7 +47,6 @@ struct RTLInfoTy {
   typedef bool(is_fine_grained_memory_enabled_ty)();
   typedef bool(is_system_supporting_managed_memory_ty)();
   typedef int32_t(init_device_ty)(int32_t);
-  typedef int32_t(deinit_device_ty)(int32_t);
   typedef int32_t(number_of_team_procs_ty)(int32_t);
   typedef __tgt_target_table *(load_binary_ty)(int32_t, void *);
   typedef void *(data_alloc_ty)(int32_t, int64_t, void *, int32_t);
@@ -70,7 +68,6 @@ struct RTLInfoTy {
   typedef int64_t(init_requires_ty)(int64_t);
   typedef int32_t(synchronize_ty)(int32_t, __tgt_async_info *);
   typedef int32_t(query_async_ty)(int32_t, __tgt_async_info *);
-  typedef int32_t (*register_lib_ty)(__tgt_bin_desc *);
   typedef int32_t(supports_empty_images_ty)();
   typedef void(print_device_info_ty)(int32_t);
   typedef void(set_info_flag_ty)(uint32_t);
@@ -110,7 +107,6 @@ struct RTLInfoTy {
 
   // Functions implemented in the RTL.
   init_plugin_ty *init_plugin = nullptr;
-  deinit_plugin_ty *deinit_plugin = nullptr;
   is_valid_binary_ty *is_valid_binary = nullptr;
   is_valid_binary_info_ty *is_valid_binary_info = nullptr;
   exists_valid_binary_for_RTL_ty *exists_valid_binary_for_RTL = nullptr;
@@ -127,7 +123,6 @@ struct RTLInfoTy {
   is_system_supporting_managed_memory_ty *is_system_supporting_managed_memory =
       nullptr;
   init_device_ty *init_device = nullptr;
-  deinit_device_ty *deinit_device = nullptr;
   number_of_team_procs_ty *number_of_team_procs = nullptr;
   load_binary_ty *load_binary = nullptr;
   data_alloc_ty *data_alloc = nullptr;
@@ -143,8 +138,6 @@ struct RTLInfoTy {
   init_requires_ty *init_requires = nullptr;
   synchronize_ty *synchronize = nullptr;
   query_async_ty *query_async = nullptr;
-  register_lib_ty register_lib = nullptr;
-  register_lib_ty unregister_lib = nullptr;
   supports_empty_images_ty *supports_empty_images = nullptr;
   set_info_flag_ty *set_info_flag = nullptr;
   print_device_info_ty *print_device_info = nullptr;

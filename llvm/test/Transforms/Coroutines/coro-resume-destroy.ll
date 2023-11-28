@@ -6,13 +6,11 @@ define void @callResume(ptr %hdl) {
 ; CHECK-NEXT: entry
 entry:
 ; CHECK-NEXT: %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
-; CHECK-NEXT: %1 = bitcast ptr %0 to ptr
-; CHECK-NEXT: call fastcc void %1(ptr %hdl)
+; CHECK-NEXT: call fastcc void %0(ptr %hdl)
   call void @llvm.coro.resume(ptr %hdl)
 
-; CHECK-NEXT: %2 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
-; CHECK-NEXT: %3 = bitcast ptr %2 to ptr
-; CHECK-NEXT: call fastcc void %3(ptr %hdl)
+; CHECK-NEXT: %1 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+; CHECK-NEXT: call fastcc void %1(ptr %hdl)
   call void @llvm.coro.destroy(ptr %hdl)
 
   ret void
@@ -24,8 +22,7 @@ define void @eh(ptr %hdl) personality ptr null {
 ; CHECK-NEXT: entry
 entry:
 ;  CHECK-NEXT: %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
-;  CHECK-NEXT: %1 = bitcast ptr %0 to ptr
-;  CHECK-NEXT: invoke fastcc void %1(ptr %hdl)
+;  CHECK-NEXT: invoke fastcc void %0(ptr %hdl)
   invoke void @llvm.coro.resume(ptr %hdl)
           to label %cont unwind label %ehcleanup
 cont:

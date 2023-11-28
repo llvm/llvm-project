@@ -92,29 +92,19 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
     AddAffected(B);
 
     if (Pred == ICmpInst::ICMP_EQ) {
-      // For equality comparisons, we handle the case of bit inversion.
-      auto AddAffectedFromEq = [&AddAffected](Value *V) {
-        Value *A, *B;
-        // (A & B) or (A | B) or (A ^ B).
-        if (match(V, m_BitwiseLogic(m_Value(A), m_Value(B)))) {
-          AddAffected(A);
-          AddAffected(B);
-          // (A << C) or (A >>_s C) or (A >>_u C) where C is some constant.
-        } else if (match(V, m_Shift(m_Value(A), m_ConstantInt()))) {
-          AddAffected(A);
-        }
-      };
-
-      AddAffectedFromEq(A);
-      AddAffectedFromEq(B);
-    } else if (Pred == ICmpInst::ICMP_NE) {
-      Value *X, *Y;
-      // Handle (a & b != 0). If a/b is a power of 2 we can use this
-      // information.
-      if (match(A, m_And(m_Value(X), m_Value(Y))) && match(B, m_Zero())) {
-        AddAffected(X);
-        AddAffected(Y);
+      if (match(B, m_ConstantInt())) {
+        Value *X;
+        // (X & C) or (X | C) or (X ^ C).
+        // (X << C) or (X >>_s C) or (X >>_u C).
+        if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
+            match(A, m_Shift(m_Value(X), m_ConstantInt())))
+          AddAffected(X);
       }
+    } else if (Pred == ICmpInst::ICMP_NE) {
+      Value *X;
+      // Handle (X & pow2 != 0).
+      if (match(A, m_And(m_Value(X), m_Power2())) && match(B, m_Zero()))
+        AddAffected(X);
     } else if (Pred == ICmpInst::ICMP_ULT) {
       Value *X;
       // Handle (A + C1) u< C2, which is the canonical form of A > C3 && A < C4,

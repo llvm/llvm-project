@@ -18,6 +18,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
@@ -646,7 +647,8 @@ struct VectorStoreOpConverter final
   }
 };
 
-struct VectorReductionToDotProd final : OpRewritePattern<vector::ReductionOp> {
+struct VectorReductionToIntDotProd final
+    : OpRewritePattern<vector::ReductionOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
@@ -740,6 +742,63 @@ private:
   }
 };
 
+struct VectorReductionToFPDotProd final
+    : OpConversionPattern<vector::ReductionOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(op, "combining kind is not 'add'");
+
+    auto resultType = getTypeConverter()->convertType<FloatType>(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op, "result is not a float");
+
+    Value vec = adaptor.getVector();
+    Value acc = adaptor.getAcc();
+
+    auto vectorType = dyn_cast<VectorType>(vec.getType());
+    if (!vectorType) {
+      assert(isa<FloatType>(vec.getType()) &&
+             "Expected the vector to be scalarized");
+      if (acc) {
+        rewriter.replaceOpWithNewOp<spirv::FAddOp>(op, acc, vec);
+        return success();
+      }
+
+      rewriter.replaceOp(op, vec);
+      return success();
+    }
+
+    Location loc = op.getLoc();
+    Value lhs;
+    Value rhs;
+    if (auto mul = vec.getDefiningOp<arith::MulFOp>()) {
+      lhs = mul.getLhs();
+      rhs = mul.getRhs();
+    } else {
+      // If the operand is not a mul, use a vector of ones for the dot operand
+      // to just sum up all values.
+      lhs = vec;
+      Attribute oneAttr =
+          rewriter.getFloatAttr(vectorType.getElementType(), 1.0);
+      oneAttr = SplatElementsAttr::get(vectorType, oneAttr);
+      rhs = rewriter.create<spirv::ConstantOp>(loc, vectorType, oneAttr);
+    }
+    assert(lhs);
+    assert(rhs);
+
+    Value res = rewriter.create<spirv::DotOp>(loc, resultType, lhs, rhs);
+    if (acc)
+      res = rewriter.create<spirv::FAddOp>(loc, acc, res);
+
+    rewriter.replaceOp(op, res);
+    return success();
+  }
+};
+
 } // namespace
 #define CL_INT_MAX_MIN_OPS                                                     \
   spirv::CLUMaxOp, spirv::CLUMinOp, spirv::CLSMaxOp, spirv::CLSMinOp
@@ -763,10 +822,15 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
       VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
       VectorSplatPattern, VectorLoadOpConverter, VectorStoreOpConverter>(
-      typeConverter, patterns.getContext());
+      typeConverter, patterns.getContext(), PatternBenefit(1));
+
+  // Make sure that the more specialized dot product pattern has higher benefit
+  // than the generic one that extracts all elements.
+  patterns.add<VectorReductionToFPDotProd>(typeConverter, patterns.getContext(),
+                                           PatternBenefit(2));
 }
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<VectorReductionToDotProd>(patterns.getContext());
+  patterns.add<VectorReductionToIntDotProd>(patterns.getContext());
 }
