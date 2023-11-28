@@ -17299,7 +17299,7 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
                                     OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
       return std::nullopt;
-    return std::move(MemberLookup);
+    return std::move(std::optional<LookupResult>(MemberLookup));
   };
 
   bool SizeNotFound, DataNotFound;
