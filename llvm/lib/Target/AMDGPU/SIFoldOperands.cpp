@@ -205,9 +205,11 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
   const uint64_t TSFlags = MI->getDesc().TSFlags;
   if (Fold.isImm()) {
     if (TSFlags & SIInstrFlags::IsPacked && !(TSFlags & SIInstrFlags::IsMAI) &&
-        (!ST->hasDOTOpSelHazard() || !(TSFlags & SIInstrFlags::IsDOT)) &&
         AMDGPU::isFoldableLiteralV216(Fold.ImmToFold,
                                       ST->hasInv2PiInlineImm())) {
+      if (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT))
+        return false; // Prevent further folding of this operand without opsel.
+
       // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
       // already set.
       unsigned Opcode = MI->getOpcode();
