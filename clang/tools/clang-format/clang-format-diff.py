@@ -40,7 +40,7 @@ def main():
     basename = os.path.basename(sys.argv[0])
     parser = argparse.ArgumentParser(
         description=__doc__.format(clang_format_diff=basename),
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "-i",
