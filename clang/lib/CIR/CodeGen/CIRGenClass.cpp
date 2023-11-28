@@ -952,10 +952,12 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &CGF, Address addr,
   const RecordType *rtype = type->castAs<RecordType>();
   const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getDecl());
   const CXXDestructorDecl *dtor = record->getDestructor();
+  // TODO(cir): Unlike traditional codegen, CIRGen should actually emit trivial
+  // dtors which shall be removed on later CIR passes. However, only remove this
+  // assertion once we get a testcase to exercise this path.
   assert(!dtor->isTrivial());
-  llvm_unreachable("NYI");
-  // CGF.buildCXXDestructorCall(dtor, Dtor_Complete, /*for vbase*/ false,
-  //                            /*Delegating=*/false, addr, type);
+  CGF.buildCXXDestructorCall(dtor, Dtor_Complete, /*for vbase*/ false,
+                             /*Delegating=*/false, addr, type);
 }
 
 /// Emits the body of the current destructor.

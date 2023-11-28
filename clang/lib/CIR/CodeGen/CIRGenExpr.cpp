@@ -2071,9 +2071,8 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
           .create<mlir::cir::TernaryOp>(
               loc, condV, /*trueBuilder=*/
               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                CIRGenFunction::LexicalScopeContext lexScope{
-                    loc, b.getInsertionBlock()};
-                CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
+                CIRGenFunction::LexicalScope lexScope{*this, loc,
+                                                      b.getInsertionBlock()};
                 CGF.currLexScope->setAsTernary();
 
                 assert(!UnimplementedFeature::incrementProfileCounter());
@@ -2093,9 +2092,8 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
               },
               /*falseBuilder=*/
               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                CIRGenFunction::LexicalScopeContext lexScope{
-                    loc, b.getInsertionBlock()};
-                CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+                CIRGenFunction::LexicalScope lexScope{*this, loc,
+                                                      b.getInsertionBlock()};
                 CGF.currLexScope->setAsTernary();
 
                 assert(!UnimplementedFeature::incrementProfileCounter());
@@ -2191,9 +2189,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     [[maybe_unused]] auto scope = builder.create<mlir::cir::ScopeOp>(
         scopeLoc, /*scopeBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          CIRGenFunction::LexicalScopeContext lexScope{
-              loc, builder.getInsertionBlock()};
-          CIRGenFunction::LexicalScopeGuard lexScopeGuard{*this, &lexScope};
+          CIRGenFunction::LexicalScope lexScope{*this, loc,
+                                                builder.getInsertionBlock()};
 
           LV = buildLValue(cleanups->getSubExpr());
           if (LV.isSimple()) {
@@ -2307,15 +2304,13 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
       loc, condV, elseS,
       /*thenBuilder=*/
       [&](mlir::OpBuilder &, mlir::Location) {
-        LexicalScopeContext lexScope{thenLoc, builder.getInsertionBlock()};
-        LexicalScopeGuard lexThenGuard{*this, &lexScope};
+        LexicalScope lexScope{*this, thenLoc, builder.getInsertionBlock()};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
       },
       /*elseBuilder=*/
       [&](mlir::OpBuilder &, mlir::Location) {
         assert(elseLoc && "Invalid location for elseS.");
-        LexicalScopeContext lexScope{*elseLoc, builder.getInsertionBlock()};
-        LexicalScopeGuard lexElseGuard{*this, &lexScope};
+        LexicalScope lexScope{*this, *elseLoc, builder.getInsertionBlock()};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
       });
 

@@ -517,9 +517,8 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
   [[maybe_unused]] auto scope = builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        CIRGenFunction::LexicalScopeContext lexScope{
-            loc, builder.getInsertionBlock()};
-        CIRGenFunction::LexicalScopeGuard lexScopeGuard{CGF, &lexScope};
+        CIRGenFunction::LexicalScope lexScope{CGF, loc,
+                                              builder.getInsertionBlock()};
         Visit(E->getSubExpr());
       });
 }

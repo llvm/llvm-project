@@ -812,8 +812,7 @@ struct DestroyObject final : EHScopeStack::Cleanup {
     [[maybe_unused]] bool useEHCleanupForArray =
         flags.isForNormalCleanup() && this->useEHCleanupForArray;
 
-    llvm_unreachable("NYI");
-    // CGF.emitDestroy(addr, type, destroyer, useEHCleanupForArray);
+    CGF.emitDestroy(addr, type, destroyer, useEHCleanupForArray);
   }
 };
 
@@ -891,6 +890,26 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                  bool useEHCleanupForArray) {
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
                                      useEHCleanupForArray);
+}
+
+/// Immediately perform the destruction of the given object.
+///
+/// \param addr - the address of the object; a type*
+/// \param type - the type of the object; if an array type, all
+///   objects are destroyed in reverse order
+/// \param destroyer - the function to call to destroy individual
+///   elements
+/// \param useEHCleanupForArray - whether an EH cleanup should be
+///   used when destroying array elements, in case one of the
+///   destructions throws an exception
+void CIRGenFunction::emitDestroy(Address addr, QualType type,
+                                 Destroyer *destroyer,
+                                 bool useEHCleanupForArray) {
+  const ArrayType *arrayType = getContext().getAsArrayType(type);
+  if (!arrayType)
+    return destroyer(*this, addr, type);
+
+  llvm_unreachable("Array destroy NYI");
 }
 
 CIRGenFunction::Destroyer *

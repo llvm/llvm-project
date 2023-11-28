@@ -316,7 +316,7 @@ mlir::LogicalResult CIRGenFunction::declare(Address addr, const Decl *var,
 /// All scope related cleanup needed:
 /// - Patching up unsolved goto's.
 /// - Build all cleanup code and insert yield/returns.
-void CIRGenFunction::LexicalScopeGuard::cleanup() {
+void CIRGenFunction::LexicalScope::cleanup() {
   auto &builder = CGF.builder;
   auto *localScope = CGF.currLexScope;
 
@@ -352,6 +352,14 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   }
   localScope->SolvedLabels.clear();
 
+  auto applyCleanup = [&]() {
+    if (PerformCleanup) {
+      // ApplyDebugLocation
+      assert(!UnimplementedFeature::generateDebugInfo());
+      ForceCleanup();
+    }
+  };
+
   // Cleanup are done right before codegen resume a scope. This is where
   // objects are destroyed.
   unsigned curLoc = 0;
@@ -360,16 +368,16 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
     builder.setInsertionPointToEnd(retBlock);
     mlir::Location retLoc = *localScope->getRetLocs()[curLoc];
     curLoc++;
-
-    // TODO(cir): insert actual scope cleanup HERE (dtors and etc)
-
     (void)buildReturn(retLoc);
   }
 
   auto insertCleanupAndLeave = [&](mlir::Block *InsPt) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToEnd(InsPt);
-    // TODO: insert actual scope cleanup (dtors and etc)
+
+    // Leverage and defers to RunCleanupsScope's dtor and scope handling.
+    applyCleanup();
+
     if (localScope->Depth != 0) { // end of any local scope != function
       // Ternary ops have to deal with matching arms for yielding types
       // and do return a value, it must do its own cir.yield insertion.
@@ -392,20 +400,22 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
 
   // If a terminator is already present in the current block, nothing
   // else to do here.
-  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
   auto *currBlock = builder.getBlock();
-  bool hasTerminator =
-      !currBlock->empty() &&
-      currBlock->back().hasTrait<mlir::OpTrait::IsTerminator>();
-  if (hasTerminator)
+  if (currBlock->mightHaveTerminator() && currBlock->getTerminator())
     return;
 
-  // An empty non-entry block has nothing to offer.
+  // An empty non-entry block has nothing to offer, and since this is
+  // synthetic, losing information does not affect anything.
+  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
   if (!entryBlock && currBlock->empty()) {
     currBlock->erase();
     // Remove unused cleanup blocks.
     if (cleanupBlock && cleanupBlock->hasNoPredecessors())
       cleanupBlock->erase();
+    // FIXME(cir): ideally we should call applyCleanup() before we
+    // get into this condition and emit the proper cleanup. This is
+    // needed to get nrvo to interop with dtor logic.
+    PerformCleanup = false;
     return;
   }
 
@@ -494,25 +504,23 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
 
   // Create a scope in the symbol table to hold variable declarations.
   SymTableScopeTy varScope(symbolTable);
+  // Compiler synthetized functions might have invalid slocs...
+  auto bSrcLoc = FD->getBody()->getBeginLoc();
+  auto eSrcLoc = FD->getBody()->getEndLoc();
+  auto unknownLoc = builder.getUnknownLoc();
+
+  auto FnBeginLoc = bSrcLoc.isValid() ? getLoc(bSrcLoc) : unknownLoc;
+  auto FnEndLoc = eSrcLoc.isValid() ? getLoc(eSrcLoc) : unknownLoc;
+  const auto fusedLoc =
+      mlir::FusedLoc::get(builder.getContext(), {FnBeginLoc, FnEndLoc});
+  SourceLocRAIIObject fnLoc{*this, Loc.isValid() ? getLoc(Loc) : unknownLoc};
+
+  assert(Fn.isDeclaration() && "Function already has body?");
+  mlir::Block *EntryBB = Fn.addEntryBlock();
+  builder.setInsertionPointToStart(EntryBB);
 
   {
-    // Compiler synthetized functions might have invalid slocs...
-    auto bSrcLoc = FD->getBody()->getBeginLoc();
-    auto eSrcLoc = FD->getBody()->getEndLoc();
-    auto unknownLoc = builder.getUnknownLoc();
-
-    auto FnBeginLoc = bSrcLoc.isValid() ? getLoc(bSrcLoc) : unknownLoc;
-    auto FnEndLoc = eSrcLoc.isValid() ? getLoc(eSrcLoc) : unknownLoc;
-    SourceLocRAIIObject fnLoc{*this, Loc.isValid() ? getLoc(Loc) : unknownLoc};
-
-    assert(Fn.isDeclaration() && "Function already has body?");
-    mlir::Block *EntryBB = Fn.addEntryBlock();
-    builder.setInsertionPointToStart(EntryBB);
-
-    const auto fusedLoc =
-        mlir::FusedLoc::get(builder.getContext(), {FnBeginLoc, FnEndLoc});
-    LexicalScopeContext lexScope{fusedLoc, EntryBB};
-    LexicalScopeGuard scopeGuard{*this, &lexScope};
+    LexicalScope lexScope{*this, fusedLoc, EntryBB};
 
     // Emit the standard function prologue.
     StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
@@ -535,7 +543,8 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     else if (isa<CXXMethodDecl>(FD) &&
              cast<CXXMethodDecl>(FD)->isLambdaStaticInvoker()) {
       // The lambda static invoker function is special, because it forwards or
-      // clones the body of the function call operator (but is actually static).
+      // clones the body of the function call operator (but is actually
+      // static).
       buildLambdaStaticInvokeBody(cast<CXXMethodDecl>(FD));
     } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
                (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||

@@ -135,9 +135,10 @@ RValue CIRGenFunction::buildCoroutineFrame() {
   llvm_unreachable("NYI");
 }
 
-static mlir::LogicalResult buildBodyAndFallthrough(
-    CIRGenFunction &CGF, const CoroutineBodyStmt &S, Stmt *Body,
-    const CIRGenFunction::LexicalScopeContext *currLexScope) {
+static mlir::LogicalResult
+buildBodyAndFallthrough(CIRGenFunction &CGF, const CoroutineBodyStmt &S,
+                        Stmt *Body,
+                        const CIRGenFunction::LexicalScope *currLexScope) {
   if (CGF.buildStmt(Body, /*useCurrentScope=*/true).failed())
     return mlir::failure();
   // Note that LLVM checks CanFallthrough by looking into the availability
