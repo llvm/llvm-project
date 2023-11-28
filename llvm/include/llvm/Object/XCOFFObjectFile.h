@@ -853,6 +853,9 @@ public:
   xcoff_symbol_iterator(const basic_symbol_iterator &B)
       : symbol_iterator(B) {}
 
+  xcoff_symbol_iterator(const XCOFFSymbolRef *Symbol)
+      : symbol_iterator(*Symbol) {}
+
   const XCOFFSymbolRef *operator->() const {
     return static_cast<const XCOFFSymbolRef *>(symbol_iterator::operator->());
   }

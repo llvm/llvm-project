@@ -21,7 +21,7 @@ define i32 @p(i32 %x, i32 %y, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, %m
@@ -36,7 +36,7 @@ define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %and = and <2 x i32> %x, %m
@@ -51,7 +51,7 @@ define <3 x i32> @p_vec_undef(<3 x i32> %x, <3 x i32> %y, <3 x i32> %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i32> [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor <3 x i32> [[M]], <i32 -1, i32 undef, i32 -1>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <3 x i32> [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or <3 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <3 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %and = and <3 x i32> %x, %m
@@ -69,7 +69,7 @@ define i32 @p_constmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p_constmask(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 65280
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 65280
@@ -82,7 +82,7 @@ define <2 x i32> @p_constmask_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask_splatvec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 65280, i32 65280>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
-; CHECK-NEXT:    [[RET:%.*]] = or <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %and = and <2 x i32> %x, <i32 65280, i32 65280>
@@ -125,7 +125,7 @@ define i32 @p_constmask2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p_constmask2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 61440
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 61440
@@ -138,7 +138,7 @@ define <2 x i32> @p_constmask2_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask2_splatvec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 61440, i32 61440>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
-; CHECK-NEXT:    [[RET:%.*]] = or <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %and = and <2 x i32> %x, <i32 61440, i32 61440>
@@ -185,7 +185,7 @@ define i32 @p_commutative0(i32 %x, i32 %y, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %m, %x ; swapped order
@@ -201,7 +201,7 @@ define i32 @p_commutative1(i32 %x, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %y = call i32 @gen32()
@@ -217,7 +217,7 @@ define i32 @p_commutative2(i32 %x, i32 %y, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, %m
@@ -233,7 +233,7 @@ define i32 @p_commutative3(i32 %x, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %y = call i32 @gen32()
@@ -249,7 +249,7 @@ define i32 @p_commutative4(i32 %x, i32 %y, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %m, %x ; swapped order
@@ -265,7 +265,7 @@ define i32 @p_commutative5(i32 %x, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %y = call i32 @gen32()
@@ -282,7 +282,7 @@ define i32 @p_commutative6(i32 %x, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[M:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y]], [[NEG]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %y = call i32 @gen32()
@@ -297,7 +297,7 @@ define i32 @p_constmask_commutative(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p_constmask_commutative(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 65280
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND1]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 65280
@@ -319,7 +319,7 @@ define i32 @n0_oneuse(i32 %x, i32 %y, i32 %m) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[M:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[M]], -1
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NEG]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    call void @use32(i32 [[AND]])
 ; CHECK-NEXT:    call void @use32(i32 [[NEG]])
 ; CHECK-NEXT:    call void @use32(i32 [[AND1]])
@@ -339,7 +339,7 @@ define i32 @n0_constmask_oneuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @n0_constmask_oneuse(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 65280
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET:%.*]] = or i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    call void @use32(i32 [[AND]])
 ; CHECK-NEXT:    call void @use32(i32 [[AND1]])
 ; CHECK-NEXT:    ret i32 [[RET]]

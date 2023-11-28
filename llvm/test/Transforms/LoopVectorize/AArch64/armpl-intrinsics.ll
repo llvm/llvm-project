@@ -161,6 +161,57 @@ define void @exp2_f32(ptr nocapture %in.ptr, ptr %out.ptr) {
   ret void
 }
 
+declare double @llvm.exp10.f64(double)
+declare float @llvm.exp10.f32(float)
+
+define void @exp10_f64(ptr nocapture %in.ptr, ptr %out.ptr) {
+; CHECK-LABEL: @exp10_f64(
+; NEON:     [[TMP5:%.*]] = call <2 x double> @armpl_vexp10q_f64(<2 x double> [[TMP4:%.*]])
+; SVE:      [[TMP5:%.*]] = call <vscale x 2 x double> @armpl_svexp10_f64_x(<vscale x 2 x double> [[TMP4:%.*]], <vscale x 2 x i1> {{.*}})
+; CHECK:    ret void
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds double, ptr %in.ptr, i64 %iv
+  %in = load double, ptr %in.gep, align 8
+  %call = tail call double @llvm.exp10.f64(double %in)
+  %out.gep = getelementptr inbounds double, ptr %out.ptr, i64 %iv
+  store double %call, ptr %out.gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
+define void @exp10_f32(ptr nocapture %in.ptr, ptr %out.ptr) {
+; CHECK-LABEL: @exp10_f32(
+; NEON:     [[TMP5:%.*]] = call <4 x float> @armpl_vexp10q_f32(<4 x float> [[TMP4:%.*]])
+; SVE:      [[TMP5:%.*]] = call <vscale x 4 x float> @armpl_svexp10_f32_x(<vscale x 4 x float> [[TMP4:%.*]], <vscale x 4 x i1> {{.*}})
+; CHECK:    ret void
+;
+  entry:
+  br label %for.body
+
+  for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %in.gep = getelementptr inbounds float, ptr %in.ptr, i64 %iv
+  %in = load float, ptr %in.gep, align 8
+  %call = tail call float @llvm.exp10.f32(float %in)
+  %out.gep = getelementptr inbounds float, ptr %out.ptr, i64 %iv
+  store float %call, ptr %out.gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+  for.end:
+  ret void
+}
+
 declare double @llvm.log.f64(double)
 declare float @llvm.log.f32(float)
 

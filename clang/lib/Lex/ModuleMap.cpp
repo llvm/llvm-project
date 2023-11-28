@@ -2509,9 +2509,9 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
       << FixItHint::CreateReplacement(CurrModuleDeclLoc, "framework module");
 }
 
-static int compareModuleHeaders(const Module::Header *A,
-                                const Module::Header *B) {
-  return A->NameAsWritten.compare(B->NameAsWritten);
+static bool compareModuleHeaders(const Module::Header &A,
+                                 const Module::Header &B) {
+  return A.NameAsWritten < B.NameAsWritten;
 }
 
 /// Parse an umbrella directory declaration.
@@ -2574,7 +2574,7 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    llvm::array_pod_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);

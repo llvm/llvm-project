@@ -1491,10 +1491,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     // Don't allow overloading of destructors.  (In theory we could, but it
     // would be a giant change to clang.)
     if (!isa<CXXDestructorDecl>(New)) {
-      Sema::CUDAFunctionTarget NewTarget = SemaRef.IdentifyCUDATarget(
-                                   New, isa<CXXConstructorDecl>(New)),
-                               OldTarget = SemaRef.IdentifyCUDATarget(
-                                   Old, isa<CXXConstructorDecl>(New));
+      Sema::CUDAFunctionTarget NewTarget = SemaRef.IdentifyCUDATarget(New),
+                               OldTarget = SemaRef.IdentifyCUDATarget(Old);
       if (NewTarget != Sema::CFT_InvalidTarget) {
         assert((OldTarget != Sema::CFT_InvalidTarget) &&
                "Unexpected invalid target.");

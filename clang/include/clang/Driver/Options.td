@@ -1452,7 +1452,7 @@ def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;
-def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
+def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
@@ -1754,6 +1754,18 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
+defm apinotes : BoolOption<"f", "apinotes",
+    LangOpts<"APINotes">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable">,
+    NegFlag<SetFalse, [], [ClangOption], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], "external API notes support">>,
+    Group<f_clang_Group>;
+defm apinotes_modules : BoolOption<"f", "apinotes-modules",
+    LangOpts<"APINotesModules">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable">,
+    NegFlag<SetFalse, [], [ClangOption], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], "module-based external API notes support">>,
+    Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,

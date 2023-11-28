@@ -154,14 +154,14 @@ constexpr bool test() {
   }
   {
     // test ID 13
-    std::ranges::zip_view v{SimpleNonCommonRandomAcessSized(buffer1)};
+    std::ranges::zip_view v{SimpleNonCommonRandomAccessSized(buffer1)};
     static_assert(std::ranges::common_range<decltype(v)>);
     assert(v.begin() + 5 == v.end());
     static_assert(std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
   }
   {
     // test ID 14
-    std::ranges::zip_view v{SimpleNonCommonRandomAcessSized(buffer1), SimpleNonCommonRandomAcessSized(buffer2)};
+    std::ranges::zip_view v{SimpleNonCommonRandomAccessSized(buffer1), SimpleNonCommonRandomAccessSized(buffer2)};
     static_assert(std::ranges::common_range<decltype(v)>);
     assert(v.begin() + 1 == v.end());
     static_assert(std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
@@ -308,14 +308,14 @@ constexpr bool test() {
   }
   {
     // test ID 35
-    std::ranges::zip_view v{NonSimpleNonCommonRandomAcessSized(buffer1)};
+    std::ranges::zip_view v{NonSimpleNonCommonRandomAccessSized(buffer1)};
     static_assert(std::ranges::common_range<decltype(v)>);
     assert(v.begin() + 5 == v.end());
     static_assert(!std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
   }
   {
     // test ID 36
-    std::ranges::zip_view v{NonSimpleNonCommonRandomAcessSized(buffer1), NonSimpleNonCommonRandomAcessSized(buffer2)};
+    std::ranges::zip_view v{NonSimpleNonCommonRandomAccessSized(buffer1), NonSimpleNonCommonRandomAccessSized(buffer2)};
     static_assert(std::ranges::common_range<decltype(v)>);
     assert(v.begin() + 1 == v.end());
     static_assert(!std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);

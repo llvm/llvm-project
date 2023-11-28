@@ -34,11 +34,6 @@ def SPIRV_INTELConvertFToBF16Op : SPIRV_IntelVendorOp<"ConvertFToBF16", []> {
 
     Results are computed per component.
 
-    ```
-    convert-f-to-bf16-op ::= ssa-id `=` `spirv.INTEL.ConvertFToBF16` ssa-use
-                          `:` operand-type `to` result-type
-    ```
-
     #### Example:
 
     ```mlir
@@ -84,11 +79,6 @@ def SPIRV_INTELConvertBF16ToFOp : SPIRV_IntelVendorOp<"ConvertBF16ToF", []> {
     The type must have the same number of components as the Result Type. The component width must be 16 bits.
 
     Results are computed per component.
-
-    ```
-    convert-bf16-to-f-op ::= ssa-id `=` `spirv.INTEL.ConvertBF16ToF` ssa-use
-                          `:` operand-type `to` result-type
-    ```
 
     #### Example:
 

@@ -36,7 +36,7 @@ define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
 ; CHECK-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
 ; CHECK-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %bb6: Trip multiple is 1
+; CHECK-NEXT:  Loop %bb6: Trip multiple is 1
 ;
 bb:
   %i = load i32, ptr %arg1, align 4

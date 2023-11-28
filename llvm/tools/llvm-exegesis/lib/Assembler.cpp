@@ -347,37 +347,43 @@ private:
 
 } // namespace
 
-ExecutableFunction::ExecutableFunction(
+Expected<ExecutableFunction> ExecutableFunction::create(
     std::unique_ptr<LLVMTargetMachine> TM,
-    object::OwningBinary<object::ObjectFile> &&ObjectFileHolder)
-    : Context(std::make_unique<LLVMContext>()) {
+    object::OwningBinary<object::ObjectFile> &&ObjectFileHolder) {
   assert(ObjectFileHolder.getBinary() && "cannot create object file");
+  std::unique_ptr<LLVMContext> Ctx = std::make_unique<LLVMContext>();
   // Initializing the execution engine.
   // We need to use the JIT EngineKind to be able to add an object file.
   LLVMLinkInMCJIT();
   uintptr_t CodeSize = 0;
   std::string Error;
-  ExecEngine.reset(
-      EngineBuilder(createModule(Context, TM->createDataLayout()))
+  std::unique_ptr<ExecutionEngine> EE(
+      EngineBuilder(createModule(Ctx, TM->createDataLayout()))
           .setErrorStr(&Error)
           .setMCPU(TM->getTargetCPU())
           .setEngineKind(EngineKind::JIT)
           .setMCJITMemoryManager(
               std::make_unique<TrackingSectionMemoryManager>(&CodeSize))
           .create(TM.release()));
-  if (!ExecEngine)
-    report_fatal_error(Twine(Error));
+  if (!EE)
+    return make_error<StringError>(Twine(Error), inconvertibleErrorCode());
   // Adding the generated object file containing the assembled function.
   // The ExecutionEngine makes sure the object file is copied into an
   // executable page.
-  ExecEngine->addObjectFile(std::move(ObjectFileHolder));
+  EE->addObjectFile(std::move(ObjectFileHolder));
   // Fetching function bytes.
-  const uint64_t FunctionAddress = ExecEngine->getFunctionAddress(FunctionID);
+  const uint64_t FunctionAddress = EE->getFunctionAddress(FunctionID);
   assert(isAligned(kFunctionAlignment, FunctionAddress) &&
          "function is not properly aligned");
-  FunctionBytes =
+  StringRef FBytes =
       StringRef(reinterpret_cast<const char *>(FunctionAddress), CodeSize);
+  return ExecutableFunction(std::move(Ctx), std::move(EE), FBytes);
 }
+
+ExecutableFunction::ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
+                                       std::unique_ptr<ExecutionEngine> EE,
+                                       StringRef FB)
+    : FunctionBytes(FB), Context(std::move(Ctx)), ExecEngine(std::move(EE)) {}
 
 Error getBenchmarkFunctionBytes(const StringRef InputData,
                                 std::vector<uint8_t> &Bytes) {

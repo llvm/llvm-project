@@ -416,11 +416,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_Args&&... __args)
     {
         _LIBCPP_ASSERT_INTERNAL(!has_value(), "__construct called for engaged __optional_storage");
-#if _LIBCPP_STD_VER >= 20
-        _VSTD::construct_at(_VSTD::addressof(this->__val_), _VSTD::forward<_Args>(__args)...);
-#else
-        ::new ((void*)_VSTD::addressof(this->__val_)) value_type(_VSTD::forward<_Args>(__args)...);
-#endif
+        std::__construct_at(std::addressof(this->__val_), std::forward<_Args>(__args)...);
         this->__engaged_ = true;
     }
 

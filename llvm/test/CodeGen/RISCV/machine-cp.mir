@@ -9,10 +9,6 @@
   entry:
     ret void
   }
-  define void @bar() {
-  entry:
-    ret void
-  }
 ...
 ---
 name:            foo
@@ -25,7 +21,6 @@ body:             |
     ; RV32-NEXT: renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY killed renamable $v0_v1_v2_v3_v4_v5_v6_v7
     ; RV32-NEXT: renamable $v28 = COPY renamable $v8, implicit killed $v28_v29_v30, implicit-def $v28_v29_v30
     ; RV32-NEXT: PseudoRET implicit $v28
-    ;
     ; RV64-LABEL: name: foo
     ; RV64: liveins: $v28_v29_v30, $v8_v9, $v1
     ; RV64-NEXT: {{  $}}
@@ -36,31 +31,4 @@ body:             |
     renamable $v4_v5_v6_v7_v8_v9_v10_v11 = COPY killed renamable $v0_v1_v2_v3_v4_v5_v6_v7
     renamable $v28 = COPY renamable $v8, implicit killed $v28_v29_v30, implicit-def $v28_v29_v30
     PseudoRET implicit $v28
-...
----
-name:            bar
-body:             |
-  bb.0.entry:
-    liveins: $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x28, $x29, $x30, $x31
-    ; RV32-LABEL: name: bar
-    ; RV32: liveins: $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x28, $x29, $x30, $x31
-    ; RV32-NEXT: {{  $}}
-    ; RV32-NEXT: $v0 = COPY renamable $v8
-    ; RV32-NEXT: renamable $v14m2 = PseudoVLE32_V_M2_MASK undef renamable $v14m2, renamable $x15, $v0, -1, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; RV32-NEXT: early-clobber renamable $v9 = PseudoVMSLE_VI_M2 killed renamable $v10m2, -1, -1, 5 /* e32 */, implicit $vl, implicit $vtype
-    ; RV32-NEXT: PseudoVSE32_V_M2_MASK killed renamable $v14m2, renamable $x9, $v0, -1, 5 /* e32 */, implicit $vl, implicit $vtype
-    ;
-    ; RV64-LABEL: name: bar
-    ; RV64: liveins: $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x28, $x29, $x30, $x31
-    ; RV64-NEXT: {{  $}}
-    ; RV64-NEXT: $v0 = COPY renamable $v8
-    ; RV64-NEXT: renamable $v14m2 = PseudoVLE32_V_M2_MASK undef renamable $v14m2, renamable $x15, $v0, -1, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; RV64-NEXT: early-clobber renamable $v9 = PseudoVMSLE_VI_M2 killed renamable $v10m2, -1, -1, 5 /* e32 */, implicit $vl, implicit $vtype
-    ; RV64-NEXT: PseudoVSE32_V_M2_MASK killed renamable $v14m2, renamable $x9, $v0, -1, 5 /* e32 */, implicit $vl, implicit $vtype
-    $v0 = COPY killed renamable $v9
-    $v0 = COPY renamable $v8
-    renamable $v14m2 = PseudoVLE32_V_M2_MASK undef renamable $v14m2, renamable $x15, $v0, -1, 5, 1, implicit $vl, implicit $vtype
-    early-clobber renamable $v9 = PseudoVMSLE_VI_M2 killed renamable $v10m2, -1, -1, 5, implicit $vl, implicit $vtype
-    $v0 = COPY killed renamable $v8
-    PseudoVSE32_V_M2_MASK killed renamable $v14m2, renamable $x9, $v0, -1, 5, implicit $vl, implicit $vtype
 ...

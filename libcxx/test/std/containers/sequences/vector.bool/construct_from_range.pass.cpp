@@ -18,7 +18,7 @@
 
 constexpr bool test() {
   for_all_iterators_and_allocators<bool>([]<class Iter, class Sent, class Alloc>() {
-    test_vector_bool<Iter, Sent, Alloc>([](const auto& c) {
+    test_vector_bool<Iter, Sent, Alloc>([]([[maybe_unused]] const auto& c) {
       LIBCPP_ASSERT(c.__invariants());
       // `is_contiguous_container_asan_correct` doesn't work on `vector<bool>`.
     });

@@ -27,7 +27,7 @@ concept test_char_streamable = requires(T&& value) { std::stringstream{} << std:
 #  endif
 
 // If possible concatenates message for the assertion function, else returns a
-// default message. Not being able to stream is not considered and error. For
+// default message. Not being able to stream is not considered an error. For
 // example, streaming to std::wcerr doesn't work properly in the CI. Therefore
 // the formatting tests should only stream to std::string.
 //

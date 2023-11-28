@@ -1013,6 +1013,9 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   case X86II::XOPA:
     Prefix.set5M(0xA);
     break;
+  case X86II::T_MAP4:
+    Prefix.set5M(0x4);
+    break;
   case X86II::T_MAP5:
     Prefix.set5M(0x5);
     break;
