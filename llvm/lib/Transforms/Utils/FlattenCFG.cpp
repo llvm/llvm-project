@@ -408,7 +408,7 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
 /// approach goes for the opposite case.
 bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
   BasicBlock *IfTrue2, *IfFalse2;
-  BranchInst *DomBI2 = GetIfCondition(BB, IfTrue2, IfFalse2);
+  BranchInst *DomBI2 = GetIfConditionFromMergePoint(BB, IfTrue2, IfFalse2);
   if (!DomBI2)
     return false;
   Instruction *CInst2 = dyn_cast<Instruction>(DomBI2->getCondition());
@@ -420,7 +420,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
     return false;
 
   BasicBlock *IfTrue1, *IfFalse1;
-  BranchInst *DomBI1 = GetIfCondition(SecondEntryBlock, IfTrue1, IfFalse1);
+  BranchInst *DomBI1 = GetIfConditionFromMergePoint(SecondEntryBlock, IfTrue1, IfFalse1);
   if (!DomBI1)
     return false;
   Instruction *CInst1 = dyn_cast<Instruction>(DomBI1->getCondition());

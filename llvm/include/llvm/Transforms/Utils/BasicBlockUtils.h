@@ -595,8 +595,20 @@ void SplitBlockAndInsertForEachLane(
 ///
 /// This does no checking to see if the true/false blocks have large or unsavory
 /// instructions in them.
-BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
+BranchInst *GetIfConditionFromMergePoint(BasicBlock *BB, BasicBlock *&IfTrue,
                            BasicBlock *&IfFalse);
+
+/// Check whether BB is the dominant point of a if-region.
+/// If so, return the merge point of the if-region. Also, return by references
+/// the block that will be entered from if the condition is true, and the block
+/// that will be entered if the condition is false.
+///
+/// This does no checking to see if the true/false blocks have large or unsavory
+/// instructions in them.
+///
+/// NOTE: we assume that the terminator of DomBB is a conditional branch instruction. 
+BasicBlock *GetIfConditionFromDom(BasicBlock *DomBB, BasicBlock *&IfTrue,
+                                  BasicBlock *&IfFalse);
 
 // Split critical edges where the source of the edge is an indirectbr
 // instruction. This isn't always possible, but we can handle some easy cases.

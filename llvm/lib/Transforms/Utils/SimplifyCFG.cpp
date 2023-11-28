@@ -3403,35 +3403,37 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
   return EverChanged;
 }
 
-/// Given a BB that starts with the specified two-entry PHI node,
-/// see if we can eliminate it.
-static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
-                                DomTreeUpdater *DTU, const DataLayout &DL) {
-  // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
-  // statement", which has a very simple dominance structure.  Basically, we
-  // are trying to find the condition that is being branched on, which
-  // subsequently causes this merge to happen.  We really want control
-  // dependence information for this check, but simplifycfg can't keep it up
-  // to date, and this catches most of the cases we care about anyway.
-  BasicBlock *BB = PN->getParent();
+// Fold phis in BB based on if-else information.
+static bool FoldPHIOfIfRegion(BasicBlock *BB, BasicBlock *DomBlock,
+                              BasicBlock *IfTrue, BasicBlock *IfFalse,
+                              const TargetTransformInfo &TTI,
+                              DomTreeUpdater *DTU, const DataLayout &DL) {
+  assert(isa<BranchInst>(DomBlock->getTerminator()));
 
-  BasicBlock *IfTrue, *IfFalse;
-  BranchInst *DomBI = GetIfCondition(BB, IfTrue, IfFalse);
-  if (!DomBI)
+  if (BB->phis().empty())
     return false;
+
+  PHINode *PN = &*BB->phis().begin();
+
+  BranchInst *DomBI = cast<BranchInst>(DomBlock->getTerminator());
   Value *IfCond = DomBI->getCondition();
   // Don't bother if the branch will be constant folded trivially.
   if (isa<ConstantInt>(IfCond))
     return false;
 
-  BasicBlock *DomBlock = DomBI->getParent();
-  SmallVector<BasicBlock *, 2> IfBlocks;
+  // Track BBs that jumps into phi unconditionally, to handle the cases where
+  // one of {IfTrue, IfFalse} is DomBlock. 
+  SmallVector<BasicBlock *, 2> UncondEnterBlocks;
   llvm::copy_if(
-      PN->blocks(), std::back_inserter(IfBlocks), [](BasicBlock *IfBlock) {
+      SmallVector<BasicBlock *, 2>{IfTrue, IfFalse},
+      std::back_inserter(UncondEnterBlocks), [](BasicBlock *IfBlock) {
         return cast<BranchInst>(IfBlock->getTerminator())->isUnconditional();
       });
-  assert((IfBlocks.size() == 1 || IfBlocks.size() == 2) &&
-         "Will have either one or two blocks to speculate.");
+
+  // NOTE: Keep the order of BBs the same as the order in phi.
+  llvm::sort(UncondEnterBlocks, [PN](BasicBlock *B1, BasicBlock *B2) {
+    return PN->getBasicBlockIndex(B1) < PN->getBasicBlockIndex(B2);
+  });
 
   // If the branch is non-unpredictable, see if we either predictably jump to
   // the merge bb (if we have only a single 'then' block), or if we predictably
@@ -3446,7 +3448,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
           BranchProbability::getBranchProbability(TWeight, TWeight + FWeight);
       BranchProbability Likely = TTI.getPredictableBranchThreshold();
       BranchProbability BIFalseProb = BITrueProb.getCompl();
-      if (IfBlocks.size() == 1) {
+      if (UncondEnterBlocks.size() == 1) {
         BranchProbability BIBBProb =
             DomBI->getSuccessor(0) == BB ? BITrueProb : BIFalseProb;
         if (BIBBProb >= Likely)
@@ -3492,10 +3494,10 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       continue;
     }
 
-    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, AggressiveInsts,
-                             Cost, Budget, TTI) ||
-        !dominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
-                             Cost, Budget, TTI))
+    if (!dominatesMergePoint(PN->getIncomingValueForBlock(IfTrue), BB,
+                             AggressiveInsts, Cost, Budget, TTI) ||
+        !dominatesMergePoint(PN->getIncomingValueForBlock(IfFalse), BB,
+                             AggressiveInsts, Cost, Budget, TTI))
       return Changed;
   }
 
@@ -3525,18 +3527,21 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
                m_CombineOr(m_Select(m_Value(), m_ImmConstant(), m_Value()),
                            m_Select(m_Value(), m_Value(), m_ImmConstant()))));
   };
+
+  Value *TrueVal = PN->getIncomingValueForBlock(IfTrue);
+  Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
+
   if (PN->getType()->isIntegerTy(1) &&
-      (IsBinOpOrAnd(PN->getIncomingValue(0)) ||
-       IsBinOpOrAnd(PN->getIncomingValue(1)) || IsBinOpOrAnd(IfCond)) &&
-      !CanHoistNotFromBothValues(PN->getIncomingValue(0),
-                                 PN->getIncomingValue(1)))
+      (IsBinOpOrAnd(TrueVal) || IsBinOpOrAnd(FalseVal) ||
+       IsBinOpOrAnd(IfCond)) &&
+      !CanHoistNotFromBothValues(TrueVal, FalseVal))
     return Changed;
 
   // If all PHI nodes are promotable, check to make sure that all instructions
   // in the predecessor blocks can be promoted as well. If not, we won't be able
   // to get rid of the control flow, so it's not worth promoting to select
   // instructions.
-  for (BasicBlock *IfBlock : IfBlocks)
+  for (BasicBlock *IfBlock : UncondEnterBlocks)
     for (BasicBlock::iterator I = IfBlock->begin(); !I->isTerminator(); ++I)
       if (!AggressiveInsts.count(&*I) && !I->isDebugOrPseudoInst()) {
         // This is not an aggressive instruction that we can promote.
@@ -3546,7 +3551,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       }
 
   // If either of the blocks has it's address taken, we can't do this fold.
-  if (any_of(IfBlocks,
+  if (any_of(UncondEnterBlocks,
              [](BasicBlock *IfBlock) { return IfBlock->hasAddressTaken(); }))
     return Changed;
 
@@ -3559,8 +3564,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   // Move all 'aggressive' instructions, which are defined in the
   // conditional parts of the if's up to the dominating block.
-  for (BasicBlock *IfBlock : IfBlocks)
-      hoistAllInstructionsInto(DomBlock, DomBI, IfBlock);
+  for (BasicBlock *IfBlock : UncondEnterBlocks)
+    hoistAllInstructionsInto(DomBlock, DomBI, IfBlock);
 
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
@@ -3574,12 +3579,18 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     Value *FalseVal = PN->getIncomingValueForBlock(IfFalse);
 
     Value *Sel = Builder.CreateSelect(IfCond, TrueVal, FalseVal, "", DomBI);
-    PN->replaceAllUsesWith(Sel);
-    Sel->takeName(PN);
-    PN->eraseFromParent();
+    if (PN->getNumIncomingValues() == 2) {
+      PN->replaceAllUsesWith(Sel);
+      Sel->takeName(PN);
+      PN->eraseFromParent();
+    } else {
+      PN->removeIncomingValue(IfTrue);
+      PN->removeIncomingValue(IfFalse);
+      PN->addIncoming(Sel, DomBlock);
+    }
   }
 
-  // At this point, all IfBlocks are empty, so our if statement
+  // At this point, all UncondEnterBlocks are empty, so our if statement
   // has been flattened.  Change DomBlock to jump directly to our new block to
   // avoid other simplifycfg's kicking in on the diamond.
   Builder.CreateBr(BB);
@@ -3596,6 +3607,25 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     DTU->applyUpdates(Updates);
 
   return true;
+}
+
+/// Given a BB that starts with the specified two-entry PHI node,
+/// see if we can eliminate it.
+static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
+                                DomTreeUpdater *DTU, const DataLayout &DL) {
+  // Ok, this is a two entry PHI node.  Check to see if this is a simple "if
+  // statement", which has a very simple dominance structure.  Basically, we
+  // are trying to find the condition that is being branched on, which
+  // subsequently causes this merge to happen.  We really want control
+  // dependence information for this check, but simplifycfg can't keep it up
+  // to date, and this catches most of the cases we care about anyway.
+  BasicBlock *BB = PN->getParent();
+  BasicBlock *IfTrue, *IfFalse;
+  BranchInst *DomBI = GetIfConditionFromMergePoint(BB, IfTrue, IfFalse);
+  if (!DomBI)
+    return false;
+  BasicBlock *DomBlock = DomBI->getParent();
+  return FoldPHIOfIfRegion(BB, DomBlock, IfTrue, IfFalse, TTI, DTU, DL);
 }
 
 static Value *createLogicalOp(IRBuilderBase &Builder,
@@ -7315,6 +7345,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
       if (HoistCommon && hoistCommonCodeFromSuccessors(
                              BI->getParent(), !Options.HoistCommonInsts))
         return requestResimplify();
+
     } else {
       // If Successor #1 has multiple preds, we may be able to conditionally
       // execute Successor #0 if it branches to Successor #1.
