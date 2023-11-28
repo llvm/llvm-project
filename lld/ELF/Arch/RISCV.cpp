@@ -530,6 +530,7 @@ struct elf::RISCVRelaxAux {
   // For relocations[i], the actual offset is r_offset - (i ? relocDeltas[i-1] :
   // 0).
   std::unique_ptr<uint32_t[]> relocDeltas;
+  std::unique_ptr<uint32_t[]> relaxDecisions;
   // For relocations[i], the actual type is relocTypes[i].
   std::unique_ptr<RelType[]> relocTypes;
   SmallVector<uint32_t, 0> writes;
@@ -544,6 +545,8 @@ static void initSymbolAnchors() {
       sec->relaxAux = make<RISCVRelaxAux>();
       if (sec->relocs().size()) {
         sec->relaxAux->relocDeltas =
+            std::make_unique<uint32_t[]>(sec->relocs().size());
+        sec->relaxAux->relaxDecisions =
             std::make_unique<uint32_t[]>(sec->relocs().size());
         sec->relaxAux->relocTypes =
             std::make_unique<RelType[]>(sec->relocs().size());
@@ -588,6 +591,26 @@ static void initSymbolAnchors() {
   }
 }
 
+// Track the number of state changes between relax and norelax have occurred
+// for a particular relocation. If hist is odd, last decision was relax, even,
+// last decision was norelax.
+static void trackRelaxedDecision(uint32_t &hist, bool relaxed) {
+  bool lastRelaxed = (bool)(hist & 0x1);
+  if (relaxed != lastRelaxed)
+    hist++;
+}
+
+// Once the decision about relaxing a specific relocation has completed
+// stopRelaxingAfter state changes and reached "norelax", we will stop
+// attempting to relax this relocation. This is an indicator that there
+// is a good chance that the ability to relax relocations in two or more
+// sections have a circular dependency.
+static bool giveUpRelaxing(const InputSection &sec, size_t i) {
+  static constexpr int stopRelaxingAfter = 6;
+  return sec.relaxAux->relaxDecisions[i] >= stopRelaxingAfter &&
+         (sec.relaxAux->relaxDecisions[i] & 0x1) == 0;
+}
+
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
@@ -598,6 +621,9 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
   const uint64_t dest =
       (r.expr == R_PLT_PC ? sym.getPltVA() : sym.getVA()) + r.addend;
   const int64_t displace = dest - loc;
+
+  if (giveUpRelaxing(sec, i))
+    return;
 
   if (rvc && isInt<12>(displace) && rd == 0) {
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
@@ -613,14 +639,20 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
     remove = 4;
   }
+  // If remove is non-zero, this relocation was relaxed.
+  trackRelaxedDecision(sec.relaxAux->relaxDecisions[i], remove != 0);
 }
 
 // Relax local-exec TLS when hi20 is zero.
 static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
                        Relocation &r, uint32_t &remove) {
   uint64_t val = r.sym->getVA(r.addend);
-  if (hi20(val) != 0)
+  if (giveUpRelaxing(sec, i))
     return;
+  if (hi20(val) != 0) {
+    trackRelaxedDecision(sec.relaxAux->relaxDecisions[i], false);
+    return;
+  }
   uint32_t insn = read32le(sec.content().data() + r.offset);
   switch (r.type) {
   case R_RISCV_TPREL_HI20:
@@ -642,6 +674,8 @@ static void relaxTlsLe(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->writes.push_back(setLO12_S(insn, val));
     break;
   }
+  // If remove is non-zero, this relocation was relaxed.
+  trackRelaxedDecision(sec.relaxAux->relaxDecisions[i], remove != 0);
 }
 
 static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
@@ -650,14 +684,20 @@ static void relaxHi20Lo12(const InputSection &sec, size_t i, uint64_t loc,
   if (!gp)
     return;
 
-  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA()))
+  if (giveUpRelaxing(sec, i))
     return;
+
+  if (!isInt<12>(r.sym->getVA(r.addend) - gp->getVA())) {
+    trackRelaxedDecision(sec.relaxAux->relaxDecisions[i], false);
+    return;
+  }
 
   switch (r.type) {
   case R_RISCV_HI20:
     // Remove lui rd, %hi20(x).
     sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
     remove = 4;
+    trackRelaxedDecision(sec.relaxAux->relaxDecisions[i], true);
     break;
   case R_RISCV_LO12_I:
     sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
