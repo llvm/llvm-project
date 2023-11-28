@@ -1121,6 +1121,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
     entry:
+      %qux = sub i16 %a, 0
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
       %foo = add i16 %a, %a
       call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
@@ -1147,12 +1148,15 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   M->convertToNewDbgValues();
 
   // Fetch the relevant instructions from the converted function.
-  Instruction *AddInst = &*Entry.begin();
+  Instruction *SubInst = &*Entry.begin();
+  ASSERT_TRUE(isa<BinaryOperator>(SubInst));
+  Instruction *AddInst = SubInst->getNextNode();
   ASSERT_TRUE(isa<BinaryOperator>(AddInst));
   Instruction *RetInst = AddInst->getNextNode();
   ASSERT_TRUE(isa<ReturnInst>(RetInst));
 
-  // They should both have one DPValue on each.
+  // add and sub should both have one DPValue on add and ret.
+  EXPECT_FALSE(SubInst->hasDbgValues());
   EXPECT_TRUE(AddInst->hasDbgValues());
   EXPECT_TRUE(RetInst->hasDbgValues());
   auto R1 = AddInst->getDbgValueRange();
@@ -1160,7 +1164,8 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   auto R2 = RetInst->getDbgValueRange();
   EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
 
-  // The Supported (TM) code sequence for removing then reinserting insts:
+  // The Supported (TM) code sequence for removing then reinserting insts
+  // after another instruction:
   std::optional<DPValue::self_iterator> Pos =
       AddInst->DbgMarker->getReinsertionPosition();
   AddInst->removeFromParent();
@@ -1172,9 +1177,10 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
 
   // Re-insert and re-insert.
-  AddInst->insertBefore(RetInst);
+  AddInst->insertAfter(SubInst);
   Entry.reinsertInstInDPValues(AddInst, Pos);
-  // We should be back into a position of having one DPValue on each inst.
+  // We should be back into a position of having one DPValue on add and ret.
+  EXPECT_FALSE(SubInst->hasDbgValues());
   EXPECT_TRUE(AddInst->hasDbgValues());
   EXPECT_TRUE(RetInst->hasDbgValues());
   auto R4 = AddInst->getDbgValueRange();
@@ -1194,6 +1200,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
     entry:
+      %qux = sub i16 %a, 0
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
       %foo = add i16 %a, %a
       ret i16 1
@@ -1219,12 +1226,15 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
   M->convertToNewDbgValues();
 
   // Fetch the relevant instructions from the converted function.
-  Instruction *AddInst = &*Entry.begin();
+  Instruction *SubInst = &*Entry.begin();
+  ASSERT_TRUE(isa<BinaryOperator>(SubInst));
+  Instruction *AddInst = SubInst->getNextNode();
   ASSERT_TRUE(isa<BinaryOperator>(AddInst));
   Instruction *RetInst = AddInst->getNextNode();
   ASSERT_TRUE(isa<ReturnInst>(RetInst));
 
   // There should be one DPValue.
+  EXPECT_FALSE(SubInst->hasDbgValues());
   EXPECT_TRUE(AddInst->hasDbgValues());
   EXPECT_FALSE(RetInst->hasDbgValues());
   auto R1 = AddInst->getDbgValueRange();
@@ -1243,9 +1253,10 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
   EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
 
   // Re-insert and re-insert.
-  AddInst->insertBefore(RetInst);
+  AddInst->insertAfter(SubInst);
   Entry.reinsertInstInDPValues(AddInst, Pos);
   // We should be back into a position of having one DPValue on the AddInst.
+  EXPECT_FALSE(SubInst->hasDbgValues());
   EXPECT_TRUE(AddInst->hasDbgValues());
   EXPECT_FALSE(RetInst->hasDbgValues());
   auto R3 = AddInst->getDbgValueRange();
