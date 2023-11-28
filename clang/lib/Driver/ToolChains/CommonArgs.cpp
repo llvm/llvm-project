@@ -988,29 +988,27 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
     // flang will try to link Fortran_main.a.  If it is, don't add the
     // --whole-archive flag to the link line.  If it's not, add a proper
     // --whole-archive/--no-whole-archive bracket to the link line.
-    bool WholeArchiveActive = false;
-    for (auto &&Arg : Args)
-      if (Arg && Arg->getSpelling().str() == "-Wl,")
-        for (auto &&ArgValue : Arg->getValues())
-          if (ArgValue) {
-            if (ArgValue && !strncmp(ArgValue, "--whole-archive",
-                                     sizeof("--whole-archive")))
-              WholeArchiveActive = true;
-            if (ArgValue && !strncmp(ArgValue, "--no-whole-archive",
-                                     sizeof("--no-whole-archive")))
-              WholeArchiveActive = false;
-          }
+    bool NeedWholeArchive = true;
+    auto * Arg = Args.getLastArg(options::OPT_Wl_COMMA);
+    for (StringRef ArgValue : llvm::reverse(Arg->getValues())) {
+      if (ArgValue == "--whole-archive") {
+        NeedWholeArchive = false;
+        break;
+      }
+    }
 
-    if (!WholeArchiveActive)
+    if (NeedWholeArchive)
       CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lFortran_main");
-    if (!WholeArchiveActive)
+    if (NeedWholeArchive)
       CmdArgs.push_back("--no-whole-archive");
 
     // Perform regular linkage of the remaining runtime libraries.
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
   } else {
+    // Add a localized /WHOLEAARCHIVE for only Fortran_main to the
+    // link line of MSVC.
     unsigned RTOptionID = options::OPT__SLASH_MT;
     if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
       RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
