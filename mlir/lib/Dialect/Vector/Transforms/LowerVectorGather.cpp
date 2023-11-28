@@ -100,12 +100,12 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
 /// MemRef with updated indices that model the strided access.
 ///
 /// ```mlir
-/// %subview = memref.subview %M (...) to memref<100xf32, strided<[3]>>
+/// %subview = memref.subview %M (...) memref<100x3xf32> to memref<100xf32, strided<[3]>>
 /// %gather = vector.gather %subview (...) : memref<100xf32, strided<[3]>>
 /// ```
 /// ==>
 /// ```mlir
-/// %collapse_shape = memref.collapse_shape %M (...) into memref<300xf32>
+/// %collapse_shape = memref.collapse_shape %M (...) memref<100x3xf32> into memref<300xf32>
 /// %1 = arith.muli %idxs, %c3 : vector<4xindex>
 /// %gather = vector.gather %collapse_shape (...) : memref<300xf32> (...)
 /// ```
@@ -122,23 +122,27 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
       return failure();
 
     // TODO: Strided accesses might be coming from other ops as well
-    auto subview = dyn_cast<memref::SubViewOp>(base.getDefiningOp());
+    auto subview = base.getDefiningOp<memref::SubViewOp>();
     if (!subview)
       return failure();
 
-    // TODO: Allows ranks > 2.
-    if (subview.getSource().getType().getRank() != 2)
+    auto sourceType = subview.getSource().getType();
+
+    // TODO: Allow ranks > 2.
+    if (sourceType.getRank() != 2)
       return failure();
 
     // Get strides
     auto layout = subview.getResult().getType().getLayout();
     auto stridedLayoutAttr = llvm::dyn_cast<StridedLayoutAttr>(layout);
+    if (!stridedLayoutAttr)
+      return failure();
 
     // TODO: Allow the access to be strided in multiple dimensions.
     if (stridedLayoutAttr.getStrides().size() != 1)
       return failure();
 
-    int64_t srcTrailingDim = subview.getSource().getType().getShape().back();
+    int64_t srcTrailingDim = sourceType.getShape().back();
 
     // Assume that the stride matches the trailing dimension of the source
     // memref.
@@ -153,8 +157,8 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
 
     // 2. Generate new gather indices that will model the
     // strided access.
-    auto stride = rewriter.getIndexAttr(srcTrailingDim);
-    auto vType = op.getIndexVec().getType();
+    IntegerAttr stride = rewriter.getIndexAttr(srcTrailingDim);
+    VectorType vType = op.getIndexVec().getType();
     Value mulCst = rewriter.create<arith::ConstantOp>(
         op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
 

@@ -153,45 +153,49 @@ func.func @gather_tensor_1d_none_set(%base: tensor<?xf32>, %v: vector<2xindex>, 
 }
 
 // Check that vector.gather of a strided memref is replaced with a
-// vector.gather with indices encoding the original strides. Note that with the
-// other patterns
+// vector.gather with indices encoding the original strides. Note that multiple
+// patterns are run for this example, e.g.:
+  //  1. "remove stride from gather source"
+  //  2. "flatten gather"
+// However, the main goal is to the test Pattern 1 above.
 #map = affine_map<()[s0] -> (s0 * 4096)>
 #map1 = affine_map<()[s0] -> (s0 * -4096 + 518400, 4096)>
-func.func @strided_gather(%M_in : memref<100x3xf32>, %M_out: memref<518400xf32>, %idxs : vector<4xindex>, %x : index, %y : index) {
+func.func @strided_gather(%base : memref<100x3xf32>,
+                          %M_out: memref<518400xf32>,
+                          %idxs : vector<4xindex>,
+                          %x : index, %y : index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
   %x_1 = affine.apply #map()[%x]
   // Strided MemRef
-  %subview = memref.subview %M_in[0, 0] [100, 1] [1, 1] : memref<100x3xf32> to memref<100xf32, strided<[3]>>
-  %cst_0 = arith.constant dense<true> : vector<4xi1>
-  %cst = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %subview = memref.subview %base[0, 0] [100, 1] [1, 1] : memref<100x3xf32> to memref<100xf32, strided<[3]>>
+  %mask = arith.constant dense<true> : vector<4xi1>
+  %pass_thru = arith.constant dense<0.000000e+00> : vector<4xf32>
   // Gather of a strided MemRef
-  %7 = vector.gather %subview[%c0] [%idxs], %cst_0, %cst : memref<100xf32, strided<[3]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
-  %subview_1 = memref.subview %M_out[%x_1] [%y] [1] : memref<518400xf32> to memref<?xf32, strided<[1], offset: ?>>
-  vector.store %7, %subview_1[%c0] : memref<?xf32, strided<[1], offset: ?>>, vector<4xf32>
-  return
+  %res = vector.gather %subview[%c0] [%idxs], %mask, %pass_thru : memref<100xf32, strided<[3]>>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
 }
 // CHECK-LABEL:   func.func @strided_gather(
-// CHECK-SAME:                         %[[M_in:.*]]: memref<100x3xf32>,
+// CHECK-SAME:                         %[[base:.*]]: memref<100x3xf32>,
 // CHECK-SAME:                         %[[M_out:.*]]: memref<518400xf32>,
 // CHECK-SAME:                         %[[IDXS:.*]]: vector<4xindex>,
 // CHECK-SAME:                         %[[VAL_4:.*]]: index,
-// CHECK-SAME:                         %[[VAL_5:.*]]: index) {
+// CHECK-SAME:                         %[[VAL_5:.*]]: index) -> vector<4xf32> {
 // CHECK:           %[[CST_3:.*]] = arith.constant dense<3> : vector<4xindex>
 // CHECK:           %[[MASK:.*]] = arith.constant dense<true> : vector<4xi1>
 
-// CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[M_in]] {{\[\[}}0, 1]] : memref<100x3xf32> into memref<300xf32>
+// CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[base]] {{\[\[}}0, 1]] : memref<100x3xf32> into memref<300xf32>
 // CHECK:           %[[NEW_IDXS:.*]] = arith.muli %[[IDXS]], %[[CST_3]] : vector<4xindex>
 
 // CHECK:           %[[MASK_0:.*]] = vector.extract %[[MASK]][0] : i1 from vector<4xi1>
 // CHECK:           %[[IDX_0:.*]] = vector.extract %[[NEW_IDXS]][0] : index from vector<4xindex>
 // CHECK:           scf.if %[[MASK_0]] -> (vector<4xf32>)
-// CHECK:             %[[M_0:.*]] = vector.load %[[COLLAPSED]]{{\[}}%[[IDX_0]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_0:.*]] = vector.load %[[COLLAPSED]][%[[IDX_0]]] : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_0:.*]] = vector.extract %[[M_0]][0] : f32 from vector<1xf32>
 
 // CHECK:           %[[MASK_1:.*]] = vector.extract %[[MASK]][1] : i1 from vector<4xi1>
 // CHECK:           %[[IDX_1:.*]] = vector.extract %[[NEW_IDXS]][1] : index from vector<4xindex>
 // CHECK:           scf.if %[[MASK_1]] -> (vector<4xf32>)
-// CHECK:             %[[M_1:.*]] = vector.load %[[COLLAPSED]]{{\[}}%[[IDX_1]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_1:.*]] = vector.load %[[COLLAPSED]][%[[IDX_1]]] : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_1:.*]] = vector.extract %[[M_1]][0] : f32 from vector<1xf32>
 
 // CHECK:           %[[MASK_2:.*]] = vector.extract %[[MASK]][2] : i1 from vector<4xi1>
@@ -203,5 +207,5 @@ func.func @strided_gather(%M_in : memref<100x3xf32>, %M_out: memref<518400xf32>,
 // CHECK:           %[[MASK_3:.*]] = vector.extract %[[MASK]][3] : i1 from vector<4xi1>
 // CHECK:           %[[IDX_3:.*]] = vector.extract %[[NEW_IDXS]][3] : index from vector<4xindex>
 // CHECK:           scf.if %[[MASK_3]] -> (vector<4xf32>)
-// CHECK:             %[[M_3:.*]] = vector.load %[[COLLAPSED]]{{\[}}%[[IDX_3]]] : memref<300xf32>, vector<1xf32>
+// CHECK:             %[[M_3:.*]] = vector.load %[[COLLAPSED]][%[[IDX_3]]] : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_3:.*]] = vector.extract %[[M_3]][0] : f32 from vector<1xf32>
