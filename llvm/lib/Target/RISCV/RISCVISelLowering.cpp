@@ -3762,11 +3762,9 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // register in the register group.
   const unsigned MinVLen = Subtarget.getRealMinVLen();
   const unsigned MaxVLen = Subtarget.getRealMaxVLen();
-  if (MinVLen == MaxVLen &&
-      VT.getSizeInBits().getKnownMinValue() > MinVLen) {
+  if (MinVLen == MaxVLen && VT.getSizeInBits().getKnownMinValue() > MinVLen) {
     MVT ElemVT = VT.getVectorElementType();
-    unsigned ElemSize = ElemVT.getSizeInBits().getKnownMinValue();
-    unsigned ElemsPerVReg = MinVLen / ElemSize;
+    unsigned ElemsPerVReg = MinVLen / ElemVT.getFixedSizeInBits();
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
     MVT OneRegVT = MVT::getVectorVT(ElemVT, ElemsPerVReg);
     MVT M1VT = getContainerForFixedLengthVector(DAG, OneRegVT, Subtarget);
@@ -3776,16 +3774,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // of the component build_vectors.  We eagerly lower to scalable and
     // insert_subvector here to avoid DAG combining it back to a large
     // build_vector.
-    SmallVector<SDValue> BuildVectorOps;
-    BuildVectorOps.append(Op->op_begin(), Op->op_end());
+    SmallVector<SDValue> BuildVectorOps(Op->op_begin(), Op->op_end());
     unsigned NumOpElts = M1VT.getVectorMinNumElements();
     SDValue Vec = DAG.getUNDEF(ContainerVT);
     for (unsigned i = 0; i < VT.getVectorNumElements(); i += ElemsPerVReg) {
       auto OneVRegOfOps = ArrayRef(BuildVectorOps).slice(i, ElemsPerVReg);
-      SDValue SubBV = DAG.getNode(ISD::BUILD_VECTOR, DL, OneRegVT, OneVRegOfOps);
+      SDValue SubBV =
+          DAG.getNode(ISD::BUILD_VECTOR, DL, OneRegVT, OneVRegOfOps);
       SubBV = convertToScalableVector(M1VT, SubBV, DAG, Subtarget);
+      unsigned InsertIdx = (i / ElemsPerVReg) * NumOpElts;
       Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT, Vec, SubBV,
-                        DAG.getIntPtrConstant((i / ElemsPerVReg) * NumOpElts, DL));
+                        DAG.getVectorIdxConstant(InsertIdx, DL));
     }
     return convertFromScalableVector(VT, Vec, DAG, Subtarget);
   }
