@@ -711,7 +711,7 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
 }
 
 //===----------------------------------------------------------------------===//
-// SparseTensorType SparseTensorType Methods.
+// SparseTensorType Methods.
 //===----------------------------------------------------------------------===//
 
 RankedTensorType
