@@ -125,6 +125,10 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
     if (Reg >= X86::YMM16 && Reg <= X86::YMM31)
       return true;
 
+    // Check for GPR with indexes between 16 - 31.
+    if (X86II::isApxExtendedReg(Reg))
+      return true;
+
     return false;
   };
 
