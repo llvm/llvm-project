@@ -451,7 +451,7 @@ static void emitBlock(ArrayRef<Attribute> attributes, StringRef inputFilename,
   }
 
   if (!typeDefs.empty()) {
-    os << "## Type definitions\n\n";
+    os << "## Types\n\n";
     for (const TypeDef &def : typeDefs)
       emitAttrOrTypeDefDoc(def, os);
   }
