@@ -347,7 +347,7 @@ bool ThreadPlanStepInRange::StepInDeepBreakpointExplainsStop(
       // at this site:
       explains_stop = true;
       hit_step_in_deep_bp = true;
-      size_t num_owners = bp_site_sp->GetNumberOfOwners();
+      size_t num_owners = bp_site_sp->GetNumberOfConstituents();
 
       // If all the owners are internal, then we are probably just stepping over
       // this range from multiple threads,
@@ -361,7 +361,7 @@ bool ThreadPlanStepInRange::StepInDeepBreakpointExplainsStop(
         continue;
 
       for (size_t i = 0; i < num_owners; i++) {
-        BreakpointLocationSP owner_loc_sp(bp_site_sp->GetOwnerAtIndex(i));
+        BreakpointLocationSP owner_loc_sp(bp_site_sp->GetConstituentAtIndex(i));
         Breakpoint &owner_bp(owner_loc_sp->GetBreakpoint());
         if (owner_loc_sp->ValidForThisThread(GetThread()) &&
             !owner_bp.IsInternal()) {

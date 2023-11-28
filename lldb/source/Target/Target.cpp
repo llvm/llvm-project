@@ -915,6 +915,18 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   if (ABISP abi = m_process_sp->GetABI())
     addr = abi->FixDataAddress(addr);
 
+  // LWP_TODO this sequence is looking for an existing watchpoint
+  // at the exact same user-specified address, disables the new one
+  // if addr/size/type match.  If type/size differ, disable old one.
+  // This isn't correct, we need both watchpoints to use a shared
+  // WatchpointResource in the target, and expand the WatchpointResource
+  // to handle the needs of both Watchpoints.
+  // Also, even if the addresses don't match, they may need to be
+  // supported by the same WatchpointResource, e.g. a watchpoint
+  // watching 1 byte at 0x102 and a watchpoint watching 1 byte at 0x103.
+  // They're in the same word and must be watched by a single hardware
+  // watchpoint register.
+
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
   WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
@@ -930,7 +942,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
       wp_sp->SetEnabled(false, notify);
     } else {
       // Nil the matched watchpoint; we will be creating a new one.
-      m_process_sp->DisableWatchpoint(matched_sp.get(), notify);
+      m_process_sp->DisableWatchpoint(matched_sp, notify);
       m_watchpoint_list.Remove(matched_sp->GetID(), true);
     }
   }
@@ -941,7 +953,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     m_watchpoint_list.Add(wp_sp, true);
   }
 
-  error = m_process_sp->EnableWatchpoint(wp_sp.get(), notify);
+  error = m_process_sp->EnableWatchpoint(wp_sp, notify);
   LLDB_LOGF(log, "Target::%s (creation of watchpoint %s with id = %u)\n",
             __FUNCTION__, error.Success() ? "succeeded" : "failed",
             wp_sp->GetID());
@@ -950,11 +962,6 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     // Enabling the watchpoint on the device side failed. Remove the said
     // watchpoint from the list maintained by the target instance.
     m_watchpoint_list.Remove(wp_sp->GetID(), true);
-    // See if we could provide more helpful error message.
-    if (!OptionGroupWatchpoint::IsWatchSizeSupported(size))
-      error.SetErrorStringWithFormat(
-          "watch size of %" PRIu64 " is not supported", (uint64_t)size);
-
     wp_sp.reset();
   } else
     m_last_created_watchpoint = wp_sp;
@@ -1254,7 +1261,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1283,7 +1290,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1310,7 +1317,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
     if (!wp_sp)
       return false;
 
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Fail())
       return false;
   }
@@ -1373,7 +1380,7 @@ bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->DisableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->DisableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
@@ -1392,7 +1399,7 @@ bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
 
   WatchpointSP wp_sp = m_watchpoint_list.FindByID(watch_id);
   if (wp_sp) {
-    Status rc = m_process_sp->EnableWatchpoint(wp_sp.get());
+    Status rc = m_process_sp->EnableWatchpoint(wp_sp);
     if (rc.Success())
       return true;
 
