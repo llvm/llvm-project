@@ -216,7 +216,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       stt,
       [&builder, &fields, stt, loc, posHeuristic, crdHeuristic, valHeuristic,
        enableInit](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-                   Level /*lvl*/, DimLevelType /*lt*/) -> bool {
+                   Level /*lvl*/, LevelType /*lt*/) -> bool {
         assert(fields.size() == fIdx);
         Value field;
         switch (fKind) {
@@ -1155,7 +1155,7 @@ public:
         SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,
          loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
-              DimLevelType /*lt*/) -> bool {
+              LevelType /*lt*/) -> bool {
           // Simply reuses the storage specifier as it is an SSA value.
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(srcDesc.getSpecifier());
@@ -1284,7 +1284,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         stt,
         [&rewriter, &fields, &op, &stt,
          loc](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-              Level /*lvl*/, DimLevelType lt) -> bool {
+              Level /*lvl*/, LevelType lt) -> bool {
           assert(fields.size() == fIdx);
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(
@@ -1333,7 +1333,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         continue;
 
       // Sets up the memory size by reading the last value in position array.
-      DimLevelType lt = stt.getLvlType(lvl);
+      LevelType lt = stt.getLvlType(lvl);
       // Simply forwards the position index when this is a dense level.
       if (isDenseLT(lt)) {
         memSize = rewriter.create<arith::MulIOp>(loc, lvlSize, memSize);
@@ -1387,10 +1387,10 @@ struct SparseDisassembleOpConverter
     Location loc = op.getLoc();
     SmallVector<Value> retMem;
     SmallVector<Value> retLen;
-    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem, &retLen](
-                                      FieldIndex fid,
-                                      SparseTensorFieldKind fKind, Level lvl,
-                                      DimLevelType lt) -> bool {
+    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem,
+                                   &retLen](FieldIndex fid,
+                                            SparseTensorFieldKind fKind,
+                                            Level lvl, LevelType lt) -> bool {
       if (fKind == SparseTensorFieldKind::StorageSpec)
         return true;
       SparseTensorType stt(desc.getRankedTensorType());

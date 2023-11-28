@@ -278,4 +278,4 @@ COMMON_FLAG(bool, test_only_replace_dlopen_main_program, false,
 
 COMMON_FLAG(bool, enable_symbolizer_markup, SANITIZER_FUCHSIA,
             "Use sanitizer symbolizer markup, available on Linux "
-            "and always set true for fuchsia.")
+            "and always set true for Fuchsia.")

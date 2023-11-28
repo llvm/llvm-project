@@ -13,7 +13,6 @@
 #include "FloatProperties.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
-#include "PlatformDefs.h"
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"

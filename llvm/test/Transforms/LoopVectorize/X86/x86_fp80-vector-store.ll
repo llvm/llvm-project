@@ -13,7 +13,7 @@ define void @example() nounwind ssp uwtable {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP0]]
 ; CHECK-NEXT:    store x86_fp80 0xK3FFF8000000000000000, ptr [[TMP1]], align 16

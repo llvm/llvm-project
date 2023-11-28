@@ -3558,11 +3558,9 @@ define i32 @test_udot_v48i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-DOT-NEXT:    ldr q1, [x0, #32]
 ; CHECK-SD-DOT-NEXT:    ldr q2, [x1, #32]
 ; CHECK-SD-DOT-NEXT:    udot v0.4s, v2.16b, v1.16b
-; CHECK-SD-DOT-NEXT:    ldr q1, [x0]
-; CHECK-SD-DOT-NEXT:    ldr q2, [x1]
-; CHECK-SD-DOT-NEXT:    udot v0.4s, v2.16b, v1.16b
-; CHECK-SD-DOT-NEXT:    ldr q1, [x0, #16]
-; CHECK-SD-DOT-NEXT:    ldr q2, [x1, #16]
+; CHECK-SD-DOT-NEXT:    ldp q3, q1, [x0]
+; CHECK-SD-DOT-NEXT:    ldp q4, q2, [x1]
+; CHECK-SD-DOT-NEXT:    udot v0.4s, v4.16b, v3.16b
 ; CHECK-SD-DOT-NEXT:    udot v0.4s, v2.16b, v1.16b
 ; CHECK-SD-DOT-NEXT:    addv s0, v0.4s
 ; CHECK-SD-DOT-NEXT:    fmov w0, s0
@@ -4052,11 +4050,9 @@ define i32 @test_sdot_v48i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-DOT-NEXT:    ldr q1, [x0, #32]
 ; CHECK-SD-DOT-NEXT:    ldr q2, [x1, #32]
 ; CHECK-SD-DOT-NEXT:    sdot v0.4s, v2.16b, v1.16b
-; CHECK-SD-DOT-NEXT:    ldr q1, [x0]
-; CHECK-SD-DOT-NEXT:    ldr q2, [x1]
-; CHECK-SD-DOT-NEXT:    sdot v0.4s, v2.16b, v1.16b
-; CHECK-SD-DOT-NEXT:    ldr q1, [x0, #16]
-; CHECK-SD-DOT-NEXT:    ldr q2, [x1, #16]
+; CHECK-SD-DOT-NEXT:    ldp q3, q1, [x0]
+; CHECK-SD-DOT-NEXT:    ldp q4, q2, [x1]
+; CHECK-SD-DOT-NEXT:    sdot v0.4s, v4.16b, v3.16b
 ; CHECK-SD-DOT-NEXT:    sdot v0.4s, v2.16b, v1.16b
 ; CHECK-SD-DOT-NEXT:    addv s0, v0.4s
 ; CHECK-SD-DOT-NEXT:    fmov w0, s0

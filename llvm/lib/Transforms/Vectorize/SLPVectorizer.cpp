@@ -13164,6 +13164,10 @@ void BoUpSLP::computeMinimumValueSizes() {
   if (!TreeRootIT)
     return;
 
+  // Ensure the roots of the vectorizable tree don't form a cycle.
+  if (!VectorizableTree.front()->UserTreeIndices.empty())
+    return;
+
   // Conservatively determine if we can actually truncate the roots of the
   // expression. Collect the values that can be demoted in ToDemote and
   // additional roots that require investigating in Roots.
