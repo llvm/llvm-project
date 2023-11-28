@@ -2792,9 +2792,10 @@ def SwiftAsyncError : InheritableAttr {
   let Documentation = [SwiftAsyncErrorDocs];
 }
 
-def Suppress : StmtAttr {
-  let Spellings = [CXX11<"gsl", "suppress">];
+def Suppress : DeclOrStmtAttr {
+  let Spellings = [CXX11<"gsl", "suppress">, Clang<"suppress">];
   let Args = [VariadicStringArgument<"DiagnosticIdentifiers">];
+  let Accessors = [Accessor<"isGSL", [CXX11<"gsl", "suppress">]>];
   let Documentation = [SuppressDocs];
 }
 
