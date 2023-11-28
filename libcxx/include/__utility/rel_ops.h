@@ -21,7 +21,7 @@ namespace rel_ops
 {
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const _Tp& __x, const _Tp& __y)
 {
@@ -29,7 +29,7 @@ operator!=(const _Tp& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator> (const _Tp& __x, const _Tp& __y)
 {
@@ -37,7 +37,7 @@ operator> (const _Tp& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator<=(const _Tp& __x, const _Tp& __y)
 {
@@ -45,7 +45,7 @@ operator<=(const _Tp& __x, const _Tp& __y)
 }
 
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator>=(const _Tp& __x, const _Tp& __y)
 {

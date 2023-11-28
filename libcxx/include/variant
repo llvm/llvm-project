@@ -278,7 +278,7 @@ struct __farray {
   static_assert(_Size > 0, "N-dimensional array should never be empty in std::visit");
   _Tp __buf_[_Size] = {};
 
-  _LIBCPP_INLINE_VISIBILITY constexpr
+  _LIBCPP_HIDE_FROM_ABI constexpr
   const _Tp &operator[](size_t __n) const noexcept {
       return __buf_[__n];
   }
@@ -370,25 +370,25 @@ template <class... _Types>
 class _LIBCPP_TEMPLATE_VIS variant;
 
 template <class... _Types>
-_LIBCPP_INLINE_VISIBILITY constexpr variant<_Types...>&
+_LIBCPP_HIDE_FROM_ABI constexpr variant<_Types...>&
 __as_variant(variant<_Types...>& __vs) noexcept {
   return __vs;
 }
 
 template <class... _Types>
-_LIBCPP_INLINE_VISIBILITY constexpr const variant<_Types...>&
+_LIBCPP_HIDE_FROM_ABI constexpr const variant<_Types...>&
 __as_variant(const variant<_Types...>& __vs) noexcept {
   return __vs;
 }
 
 template <class... _Types>
-_LIBCPP_INLINE_VISIBILITY constexpr variant<_Types...>&&
+_LIBCPP_HIDE_FROM_ABI constexpr variant<_Types...>&&
 __as_variant(variant<_Types...>&& __vs) noexcept {
   return _VSTD::move(__vs);
 }
 
 template <class... _Types>
-_LIBCPP_INLINE_VISIBILITY constexpr const variant<_Types...>&&
+_LIBCPP_HIDE_FROM_ABI constexpr const variant<_Types...>&&
 __as_variant(const variant<_Types...>&& __vs) noexcept {
   return _VSTD::move(__vs);
 }

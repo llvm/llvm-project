@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _IntT, class _FloatT,
     bool _FloatBigger = (numeric_limits<_FloatT>::digits > numeric_limits<_IntT>::digits),
     int _Bits = (numeric_limits<_IntT>::digits - numeric_limits<_FloatT>::digits)>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
   static_assert(is_floating_point<_FloatT>::value, "must be a floating point type");
   static_assert(is_integral<_IntT>::value, "must be an integral type");
@@ -40,7 +40,7 @@ _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
 //
 // The behavior is undefined if `__r` is NaN.
 template <class _IntT, class _RealT>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _IntT __clamp_to_integral(_RealT __r) _NOEXCEPT {
   using _Lim = numeric_limits<_IntT>;
   const _IntT __max_val = __max_representable_int_for_float<_IntT, _RealT>();

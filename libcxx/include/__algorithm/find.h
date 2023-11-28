@@ -119,7 +119,7 @@ __find_impl(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst>
 }
 
 template <class _InputIterator, class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__rewrap_iter(
