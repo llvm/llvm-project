@@ -212,7 +212,8 @@ struct ParenState {
         ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
         NestedBlockInlined(false), IsInsideObjCArrayLiteral(false),
         IsCSharpGenericTypeConstraint(false), IsChainedConditional(false),
-        IsWrappedConditional(false), UnindentOperator(false) {}
+        IsPPDefineBody(false), IsWrappedConditional(false),
+        UnindentOperator(false) {}
 
   /// \brief The token opening this parenthesis level, or nullptr if this level
   /// is opened by fake parenthesis.
@@ -349,6 +350,9 @@ struct ParenState {
   /// a chained conditional expression (e.g. else-if)
   bool IsChainedConditional : 1;
 
+  /// \brief true if in pre-processor define body
+  bool IsPPDefineBody : 1;
+
   /// \brief true if there conditionnal was wrapped on the first operator (the
   /// question mark)
   bool IsWrappedConditional : 1;
@@ -402,6 +406,8 @@ struct ParenState {
       return IsCSharpGenericTypeConstraint;
     if (IsChainedConditional != Other.IsChainedConditional)
       return IsChainedConditional;
+    if (IsPPDefineBody != Other.IsPPDefineBody)
+      return IsPPDefineBody;
     if (IsWrappedConditional != Other.IsWrappedConditional)
       return IsWrappedConditional;
     if (UnindentOperator != Other.UnindentOperator)

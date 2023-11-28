@@ -739,8 +739,18 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 
   if (!DryRun) {
-    Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
-                                  State.Column + Spaces + PPColumnCorrection);
+    if (Style.SkipMacroDefinition && CurrentState.IsPPDefineBody &&
+        !Current.is(tok::comment)) {
+      Whitespaces.addUntouchableToken(Current, State.Line->InPPDirective);
+    } else {
+      Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
+                                    State.Column + Spaces + PPColumnCorrection);
+    }
+  }
+
+  if (Style.SkipMacroDefinition && Previous.is(tok::pp_define)) {
+    CurrentState.NoLineBreak = true;
+    CurrentState.IsPPDefineBody = true;
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -1888,6 +1898,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   NewState.NestedBlockIndent = NestedBlockIndent;
   NewState.BreakBeforeParameter = BreakBeforeParameter;
   NewState.HasMultipleNestedBlocks = (Current.BlockParameterCount > 1);
+  NewState.IsPPDefineBody = CurrentState.IsPPDefineBody;
 
   if (Style.BraceWrapping.BeforeLambdaBody && Current.Next &&
       Current.is(tok::l_paren)) {

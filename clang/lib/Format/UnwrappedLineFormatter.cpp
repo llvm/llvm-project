@@ -1356,9 +1356,6 @@ unsigned UnwrappedLineFormatter::format(
                           Indent != TheLine.First->OriginalColumn;
     bool ShouldFormat = TheLine.Affected || FixIndentation;
 
-    if (Style.SkipMacroDefinition && TheLine.startsWith(tok::hash, tok::pp_define))
-      ShouldFormat = false;
-
     // We cannot format this line; if the reason is that the line had a
     // parsing error, remember that.
     if (ShouldFormat && TheLine.Type == LT_Invalid && Status) {

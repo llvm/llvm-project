@@ -1138,14 +1138,6 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
-  if (Style.SkipMacroDefinition) {
-    do {
-      nextToken();
-    } while (!eof());
-    addUnwrappedLine();
-    return;
-  }
-
   if (IncludeGuard == IG_IfNdefed &&
       IncludeGuardToken->TokenText == FormatTok->TokenText) {
     IncludeGuard = IG_Defined;
@@ -1165,7 +1157,15 @@ void UnwrappedLineParser::parsePPDefine() {
   // guard processing above, and changes preprocessing nesting.
   FormatTok->Tok.setKind(tok::identifier);
   FormatTok->Tok.setIdentifierInfo(Keywords.kw_internal_ident_after_define);
-  nextToken();
+
+  if (Style.SkipMacroDefinition) {
+    do {
+      nextToken();
+    } while (!eof());
+  } else {
+    nextToken();
+  }
+
   if (FormatTok->Tok.getKind() == tok::l_paren &&
       !FormatTok->hasWhitespaceBefore()) {
     parseParens();

@@ -24223,17 +24223,24 @@ TEST_F(FormatTest, SkipMacroDefinition) {
   auto Style = getLLVMStyle();
   Style.SkipMacroDefinition = true;
 
-  verifyNoChange("#define  A", Style);
+  verifyFormat("#define A", "#define  A", Style);
+  verifyFormat("#define A       a   aa", "#define   A       a   aa", Style);
   verifyNoChange("#define A   b", Style);
   verifyNoChange("#define A  (  args   )", Style);
   verifyNoChange("#define A  (  args   )  =  func  (  args  )", Style);
+  verifyNoChange("#define A  (  args   )  {  int  a  =  1 ;  }", Style);
+  verifyNoChange("#define A  (  args   ) \\\n"
+                 "  {\\\n"
+                 "    int  a  =  1 ;\\\n"
+                 "}",
+                 Style);
 
   verifyNoChange("#define A x:", Style);
   verifyNoChange("#define A a. b", Style);
 
   // Surrounded with formatted code.
   verifyFormat("int a;\n"
-               "#define  A  a\n"
+               "#define A  a\n"
                "int a;",
                "int  a ;\n"
                "#define  A  a\n"
@@ -24242,21 +24249,15 @@ TEST_F(FormatTest, SkipMacroDefinition) {
 
   // Columns are not broken when a limit is set.
   Style.ColumnLimit = 10;
+  verifyFormat("#define A  a  a  a  a", " # define  A  a  a  a  a ", Style);
   verifyNoChange("#define A a a a a", Style);
 
   Style.ColumnLimit = 15;
-  verifyNoChange("#define A //a very long comment", Style);
-  // in the following examples, since second line will not be formtted, it won't
-  // take into considertaion the alignment from the first line. The third line
-  // will follow the second line's alignment.
-  verifyFormat("int aaaaaa; // a\n"
-               "#define A // a\n"
-               "int a;    // a",
-               "int aaaaaa; // a\n"
-               "#define A // a\n"
-               "int a; // a",
-               Style);
-
+  verifyFormat("#define A // a\n"
+               "          // very\n"
+               "          // long\n"
+               "          // comment",
+               "#define A //a very long comment", Style);
   Style.ColumnLimit = 0;
 
   // Multiline definition.
@@ -24288,12 +24289,6 @@ TEST_F(FormatTest, SkipMacroDefinition) {
                  "#define A  a\n"
                  "#endif",
                  Style);
-  verifyNoChange("#define UNITY 1\n"
-                 "#if A\n"
-                 "#  define   A  a\\\n"
-                 "  a  a\n"
-                 "#endif",
-                 Style);
   verifyFormat("#if A\n"
                "#define A  a\n"
                "#endif",
@@ -24302,11 +24297,15 @@ TEST_F(FormatTest, SkipMacroDefinition) {
                "#endif",
                Style);
   Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
+  verifyNoChange("#if A\n"
+                 "#  define A  a\n"
+                 "#endif",
+                 Style);
   verifyFormat("#if A\n"
                "#  define A  a\n"
                "#endif",
                "#if A\n"
-               "  #  define A  a\n"
+               "  #define A  a\n"
                "#endif",
                Style);
   Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
@@ -24314,26 +24313,42 @@ TEST_F(FormatTest, SkipMacroDefinition) {
                  "  #define A  a\n"
                  "#endif",
                  Style);
+  verifyFormat("#if A\n"
+               "  #define A  a\n"
+               "#endif",
+               "#if A\n"
+               " # define A  a\n"
+               "#endif",
+               Style);
 
   Style.IndentPPDirectives = FormatStyle::PPDIS_None;
   // SkipMacroDefinition should not affect other PP directives
   verifyFormat("#if !defined(A)\n"
-               "# define  A  a\n"
+               "#define A  a\n"
                "#endif",
                "#if ! defined ( A )\n"
-               "  # define  A  a\n"
+               "  #define  A  a\n"
                "#endif",
                Style);
 
   // With comments.
-  verifyNoChange("/* */  # define A  a  //  a  a", Style);
-  verifyFormat("int a;     // a\n"
-               "#define A  // a\n"
-               "int aaa;   // a",
+  verifyFormat("/* */ #define A  a //  a  a", "/* */  # define A  a  //  a  a",
+               Style);
+  verifyNoChange("/* */ #define A  a //  a  a", Style);
+
+  verifyFormat("int a;    // a\n"
+               "#define A // a\n"
+               "int aaa;  // a",
                "int a; // a\n"
                "#define A  // a\n"
                "int aaa; // a",
                Style);
+
+  // multiline macro definitions
+  verifyNoChange("#define A  a\\\n"
+                 "  A  a \\\n "
+                 " A  a",
+                 Style);
 }
 
 TEST_F(FormatTest, VeryLongNamespaceCommentSplit) {
