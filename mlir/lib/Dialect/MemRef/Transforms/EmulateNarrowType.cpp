@@ -364,9 +364,8 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
     Value extendedInput = rewriter.create<arith::ExtUIOp>(loc, dstIntegerType,
                                                           adaptor.getValue());
 
-    // Special case 0-rank memref stores. We compute the mask at compile time.
+    // Special case 0-rank memref stores. No need for masking.
     if (convertedType.getRank() == 0) {
-      // Write srcs bits to destination
       rewriter.create<memref::AtomicRMWOp>(loc, arith::AtomicRMWKind::assign,
                                            extendedInput, adaptor.getMemref(),
                                            ValueRange{});
