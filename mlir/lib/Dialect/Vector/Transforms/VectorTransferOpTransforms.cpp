@@ -489,37 +489,43 @@ class TransferWriteDropUnitDimsPattern
 
 /// Return true if `vectorType` is a contiguous slice of `memrefType`.
 ///
-/// Compares `vectorType` against the trailing dimensions (*) of `memrefType`
-/// to check whether `vectorType` is a contiguous slice of `memrefType`.
+/// Compares `vectorType` against the trailing dimensions of `memrefType`
+/// to check whether `vectorType` is a contiguous slice of `memrefType`. This
+/// is implemented by iterating over the dims of `vectorType` and `memrefType`
+/// and comparing them starting from the inner-most/right-most dims.
 ///
-/// There are two cases:
+/// Note that there might be some restriction on the leading dim of
+/// `VectorType`:
+///   1. if all the trialing dims of `vectorType` match the trailing dims
+///     of `memrefType` then the leading dim of `vectorType` can be arbitrary:
 ///
-/// 1. The trailing dimensions of `memrefType` match the dimensions of
-/// `vectorType` excluding the front dim (the leading dim of `vectorType` does
-/// not matter in this case):
+///       1.1 contiguous slice, perfect match
+///         vector<4x3x2xi32> from memref<5x4x3x2xi32>
+///       1.2 contiguous slice, all dims match except the leading dim: 2 != 4
+///         vector<2x3x2xi32> from memref<5x4x3x2xi32>
 ///
-///   vector<2x4x3x2xi32> vs memref<5x4x3x2xi32> (contiguous slice)
-///   vector<2x4x2x2xi32> vs memref<5x4x3x2xi32> (non-contiguous slice)
+///   2. if an "internal" dim of `vectorType` does not match the corresponding
+///     trailing dim in `memrefType` then the remaining leading dims of
+///     `vectorType` have to be 1 (the first non-matching dim can be arbitrary):
 ///
-/// 2. The trailing dimension of `memrefType` match the trailing dimensions of
-/// `vectorType` (i.e. at least 2 leading dims of `vectorType` don't match). The
-/// first dim of `vectorType` that does not match can be arbitrary, but the
-/// remaining leading dims have to be 1:
+///       2.1 non-contiguous slice, 2 != 3 and the leading dim != <1>
+///         vector<2x2x2xi32> from memref<5x4x3x2xi32>
+///       2.2  contiguous slice, 2 != 3 and the leading dim == <1>
+///         vector<1x2x2xi32> from memref<5x4x3x2xi32>
+///       2.3. contiguous slice, 2 != 3 and the leading dims == <1x1>
+///         vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
+///       2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
+///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
 ///
-///   vector<1x1x2x2xi32> vs memref<5x4x3x2xi32> (contiguous slice)
-///   vector<2x1x2x2xi32> vs memref<5x4x3x2xi32> (non-contiguous slice)
-///
-/// In both cases `memrefType` has to be contiguous (this is checked by looking
+/// In all cases `memrefType` has to be contiguous (this is checked by looking
 /// at strides).
-///
-/// (*) Only relevant in cases when the rank(vectorType) < rank(memrefType)
-/// TODO: Update
 static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
 
+  // Get the shape of `vectorType`. The leading dim is treated seperately.
   ArrayRef<int64_t> targetShape = vectorType.getShape();
   auto targetShapeTrailingDims = targetShape.drop_front(1);
 
-  // Not used
+  // Get the strides of the memref.
   int64_t offset;
   SmallVector<int64_t> strides;
   if (!succeeded(getStridesAndOffset(memrefType, strides, offset)))
@@ -538,6 +544,9 @@ static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   // current dim. This will be a product of the leading dims, hence initialising
   // to 1.
   int64_t flatDim = 1;
+
+  // Iterate overall all dim of `vectorType` excluding the leading dim and
+  // compare them against the trailing dims of `memrefType`.
   strides.pop_back();
   for (auto [targetDim, memrefDim, memrefStride] : llvm::reverse(llvm::zip(
            targetShapeTrailingDims, memrefType.getShape(), strides))) {
@@ -547,14 +556,18 @@ static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
     if (flatDim != memrefStride)
       return false;
 
-    // If a non-matching dim was found, then the remaining dims of `VectorType`
-    // should be 1.
+    // If a non-matching dim was found previously, then the remaining dims of
+    // `VectorType` should be 1.
     if (!allTrailingDimsMatch && (targetDim != 1))
       return false;
 
     allTrailingDimsMatch = (targetDim == memrefDim);
   }
 
+  // If all dims of `vectorType` (excluding the leading dim) match the trailing
+  // dims `memrefType`, then this is a contiguous load. If there was a
+  // mismatch, then the internal dims have already been verified to be unit
+  // dims, but the leading dim still has to be checked.
   return allTrailingDimsMatch ? true : (targetShape[0] == 1);
 }
 
