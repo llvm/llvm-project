@@ -264,6 +264,20 @@ public:
     });
   }
 
+  /// Get bundle IDs in \a Input in \a BundleIds.
+  virtual Error getBundleIDs(MemoryBuffer &Input,
+                             std::set<StringRef> &BundleIds) {
+    if (Error Err = ReadHeader(Input))
+      return Err;
+    return forEachBundle(Input, [&](const BundleInfo &Info) -> Error {
+      BundleIds.insert(Info.BundleID);
+      Error Err = listBundleIDsCallback(Input, Info);
+      if (Err)
+        return Err;
+      return Error::success();
+    });
+  }
+
   /// For each bundle in \a Input, do \a Func.
   Error forEachBundle(MemoryBuffer &Input,
                       std::function<Error(const BundleInfo &)> Func) {
@@ -1353,13 +1367,81 @@ getCompatibleOffloadTargets(OffloadTargetInfo &CodeObjectInfo,
   return !CompatibleTargets.empty();
 }
 
+// Check that each code object file in the input archive conforms to following
+// rule: for a specific processor, a feature either shows up in all target IDs,
+// or does not show up in any target IDs. Otherwise the target ID combination is
+// invalid.
+static Error
+CheckHeterogeneousArchive(StringRef ArchiveName,
+                          const OffloadBundlerConfig &BundlerConfig) {
+  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(ArchiveName, true, false);
+  if (std::error_code EC = BufOrErr.getError())
+    return createFileError(ArchiveName, EC);
+
+  ArchiveBuffers.push_back(std::move(*BufOrErr));
+  Expected<std::unique_ptr<llvm::object::Archive>> LibOrErr =
+      Archive::create(ArchiveBuffers.back()->getMemBufferRef());
+  if (!LibOrErr)
+    return LibOrErr.takeError();
+
+  auto Archive = std::move(*LibOrErr);
+
+  Error ArchiveErr = Error::success();
+  auto ChildEnd = Archive->child_end();
+
+  /// Iterate over all bundled code object files in the input archive.
+  for (auto ArchiveIter = Archive->child_begin(ArchiveErr);
+       ArchiveIter != ChildEnd; ++ArchiveIter) {
+    if (ArchiveErr)
+      return ArchiveErr;
+    auto ArchiveChildNameOrErr = (*ArchiveIter).getName();
+    if (!ArchiveChildNameOrErr)
+      return ArchiveChildNameOrErr.takeError();
+
+    auto CodeObjectBufferRefOrErr = (*ArchiveIter).getMemoryBufferRef();
+    if (!CodeObjectBufferRefOrErr)
+      return CodeObjectBufferRefOrErr.takeError();
+
+    auto CodeObjectBuffer =
+        MemoryBuffer::getMemBuffer(*CodeObjectBufferRefOrErr, false);
+
+    Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+        CreateFileHandler(*CodeObjectBuffer, BundlerConfig);
+    if (!FileHandlerOrErr)
+      return FileHandlerOrErr.takeError();
+
+    std::unique_ptr<FileHandler> &FileHandler = *FileHandlerOrErr;
+    assert(FileHandler);
+
+    std::set<StringRef> BundleIds;
+    auto CodeObjectFileError =
+        FileHandler->getBundleIDs(*CodeObjectBuffer, BundleIds);
+    if (CodeObjectFileError)
+      return CodeObjectFileError;
+
+    auto &&ConflictingArchs = clang::getConflictTargetIDCombination(BundleIds);
+    if (ConflictingArchs) {
+      std::string ErrMsg =
+          Twine("conflicting TargetIDs [" + ConflictingArchs.value().first +
+                ", " + ConflictingArchs.value().second + "] found in " +
+                ArchiveChildNameOrErr.get() + " of " + ArchiveName)
+              .str();
+      return createStringError(inconvertibleErrorCode(), ErrMsg);
+    }
+  }
+
+  return ArchiveErr;
+}
+
 /// UnbundleArchive takes an archive file (".a") as input containing bundled
 /// code object files, and a list of offload targets (not host), and extracts
 /// the code objects into a new archive file for each offload target. Each
 /// resulting archive file contains all code object files corresponding to that
 /// particular offload target. The created archive file does not
 /// contain an index of the symbols and code object files are named as
-/// <<Parent Bundle Name>-<CodeObject's GPUArch>>, with ':' replaced with '_'.
+/// <<Parent Bundle Name>-<CodeObject's TargetID>>, with ':' replaced with '_'.
 Error OffloadBundler::UnbundleArchive() {
   std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 
@@ -1377,6 +1459,16 @@ Error OffloadBundler::UnbundleArchive() {
   }
 
   StringRef IFName = BundlerConfig.InputFileNames.front();
+
+  if (BundlerConfig.CheckInputArchive) {
+    // For a specific processor, a feature either shows up in all target IDs, or
+    // does not show up in any target IDs. Otherwise the target ID combination
+    // is invalid.
+    auto ArchiveError = CheckHeterogeneousArchive(IFName, BundlerConfig);
+    if (ArchiveError) {
+      return ArchiveError;
+    }
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getFileOrSTDIN(IFName, true, false);
