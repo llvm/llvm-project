@@ -6230,11 +6230,7 @@ bool CombinerHelper::matchBuildVectorToBinOp(MachineInstr &MI,
                                              BuildFnTy &MatchInfo) {
   GBuildVector *BuildVector = cast<GBuildVector>(&MI);
   Register Dst = BuildVector->getReg(0);
-
   unsigned NumOfSources = BuildVector->getNumSources();
-  if (NumOfSources == 1)
-    return false;
-
   LLT ElementTy = MRI.getType(BuildVector->getSourceReg(0));
   LLT BVTy = MRI.getType(BuildVector->getReg(0));
 
