@@ -18,11 +18,11 @@ add_llvm_library(omptarget
   api.cpp
   device.cpp
   interface.cpp
-  interop.cpp
   omptarget.cpp
   OmptCallback.cpp
   rtl.cpp
   LegacyAPI.cpp
+  OpenMP/InteropAPI.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}
