@@ -109,7 +109,19 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         parsers = self.make_parsers()
         self.parse_test(parsers)
         space_list_parser = self.get_parser(parsers, "MY_SPACE_LIST:")
-        self.assertEqual(space_list_parser.getValue(), ["orange", "tabby", "tortie", "tuxedo", "void", "cute,", "fluffy,", "kittens"])
+        self.assertEqual(
+            space_list_parser.getValue(),
+            [
+                "orange",
+                "tabby",
+                "tortie",
+                "tuxedo",
+                "void",
+                "cute,",
+                "fluffy,",
+                "kittens",
+            ],
+        )
 
     def test_commands(self):
         parsers = self.make_parsers()
