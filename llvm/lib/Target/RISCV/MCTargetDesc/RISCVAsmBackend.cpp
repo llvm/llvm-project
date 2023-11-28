@@ -103,9 +103,9 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-// If linker relaxation is enabled, or the relax option had previously been
-// enabled, always emit relocations even if the fixup can be resolved. This is
-// necessary for correctness as offsets may change during relaxation.
+// Always emit relocations for relative addresses, even if the fixup can be
+// resolved. This is necessary for correctness as offsets may change during
+// relaxation.
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target) {
@@ -122,13 +122,9 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     if (Target.isAbsolute())
       return false;
     break;
-  case RISCV::fixup_riscv_got_hi20:
-  case RISCV::fixup_riscv_tls_got_hi20:
-  case RISCV::fixup_riscv_tls_gd_hi20:
-    return true;
   }
 
-  return STI.hasFeature(RISCV::FeatureRelax) || ForceRelocs;
+  return true;
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,

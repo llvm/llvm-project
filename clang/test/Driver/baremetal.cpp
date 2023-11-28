@@ -460,3 +460,13 @@
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARCH %s
 // CHECK-CLANGRT-ARCH: "-lclang_rt.builtins-armv6m"
 // CHECK-CLANGRT-ARCH-NOT: "-lclang_rt.builtins"
+
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf -nostdinc -mno-relax \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-NORELAX %s
+// CHECK-RV64-NORELAX: "--no-relax"
+
+// RUN: %clang %s -### 2>&1 --target=riscv64-unknown-elf -nostdinc \
+// RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
+// RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
+// CHECK-RV64-RELAX-NOT: "--no-relax"
