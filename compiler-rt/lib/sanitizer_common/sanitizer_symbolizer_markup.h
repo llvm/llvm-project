@@ -16,6 +16,7 @@
 #include "sanitizer_common.h"
 #include "sanitizer_stacktrace_printer.h"
 #include "sanitizer_symbolizer.h"
+#include "sanitizer_symbolizer_internal.h"
 
 namespace __sanitizer {
 
@@ -38,6 +39,28 @@ class MarkupStackTracePrinter : public StackTracePrinter {
 
  protected:
   ~MarkupStackTracePrinter() {}
+};
+
+class MarkupSymbolizerTool final : public SymbolizerTool {
+ public:
+  // This is used in some places for suppression checking, which we
+  // don't really support for Fuchsia.  It's also used in UBSan to
+  // identify a PC location to a function name, so we always fill in
+  // the function member with a string containing markup around the PC
+  // value.
+  // TODO(mcgrathr): Under SANITIZER_GO, it's currently used by TSan
+  // to render stack frames, but that should be changed to use
+  // RenderStackFrame.
+  bool SymbolizePC(uptr addr, SymbolizedStack *stack) override;
+
+  // Always claim we succeeded, so that RenderDataInfo will be called.
+  bool SymbolizeData(uptr addr, DataInfo *info) override;
+
+  // May return NULL if demangling failed.
+  // This is used by UBSan for type names, and by ASan for global variable
+  // names. It's expected to return a static buffer that will be reused on each
+  // call.
+  const char *Demangle(const char *name) override;
 };
 
 }  // namespace __sanitizer
