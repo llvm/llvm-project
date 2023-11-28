@@ -146,10 +146,10 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   assert(Scope.getFixupDepth() <= EHStack.getNumBranchFixups());
 
   // Remember activation information.
-  [[maybe_unused]] bool IsActive = Scope.isActive();
-  [[maybe_unused]] Address NormalActiveFlag =
-      Scope.shouldTestFlagInNormalCleanup() ? Scope.getActiveFlag()
-                                            : Address::invalid();
+  bool IsActive = Scope.isActive();
+  Address NormalActiveFlag = Scope.shouldTestFlagInNormalCleanup()
+                                 ? Scope.getActiveFlag()
+                                 : Address::invalid();
   [[maybe_unused]] Address EHActiveFlag = Scope.shouldTestFlagInEHCleanup()
                                               ? Scope.getActiveFlag()
                                               : Address::invalid();
@@ -177,11 +177,12 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   // end of the last cleanup, which points to the current scope.  The
   // rest of CIR gen doesn't need to worry about this; it only happens
   // during the execution of PopCleanupBlocks().
-  bool HasTerminator =
-      FallthroughSource && !FallthroughSource->empty() &&
-      FallthroughSource->back().mightHaveTrait<mlir::OpTrait::IsTerminator>();
-  bool HasPrebranchedFallthrough = (FallthroughSource && HasTerminator &&
-                                    FallthroughSource->getTerminator());
+  bool HasTerminator = FallthroughSource &&
+                       FallthroughSource->mightHaveTerminator() &&
+                       FallthroughSource->getTerminator();
+  bool HasPrebranchedFallthrough =
+      HasTerminator &&
+      !isa<mlir::cir::YieldOp>(FallthroughSource->getTerminator());
 
   // If this is a normal cleanup, then having a prebranched
   // fallthrough implies that the fallthrough source unconditionally

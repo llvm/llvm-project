@@ -1515,6 +1515,9 @@ public:
 
   Destroyer *getDestroyer(QualType::DestructionKind kind);
 
+  void emitDestroy(Address addr, QualType type, Destroyer *destroyer,
+                   bool useEHCleanupForArray);
+
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
     // llvm::BasicBlock *StartBB;
@@ -1661,7 +1664,7 @@ public:
 public:
   // Represents a cir.scope, cir.if, and then/else regions. I.e. lexical
   // scopes that require cleanups.
-  struct LexicalScopeContext {
+  struct LexicalScope : public RunCleanupsScope {
   private:
     // Block containing cleanup code for things initialized in this
     // lexical context (scope).
@@ -1678,6 +1681,8 @@ public:
     // skipeed.
     bool HasCoreturn = false;
 
+    LexicalScope *ParentScope = nullptr;
+
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
       Regular, // cir.if, cir.scope, if_regions
@@ -1689,8 +1694,14 @@ public:
     unsigned Depth = 0;
     bool HasReturn = false;
 
-    LexicalScopeContext(mlir::Location loc, mlir::Block *eb)
-        : EntryBlock(eb), BeginLoc(loc), EndLoc(loc) {
+    LexicalScope(CIRGenFunction &CGF, mlir::Location loc, mlir::Block *eb)
+        : RunCleanupsScope(CGF), EntryBlock(eb), ParentScope(CGF.currLexScope),
+          BeginLoc(loc), EndLoc(loc) {
+
+      CGF.currLexScope = this;
+      if (ParentScope)
+        Depth++;
+
       // Has multiple locations: overwrite with separate start and end locs.
       if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
         assert(fusedLoc.getLocations().size() == 2 && "too many locations");
@@ -1701,7 +1712,24 @@ public:
       assert(EntryBlock && "expected valid block");
     }
 
-    ~LexicalScopeContext() = default;
+    void cleanup();
+    void restore() { CGF.currLexScope = ParentScope; }
+
+    ~LexicalScope() {
+      // EmitLexicalBlockEnd
+      assert(!UnimplementedFeature::generateDebugInfo());
+      // If we should perform a cleanup, force them now.  Note that
+      // this ends the cleanup scope before rescoping any labels.
+      cleanup();
+      restore();
+    }
+
+    /// Force the emission of cleanups now, instead of waiting
+    /// until this object is destroyed.
+    void ForceCleanup() {
+      RunCleanupsScope::ForceCleanup();
+      // TODO(cir): something akin to rescopeLabels if it makes sense to CIR.
+    }
 
     // ---
     // Coroutine tracking
@@ -1798,32 +1826,7 @@ public:
     mlir::Location BeginLoc, EndLoc;
   };
 
-  class LexicalScopeGuard {
-    CIRGenFunction &CGF;
-    LexicalScopeContext *OldVal = nullptr;
-
-  public:
-    LexicalScopeGuard(CIRGenFunction &c, LexicalScopeContext *L) : CGF(c) {
-      if (CGF.currLexScope) {
-        OldVal = CGF.currLexScope;
-        L->Depth++;
-      }
-      CGF.currLexScope = L;
-    }
-
-    LexicalScopeGuard(const LexicalScopeGuard &) = delete;
-    LexicalScopeGuard &operator=(const LexicalScopeGuard &) = delete;
-    LexicalScopeGuard &operator=(LexicalScopeGuard &&other) = delete;
-
-    void cleanup();
-    void restore() { CGF.currLexScope = OldVal; }
-    ~LexicalScopeGuard() {
-      cleanup();
-      restore();
-    }
-  };
-
-  LexicalScopeContext *currLexScope = nullptr;
+  LexicalScope *currLexScope = nullptr;
 
   /// CIR build helpers
   /// -----------------
