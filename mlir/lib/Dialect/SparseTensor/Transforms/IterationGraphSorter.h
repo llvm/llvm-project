@@ -26,7 +26,6 @@ enum class SortMask : unsigned {
   // The individual mask bits.
   kIncludeDenseOutput = 0x1, // b001
   kIncludeDenseInput = 0x2,  // b010
-  kIncludeUndef = 0x4,       // b100
   // The subsets of mask bits.
   kIncludeAll = 0x7,   // b111
   kIncludeDense = 0x3, // b011
