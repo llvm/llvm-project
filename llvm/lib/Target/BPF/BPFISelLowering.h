@@ -75,7 +75,12 @@ private:
 
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;
 
   // Lower the result values of a call, copying them out of physregs into vregs
   SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
