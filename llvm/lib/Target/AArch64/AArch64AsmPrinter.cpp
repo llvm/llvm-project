@@ -1965,64 +1965,70 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
   OutStreamer->emitLabel(StubHelper);
   emitVisibility(StubHelper, GI.getVisibility());
 
-  // stp	fp, lr, [sp, #-16]!
-  // mov	fp, sp
-  // stp	x1, x0, [sp, #-16]!
-  // stp	x3, x2, [sp, #-16]!
-  // stp	x5, x4, [sp, #-16]!
-  // stp	x7, x6, [sp, #-16]!
-  // stp	d1, d0, [sp, #-16]!
-  // stp	d3, d2, [sp, #-16]!
-  // stp	d5, d4, [sp, #-16]!
-  // stp	d7, d6, [sp, #-16]!
+  // stp	fp, lr, [sp, #-16]
+  // sub	fp, sp, 16
+  // stp	x1, x0, [sp, #-32]
+  // stp	x3, x2, [sp, #-48]
+  // stp	x5, x4, [sp, #-64]
+  // stp	x7, x6, [sp, #-80]
+  // stp	d1, d0, [sp, #-96]
+  // stp	d3, d2, [sp, #-112]
+  // stp	d5, d4, [sp, #-128]
+  // stp	d7, d6, [sp, #-144]
+  // sub	sp, sp, 144
   // bl	_resolver
   // adrp	x16, lazy_pointer@GOTPAGE
   // ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
   // str	x0, [x16]
   // mov	x16, x0
-  // ldp	d7, d6, [sp], #16
-  // ldp	d5, d4, [sp], #16
-  // ldp	d3, d2, [sp], #16
-  // ldp	d1, d0, [sp], #16
-  // ldp	x7, x6, [sp], #16
-  // ldp	x5, x4, [sp], #16
-  // ldp	x3, x2, [sp], #16
-  // ldp	x1, x0, [sp], #16
-  // ldp	fp, lr, [sp], #16
+  // add	sp, sp, 144
+  // ldp	d7, d6, [sp, #-144]
+  // ldp	d5, d4, [sp, #-128]
+  // ldp	d3, d2, [sp, #-112]
+  // ldp	d1, d0, [sp, #-96]
+  // ldp	x7, x6, [sp, #-80]
+  // ldp	x5, x4, [sp, #-64]
+  // ldp	x3, x2, [sp, #-48]
+  // ldp	x1, x0, [sp, #-32]
+  // ldp	fp, lr, [sp, #-16]
   // br	x16
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
-                                   .addReg(AArch64::SP)
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXi)
                                    .addReg(AArch64::FP)
                                    .addReg(AArch64::LR)
                                    .addReg(AArch64::SP)
                                    .addImm(-2),
                                *STI);
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBXri)
                                    .addReg(AArch64::FP)
                                    .addReg(AArch64::SP)
-                                   .addImm(0)
+                                   .addImm(16)
                                    .addImm(0),
                                *STI);
 
-  for (int I = 0; I != 4; ++I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
+  for (int I = 0; I != 8; I += 2)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXi)
+                                     .addReg(AArch64::X1 + I)
+                                     .addReg(AArch64::X0 + I)
                                      .addReg(AArch64::SP)
-                                     .addReg(AArch64::X1 + 2 * I)
-                                     .addReg(AArch64::X0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(-2),
+                                     .addImm(-4 - I),
                                  *STI);
 
-  for (int I = 0; I != 4; ++I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPDpre)
+  for (int I = 0; I != 8; I += 2)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPDi)
+                                     .addReg(AArch64::D1 + I)
+                                     .addReg(AArch64::D0 + I)
                                      .addReg(AArch64::SP)
-                                     .addReg(AArch64::D1 + 2 * I)
-                                     .addReg(AArch64::D0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(-2),
+                                     .addImm(-12 - I),
                                  *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBXri)
+                                   .addReg(AArch64::SP)
+                                   .addReg(AArch64::SP)
+                                   .addImm(144)
+                                   .addImm(0),
+                               *STI);
 
   OutStreamer->emitInstruction(
       MCInstBuilder(AArch64::BL)
@@ -2070,30 +2076,34 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
                                    .addImm(0),
                                *STI);
 
-  for (int I = 3; I != -1; --I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPDpost)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::D1 + 2 * I)
-                                     .addReg(AArch64::D0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(2),
-                                 *STI);
-
-  for (int I = 3; I != -1; --I)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
-                                     .addReg(AArch64::SP)
-                                     .addReg(AArch64::X1 + 2 * I)
-                                     .addReg(AArch64::X0 + 2 * I)
-                                     .addReg(AArch64::SP)
-                                     .addImm(2),
-                                 *STI);
-
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
                                    .addReg(AArch64::SP)
+                                   .addReg(AArch64::SP)
+                                   .addImm(144)
+                                   .addImm(0),
+                               *STI);
+
+  for (int I = 6; I != -2; I -= 2)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPDi)
+                                     .addReg(AArch64::D1 + I)
+                                     .addReg(AArch64::D0 + I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-12 - I),
+                                 *STI);
+
+  for (int I = 6; I != -2; I -= 2)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXi)
+                                     .addReg(AArch64::X1 + I)
+                                     .addReg(AArch64::X0 + I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-4 - I),
+                                 *STI);
+
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXi)
                                    .addReg(AArch64::FP)
                                    .addReg(AArch64::LR)
                                    .addReg(AArch64::SP)
-                                   .addImm(2),
+                                   .addImm(-2),
                                *STI);
 
   OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
