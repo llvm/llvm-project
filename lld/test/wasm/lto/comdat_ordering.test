@@ -1,5 +1,5 @@
 ; Check if we handle a variable (here __cxx_global_var_init) in different LTO
-bitcode modules sharing a comdat.
+; bitcode modules sharing a comdat.
 
 ; RUN: llvm-as %S/Inputs/comdat_ordering1.ll -o %t1.o
 ; RUN: llvm-as %S/Inputs/comdat_ordering2.ll -o %t2.o
