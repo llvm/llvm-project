@@ -878,7 +878,7 @@ Level mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
   return lvlRank;
 }
 
-// Helpers to setup a COO type.
+// Helper to setup a COO type.
 RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
                                                            AffineMap lvlPerm,
                                                            bool ordered) {
@@ -909,13 +909,6 @@ RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
   auto enc = SparseTensorEncodingAttr::get(src.getContext(), lvlTypes, lvlPerm,
                                            invPerm, posWidth, crdWidth);
   return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
-}
-
-RankedTensorType sparse_tensor::getCOOFromType(RankedTensorType src,
-                                               bool ordered) {
-  return getCOOFromTypeWithOrdering(
-      src, AffineMap::getMultiDimIdentityMap(src.getRank(), src.getContext()),
-      ordered);
 }
 
 Dimension mlir::sparse_tensor::toDim(SparseTensorEncodingAttr enc, Level l) {
