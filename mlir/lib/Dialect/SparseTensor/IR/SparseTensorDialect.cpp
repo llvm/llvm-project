@@ -903,39 +903,6 @@ Level mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
   return lvlRank;
 }
 
-// Helper to setup a COO type.
-RankedTensorType sparse_tensor::getCOOFromTypeWithOrdering(RankedTensorType rtt,
-                                                           AffineMap lvlPerm,
-                                                           bool ordered) {
-  const SparseTensorType src(rtt);
-  const Level lvlRank = src.getLvlRank();
-  SmallVector<LevelType> lvlTypes;
-  lvlTypes.reserve(lvlRank);
-
-  // An unordered and non-unique compressed level at beginning.
-  // If this is also the last level, then it is unique.
-  lvlTypes.push_back(
-      *buildLevelType(LevelFormat::Compressed, ordered, lvlRank == 1));
-  if (lvlRank > 1) {
-    // TODO: it is actually ordered at the level for ordered input.
-    // Followed by unordered non-unique n-2 singleton levels.
-    std::fill_n(std::back_inserter(lvlTypes), lvlRank - 2,
-                *buildLevelType(LevelFormat::Singleton, ordered, false));
-    // Ends by a unique singleton level unless the lvlRank is 1.
-    lvlTypes.push_back(*buildLevelType(LevelFormat::Singleton, ordered, true));
-  }
-
-  // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
-  // largest one among them) in the original operation instead of using the
-  // default value.
-  unsigned posWidth = src.getPosWidth();
-  unsigned crdWidth = src.getCrdWidth();
-  AffineMap invPerm = src.getLvlToDim();
-  auto enc = SparseTensorEncodingAttr::get(src.getContext(), lvlTypes, lvlPerm,
-                                           invPerm, posWidth, crdWidth);
-  return RankedTensorType::get(src.getDimShape(), src.getElementType(), enc);
-}
-
 Dimension mlir::sparse_tensor::toDim(SparseTensorEncodingAttr enc, Level l) {
   if (enc) {
     assert(enc.isPermutation() && "Non permutation map not supported");
