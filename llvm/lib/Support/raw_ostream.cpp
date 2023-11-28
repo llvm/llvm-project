@@ -31,8 +31,13 @@
 #include <sys/stat.h>
 
 #include <iostream>
+#ifdef _WIN32
+#include <afunix.h>
+#include <winsock2.h>
+#else
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif // _WIN32
 
 // <fcntl.h> may provide O_BINARY.
 #if defined(HAVE_FCNTL_H)
@@ -61,7 +66,6 @@
 #endif
 
 #ifdef _WIN32
-#include "raw_ostream.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
@@ -979,7 +983,9 @@ int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
 
   struct sockaddr_un Addr;
   memset(&Addr, 0, sizeof(Addr));
+#ifndef _WIN32
   Addr.sun_family = AF_UNIX;
+#endif // _WIN32
   strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
 
   if (bind(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
@@ -997,10 +1003,7 @@ int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
     return -1;
   }
 #ifdef _WIN32
-  return _open_osfhandle(
-      MaybeWinsocket,
-      0); // flags?
-          // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/open-osfhandle?view=msvc-170
+  return _open_osfhandle(MaybeWinsocket, 0);
 #else
   return MaybeWinsocket;
 #endif // _WIN32
@@ -1044,7 +1047,7 @@ static int ServerAccept(int FD) {
 #ifdef _WIN32
   SOCKET WinServerSock = _get_osfhandle(FD);
   SOCKET WinAcceptSock = ::accept(WinServerSock, NULL, NULL);
-  AcceptFD = _open_osfhandle(WinAcceptSock, 0); // flags?
+  AcceptFD = _open_osfhandle(WinAcceptSock, 0);
 #else
   AcceptFD = ::accept(FD, NULL, NULL);
 #endif //_WIN32
