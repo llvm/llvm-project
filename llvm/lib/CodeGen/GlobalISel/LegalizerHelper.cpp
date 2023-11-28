@@ -7895,8 +7895,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
     Register AlignAmt =
         MIRBuilder.buildConstant(PtrTyAsScalarTy, MA->value() - 1).getReg(0);
     auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, HeadOfList, AlignAmt);
-    auto AndDst =
-        MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(*MA));
+    auto AndDst = MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(*MA));
     VAList = AndDst.getReg(0);
   }
 
