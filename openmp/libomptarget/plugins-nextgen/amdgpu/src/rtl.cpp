@@ -161,8 +161,8 @@ Error asyncMemCopy(bool UseMultipleSdmaEngines, void *Dst, hsa_agent_t DstAgent,
       Dst, DstAgent, Src, SrcAgent, Size, NumDepSignals, DepSignals,
       CompletionSignal, (hsa_amd_sdma_engine_id_t)LocalSdmaEngine,
       /*force_copy_on_sdma=*/true);
-  // Increment to use one of three SDMA engines: 0x1, 0x2, 0x4
-  LocalSdmaEngine = (LocalSdmaEngine << 1) % 7;
+  // Increment to use one of two SDMA engines: 0x1, 0x2
+  LocalSdmaEngine = (LocalSdmaEngine << 1) % 3;
   SdmaEngine.store(LocalSdmaEngine, std::memory_order_relaxed);
 
   return Plugin::check(S, "Error in hsa_amd_memory_async_copy_on_engine: %s");
