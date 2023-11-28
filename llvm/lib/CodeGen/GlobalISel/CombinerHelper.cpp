@@ -6271,7 +6271,7 @@ bool CombinerHelper::matchBuildVectorToBinOp(MachineInstr &MI,
       Register Second = MRI.createGenericVirtualRegister(BVTy);
       B.buildBuildVector(First, LHS);
       B.buildBuildVectorConstant(Second, RHS);
-      B.buildInstr(Opcode, {Dst}, {First, Second}); // DEBUG: did not happen
+      B.buildInstr(Opcode, {Dst}, {First, Second});
     };
     return true;
   } else if (isa<GFBinOp>(FirstDef)) {
