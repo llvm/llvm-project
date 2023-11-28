@@ -85,6 +85,10 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
         {
           "kind": "identifier",
           "spelling": "exposed_global"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

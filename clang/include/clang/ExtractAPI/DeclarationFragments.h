@@ -22,6 +22,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include <vector>
@@ -314,6 +315,11 @@ private:
   /// Build DeclarationFragments for a parameter variable declaration
   /// ParmVarDecl.
   static DeclarationFragments getFragmentsForParam(const ParmVarDecl *);
+
+  static DeclarationFragments
+  getFragmentsForBlock(const NamedDecl *BlockDecl, FunctionTypeLoc &Block,
+                       FunctionProtoTypeLoc &BlockProto,
+                       DeclarationFragments &After);
 };
 
 } // namespace extractapi
