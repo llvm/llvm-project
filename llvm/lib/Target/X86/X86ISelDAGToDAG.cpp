@@ -2715,6 +2715,39 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
           !CurDAG->MaskedValueIsZero(ShlSrc, HighZeros & Mask))
         break;
 
+      // index: t69: i64 = zero_extend t68
+      // t68: i32 = shl nuw nsw t67, Constant:i8<3>
+      //   t67: i32 = truncate t64
+      //     t64: i64 = <<Unknown Node #610>> t62, Constant:i64<5>
+      //       t62: i64,ch = load<(load (s16) from %ir.<badref>), zext from i16>
+      //       t0, t12, undef:i64
+      // =>
+      // index: t64, scale = 8
+
+      SDValue Trunc = Src.getOperand(0);
+      // match: i32 = truncate(i64 mul_imm(i64 zext from load i16,5))
+      if (N.getValueType() == MVT::i64 && Trunc.getOpcode() == ISD::TRUNCATE &&
+          Trunc.getValueType() == MVT::i32 &&
+          Trunc.getOperand(0).getValueType() == MVT::i64) {
+        // check i64 mul_imm(i64 zext from load i16,5)
+        if (Trunc.getOperand(0)->getOpcode() == X86ISD::MUL_IMM) {
+          SDValue Mul = Trunc.getOperand(0);
+          if (auto *Imm = dyn_cast<ConstantSDNode>(Mul.getOperand(1))) {
+            // check: imm < INT32_MAX
+            if (Imm->getZExtValue() < INT32_MAX &&
+                ISD::isZEXTLoad(Mul.getOperand(0).getNode())) {
+              LoadSDNode *LN0 = cast<LoadSDNode>(Mul.getOperand(0).getNode());
+              EVT MemVT = LN0->getMemoryVT();
+              if (MemVT == MVT::i16) {
+                AM.Scale = 1 << ShAmtV;
+                AM.IndexReg =
+                    matchIndexRecursively(Trunc.getOperand(0), AM, Depth + 1);
+                return false;
+              }
+            }
+          }
+        }
+      }
       // zext (shl nuw i8 %x, C1) to i32
       // --> shl (zext i8 %x to i32), (zext C1)
       // zext (and (shl nuw i8 %x, C1), C2) to i32
