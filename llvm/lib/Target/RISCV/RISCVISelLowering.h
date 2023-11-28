@@ -962,6 +962,8 @@ private:
 
   bool shouldFoldSelectWithSingleBitTest(EVT VT,
                                          const APInt &AndMask) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace RISCV {

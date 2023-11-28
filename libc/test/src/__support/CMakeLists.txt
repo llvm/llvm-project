@@ -23,6 +23,29 @@ add_libc_test(
     libc.src.__support.common
 )
 
+
+add_libc_test(
+  bit_test
+  SUITE
+    libc-support-tests
+  SRCS
+    bit_test.cpp
+  DEPENDS
+    libc.src.__support.bit
+)
+
+
+add_libc_test(
+  math_extras_test
+  SUITE
+    libc-support-tests
+  SRCS
+    math_extras_test.cpp
+  DEPENDS
+    libc.src.__support.math_extras
+)
+
+
 add_libc_test(
   high_precision_decimal_test
   SUITE

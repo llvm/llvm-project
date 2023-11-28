@@ -43,6 +43,7 @@ env:
 
 jobs:
   stage1:
+    if: github.repository_owner == 'llvm'
     runs-on:
       group: libcxx-runners-8
     continue-on-error: false
@@ -81,6 +82,7 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage2:
+    if: github.repository_owner == 'llvm'
     runs-on:
       group: libcxx-runners-8
     needs: [ stage1 ]
@@ -130,6 +132,7 @@ jobs:
             **/CMakeOutput.log
             **/crash_diagnostics/*
   stage3:
+    if: github.repository_owner == 'llvm'
     needs: [ stage1, stage2 ]
     continue-on-error: false
     strategy:

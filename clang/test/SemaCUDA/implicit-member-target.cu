@@ -6,7 +6,7 @@
 // Test 1: infer default ctor to be host.
 
 struct A1_with_host_ctor {
-  A1_with_host_ctor() { static int nontrivial_ctor = 1; }
+  A1_with_host_ctor() {}
 };
 
 // The implicit default constructor is inferred to be host because it only needs
@@ -75,7 +75,7 @@ void hostfoo3() {
 // Test 4: infer default ctor from a field, not a base
 
 struct A4_with_host_ctor {
-  A4_with_host_ctor() { static int nontrivial_ctor = 1; }
+  A4_with_host_ctor() {}
 };
 
 struct B4_with_implicit_default_ctor {

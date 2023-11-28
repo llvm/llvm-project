@@ -154,6 +154,11 @@ TEST(SimplePackedSerializationTest, SpanSerialization) {
   EXPECT_EQ(InS.data(), Buffer.get() + sizeof(uint64_t));
 }
 
+TEST(SimplePackedSerializationTest, StdTupleSerialization) {
+  std::tuple<int32_t, std::string, bool> P(42, "foo", true);
+  blobSerializationRoundTrip<SPSTuple<int32_t, SPSString, bool>>(P);
+}
+
 TEST(SimplePackedSerializationTest, StdPairSerialization) {
   std::pair<int32_t, std::string> P(42, "foo");
   blobSerializationRoundTrip<SPSTuple<int32_t, SPSString>,

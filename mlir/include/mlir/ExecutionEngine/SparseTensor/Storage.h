@@ -70,7 +70,7 @@ public:
   /// Constructs a new sparse-tensor storage object with the given encoding.
   SparseTensorStorageBase(uint64_t dimRank, const uint64_t *dimSizes,
                           uint64_t lvlRank, const uint64_t *lvlSizes,
-                          const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                          const LevelType *lvlTypes, const uint64_t *dim2lvl,
                           const uint64_t *lvl2dim);
   virtual ~SparseTensorStorageBase() = default;
 
@@ -99,10 +99,10 @@ public:
   }
 
   /// Gets the level-types array.
-  const std::vector<DimLevelType> &getLvlTypes() const { return lvlTypes; }
+  const std::vector<LevelType> &getLvlTypes() const { return lvlTypes; }
 
   /// Safely looks up the type of the given level.
-  DimLevelType getLvlType(uint64_t l) const {
+  LevelType getLvlType(uint64_t l) const {
     assert(l < getLvlRank());
     return lvlTypes[l];
   }
@@ -180,7 +180,7 @@ public:
 private:
   const std::vector<uint64_t> dimSizes;
   const std::vector<uint64_t> lvlSizes;
-  const std::vector<DimLevelType> lvlTypes;
+  const std::vector<LevelType> lvlTypes;
   const std::vector<uint64_t> dim2lvlVec;
   const std::vector<uint64_t> lvl2dimVec;
 
@@ -203,7 +203,7 @@ class SparseTensorStorage final : public SparseTensorStorageBase {
   /// doesn't entail `!(positions[l].empty())`.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim)
       : SparseTensorStorageBase(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                                 dim2lvl, lvl2dim),
@@ -219,7 +219,7 @@ public:
   /// some other form of initialization.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim, SparseTensorCOO<V> *lvlCOO,
                       bool initializeValuesIfAllDense);
 
@@ -228,7 +228,7 @@ public:
   /// overhead-storage allocation as the ctor above.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim, SparseTensorCOO<V> &lvlCOO);
 
   /// Constructs a sparse tensor with the given encoding, and initializes
@@ -240,19 +240,19 @@ public:
   /// passed in as a single AoS memory.
   SparseTensorStorage(uint64_t dimRank, const uint64_t *dimSizes,
                       uint64_t lvlRank, const uint64_t *lvlSizes,
-                      const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                      const LevelType *lvlTypes, const uint64_t *dim2lvl,
                       const uint64_t *lvl2dim, const intptr_t *lvlBufs);
 
   /// Allocates a new empty sparse tensor.
   static SparseTensorStorage<P, C, V> *
   newEmpty(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-           const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+           const uint64_t *lvlSizes, const LevelType *lvlTypes,
            const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding);
 
   /// Allocates a new sparse tensor and initializes it from the given COO.
   static SparseTensorStorage<P, C, V> *
   newFromCOO(uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-             const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+             const uint64_t *lvlSizes, const LevelType *lvlTypes,
              const uint64_t *dim2lvl, const uint64_t *lvl2dim,
              SparseTensorCOO<V> &lvlCOO);
 
@@ -261,7 +261,7 @@ public:
   static SparseTensorStorage<P, C, V> *
   packFromLvlBuffers(uint64_t dimRank, const uint64_t *dimSizes,
                      uint64_t lvlRank, const uint64_t *lvlSizes,
-                     const DimLevelType *lvlTypes, const uint64_t *dim2lvl,
+                     const LevelType *lvlTypes, const uint64_t *dim2lvl,
                      const uint64_t *lvl2dim, uint64_t srcRank,
                      const intptr_t *buffers);
 
@@ -294,7 +294,7 @@ public:
   void lexInsert(const uint64_t *lvlCoords, V val) final {
     assert(lvlCoords);
     bool allDense = std::all_of(getLvlTypes().begin(), getLvlTypes().end(),
-                                [](DimLevelType lt) { return isDenseLT(lt); });
+                                [](LevelType lt) { return isDenseLT(lt); });
     if (allDense) {
       uint64_t lvlRank = getLvlRank();
       uint64_t valIdx = 0;
@@ -654,7 +654,7 @@ private:
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, bool forwarding) {
   SparseTensorCOO<V> *lvlCOO = nullptr;
   if (forwarding)
@@ -667,7 +667,7 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newEmpty(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
     SparseTensorCOO<V> &lvlCOO) {
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
@@ -677,7 +677,7 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::newFromCOO(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, uint64_t srcRank,
     const intptr_t *buffers) {
   return new SparseTensorStorage<P, C, V>(dimRank, dimSizes, lvlRank, lvlSizes,
@@ -693,7 +693,7 @@ SparseTensorStorage<P, C, V> *SparseTensorStorage<P, C, V>::packFromLvlBuffers(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
     SparseTensorCOO<V> *lvlCOO, bool initializeValuesIfAllDense)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
@@ -742,7 +742,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage(
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim,
     SparseTensorCOO<V> &lvlCOO)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
@@ -761,7 +761,7 @@ SparseTensorStorage<P, C, V>::SparseTensorStorage( // NOLINT
 template <typename P, typename C, typename V>
 SparseTensorStorage<P, C, V>::SparseTensorStorage(
     uint64_t dimRank, const uint64_t *dimSizes, uint64_t lvlRank,
-    const uint64_t *lvlSizes, const DimLevelType *lvlTypes,
+    const uint64_t *lvlSizes, const LevelType *lvlTypes,
     const uint64_t *dim2lvl, const uint64_t *lvl2dim, const intptr_t *lvlBufs)
     : SparseTensorStorage(dimRank, dimSizes, lvlRank, lvlSizes, lvlTypes,
                           dim2lvl, lvl2dim) {

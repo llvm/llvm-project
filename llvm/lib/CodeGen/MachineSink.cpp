@@ -506,7 +506,7 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
     MRI->clearKillFlags(UsedRegB);
 
   for (auto &[SinkDst, MaybeAM] : SinkInto) {
-    [[maybe_unused]] MachineInstr *New = nullptr;
+    MachineInstr *New = nullptr;
     LLVM_DEBUG(dbgs() << "Sinking copy of"; MI.dump(); dbgs() << "into";
                SinkDst->dump());
     if (SinkDst->isCopy()) {
@@ -525,6 +525,8 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       Register DstReg = SinkDst->getOperand(0).getReg();
       TII->reMaterialize(*SinkDst->getParent(), InsertPt, DstReg, 0, MI, *TRI);
       New = &*std::prev(InsertPt);
+      if (!New->getDebugLoc())
+        New->setDebugLoc(SinkDst->getDebugLoc());
     } else {
       // Fold instruction into the addressing mode of a memory instruction.
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);

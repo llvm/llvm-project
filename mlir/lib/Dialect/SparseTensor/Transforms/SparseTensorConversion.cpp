@@ -146,7 +146,7 @@ static Value genLvlTypesBuffer(OpBuilder &builder, Location loc,
   SmallVector<Value> lvlTypes;
   lvlTypes.reserve(stt.getLvlRank());
   for (const auto lt : stt.getEncoding().getLvlTypes())
-    lvlTypes.push_back(constantDimLevelTypeEncoding(builder, loc, lt));
+    lvlTypes.push_back(constantLevelTypeEncoding(builder, loc, lt));
   return allocaBuffer(builder, loc, lvlTypes);
 }
 

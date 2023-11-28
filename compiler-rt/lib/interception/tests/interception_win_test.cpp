@@ -15,13 +15,15 @@
 #include "gtest/gtest.h"
 
 // Too slow for debug build
+// Disabling for ARM64 since testcases are x86/x64 assembly.
 #if !SANITIZER_DEBUG
 #if SANITIZER_WINDOWS
+#    if !SANITIZER_WINDOWS_ARM64
 
-#include <stdarg.h>
+#      include <stdarg.h>
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#      define WIN32_LEAN_AND_MEAN
+#      include <windows.h>
 
 namespace __interception {
 namespace {
@@ -793,5 +795,6 @@ TEST(Interception, EmptyExportTable) {
 
 }  // namespace __interception
 
+#    endif  // !SANITIZER_WINDOWS_ARM64
 #endif  // SANITIZER_WINDOWS
 #endif  // #if !SANITIZER_DEBUG

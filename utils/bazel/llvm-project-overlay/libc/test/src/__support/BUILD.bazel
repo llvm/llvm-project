@@ -10,6 +10,18 @@ package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
+libc_test(
+    name = "bit_test",
+    srcs = ["bit_test.cpp"],
+    deps = ["//libc:__support_bit"],
+)
+
+libc_test(
+    name = "math_extras_test",
+    srcs = ["math_extras_test.cpp"],
+    deps = ["//libc:__support_math_extras"],
+)
+
 # This test is currently disabled because of an issue in
 # `libc/src/__support/CPP/new.h` which currently fails with
 # "error: cannot apply asm label to function after its first use"

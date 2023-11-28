@@ -12,7 +12,7 @@
 struct IntType {
   int val;
   constexpr IntType() = default;
-  constexpr IntType(int v) noexcept : val(v){};
+  constexpr IntType(int v) noexcept : val(v) {}
 
   constexpr bool operator==(const IntType& rhs) const { return val == rhs.val; }
   constexpr operator int() const noexcept { return val; }
@@ -24,7 +24,7 @@ struct IntType {
 struct IntTypeNC {
   int val;
   constexpr IntTypeNC() = default;
-  constexpr IntTypeNC(int v) noexcept : val(v){};
+  constexpr IntTypeNC(int v) noexcept : val(v) {}
 
   constexpr bool operator==(const IntType& rhs) const { return val == rhs.val; }
   constexpr operator int() noexcept { return val; }

@@ -6,9 +6,9 @@ define i32 @mul(i32 %val) nounwind {
 ; CHECK-LABEL: 'mul'
 ; CHECK-NEXT:  Classifying expressions for: @mul
 ; CHECK-NEXT:    %tmp1 = mul i32 %val, 16
-; CHECK-NEXT:    -->  (16 * %val) U: [0,-15) S: [-2147483648,2147483633)
+; CHECK-NEXT:    --> (16 * %val) U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:    %tmp2 = udiv i32 %tmp1, 16
-; CHECK-NEXT:    -->  ((16 * %val) /u 16) U: [0,268435456) S: [0,268435456)
+; CHECK-NEXT:    --> ((16 * %val) /u 16) U: [0,268435456) S: [0,268435456)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul
 ;
   %tmp1 = mul i32 %val, 16
@@ -26,7 +26,7 @@ define i32 @mask_abc(i32 %val) nounwind {
 ; CHECK-LABEL: 'mask_abc'
 ; CHECK-NEXT:  Classifying expressions for: @mask_abc
 ; CHECK-NEXT:    %masked = and i32 %val, 15
-; CHECK-NEXT:    -->  (zext i4 (trunc i32 %val to i4) to i32) U: [0,16) S: [0,16)
+; CHECK-NEXT:    --> (zext i4 (trunc i32 %val to i4) to i32) U: [0,16) S: [0,16)
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_abc
 ;
   %masked = and i32 %val, 15
@@ -37,9 +37,9 @@ define i32 @mask_d(i32 %val) nounwind {
 ; CHECK-LABEL: 'mask_d'
 ; CHECK-NEXT:  Classifying expressions for: @mask_d
 ; CHECK-NEXT:    %highbitscleared = shl i32 %val, 4
-; CHECK-NEXT:    -->  (16 * %val) U: [0,-15) S: [-2147483648,2147483633)
+; CHECK-NEXT:    --> (16 * %val) U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:    %masked = lshr i32 %highbitscleared, 4
-; CHECK-NEXT:    -->  ((16 * %val) /u 16) U: [0,268435456) S: [0,268435456)
+; CHECK-NEXT:    --> ((16 * %val) /u 16) U: [0,268435456) S: [0,268435456)
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_d
 ;
   %highbitscleared = shl i32 %val, 4

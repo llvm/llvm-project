@@ -19,7 +19,7 @@
 
 struct ThrowingMove {
   ThrowingMove() = default;
-  ThrowingMove(ThrowingMove&&){};
+  ThrowingMove(ThrowingMove&&) {}
   ThrowingMove& operator=(ThrowingMove&&){return *this;}
 };
 

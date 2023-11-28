@@ -2,7 +2,7 @@
 REQUIRES: asserts
 RUN: split-file %s %t
 RUN: yaml2obj %t/yaml -o %t.exe --max-size=0
-RUN: llvm-bolt %t.exe -o /dev/null --allow-stripped
+RUN: llvm-bolt %t.exe -o %t.null --allow-stripped
 #--- yaml
 --- !ELF
 FileHeader:
