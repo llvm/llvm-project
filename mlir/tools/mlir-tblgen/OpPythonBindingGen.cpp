@@ -582,8 +582,7 @@ static bool hasFirstAttrDerivedResultTypes(const Operator &op) {
 /// Returns true if the InferTypeOpInterface can be used to infer result types
 /// of the given operation.
 static bool hasInferTypeInterface(const Operator &op) {
-  return op.getTrait("::mlir::InferTypeOpInterface::Trait") &&
-         op.getNumRegions() == 0;
+  return op.getTrait("::mlir::InferTypeOpInterface::Trait");
 }
 
 /// Returns true if there is a trait or interface that can be used to infer
@@ -598,9 +597,6 @@ static bool canInferType(const Operator &op) {
 static void
 populateBuilderArgsResults(const Operator &op,
                            llvm::SmallVectorImpl<std::string> &builderArgs) {
-  if (canInferType(op))
-    return;
-
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     std::string name = op.getResultName(i).str();
     if (name.empty()) {
@@ -769,6 +765,36 @@ static void appendLineByLine(StringRef string,
   } while (!split.second.empty());
 }
 
+static void populateBuilderLinesResultList(
+    const Operator &op, llvm::ArrayRef<std::string> names,
+    llvm::SmallVectorImpl<std::string> &builderLines) {
+  bool sizedSegments = op.getTrait(attrSizedTraitForKind("result")) != nullptr;
+  // For each element, find or generate a name.
+  for (int i = 0, e = op.getNumResults(); i < e; ++i) {
+    const NamedTypeConstraint &element = op.getResult(i);
+    std::string name = names[i];
+
+    // Choose the formatting string based on the element kind.
+    llvm::StringRef formatString;
+    if (!element.isVariableLength()) {
+      formatString = singleResultAppendTemplate;
+    } else if (element.isOptional()) {
+      formatString = optionalAppendResultTemplate;
+    } else {
+      assert(element.isVariadic() && "unhandled element group type");
+      // If emitting with sizedSegments, then we add the actual list-typed
+      // element. Otherwise, we extend the actual operands.
+      if (sizedSegments) {
+        formatString = singleResultAppendTemplate;
+      } else {
+        formatString = multiResultAppendTemplate;
+      }
+    }
+
+    builderLines.push_back(llvm::formatv(formatString.data(), name));
+  }
+}
+
 /// Populates `builderLines` with additional lines that are required in the
 /// builder to set up op results.
 static void
@@ -798,31 +824,7 @@ populateBuilderLinesResult(const Operator &op,
 
   if (hasInferTypeInterface(op))
     return;
-
-  // For each element, find or generate a name.
-  for (int i = 0, e = op.getNumResults(); i < e; ++i) {
-    const NamedTypeConstraint &element = op.getResult(i);
-    std::string name = names[i];
-
-    // Choose the formatting string based on the element kind.
-    llvm::StringRef formatString;
-    if (!element.isVariableLength()) {
-      formatString = singleResultAppendTemplate;
-    } else if (element.isOptional()) {
-      formatString = optionalAppendResultTemplate;
-    } else {
-      assert(element.isVariadic() && "unhandled element group type");
-      // If emitting with sizedSegments, then we add the actual list-typed
-      // element. Otherwise, we extend the actual operands.
-      if (sizedSegments) {
-        formatString = singleResultAppendTemplate;
-      } else {
-        formatString = multiResultAppendTemplate;
-      }
-    }
-
-    builderLines.push_back(llvm::formatv(formatString.data(), name));
-  }
+  populateBuilderLinesResultList(op, names, builderLines);
 }
 
 /// If the operation has variadic regions, adds a builder argument to specify
@@ -861,7 +863,8 @@ static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   llvm::SmallVector<std::string> successorArgNames;
   builderArgs.reserve(op.getNumOperands() + op.getNumResults() +
                       op.getNumNativeAttributes() + op.getNumSuccessors());
-  populateBuilderArgsResults(op, builderArgs);
+  if (!canInferType(op))
+    populateBuilderArgsResults(op, builderArgs);
   size_t numResultArgs = builderArgs.size();
   populateBuilderArgs(op, builderArgs, operandArgNames);
   size_t numOperandAttrArgs = builderArgs.size() - numResultArgs;
@@ -918,13 +921,21 @@ static llvm::SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
       functionArgs.push_back(builderArgs[i]);
     }
   }
+  llvm::SmallVector<std::string> builderArgs2;
+  if (canInferType(op)) {
+    populateBuilderArgsResults(op, builderArgs2);
+    populateBuilderLinesResultList(op, builderArgs2, builderLines);
+    for (size_t i = 0, cnt = builderArgs2.size(); i < cnt; ++i) {
+      builderArgs2[i].append("=None");
+      functionArgs.push_back(builderArgs2[i]);
+    }
+  }
   functionArgs.push_back("loc=None");
   functionArgs.push_back("ip=None");
 
   SmallVector<std::string> initArgs;
   initArgs.push_back("attributes=attributes");
-  if (!hasInferTypeInterface(op))
-    initArgs.push_back("results=results");
+  initArgs.push_back("results=results");
   initArgs.push_back("operands=operands");
   initArgs.push_back("successors=_ods_successors");
   initArgs.push_back("regions=regions");

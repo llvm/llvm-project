@@ -18,7 +18,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -29,7 +28,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 
-#include <cstddef>
 #include <memory>
 #include <optional>
 
@@ -471,9 +469,7 @@ MlirOperation mlirOperationCreate(MlirOperationState *state) {
   free(state->attributes);
 
   // Infer result types.
-  if (state->enableResultTypeInference) {
-    assert(cppState.types.empty() &&
-           "result type inference enabled and result types provided");
+  if (state->enableResultTypeInference && cppState.types.empty()) {
     if (failed(inferOperationTypes(cppState)))
       return {nullptr};
   }
