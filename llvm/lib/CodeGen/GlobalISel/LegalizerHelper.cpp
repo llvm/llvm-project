@@ -7886,22 +7886,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineMemOperand *PtrLoadMMO =
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
-  Register HeadOfList = MRI.createGenericVirtualRegister(PtrTy);
-  Register VAList =
-      MIRBuilder.buildLoad(HeadOfList, ListPtr, *PtrLoadMMO).getReg(0);
+  auto HeadOfList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
+  Register VAList = HeadOfList;
 
   const MaybeAlign MA(MI.getOperand(2).getImm());
   LLT PtrTyAsScalarTy = LLT::scalar(PtrTy.getSizeInBits());
   if (MA && *MA > TLI.getMinStackArgumentAlignment()) {
     Register AlignAmt =
         MIRBuilder.buildConstant(PtrTyAsScalarTy, MA->value() - 1).getReg(0);
-    Register AddDst = MRI.createGenericVirtualRegister(PtrTy);
-    MIRBuilder.buildPtrAdd(AddDst, HeadOfList, AlignAmt);
-    Register Mask =
-        MIRBuilder.buildConstant(PtrTyAsScalarTy, -(int64_t)MA->value())
-            .getReg(0);
-    Register AndDst = MRI.createGenericVirtualRegister(PtrTy);
-    VAList = MIRBuilder.buildPtrMask(AndDst, AddDst, Mask).getReg(0);
+    auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, HeadOfList, AlignAmt);
+    auto AndDst =
+        MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(*MA));
+    VAList = AndDst.getReg(0);
   }
 
   // Increment the pointer, VAList, to the next vaarg
@@ -7914,8 +7910,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
           .buildConstant(PtrTyAsScalarTy,
                          DL.getTypeAllocSize(getTypeForLLT(Ty, Ctx)))
           .getReg(0);
-  Register Succ = MRI.createGenericVirtualRegister(PtrTy);
-  MIRBuilder.buildPtrAdd(Succ, VAList, IncAmt);
+  auto Succ = MIRBuilder.buildPtrAdd(PtrTy, VAList, IncAmt);
 
   // Store the increment VAList to the legalized pointer
   MachineMemOperand *StoreMMO =
@@ -7923,7 +7918,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
                               MachineMemOperand::MOStore, PtrTy, PtrAlignment);
   MIRBuilder.buildStore(Succ, ListPtr, *StoreMMO);
   // Load the actual argument out of the pointer VAList
-  Align EltAlignment = Align(DL.getABITypeAlign(getTypeForLLT(Ty, Ctx)));
+  Align EltAlignment = DL.getABITypeAlign(getTypeForLLT(Ty, Ctx));
   MachineMemOperand *EltLoadMMO =
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOLoad, Ty, EltAlignment);
