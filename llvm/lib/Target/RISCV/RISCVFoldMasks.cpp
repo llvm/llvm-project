@@ -55,12 +55,11 @@ public:
   StringRef getPassName() const override { return "RISC-V Fold Masks"; }
 
 private:
+  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef);
   bool foldVMergeIntoOps(MachineInstr &MI, MachineInstr *MaskDef);
   bool convertVMergeToVMv(MachineInstr &MI, MachineInstr *MaskDef);
-  bool convertToUnmasked(MachineInstr &MI, MachineInstr *MaskDef);
 
   bool isAllOnesMask(MachineInstr *MaskDef);
-  bool isOpSameAs(const MachineOperand &LHS, const MachineOperand &RHS);
 };
 
 } // namespace
@@ -119,17 +118,6 @@ static unsigned getVMSetForLMul(RISCVII::VLMUL LMUL) {
   llvm_unreachable("Unknown VLMUL enum");
 }
 
-// Returns true if LHS is the same register as RHS, or if LHS is undefined.
-bool RISCVFoldMasks::isOpSameAs(const MachineOperand &LHS,
-                                const MachineOperand &RHS) {
-  if (LHS.getReg() == RISCV::NoRegister)
-    return true;
-  if (RHS.getReg() == RISCV::NoRegister)
-    return false;
-  return TRI->lookThruCopyLike(LHS.getReg(), MRI) ==
-         TRI->lookThruCopyLike(RHS.getReg(), MRI);
-}
-
 // Try to fold away VMERGE_VVM instructions. We handle these cases:
 // -Masked TU VMERGE_VVM combined with an unmasked TA instruction instruction
 //  folds to a masked TU instruction. VMERGE_VVM must have have merge operand
@@ -163,10 +151,14 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
     return false;
 
   MachineInstr &TrueMI = *MRI->getVRegDef(True->getReg());
+  if (TrueMI.getParent() != MI.getParent())
+    return false;
 
   // We require that either merge and false are the same, or that merge
   // is undefined.
-  if (!isOpSameAs(*Merge, *False))
+  if (Merge->getReg() != RISCV::NoRegister &&
+      TRI->lookThruCopyLike(Merge->getReg(), MRI) !=
+          TRI->lookThruCopyLike(False->getReg(), MRI))
     return false;
 
   // N must be the only user of True.
@@ -177,12 +169,14 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
   const MCInstrDesc &TrueMCID = TrueMI.getDesc();
   bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(TrueMCID);
 
-  bool IsMasked = false;
+  const bool MIIsMasked =
+      BaseOpc == RISCV::VMERGE_VVM && !isAllOnesMask(MaskDef);
+  bool TrueIsMasked = false;
   const RISCV::RISCVMaskedPseudoInfo *Info =
       RISCV::lookupMaskedIntrinsicByUnmasked(TrueOpc);
   if (!Info && HasTiedDest) {
     Info = RISCV::getMaskedPseudoInfo(TrueOpc);
-    IsMasked = true;
+    TrueIsMasked = true;
   }
 
   if (!Info)
@@ -190,8 +184,7 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
 
   // When Mask is not a true mask, this transformation is illegal for some
   // operations whose results are affected by mask, like viota.m.
-  if (Info->MaskAffectsResult && BaseOpc == RISCV::VMERGE_VVM &&
-      !isAllOnesMask(MaskDef))
+  if (Info->MaskAffectsResult && MIIsMasked)
     return false;
 
   MachineOperand &TrueMergeOp = TrueMI.getOperand(1);
@@ -203,20 +196,21 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
       return false;
     // Both the vmerge instruction and the True instruction must have the same
     // merge operand.
-    if (!isOpSameAs(TrueMergeOp, *False))
+    if (TrueMergeOp.getReg() != RISCV::NoRegister &&
+        TrueMergeOp.getReg() != False->getReg())
       return false;
   }
 
-  if (IsMasked) {
+  if (TrueIsMasked) {
     assert(HasTiedDest && "Expected tied dest");
     // The vmerge instruction must be TU.
     if (Merge->getReg() == RISCV::NoRegister)
       return false;
-    // The vmerge instruction must have an all 1s mask since we're going to keep
-    // the mask from the True instruction.
-    // FIXME: Support mask agnostic True instruction which would have an
-    // undef merge operand.
-    if (BaseOpc == RISCV::VMERGE_VVM && !isAllOnesMask(MaskDef))
+    // MI must have an all 1s mask since we're going to keep the mask from the
+    // True instruction.
+    // FIXME: Support mask agnostic True instruction which would have an undef
+    // merge operand.
+    if (MIIsMasked)
       return false;
   }
 
@@ -224,10 +218,6 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
   // TODO: Support vleff and vlsegff.
   if (TII->get(TrueOpc).hasUnmodeledSideEffects())
     return false;
-
-  // The vector policy operand may be present for masked intrinsics
-  const MachineOperand &TrueVL =
-      TrueMI.getOperand(RISCVII::getVLOpNum(TrueMCID));
 
   auto GetMinVL =
       [](const MachineOperand &LHS,
@@ -246,7 +236,9 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
 
   // Because MI and True must have the same merge operand (or True's operand is
   // implicit_def), the "effective" body is the minimum of their VLs.
-  const MachineOperand VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  const MachineOperand &TrueVL =
+      TrueMI.getOperand(RISCVII::getVLOpNum(TrueMCID));
+  const MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
   auto MinVL = GetMinVL(TrueVL, VL);
   if (!MinVL)
     return false;
@@ -255,7 +247,7 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
   // If we end up changing the VL or mask of True, then we need to make sure it
   // doesn't raise any observable fp exceptions, since changing the active
   // elements will affect how fflags is set.
-  if (VLChanged || !IsMasked)
+  if (VLChanged || !TrueIsMasked)
     if (TrueMCID.mayRaiseFPException() &&
         !TrueMI.getFlag(MachineInstr::MIFlag::NoFPExcept))
       return false;
@@ -287,8 +279,9 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
   // Set the merge to the false operand of the merge.
   TrueMI.getOperand(1).setReg(False->getReg());
 
+  bool NeedToMoveOldMask = TrueIsMasked;
   // If we're converting it to a masked pseudo, reuse MI's mask.
-  if (!IsMasked) {
+  if (!TrueIsMasked) {
     if (BaseOpc == RISCV::VMV_V_V) {
       // If MI is a vmv.v.v, it won't have a mask operand. So insert an all-ones
       // mask just before True.
@@ -302,6 +295,7 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
       BuildMI(*MI.getParent(), TrueMI, MI.getDebugLoc(), TII->get(RISCV::COPY),
               RISCV::V0)
           .addReg(Dest);
+      NeedToMoveOldMask = true;
     }
 
     TrueMI.setDesc(MaskedMCID);
@@ -342,9 +336,17 @@ bool RISCVFoldMasks::foldVMergeIntoOps(MachineInstr &MI,
     MRI->constrainRegClass(PassthruReg, V0RC);
 
   MRI->replaceRegWith(MI.getOperand(0).getReg(), TrueMI.getOperand(0).getReg());
+
+  // We need to move the old mask copy to after MI if:
+  // - TrueMI is masked and we are using its mask instead
+  // - We created a new all ones mask that clobbers V0
+  if (NeedToMoveOldMask && MaskDef) {
+    assert(MaskDef->getParent() == MI.getParent());
+    MaskDef->removeFromParent();
+    MI.getParent()->insertAfter(MI.getIterator(), MaskDef);
+  }
+
   MI.eraseFromParent();
-  if (IsMasked)
-    MaskDef->eraseFromParent();
 
   return true;
 }
@@ -369,8 +371,11 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
     CASE_VMERGE_TO_VMV(M8)
   }
 
+  Register MergeReg = MI.getOperand(1).getReg();
+  Register FalseReg = MI.getOperand(2).getReg();
   // Check merge == false (or merge == undef)
-  if (!isOpSameAs(MI.getOperand(1), MI.getOperand(2)))
+  if (MergeReg != RISCV::NoRegister && TRI->lookThruCopyLike(MergeReg, MRI) !=
+                                           TRI->lookThruCopyLike(FalseReg, MRI))
     return false;
 
   assert(MI.getOperand(4).isReg() && MI.getOperand(4).getReg() == RISCV::V0);
@@ -468,8 +473,9 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
 
     CurrentV0Def = nullptr;
     for (MachineInstr &MI : MBB) {
-      Changed |= convertVMergeToVMv(MI, CurrentV0Def);
       Changed |= convertToUnmasked(MI, CurrentV0Def);
+      Changed |= convertVMergeToVMv(MI, CurrentV0Def);
+
       if (MI.definesRegister(RISCV::V0, TRI))
         CurrentV0Def = &MI;
     }
