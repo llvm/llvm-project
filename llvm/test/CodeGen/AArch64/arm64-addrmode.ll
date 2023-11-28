@@ -252,9 +252,8 @@ define i64 @LdOffset_i64_multi_offset(ptr %a) {
 ; CHECK-LABEL: LdOffset_i64_multi_offset:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x0, #2031, lsl #12 // =8318976
-; CHECK-NEXT:    add x8, x8, #960
-; CHECK-NEXT:    ldr x9, [x8]
-; CHECK-NEXT:    ldr x8, [x8, #2056]
+; CHECK-NEXT:    ldr x9, [x8, #960]
+; CHECK-NEXT:    ldr x8, [x8, #3016]
 ; CHECK-NEXT:    add x0, x8, x9
 ; CHECK-NEXT:    ret
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 1039992
