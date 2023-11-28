@@ -46,7 +46,7 @@ This pipeline will:
 
    Bit-for-bit compatibility is not (and never was) a guarantee, and we reserve
    the right to change this at any time. Explicitly, users should not rely on
-   the produced bitcode or object code to mach their non-LTO counterparts
+   the produced bitcode or object code to match their non-LTO counterparts
    precisely. They will exhibit similar performance characteristics, but may
    not be bit-for-bit the same.
 
