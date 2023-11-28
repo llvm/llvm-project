@@ -53,3 +53,49 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+%struct = type { i8, [3 x i8], i32 }
+
+define void @forward_different_access_sizes(ptr readnone %end, ptr %start) {
+; CHECK-LABEL: 'forward_different_access_sizes'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l = load i24, ptr %gep.1, align 1 ->
+; CHECK-NEXT:            store i24 %l, ptr %ptr.iv, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:            store i32 0, ptr %gep.2, align 4 ->
+; CHECK-NEXT:            %l = load i24, ptr %gep.1, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i32 0, ptr %gep.2, align 4 ->
+; CHECK-NEXT:            store i24 %l, ptr %ptr.iv, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %start, %entry ], [ %next, %loop ]
+  %gep.2  = getelementptr %struct, ptr %ptr.iv, i64 0, i32 2
+  store i32 0, ptr %gep.2, align 4
+  %gep.1 = getelementptr %struct, ptr %ptr.iv, i64 0, i32 1
+  %l = load i24, ptr %gep.1, align 1
+  store i24 %l, ptr %ptr.iv, align 1
+  %next = getelementptr inbounds %struct, ptr %ptr.iv, i64 1
+  %ec = icmp eq ptr %ptr.iv, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
