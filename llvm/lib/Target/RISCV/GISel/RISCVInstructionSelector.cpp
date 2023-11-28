@@ -542,58 +542,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
   }
-  case TargetOpcode::G_BRJT: {
-    // FIXME: Move to legalization?
-    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
-    unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
-    assert((EntrySize == 4 || (Subtarget->is64Bit() && EntrySize == 8)) &&
-           "Unsupported jump-table entry size");
-    assert(
-        (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
-         MJTI->getEntryKind() == MachineJumpTableInfo::EK_Custom32 ||
-         MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress) &&
-        "Unexpected jump-table entry kind");
-
-    auto SLL =
-        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {MI.getOperand(2)})
-            .addImm(Log2_32(EntrySize));
-    if (!SLL.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    // TODO: Use SHXADD. Moving to legalization would fix this automatically.
-    auto ADD = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
-                              {MI.getOperand(0), SLL.getReg(0)});
-    if (!ADD.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    unsigned LdOpc = EntrySize == 8 ? RISCV::LD : RISCV::LW;
-    auto Dest =
-        MIB.buildInstr(LdOpc, {&RISCV::GPRRegClass}, {ADD.getReg(0)})
-            .addImm(0)
-            .addMemOperand(MF.getMachineMemOperand(
-                MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
-                EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout()))));
-    if (!Dest.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    // If the Kind is EK_LabelDifference32, the table stores an offset from
-    // the location of the table. Add the table address to get an absolute
-    // address.
-    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
-      Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
-                            {Dest.getReg(0), MI.getOperand(0)});
-      if (!Dest.constrainAllUses(TII, TRI, RBI))
-        return false;
-    }
-
-    auto Branch =
-        MIB.buildInstr(RISCV::PseudoBRIND, {}, {Dest.getReg(0)}).addImm(0);
-    if (!Branch.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    MI.eraseFromParent();
-    return true;
-  }
   case TargetOpcode::G_BRINDIRECT:
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
