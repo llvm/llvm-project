@@ -1532,9 +1532,13 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 ModulePassManager
 PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level) {
   ModulePassManager MPM;
+  // FatLTO always uses UnifiedLTO, so use the ThinLTOPreLink pipeline
   MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
   MPM.addPass(EmbedBitcodePass());
-  MPM.addPass(buildThinLTODefaultPipeline(Level, /*ImportSummary=*/nullptr));
+  MPM.addPass(buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
+
+  // Emit annotation remarks.
+  addAnnotationRemarksPass(MPM);
   return MPM;
 }
 
