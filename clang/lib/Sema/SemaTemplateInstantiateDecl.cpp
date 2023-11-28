@@ -6501,15 +6501,25 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
 // see CWG2497.
 void Sema::InstantiateFunctionTemplateSpecializations(
     SourceLocation PointOfInstantiation, FunctionDecl *Tpl) {
+
+  auto InstantiateAll = [&](const auto &Range) {
+    for (NamedDecl *Fun : Range) {
+      InstantiateFunctionDefinition(PointOfInstantiation,
+                                    cast<FunctionDecl>(Fun));
+    }
+  };
+
   auto It =
       PendingInstantiationsOfConstexprEntities.find(Tpl->getCanonicalDecl());
-  if (It == PendingInstantiationsOfConstexprEntities.end())
-    return;
-  for (NamedDecl *Fun : It->second) {
-    InstantiateFunctionDefinition(PointOfInstantiation,
-                                  cast<FunctionDecl>(Fun));
+  if (It != PendingInstantiationsOfConstexprEntities.end()) {
+    InstantiateAll(It->second);
   }
-  PendingInstantiationsOfConstexprEntities.erase(It);
+
+  llvm::SmallSetVector<NamedDecl *, 4> Decls;
+  if (ExternalSource) {
+    ExternalSource->ReadPendingOfInstantiationsForConstexprEntity(Tpl, Decls);
+    InstantiateAll(Decls);
+  }
 }
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,

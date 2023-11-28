@@ -849,6 +849,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SEMA_DECL_REFS);
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
+  RECORD(PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES);
   RECORD(UPDATE_VISIBLE);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
@@ -4836,6 +4837,16 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   assert(SemaRef.PendingLocalImplicitInstantiations.empty() &&
          "There are local ones at end of translation unit!");
 
+  // Build a record containing all of pending instantiations of constexpr
+  // entities.
+  RecordData PendingInstantiationsOfConstexprEntities;
+  for (const auto &I : SemaRef.PendingInstantiationsOfConstexprEntities) {
+    for (const auto &Elem : I.second) {
+      AddDeclRef(I.first, PendingInstantiationsOfConstexprEntities);
+      AddDeclRef(Elem, PendingInstantiationsOfConstexprEntities);
+    }
+  }
+
   // Build a record containing some declaration references.
   RecordData SemaDeclRefs;
   if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
@@ -5152,6 +5163,11 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // Write the record containing pending implicit instantiations.
   if (!PendingInstantiations.empty())
     Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
+
+  // Write the record containing pending instantiations of constexpr entities.
+  if (!PendingInstantiationsOfConstexprEntities.empty())
+    Stream.EmitRecord(PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES,
+                      PendingInstantiationsOfConstexprEntities);
 
   // Write the record containing declaration references of Sema.
   if (!SemaDeclRefs.empty())
