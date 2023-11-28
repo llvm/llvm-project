@@ -65,7 +65,7 @@ public:
 
 private:
   bool tryCreateStridedLoadStore(IntrinsicInst *II, Type *DataType, Value *Ptr,
-                                 Value *AlignOp);
+                                 MaybeAlign MA);
 
   std::pair<Value *, Value *> determineBaseAndStride(Instruction *Ptr,
                                                      IRBuilderBase &Builder);
@@ -459,9 +459,8 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
                                                            Type *DataType,
                                                            Value *Ptr,
-                                                           Value *AlignOp) {
+                                                           MaybeAlign MA) {
   // Make sure the operation will be supported by the backend.
-  MaybeAlign MA = cast<ConstantInt>(AlignOp)->getMaybeAlignValue();
   EVT DataTypeVT = TLI->getValueType(*DL, DataType);
   if (!MA || !TLI->isLegalStridedLoadStore(DataTypeVT, *MA))
     return false;
@@ -493,11 +492,22 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
         Intrinsic::riscv_masked_strided_load,
         {DataType, BasePtr->getType(), Stride->getType()},
         {II->getArgOperand(3), BasePtr, Stride, II->getArgOperand(2)});
-  else
+  else if (II->getIntrinsicID() == Intrinsic::vp_gather)
+    Call = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vp_strided_load,
+        {DataType, BasePtr->getType(), Stride->getType()},
+        {BasePtr, Stride, II->getArgOperand(1), II->getArgOperand(2)});
+  else if (II->getIntrinsicID() == Intrinsic::masked_scatter)
     Call = Builder.CreateIntrinsic(
         Intrinsic::riscv_masked_strided_store,
         {DataType, BasePtr->getType(), Stride->getType()},
         {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3)});
+  else if (II->getIntrinsicID() == Intrinsic::vp_scatter)
+    Call = Builder.CreateIntrinsic(
+        Intrinsic::experimental_vp_strided_store,
+        {DataType, BasePtr->getType(), Stride->getType()},
+        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(2),
+         II->getArgOperand(3)});
 
   Call->takeName(II);
   II->replaceAllUsesWith(Call);
@@ -533,22 +543,40 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
+      if (!II)
+        continue;
+      if (II->getIntrinsicID() == Intrinsic::masked_gather ||
+          II->getIntrinsicID() == Intrinsic::vp_gather) {
         Gathers.push_back(II);
-      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
+      } else if (II->getIntrinsicID() == Intrinsic::masked_scatter ||
+                 II->getIntrinsicID() == Intrinsic::vp_scatter) {
         Scatters.push_back(II);
       }
     }
   }
 
   // Rewrite gather/scatter to form strided load/store if possible.
-  for (auto *II : Gathers)
+  MaybeAlign MA;
+  for (auto *II : Gathers) {
+    if (II->getIntrinsicID() == Intrinsic::masked_gather)
+      MA = cast<ConstantInt>(II->getArgOperand(1))->getMaybeAlignValue();
+    else if (II->getIntrinsicID() == Intrinsic::vp_gather)
+      MA = II->getAttributes().getParamAttrs(0).getAlignment();
+
     Changed |= tryCreateStridedLoadStore(
-        II, II->getType(), II->getArgOperand(0), II->getArgOperand(1));
-  for (auto *II : Scatters)
+        II, II->getType(), II->getArgOperand(0), MA);
+  }
+
+  for (auto *II : Scatters) {
+    if (II->getIntrinsicID() == Intrinsic::masked_scatter)
+      MA = cast<ConstantInt>(II->getArgOperand(2))->getMaybeAlignValue();
+    else if (II->getIntrinsicID() == Intrinsic::vp_scatter)
+      MA = II->getAttributes().getParamAttrs(1).getAlignment();
+
     Changed |=
         tryCreateStridedLoadStore(II, II->getArgOperand(0)->getType(),
-                                  II->getArgOperand(1), II->getArgOperand(2));
+                                  II->getArgOperand(1), MA);
+  }
 
   // Remove any dead phis.
   while (!MaybeDeadPHIs.empty()) {
