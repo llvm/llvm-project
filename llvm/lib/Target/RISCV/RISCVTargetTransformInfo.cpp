@@ -34,6 +34,51 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+InstructionCost
+RISCVTTIImpl::getRISCVInstructionCost(RISCVInstruction Inst, MVT VT,
+                                      unsigned NumInstr,
+                                      TTI::TargetCostKind CostKind) {
+  if (CostKind == TTI::TCK_CodeSize)
+    return NumInstr;
+
+  InstructionCost LMUL = TLI->getLMULCost(VT);
+  InstructionCost Cost = LMUL * NumInstr;
+
+  if ((CostKind == TTI::TCK_RecipThroughput) ||
+      (CostKind == TTI::TCK_Latency)) {
+    switch (Inst) {
+    case RISCVInstruction::VRGATHER_VI:
+      return NumInstr * TLI->getVRGatherVICost(VT);
+    case RISCVInstruction::VRGATHER_VV:
+      return NumInstr * TLI->getVRGatherVVCost(VT);
+    case RISCVInstruction::VSLIDE:
+      return NumInstr * TLI->getVSlideCost(VT);
+    case RISCVInstruction::VSIMPLE_INT_RED:
+    case RISCVInstruction::VMINMAX_INTFP_RED:
+    case RISCVInstruction::VUNORD_FP_RED: {
+      unsigned VL = VT.getVectorMinNumElements();
+      if (!VT.isFixedLengthVector()) {
+        VL *= *getVScaleForTuning();
+      }
+      return Log2_32_Ceil(VL);
+    }
+    case RISCVInstruction::VORD_FP_RED: {
+      unsigned VL = VT.getVectorMinNumElements();
+      if (!VT.isFixedLengthVector()) {
+        VL *= *getVScaleForTuning();
+      }
+      return VL;
+    }
+    case RISCVInstruction::VMERGE:
+    case RISCVInstruction::VMV:
+    case RISCVInstruction::VSIMPLE_INT:
+    case RISCVInstruction::VNARROWING:
+      return Cost;
+    }
+  }
+  return Cost;
+}
+
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                             TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
@@ -279,7 +324,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             // Example sequence:
             //   vnsrl.wi   v10, v8, 0
             if (equal(DeinterleaveMask, Mask))
-              return LT.first * TLI->getLMULCost(LT.second);
+              return LT.first *
+                     getRISCVInstructionCost(RISCVInstruction::VNARROWING,
+                                             LT.second, 1, CostKind);
           }
         }
       }
@@ -290,7 +337,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
            LT.second.getVectorNumElements() <= 256)) {
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-        return IndexCost + TLI->getVRGatherVVCost(LT.second);
+        return IndexCost +
+               getRISCVInstructionCost(RISCVInstruction::VRGATHER_VV, LT.second,
+                                       1, CostKind);
       }
       [[fallthrough]];
     }
@@ -308,7 +357,10 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
-        return 2 * IndexCost + 2 * TLI->getVRGatherVVCost(LT.second) + MaskCost;
+        return 2 * IndexCost +
+               getRISCVInstructionCost(RISCVInstruction::VRGATHER_VV, LT.second,
+                                       2, CostKind) +
+               MaskCost;
       }
       [[fallthrough]];
     }
@@ -363,19 +415,26 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
-    return LT.first * TLI->getVSlideCost(LT.second);
+    return LT.first * getRISCVInstructionCost(RISCVInstruction::VSLIDE,
+                                              LT.second, 1, CostKind);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
-    return LT.first * TLI->getVSlideCost(LT.second);
+    return LT.first * getRISCVInstructionCost(RISCVInstruction::VSLIDE,
+                                              LT.second, 1, CostKind);
   case TTI::SK_Select: {
     // Example sequence:
     // li           a0, 90
     // vsetivli     zero, 8, e8, mf2, ta, ma (ignored)
     // vmv.s.x      v0, a0
     // vmerge.vvm   v8, v9, v8, v0
-    return LT.first * 3 * TLI->getLMULCost(LT.second);
+    return LT.first *
+           (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for li
+            getRISCVInstructionCost(RISCVInstruction::VMV, LT.second, 1,
+                                    CostKind) +
+            getRISCVInstructionCost(RISCVInstruction::VMERGE, LT.second, 1,
+                                    CostKind));
   }
   case TTI::SK_Broadcast: {
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
@@ -387,7 +446,12 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         //   vsetivli zero, 2, e8, mf8, ta, ma (ignored)
         //   vmv.v.x v8, a0
         //   vmsne.vi v0, v8, 0
-        return LT.first * TLI->getLMULCost(LT.second) * 3;
+        return LT.first *
+               (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for andi
+                getRISCVInstructionCost(RISCVInstruction::VMV, LT.second, 1,
+                                        CostKind) +
+                getRISCVInstructionCost(RISCVInstruction::VSIMPLE_INT,
+                                        LT.second, 1, CostKind));
       }
       // Example sequence:
       //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
@@ -398,24 +462,34 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       //   vmv.v.x v8, a0
       //   vmsne.vi  v0, v8, 0
 
-      return LT.first * TLI->getLMULCost(LT.second) * 6;
+      return LT.first *
+             (TLI->getLMULCost(LT.second) + // FIXME: this should be 1 for andi
+              getRISCVInstructionCost(RISCVInstruction::VMV, LT.second, 3,
+                                      CostKind) +
+              getRISCVInstructionCost(RISCVInstruction::VMERGE, LT.second, 1,
+                                      CostKind) +
+              getRISCVInstructionCost(RISCVInstruction::VSIMPLE_INT, LT.second,
+                                      1, CostKind));
     }
 
     if (HasScalar) {
       // Example sequence:
       //   vmv.v.x v8, a0
-      return LT.first * TLI->getLMULCost(LT.second);
+      return LT.first * getRISCVInstructionCost(RISCVInstruction::VMV,
+                                                LT.second, 1, CostKind);
     }
 
     // Example sequence:
     //   vrgather.vi     v9, v8, 0
-    return LT.first * TLI->getVRGatherVICost(LT.second);
+    return LT.first * getRISCVInstructionCost(RISCVInstruction::VRGATHER_VI,
+                                              LT.second, 1, CostKind);
   }
   case TTI::SK_Splice:
     // vslidedown+vslideup.
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
-    return 2 * LT.first * TLI->getVSlideCost(LT.second);
+    return LT.first * getRISCVInstructionCost(RISCVInstruction::VSLIDE,
+                                              LT.second, 2, CostKind);
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
     // * Illegal vector types
@@ -435,7 +509,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    InstructionCost GatherCost = 2 + TLI->getVRGatherVVCost(LT.second);
+    // FIXME: replace the constant `2` below with cost of VSIMPLE_INT (vid.v &
+    // vrsub.vx)
+    InstructionCost GatherCost =
+        2 + getRISCVInstructionCost(RISCVInstruction::VRGATHER_VV, LT.second, 1,
+                                    CostKind);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
     return LT.first * (LenCost + GatherCost + ExtendCost);
