@@ -162,8 +162,8 @@ LIBC_INLINE T nextafter(T from, U to) {
 
   using UIntType = typename FPBits<T>::UIntType;
   UIntType int_val = from_bits.uintval();
-  if (from != T(0.0)) {
-    if ((static_cast<U>(from) < to) == (from > T(0.0))) {
+  if (from != FPBits<T>::zero()) {
+    if ((static_cast<U>(from) < to) == (from > FPBits<T>::zero())) {
       ++int_val;
     } else {
       --int_val;
