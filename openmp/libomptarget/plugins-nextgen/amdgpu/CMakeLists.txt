@@ -80,7 +80,6 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
 
   LINK_LIBS
   PRIVATE
-  MemoryManager
   PluginInterface
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
