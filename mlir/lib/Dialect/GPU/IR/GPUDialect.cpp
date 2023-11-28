@@ -32,6 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/StringSaver.h"
+#include <cassert>
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -985,7 +986,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
-                         ValueRange asyncDependencies) {
+                         ValueRange asyncDependencies,
+                         std::optional<KernelDim3> clusterSize) {
   result.addOperands(asyncDependencies);
   if (asyncTokenType)
     result.types.push_back(builder.getType<AsyncTokenType>());
@@ -993,6 +995,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
                       getBlockSize.y, getBlockSize.z});
+  if (clusterSize.has_value())
+    result.addOperands({clusterSize->x, clusterSize->y, clusterSize->z});
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
   result.addOperands(kernelOperands);
@@ -1008,6 +1012,11 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   for (auto &sz : prop.operandSegmentSizes)
     sz = 1;
   prop.operandSegmentSizes[0] = asyncDependencies.size();
+  if (!clusterSize.has_value()) {
+    prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
+    prop.operandSegmentSizes[segmentSizesLen - 5] = 0;
+    prop.operandSegmentSizes[segmentSizesLen - 6] = 0;
+  }
   prop.operandSegmentSizes[segmentSizesLen - 3] =
       dynamicSharedMemorySize ? 1 : 0;
   prop.operandSegmentSizes[segmentSizesLen - 2] =
@@ -1018,10 +1027,13 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          SymbolRefAttr kernel, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
-                         ValueRange kernelOperands, Value asyncObject) {
+                         ValueRange kernelOperands, Value asyncObject,
+                         std::optional<KernelDim3> clusterSize) {
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
                       getBlockSize.y, getBlockSize.z});
+  if (clusterSize.has_value())
+    result.addOperands({clusterSize->x, clusterSize->y, clusterSize->z});
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
   result.addOperands(kernelOperands);
@@ -1034,6 +1046,11 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   for (auto &sz : prop.operandSegmentSizes)
     sz = 1;
   prop.operandSegmentSizes[0] = 0;
+  if (!clusterSize.has_value()) {
+    prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
+    prop.operandSegmentSizes[segmentSizesLen - 5] = 0;
+    prop.operandSegmentSizes[segmentSizesLen - 6] = 0;
+  }
   prop.operandSegmentSizes[segmentSizesLen - 3] =
       dynamicSharedMemorySize ? 1 : 0;
   prop.operandSegmentSizes[segmentSizesLen - 2] =
@@ -1067,6 +1084,13 @@ KernelDim3 LaunchFuncOp::getBlockSizeOperandValues() {
   return KernelDim3{operands[3], operands[4], operands[5]};
 }
 
+KernelDim3 LaunchFuncOp::getClusterSizeOperandValues() {
+  assert(hasClusterSize() &&
+         "cluster size is not set, check hasClusterSize() first");
+  auto operands = getOperands().drop_front(getAsyncDependencies().size());
+  return KernelDim3{operands[6], operands[7], operands[8]};
+}
+
 LogicalResult LaunchFuncOp::verify() {
   auto module = (*this)->getParentOfType<ModuleOp>();
   if (!module)
@@ -1078,21 +1102,35 @@ LogicalResult LaunchFuncOp::verify() {
                        GPUDialect::getContainerModuleAttrName() +
                        "' attribute");
 
+  if (hasClusterSize()) {
+    if (getClusterSizeY().getType() != getClusterSizeX().getType() ||
+        getClusterSizeZ().getType() != getClusterSizeX().getType())
+      return emitOpError()
+             << "expects types of the cluster dimensions must be the same";
+  }
+
   return success();
 }
 
-static ParseResult parseLaunchDimType(OpAsmParser &parser, Type &dimTy) {
+static ParseResult
+parseLaunchDimType(OpAsmParser &parser, Type &dimTy,
+                   std::optional<OpAsmParser::UnresolvedOperand> clusterValue,
+                   Type &clusterXTy, Type &clusterYTy, Type &clusterZTy) {
   if (succeeded(parser.parseOptionalColon())) {
     if (parser.parseType(dimTy))
       return failure();
   } else {
     dimTy = IndexType::get(parser.getContext());
   }
+  if (clusterValue.has_value()) {
+    clusterXTy = clusterYTy = clusterZTy = dimTy;
+  }
   return success();
 }
 
-static void printLaunchDimType(OpAsmPrinter &printer, Operation *op,
-                               Type dimTy) {
+static void printLaunchDimType(OpAsmPrinter &printer, Operation *op, Type dimTy,
+                               Value clusterValue, Type clusterXTy,
+                               Type clusterYTy, Type clusterZTy) {
   if (!dimTy.isIndex())
     printer << ": " << dimTy;
 }

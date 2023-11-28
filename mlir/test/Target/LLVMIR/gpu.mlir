@@ -75,3 +75,22 @@ module attributes {gpu.container_module} {
   llvm.func @mgpuStreamSynchronize(!llvm.ptr)
   llvm.func @mgpuStreamDestroy(!llvm.ptr)
 }
+
+// -----
+
+// Test cluster/block/thread syntax.
+module attributes {gpu.container_module} {
+  // CHECK: @kernel_module_bin_cst = internal constant [4 x i8] c"BLOB", align 8
+  gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
+  llvm.func @foo() {
+  // CHECK: [[S2:%.*]] = alloca ptr, i64 0, align 8
+  // CHECK: [[S3:%.*]] = call ptr @mgpuModuleLoad(ptr @kernel_module_bin_cst)
+  // CHECK: [[S4:%.*]] = call ptr @mgpuModuleGetFunction(ptr [[S3]], ptr @kernel_module_kernel_kernel_name)
+  // CHECK: [[S5:%.*]] = call ptr @mgpuStreamCreate()
+  // CHECK: call void @mgpuLaunchClusterKernel(ptr [[S4]], i64 2, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i32 0, ptr [[S5]], ptr [[S2]], ptr null)
+    %0 = llvm.mlir.constant(1 : index) : i64
+    %1 = llvm.mlir.constant(2 : index) : i64
+    gpu.launch_func @kernel_module::@kernel clusters in (%1, %0, %0) blocks in (%0, %0, %0) threads in (%0, %0, %0) : i64
+    llvm.return
+  }
+}
