@@ -530,6 +530,36 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
   O << ']';
 }
 
+void X86AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
+  if (!TM.getTargetTriple().isOSBinFormatMachO())
+    return AsmPrinter::emitGlobalIFunc(M, GI);
+
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
+
+  MCSymbol *Name = getSymbol(&GI);
+
+  if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
+  else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
+  else
+    assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
+
+  OutStreamer->emitCodeAlignment(Align(16), Subtarget);
+  OutStreamer->emitLabel(Name);
+  OutStreamer->emitSymbolAttribute(Name, MCSA_SymbolResolver);
+  emitVisibility(Name, GI.getVisibility());
+
+  // ld64 does not seem to support aliases of symbol resolvers, so we have to
+  // tail call the resolver manually.
+  MCInst JMP;
+  JMP.setOpcode(X86::JMP_4);
+  JMP.addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver())));
+  OutStreamer->emitInstruction(JMP, *Subtarget);
+
+  // FIXME: do the manual .symbol_resolver lowering that we did in AArch64AsmPrinter.
+}
+
 static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
                               char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
