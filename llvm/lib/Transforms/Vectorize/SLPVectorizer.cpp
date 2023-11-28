@@ -1836,7 +1836,7 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          auto It = HashMap.find(NumFreeOpsHash.Hash);
+          auto *It = HashMap.find(NumFreeOpsHash.Hash);
           if (It == HashMap.end())
             HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
           else
@@ -4922,7 +4922,7 @@ void BoUpSLP::buildExternalUses(
       int FoundLane = Entry->findLaneForValue(Scalar);
 
       // Check if the scalar is externally used as an extra arg.
-      auto ExtI = ExternallyUsedValues.find(Scalar);
+      const auto *ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
                           << Lane << " from " << *Scalar << ".\n");
@@ -13660,7 +13660,7 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     // constant index, or a pointer operand that doesn't point to a scalar
     // type.
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-      auto Idx = GEP->idx_begin()->get();
+      Value *Idx = GEP->idx_begin()->get();
       if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
         continue;
       if (!isValidElementType(Idx->getType()))
@@ -16100,7 +16100,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       auto *SI = dyn_cast<StoreInst>(it);
       bool TryToVectorizeRoot = ShouldStartVectorizeHorAtStore || !SI;
       if (SI) {
-        auto I = Stores.find(getUnderlyingObject(SI->getPointerOperand()));
+        auto *I = Stores.find(getUnderlyingObject(SI->getPointerOperand()));
         // Try to vectorize chain in store, if this is the only store to the
         // address in the block.
         // TODO: This is just a temporarily solution to save compile time. Need
