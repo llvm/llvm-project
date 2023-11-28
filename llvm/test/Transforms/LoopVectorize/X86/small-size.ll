@@ -96,7 +96,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -104,7 +104,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
 ; CHECK:       pred.store.if3:
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP10]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
@@ -112,7 +112,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; CHECK:       pred.store.if5:
-; CHECK-NEXT:    [[TMP13:%.*]] = or i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP13:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2048 x i32], ptr @b, i64 0, i64 [[TMP13]]
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
@@ -147,7 +147,7 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX20]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT21:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX20]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT22:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT21]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT22]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT22]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT18]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF23:%.*]], label [[PRED_STORE_CONTINUE24:%.*]]
@@ -276,7 +276,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE19:%.*]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT12]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT13]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT13]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -460,7 +460,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE16:%.*]] ]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = or <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[VEC_IV:%.*]] = or disjoint <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[VEC_IV]], <i64 257, i64 257, i64 257, i64 257>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
