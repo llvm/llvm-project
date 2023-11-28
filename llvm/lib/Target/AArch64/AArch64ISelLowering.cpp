@@ -21095,6 +21095,50 @@ static SDValue foldTruncStoreOfExt(SelectionDAG &DAG, SDNode *N) {
   return SDValue();
 }
 
+// A custom combine to lower load <3 x i8> as the more efficient sequence
+// below:
+//    ldrb wX, [x0, #2]
+//    ldrh wY, [x0]
+//    orr wX, wY, wX, lsl #16
+//    fmov s0, wX
+//
+static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
+  EVT MemVT = LD->getMemoryVT();
+  if (MemVT != EVT::getVectorVT(*DAG.getContext(), MVT::i8, 3) ||
+      LD->getOriginalAlign() >= 4)
+    return SDValue();
+
+  SDLoc DL(LD);
+  SDValue Chain = LD->getChain();
+  SDValue BasePtr = LD->getBasePtr();
+
+  // Load 2 x i8, then 1 x i8.
+  SDValue L16 = DAG.getLoad(MVT::i16, DL, Chain, BasePtr, LD->getPointerInfo(),
+                            LD->getOriginalAlign());
+  SDValue L8 =
+      DAG.getLoad(MVT::i8, DL, Chain,
+                  DAG.getMemBasePlusOffset(BasePtr, TypeSize::getFixed(2), DL),
+                  LD->getPointerInfo(), LD->getOriginalAlign());
+
+  // Extend to i32.
+  SDValue Ext16 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L16);
+  SDValue Ext8 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, L8);
+
+  // Pack 2 x i8 and 1 x i8 in an i32 and convert to v4i8.
+  SDValue Shr = DAG.getNode(ISD::SHL, DL, MVT::i32, Ext8,
+                            DAG.getConstant(16, DL, MVT::i32));
+  SDValue Or = DAG.getNode(ISD::OR, DL, MVT::i32, Ext16, Shr);
+  SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v4i8, Or);
+
+  // Extract v3i8 again.
+  SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MemVT, Cast,
+                                DAG.getConstant(0, DL, MVT::i64));
+  SDValue TokenFactor = DAG.getNode(
+      ISD::TokenFactor, DL, MVT::Other,
+      {SDValue(cast<SDNode>(L16), 1), SDValue(cast<SDNode>(L8), 1)});
+  return DAG.getMergeValues({Extract, TokenFactor}, DL);
+}
+
 // Perform TBI simplification if supported by the target and try to break up
 // nontemporal loads larger than 256-bits loads for odd types so LDNPQ 256-bit
 // load instructions can be selected.
@@ -21106,10 +21150,16 @@ static SDValue performLOADCombine(SDNode *N,
     performTBISimplification(N->getOperand(1), DCI, DAG);
 
   LoadSDNode *LD = cast<LoadSDNode>(N);
-  EVT MemVT = LD->getMemoryVT();
-  if (LD->isVolatile() || !LD->isNonTemporal() || !Subtarget->isLittleEndian())
+  if (LD->isVolatile() || !Subtarget->isLittleEndian())
     return SDValue(N, 0);
 
+  if (SDValue Res = combineV3I8LoadExt(LD, DAG))
+    return Res;
+
+  if (!LD->isNonTemporal())
+    return SDValue(N, 0);
+
+  EVT MemVT = LD->getMemoryVT();
   if (MemVT.isScalableVector() || MemVT.getSizeInBits() <= 256 ||
       MemVT.getSizeInBits() % 256 == 0 ||
       256 % MemVT.getScalarSizeInBits() != 0)
