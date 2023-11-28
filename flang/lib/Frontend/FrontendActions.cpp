@@ -244,8 +244,7 @@ static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
   mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
 }
 
-static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
-                              CompilerInstance &ci) {
+static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
   const std::vector<std::string> &libs =
       ci.getInvocation().getCodeGenOpts().DependentLibs;
   if (libs.empty()) {
@@ -262,6 +261,68 @@ static void addDepdendentLibs(mlir::ModuleOp &mlirModule,
     builder.create<mlir::LLVM::LinkerOptionsOp>(
         mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
+}
+
+// Add to MLIR code target specific items which are dependent on target
+// configuration specified by the user.
+// Clang equivalent function: AMDGPUTargetCodeGenInfo::emitTargetGlobals
+static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
+                                       CompilerInstance &ci) {
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+  const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
+
+  // TODO: Share address spaces enumeration between Clang and Flang.
+  // Currently this enumeration is defined in Clang specific class
+  // defined in file: clang/lib/Basic/Targets/AMDGPU.h .
+  // and we need to move it to LLVM directory.
+  const int constantAddressSpace = 4;
+
+  if (!triple.isAMDGPU()) {
+    return;
+  }
+  const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
+  if (codeGenOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_None) {
+    return;
+  }
+
+  mlir::ConversionPatternRewriter builder(mlirModule.getContext());
+  unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
+  auto int32Type = builder.getI32Type();
+
+  std::optional<mlir::LLVM::GlobalOp> originalGV;
+
+  mlirModule.walk([&originalGV, codeObjectVersionGlobalOpName](
+                      mlir::LLVM::GlobalOp globalOp) {
+    if (globalOp.getName() == codeObjectVersionGlobalOpName)
+      originalGV = globalOp;
+  });
+  if (originalGV.has_value()) {
+    mlir::LLVM::GlobalOp originalGVOp = originalGV.value();
+    if (originalGVOp.getLinkage() != mlir::LLVM::Linkage::External) {
+      return;
+    }
+    // Update the variable if it is already present in MLIR but it was marked
+    // as external linkage variable
+    originalGVOp.setLinkage(mlir::LLVM::Linkage::WeakODR);
+    originalGVOp.setValueAttr(
+        builder.getIntegerAttr(int32Type, oclcABIVERsion));
+    originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
+    originalGVOp.setAddrSpace(constantAddressSpace);
+    originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
+    return;
+  }
+
+  mlir::LLVM::GlobalOp covInfo = builder.create<mlir::LLVM::GlobalOp>(
+      /* Location */ mlirModule.getLoc(), /* Type */ int32Type,
+      /* IsConstant */ true, /* Linkage */ mlir::LLVM::Linkage::WeakODR,
+      /* Name */ codeObjectVersionGlobalOpName,
+      /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
+  covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
+  covInfo.setAddrSpace(constantAddressSpace);
+  covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  builder.insert(covInfo);
 }
 
 bool CodeGenAction::beginSourceFileAction() {
@@ -365,8 +426,10 @@ bool CodeGenAction::beginSourceFileAction() {
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
   lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
 
-  // Add dependent libraries
-  addDepdendentLibs(*mlirModule, ci);
+  // Add target specific items like dependent libraries, target specific
+  // constants etc.
+  addDependentLibs(*mlirModule, ci);
+  addAMDGPUSpecificMLIRItems(*mlirModule, ci);
 
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
