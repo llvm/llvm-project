@@ -443,4 +443,10 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_WORKAROUND_BUG_109234844_WEAK /* nothing */
 #endif
 
+#ifdef _AIX
+#  define TEST_IF_AIX(arg_true, arg_false) arg_true
+#else
+#  define TEST_IF_AIX(arg_true, arg_false) arg_false
+#endif
+
 #endif // SUPPORT_TEST_MACROS_HPP
