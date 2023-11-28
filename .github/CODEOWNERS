@@ -42,6 +42,14 @@
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar
 /mlir/lib/Interfaces/TilingInterface.* @MaheshRavishankar
 
+/mlir/**/*EmulateNarrowType* @hanhanW
+/mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @hanhanW
+/mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @hanhanW
+/mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp @hanhanW
+/mlir/lib/Dialect/Tensor/Transforms/FoldIntoPackAndUnpackPatterns.cpp @hanhanW
+/mlir/lib/Dialect/Vector/Transforms/* @hanhanW
+
 # Transform Dialect in MLIR.
 /mlir/include/mlir/Dialect/Transform/* @ftynse
 /mlir/lib/Dialect/Transform/* @ftynse
