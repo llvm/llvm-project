@@ -780,7 +780,6 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
 
   Register DefReg = MI.getOperand(0).getReg();
   const LLT DefTy = MRI.getType(DefReg);
-  MachineInstr *Result = nullptr;
 
   // When HWASAN is used and tagging of global variables is enabled
   // they should be accessed via the GOT, since the tagged address of a global
@@ -791,24 +790,24 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
-      Result =
-          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addDisp(DispMO, 0);
-    } else {
-      // Use PC-relative addressing to access the GOT for this symbol, then
-      // load the address from the GOT. This generates the pattern (PseudoLGA
-      // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
-      // %pcrel_lo(auipc))).
-      MachineFunction &MF = *MI.getParent()->getParent();
-      MachineMemOperand *MemOp = MF.getMachineMemOperand(
-          MachinePointerInfo::getGOT(MF),
-          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-              MachineMemOperand::MOInvariant,
-          DefTy, Align(DefTy.getSizeInBits() / 8));
-
-      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
-                   .addDisp(DispMO, 0)
-                   .addMemOperand(MemOp);
+      MI.setDesc(TII.get(RISCV::PseudoLLA));
+      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
     }
+
+    // Use PC-relative addressing to access the GOT for this symbol, then
+    // load the address from the GOT. This generates the pattern (PseudoLGA
+    // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
+    // %pcrel_lo(auipc))).
+    MachineFunction &MF = *MI.getParent()->getParent();
+    MachineMemOperand *MemOp = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        DefTy, Align(DefTy.getSizeInBits() / 8));
+
+    auto Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                      .addDisp(DispMO, 0)
+                      .addMemOperand(MemOp);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
@@ -834,8 +833,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
     if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
       return false;
 
-    Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
-                 .addDisp(DispMO, 0, RISCVII::MO_LO);
+    auto Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
+                      .addDisp(DispMO, 0, RISCVII::MO_LO);
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
@@ -860,22 +859,22 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
               MachineMemOperand::MOInvariant,
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
-      Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
-                   .addDisp(DispMO, 0)
-                   .addMemOperand(MemOp);
-    } else {
-      // Generate a sequence for accessing addresses within any 2GiB range
-      // within the address space. This generates the pattern (PseudoLLA sym),
-      // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
-      Result =
-          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addDisp(DispMO, 0);
+      auto Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
+                        .addDisp(DispMO, 0)
+                        .addMemOperand(MemOp);
+
+      if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
+        return false;
+
+      MI.eraseFromParent();
+      return true;
     }
 
-    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
-      return false;
-
-    MI.eraseFromParent();
-    return true;
+    // Generate a sequence for accessing addresses within any 2GiB range
+    // within the address space. This generates the pattern (PseudoLLA sym),
+    // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
+    MI.setDesc(TII.get(RISCV::PseudoLLA));
+    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
   }
 
   return false;
