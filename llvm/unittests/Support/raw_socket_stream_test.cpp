@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include <iostream>
-#include <future>
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
@@ -8,6 +5,9 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
+#include <future>
+#include <iostream>
+#include <stdlib.h>
 
 using namespace llvm;
 
@@ -45,11 +45,10 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   Server.flush();
 
   Expected<std::string> from_server = Client.read_impl();
-    if (auto E = from_server.takeError()) {
+  if (auto E = from_server.takeError()) {
     return;
     // YIKES! 😩
   }
   EXPECT_EQ("76543210", (*from_server));
-
 }
 } // namespace

@@ -641,13 +641,12 @@ class raw_socket_stream : public raw_fd_ostream {
   bool ShouldUnlink;
 
   uint64_t current_pos() const override { return 0; }
-  
+
 public:
-  int get_socket() {
-    return get_fd();
-  }
-  
-  static int MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog, std::error_code &EC);
+  int get_socket() { return get_fd(); }
+
+  static int MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog,
+                              std::error_code &EC);
 
   raw_socket_stream(int SocketFD, StringRef SockPath, std::error_code &EC);
   raw_socket_stream(StringRef SockPath, std::error_code &EC);

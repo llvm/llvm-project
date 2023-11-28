@@ -1,4 +1,4 @@
- //===--- raw_ostream.cpp - Implement the raw_ostream classes --------------===//
+//===--- raw_ostream.cpp - Implement the raw_ostream classes --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Duration.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -24,15 +25,14 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <sys/stat.h>
 
+#include <iostream>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <iostream>
 
 // <fcntl.h> may provide O_BINARY.
 #if defined(HAVE_FCNTL_H)
@@ -61,10 +61,10 @@
 #endif
 
 #ifdef _WIN32
+#include "raw_ostream.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
-#include "raw_ostream.h"
 #include <afunix.h>
 #include <io.h>
 #endif
@@ -955,7 +955,9 @@ bool raw_fd_stream::classof(const raw_ostream *OS) {
 //  raw_socket_stream
 //===----------------------------------------------------------------------===//
 
-int raw_socket_stream::MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog, std::error_code &EC) {
+int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
+                                        unsigned int MaxBacklog,
+                                        std::error_code &EC) {
 
 #ifdef _WIN32
   SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -972,14 +974,14 @@ int raw_socket_stream::MakeServerSocket(StringRef SocketPath, unsigned int MaxBa
     std::perror(Msg.c_str());
     std::cout << Msg << std::endl;
     EC = std::make_error_code(std::errc::connection_aborted);
-    return -1;  
+    return -1;
   }
 
   struct sockaddr_un Addr;
   memset(&Addr, 0, sizeof(Addr));
   Addr.sun_family = AF_UNIX;
   strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
-  
+
   if (bind(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
     if (errno == EADDRINUSE) {
       ::close(MaybeWinsocket);
@@ -995,7 +997,10 @@ int raw_socket_stream::MakeServerSocket(StringRef SocketPath, unsigned int MaxBa
     return -1;
   }
 #ifdef _WIN32
-  return _open_osfhandle(MaybeWinsocket, 0); // flags? https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/open-osfhandle?view=msvc-170
+  return _open_osfhandle(
+      MaybeWinsocket,
+      0); // flags?
+          // https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/open-osfhandle?view=msvc-170
 #else
   return MaybeWinsocket;
 #endif // _WIN32
@@ -1048,13 +1053,17 @@ static int ServerAccept(int FD) {
 
 // Server
 // Call raw_fd_ostream with ShouldClose=false
-raw_socket_stream::raw_socket_stream(int SocketFD, StringRef SockPath, std::error_code &EC) : raw_fd_ostream(ServerAccept(SocketFD), true) {
+raw_socket_stream::raw_socket_stream(int SocketFD, StringRef SockPath,
+                                     std::error_code &EC)
+    : raw_fd_ostream(ServerAccept(SocketFD), true) {
   SocketPath = SockPath;
   ShouldUnlink = true;
 }
 
 // Client
-raw_socket_stream::raw_socket_stream(StringRef SockPath, std::error_code &EC) : raw_fd_ostream(GetSocketFD(SockPath, EC), true, true, OStreamKind::OK_OStream ) {
+raw_socket_stream::raw_socket_stream(StringRef SockPath, std::error_code &EC)
+    : raw_fd_ostream(GetSocketFD(SockPath, EC), true, true,
+                     OStreamKind::OK_OStream) {
   SocketPath = SockPath;
   ShouldUnlink = false;
 }
@@ -1081,12 +1090,12 @@ Expected<std::string> raw_socket_stream::read_impl() {
   n = ::read(MaybeWinsocket, Buffer.data(), Buffer.size());
 
   if (n < 0) {
-      std::string Msg = "Buffer read error: " + std::string(strerror(errno));
-      return llvm::make_error<StringError>(Msg, inconvertibleErrorCode());
+    std::string Msg = "Buffer read error: " + std::string(strerror(errno));
+    return llvm::make_error<StringError>(Msg, inconvertibleErrorCode());
   }
 
   if (n == 0) {
-      return llvm::make_error<StringError>("EOF", inconvertibleErrorCode());
+    return llvm::make_error<StringError>("EOF", inconvertibleErrorCode());
   }
   return std::string(Buffer.data());
 }
