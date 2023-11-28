@@ -788,6 +788,11 @@ public:
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
   void clearVirtRegs();
 
+  /// clearDeadVirtRegs - Remove virtual registers without a definition and
+  /// uses. Since virtual registers are linear and can be removed only from the
+  /// end, register ids will be shuffled.
+  void clearDeadVirtRegs();
+
   /// setRegAllocationHint - Specify a register allocation hint for the
   /// specified virtual register. This is typically used by target, and in case
   /// of an earlier hint it will be overwritten.

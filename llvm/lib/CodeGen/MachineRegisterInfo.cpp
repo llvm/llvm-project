@@ -214,6 +214,41 @@ void MachineRegisterInfo::clearVirtRegs() {
     I.second = 0;
 }
 
+void MachineRegisterInfo::clearDeadVirtRegs() {
+  unsigned i = 0;
+  for (unsigned e = getNumVirtRegs(), j = e - 1; i < e; ++i) {
+    Register DeadReg = Register::index2VirtReg(i);
+    if (!reg_empty(DeadReg))
+      continue;
+
+    Register AliveReg;
+    for (; i < j; --j) {
+      AliveReg = Register::index2VirtReg(j);
+      if (!reg_empty(AliveReg))
+        break;
+    }
+    if (i == j)
+      break;
+
+    setRegClass(DeadReg, getRegClass(AliveReg));
+
+    RegAllocHints[DeadReg] = RegAllocHints[AliveReg];
+
+    if (VReg2Name.inBounds(DeadReg)) {
+      VRegNames.erase(VReg2Name[DeadReg]);
+      VReg2Name[DeadReg] = getVRegName(AliveReg);
+    }
+
+    replaceRegWith(AliveReg, DeadReg);
+  }
+  unsigned NewSize = i;
+  if (VReg2Name.size() > NewSize)
+    VReg2Name.resize(NewSize);
+
+  VRegInfo.resize(NewSize);
+  RegAllocHints.resize(NewSize);
+}
+
 void MachineRegisterInfo::verifyUseList(Register Reg) const {
 #ifndef NDEBUG
   bool Valid = true;

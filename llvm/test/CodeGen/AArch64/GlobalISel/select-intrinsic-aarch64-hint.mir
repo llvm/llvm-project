@@ -13,8 +13,7 @@ name:            hint
 legalized:       true
 regBankSelected: true
 
-# CHECK:      registers:
-# CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '' }
+# CHECK:      registers:       []
 registers:
   - { id: 0, class: gpr }
 

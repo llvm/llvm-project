@@ -269,15 +269,15 @@ define <4 x double> @frem_v4f64(<4 x double> %a, <4 x double> %b) {
 ; CHECK-GI-NEXT:    fmov d1, d11
 ; CHECK-GI-NEXT:    fmov d0, d9
 ; CHECK-GI-NEXT:    bl fmod
-; CHECK-GI-NEXT:    ldp q3, q1, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q3, [sp, #32] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #16] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #80] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-GI-NEXT:    mov v3.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v0.16b, v3.16b
 ; CHECK-GI-NEXT:    add sp, sp, #112
 ; CHECK-GI-NEXT:    ret
 entry:

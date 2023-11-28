@@ -326,6 +326,9 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // types after us (otherwise MIRPrinter would need them). Make sure the types
   // disappear.
   MRI.clearVirtRegTypes();
+  // We need to remove dead virtual registers as no register class has been
+  // assigned to them.
+  MRI.clearDeadVirtRegs();
 
   // FIXME: Should we accurately track changes?
   return true;

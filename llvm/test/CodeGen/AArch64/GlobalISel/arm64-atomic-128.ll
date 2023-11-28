@@ -9,22 +9,22 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O1-NEXT:    ldaxp x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cmp x8, x2
-; CHECK-LLSC-O1-NEXT:    cset w10, ne
-; CHECK-LLSC-O1-NEXT:    cmp x9, x3
-; CHECK-LLSC-O1-NEXT:    cinc w10, w10, ne
-; CHECK-LLSC-O1-NEXT:    cbz w10, .LBB0_3
+; CHECK-LLSC-O1-NEXT:    ldaxp x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cmp x9, x2
+; CHECK-LLSC-O1-NEXT:    cset w8, ne
+; CHECK-LLSC-O1-NEXT:    cmp x10, x3
+; CHECK-LLSC-O1-NEXT:    cinc w8, w8, ne
+; CHECK-LLSC-O1-NEXT:    cbz w8, .LBB0_3
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // in Loop: Header=BB0_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stxp w10, x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB0_1
+; CHECK-LLSC-O1-NEXT:    stxp w8, x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB0_1
 ; CHECK-LLSC-O1-NEXT:    b .LBB0_4
 ; CHECK-LLSC-O1-NEXT:  .LBB0_3: // in Loop: Header=BB0_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stxp w10, x4, x5, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB0_1
+; CHECK-LLSC-O1-NEXT:    stxp w8, x4, x5, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB0_1
 ; CHECK-LLSC-O1-NEXT:  .LBB0_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x10
 ; CHECK-LLSC-O1-NEXT:    str q0, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
@@ -94,22 +94,22 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_monotonic_seqcst:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB1_1: // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O1-NEXT:    ldaxp x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cmp x8, x2
-; CHECK-LLSC-O1-NEXT:    cset w10, ne
-; CHECK-LLSC-O1-NEXT:    cmp x9, x3
-; CHECK-LLSC-O1-NEXT:    cinc w10, w10, ne
-; CHECK-LLSC-O1-NEXT:    cbz w10, .LBB1_3
+; CHECK-LLSC-O1-NEXT:    ldaxp x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cmp x9, x2
+; CHECK-LLSC-O1-NEXT:    cset w8, ne
+; CHECK-LLSC-O1-NEXT:    cmp x10, x3
+; CHECK-LLSC-O1-NEXT:    cinc w8, w8, ne
+; CHECK-LLSC-O1-NEXT:    cbz w8, .LBB1_3
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // in Loop: Header=BB1_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stlxp w10, x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB1_1
+; CHECK-LLSC-O1-NEXT:    stlxp w8, x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB1_1
 ; CHECK-LLSC-O1-NEXT:    b .LBB1_4
 ; CHECK-LLSC-O1-NEXT:  .LBB1_3: // in Loop: Header=BB1_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stlxp w10, x4, x5, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB1_1
+; CHECK-LLSC-O1-NEXT:    stlxp w8, x4, x5, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB1_1
 ; CHECK-LLSC-O1-NEXT:  .LBB1_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x10
 ; CHECK-LLSC-O1-NEXT:    str q0, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
@@ -179,22 +179,22 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_release_acquire:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O1-NEXT:    ldaxp x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cmp x8, x2
-; CHECK-LLSC-O1-NEXT:    cset w10, ne
-; CHECK-LLSC-O1-NEXT:    cmp x9, x3
-; CHECK-LLSC-O1-NEXT:    cinc w10, w10, ne
-; CHECK-LLSC-O1-NEXT:    cbz w10, .LBB2_3
+; CHECK-LLSC-O1-NEXT:    ldaxp x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cmp x9, x2
+; CHECK-LLSC-O1-NEXT:    cset w8, ne
+; CHECK-LLSC-O1-NEXT:    cmp x10, x3
+; CHECK-LLSC-O1-NEXT:    cinc w8, w8, ne
+; CHECK-LLSC-O1-NEXT:    cbz w8, .LBB2_3
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // in Loop: Header=BB2_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stlxp w10, x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB2_1
+; CHECK-LLSC-O1-NEXT:    stlxp w8, x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB2_1
 ; CHECK-LLSC-O1-NEXT:    b .LBB2_4
 ; CHECK-LLSC-O1-NEXT:  .LBB2_3: // in Loop: Header=BB2_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stlxp w10, x4, x5, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB2_1
+; CHECK-LLSC-O1-NEXT:    stlxp w8, x4, x5, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB2_1
 ; CHECK-LLSC-O1-NEXT:  .LBB2_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x10
 ; CHECK-LLSC-O1-NEXT:    str q0, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
@@ -264,22 +264,22 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ; CHECK-LLSC-O1-LABEL: val_compare_and_swap_monotonic:
 ; CHECK-LLSC-O1:       // %bb.0:
 ; CHECK-LLSC-O1-NEXT:  .LBB3_1: // =>This Inner Loop Header: Depth=1
-; CHECK-LLSC-O1-NEXT:    ldaxp x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cmp x8, x2
-; CHECK-LLSC-O1-NEXT:    cset w10, ne
-; CHECK-LLSC-O1-NEXT:    cmp x9, x3
-; CHECK-LLSC-O1-NEXT:    cinc w10, w10, ne
-; CHECK-LLSC-O1-NEXT:    cbz w10, .LBB3_3
+; CHECK-LLSC-O1-NEXT:    ldaxp x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cmp x9, x2
+; CHECK-LLSC-O1-NEXT:    cset w8, ne
+; CHECK-LLSC-O1-NEXT:    cmp x10, x3
+; CHECK-LLSC-O1-NEXT:    cinc w8, w8, ne
+; CHECK-LLSC-O1-NEXT:    cbz w8, .LBB3_3
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // in Loop: Header=BB3_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stlxp w10, x8, x9, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB3_1
+; CHECK-LLSC-O1-NEXT:    stlxp w8, x9, x10, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB3_1
 ; CHECK-LLSC-O1-NEXT:    b .LBB3_4
 ; CHECK-LLSC-O1-NEXT:  .LBB3_3: // in Loop: Header=BB3_1 Depth=1
-; CHECK-LLSC-O1-NEXT:    stlxp w10, x4, x5, [x0]
-; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB3_1
+; CHECK-LLSC-O1-NEXT:    stlxp w8, x4, x5, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w8, .LBB3_1
 ; CHECK-LLSC-O1-NEXT:  .LBB3_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
+; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x10
 ; CHECK-LLSC-O1-NEXT:    str q0, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;

@@ -26,14 +26,14 @@ define i32 @test(i32 %a, i1 %c) {
   ; TRANSLATED-NEXT:   G_BR %bb.2
   ; TRANSLATED-NEXT: {{  $}}
   ; TRANSLATED-NEXT: bb.2.common.ret:
-  ; TRANSLATED-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %7(s32), %bb.3, [[C1]](s32), %bb.1
+  ; TRANSLATED-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[ADD:%[0-9]+]](s32), %bb.3, [[C1]](s32), %bb.1
   ; TRANSLATED-NEXT:   $w0 = COPY [[PHI]](s32)
   ; TRANSLATED-NEXT:   RET_ReallyLR implicit $w0
   ; TRANSLATED-NEXT: {{  $}}
   ; TRANSLATED-NEXT: bb.3.cont:
   ; TRANSLATED-NEXT:   successors: %bb.2(0x80000000)
   ; TRANSLATED-NEXT: {{  $}}
-  ; TRANSLATED-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
+  ; TRANSLATED-NEXT:   [[ADD]]:_(s32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
   ; TRANSLATED-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; TRANSLATED-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; TRANSLATED-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
@@ -58,14 +58,14 @@ define i32 @test(i32 %a, i1 %c) {
   ; PRESELECTION-NEXT:   G_BR %bb.2
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT: bb.2.common.ret:
-  ; PRESELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI %7(s32), %bb.3, [[C]](s32), %bb.1
+  ; PRESELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr(s32) = G_PHI [[ADD:%[0-9]+]](s32), %bb.3, [[C]](s32), %bb.1
   ; PRESELECTION-NEXT:   $w0 = COPY [[PHI]](s32)
   ; PRESELECTION-NEXT:   RET_ReallyLR implicit $w0
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT: bb.3.cont:
   ; PRESELECTION-NEXT:   successors: %bb.2(0x80000000)
   ; PRESELECTION-NEXT: {{  $}}
-  ; PRESELECTION-NEXT:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
+  ; PRESELECTION-NEXT:   [[ADD]]:gpr(s32) = G_ADD [[COPY]], [[CONSTANT_FOLD_BARRIER]]
   ; PRESELECTION-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; PRESELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; PRESELECTION-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
@@ -84,14 +84,14 @@ define i32 @test(i32 %a, i1 %c) {
   ; POSTSELECTION-NEXT:   B %bb.2
   ; POSTSELECTION-NEXT: {{  $}}
   ; POSTSELECTION-NEXT: bb.2.common.ret:
-  ; POSTSELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI %7, %bb.3, [[COPY2]], %bb.1
+  ; POSTSELECTION-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[ADDWrr:%[0-9]+]], %bb.3, [[COPY2]], %bb.1
   ; POSTSELECTION-NEXT:   $w0 = COPY [[PHI]]
   ; POSTSELECTION-NEXT:   RET_ReallyLR implicit $w0
   ; POSTSELECTION-NEXT: {{  $}}
   ; POSTSELECTION-NEXT: bb.3.cont:
   ; POSTSELECTION-NEXT:   successors: %bb.2(0x80000000)
   ; POSTSELECTION-NEXT: {{  $}}
-  ; POSTSELECTION-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[MOVi32imm]]
+  ; POSTSELECTION-NEXT:   [[ADDWrr]]:gpr32 = ADDWrr [[COPY]], [[MOVi32imm]]
   ; POSTSELECTION-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; POSTSELECTION-NEXT:   BL @callee, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp
   ; POSTSELECTION-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp

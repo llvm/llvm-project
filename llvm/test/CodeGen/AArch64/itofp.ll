@@ -4442,20 +4442,20 @@ define <32 x half> @stofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    scvtf v18.2d, v4.2d
 ; CHECK-GI-FP16-NEXT:    scvtf v17.2d, v6.2d
 ; CHECK-GI-FP16-NEXT:    scvtf v4.2d, v1.2d
-; CHECK-GI-FP16-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-GI-FP16-NEXT:    ldp q1, q23, [sp]
-; CHECK-GI-FP16-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-GI-FP16-NEXT:    scvtf v6.2d, v7.2d
+; CHECK-GI-FP16-NEXT:    ldp q1, q23, [sp]
+; CHECK-GI-FP16-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-GI-FP16-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-GI-FP16-NEXT:    mov d20, v16.d[1]
 ; CHECK-GI-FP16-NEXT:    mov d19, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    mov d21, v18.d[1]
 ; CHECK-GI-FP16-NEXT:    mov d22, v17.d[1]
-; CHECK-GI-FP16-NEXT:    fcvt h16, d16
+; CHECK-GI-FP16-NEXT:    fcvt h7, d16
 ; CHECK-GI-FP16-NEXT:    scvtf v2.2d, v1.2d
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d18
 ; CHECK-GI-FP16-NEXT:    ldr q18, [sp, #32]
-; CHECK-GI-FP16-NEXT:    fcvt h7, d17
+; CHECK-GI-FP16-NEXT:    fcvt h16, d17
 ; CHECK-GI-FP16-NEXT:    ldp q25, q17, [sp, #48]
 ; CHECK-GI-FP16-NEXT:    fcvt h20, d20
 ; CHECK-GI-FP16-NEXT:    fcvt h24, d19
@@ -4469,18 +4469,18 @@ define <32 x half> @stofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    scvtf v23.2d, v23.2d
 ; CHECK-GI-FP16-NEXT:    scvtf v25.2d, v25.2d
 ; CHECK-GI-FP16-NEXT:    mov d4, v4.d[1]
-; CHECK-GI-FP16-NEXT:    mov v16.h[1], v20.h[0]
+; CHECK-GI-FP16-NEXT:    mov v7.h[1], v20.h[0]
 ; CHECK-GI-FP16-NEXT:    ldp q19, q20, [sp, #80]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v24.h[0]
 ; CHECK-GI-FP16-NEXT:    fcvt h24, d5
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v21.h[0]
 ; CHECK-GI-FP16-NEXT:    ldr q21, [sp, #112]
-; CHECK-GI-FP16-NEXT:    mov v7.h[1], v22.h[0]
+; CHECK-GI-FP16-NEXT:    mov v16.h[1], v22.h[0]
 ; CHECK-GI-FP16-NEXT:    mov d22, v2.d[1]
 ; CHECK-GI-FP16-NEXT:    scvtf v20.2d, v20.2d
 ; CHECK-GI-FP16-NEXT:    fcvt h2, d2
 ; CHECK-GI-FP16-NEXT:    scvtf v19.2d, v19.2d
-; CHECK-GI-FP16-NEXT:    mov v16.h[2], v27.h[0]
+; CHECK-GI-FP16-NEXT:    mov v7.h[2], v27.h[0]
 ; CHECK-GI-FP16-NEXT:    scvtf v21.2d, v21.2d
 ; CHECK-GI-FP16-NEXT:    mov d5, v5.d[1]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[2], v26.h[0]
@@ -4488,7 +4488,7 @@ define <32 x half> @stofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov v1.h[2], v24.h[0]
 ; CHECK-GI-FP16-NEXT:    mov d24, v17.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h22, d22
-; CHECK-GI-FP16-NEXT:    mov v7.h[2], v28.h[0]
+; CHECK-GI-FP16-NEXT:    mov v16.h[2], v28.h[0]
 ; CHECK-GI-FP16-NEXT:    mov d27, v20.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h18, d18
 ; CHECK-GI-FP16-NEXT:    mov d28, v3.d[1]
@@ -4524,14 +4524,14 @@ define <32 x half> @stofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov v1.h[3], v5.h[0]
 ; CHECK-GI-FP16-NEXT:    fcvt h19, d22
 ; CHECK-GI-FP16-NEXT:    mov v20.h[2], v21.h[0]
-; CHECK-GI-FP16-NEXT:    mov v7.h[3], v6.h[0]
-; CHECK-GI-FP16-NEXT:    mov v16.h[3], v24.h[0]
+; CHECK-GI-FP16-NEXT:    mov v16.h[3], v6.h[0]
+; CHECK-GI-FP16-NEXT:    mov v7.h[3], v24.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v2.h[3], v23.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v18.h[3], v25.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v3.h[3], v17.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v20.h[3], v19.h[0]
-; CHECK-GI-FP16-NEXT:    mov v1.d[1], v7.d[0]
-; CHECK-GI-FP16-NEXT:    mov v0.d[1], v16.d[0]
+; CHECK-GI-FP16-NEXT:    mov v1.d[1], v16.d[0]
+; CHECK-GI-FP16-NEXT:    mov v0.d[1], v7.d[0]
 ; CHECK-GI-FP16-NEXT:    mov v2.d[1], v18.d[0]
 ; CHECK-GI-FP16-NEXT:    mov v3.d[1], v20.d[0]
 ; CHECK-GI-FP16-NEXT:    ret
@@ -4644,20 +4644,20 @@ define <32 x half> @utofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    ucvtf v18.2d, v4.2d
 ; CHECK-GI-FP16-NEXT:    ucvtf v17.2d, v6.2d
 ; CHECK-GI-FP16-NEXT:    ucvtf v4.2d, v1.2d
-; CHECK-GI-FP16-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-GI-FP16-NEXT:    ldp q1, q23, [sp]
-; CHECK-GI-FP16-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-GI-FP16-NEXT:    ucvtf v6.2d, v7.2d
+; CHECK-GI-FP16-NEXT:    ldp q1, q23, [sp]
+; CHECK-GI-FP16-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-GI-FP16-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-GI-FP16-NEXT:    mov d20, v16.d[1]
 ; CHECK-GI-FP16-NEXT:    mov d19, v0.d[1]
 ; CHECK-GI-FP16-NEXT:    mov d21, v18.d[1]
 ; CHECK-GI-FP16-NEXT:    mov d22, v17.d[1]
-; CHECK-GI-FP16-NEXT:    fcvt h16, d16
+; CHECK-GI-FP16-NEXT:    fcvt h7, d16
 ; CHECK-GI-FP16-NEXT:    ucvtf v2.2d, v1.2d
 ; CHECK-GI-FP16-NEXT:    fcvt h0, d0
 ; CHECK-GI-FP16-NEXT:    fcvt h1, d18
 ; CHECK-GI-FP16-NEXT:    ldr q18, [sp, #32]
-; CHECK-GI-FP16-NEXT:    fcvt h7, d17
+; CHECK-GI-FP16-NEXT:    fcvt h16, d17
 ; CHECK-GI-FP16-NEXT:    ldp q25, q17, [sp, #48]
 ; CHECK-GI-FP16-NEXT:    fcvt h20, d20
 ; CHECK-GI-FP16-NEXT:    fcvt h24, d19
@@ -4671,18 +4671,18 @@ define <32 x half> @utofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    ucvtf v23.2d, v23.2d
 ; CHECK-GI-FP16-NEXT:    ucvtf v25.2d, v25.2d
 ; CHECK-GI-FP16-NEXT:    mov d4, v4.d[1]
-; CHECK-GI-FP16-NEXT:    mov v16.h[1], v20.h[0]
+; CHECK-GI-FP16-NEXT:    mov v7.h[1], v20.h[0]
 ; CHECK-GI-FP16-NEXT:    ldp q19, q20, [sp, #80]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[1], v24.h[0]
 ; CHECK-GI-FP16-NEXT:    fcvt h24, d5
 ; CHECK-GI-FP16-NEXT:    mov v1.h[1], v21.h[0]
 ; CHECK-GI-FP16-NEXT:    ldr q21, [sp, #112]
-; CHECK-GI-FP16-NEXT:    mov v7.h[1], v22.h[0]
+; CHECK-GI-FP16-NEXT:    mov v16.h[1], v22.h[0]
 ; CHECK-GI-FP16-NEXT:    mov d22, v2.d[1]
 ; CHECK-GI-FP16-NEXT:    ucvtf v20.2d, v20.2d
 ; CHECK-GI-FP16-NEXT:    fcvt h2, d2
 ; CHECK-GI-FP16-NEXT:    ucvtf v19.2d, v19.2d
-; CHECK-GI-FP16-NEXT:    mov v16.h[2], v27.h[0]
+; CHECK-GI-FP16-NEXT:    mov v7.h[2], v27.h[0]
 ; CHECK-GI-FP16-NEXT:    ucvtf v21.2d, v21.2d
 ; CHECK-GI-FP16-NEXT:    mov d5, v5.d[1]
 ; CHECK-GI-FP16-NEXT:    mov v0.h[2], v26.h[0]
@@ -4690,7 +4690,7 @@ define <32 x half> @utofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov v1.h[2], v24.h[0]
 ; CHECK-GI-FP16-NEXT:    mov d24, v17.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h22, d22
-; CHECK-GI-FP16-NEXT:    mov v7.h[2], v28.h[0]
+; CHECK-GI-FP16-NEXT:    mov v16.h[2], v28.h[0]
 ; CHECK-GI-FP16-NEXT:    mov d27, v20.d[1]
 ; CHECK-GI-FP16-NEXT:    fcvt h18, d18
 ; CHECK-GI-FP16-NEXT:    mov d28, v3.d[1]
@@ -4726,14 +4726,14 @@ define <32 x half> @utofp_v32i64_v32f16(<32 x i64> %a) {
 ; CHECK-GI-FP16-NEXT:    mov v1.h[3], v5.h[0]
 ; CHECK-GI-FP16-NEXT:    fcvt h19, d22
 ; CHECK-GI-FP16-NEXT:    mov v20.h[2], v21.h[0]
-; CHECK-GI-FP16-NEXT:    mov v7.h[3], v6.h[0]
-; CHECK-GI-FP16-NEXT:    mov v16.h[3], v24.h[0]
+; CHECK-GI-FP16-NEXT:    mov v16.h[3], v6.h[0]
+; CHECK-GI-FP16-NEXT:    mov v7.h[3], v24.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v2.h[3], v23.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v18.h[3], v25.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v3.h[3], v17.h[0]
 ; CHECK-GI-FP16-NEXT:    mov v20.h[3], v19.h[0]
-; CHECK-GI-FP16-NEXT:    mov v1.d[1], v7.d[0]
-; CHECK-GI-FP16-NEXT:    mov v0.d[1], v16.d[0]
+; CHECK-GI-FP16-NEXT:    mov v1.d[1], v16.d[0]
+; CHECK-GI-FP16-NEXT:    mov v0.d[1], v7.d[0]
 ; CHECK-GI-FP16-NEXT:    mov v2.d[1], v18.d[0]
 ; CHECK-GI-FP16-NEXT:    mov v3.d[1], v20.d[0]
 ; CHECK-GI-FP16-NEXT:    ret

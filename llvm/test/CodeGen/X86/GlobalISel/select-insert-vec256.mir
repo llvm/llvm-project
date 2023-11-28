@@ -60,14 +60,14 @@ registers:
   - { id: 0, class: vecr }
   - { id: 1, class: vecr }
   - { id: 2, class: vecr }
-# AVX:               %1:vr128 = COPY $xmm1
-# AVX-NEXT:          undef %2.sub_xmm:vr256 = COPY %1
-# AVX-NEXT:          $ymm0 = COPY %2
+# AVX:               [[COPY:%[0-9]+]]:vr128 = COPY $xmm1
+# AVX-NEXT:          undef [[COPY1:%[0-9]+]].sub_xmm:vr256 = COPY [[COPY]]
+# AVX-NEXT:          $ymm0 = COPY [[COPY1]]
 # AVX-NEXT:          RET 0, implicit $ymm0
 #
-# AVX512VL:          %1:vr128x = COPY $xmm1
-# AVX512VL-NEXT:     undef %2.sub_xmm:vr256x = COPY %1
-# AVX512VL-NEXT:     $ymm0 = COPY %2
+# AVX512VL:          [[COPY:%[0-9]+]]:vr128x = COPY $xmm1
+# AVX512VL-NEXT:     undef [[COPY1:%[0-9]+]].sub_xmm:vr256x = COPY [[COPY]]
+# AVX512VL-NEXT:     $ymm0 = COPY [[COPY1]]
 # AVX512VL-NEXT:     RET 0, implicit $ymm0
 body:             |
   bb.1 (%ir-block.0):
