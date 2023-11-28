@@ -2612,6 +2612,18 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Take the second timepoints and compute the required metadata.
     OMPT_IF_ENABLED(completeH2DTimeRate(HostRef1, DeviceRef1););
 
+    uint32_t NumSdmaEngines = 0;
+    if (auto Err =
+            getDeviceAttr(HSA_AMD_AGENT_INFO_NUM_SDMA_ENG, NumSdmaEngines))
+      return Err;
+    DP("The number of SDMA Engines: %i\n", NumSdmaEngines);
+
+    uint32_t NumXGmiEngines = 0;
+    if (auto Err =
+            getDeviceAttr(HSA_AMD_AGENT_INFO_NUM_SDMA_XGMI_ENG, NumXGmiEngines))
+      return Err;
+    DP("The number of XGMI Engines: %i\n", NumXGmiEngines);
+
     return Plugin::success();
   }
 
