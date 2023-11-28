@@ -2431,6 +2431,47 @@ def DblwdCmp {
                                (v2i64 (XXSPLTW EQWSHAND, 2)), 0));
 }
 
+class SplatAndAssignIndexed<
+      SDPatternOperator op,
+      int Total, dag splat,
+      int Index, dag assign> {
+  defvar head = !listsplat(splat, Index);
+  defvar x = [assign];
+  defvar tail = !listsplat(splat, !sub(!sub(Total, Index), 1));
+  list<dag> Ops = !listconcat(head, x, tail);
+  dag DAG = !foldl((op), Ops, a, b, !con(a, (op b)));
+}
+
+class BVExtLoadAndZerosFP<int Index> : SplatAndAssignIndexed<
+    build_vector,
+    2, (f64 fpimm0),
+    Index, (f64 (extloadf32 ForceXForm:$src))>;
+
+class BVZExtLoadAndZerosInt<int Index> : SplatAndAssignIndexed<
+    build_vector,
+    2, (i64 0),
+    Index, (i64 (zextloadi32 ForceXForm:$src))>;
+
+class BVLoadAndZerosInt<int Index> : SplatAndAssignIndexed<
+    build_vector,
+    4, (i32 0),
+    Index, (i32 (load ForceXForm:$src))>;
+
+class BVLoadAndZerosFP<int Index> : SplatAndAssignIndexed<
+    build_vector,
+    4, (f32 fpimm0),
+    Index, (f32 (load ForceXForm:$src))>;
+
+class BVLoadAndZerosDbl<int Index> : SplatAndAssignIndexed<
+    build_vector,
+    2, (f64 fpimm0),
+    Index, (f64 (load ForceXForm:$src))>;
+
+class BVLoadAndZerosLong<int Index> : SplatAndAssignIndexed<
+    build_vector,
+    2, (i64 0),
+    Index, (i64 (load ForceXForm:$src))>;
+
 //---------------------------- Anonymous Patterns ----------------------------//
 // Predicate combinations are kept in roughly chronological order in terms of
 // instruction availability in the architecture. For example, VSX came in with
@@ -3449,6 +3490,53 @@ foreach Idx = [ [0,3], [2,1], [3,2] ] in {
             (STIWX (EXTRACT_SUBREG (XXSLDWI $A, $A, !head(!tail(Idx))),
                                    sub_64), ForceXForm:$src)>;
 }
+
+// BUILD_VECTOR via single load and zeros.
+// Extension load.
+def : Pat<(v2f64 BVExtLoadAndZerosFP<0>.DAG),
+          (v2f64 (COPY_TO_REGCLASS (LXSSPX ForceXForm:$src), VSRC))>;
+def : Pat<(v2f64 BVExtLoadAndZerosFP<1>.DAG),
+          (v2f64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSSPX ForceXForm:$src), VSRC), 2))>;
+
+def : Pat<(v2i64 BVZExtLoadAndZerosInt<0>.DAG),
+          (v2i64 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC))>;
+def : Pat<(v2i64 BVZExtLoadAndZerosInt<1>.DAG),
+          (v2i64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC), 2))>;
+
+// Normal load.
+foreach Index = !range(4) in {
+  defvar Temp = !sub(5, Index);
+  defvar Offset = !if(!gt(Temp, 3), !sub(Temp, 4), Temp);
+  if !ne(Offset, 0) then {
+    def : Pat<(v4i32 BVLoadAndZerosInt<Index>.DAG),
+              (v4i32 (XXSLDWIs
+                     (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC),
+                     Offset))>;
+    def : Pat<(v4f32 BVLoadAndZerosFP<Index>.DAG),
+              (v4f32 (XXSLDWIs
+                     (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC),
+                     Offset))>;
+  } else {
+    def : Pat<(v4i32 BVLoadAndZerosInt<Index>.DAG),
+              (v4i32 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC))>;
+    def : Pat<(v4f32 BVLoadAndZerosFP<Index>.DAG),
+              (v4f32 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC))>;
+  }
+}
+
+def : Pat<(v2f64 BVLoadAndZerosDbl<0>.DAG),
+          (v2f64 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC))>;
+def : Pat<(v2f64 BVLoadAndZerosDbl<1>.DAG),
+          (v2f64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC), 2))>;
+
+def : Pat<(v2i64 BVLoadAndZerosLong<0>.DAG),
+          (v2i64 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC))>;
+def : Pat<(v2i64 BVLoadAndZerosLong<1>.DAG),
+          (v2i64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC), 2))>;
 } // HasVSX, HasP8Vector, IsBigEndian, IsPPC64
 
 // Little endian Power8 VSX subtarget.
@@ -3542,6 +3630,54 @@ foreach Idx = [ [0,2], [1,1], [3,3] ] in {
             (STIWX (EXTRACT_SUBREG (XXSLDWI $A, $A, !head(!tail(Idx))),
                                    sub_64), ForceXForm:$src)>;
 }
+
+// BUILD_VECTOR via single load and zeros.
+// Extension load.
+def : Pat<(v2f64 BVExtLoadAndZerosFP<1>.DAG),
+          (v2f64 (COPY_TO_REGCLASS (LXSSPX ForceXForm:$src), VSRC))>;
+def : Pat<(v2f64 BVExtLoadAndZerosFP<0>.DAG),
+          (v2f64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSSPX ForceXForm:$src), VSRC), 2))>;
+
+def : Pat<(v2i64 BVZExtLoadAndZerosInt<1>.DAG),
+          (v2i64 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC))>;
+def : Pat<(v2i64 BVZExtLoadAndZerosInt<0>.DAG),
+          (v2i64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC), 2))>;
+
+// Normal load.
+foreach Index = !range(4) in {
+  defvar Temp = !sub(!add(Index, 4), 2);
+  defvar Offset = !if(!gt(Temp, 3), !sub(Temp, 4), Temp);
+  if !ne(Offset, 0) then {
+    def : Pat<(v4i32 BVLoadAndZerosInt<Index>.DAG),
+              (v4i32 (XXSLDWIs
+                     (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC),
+                     Offset))>;
+    def : Pat<(v4f32 BVLoadAndZerosFP<Index>.DAG),
+              (v4f32 (XXSLDWIs
+                     (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC),
+                     Offset))>;
+  } else {
+    def : Pat<(v4i32 BVLoadAndZerosInt<Index>.DAG),
+              (v4i32 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC))>;
+    def : Pat<(v4f32 BVLoadAndZerosFP<Index>.DAG),
+              (v4f32 (COPY_TO_REGCLASS (LXSIWZX ForceXForm:$src), VSRC))>;
+  }
+}
+
+def : Pat<(v2f64 BVLoadAndZerosDbl<1>.DAG),
+          (v2f64 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC))>;
+def : Pat<(v2f64 BVLoadAndZerosDbl<0>.DAG),
+          (v2f64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC), 2))>;
+
+def : Pat<(v2i64 BVLoadAndZerosLong<1>.DAG),
+          (v2i64 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC))>;
+def : Pat<(v2i64 BVLoadAndZerosLong<0>.DAG),
+          (v2i64 (XXPERMDIs
+                 (COPY_TO_REGCLASS (LXSDX ForceXForm:$src), VSRC), 2))>;
+
 } // HasVSX, HasP8Vector, IsLittleEndian
 
 // Big endian pre-Power9 VSX subtarget.
