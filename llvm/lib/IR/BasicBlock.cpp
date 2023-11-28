@@ -617,7 +617,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
                                        this->getNextNode());
 
   // Save DebugLoc of split point before invalidating iterator.
-  DebugLoc Loc = I->getDebugLoc();
+  DebugLoc Loc = I->getStableDebugLoc();
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, I, end());
