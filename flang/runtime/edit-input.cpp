@@ -244,7 +244,15 @@ bool EditIntegerInput(
     value = -value;
   }
   if (any || !io.GetConnectionState().IsAtEOF()) {
-    std::memcpy(n, &value, kind); // a blank field means zero
+    // For integer kind <= 4, the value is stored in the lower order bits on
+    // the big endian platform. When memcpy the value, shift the value, shift
+    // the value to the higher order bit.
+    if (!isHostLittleEndian && kind <= 4) {
+      auto l{value.low() << (8 * (sizeof(value.low()) - kind))};
+      std::memcpy(n, &l, kind);
+    } else {
+      std::memcpy(n, &value, kind); // a blank field means zero
+    }
   }
   return any;
 }
