@@ -3177,6 +3177,10 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_duplicate_target_attribute
+    : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
+              " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
+              "attribute string; ">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -10967,6 +10971,8 @@ def note_omp_atomic_compare: Note<
   "expect binary operator in conditional expression|expect '<', '>' or '==' as order operator|expect comparison in a form of 'x == e', 'e == x', 'x ordop expr', or 'expr ordop x'|"
   "expect lvalue for result value|expect scalar value|expect integer value|unexpected 'else' statement|expect '==' operator|expect an assignment statement 'v = x'|"
   "expect a 'if' statement|expect no more than two statements|expect a compound statement|expect 'else' statement|expect a form 'r = x == e; if (r) ...'}0">;
+def err_omp_atomic_fail_wrong_or_no_clauses : Error<"expected a memory order clause">;
+def err_omp_atomic_fail_no_compare : Error<"expected 'compare' clause with the 'fail' modifier">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<

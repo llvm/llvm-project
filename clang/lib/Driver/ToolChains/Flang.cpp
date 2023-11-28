@@ -142,6 +142,26 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
+  Arg *aliasAnalysis = Args.getLastArg(options::OPT_falias_analysis,
+                                       options::OPT_fno_alias_analysis);
+  // only pass on the argument if it does not match that implied by the
+  // optimization level: so if optimization is requested, only forward
+  // -fno-alias-analysis. If optimization is not requested, only forward
+  // -falias-analysis.
+  Arg *optLevel =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4);
+  if (aliasAnalysis) {
+    bool faliasAnalysis =
+        aliasAnalysis->getOption().matches(options::OPT_falias_analysis);
+    if (optLevel && !faliasAnalysis) {
+      CmdArgs.push_back("-fno-alias-analysis");
+    } else {
+      if (faliasAnalysis)
+        // requested alias analysis but no optimization enabled
+        CmdArgs.push_back("-falias-analysis");
+    }
+  }
+
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
@@ -201,6 +221,59 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
+  }
+}
+
+static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
+         "can only add VS runtime library on Windows!");
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+  }
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("--dependent-lib=libcmt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("--dependent-lib=libcmtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
+    break;
   }
 }
 
@@ -265,6 +338,10 @@ void Flang::addTargetOptions(const ArgList &Args,
     } else {
       A->render(Args, CmdArgs);
     }
+  }
+
+  if (Triple.isKnownWindowsMSVCEnvironment()) {
+    processVSRuntimeLibrary(TC, Args, CmdArgs);
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.

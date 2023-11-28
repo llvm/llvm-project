@@ -13,18 +13,16 @@ namespace llvm {
 namespace dwarflinker_parallel {
 
 void DIEAttributeCloner::clone() {
-  DWARFUnit &U = CU.getOrigUnit();
-
   // Extract and clone every attribute.
-  DWARFDataExtractor Data = U.getDebugInfoExtractor();
+  DWARFDataExtractor Data = InUnit.getOrigUnit().getDebugInfoExtractor();
 
   uint64_t Offset = InputDieEntry->getOffset();
   // Point to the next DIE (generally there is always at least a NULL
   // entry after the current one). If this is a lone
   // DW_TAG_compile_unit without any children, point to the next unit.
-  uint64_t NextOffset = (InputDIEIdx + 1 < U.getNumDIEs())
-                            ? U.getDIEAtIndex(InputDIEIdx + 1).getOffset()
-                            : U.getNextUnitOffset();
+  uint64_t NextOffset = (InputDIEIdx + 1 < InUnit.getOrigUnit().getNumDIEs())
+                            ? InUnit.getDIEAtIndex(InputDIEIdx + 1).getOffset()
+                            : InUnit.getOrigUnit().getNextUnitOffset();
 
   // We could copy the data only if we need to apply a relocation to it. After
   // testing, it seems there is no performance downside to doing the copy
@@ -34,8 +32,8 @@ void DIEAttributeCloner::clone() {
       DWARFDataExtractor(DIECopy, Data.isLittleEndian(), Data.getAddressSize());
 
   // Modify the copy with relocated addresses.
-  CU.getContaingFile().Addresses->applyValidRelocs(DIECopy, Offset,
-                                                   Data.isLittleEndian());
+  InUnit.getContaingFile().Addresses->applyValidRelocs(DIECopy, Offset,
+                                                       Data.isLittleEndian());
 
   // Reset the Offset to 0 as we will be working on the local copy of
   // the data.
@@ -45,17 +43,18 @@ void DIEAttributeCloner::clone() {
   Offset += getULEB128Size(Abbrev->getCode());
 
   // Set current output offset.
-  AttrOutOffset = OutDIE->getOffset();
+  AttrOutOffset = OutUnit.isCompileUnit() ? OutDIE->getOffset() : 0;
   for (const auto &AttrSpec : Abbrev->attributes()) {
     // Check whether current attribute should be skipped.
     if (shouldSkipAttribute(AttrSpec)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
-                                U.getFormParams());
+                                InUnit.getFormParams());
       continue;
     }
 
     DWARFFormValue Val = AttrSpec.getFormValue();
-    Val.extractValue(Data, &Offset, U.getFormParams(), &U);
+    Val.extractValue(Data, &Offset, InUnit.getFormParams(),
+                     &InUnit.getOrigUnit());
 
     // Clone current attribute.
     switch (AttrSpec.Form) {
@@ -107,10 +106,10 @@ void DIEAttributeCloner::clone() {
       AttrOutOffset += cloneAddressAttr(Val, AttrSpec);
       break;
     default:
-      CU.warn("unsupported attribute form " +
-                  dwarf::FormEncodingString(AttrSpec.Form) +
-                  " in DieAttributeCloner::clone(). Dropping.",
-              InputDieEntry);
+      InUnit.warn("unsupported attribute form " +
+                      dwarf::FormEncodingString(AttrSpec.Form) +
+                      " in DieAttributeCloner::clone(). Dropping.",
+                  InputDieEntry);
     }
   }
 
@@ -118,19 +117,20 @@ void DIEAttributeCloner::clone() {
   // Check if original compile unit already has DW_AT_str_offsets_base
   // attribute.
   if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      CU.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
+      InUnit.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
-        DebugOffsetPatch{
-            AttrOutOffset,
-            &CU.getOrCreateSectionDescriptor(DebugSectionKind::DebugStrOffsets),
-            true},
+        DebugOffsetPatch{AttrOutOffset,
+                         &OutUnit->getOrCreateSectionDescriptor(
+                             DebugSectionKind::DebugStrOffsets),
+                         true},
         PatchesOffsets);
 
-    AttrOutOffset += Generator
-                         .addScalarAttribute(dwarf::DW_AT_str_offsets_base,
-                                             dwarf::DW_FORM_sec_offset,
-                                             CU.getDebugStrOffsetsHeaderSize())
-                         .second;
+    AttrOutOffset +=
+        Generator
+            .addScalarAttribute(dwarf::DW_AT_str_offsets_base,
+                                dwarf::DW_FORM_sec_offset,
+                                OutUnit->getDebugStrOffsetsHeaderSize())
+            .second;
   }
 }
 
@@ -142,28 +142,28 @@ bool DIEAttributeCloner::shouldSkipAttribute(
   case dwarf::DW_AT_low_pc:
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
-    if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly)
       return false;
 
     // Skip address attribute if we are in function scope and function does not
     // reference live address.
-    return CU.getDIEInfo(InputDIEIdx).getIsInFunctionScope() &&
+    return InUnit.getDIEInfo(InputDIEIdx).getIsInFunctionScope() &&
            !FuncAddressAdjustment.has_value();
   case dwarf::DW_AT_rnglists_base:
     // In case !Update the .debug_addr table is not generated/preserved.
     // Thus instead of DW_FORM_rnglistx the DW_FORM_sec_offset is used.
     // Since DW_AT_rnglists_base is used for only DW_FORM_rnglistx the
     // DW_AT_rnglists_base is removed.
-    return !CU.getGlobalData().getOptions().UpdateIndexTablesOnly;
+    return !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
   case dwarf::DW_AT_loclists_base:
     // In case !Update the .debug_addr table is not generated/preserved.
     // Thus instead of DW_FORM_loclistx the DW_FORM_sec_offset is used.
     // Since DW_AT_loclists_base is used for only DW_FORM_loclistx the
     // DW_AT_loclists_base is removed.
-    return !CU.getGlobalData().getOptions().UpdateIndexTablesOnly;
+    return !InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
   case dwarf::DW_AT_location:
   case dwarf::DW_AT_frame_base:
-    if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
+    if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly)
       return false;
 
     // When location expression contains an address: skip this attribute
@@ -173,7 +173,7 @@ bool DIEAttributeCloner::shouldSkipAttribute(
 
     // Skip location attribute if we are in function scope and function does not
     // reference live address.
-    return CU.getDIEInfo(InputDIEIdx).getIsInFunctionScope() &&
+    return InUnit.getDIEInfo(InputDIEIdx).getIsInFunctionScope() &&
            !FuncAddressAdjustment.has_value();
   }
 }
@@ -183,19 +183,12 @@ size_t DIEAttributeCloner::cloneStringAttr(
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
   std::optional<const char *> String = dwarf::toString(Val);
   if (!String) {
-    CU.warn("cann't read string attribute.");
+    InUnit.warn("cann't read string attribute.");
     return 0;
   }
 
   StringEntry *StringInPool =
-      CU.getGlobalData().getStringPool().insert(*String).first;
-  if (AttrSpec.Form == dwarf::DW_FORM_line_strp) {
-    DebugInfoOutputSection.notePatchWithOffsetUpdate(
-        DebugLineStrPatch{{AttrOutOffset}, StringInPool}, PatchesOffsets);
-    return Generator
-        .addStringPlaceholderAttribute(AttrSpec.Attr, dwarf::DW_FORM_line_strp)
-        .second;
-  }
+      InUnit.getGlobalData().getStringPool().insert(*String).first;
 
   // Update attributes info.
   if (AttrSpec.Attr == dwarf::DW_AT_name)
@@ -204,9 +197,29 @@ size_t DIEAttributeCloner::cloneStringAttr(
            AttrSpec.Attr == dwarf::DW_AT_linkage_name)
     AttrInfo.MangledName = StringInPool;
 
-  if (CU.getVersion() < 5) {
-    DebugInfoOutputSection.notePatchWithOffsetUpdate(
-        DebugStrPatch{{AttrOutOffset}, StringInPool}, PatchesOffsets);
+  if (AttrSpec.Form == dwarf::DW_FORM_line_strp) {
+    if (OutUnit.isTypeUnit()) {
+      DebugInfoOutputSection.notePatch(DebugTypeLineStrPatch{
+          AttrOutOffset, OutDIE, InUnit.getDieTypeEntry(InputDIEIdx),
+          StringInPool});
+    } else {
+      DebugInfoOutputSection.notePatchWithOffsetUpdate(
+          DebugLineStrPatch{{AttrOutOffset}, StringInPool}, PatchesOffsets);
+    }
+    return Generator
+        .addStringPlaceholderAttribute(AttrSpec.Attr, dwarf::DW_FORM_line_strp)
+        .second;
+  }
+
+  if (Use_DW_FORM_strp) {
+    if (OutUnit.isTypeUnit()) {
+      DebugInfoOutputSection.notePatch(
+          DebugTypeStrPatch{AttrOutOffset, OutDIE,
+                            InUnit.getDieTypeEntry(InputDIEIdx), StringInPool});
+    } else {
+      DebugInfoOutputSection.notePatchWithOffsetUpdate(
+          DebugStrPatch{{AttrOutOffset}, StringInPool}, PatchesOffsets);
+    }
 
     return Generator
         .addStringPlaceholderAttribute(AttrSpec.Attr, dwarf::DW_FORM_strp)
@@ -215,7 +228,7 @@ size_t DIEAttributeCloner::cloneStringAttr(
 
   return Generator
       .addIndexedStringAttribute(AttrSpec.Attr, dwarf::DW_FORM_strx,
-                                 CU.getDebugStrIndex(StringInPool))
+                                 OutUnit->getDebugStrIndex(StringInPool))
       .second;
 }
 
@@ -225,22 +238,48 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
   if (AttrSpec.Attr == dwarf::DW_AT_sibling)
     return 0;
 
-  std::optional<std::pair<CompileUnit *, uint32_t>> RefDiePair =
-      CU.resolveDIEReference(Val, ResolveInterCUReferencesMode::Resolve);
-  if (!RefDiePair) {
+  std::optional<UnitEntryPairTy> RefDiePair =
+      InUnit.resolveDIEReference(Val, ResolveInterCUReferencesMode::Resolve);
+  if (!RefDiePair || !RefDiePair->DieEntry) {
     // If the referenced DIE is not found,  drop the attribute.
-    CU.warn("cann't find referenced DIE.", InputDieEntry);
+    InUnit.warn("cann't find referenced DIE.", InputDieEntry);
     return 0;
   }
-  assert(RefDiePair->first->getStage() >= CompileUnit::Stage::Loaded);
-  assert(RefDiePair->second != 0);
+
+  TypeEntry *RefTypeName = nullptr;
+  const CompileUnit::DIEInfo &RefDIEInfo =
+      RefDiePair->CU->getDIEInfo(RefDiePair->DieEntry);
+  if (RefDIEInfo.needToPlaceInTypeTable())
+    RefTypeName = RefDiePair->CU->getDieTypeEntry(RefDiePair->DieEntry);
+
+  if (OutUnit.isTypeUnit()) {
+    assert(RefTypeName && "Type name for referenced DIE is not set");
+    assert(InUnit.getDieTypeEntry(InputDIEIdx) &&
+           "Type name for DIE is not set");
+
+    DebugInfoOutputSection.notePatch(DebugType2TypeDieRefPatch{
+        AttrOutOffset, OutDIE, InUnit.getDieTypeEntry(InputDIEIdx),
+        RefTypeName});
+
+    return Generator
+        .addScalarAttribute(AttrSpec.Attr, dwarf::DW_FORM_ref4, 0xBADDEF)
+        .second;
+  }
+
+  if (RefTypeName) {
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugDieTypeRefPatch{AttrOutOffset, RefTypeName}, PatchesOffsets);
+
+    return Generator
+        .addScalarAttribute(AttrSpec.Attr, dwarf::DW_FORM_ref_addr, 0xBADDEF)
+        .second;
+  }
 
   // Get output offset for referenced DIE.
-  uint64_t OutDieOffset =
-      RefDiePair->first->getDieOutOffset(RefDiePair->second);
+  uint64_t OutDieOffset = RefDiePair->CU->getDieOutOffset(RefDiePair->DieEntry);
 
   // Examine whether referenced DIE is in current compile unit.
-  bool IsLocal = CU.getUniqueID() == RefDiePair->first->getUniqueID();
+  bool IsLocal = OutUnit->getUniqueID() == RefDiePair->CU->getUniqueID();
 
   // Set attribute form basing on the kind of referenced DIE(local or not?).
   dwarf::Form NewForm = IsLocal ? dwarf::DW_FORM_ref4 : dwarf::DW_FORM_ref_addr;
@@ -254,8 +293,9 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
   // If offset value is not known at this point then create patch for the
   // reference value and write dummy value into the attribute.
   DebugInfoOutputSection.notePatchWithOffsetUpdate(
-      DebugDieRefPatch{AttrOutOffset, &CU, RefDiePair->first,
-                       RefDiePair->second},
+      DebugDieRefPatch{AttrOutOffset, OutUnit.getAsCompileUnit(),
+                       RefDiePair->CU,
+                       RefDiePair->CU->getDIEIndex(RefDiePair->DieEntry)},
       PatchesOffsets);
   return Generator.addScalarAttribute(AttrSpec.Attr, NewForm, 0xBADDEF).second;
 }
@@ -267,41 +307,47 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   // Create patches for attribute referencing other non invariant section.
   // Invariant section could not be updated here as this section and
   // reference to it do not change value in case --update.
-  if (AttrSpec.Attr == dwarf::DW_AT_macro_info) {
+  switch (AttrSpec.Attr) {
+  case dwarf::DW_AT_macro_info: {
     if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
       const DWARFDebugMacro *Macro =
-          CU.getContaingFile().Dwarf->getDebugMacinfo();
+          InUnit.getContaingFile().Dwarf->getDebugMacinfo();
       if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
         return 0;
 
       DebugInfoOutputSection.notePatchWithOffsetUpdate(
-          DebugOffsetPatch{AttrOutOffset, &CU.getOrCreateSectionDescriptor(
-                                              DebugSectionKind::DebugMacinfo)},
+          DebugOffsetPatch{AttrOutOffset,
+                           &OutUnit->getOrCreateSectionDescriptor(
+                               DebugSectionKind::DebugMacinfo)},
           PatchesOffsets);
     }
-  } else if (AttrSpec.Attr == dwarf::DW_AT_macros) {
+  } break;
+  case dwarf::DW_AT_macros: {
     if (std::optional<uint64_t> Offset = Val.getAsSectionOffset()) {
       const DWARFDebugMacro *Macro =
-          CU.getContaingFile().Dwarf->getDebugMacro();
+          InUnit.getContaingFile().Dwarf->getDebugMacro();
       if (Macro == nullptr || !Macro->hasEntryForOffset(*Offset))
         return 0;
 
       DebugInfoOutputSection.notePatchWithOffsetUpdate(
-          DebugOffsetPatch{AttrOutOffset, &CU.getOrCreateSectionDescriptor(
-                                              DebugSectionKind::DebugMacro)},
+          DebugOffsetPatch{AttrOutOffset,
+                           &OutUnit->getOrCreateSectionDescriptor(
+                               DebugSectionKind::DebugMacro)},
           PatchesOffsets);
     }
-  } else if (AttrSpec.Attr == dwarf::DW_AT_stmt_list) {
+  } break;
+  case dwarf::DW_AT_stmt_list: {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
-        DebugOffsetPatch{AttrOutOffset, &CU.getOrCreateSectionDescriptor(
+        DebugOffsetPatch{AttrOutOffset, &OutUnit->getOrCreateSectionDescriptor(
                                             DebugSectionKind::DebugLine)},
         PatchesOffsets);
-  } else if (AttrSpec.Attr == dwarf::DW_AT_str_offsets_base) {
+  } break;
+  case dwarf::DW_AT_str_offsets_base: {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
-        DebugOffsetPatch{
-            AttrOutOffset,
-            &CU.getOrCreateSectionDescriptor(DebugSectionKind::DebugStrOffsets),
-            true},
+        DebugOffsetPatch{AttrOutOffset,
+                         &OutUnit->getOrCreateSectionDescriptor(
+                             DebugSectionKind::DebugStrOffsets),
+                         true},
         PatchesOffsets);
 
     // Use size of .debug_str_offsets header as attribute value. The offset
@@ -309,9 +355,36 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     AttrInfo.HasStringOffsetBaseAttr = true;
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form,
-                            CU.getDebugStrOffsetsHeaderSize())
+                            OutUnit->getDebugStrOffsetsHeaderSize())
         .second;
-  }
+  } break;
+  case dwarf::DW_AT_decl_file: {
+    // Value of DW_AT_decl_file may exceed original form. Longer
+    // form can affect offsets to the following attributes. To not
+    // update offsets of the following attributes we always remove
+    // original DW_AT_decl_file and attach it to the last position
+    // later.
+    if (OutUnit.isTypeUnit()) {
+      if (std::optional<std::pair<StringRef, StringRef>> DirAndFilename =
+              InUnit.getDirAndFilenameFromLineTable(Val))
+        DebugInfoOutputSection.notePatch(DebugTypeDeclFilePatch{
+            OutDIE,
+            InUnit.getDieTypeEntry(InputDIEIdx),
+            OutUnit->getGlobalData()
+                .getStringPool()
+                .insert(DirAndFilename->first)
+                .first,
+            OutUnit->getGlobalData()
+                .getStringPool()
+                .insert(DirAndFilename->second)
+                .first,
+        });
+      return 0;
+    }
+  } break;
+  default: {
+  } break;
+  };
 
   uint64_t Value;
   if (AttrSpec.Attr == dwarf::DW_AT_const_value &&
@@ -319,7 +392,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
        InputDieEntry->getTag() == dwarf::DW_TAG_constant))
     AttrInfo.HasLiveAddress = true;
 
-  if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly) {
+  if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly) {
     if (auto OptionalValue = Val.getAsUnsignedConstant())
       Value = *OptionalValue;
     else if (auto OptionalValue = Val.getAsSignedConstant())
@@ -327,8 +400,8 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     else if (auto OptionalValue = Val.getAsSectionOffset())
       Value = *OptionalValue;
     else {
-      CU.warn("unsupported scalar attribute form. Dropping attribute.",
-              InputDieEntry);
+      InUnit.warn("unsupported scalar attribute form. Dropping attribute.",
+                  InputDieEntry);
       return 0;
     }
 
@@ -350,12 +423,13 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     // to DW_FORM_sec_offset here.
     std::optional<uint64_t> Index = Val.getAsSectionOffset();
     if (!Index) {
-      CU.warn("cann't read the attribute. Dropping.", InputDieEntry);
+      InUnit.warn("cann't read the attribute. Dropping.", InputDieEntry);
       return 0;
     }
-    std::optional<uint64_t> Offset = CU.getOrigUnit().getRnglistOffset(*Index);
+    std::optional<uint64_t> Offset =
+        InUnit.getOrigUnit().getRnglistOffset(*Index);
     if (!Offset) {
-      CU.warn("cann't read the attribute. Dropping.", InputDieEntry);
+      InUnit.warn("cann't read the attribute. Dropping.", InputDieEntry);
       return 0;
     }
 
@@ -367,12 +441,13 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     // to DW_FORM_sec_offset here.
     std::optional<uint64_t> Index = Val.getAsSectionOffset();
     if (!Index) {
-      CU.warn("cann't read the attribute. Dropping.", InputDieEntry);
+      InUnit.warn("cann't read the attribute. Dropping.", InputDieEntry);
       return 0;
     }
-    std::optional<uint64_t> Offset = CU.getOrigUnit().getLoclistOffset(*Index);
+    std::optional<uint64_t> Offset =
+        InUnit.getOrigUnit().getLoclistOffset(*Index);
     if (!Offset) {
-      CU.warn("cann't read the attribute. Dropping.", InputDieEntry);
+      InUnit.warn("cann't read the attribute. Dropping.", InputDieEntry);
       return 0;
     }
 
@@ -380,11 +455,14 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     ResultingForm = dwarf::DW_FORM_sec_offset;
   } else if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
              InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit) {
-    std::optional<uint64_t> LowPC = CU.getLowPc();
+    if (!OutUnit.isCompileUnit())
+      return 0;
+
+    std::optional<uint64_t> LowPC = OutUnit.getAsCompileUnit()->getLowPc();
     if (!LowPC)
       return 0;
     // Dwarf >= 4 high_pc is an size, not an address.
-    Value = CU.getHighPc() - *LowPC;
+    Value = OutUnit.getAsCompileUnit()->getHighPc() - *LowPC;
   } else if (AttrSpec.Form == dwarf::DW_FORM_sec_offset)
     Value = *Val.getAsSectionOffset();
   else if (AttrSpec.Form == dwarf::DW_FORM_sdata)
@@ -392,8 +470,8 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   else if (auto OptionalValue = Val.getAsUnsignedConstant())
     Value = *OptionalValue;
   else {
-    CU.warn("unsupported scalar attribute form. Dropping attribute.",
-            InputDieEntry);
+    InUnit.warn("unsupported scalar attribute form. Dropping attribute.",
+                InputDieEntry);
     return 0;
   }
 
@@ -408,7 +486,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   } else if (DWARFAttribute::mayHaveLocationList(AttrSpec.Attr) &&
              dwarf::doesFormBelongToClass(AttrSpec.Form,
                                           DWARFFormValue::FC_SectionOffset,
-                                          CU.getOrigUnit().getVersion())) {
+                                          InUnit.getOrigUnit().getVersion())) {
     int64_t AddrAdjustmentValue = 0;
     if (VarAddressAdjustment)
       AddrAdjustmentValue = *VarAddressAdjustment;
@@ -422,7 +500,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{
             AttrOutOffset,
-            &CU.getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr),
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr),
             true},
         PatchesOffsets);
 
@@ -430,7 +508,7 @@ size_t DIEAttributeCloner::cloneScalarAttr(
     // .debug_addr would be added later while patching.
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form,
-                            CU.getDebugAddrHeaderSize())
+                            OutUnit->getDebugAddrHeaderSize())
         .second;
   } else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     AttrInfo.IsDeclaration = true;
@@ -443,6 +521,9 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
 
+  if (OutUnit.isTypeUnit())
+    return 0;
+
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
 
   // If the block is a DWARF Expression, clone it into the temporary
@@ -452,15 +533,14 @@ size_t DIEAttributeCloner::cloneBlockAttr(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DWARFUnit &OrigUnit = CU.getOrigUnit();
     DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       OrigUnit.isLittleEndian(),
-                       OrigUnit.getAddressByteSize());
-    DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
-                         OrigUnit.getFormParams().Format);
+                       InUnit.getOrigUnit().isLittleEndian(),
+                       InUnit.getOrigUnit().getAddressByteSize());
+    DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
+                         InUnit.getFormParams().Format);
 
-    CU.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
-                              VarAddressAdjustment, PatchesOffsets);
+    InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
+                                  VarAddressAdjustment, PatchesOffsets);
     Bytes = Buffer;
   }
 
@@ -491,7 +571,7 @@ size_t DIEAttributeCloner::cloneBlockAttr(
   if (HasLocationExpressionAddress)
     AttrInfo.HasLiveAddress =
         VarAddressAdjustment.has_value() ||
-        CU.getGlobalData().getOptions().UpdateIndexTablesOnly;
+        InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly;
 
   return FinalAttributeSize;
 }
@@ -502,10 +582,13 @@ size_t DIEAttributeCloner::cloneAddressAttr(
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc)
     AttrInfo.HasLiveAddress = true;
 
-  if (CU.getGlobalData().getOptions().UpdateIndexTablesOnly)
+  if (InUnit.getGlobalData().getOptions().UpdateIndexTablesOnly)
     return Generator
         .addScalarAttribute(AttrSpec.Attr, AttrSpec.Form, Val.getRawUValue())
         .second;
+
+  if (OutUnit.isTypeUnit())
+    return 0;
 
   // Cloned Die may have address attributes relocated to a
   // totally unrelated value. This can happen:
@@ -520,25 +603,25 @@ size_t DIEAttributeCloner::cloneAddressAttr(
   //  Info.PCOffset here.
 
   std::optional<DWARFFormValue> AddrAttribute =
-      CU.find(InputDieEntry, AttrSpec.Attr);
+      InUnit.find(InputDieEntry, AttrSpec.Attr);
   if (!AddrAttribute)
     llvm_unreachable("Cann't find attribute");
 
   std::optional<uint64_t> Addr = AddrAttribute->getAsAddress();
   if (!Addr) {
-    CU.warn("cann't read address attribute value.");
+    InUnit.warn("cann't read address attribute value.");
     return 0;
   }
 
   if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
       AttrSpec.Attr == dwarf::DW_AT_low_pc) {
-    if (std::optional<uint64_t> LowPC = CU.getLowPc())
+    if (std::optional<uint64_t> LowPC = OutUnit.getAsCompileUnit()->getLowPc())
       Addr = *LowPC;
     else
       return 0;
   } else if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
              AttrSpec.Attr == dwarf::DW_AT_high_pc) {
-    if (uint64_t HighPc = CU.getHighPc())
+    if (uint64_t HighPc = OutUnit.getAsCompileUnit()->getHighPc())
       Addr = HighPc;
     else
       return 0;
@@ -556,20 +639,14 @@ size_t DIEAttributeCloner::cloneAddressAttr(
 
   return Generator
       .addScalarAttribute(AttrSpec.Attr, dwarf::Form::DW_FORM_addrx,
-                          CU.getDebugAddrIndex(*Addr))
+                          OutUnit.getAsCompileUnit()->getDebugAddrIndex(*Addr))
       .second;
 }
 
 unsigned DIEAttributeCloner::finalizeAbbreviations(bool HasChildrenToClone) {
-  size_t SizeOfAbbreviationNumber =
-      Generator.finalizeAbbreviations(HasChildrenToClone);
-
-  // We need to update patches offsets after we know the size of the
-  // abbreviation number.
-  updatePatchesWithSizeOfAbbreviationNumber(SizeOfAbbreviationNumber);
-
   // Add the size of the abbreviation number to the output offset.
-  AttrOutOffset += SizeOfAbbreviationNumber;
+  AttrOutOffset +=
+      Generator.finalizeAbbreviations(HasChildrenToClone, &PatchesOffsets);
 
   return AttrOutOffset;
 }

@@ -298,3 +298,19 @@ multiclass ZAAddSub<string n_suffix> {
 
 defm SVADD : ZAAddSub<"add">;
 defm SVSUB : ZAAddSub<"sub">;
+
+//
+// Outer product and accumulate/subtract
+//
+
+let TargetGuard = "sme2" in {
+  def SVSMOPA  : Inst<"svmopa_za32[_{d}]_m", "viPPdd", "s", MergeNone, "aarch64_sme_smopa_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+  def SVUSMOPA : Inst<"svmopa_za32[_{d}]_m", "viPPdd", "Us", MergeNone, "aarch64_sme_umopa_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+
+  def SVSMOPS  : Inst<"svmops_za32[_{d}]_m", "viPPdd", "s", MergeNone, "aarch64_sme_smops_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+  def SVUSMOPS : Inst<"svmops_za32[_{d}]_m", "viPPdd", "Us", MergeNone, "aarch64_sme_umops_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+
+  def SVBMOPA : Inst<"svbmopa_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmopa_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+
+  def SVBMOPS : Inst<"svbmops_za32[_{d}]_m", "viPPdd", "iUi", MergeNone, "aarch64_sme_bmops_za32", [IsSharedZA, IsStreaming], [ImmCheck<0, ImmCheck0_3>]>;
+}

@@ -1632,17 +1632,6 @@ int32_t __tgt_rtl_init_plugin() {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_deinit_plugin() {
-  auto Err = Plugin::deinitIfNeeded();
-  if (Err) {
-    REPORT("Failure to deinitialize plugin " GETNAME(TARGET_NAME) ": %s\n",
-           toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
   if (!Plugin::isActive())
     return false;
@@ -1692,17 +1681,6 @@ int32_t __tgt_rtl_init_device(int32_t DeviceId) {
   auto Err = Plugin::get().initDevice(DeviceId);
   if (Err) {
     REPORT("Failure to initialize device %d: %s\n", DeviceId,
-           toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t __tgt_rtl_deinit_device(int32_t DeviceId) {
-  auto Err = Plugin::get().deinitDevice(DeviceId);
-  if (Err) {
-    REPORT("Failure to deinitialize device %d: %s\n", DeviceId,
            toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }

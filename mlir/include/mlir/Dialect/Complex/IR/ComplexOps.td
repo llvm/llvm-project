@@ -280,12 +280,6 @@ def ExpOp : ComplexUnaryOp<"exp", [SameOperandsAndResultType]> {
 def Expm1Op : ComplexUnaryOp<"expm1", [SameOperandsAndResultType]> {
   let summary = "computes exponential of a complex number minus 1";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `complex.expm1` ssa-use `:` type
-    ```
-
     complex.expm1(x) := complex.exp(x) - 1
 
     Example:

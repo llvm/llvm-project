@@ -278,7 +278,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     // A level-type for each level of the sparse storage
     // (consists of a level-format combined with level-properties).
     ArrayRefParameter<
-      "::mlir::sparse_tensor::DimLevelType",
+      "::mlir::sparse_tensor::LevelType",
       "level-types"
       >: $lvlTypes,
 
@@ -302,7 +302,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   );
 
   let builders = [
-    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
+    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::LevelType>":$lvlTypes,
                      CArg<"AffineMap", "{}">:$dimToLvl,
                      CArg<"AffineMap", "{}">:$lvlToDim,
                      CArg<"unsigned", "0">:$posWidth,
@@ -366,9 +366,9 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     //
 
     /// Safely looks up the level-type for the requested level.  (Returns
-    /// `DimLevelType::Dense` for the null encoding, since dense-tensors
+    /// `LevelType::Dense` for the null encoding, since dense-tensors
     /// are always all-dense.)
-    ::mlir::sparse_tensor::DimLevelType getLvlType(::mlir::sparse_tensor::Level l) const;
+    ::mlir::sparse_tensor::LevelType getLvlType(::mlir::sparse_tensor::Level l) const;
 
     bool isDenseLvl(::mlir::sparse_tensor::Level l) const { return isDenseLT(getLvlType(l)); }
     bool isCompressedLvl(::mlir::sparse_tensor::Level l) const { return isCompressedLT(getLvlType(l)); }
@@ -428,7 +428,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     void printSymbols(AffineMap &map, AsmPrinter &printer) const;
     void printDimensions(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
-    void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::DimLevelType> lvlTypes) const;
+    void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::LevelType> lvlTypes) const;
   }];
 
   let genVerifyDecl = 1;
