@@ -41,7 +41,7 @@
 
 /// FatLTO always uses UnifiedLTO. It's an error if they aren't set together
 //    UNIFIED: ![[#]] = !{i32 1, !"UnifiedLTO", i32 1}
-// NO-UNIFIED: error: the combination of '-ffat-lto-objects' and '-fno-unified-lto' is incompatible 
+// NO-UNIFIED: error: invalid argument '-ffat-lto-objects' only allowed with '-funified-lto'
 
 // ELF: .llvm.lto
 

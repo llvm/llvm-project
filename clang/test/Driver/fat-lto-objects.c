@@ -34,3 +34,13 @@
 // RUN:   -fuse-ld=lld -fno-lto -ffat-lto-objects -### 2>&1 | FileCheck --check-prefix=NOLTO %s
 // LTO: "--fat-lto-objects"
 // NOLTO-NOT: "--fat-lto-objects"
+
+/// Make sure that incompatible options emit the correct diagnostics, since -ffat-lto-objects requires -funified-lto
+// RUN: %clang -cc1 -triple=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -funified-lto -emit-llvm-only %s  2>&1 | FileCheck %s -check-prefix=UNIFIED --allow-empty
+// UNIFIED-NOT: error:
+
+// RUN: not %clang -cc1 -triple=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -emit-llvm-only %s  2>&1 | FileCheck %s -check-prefix=MISSING_UNIFIED
+// MISSING_UNIFIED: error: invalid argument '-ffat-lto-objects' only allowed with '-funified-lto'
+
+// RUN: not %clang -cc1 -triple=x86_64-unknown-linux-gnu -flto -fno-unified-lto -ffat-lto-objects -emit-llvm-only %s  2>&1 | FileCheck %s -check-prefix=NO-UNIFIED
+// NO-UNIFIED: error: the combination of '-ffat-lto-objects' and '-fno-unified-lto' is incompatible
