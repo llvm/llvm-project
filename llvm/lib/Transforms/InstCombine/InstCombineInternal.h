@@ -53,6 +53,7 @@ class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class GlobalVariable;
+struct InstCombineOptions;
 class LoopInfo;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
@@ -68,9 +69,11 @@ public:
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-                   const DataLayout &DL, LoopInfo *LI)
+                   const DataLayout &DL, LoopInfo *LI,
+                   const InstCombineOptions &Opts)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, PSI, DL, LI) {}
+                     BFI, PSI, DL, LI),
+        Opts(Opts) {}
 
   virtual ~InstCombinerImpl() = default;
 
@@ -433,6 +436,8 @@ private:
                                                  bool IsAnd);
 
   Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp, Instruction &FMFSource);
+
+  const InstCombineOptions &Opts;
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable

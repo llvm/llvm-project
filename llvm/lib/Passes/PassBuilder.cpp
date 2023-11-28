@@ -873,6 +873,8 @@ Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
                     ParamName).str(),
             inconvertibleErrorCode());
       Result.setMaxIterations((unsigned)MaxIterations.getZExtValue());
+    } else if (ParamName == "code-sinking") {
+      Result.setEnableCodeSinking(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid InstCombine pass parameter '{0}' ", ParamName).str(),

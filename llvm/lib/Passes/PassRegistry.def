@@ -528,7 +528,8 @@ FUNCTION_PASS_WITH_PARAMS("instcombine",
                           parseInstCombineOptions,
                           "no-use-loop-info;use-loop-info;"
                           "no-verify-fixpoint;verify-fixpoint;"
-                          "max-iterations=N"
+                          "max-iterations=N;"
+                          "no-code-sinking;code-sinking"
                           )
 FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                           "MergedLoadStoreMotionPass",
