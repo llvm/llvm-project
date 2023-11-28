@@ -166,11 +166,10 @@ static bool ResumeStmtCanThrow(const Stmt *S) {
     // Fall through to visit the children.
   }
 
-  for (const auto *child : S->children()) {
-    if (ResumeStmtCanThrow(child)) {
+  for (const auto *child : S->children())
+    if (ResumeStmtCanThrow(child))
       return true;
-    }
-  }
+
   return false;
 }
 
