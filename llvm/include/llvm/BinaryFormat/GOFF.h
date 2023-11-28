@@ -157,33 +157,6 @@ enum ESDAlignment : uint8_t {
   ESD_ALIGN_4Kpage = 12,
 };
 
-enum TXTRecordStyle : uint8_t {
-  TXT_RS_Byte = 0,
-  TXT_RS_Structured = 1,
-  TXT_RS_Unstructured = 2,
-};
-
-enum RLDReferenceType : uint8_t {
-  RLD_RT_RAddress = 0,
-  RLD_RT_ROffset = 1,
-  RLD_RT_RLength = 2,
-  RLD_RT_RRelativeImmediate = 6,
-  RLD_RT_RTypeConstant = 7, // XPLink ADA
-  RLD_RT_RLongDisplacement = 9,
-};
-
-enum RLDReferentType : uint8_t {
-  RLD_RO_Label = 0,
-  RLD_RO_Element = 1,
-  RLD_RO_Class = 2,
-  RLD_RO_Part = 3,
-};
-
-enum RLDAction : uint8_t {
-  RLD_ACT_Add = 0,
-  RLD_ACT_Subtract = 1,
-};
-
 enum ENDEntryPointRequest : uint8_t {
   END_EPR_None = 0,
   END_EPR_EsdidOffset = 1,
