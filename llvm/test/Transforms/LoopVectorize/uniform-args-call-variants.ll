@@ -77,7 +77,7 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[WIDE_LOAD]], i64 0

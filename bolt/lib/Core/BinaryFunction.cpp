@@ -40,6 +40,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 #include <functional>
 #include <limits>
 #include <numeric>
@@ -3636,7 +3637,7 @@ size_t BinaryFunction::computeHash(bool UseDFS,
   for (const BinaryBasicBlock *BB : Order)
     HashString.append(hashBlock(BC, *BB, OperandHashFunc));
 
-  return Hash = std::hash<std::string>{}(HashString);
+  return Hash = llvm::xxh3_64bits(HashString);
 }
 
 void BinaryFunction::insertBasicBlocks(

@@ -4,7 +4,7 @@
 ; RUN: not llvm-readtapi -merge -compact %t/tmp.tbd %t/tmp2.tbd --filetype=tbd-v2 2>&1 | FileCheck %s --check-prefix FILE_FORMAT 
 
 CHECK: OVERVIEW: LLVM TAPI file reader and manipulator
-CHECK: USAGE: llvm-readtapi [options] <inputs>
+CHECK: USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o <output>]*
 CHECK: OPTIONS:
 CHECK:   -help    display this help
 

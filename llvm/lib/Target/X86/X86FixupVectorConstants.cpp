@@ -357,14 +357,14 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     unsigned OpBcst32 = 0, OpBcst64 = 0;
     unsigned OpNoBcst32 = 0, OpNoBcst64 = 0;
     if (OpSrc32) {
-      if (const X86MemoryFoldTableEntry *Mem2Bcst =
+      if (const X86FoldTableEntry *Mem2Bcst =
               llvm::lookupBroadcastFoldTable(OpSrc32, 32)) {
         OpBcst32 = Mem2Bcst->DstOp;
         OpNoBcst32 = Mem2Bcst->Flags & TB_INDEX_MASK;
       }
     }
     if (OpSrc64) {
-      if (const X86MemoryFoldTableEntry *Mem2Bcst =
+      if (const X86FoldTableEntry *Mem2Bcst =
               llvm::lookupBroadcastFoldTable(OpSrc64, 64)) {
         OpBcst64 = Mem2Bcst->DstOp;
         OpNoBcst64 = Mem2Bcst->Flags & TB_INDEX_MASK;
