@@ -12,7 +12,7 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
