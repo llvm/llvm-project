@@ -738,8 +738,12 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
                     InfoSectionOffset, InfoSectionOffset + C.getLength32(),
                     "debug_info", OverflowOptValue, AnySectionOverflow))
               return Err;
-            if (AnySectionOverflow)
+            if (AnySectionOverflow) {
+              if (Header.Version < 5 ||
+                  Header.UnitType == dwarf::DW_UT_split_compile)
+                FoundCUUnit = true;
               break;
+            }
           }
 
           UnitOffset += C.getLength32();
