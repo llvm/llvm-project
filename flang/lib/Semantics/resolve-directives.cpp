@@ -1989,16 +1989,17 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
     return nullptr;
   }
   // First check if the Common Block is declared in the current scope
-  if (auto *cur{GetContext().scope.FindCommonBlock(name->source)}) {
-    name->symbol = cur;
-    return cur;
-  }
+  Symbol *sym{GetContext().scope.FindCommonBlock(name->source)};
   // Then check parent scope
-  if (auto *prev{GetContext().scope.parent().FindCommonBlock(name->source)}) {
-    name->symbol = prev;
-    return prev;
+  if (!sym) {
+    sym = GetContext().scope.parent().FindCommonBlock(name->source);
   }
-  return nullptr;
+  if (!sym) {
+    return nullptr;
+  }
+  sym->set(Symbol::Flag::OmpCommonBlock);
+  name->symbol = sym;
+  return sym;
 }
 
 // Use this function over ResolveOmpName when an omp object's scope needs
@@ -2152,8 +2153,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
           [&](const parser::Name &name) { // common block
             if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
               if (!dataCopyingAttributeFlags.test(ompFlag)) {
-                CheckMultipleAppearances(
-                    name, *symbol, Symbol::Flag::OmpCommonBlock);
+                CheckMultipleAppearances(name, *symbol, ompFlag);
               }
               // 2.15.3 When a named common block appears in a list, it has the
               // same meaning as if every explicit member of the common block
