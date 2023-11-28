@@ -150,7 +150,7 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     if (ContinueOption == "soft-stop") {
       OverflowOptValue = OnCuIndexOverflow::SoftStop;
     } else {
-      ContinueOption = OnCuIndexOverflow::Continue;
+      OverflowOptValue = OnCuIndexOverflow::Continue;
     }
   }
 
