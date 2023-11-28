@@ -1,5 +1,6 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -c 2>&1 | FileCheck %s -check-prefix=CHECK-CC
 // CHECK-CC: -cc1
+// CHECK-CC-SAME: -funified-lto
 // CHECK-CC-SAME: -emit-obj
 // CHECK-CC-SAME: -ffat-lto-objects
 
@@ -15,6 +16,7 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -S 2>&1 | FileCheck %s -check-prefix=CHECK-CC-S-LTO
 // RUN: %clang --target=x86_64-unknown-linux-gnu -flto -ffat-lto-objects -### %s -S -emit-llvm 2>&1 | FileCheck %s -check-prefix=CHECK-CC-S-LTO
 // CHECK-CC-S-LTO: -cc1
+// CHECK-CC-S-LTO-SAME: -funified-lto
 // CHECK-CC-S-LTO-SAME: -emit-llvm
 // CHECK-CC-S-LTO-SAME: -ffat-lto-objects
 
