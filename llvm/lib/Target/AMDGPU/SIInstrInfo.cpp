@@ -3511,14 +3511,10 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               MRI->hasOneUse(Src0->getReg())) {
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
             Src0Inlined = true;
-          } else if ((Src0->getReg().isPhysical() &&
-                      (ST.getConstantBusLimit(Opc) <= 1 &&
-                       RI.isSGPRClass(
-                           RI.getPhysRegBaseClass(Src0->getReg())))) ||
-                     (Src0->getReg().isVirtual() &&
-                      (ST.getConstantBusLimit(Opc) <= 1 &&
-                       RI.isSGPRClass(MRI->getRegClass(Src0->getReg())))))
+          } else if (ST.getConstantBusLimit(Opc) <= 1 &&
+                     RI.isSGPRReg(*MRI, Src0->getReg())) {
             return false;
+          }
           // VGPR is okay as Src0 - fallthrough
         }
 
@@ -3527,12 +3523,9 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
           MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
           if (Def && Def->isMoveImmediate() &&
               isInlineConstant(Def->getOperand(1)) &&
-              MRI->hasOneUse(Src1->getReg()) && commuteInstruction(UseMI)) {
+              MRI->hasOneUse(Src1->getReg()) && commuteInstruction(UseMI))
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
-          } else if ((Src1->getReg().isPhysical() &&
-                      RI.isSGPRClass(RI.getPhysRegBaseClass(Src1->getReg()))) ||
-                     (Src1->getReg().isVirtual() &&
-                      RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
+          else if (RI.isSGPRReg(*MRI, Src1->getReg()))
             return false;
           // VGPR is okay as Src1 - fallthrough
         }
