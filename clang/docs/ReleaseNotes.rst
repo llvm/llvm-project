@@ -228,6 +228,8 @@ Non-comprehensive list of changes in this release
 * ``__builtin_classify_type()`` now classifies ``_BitInt`` values as the return value ``18``
   and vector types as return value ``19``, to match GCC 14's behavior.
 
+* Added ``#pragma clang fp reciprocal``.
+
 New Compiler Flags
 ------------------
 
