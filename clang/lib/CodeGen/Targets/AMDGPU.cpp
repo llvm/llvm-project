@@ -368,7 +368,7 @@ void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     return;
 
   if (CGM.getTarget().getTargetOpts().CodeObjectVersion ==
-      llvm::CodeObjectVersionKind::COV_None)
+      clang::TargetOptions::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
