@@ -21,6 +21,8 @@
 #include "Shared/Profile.h"
 #include "Shared/Utils.h"
 
+#include "Utils/ExponentialBackoff.h"
+
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -452,7 +454,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // completed (use device side blocking mechanism). This allows the runtime to
   // adapt itself when there are a lot of long-running target regions in-flight.
   using namespace llvm::omp::target;
-  static thread_local ExponentialBackoff QueryCounter(
+  static thread_local utils::ExponentialBackoff QueryCounter(
       Int64Envar("OMPTARGET_QUERY_COUNT_MAX", 10),
       Int64Envar("OMPTARGET_QUERY_COUNT_THRESHOLD", 5),
       Envar<float>("OMPTARGET_QUERY_COUNT_BACKOFF_FACTOR", 0.5f));
