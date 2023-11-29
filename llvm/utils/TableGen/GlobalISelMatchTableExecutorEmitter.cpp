@@ -164,11 +164,14 @@ void GlobalISelMatchTableExecutorEmitter::emitTypeObjects(
 
 void GlobalISelMatchTableExecutorEmitter::emitMatchTable(
     raw_ostream &OS, const MatchTable &Table) {
-  OS << "const int64_t *" << getClassName() << "::getMatchTable() const {\n";
+  emitEncodingMacrosDef(OS);
+  OS << "const uint8_t *" << getClassName() << "::getMatchTable() const {\n";
   Table.emitDeclaration(OS);
   OS << "  return ";
   Table.emitUse(OS);
   OS << ";\n}\n";
+  emitEncodingMacrosUndef(OS);
+  OS << "\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
@@ -187,7 +190,9 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitCustomOperandRenderers(OS, CustomOperandRenderers);
   emitAdditionalImpl(OS);
   emitRunCustomAction(OS);
+
   emitMatchTable(OS, Table);
+
   OS << "#endif // ifdef " << IfDefName << "\n\n";
 }
 
@@ -226,7 +231,7 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
         "const override;\n"
      << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
         "&Imm) const override;\n"
-     << "  const int64_t *getMatchTable() const override;\n"
+     << "  const uint8_t *getMatchTable() const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
         "const override;\n"

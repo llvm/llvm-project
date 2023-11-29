@@ -32,61 +32,61 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   CImmInstTest1
 ]>;
 
-// CHECK:      const int64_t *GenMyCombiner::getMatchTable() const {
-// CHECK-NEXT:   constexpr static int64_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/19, 127, /*)*//*default:*//*Label 3*/ 195,
-// CHECK-NEXT:     /*TargetOpcode::COPY*//*Label 0*/ 113, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-// CHECK-NEXT:     /*TargetOpcode::G_CONSTANT*//*Label 1*/ 139, 0, 0, 0, 0, 0,
-// CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 2*/ 166,
-// CHECK-NEXT:     // Label 0: @113
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ 138, // Rule ID 0 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
+// CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
+// CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
+// CHECK-NEXT:     GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2(19), GIMT_Encode2(127), /*)*//*default:*//*Label 3*/ GIMT_Encode4(582),
+// CHECK-NEXT:     /*TargetOpcode::COPY*//*Label 0*/ GIMT_Encode4(442), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:     /*TargetOpcode::G_CONSTANT*//*Label 1*/ GIMT_Encode4(487), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0), GIMT_Encode4(0),
+// CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 2*/ GIMT_Encode4(533),
+// CHECK-NEXT:     // Label 0: @442
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(486), // Rule ID 0 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       GIM_CheckConstantInt, /*MI*/0, /*Op*/1, 0,
+// CHECK-NEXT:       GIM_CheckConstantInt, /*MI*/0, /*Op*/1, GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: InstTest0
-// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // a
-// CHECK-NEXT:       GIR_AddImm, /*InsnID*/0, /*Imm*/0,
+// CHECK-NEXT:       GIR_AddImm, /*InsnID*/0, /*Imm*/GIMT_Encode8(0),
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 4: @138
+// CHECK-NEXT:     // Label 4: @486
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 1: @139
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ 165, // Rule ID 2 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule2Enabled,
+// CHECK-NEXT:     // Label 1: @487
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(532), // Rule ID 2 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule2Enabled),
 // CHECK-NEXT:       GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
-// CHECK-NEXT:       GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, 0,
+// CHECK-NEXT:       GIM_CheckLiteralInt, /*MI*/0, /*Op*/1, GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #2: CImmInstTest1
-// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::G_CONSTANT,
+// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // a
-// CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/GILLT_s32, /*Imm*/42,
+// CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/GILLT_s32, /*Imm*/GIMT_Encode8(42),
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 5: @165
+// CHECK-NEXT:     // Label 5: @532
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 2: @166
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ 194, // Rule ID 1 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule1Enabled,
+// CHECK-NEXT:     // Label 2: @533
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(581), // Rule ID 1 //
+// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule1Enabled),
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       // MIs[0] Operand 1
-// CHECK-NEXT:       GIM_CheckConstantInt, /*MI*/0, /*Op*/1, 0,
+// CHECK-NEXT:       GIM_CheckConstantInt, /*MI*/0, /*Op*/1, GIMT_Encode8(0),
 // CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
+// CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #1: InstTest1
-// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
+// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/0, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // a
-// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/0,
+// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(0),
 // CHECK-NEXT:       GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:       GIR_Done,
-// CHECK-NEXT:     // Label 6: @194
+// CHECK-NEXT:     // Label 6: @581
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     // Label 3: @195
+// CHECK-NEXT:     // Label 3: @582
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     };
+// CHECK-NEXT:     }; // Size: 583 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }
