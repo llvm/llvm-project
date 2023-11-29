@@ -7315,7 +7315,7 @@ this usage is debugger-dependent.
 }
 
 def CleanupDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatVariable;
   let Content = [{
 This attribute allows a function to be run when a local variable goes out of
 scope. The attribute takes the identifier of a function with a parameter type
