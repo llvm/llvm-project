@@ -60,14 +60,15 @@ static bool generateSnippetSetupCode(
     }
     BBF.addInstructions(ET.setStackRegisterToAuxMem());
   }
+  Register StackPointerRegister = BBF.MF.getSubtarget()
+                                      .getTargetLowering()
+                                      ->getStackPointerRegisterToSaveRestore();
   for (const RegisterValue &RV : RegisterInitialValues) {
     if (GenerateMemoryInstructions) {
       // If we're generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
       // the setup.
-      if (RV.Register == BBF.MF.getSubtarget()
-                             .getTargetLowering()
-                             ->getStackPointerRegisterToSaveRestore())
+      if (RV.Register == StackPointerRegister)
         continue;
     }
     // Load a constant in the register.
@@ -84,9 +85,7 @@ static bool generateSnippetSetupCode(
       // Load in the stack register now as we're done using it elsewhere
       // and need to set the value in preparation for executing the
       // snippet.
-      if (RV.Register == BBF.MF.getSubtarget()
-                             .getTargetLowering()
-                             ->getStackPointerRegisterToSaveRestore())
+      if (RV.Register == StackPointerRegister)
         continue;
       const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
       if (SetRegisterCode.empty())
