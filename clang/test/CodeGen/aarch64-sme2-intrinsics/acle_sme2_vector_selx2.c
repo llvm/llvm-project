@@ -15,7 +15,7 @@
 #define SVE_ACLE_FUNC(A1,A2) A1##A2
 #endif
 
-// 8-bit ZIPs
+// 8-bit SELs
 
 // CHECK-LABEL: @test_svsel_s8_x2(
 // CHECK-NEXT:  entry:
@@ -77,7 +77,7 @@ svuint8x2_t test_svsel_u8_x2(svcount_t pn, svuint8x2_t zn, svuint8x2_t zm) __arm
   return SVE_ACLE_FUNC(svsel,_u8_x2)(pn, zn, zm);
 }
 
-// 16-bit ZIPs
+// 16-bit SELs
 
 // CHECK-LABEL: @test_svsel_s16_x2(
 // CHECK-NEXT:  entry:
@@ -199,7 +199,7 @@ svbfloat16x2_t test_svsel_bf16_x2(svcount_t pn, svbfloat16x2_t zn, svbfloat16x2_
   return SVE_ACLE_FUNC(svsel,_bf16_x2)(pn, zn, zm);
 }
 
-// 32-bit ZIPs
+// 32-bit SELs
 
 // CHECK-LABEL: @test_svsel_s32_x2(
 // CHECK-NEXT:  entry:
@@ -291,7 +291,7 @@ svfloat32x2_t test_svsel_f32_x2(svcount_t pn, svfloat32x2_t zn, svfloat32x2_t zm
   return SVE_ACLE_FUNC(svsel,_f32_x2)(pn, zn, zm);
 }
 
-// 64-bit ZIPs
+// 64-bit SELs
 
 // CHECK-LABEL: @test_svsel_s64_x2(
 // CHECK-NEXT:  entry:
