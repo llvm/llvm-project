@@ -3,6 +3,10 @@
 ; RUN: llc -march=amdgcn -global-isel=0 -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck %s --check-prefixes=CHECK,DAGISEL
 ; RUN: llc -march=amdgcn -global-isel -mcpu=gfx1010 < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 ; RUN: llc -march=amdgcn -global-isel -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck %s --check-prefixes=CHECK,GISEL
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -passes=instcombine -o - < %s | llc -march=amdgcn -global-isel=0 -mcpu=gfx1010 - | FileCheck %s --check-prefixes=CHECK-OPT,DAGISEL-OPT
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -passes=instcombine -o - < %s | llc -march=amdgcn -global-isel=0 -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 - | FileCheck %s --check-prefixes=CHECK-OPT,DAGISEL-OPT
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -passes=instcombine -o - < %s | llc -march=amdgcn -global-isel -mcpu=gfx1010 - | FileCheck %s --check-prefixes=CHECK-OPT,GISEL-OPT
+; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -passes=instcombine -o - < %s | llc -march=amdgcn -global-isel -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 - | FileCheck %s --check-prefixes=CHECK-OPT,GISEL-OPT
 
 declare i64 @llvm.amdgcn.ballot.i64(i1)
 declare i64 @llvm.ctpop.i64(i64)
@@ -15,6 +19,12 @@ define amdgpu_cs i64 @constant_false() {
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
+;
+; CHECK-OPT-LABEL: constant_false:
+; CHECK-OPT:       ; %bb.0:
+; CHECK-OPT-NEXT:    s_mov_b32 s0, 0
+; CHECK-OPT-NEXT:    s_mov_b32 s1, 0
+; CHECK-OPT-NEXT:    ; return to shader part epilog
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 0)
   ret i64 %ballot
 }
@@ -33,6 +43,18 @@ define amdgpu_cs i64 @constant_true() {
 ; GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GISEL-NEXT:    s_mov_b32 s1, 0
 ; GISEL-NEXT:    ; return to shader part epilog
+;
+; DAGISEL-OPT-LABEL: constant_true:
+; DAGISEL-OPT:       ; %bb.0:
+; DAGISEL-OPT-NEXT:    s_mov_b32 s0, exec_lo
+; DAGISEL-OPT-NEXT:    s_mov_b32 s1, exec_hi
+; DAGISEL-OPT-NEXT:    ; return to shader part epilog
+;
+; GISEL-OPT-LABEL: constant_true:
+; GISEL-OPT:       ; %bb.0:
+; GISEL-OPT-NEXT:    s_mov_b32 s0, exec_lo
+; GISEL-OPT-NEXT:    s_mov_b32 s1, 0
+; GISEL-OPT-NEXT:    ; return to shader part epilog
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 1)
   ret i64 %ballot
 }
@@ -46,6 +68,21 @@ define amdgpu_cs i64 @non_compare(i32 %x) {
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
 ; CHECK-NEXT:    ; return to shader part epilog
+;
+; DAGISEL-OPT-LABEL: non_compare:
+; DAGISEL-OPT:       ; %bb.0:
+; DAGISEL-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; DAGISEL-OPT-NEXT:    s_mov_b32 s1, 0
+; DAGISEL-OPT-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; DAGISEL-OPT-NEXT:    ; return to shader part epilog
+;
+; GISEL-OPT-LABEL: non_compare:
+; GISEL-OPT:       ; %bb.0:
+; GISEL-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-OPT-NEXT:    s_mov_b32 s1, 0
+; GISEL-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-OPT-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; GISEL-OPT-NEXT:    ; return to shader part epilog
   %trunc = trunc i32 %x to i1
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %trunc)
   ret i64 %ballot
@@ -59,6 +96,12 @@ define amdgpu_cs i64 @compare_ints(i32 %x, i32 %y) {
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s0, v0, v1
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
+;
+; CHECK-OPT-LABEL: compare_ints:
+; CHECK-OPT:       ; %bb.0:
+; CHECK-OPT-NEXT:    v_cmp_eq_u32_e64 s0, v0, v1
+; CHECK-OPT-NEXT:    s_mov_b32 s1, 0
+; CHECK-OPT-NEXT:    ; return to shader part epilog
   %cmp = icmp eq i32 %x, %y
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
   ret i64 %ballot
@@ -76,6 +119,12 @@ define amdgpu_cs i64 @compare_int_with_constant(i32 %x) {
 ; GISEL-NEXT:    v_cmp_le_i32_e64 s0, 0x63, v0
 ; GISEL-NEXT:    s_mov_b32 s1, 0
 ; GISEL-NEXT:    ; return to shader part epilog
+;
+; CHECK-OPT-LABEL: compare_int_with_constant:
+; CHECK-OPT:       ; %bb.0:
+; CHECK-OPT-NEXT:    v_cmp_lt_i32_e64 s0, 0x62, v0
+; CHECK-OPT-NEXT:    s_mov_b32 s1, 0
+; CHECK-OPT-NEXT:    ; return to shader part epilog
   %cmp = icmp sge i32 %x, 99
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
   ret i64 %ballot
@@ -87,6 +136,12 @@ define amdgpu_cs i64 @compare_floats(float %x, float %y) {
 ; CHECK-NEXT:    v_cmp_gt_f32_e64 s0, v0, v1
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
+;
+; CHECK-OPT-LABEL: compare_floats:
+; CHECK-OPT:       ; %bb.0:
+; CHECK-OPT-NEXT:    v_cmp_gt_f32_e64 s0, v0, v1
+; CHECK-OPT-NEXT:    s_mov_b32 s1, 0
+; CHECK-OPT-NEXT:    ; return to shader part epilog
   %cmp = fcmp ogt float %x, %y
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
   ret i64 %ballot
@@ -99,6 +154,13 @@ define amdgpu_cs i64 @ctpop_of_ballot(float %x, float %y) {
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
 ; CHECK-NEXT:    ; return to shader part epilog
+;
+; CHECK-OPT-LABEL: ctpop_of_ballot:
+; CHECK-OPT:       ; %bb.0:
+; CHECK-OPT-NEXT:    v_cmp_gt_f32_e64 s0, v0, v1
+; CHECK-OPT-NEXT:    s_mov_b32 s1, 0
+; CHECK-OPT-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
+; CHECK-OPT-NEXT:    ; return to shader part epilog
   %cmp = fcmp ogt float %x, %y
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
   %bcnt = call i64 @llvm.ctpop.i64(i64 %ballot)
@@ -119,6 +181,20 @@ define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_compare(i32 %v) {
 ; CHECK-NEXT:    s_mov_b32 s0, 33
 ; CHECK-NEXT:    s_branch .LBB7_3
 ; CHECK-NEXT:  .LBB7_3:
+;
+; CHECK-OPT-LABEL: branch_divergent_ballot64_ne_zero_compare:
+; CHECK-OPT:       ; %bb.0:
+; CHECK-OPT-NEXT:    v_cmp_gt_u32_e64 s0, 12, v0
+; CHECK-OPT-NEXT:    s_mov_b32 s1, 0
+; CHECK-OPT-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; CHECK-OPT-NEXT:    s_cbranch_scc1 .LBB7_2
+; CHECK-OPT-NEXT:  ; %bb.1: ; %true
+; CHECK-OPT-NEXT:    s_mov_b32 s0, 42
+; CHECK-OPT-NEXT:    s_branch .LBB7_3
+; CHECK-OPT-NEXT:  .LBB7_2: ; %false
+; CHECK-OPT-NEXT:    s_mov_b32 s0, 33
+; CHECK-OPT-NEXT:    s_branch .LBB7_3
+; CHECK-OPT-NEXT:  .LBB7_3:
   %c = icmp ult i32 %v, 12
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
   %ballot_ne_zero = icmp ne i64 %ballot, 0
@@ -163,6 +239,40 @@ define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_and(i32 %v1, i32 %v2) {
 ; GISEL-NEXT:    s_mov_b32 s0, 33
 ; GISEL-NEXT:    s_branch .LBB8_3
 ; GISEL-NEXT:  .LBB8_3:
+;
+; DAGISEL-OPT-LABEL: branch_divergent_ballot64_ne_zero_and:
+; DAGISEL-OPT:       ; %bb.0:
+; DAGISEL-OPT-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; DAGISEL-OPT-NEXT:    v_cmp_lt_u32_e64 s0, 34, v1
+; DAGISEL-OPT-NEXT:    s_mov_b32 s1, 0
+; DAGISEL-OPT-NEXT:    s_and_b32 s0, vcc_lo, s0
+; DAGISEL-OPT-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; DAGISEL-OPT-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
+; DAGISEL-OPT-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; DAGISEL-OPT-NEXT:    s_cbranch_scc1 .LBB8_2
+; DAGISEL-OPT-NEXT:  ; %bb.1: ; %true
+; DAGISEL-OPT-NEXT:    s_mov_b32 s0, 42
+; DAGISEL-OPT-NEXT:    s_branch .LBB8_3
+; DAGISEL-OPT-NEXT:  .LBB8_2: ; %false
+; DAGISEL-OPT-NEXT:    s_mov_b32 s0, 33
+; DAGISEL-OPT-NEXT:    s_branch .LBB8_3
+; DAGISEL-OPT-NEXT:  .LBB8_3:
+;
+; GISEL-OPT-LABEL: branch_divergent_ballot64_ne_zero_and:
+; GISEL-OPT:       ; %bb.0:
+; GISEL-OPT-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; GISEL-OPT-NEXT:    v_cmp_lt_u32_e64 s0, 34, v1
+; GISEL-OPT-NEXT:    s_mov_b32 s1, 0
+; GISEL-OPT-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GISEL-OPT-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GISEL-OPT-NEXT:    s_cbranch_scc1 .LBB8_2
+; GISEL-OPT-NEXT:  ; %bb.1: ; %true
+; GISEL-OPT-NEXT:    s_mov_b32 s0, 42
+; GISEL-OPT-NEXT:    s_branch .LBB8_3
+; GISEL-OPT-NEXT:  .LBB8_2: ; %false
+; GISEL-OPT-NEXT:    s_mov_b32 s0, 33
+; GISEL-OPT-NEXT:    s_branch .LBB8_3
+; GISEL-OPT-NEXT:  .LBB8_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
