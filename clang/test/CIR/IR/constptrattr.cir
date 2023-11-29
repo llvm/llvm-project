@@ -1,0 +1,8 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+cir.global external @const_ptr = #cir.ptr<4660> : !cir.ptr<!s32i>
+// CHECK: cir.global external @const_ptr = #cir.ptr<4660> : !cir.ptr<!s32i>
+cir.global external @null_ptr = #cir.ptr<null> : !cir.ptr<!s32i>
+// CHECK: cir.global external @null_ptr = #cir.ptr<null> : !cir.ptr<!s32i>

@@ -204,7 +204,7 @@ Attribute ConstPtrAttr::parse(AsmParser &parser, Type odsType) {
   if (parser.parseLess())
     return {};
 
-  if (parser.parseKeyword("null").succeeded()) {
+  if (parser.parseOptionalKeyword("null").succeeded()) {
     value = 0;
   } else {
     if (parser.parseInteger(value))
