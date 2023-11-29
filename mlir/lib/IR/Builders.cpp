@@ -527,6 +527,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
 
 Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
   Operation *newOp = op.clone(mapper);
+  newOp = insert(newOp);
   // The `insert` call below handles the notification for inserting `newOp`
   // itself. But if `newOp` has any regions, we need to notify the listener
   // about any ops that got inserted inside those regions as part of cloning.
@@ -537,7 +538,7 @@ Operation *OpBuilder::clone(Operation &op, IRMapping &mapper) {
     for (Region &region : newOp->getRegions())
       region.walk(walkFn);
   }
-  return insert(newOp);
+  return newOp;
 }
 
 Operation *OpBuilder::clone(Operation &op) {

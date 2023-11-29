@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(test-clone))" -split-input-file
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(test-clone))" | FileCheck %s
 
 module {
   func.func @fixpoint(%arg1 : i32) -> i32 {
@@ -8,6 +8,10 @@ module {
     return %r : i32
   }
 }
+
+// CHECK: notifyOperationInserted: test.use
+// CHECK-NEXT: notifyOperationInserted: test.yield
+// CHECK-NEXT: notifyOperationInserted: func.return
 
 // CHECK:   func @fixpoint(%[[arg0:.+]]: i32) -> i32 {
 // CHECK-NEXT:     %[[i0:.+]] = "test.use"(%[[arg0]]) ({
