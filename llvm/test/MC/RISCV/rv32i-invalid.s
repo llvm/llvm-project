@@ -188,3 +188,8 @@ addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 
 # fence.tso accepts no operands
 fence.tso rw, rw # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+
+.Ltlsdesc_hi0:
+jalr	x5, 0(a1), %tlsdesc_hi(.Ltlsdesc_hi0) # CHECK: :[[@LINE]]:17: error: operand must be a symbol with %tlsdesc_call modifier
+jalr	x1, 0(a1), %tlsdesc_call(.Ltlsdesc_hi0) # CHECK: :[[@LINE]]:12: error: the output operand must be t0/x5 when using %tlsdesc_call modifier
+

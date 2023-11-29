@@ -3310,6 +3310,7 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
 
   return false;
 }
+
 bool RISCVAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
                                             OperandVector &Operands) {
   assert(Inst.getOpcode() == RISCV::PseudoTLSDESCCall && "Invalid instruction");
@@ -3575,6 +3576,10 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoAddTPRel:
     if (checkPseudoAddTPRel(Inst, Operands))
+      return true;
+    break;
+  case RISCV::PseudoTLSDESCCall:
+    if(checkPseudoTLSDESCCall(Inst, Operands))
       return true;
     break;
   case RISCV::PseudoSEXT_B:
