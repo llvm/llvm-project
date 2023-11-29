@@ -22,7 +22,7 @@ jobs:
 
       # Reset the git branch to have all of the modified files staged but not committed.
       - name: Reset git state
-        run: git reset --soft ${{ github.pull_request.base.sha }}
+        run: git reset --soft origin/${{ github.base_ref }}
 
       - name: Check generated files
         run: bash ./libcxx/utils/formatting/pre-commit-formatting-hook.sh
