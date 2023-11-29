@@ -127,7 +127,7 @@ following:
 
 .. code-block:: bash
 
-   $(LLVM_BUILD_FOLDER)/bin/opt -O2 -S $1 -o /dev/null \
+   $(LLVM_BUILD_FOLDER)/bin/opt -O2 -disable-output $1 \
      |& grep "Assertion failed at line 1234 of WhateverFile.cpp"
 
 (In this script, `grep` exits with 0 if it finds the string and that
