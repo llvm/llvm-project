@@ -1012,7 +1012,7 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
   SmallVector<Value> yields;
   {2}
   {3}
-  helper.yieldOutputs(yields);
+  helper.yieldOutputs(b, yields);
 }
 )FMT";
     auto &args = opConfig.structuredOp->args;
