@@ -17,7 +17,7 @@
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/Utils.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -193,12 +193,8 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   DP("Registering RTL %s supporting %d devices!\n", Name, RTL.NumberOfDevices);
 
   // Optional functions
-  *((void **)&RTL.deinit_plugin) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
   *((void **)&RTL.is_valid_binary_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-  *((void **)&RTL.deinit_device) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
   *((void **)&RTL.init_requires) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
   *((void **)&RTL.data_submit_async) =
@@ -215,10 +211,6 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
   *((void **)&RTL.is_data_exchangable) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
-  *((void **)&RTL.register_lib) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_register_lib");
-  *((void **)&RTL.unregister_lib) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_unregister_lib");
   *((void **)&RTL.supports_empty_images) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
   *((void **)&RTL.set_info_flag) =
@@ -313,12 +305,18 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
         DP("Adding ctor " DPxMOD " to the pending list.\n",
            DPxPTR(Entry->addr));
         Device.PendingCtorsDtors[Desc].PendingCtors.push_back(Entry->addr);
+        MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
+                "removed in a future release \n",
+                Entry->name);
       } else if (Entry->flags & OMP_DECLARE_TARGET_DTOR) {
         // Dtors are pushed in reverse order so they are executed from end
         // to beginning when unregistering the library!
         DP("Adding dtor " DPxMOD " to the pending list.\n",
            DPxPTR(Entry->addr));
         Device.PendingCtorsDtors[Desc].PendingDtors.push_front(Entry->addr);
+        MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
+                "removed in a future release \n",
+                Entry->name);
       }
 
       if (Entry->flags & OMP_DECLARE_TARGET_LINK) {
@@ -405,33 +403,30 @@ void RTLsTy::registerRequires(int64_t Flags) {
 
 void RTLsTy::initRTLonce(RTLInfoTy &R) {
   // If this RTL is not already in use, initialize it.
-  if (!R.IsUsed && R.NumberOfDevices != 0) {
-    // Initialize the device information for the RTL we are about to use.
-    const size_t Start = PM->Devices.size();
-    PM->Devices.reserve(Start + R.NumberOfDevices);
-    for (int32_t DeviceId = 0; DeviceId < R.NumberOfDevices; DeviceId++) {
-      PM->Devices.push_back(std::make_unique<DeviceTy>(&R));
-      // global device ID
-      PM->Devices[Start + DeviceId]->DeviceID = Start + DeviceId;
-      // RTL local device ID
-      PM->Devices[Start + DeviceId]->RTLDeviceID = DeviceId;
-    }
+  if (R.IsUsed || !R.NumberOfDevices)
+    return;
 
-    // Initialize the index of this RTL and save it in the used RTLs.
-    R.Idx = (UsedRTLs.empty())
-                ? 0
-                : UsedRTLs.back()->Idx + UsedRTLs.back()->NumberOfDevices;
-    assert((size_t)R.Idx == Start &&
-           "RTL index should equal the number of devices used so far.");
-    R.IsUsed = true;
-    UsedRTLs.push_back(&R);
-
-    // If possible, set the device identifier offset
-    if (R.set_device_offset)
-      R.set_device_offset(Start);
-
-    DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler.get()), R.Idx);
+  // Initialize the device information for the RTL we are about to use.
+  const size_t Start = PM->Devices.size();
+  PM->Devices.reserve(Start + R.NumberOfDevices);
+  for (int32_t DeviceId = 0; DeviceId < R.NumberOfDevices; DeviceId++) {
+    PM->Devices.push_back(std::make_unique<DeviceTy>(&R));
+    // global device ID
+    PM->Devices[Start + DeviceId]->DeviceID = Start + DeviceId;
+    // RTL local device ID
+    PM->Devices[Start + DeviceId]->RTLDeviceID = DeviceId;
   }
+
+  // Initialize the index of this RTL and save it in the used RTLs.
+  R.Idx = Start;
+  R.IsUsed = true;
+  UsedRTLs.push_back(&R);
+
+  // If possible, set the device identifier offset
+  if (R.set_device_offset)
+    R.set_device_offset(Start);
+
+  DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler.get()), R.Idx);
 }
 
 void RTLsTy::initAllRTLs() {
@@ -544,7 +539,8 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
         if (Device.PendingCtorsDtors[Desc].PendingCtors.empty()) {
           AsyncInfoTy AsyncInfo(Device);
           for (auto &Dtor : Device.PendingCtorsDtors[Desc].PendingDtors) {
-            int Rc = target(nullptr, Device, Dtor, CTorDTorKernelArgs, AsyncInfo);
+            int Rc =
+                target(nullptr, Device, Dtor, CTorDTorKernelArgs, AsyncInfo);
             if (Rc != OFFLOAD_SUCCESS) {
               DP("Running destructor " DPxMOD " failed.\n", DPxPTR(Dtor));
             }
@@ -594,15 +590,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
   }
 
   PM->TblMapMtx.unlock();
-
-  // TODO: Write some RTL->unload_image(...) function?
-  for (auto *R : UsedRTLs) {
-    if (R->deinit_plugin) {
-      if (R->deinit_plugin() != OFFLOAD_SUCCESS) {
-        DP("Failure deinitializing RTL %s!\n", R->RTLName.c_str());
-      }
-    }
-  }
 
   DP("Done unregistering library!\n");
 }

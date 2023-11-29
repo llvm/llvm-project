@@ -107,19 +107,19 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
-    case TTK_Struct:
+    case TagTypeKind::Struct:
       Info.Kind = SymbolKind::Struct; break;
-    case TTK_Union:
+    case TagTypeKind::Union:
       Info.Kind = SymbolKind::Union; break;
-    case TTK_Class:
+    case TagTypeKind::Class:
       Info.Kind = SymbolKind::Class;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Interface:
+    case TagTypeKind::Interface:
       Info.Kind = SymbolKind::Protocol;
       Info.Lang = SymbolLanguage::CXX;
       break;
-    case TTK_Enum:
+    case TagTypeKind::Enum:
       Info.Kind = SymbolKind::Enum; break;
     }
 

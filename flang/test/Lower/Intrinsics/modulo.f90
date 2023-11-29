@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPmodulo_testr(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {

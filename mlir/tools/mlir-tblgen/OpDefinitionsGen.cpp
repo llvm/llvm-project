@@ -1143,6 +1143,8 @@ void OpEmitter::genAttrNameGetters() {
       const char *const getAttrName = R"(
   assert(index < {0} && "invalid attribute index");
   assert(name.getStringRef() == getOperationName() && "invalid operation name");
+  assert(name.isRegistered() && "Operation isn't registered, missing a "
+        "dependent dialect loading?");
   return name.getAttributeNames()[index];
 )";
       method->body() << formatv(getAttrName, attributes.size());
@@ -2883,16 +2885,20 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
   // Successors and variadic regions go at the end of the parameter list, so no
   // default arguments are possible.
   bool hasTrailingParams = op.getNumSuccessors() || op.getNumVariadicRegions();
-  if (attrParamKind == AttrParamKind::UnwrappedValue && !hasTrailingParams) {
+  if (!hasTrailingParams) {
     // Calculate the start index from which we can attach default values in the
     // builder declaration.
     for (int i = op.getNumArgs() - 1; i >= 0; --i) {
       auto *namedAttr =
           llvm::dyn_cast_if_present<tblgen::NamedAttribute *>(op.getArg(i));
-      if (!namedAttr || !namedAttr->attr.hasDefaultValue())
+      if (!namedAttr)
         break;
 
-      if (!canUseUnwrappedRawValue(namedAttr->attr))
+      Attribute attr = namedAttr->attr;
+      // TODO: Currently we can't differentiate between optional meaning do not
+      // verify/not always error if missing or optional meaning need not be
+      // specified in builder. Expand isOptional once we can differentiate.
+      if (!attr.hasDefaultValue() && !attr.isDerivedAttr())
         break;
 
       // Creating an APInt requires us to provide bitwidth, value, and
@@ -2906,6 +2912,21 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 
       defaultValuedAttrStartIndex = i;
     }
+  }
+  // Avoid generating build methods that are ambiguous due to default values by
+  // requiring at least one attribute.
+  if (defaultValuedAttrStartIndex < op.getNumArgs()) {
+    // TODO: This should have been possible as a cast<NamedAttribute> but
+    // required template instantiations is not yet defined for the tblgen helper
+    // classes.
+    auto *namedAttr =
+        cast<NamedAttribute *>(op.getArg(defaultValuedAttrStartIndex));
+    Attribute attr = namedAttr->attr;
+    if ((attrParamKind == AttrParamKind::WrappedAttr &&
+         canUseUnwrappedRawValue(attr)) ||
+        (attrParamKind == AttrParamKind::UnwrappedValue &&
+         !canUseUnwrappedRawValue(attr)))
+      ++defaultValuedAttrStartIndex;
   }
 
   /// Collect any inferred attributes.
@@ -2959,9 +2980,12 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
 
     // Attach default value if requested and possible.
     std::string defaultValue;
-    if (attrParamKind == AttrParamKind::UnwrappedValue &&
-        i >= defaultValuedAttrStartIndex) {
-      defaultValue += attr.getDefaultValue();
+    if (i >= defaultValuedAttrStartIndex) {
+      if (attrParamKind == AttrParamKind::UnwrappedValue &&
+          canUseUnwrappedRawValue(attr))
+        defaultValue += attr.getDefaultValue();
+      else
+        defaultValue += "nullptr";
     }
     paramList.emplace_back(type, namedAttr.name, StringRef(defaultValue),
                            attr.isOptional());

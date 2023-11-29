@@ -400,6 +400,7 @@ FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(dbgs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(dbgs()))
 FUNCTION_PASS("print<inliner-size-estimator>",
   InlineSizeEstimatorAnalysisPrinterPass(dbgs()))
+FUNCTION_PASS("print<lazy-value-info>", LazyValueInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(dbgs()))
 FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(dbgs()))
 FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(dbgs()))
@@ -424,7 +425,6 @@ FUNCTION_PASS("sccp", SCCPPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
-FUNCTION_PASS("speculative-execution", SpeculativeExecutionPass())
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("structurizecfg", StructurizeCFGPass())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
@@ -446,6 +446,8 @@ FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM));
+FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM));
+FUNCTION_PASS("dwarfehprepare", DwarfEHPreparePass(TM));
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
@@ -587,6 +589,13 @@ FUNCTION_PASS_WITH_PARAMS("print<memoryssa>",
                            },
                           parseMemorySSAPrinterPassOptions,
                           "no-ensure-optimized-uses")
+FUNCTION_PASS_WITH_PARAMS("speculative-execution",
+                          "SpeculativeExecutionPass",
+                          [](bool OnlyIfDivergentTarget) {
+                            return SpeculativeExecutionPass(OnlyIfDivergentTarget);
+                          },
+                          parseSpeculativeExecutionPassOptions,
+                          "only-if-divergent-target")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

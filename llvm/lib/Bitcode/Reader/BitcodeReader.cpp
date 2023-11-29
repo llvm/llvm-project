@@ -1394,6 +1394,9 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
   if (Instruction::isBinaryOp(Opcode))
     return ConstantExpr::isSupportedBinOp(Opcode);
 
+  if (Instruction::isCast(Opcode))
+    return ConstantExpr::isSupportedCastOp(Opcode);
+
   if (Opcode == Instruction::GetElementPtr)
     return ConstantExpr::isSupportedGetElementPtr(BC->SrcElemTy);
 
@@ -2060,6 +2063,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::PresplitCoroutine;
   case bitc::ATTR_KIND_WRITABLE:
     return Attribute::Writable;
+  case bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE:
+    return Attribute::CoroDestroyOnlyWhenComplete;
   }
 }
 
@@ -2894,11 +2899,7 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
           return error("Alias and aliasee types don't match");
         GA->setAliasee(C);
       } else if (auto *GI = dyn_cast<GlobalIFunc>(GV)) {
-        Type *ResolverFTy =
-            GlobalIFunc::getResolverFunctionType(GI->getValueType());
-        // Transparently fix up the type for compatibility with older bitcode
-        GI->setResolver(ConstantExpr::getBitCast(
-            C, ResolverFTy->getPointerTo(GI->getAddressSpace())));
+        GI->setResolver(C);
       } else {
         return error("Expected an alias or an ifunc");
       }
@@ -4865,12 +4866,14 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
                    Opc == Instruction::AShr) {
           if (Record[OpNum] & (1 << bitc::PEO_EXACT))
             cast<BinaryOperator>(I)->setIsExact(true);
+        } else if (Opc == Instruction::Or) {
+          if (Record[OpNum] & (1 << bitc::PDI_DISJOINT))
+            cast<PossiblyDisjointInst>(I)->setIsDisjoint(true);
         } else if (isa<FPMathOperator>(I)) {
           FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
-
       }
       break;
     }

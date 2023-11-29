@@ -598,7 +598,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
   if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld") {
+      llvm::sys::path::stem(Linker) != "ld.lld" &&
+      !ToolChain.getTriple().isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -976,16 +977,60 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
-void tools::addFortranRuntimeLibs(const ToolChain &TC,
+void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    CmdArgs.push_back("Fortran_main.lib");
-    CmdArgs.push_back("FortranRuntime.lib");
-    CmdArgs.push_back("FortranDecimal.lib");
-  } else {
+  // These are handled earlier on Windows by telling the frontend driver to add
+  // the correct libraries to link against as dependents in the object file.
+  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    // The --whole-archive option needs to be part of the link line to
+    // make sure that the main() function from Fortran_main.a is pulled
+    // in by the linker.  Determine if --whole-archive is active when
+    // flang will try to link Fortran_main.a.  If it is, don't add the
+    // --whole-archive flag to the link line.  If it's not, add a proper
+    // --whole-archive/--no-whole-archive bracket to the link line.
+    bool WholeArchiveActive = false;
+    for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA))
+      if (Arg)
+        for (StringRef ArgValue : Arg->getValues()) {
+          if (ArgValue == "--whole-archive")
+            WholeArchiveActive = true;
+          if (ArgValue == "--no-whole-archive")
+            WholeArchiveActive = false;
+        }
+
+    if (!WholeArchiveActive)
+      CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back("-lFortran_main");
+    if (!WholeArchiveActive)
+      CmdArgs.push_back("--no-whole-archive");
+
+    // Perform regular linkage of the remaining runtime libraries.
     CmdArgs.push_back("-lFortranRuntime");
     CmdArgs.push_back("-lFortranDecimal");
+  } else {
+    unsigned RTOptionID = options::OPT__SLASH_MT;
+    if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+      RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                       .Case("static", options::OPT__SLASH_MT)
+                       .Case("static_dbg", options::OPT__SLASH_MTd)
+                       .Case("dll", options::OPT__SLASH_MD)
+                       .Case("dll_dbg", options::OPT__SLASH_MDd)
+                       .Default(options::OPT__SLASH_MT);
+    }
+    switch (RTOptionID) {
+    case options::OPT__SLASH_MT:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static.lib");
+      break;
+    case options::OPT__SLASH_MTd:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.static_dbg.lib");
+      break;
+    case options::OPT__SLASH_MD:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic.lib");
+      break;
+    case options::OPT__SLASH_MDd:
+      CmdArgs.push_back("/WHOLEARCHIVE:Fortran_main.dynamic_dbg.lib");
+      break;
+    }
   }
 }
 
@@ -2349,7 +2394,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
-  const unsigned MinCodeObjVer = 3;
+  const unsigned MinCodeObjVer = 4;
   const unsigned MaxCodeObjVer = 5;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {

@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm='use-opaque-pointers=1' -split-input-file | FileCheck %s
-
+// RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
 
 func.func @bitcast_f32_to_i32_vector_0d(%input: vector<f32>) -> vector<i32> {
   %0 = vector.bitcast %input : vector<f32> to vector<i32>

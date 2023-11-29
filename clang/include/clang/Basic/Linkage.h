@@ -100,6 +100,7 @@ inline bool isExternallyVisible(Linkage L) {
   case Linkage::External:
     return true;
   }
+  llvm_unreachable("Unhandled Linkage enum");
 }
 
 inline Linkage getFormalLinkage(Linkage L) {

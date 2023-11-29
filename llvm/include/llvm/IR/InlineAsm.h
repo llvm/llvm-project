@@ -291,18 +291,23 @@ public:
   //     Bits 30-16 - A ConstraintCode:: value indicating the original
   //                  constraint code. (MemConstraintCode)
   //   Else:
-  //     Bits 30-16 - The register class ID to use for the operand. (RegClass)
+  //     Bits 29-16 - The register class ID to use for the operand. (RegClass)
+  //     Bit  30    - If the register is permitted to be spilled.
+  //                  (RegMayBeFolded)
+  //                  Defaults to false "r", may be set for constraints like
+  //                  "rm" (or "g").
   //
-  //   As such, MatchedOperandNo, MemConstraintCode, and RegClass are views of
-  //   the same slice of bits, but are mutually exclusive depending on the
-  //   fields IsMatched then KindField.
+  //   As such, MatchedOperandNo, MemConstraintCode, and
+  //   (RegClass+RegMayBeFolded) are views of the same slice of bits, but are
+  //   mutually exclusive depending on the fields IsMatched then KindField.
   class Flag {
     uint32_t Storage;
     using KindField = Bitfield::Element<Kind, 0, 3, Kind::Func>;
     using NumOperands = Bitfield::Element<unsigned, 3, 13>;
     using MatchedOperandNo = Bitfield::Element<unsigned, 16, 15>;
     using MemConstraintCode = Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
-    using RegClass = Bitfield::Element<unsigned, 16, 15>;
+    using RegClass = Bitfield::Element<unsigned, 16, 14>;
+    using RegMayBeFolded = Bitfield::Element<bool, 30, 1>;
     using IsMatched = Bitfield::Element<bool, 31, 1>;
 
 
@@ -412,6 +417,26 @@ public:
       assert((isMemKind() || isFuncKind()) &&
              "Flag is not a memory or function constraint!");
       Bitfield::set<MemConstraintCode>(Storage, ConstraintCode::Unknown);
+    }
+
+    /// Set a bit to denote that while this operand is some kind of register
+    /// (use, def, ...), a memory flag did appear in the original constraint
+    /// list.  This is set by the instruction selection framework, and consumed
+    /// by the register allocator. While the register allocator is generally
+    /// responsible for spilling registers, we need to be able to distinguish
+    /// between registers that the register allocator has permission to fold
+    /// ("rm") vs ones it does not ("r"). This is because the inline asm may use
+    /// instructions which don't support memory addressing modes for that
+    /// operand.
+    void setRegMayBeFolded(bool B) {
+      assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
+             "Must be reg");
+      Bitfield::set<RegMayBeFolded>(Storage, B);
+    }
+    bool getRegMayBeFolded() const {
+      assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
+             "Must be reg");
+      return Bitfield::get<RegMayBeFolded>(Storage);
     }
   };
 

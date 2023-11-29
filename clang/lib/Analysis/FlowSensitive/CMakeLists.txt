@@ -7,6 +7,7 @@ add_clang_library(clangAnalysisFlowSensitive
   HTMLLogger.cpp
   Logger.cpp
   RecordOps.cpp
+  SimplifyConstraints.cpp
   Transfer.cpp
   TypeErasedDataflowAnalysis.cpp
   Value.cpp

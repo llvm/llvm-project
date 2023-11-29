@@ -39,7 +39,8 @@ public:
     VOLCANIC_ISLANDS = 7,
     GFX9 = 8,
     GFX10 = 9,
-    GFX11 = 10
+    GFX11 = 10,
+    GFX12 = 11,
   };
 
 private:

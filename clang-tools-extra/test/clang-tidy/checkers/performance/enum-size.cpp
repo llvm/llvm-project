@@ -102,4 +102,7 @@ enum class IgnoredSecondEnum
     unused2 = 2
 };
 
+enum class EnumClassWithoutValues : int {};
+enum EnumWithoutValues {};
+
 }

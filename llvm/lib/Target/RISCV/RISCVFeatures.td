@@ -444,8 +444,8 @@ def FeatureStdExtV
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32x),
-          "'V' (Vector Extension for Application Processors), 'Zve32x' or "
-          "'Zve64x' (Vector Extensions for Embedded Processors)">;
+          "'V' (Vector Extension for Application Processors), 'Zve32x' "
+          "(Vector Extensions for Embedded Processors)">;
 def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve64x),
@@ -454,8 +454,8 @@ def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
 def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32f),
-          "'V' (Vector Extension for Application Processors), 'Zve32f', "
-          "'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors)">;
+          "'V' (Vector Extension for Application Processors), 'Zve32f' "
+          "(Vector Extensions for Embedded Processors)">;
 
 def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
@@ -599,14 +599,21 @@ def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
 def FeatureStdExtZvknha
     : SubtargetFeature<"experimental-zvknha", "HasStdExtZvknha", "true",
                        "'Zvknha' (Vector SHA-2 (SHA-256 only))">;
+def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZvknha),
+                                "'Zvknha' (Vector SHA-2 (SHA-256 only))">;
 
 def FeatureStdExtZvknhb
     : SubtargetFeature<"experimental-zvknhb", "HasStdExtZvknhb", "true",
                        "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))",
-                       [FeatureStdExtZvknha]>;
-def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
-                                AssemblerPredicate<(all_of FeatureStdExtZvknha),
-                                "'Zvknha' (Vector SHA-2 (SHA-256 only))">;
+                       [FeatureStdExtZve64x]>;
+def HasStdExtZvknhb : Predicate<"Subtarget->hasStdExtZvknhb()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZvknhb),
+                                "'Zvknhb' (Vector SHA-2 (SHA-256 and SHA-512))">;
+
+def HasStdExtZvknhaOrZvknhb : Predicate<"Subtarget->hasStdExtZvknha() || Subtarget->hasStdExtZvknhb()">,
+                                        AssemblerPredicate<(any_of FeatureStdExtZvknha, FeatureStdExtZvknhb),
+                                        "'Zvknha' or 'Zvknhb' (Vector SHA-2)">;
 
 def FeatureStdExtZvksed
     : SubtargetFeature<"experimental-zvksed", "HasStdExtZvksed", "true",
@@ -681,14 +688,14 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                                 "'Zicond' (Integer Conditional Operations)">;
 
 def FeatureStdExtSmaia
-    : SubtargetFeature<"experimental-smaia", "HasStdExtSmaia", "true",
+    : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Smaia encompasses all added CSRs and all "
                        "modifications to interrupt response behavior that the "
                        "AIA specifies for a hart, over all privilege levels.)",
                        []>;
 
 def FeatureStdExtSsaia
-    : SubtargetFeature<"experimental-ssaia", "HasStdExtSsaia", "true",
+    : SubtargetFeature<"ssaia", "HasStdExtSsaia", "true",
                        "'Ssaia' (Ssaia is essentially the same as Smaia except "
                        "excluding the machine-level CSRs and behavior not "
                        "directly visible to supervisor level.)", []>;
@@ -829,6 +836,29 @@ def HasVendorXSfvqmaccqoq : Predicate<"Subtarget->hasVendorXSfvqmaccqoq()">,
                          AssemblerPredicate<(all_of FeatureVendorXSfvqmaccqoq),
                          "'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))">;
 
+def FeatureVendorXSfvfwmaccqqq
+    : SubtargetFeature<"xsfvfwmaccqqq", "HasVendorXSfvfwmaccqqq", "true",
+                       "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))",
+                       [FeatureStdExtZve32f, FeatureStdExtZvfbfmin]>;
+def HasVendorXSfvfwmaccqqq : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
+                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))">;
+
+def FeatureVendorXSfvfnrclipxfqf
+    : SubtargetFeature<"xsfvfnrclipxfqf", "HasVendorXSfvfnrclipxfqf", "true",
+                       "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)",
+                       [FeatureStdExtZve32f]>;
+def HasVendorXSfvfnrclipxfqf : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
+                               AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
+                               "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+def FeatureVendorXCVelw
+   : SubtargetFeature<"xcvelw", "HasVendorXCVelw", "true",
+                      "'XCVelw' (CORE-V Event Load Word)">;
+def HasVendorXCVelw
+   : Predicate<"Subtarget->hasVendorXCVelw()">,
+              AssemblerPredicate<(any_of FeatureVendorXCVelw),
+              "'XCVelw' (CORE-V Event Load Word)">;
+
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
                        "'XCVbitmanip' (CORE-V Bit Manipulation)">;
@@ -842,6 +872,14 @@ def FeatureVendorXCVmac
 def HasVendorXCVmac : Predicate<"Subtarget->hasVendorXCVmac()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVmac),
                                 "'XCVmac' (CORE-V Multiply-Accumulate)">;
+
+def FeatureVendorXCVmem
+    : SubtargetFeature<"xcvmem", "HasVendorXCVmem", "true",
+                       "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
+def HasVendorXCVmem
+    : Predicate<"Subtarget->hasVendorXCVmem()">,
+               AssemblerPredicate<(any_of FeatureVendorXCVmem),
+               "'XCVmem' (CORE-V Post-incrementing Load & Store)">;
 
 def FeatureVendorXCValu
     : SubtargetFeature<"xcvalu", "HasVendorXCValu", "true",

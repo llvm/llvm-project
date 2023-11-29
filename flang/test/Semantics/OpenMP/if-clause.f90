@@ -451,15 +451,15 @@ program main
   ! ----------------------------------------------------------------------------
   ! TARGET UPDATE
   ! ----------------------------------------------------------------------------
-  !$omp target update if(.true.)
+  !$omp target update to(i) if(.true.)
   
-  !$omp target update if(target update: .true.)
+  !$omp target update to(i) if(target update: .true.)
 
   !ERROR: Unmatched directive name modifier TARGET on the IF clause
-  !$omp target update if(target: .true.)
+  !$omp target update to(i) if(target: .true.)
 
   !ERROR: At most one IF clause can appear on the TARGET UPDATE directive
-  !$omp target update if(.true.) if(target update: .false.)
+  !$omp target update to(i) if(.true.) if(target update: .false.)
 
   ! ----------------------------------------------------------------------------
   ! TASK

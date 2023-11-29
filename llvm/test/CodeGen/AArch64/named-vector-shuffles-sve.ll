@@ -351,9 +351,9 @@ define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vsca
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    addvl x8, x8, #1
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #16
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
@@ -457,7 +457,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_neg17(<vscale x 16 x i8> %a, <vscale x
 ; CHECK-NEXT:    mov w9, #17 // =0x11
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #17
-; CHECK-NEXT:    addvl x10, x10, #1
+; CHECK-NEXT:    add x10, x10, x8
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    sub x8, x10, x8
 ; CHECK-NEXT:    st1b { z0.b }, p0, [sp]
@@ -502,7 +502,7 @@ define <vscale x 8 x i16> @splice_nxv8i16_neg9(<vscale x 8 x i16> %a, <vscale x 
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #18
-; CHECK-NEXT:    addvl x10, x10, #1
+; CHECK-NEXT:    add x10, x10, x8
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    sub x8, x10, x8
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -613,7 +613,7 @@ define <vscale x 8 x half> @splice_nxv8f16_neg9(<vscale x 8 x half> %a, <vscale 
 ; CHECK-NEXT:    mov w9, #18 // =0x12
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #18
-; CHECK-NEXT:    addvl x10, x10, #1
+; CHECK-NEXT:    add x10, x10, x8
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    sub x8, x10, x8
 ; CHECK-NEXT:    st1h { z0.h }, p0, [sp]
@@ -779,9 +779,10 @@ define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    mov x9, #-8 // =0xfffffffffffffff8
-; CHECK-NEXT:    addvl x8, x8, #2
 ; CHECK-NEXT:    sub x10, x8, #32
 ; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [sp]
@@ -807,9 +808,9 @@ define <vscale x 16 x float> @splice_nxv16f32_neg17(<vscale x 16 x float> %a, <v
 ; CHECK-NEXT:    mov w9, #68 // =0x44
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    cmp x8, #68
-; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    addvl x9, x10, #4
-; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    csel x9, x8, x9, lo
+; CHECK-NEXT:    add x8, x10, x8
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    st1w { z3.s }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    st1w { z2.s }, p0, [sp, #2, mul vl]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [sp, #1, mul vl]

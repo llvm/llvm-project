@@ -1072,12 +1072,11 @@ public:
 
     SmallVector<AffineExpr, 2> inputExprs;
     inputExprs.resize(resultTy.getRank());
-    auto operandTy = cast<ShapedType>(input.getType());
     for (const auto &permutation : llvm::enumerate(perms.getValues<APInt>())) {
       auto index = permutation.index();
       auto value = permutation.value().getZExtValue();
-      if (!operandTy.hasRank() || operandTy.isDynamicDim(index)) {
-        dynDims[value] = rewriter.create<tensor::DimOp>(loc, input, index);
+      if (!resultTy.hasRank() || resultTy.isDynamicDim(index)) {
+        dynDims[index] = rewriter.create<tensor::DimOp>(loc, input, value);
       }
       inputExprs[value] = rewriter.getAffineDimExpr(index);
     }

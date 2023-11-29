@@ -103,10 +103,11 @@ TraceIntelPTBundleLoader::CreateEmptyProcess(lldb::pid_t pid,
   ParsedProcess parsed_process;
   parsed_process.target_sp = target_sp;
 
-  ProcessSP process_sp = target_sp->CreateProcess(
-      /*listener*/ nullptr, "trace",
-      /*crash_file*/ nullptr,
-      /*can_connect*/ false);
+  // This should instead try to directly create an instance of ProcessTrace.
+  // ProcessSP process_sp = target_sp->CreateProcess(
+  //    /*listener*/ nullptr, "trace",
+  //    /*crash_file*/ nullptr,
+  //    /*can_connect*/ false);
 
   process_sp->SetID(static_cast<lldb::pid_t>(pid));
 

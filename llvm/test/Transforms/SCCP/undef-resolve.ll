@@ -43,10 +43,10 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       control.us:
 ; CHECK-NEXT:    [[SWITCHCOND_0_US]] = phi i32 [ [[A_0_PH_US]], [[BB0_US:%.*]] ], [ [[SWITCHCOND_0_PH_US]], [[CONTROL_OUTER_US]] ]
 ; CHECK-NEXT:    switch i32 [[SWITCHCOND_0_US]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA_US:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB0_US]]
-; CHECK-NEXT:    i32 1, label [[BB1_US_LCSSA_US:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3_US]]
-; CHECK-NEXT:    i32 4, label [[BB4_US_LCSSA_US:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB0_US]]
+; CHECK-NEXT:      i32 1, label [[BB1_US_LCSSA_US:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3_US]]
+; CHECK-NEXT:      i32 4, label [[BB4_US_LCSSA_US:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       control.outer.loopexit.us-lcssa.us:
 ; CHECK-NEXT:    br label [[CONTROL_OUTER_LOOPEXIT]]
@@ -61,10 +61,10 @@ define i32 @test2() nounwind readnone ssp {
 ; CHECK:       control:
 ; CHECK-NEXT:    [[SWITCHCOND_0:%.*]] = phi i32 [ [[A_0_PH]], [[BB0:%.*]] ], [ [[SWITCHCOND_0_PH]], [[CONTROL_OUTER]] ]
 ; CHECK-NEXT:    switch i32 [[SWITCHCOND_0]], label [[CONTROL_OUTER_LOOPEXIT_US_LCSSA:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB0]]
-; CHECK-NEXT:    i32 1, label [[BB1_US_LCSSA:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3]]
-; CHECK-NEXT:    i32 4, label [[BB4_US_LCSSA:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB0]]
+; CHECK-NEXT:      i32 1, label [[BB1_US_LCSSA:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3]]
+; CHECK-NEXT:      i32 4, label [[BB4_US_LCSSA:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4.us-lcssa:
 ; CHECK-NEXT:    br label [[BB4]]
@@ -258,11 +258,13 @@ entry:
 define i32 @test11(i1 %tobool) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHR4:%.*]] = ashr i32 undef, zext (i1 icmp eq (ptr @test11, ptr @GV) to i32)
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 icmp eq (ptr @test11, ptr @GV) to i32
+; CHECK-NEXT:    [[SHR4:%.*]] = ashr i32 undef, [[EXT]]
 ; CHECK-NEXT:    ret i32 [[SHR4]]
 ;
 entry:
-  %shr4 = ashr i32 undef, zext (i1 icmp eq (ptr @test11, ptr @GV) to i32)
+  %ext = zext i1 icmp eq (ptr @test11, ptr @GV) to i32
+  %shr4 = ashr i32 undef, %ext
   ret i32 %shr4
 }
 

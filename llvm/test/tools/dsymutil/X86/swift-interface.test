@@ -12,9 +12,9 @@
 # RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
 # RUN:   | FileCheck %s --check-prefix=INTERFACE
 
-# WARNINGS-NOT: cannot copy parseable Swift interface {{.*}}{{Swift|Foundation}}
+# WARNINGS-NOT: cannot copy parseable Swift interface {{.*}}{{Swift|Foundation|_Concurrency}}
 # WARNINGS: cannot copy parseable Swift interface {{.*}}Foo
-# WARNINGS-NOT: cannot copy parseable Swift interface {{.*}}{{Swift|Foundation}}
+# WARNINGS-NOT: cannot copy parseable Swift interface {{.*}}{{Swift|Foundation|_Concurrency}}
 # INTERFACE: module Foo
 
 ---

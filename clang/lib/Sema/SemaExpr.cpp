@@ -414,80 +414,83 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 /// message-send is to a declaration with the sentinel attribute, and
 /// if so, it checks that the requirements of the sentinel are
 /// satisfied.
-void Sema::DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
+void Sema::DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
                                  ArrayRef<Expr *> Args) {
-  const SentinelAttr *attr = D->getAttr<SentinelAttr>();
-  if (!attr)
+  const SentinelAttr *Attr = D->getAttr<SentinelAttr>();
+  if (!Attr)
     return;
 
   // The number of formal parameters of the declaration.
-  unsigned numFormalParams;
+  unsigned NumFormalParams;
 
   // The kind of declaration.  This is also an index into a %select in
   // the diagnostic.
-  enum CalleeType { CT_Function, CT_Method, CT_Block } calleeType;
+  enum { CK_Function, CK_Method, CK_Block } CalleeKind;
 
-  if (ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    numFormalParams = MD->param_size();
-    calleeType = CT_Method;
-  } else if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    numFormalParams = FD->param_size();
-    calleeType = CT_Function;
-  } else if (isa<VarDecl>(D)) {
-    QualType type = cast<ValueDecl>(D)->getType();
-    const FunctionType *fn = nullptr;
-    if (const PointerType *ptr = type->getAs<PointerType>()) {
-      fn = ptr->getPointeeType()->getAs<FunctionType>();
-      if (!fn) return;
-      calleeType = CT_Function;
-    } else if (const BlockPointerType *ptr = type->getAs<BlockPointerType>()) {
-      fn = ptr->getPointeeType()->castAs<FunctionType>();
-      calleeType = CT_Block;
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+    NumFormalParams = MD->param_size();
+    CalleeKind = CK_Method;
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    NumFormalParams = FD->param_size();
+    CalleeKind = CK_Function;
+  } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    QualType Ty = VD->getType();
+    const FunctionType *Fn = nullptr;
+    if (const auto *PtrTy = Ty->getAs<PointerType>()) {
+      Fn = PtrTy->getPointeeType()->getAs<FunctionType>();
+      if (!Fn)
+        return;
+      CalleeKind = CK_Function;
+    } else if (const auto *PtrTy = Ty->getAs<BlockPointerType>()) {
+      Fn = PtrTy->getPointeeType()->castAs<FunctionType>();
+      CalleeKind = CK_Block;
     } else {
       return;
     }
 
-    if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(fn)) {
-      numFormalParams = proto->getNumParams();
-    } else {
-      numFormalParams = 0;
-    }
+    if (const auto *proto = dyn_cast<FunctionProtoType>(Fn))
+      NumFormalParams = proto->getNumParams();
+    else
+      NumFormalParams = 0;
   } else {
     return;
   }
 
-  // "nullPos" is the number of formal parameters at the end which
+  // "NullPos" is the number of formal parameters at the end which
   // effectively count as part of the variadic arguments.  This is
   // useful if you would prefer to not have *any* formal parameters,
   // but the language forces you to have at least one.
-  unsigned nullPos = attr->getNullPos();
-  assert((nullPos == 0 || nullPos == 1) && "invalid null position on sentinel");
-  numFormalParams = (nullPos > numFormalParams ? 0 : numFormalParams - nullPos);
+  unsigned NullPos = Attr->getNullPos();
+  assert((NullPos == 0 || NullPos == 1) && "invalid null position on sentinel");
+  NumFormalParams = (NullPos > NumFormalParams ? 0 : NumFormalParams - NullPos);
 
   // The number of arguments which should follow the sentinel.
-  unsigned numArgsAfterSentinel = attr->getSentinel();
+  unsigned NumArgsAfterSentinel = Attr->getSentinel();
 
   // If there aren't enough arguments for all the formal parameters,
   // the sentinel, and the args after the sentinel, complain.
-  if (Args.size() < numFormalParams + numArgsAfterSentinel + 1) {
+  if (Args.size() < NumFormalParams + NumArgsAfterSentinel + 1) {
     Diag(Loc, diag::warn_not_enough_argument) << D->getDeclName();
-    Diag(D->getLocation(), diag::note_sentinel_here) << int(calleeType);
+    Diag(D->getLocation(), diag::note_sentinel_here) << int(CalleeKind);
     return;
   }
 
   // Otherwise, find the sentinel expression.
-  Expr *sentinelExpr = Args[Args.size() - numArgsAfterSentinel - 1];
-  if (!sentinelExpr) return;
-  if (sentinelExpr->isValueDependent()) return;
-  if (Context.isSentinelNullExpr(sentinelExpr)) return;
+  const Expr *SentinelExpr = Args[Args.size() - NumArgsAfterSentinel - 1];
+  if (!SentinelExpr)
+    return;
+  if (SentinelExpr->isValueDependent())
+    return;
+  if (Context.isSentinelNullExpr(SentinelExpr))
+    return;
 
   // Pick a reasonable string to insert.  Optimistically use 'nil', 'nullptr',
   // or 'NULL' if those are actually defined in the context.  Only use
   // 'nil' for ObjC methods, where it's much more likely that the
   // variadic arguments form a list of object pointers.
-  SourceLocation MissingNilLoc = getLocForEndOfToken(sentinelExpr->getEndLoc());
+  SourceLocation MissingNilLoc = getLocForEndOfToken(SentinelExpr->getEndLoc());
   std::string NullValue;
-  if (calleeType == CT_Method && PP.isMacroDefined("nil"))
+  if (CalleeKind == CK_Method && PP.isMacroDefined("nil"))
     NullValue = "nil";
   else if (getLangOpts().CPlusPlus11)
     NullValue = "nullptr";
@@ -497,12 +500,13 @@ void Sema::DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
     NullValue = "(void*) 0";
 
   if (MissingNilLoc.isInvalid())
-    Diag(Loc, diag::warn_missing_sentinel) << int(calleeType);
+    Diag(Loc, diag::warn_missing_sentinel) << int(CalleeKind);
   else
     Diag(MissingNilLoc, diag::warn_missing_sentinel)
-      << int(calleeType)
-      << FixItHint::CreateInsertion(MissingNilLoc, ", " + NullValue);
-  Diag(D->getLocation(), diag::note_sentinel_here) << int(calleeType);
+        << int(CalleeKind)
+        << FixItHint::CreateInsertion(MissingNilLoc, ", " + NullValue);
+  Diag(D->getLocation(), diag::note_sentinel_here)
+      << int(CalleeKind) << Attr->getRange();
 }
 
 SourceRange Sema::getExprRange(Expr *E) const {
@@ -1884,24 +1888,24 @@ ExprResult Sema::CreateGenericSelectionExpr(
       ContainsUnexpandedParameterPack, ResultIndex);
 }
 
-static PredefinedExpr::IdentKind getPredefinedExprKind(tok::TokenKind Kind) {
+static PredefinedIdentKind getPredefinedExprKind(tok::TokenKind Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("unexpected TokenKind");
   case tok::kw___func__:
-    return PredefinedExpr::Func; // [C99 6.4.2.2]
+    return PredefinedIdentKind::Func; // [C99 6.4.2.2]
   case tok::kw___FUNCTION__:
-    return PredefinedExpr::Function;
+    return PredefinedIdentKind::Function;
   case tok::kw___FUNCDNAME__:
-    return PredefinedExpr::FuncDName; // [MS]
+    return PredefinedIdentKind::FuncDName; // [MS]
   case tok::kw___FUNCSIG__:
-    return PredefinedExpr::FuncSig; // [MS]
+    return PredefinedIdentKind::FuncSig; // [MS]
   case tok::kw_L__FUNCTION__:
-    return PredefinedExpr::LFunction; // [MS]
+    return PredefinedIdentKind::LFunction; // [MS]
   case tok::kw_L__FUNCSIG__:
-    return PredefinedExpr::LFuncSig; // [MS]
+    return PredefinedIdentKind::LFuncSig; // [MS]
   case tok::kw___PRETTY_FUNCTION__:
-    return PredefinedExpr::PrettyFunction; // [GNU]
+    return PredefinedIdentKind::PrettyFunction; // [GNU]
   }
 }
 
@@ -1969,7 +1973,7 @@ ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
     StringTokLocs.push_back(Tok.getLocation());
 
   StringLiteral *Lit = StringLiteral::Create(
-      Context, Literal.GetString(), StringLiteral::Unevaluated, false, {},
+      Context, Literal.GetString(), StringLiteralKind::Unevaluated, false, {},
       &StringTokLocs[0], StringTokLocs.size());
 
   if (!Literal.getUDSuffix().empty()) {
@@ -2055,20 +2059,20 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
     StringTokLocs.push_back(Tok.getLocation());
 
   QualType CharTy = Context.CharTy;
-  StringLiteral::StringKind Kind = StringLiteral::Ordinary;
+  StringLiteralKind Kind = StringLiteralKind::Ordinary;
   if (Literal.isWide()) {
     CharTy = Context.getWideCharType();
-    Kind = StringLiteral::Wide;
+    Kind = StringLiteralKind::Wide;
   } else if (Literal.isUTF8()) {
     if (getLangOpts().Char8)
       CharTy = Context.Char8Ty;
-    Kind = StringLiteral::UTF8;
+    Kind = StringLiteralKind::UTF8;
   } else if (Literal.isUTF16()) {
     CharTy = Context.Char16Ty;
-    Kind = StringLiteral::UTF16;
+    Kind = StringLiteralKind::UTF16;
   } else if (Literal.isUTF32()) {
     CharTy = Context.Char32Ty;
-    Kind = StringLiteral::UTF32;
+    Kind = StringLiteralKind::UTF32;
   } else if (Literal.isPascal()) {
     CharTy = Context.UnsignedCharTy;
   }
@@ -2076,7 +2080,7 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   // Warn on initializing an array of char from a u8 string literal; this
   // becomes ill-formed in C++2a.
   if (getLangOpts().CPlusPlus && !getLangOpts().CPlusPlus20 &&
-      !getLangOpts().Char8 && Kind == StringLiteral::UTF8) {
+      !getLangOpts().Char8 && Kind == StringLiteralKind::UTF8) {
     Diag(StringTokLocs.front(), diag::warn_cxx20_compat_utf8_string);
 
     // Create removals for all 'u8' prefixes in the string literal(s). This
@@ -3716,7 +3720,7 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
 }
 
 ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
-                                     PredefinedExpr::IdentKind IK) {
+                                     PredefinedIdentKind IK) {
   Decl *currentDecl = getPredefinedExprDecl(CurContext);
   if (!currentDecl) {
     Diag(Loc, diag::ext_predef_outside_function);
@@ -3734,7 +3738,8 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);
-    if (IK == PredefinedExpr::LFunction || IK == PredefinedExpr::LFuncSig) {
+    if (IK == PredefinedIdentKind::LFunction ||
+        IK == PredefinedIdentKind::LFuncSig) {
       ResTy =
           Context.adjustStringLiteralBaseType(Context.WideCharTy.withConst());
       SmallString<32> RawChars;
@@ -3743,14 +3748,14 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
       ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
                                            ArraySizeModifier::Normal,
                                            /*IndexTypeQuals*/ 0);
-      SL = StringLiteral::Create(Context, RawChars, StringLiteral::Wide,
+      SL = StringLiteral::Create(Context, RawChars, StringLiteralKind::Wide,
                                  /*Pascal*/ false, ResTy, Loc);
     } else {
       ResTy = Context.adjustStringLiteralBaseType(Context.CharTy.withConst());
       ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
                                            ArraySizeModifier::Normal,
                                            /*IndexTypeQuals*/ 0);
-      SL = StringLiteral::Create(Context, Str, StringLiteral::Ordinary,
+      SL = StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
                                  /*Pascal*/ false, ResTy, Loc);
     }
   }
@@ -3814,15 +3819,15 @@ ExprResult Sema::ActOnCharacterConstant(const Token &Tok, Scope *UDLScope) {
     Ty = Context.CharTy; // 'x' -> char in C++;
                          // u8'x' -> char in C11-C17 and in C++ without char8_t.
 
-  CharacterLiteral::CharacterKind Kind = CharacterLiteral::Ascii;
+  CharacterLiteralKind Kind = CharacterLiteralKind::Ascii;
   if (Literal.isWide())
-    Kind = CharacterLiteral::Wide;
+    Kind = CharacterLiteralKind::Wide;
   else if (Literal.isUTF16())
-    Kind = CharacterLiteral::UTF16;
+    Kind = CharacterLiteralKind::UTF16;
   else if (Literal.isUTF32())
-    Kind = CharacterLiteral::UTF32;
+    Kind = CharacterLiteralKind::UTF32;
   else if (Literal.isUTF8())
-    Kind = CharacterLiteral::UTF8;
+    Kind = CharacterLiteralKind::UTF8;
 
   Expr *Lit = new (Context) CharacterLiteral(Literal.getValue(), Kind, Ty,
                                              Tok.getLocation());
@@ -4006,7 +4011,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           llvm::APInt(32, Length + 1), nullptr, ArraySizeModifier::Normal, 0);
       Expr *Lit =
           StringLiteral::Create(Context, StringRef(TokSpelling.data(), Length),
-                                StringLiteral::Ordinary,
+                                StringLiteralKind::Ordinary,
                                 /*Pascal*/ false, StrTy, &TokLoc, 1);
       return BuildLiteralOperatorCall(R, OpNameInfo, Lit, TokLoc);
     }
@@ -4443,8 +4448,9 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   assert(!ExprTy->isReferenceType());
 
   bool IsUnevaluatedOperand =
-      (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
-       ExprKind == UETT_PreferredAlignOf || ExprKind == UETT_VecStep);
+      (ExprKind == UETT_SizeOf || ExprKind == UETT_DataSizeOf ||
+       ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf ||
+       ExprKind == UETT_VecStep);
   if (IsUnevaluatedOperand) {
     ExprResult Result = CheckUnevaluatedOperand(E);
     if (Result.isInvalid())
@@ -17542,25 +17548,25 @@ static CXXRecordDecl *LookupStdSourceLocationImpl(Sema &S, SourceLocation Loc) {
   return ImplDecl;
 }
 
-ExprResult Sema::ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+ExprResult Sema::ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                     SourceLocation BuiltinLoc,
                                     SourceLocation RPLoc) {
   QualType ResultTy;
   switch (Kind) {
-  case SourceLocExpr::File:
-  case SourceLocExpr::FileName:
-  case SourceLocExpr::Function:
-  case SourceLocExpr::FuncSig: {
+  case SourceLocIdentKind::File:
+  case SourceLocIdentKind::FileName:
+  case SourceLocIdentKind::Function:
+  case SourceLocIdentKind::FuncSig: {
     QualType ArrTy = Context.getStringLiteralArrayType(Context.CharTy, 0);
     ResultTy =
         Context.getPointerType(ArrTy->getAsArrayTypeUnsafe()->getElementType());
     break;
   }
-  case SourceLocExpr::Line:
-  case SourceLocExpr::Column:
+  case SourceLocIdentKind::Line:
+  case SourceLocIdentKind::Column:
     ResultTy = Context.UnsignedIntTy;
     break;
-  case SourceLocExpr::SourceLocStruct:
+  case SourceLocIdentKind::SourceLocStruct:
     if (!StdSourceLocationImplDecl) {
       StdSourceLocationImplDecl =
           LookupStdSourceLocationImpl(*this, BuiltinLoc);
@@ -17575,8 +17581,7 @@ ExprResult Sema::ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
   return BuildSourceLocExpr(Kind, ResultTy, BuiltinLoc, RPLoc, CurContext);
 }
 
-ExprResult Sema::BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
-                                    QualType ResultTy,
+ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                     SourceLocation BuiltinLoc,
                                     SourceLocation RPLoc,
                                     DeclContext *ParentContext) {
@@ -19095,6 +19100,13 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   const FunctionProtoType *FPT = Func->getType()->getAs<FunctionProtoType>();
   if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
     ResolveExceptionSpec(Loc, FPT);
+
+  // A callee could be called by a host function then by a device function.
+  // If we only try recording once, we will miss recording the use on device
+  // side. Therefore keep trying until it is recorded.
+  if (LangOpts.OffloadImplicitHostDeviceTemplates && LangOpts.CUDAIsDevice &&
+      !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(Func))
+    CUDARecordImplicitHostDeviceFuncUsedByDevice(Func);
 
   // If this is the first "real" use, act on that.
   if (OdrUse == OdrUseContext::Used && !Func->isUsed(/*CheckUsedAttr=*/false)) {

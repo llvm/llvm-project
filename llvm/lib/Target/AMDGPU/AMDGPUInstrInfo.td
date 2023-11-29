@@ -94,6 +94,11 @@ def AMDGPUtc_return_gfx: SDNode<"AMDGPUISD::TC_RETURN_GFX", AMDGPUTCReturnTP,
 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
+def AMDGPUtc_return_chain: SDNode<"AMDGPUISD::TC_RETURN_CHAIN",
+  SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
   SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>,
     [SDNPHasChain, SDNPVariadic, SDNPSideEffect, SDNPInGlue]

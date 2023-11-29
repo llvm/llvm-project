@@ -15,7 +15,7 @@ def setup_passes(mlir_module):
         "parallelization-strategy=none"
         " vectorization-strategy=none vl=1 enable-simd-index32=False"
     )
-    pipeline = f"sparse-compiler{{{opt}}}"
+    pipeline = f"sparsifier{{{opt}}}"
     PassManager.parse(pipeline).run(mlir_module)
 
 

@@ -60,6 +60,8 @@
 #elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#elif KMP_OS_SOLARIS
+#include <sys/loadavg.h>
 #endif
 
 #include <ctype.h>
@@ -69,6 +71,15 @@
 struct kmp_sys_timer {
   struct timespec start;
 };
+
+#if KMP_OS_SOLARIS
+// Convert timeval to timespec.
+#define TIMEVAL_TO_TIMESPEC(tv, ts)                                            \
+  do {                                                                         \
+    (ts)->tv_sec = (tv)->tv_sec;                                               \
+    (ts)->tv_nsec = (tv)->tv_usec * 1000;                                      \
+  } while (0)
+#endif
 
 // Convert timespec to nanoseconds.
 #define TS2NS(timespec)                                                        \
@@ -409,7 +420,7 @@ void __kmp_terminate_thread(int gtid) {
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS
   pthread_attr_t attr;
   int status;
   size_t size = 0;
@@ -448,7 +459,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
     return TRUE;
   }
 #endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD  \
-          || KMP_OS_HURD */
+          || KMP_OS_HURD || KMP_OS_SOLARIS */
   /* Use incremental refinement starting from initial conservative estimate */
   TCW_PTR(th->th.th_info.ds.ds_stacksize, 0);
   TCW_PTR(th->th.th_info.ds.ds_stackbase, &stack_data);
@@ -463,7 +474,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -512,7 +523,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -1813,7 +1824,7 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD
+    KMP_OS_HURD || KMP_OS_SOLARIS
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -2189,9 +2200,9 @@ int __kmp_is_address_mapped(void *addr) {
     }
     kiv.kve_start += 1;
   }
-#elif KMP_OS_DRAGONFLY
+#elif KMP_OS_DRAGONFLY || KMP_OS_SOLARIS
 
-  // FIXME(DragonFly): Implement this
+  // FIXME(DragonFly, Solaris): Implement this
   found = 1;
 
 #else
@@ -2207,7 +2218,7 @@ int __kmp_is_address_mapped(void *addr) {
 #ifdef USE_LOAD_BALANCE
 
 #if KMP_OS_DARWIN || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||    \
-    KMP_OS_OPENBSD
+    KMP_OS_OPENBSD || KMP_OS_SOLARIS
 
 // The function returns the rounded value of the system load average
 // during given time interval which depends on the value of
@@ -2465,7 +2476,7 @@ finish: // Clean up and exit.
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
       KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||            \
-      KMP_ARCH_ARM || KMP_ARCH_VE)
+      KMP_ARCH_ARM || KMP_ARCH_VE || KMP_ARCH_S390X)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

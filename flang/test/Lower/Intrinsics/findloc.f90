@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPfindloc_test_1d(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}, %[[arg1:.*]]: !fir.ref<i32>{{.*}}) -> !fir.array<1xi32>

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_SEMA_SEMA_H
 #define LLVM_CLANG_SEMA_SEMA_H
 
+#include "clang/APINotes/APINotesManager.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
@@ -408,6 +409,7 @@ public:
   ASTConsumer &Consumer;
   DiagnosticsEngine &Diags;
   SourceManager &SourceMgr;
+  api_notes::APINotesManager APINotes;
 
   /// Flag indicating whether or not to collect detailed statistics.
   bool CollectStats;
@@ -710,9 +712,13 @@ public:
     return result;
   }
 
+  // Saves the current floating-point pragma stack and clear it in this Sema.
   class FpPragmaStackSaveRAII {
   public:
-    FpPragmaStackSaveRAII(Sema &S) : S(S), SavedStack(S.FpPragmaStack) {}
+    FpPragmaStackSaveRAII(Sema &S)
+        : S(S), SavedStack(std::move(S.FpPragmaStack)) {
+      S.FpPragmaStack.Stack.clear();
+    }
     ~FpPragmaStackSaveRAII() { S.FpPragmaStack = std::move(SavedStack); }
 
   private:
@@ -722,7 +728,6 @@ public:
 
   void resetFPOptions(FPOptions FPO) {
     CurFPFeatures = FPO;
-    FpPragmaStack.Stack.clear();
     FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
   }
 
@@ -2096,6 +2101,9 @@ public:
   QualType BuildAddressSpaceAttr(QualType &T, Expr *AddrSpace,
                                  SourceLocation AttrLoc);
 
+  CodeAlignAttr *BuildCodeAlignAttr(const AttributeCommonInfo &CI, Expr *E);
+  bool CheckRebuiltCodeAlignStmtAttributes(ArrayRef<const Attr *> Attrs);
+
   bool CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc);
 
   bool CheckFunctionReturnType(QualType T, SourceLocation Loc);
@@ -2303,7 +2311,6 @@ private:
   struct ModuleScope {
     SourceLocation BeginLoc;
     clang::Module *Module = nullptr;
-    bool ModuleInterface = false;
     VisibleModuleSet OuterVisibleModules;
   };
   /// The modules we're currently parsing.
@@ -2318,14 +2325,9 @@ private:
   clang::Module *TheGlobalModuleFragment = nullptr;
 
   /// The implicit global module fragments of the current translation unit.
-  /// We would only create at most two implicit global module fragments to
-  /// avoid performance penalties when there are many language linkage
-  /// exports.
   ///
-  /// The contents in the implicit global module fragment can't be discarded
-  /// no matter if it is exported or not.
+  /// The contents in the implicit global module fragment can't be discarded.
   clang::Module *TheImplicitGlobalModuleFragment = nullptr;
-  clang::Module *TheExportedImplicitGlobalModuleFragment = nullptr;
 
   /// Namespace definitions that we will export when they finish.
   llvm::SmallPtrSet<const NamespaceDecl*, 8> DeferredExportedNamespaces;
@@ -2337,9 +2339,7 @@ private:
 
   /// Helper function to judge if we are in module purview.
   /// Return false if we are not in a module.
-  bool isCurrentModulePurview() const {
-    return getCurrentModule() ? getCurrentModule()->isModulePurview() : false;
-  }
+  bool isCurrentModulePurview() const;
 
   /// Enter the scope of the explicit global module fragment.
   Module *PushGlobalModuleFragment(SourceLocation BeginLoc);
@@ -2347,8 +2347,7 @@ private:
   void PopGlobalModuleFragment();
 
   /// Enter the scope of an implicit global module fragment.
-  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc,
-                                           bool IsExported);
+  Module *PushImplicitGlobalModuleFragment(SourceLocation BeginLoc);
   /// Leave the scope of an implicit global module fragment.
   void PopImplicitGlobalModuleFragment();
 
@@ -2367,9 +2366,11 @@ public:
     return ModuleScopes.empty() ? nullptr : ModuleScopes.back().Module;
   }
 
-  /// Is the module scope we are an interface?
-  bool currentModuleIsInterface() const {
-    return ModuleScopes.empty() ? false : ModuleScopes.back().ModuleInterface;
+  /// Is the module scope we are an implementation unit?
+  bool currentModuleIsImplementation() const {
+    return ModuleScopes.empty()
+               ? false
+               : ModuleScopes.back().Module->isModuleImplementation();
   }
 
   /// Is the module scope we are in a C++ Header Unit?
@@ -3736,6 +3737,9 @@ public:
                                               int X, int Y, int Z);
   HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                       HLSLShaderAttr::ShaderType ShaderType);
+  HLSLParamModifierAttr *
+  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
+                             HLSLParamModifierAttr::Spelling Spelling);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
@@ -3848,6 +3852,12 @@ public:
                                   const FunctionProtoType *NewType,
                                   unsigned *ArgPos = nullptr,
                                   bool Reversed = false);
+
+  bool FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
+                                           const FunctionDecl *NewFunction,
+                                           unsigned *ArgPos = nullptr,
+                                           bool Reversed = false);
+
   void HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                                   QualType FromType, QualType ToType);
 
@@ -5456,7 +5466,7 @@ public:
   bool DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *PD,
                                         ObjCMethodDecl *Getter,
                                         SourceLocation Loc);
-  void DiagnoseSentinelCalls(NamedDecl *D, SourceLocation Loc,
+  void DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
                              ArrayRef<Expr *> Args);
 
   void PushExpressionEvaluationContext(
@@ -5723,8 +5733,7 @@ public:
   // __FUNCTION__) are replaced (expanded) with string-literal Tokens.
   std::vector<Token> ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks);
 
-  ExprResult BuildPredefinedExpr(SourceLocation Loc,
-                                 PredefinedExpr::IdentKind IK);
+  ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
@@ -6086,14 +6095,13 @@ public:
 
   // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FUNCSIG(),
   // __builtin_FILE(), __builtin_COLUMN(), __builtin_source_location()
-  ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+  ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
   // Build a potentially resolved SourceLocExpr.
-  ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
-                                QualType ResultTy, SourceLocation BuiltinLoc,
-                                SourceLocation RPLoc,
+  ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
+                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
                                 DeclContext *ParentContext);
 
   // __null
@@ -6325,36 +6333,30 @@ public:
   /// including handling of its default argument expressions.
   ///
   /// \param ConstructKind - a CXXConstructExpr::ConstructionKind
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        NamedDecl *FoundDecl,
-                        CXXConstructorDecl *Constructor, MultiExprArg Exprs,
-                        bool HadMultipleCandidates, bool IsListInitialization,
-                        bool IsStdInitListInitialization,
-                        bool RequiresZeroInit, unsigned ConstructKind,
-                        SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+      CXXConstructorDecl *Constructor, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   /// Build a CXXConstructExpr whose constructor has already been resolved if
   /// it denotes an inherited constructor.
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        CXXConstructorDecl *Constructor, bool Elidable,
-                        MultiExprArg Exprs,
-                        bool HadMultipleCandidates, bool IsListInitialization,
-                        bool IsStdInitListInitialization,
-                        bool RequiresZeroInit, unsigned ConstructKind,
-                        SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType,
+      CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   // FIXME: Can we remove this and have the above BuildCXXConstructExpr check if
   // the constructor can be elidable?
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        NamedDecl *FoundDecl,
-                        CXXConstructorDecl *Constructor, bool Elidable,
-                        MultiExprArg Exprs, bool HadMultipleCandidates,
-                        bool IsListInitialization,
-                        bool IsStdInitListInitialization, bool RequiresZeroInit,
-                        unsigned ConstructKind, SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+      CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
                                                 SourceLocation InitLoc);
@@ -8476,6 +8478,8 @@ public:
       ArrayRef<TemplateArgument> SugaredConverted,
       ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
 
+  SourceLocation getTopMostPointOfInstantiation(const NamedDecl *) const;
+
   /// Specifies the context in which a particular template
   /// argument is being checked.
   enum CheckTemplateArgumentKind {
@@ -8853,6 +8857,9 @@ public:
 
     /// The type of an exception.
     UPPC_ExceptionType,
+
+    /// Explicit specialization.
+    UPPC_ExplicitSpecialization,
 
     /// Partial specialization.
     UPPC_PartialSpecialization,
@@ -10998,7 +11005,10 @@ public:
 
   /// Called on well formed
   /// \#pragma clang fp reassociate
-  void ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled);
+  /// or
+  /// \#pragma clang fp reciprocal
+  void ActOnPragmaFPValueChangingOption(SourceLocation Loc, PragmaFPKind Kind,
+                                        bool IsEnabled);
 
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
@@ -11198,6 +11208,12 @@ public:
   bool buildCoroutineParameterMoves(SourceLocation Loc);
   VarDecl *buildCoroutinePromise(SourceLocation Loc);
   void CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body);
+
+  // As a clang extension, enforces that a non-coroutine function must be marked
+  // with [[clang::coro_wrapper]] if it returns a type marked with
+  // [[clang::coro_return_type]].
+  // Expects that FD is not a coroutine.
+  void CheckCoroutineWrapper(FunctionDecl *FD);
   /// Lookup 'coroutine_traits' in std namespace and std::experimental
   /// namespace. The namespace found is recorded in Namespace.
   ClassTemplateDecl *lookupCoroutineTraits(SourceLocation KwLoc,
@@ -12194,6 +12210,13 @@ public:
   /// Called on well-formed 'compare' clause.
   OMPClause *ActOnOpenMPCompareClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'fail' clause.
+  OMPClause *ActOnOpenMPFailClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPFailClause(
+      OpenMPClauseKind Kind, SourceLocation KindLoc,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+
   /// Called on well-formed 'seq_cst' clause.
   OMPClause *ActOnOpenMPSeqCstClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);
@@ -13492,6 +13515,10 @@ public:
   /// host or device attribute.
   void CUDASetLambdaAttrs(CXXMethodDecl *Method);
 
+  /// Record \p FD if it is a CUDA/HIP implicit host device function used on
+  /// device side in device compilation.
+  void CUDARecordImplicitHostDeviceFuncUsedByDevice(const FunctionDecl *FD);
+
   /// Finds a function in \p Matches with highest calling priority
   /// from \p Caller context and erases all functions with lower
   /// calling priority.
@@ -14038,7 +14065,9 @@ public:
 
     /// If true, \c Type should be compared with other expression's types for
     /// layout-compatibility.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned LayoutCompatible : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned MustBeNull : 1;
   };
 

@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -E -P -I%t -o %t/tmp 2>&1 | FileCheck %t/a.cppm
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -E -P -I%t -o - 2>&1 \
 // RUN:     -Wno-include-angled-in-module-purview | FileCheck %t/a.cppm --check-prefix=CHECK-NO-WARN
+// RUN: %clang_cc1 -std=c++20 %t/b.cpp -E -P -I%t -o - 2>&1 | FileCheck %t/a.cppm --check-prefix=CHECK-NO-WARN
 
 //--- a.h
 // left empty
@@ -58,3 +59,10 @@ module :private;
 // CHECK: 10 warnings generated.
 
 // CHECK-NO-WARN-NOT: warning
+
+//--- b.cpp
+/// Don't recognize `module m);` as a module purview or report a spurious
+/// warning for <stddef.h>.
+struct module {};
+void foo(module m);
+#include <stddef.h>

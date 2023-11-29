@@ -6790,10 +6790,13 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 }
 
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {
-  void testImport(llvm::StringRef Code, clang::TestLanguage Lang = Lang_CXX14) {
+  void testImport(llvm::StringRef Code, clang::TestLanguage Lang = Lang_CXX14,
+                  bool FindLast = false) {
     Decl *FromTU = getTuDecl(Code, Lang, "input0.cc");
-    FunctionDecl *From = FirstDeclMatcher<FunctionDecl>().match(
-        FromTU, functionDecl(hasName("foo")));
+    FunctionDecl *From = FindLast ? LastDeclMatcher<FunctionDecl>().match(
+                                        FromTU, functionDecl(hasName("foo")))
+                                  : FirstDeclMatcher<FunctionDecl>().match(
+                                        FromTU, functionDecl(hasName("foo")));
 
     FunctionDecl *To = Import(From, Lang);
     EXPECT_TRUE(To);
@@ -7230,6 +7233,20 @@ TEST_P(ImportAutoFunctions, ReturnWithTypeInSwitch) {
       }
       )",
       Lang_CXX17);
+}
+
+TEST_P(ImportAutoFunctions, ReturnWithAutoTemplateType) {
+  testImport(
+      R"(
+      template<class T>
+      struct S {};
+      template<class T>
+      auto foo() {
+        return S<T>{};
+      }
+      auto a = foo<int>();
+      )",
+      Lang_CXX14, /*FindLast=*/true);
 }
 
 struct ImportSourceLocations : ASTImporterOptionSpecificTestBase {};
@@ -7705,8 +7722,9 @@ TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
 
   // Create a dummy class by hand with external lexical storage.
   IdentifierInfo &Ident = Context.Idents.get("test_class");
-  auto *Record = CXXRecordDecl::Create(
-      Context, TTK_Class, FromTU, SourceLocation(), SourceLocation(), &Ident);
+  auto *Record =
+      CXXRecordDecl::Create(Context, TagTypeKind::Class, FromTU,
+                            SourceLocation(), SourceLocation(), &Ident);
   Record->setHasExternalLexicalStorage();
   FromTU->addDecl(Record);
 

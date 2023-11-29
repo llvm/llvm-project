@@ -116,6 +116,7 @@ static_library("Checkers") {
     "SmartPtrModeling.cpp",
     "StackAddrEscapeChecker.cpp",
     "StdLibraryFunctionsChecker.cpp",
+    "StdVariantChecker.cpp",
     "StreamChecker.cpp",
     "StringChecker.cpp",
     "Taint.cpp",

@@ -47,8 +47,6 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
 
         LINK_LIBS
         PRIVATE
-        elf_common
-        MemoryManager
         PluginInterface
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}
@@ -70,6 +68,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
       LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
     set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES
       INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+      POSITION_INDEPENDENT_CODE ON
       CXX_VISIBILITY_PRESET protected)
 
     target_include_directories( "omptarget.rtl.${tmachine_libname}" PRIVATE
@@ -96,6 +95,7 @@ add_subdirectory(cuda)
 add_subdirectory(ppc64)
 add_subdirectory(ppc64le)
 add_subdirectory(x86_64)
+add_subdirectory(s390x)
 
 # Make sure the parent scope can see the plugins that will be created.
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)

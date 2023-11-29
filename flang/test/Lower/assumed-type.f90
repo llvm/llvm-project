@@ -1,4 +1,4 @@
-! RUN: bbc -polymorphic-type -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -polymorphic-type -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module assumed_type_test
 

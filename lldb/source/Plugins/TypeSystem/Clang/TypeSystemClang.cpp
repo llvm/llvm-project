@@ -2320,8 +2320,9 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-                          type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
+  type = CreateRecordType(
+      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
     AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,

@@ -24,6 +24,7 @@
 #include "kmp_wait_release.h"
 #include "kmp_wrapper_getpid.h"
 #include "kmp_dispatch.h"
+#include "kmp_utils.h"
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
@@ -1652,7 +1653,7 @@ __kmp_serial_fork_call(ident_t *loc, int gtid, enum fork_context_e call_context,
 /* josh todo: hypothetical question: what do we do for OS X*? */
 #if KMP_OS_LINUX &&                                                            \
     (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
-  void *args[argc];
+  SimpleVLA<void *> args(argc);
 #else
   void **args = (void **)KMP_ALLOCA(argc * sizeof(void *));
 #endif /* KMP_OS_LINUX && ( KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || \
@@ -8894,10 +8895,12 @@ __kmp_determine_reduction_method(
     int atomic_available = FAST_REDUCTION_ATOMIC_METHOD_GENERATED;
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
-    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 || KMP_ARCH_VE
+    KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
+    KMP_ARCH_VE || KMP_ARCH_S390X
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||        \
+    KMP_OS_SOLARIS
 
     int teamsize_cutoff = 4;
 
@@ -8921,12 +8924,13 @@ __kmp_determine_reduction_method(
 #else
 #error "Unknown or unsupported OS"
 #endif // KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||
-       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD
+       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||
+       // KMP_OS_SOLARIS
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HURD
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HURD || KMP_OS_SOLARIS
 
     // basic tuning
 

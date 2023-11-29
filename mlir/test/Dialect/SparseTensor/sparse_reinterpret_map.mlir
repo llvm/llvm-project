@@ -19,17 +19,17 @@
     )
 }>
 
-// CHECK: #[[$map0:.*]] = affine_map<(d0, d1, d2, d3) -> (d0 * 2 + d2, d1 * 4 + d3)>
-// CHECK: #[[$map1:.*]] = affine_map<(d0, d1, d2, d3) -> (d1 * 4 + d3, d0 * 2 + d2)>
-// CHECK: #[[$map2:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK-DAG: #[[$map0:.*]] = affine_map<(d0, d1, d2, d3) -> (d0 * 2 + d2, d1 * 4 + d3)>
+// CHECK-DAG: #[[$map1:.*]] = affine_map<(d0, d1, d2, d3) -> (d1 * 4 + d3, d0 * 2 + d2)>
+// CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 // CHECK-LABEL: func @mul(
 // CHECK-SAME:  %[[A0:.*0]]: tensor<32x32xf32>,
 // CHECK-SAME:  %[[A1:.*1]]: tensor<32x32xf32>,
-// CHECK-SAME:  %[[A2:.*2]]: tensor<32x32xf32, #sparse_tensor.encoding<{{{.*}}}>>)
+// CHECK-SAME:  %[[A2:.*2]]: tensor<32x32xf32, #sparse{{[0-9]*}}>)
 // CHECK:       %[[T0:.*]] = sparse_tensor.reinterpret_map %[[A2]]
-// CHECK:       %[[T1:.*]] = linalg.generic {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+// CHECK:       %[[T1:.*]] = linalg.generic {doc = {{.*}} indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
 // CHECK:       %[[T2:.*]] = sparse_tensor.reinterpret_map %[[T1]]
-// CHECK:       return %[[T2]] : tensor<32x32xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:       return %[[T2]] : tensor<32x32xf32, #sparse{{[0-9]*}}>
 func.func @mul(%arg0: tensor<32x32xf32>,
                %arg1: tensor<32x32xf32>,
                %arg2: tensor<32x32xf32, #BSR>) -> tensor<32x32xf32, #BSR> {
@@ -55,18 +55,20 @@ func.func @mul(%arg0: tensor<32x32xf32>,
       )
 }>
 
+// CHECK-DAG: #[[$remap:.*]] = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 floordiv 2 : dense, d1 floordiv 2 : compressed, d0 mod 2 : dense, d1 mod 2 : dense) }>
+// CHECK-DAG: #[[$demap:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2, d3) -> (d0 : dense, d1 : compressed, d2 : dense, d3 : dense) }>
 // CHECK-LABEL:   func.func @sparse_foreach_reinterpret_map(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<2x4xf64
-// CHECK:           %[[VAL_1:.*]] = bufferization.alloc_tensor() : tensor<1x2x2x2xf64
-// CHECK:           %[[VAL_2:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<2x4xf64
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<2x4xf64, #[[$remap]]>
+// CHECK:           %[[VAL_1:.*]] = bufferization.alloc_tensor() : tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:           %[[VAL_2:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<2x4xf64, #[[$remap]]> to tensor<1x2x2x2xf64, #[[$demap]]>
 // CHECK:           %[[VAL_4:.*]] = sparse_tensor.foreach in %[[VAL_2]] init(%[[VAL_1]])
-// CHECK:           ^bb0(%[[VAL_5:.*]]: index, %[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index, %[[VAL_8:.*]]: index, %[[VAL_9:.*]]: f64, %[[VAL_10:.*]]: tensor<1x2x2x2xf64
-// CHECK:             %[[VAL_11:.*]] = sparse_tensor.insert %[[VAL_9]] into %[[VAL_10]]{{\[}}%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]]] : tensor<1x2x2x2xf64
-// CHECK:             sparse_tensor.yield %[[VAL_11]] : tensor<1x2x2x2xf64
+// CHECK:           ^bb0(%[[VAL_5:.*]]: index, %[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index, %[[VAL_8:.*]]: index, %[[VAL_9:.*]]: f64, %[[VAL_10:.*]]: tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:             %[[VAL_11:.*]] = sparse_tensor.insert %[[VAL_9]] into %[[VAL_10]]{{\[}}%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]]] : tensor<1x2x2x2xf64, #[[$demap]]>
+// CHECK:             sparse_tensor.yield %[[VAL_11]] : tensor<1x2x2x2xf64, #sparse{{[0-9]*}}>
 // CHECK:           }
-// CHECK:           %[[VAL_12:.*]] = sparse_tensor.reinterpret_map %[[VAL_4]] : tensor<1x2x2x2xf64
-// CHECK:           %[[VAL_13:.*]] = sparse_tensor.load %[[VAL_12]] hasInserts : tensor<2x4xf64
-// CHECK:           return %[[VAL_13]] : tensor<2x4xf64
+// CHECK:           %[[VAL_12:.*]] = sparse_tensor.reinterpret_map %[[VAL_4]] : tensor<1x2x2x2xf64, #[[$demap]]> to tensor<2x4xf64, #[[$remap]]>
+// CHECK:           %[[VAL_13:.*]] = sparse_tensor.load %[[VAL_12]] hasInserts : tensor<2x4xf64, #[[$remap]]>
+// CHECK:           return %[[VAL_13]] : tensor<2x4xf64, #sparse{{[0-9]*}}>
 // CHECK:         }
 func.func @sparse_foreach_reinterpret_map(%6 : tensor<2x4xf64, #BSR>) -> tensor<2x4xf64, #BSR> {
   %7 = bufferization.alloc_tensor() : tensor<2x4xf64, #BSR>

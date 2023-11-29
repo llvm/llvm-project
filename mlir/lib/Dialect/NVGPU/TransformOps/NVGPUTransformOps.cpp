@@ -99,8 +99,7 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
       });
   llvmTypeConverter.addConversion(
       [&](nvgpu::TensorMapDescriptorType type) -> Type {
-        return llvmTypeConverter.getPointerType(
-            type.getTensor().getElementType());
+        return LLVM::LLVMPointerType::get(type.getContext());
       });
   populateNVGPUToNVVMConversionPatterns(llvmTypeConverter, patterns);
 }

@@ -70,6 +70,7 @@ Code actions
 ^^^^^^^^^^^^
 
 - The extract variable tweak gained support for extracting lambda expressions to a variable.
+- A new tweak was added for turning unscoped into scoped enums.
 
 Signature help
 ^^^^^^^^^^^^^^
@@ -207,6 +208,15 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`abseil-string-find-startswith
+  <clang-tidy/checks/abseil/string-find-startswith>` check to also consider
+  ``std::basic_string_view`` in addition to ``std::basic_string`` by default.
+
+- Improved :doc:`bugprone-assert-side-effect
+  <clang-tidy/checks/bugprone/assert-side-effect>` check to report usage of
+  non-const ``<<`` and ``>>`` operators in assertions and fixed some false-positives
+  with const operators.
+
 - Improved :doc:`bugprone-dangling-handle
   <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
   casting during type conversions at variable initialization, now with improved
@@ -223,6 +233,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
+
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check diagnostics to precisely
+  highlight specific locations, providing more accurate guidance.
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check, so that it does
@@ -304,9 +318,15 @@ Changes in existing checks
   customizable namespace. This further allows for testing the libc when the
   system-libc is also LLVM's libc.
 
+- Improved :doc:`llvmlibc-inline-function-decl
+  <clang-tidy/checks/llvmlibc/inline-function-decl>` to properly ignore implicit
+  functions, such as struct constructors, and explicitly deleted functions.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
-  using pointer to member function.
+  using pointer to member function. Additionally, the check no longer emits
+  a diagnostic when a variable that is not type-dependent is an operand of a
+  type-dependent binary operator.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
@@ -324,12 +344,18 @@ Changes in existing checks
 
 - Improved :doc:`modernize-avoid-bind
   <clang-tidy/checks/modernize/avoid-bind>` check to
-  not emit a ``return`` for fixes when the function returns ``void``.
+  not emit a ``return`` for fixes when the function returns ``void`` and to
+  provide valid fixes for cases involving bound C++ operators.
 
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
   and avoid crash for array of dependent array.
+
+- Improved :doc:`modernize-make-shared
+  <clang-tidy/checks/modernize/make-shared>` check to support
+  ``std::shared_ptr`` implementations that inherit the ``reset`` method from a
+  base class.
 
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
@@ -390,11 +416,14 @@ Changes in existing checks
   ``Leading_upper_snake_case`` naming convention. The handling of ``typedef``
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
+  Added support for C++20 ``concept`` declarations. ``Camel_Snake_Case`` and
+  ``camel_Snake_Case`` now detect more invalid identifier names.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
-  `AllowPointerConditions` options.
+  `AllowPointerConditions` options. It also now provides more consistent
+  suggestions when parentheses are added to the return value.
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check to ignore

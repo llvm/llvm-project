@@ -84,7 +84,7 @@ llvm.func internal fastcc @callee() -> (i32) attributes { function_entry_count =
 // CHECK-NEXT: llvm.return %[[CST]]
 llvm.func @caller() -> (i32) {
   // Include all call attributes that don't prevent inlining.
-  %0 = llvm.call @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (i32)
+  %0 = llvm.call fastcc @callee() { fastmathFlags = #llvm.fastmath<nnan, ninf>, branch_weights = dense<42> : vector<1xi32> } : () -> (i32)
   llvm.return %0 : i32
 }
 

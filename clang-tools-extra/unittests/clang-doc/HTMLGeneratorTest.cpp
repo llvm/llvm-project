@@ -154,7 +154,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   SmallString<16> PathTo;
   llvm::sys::path::native("path/to", PathTo);
   I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
-  I.TagType = TagTypeKind::TTK_Class;
+  I.TagType = TagTypeKind::Class;
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "F", PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 

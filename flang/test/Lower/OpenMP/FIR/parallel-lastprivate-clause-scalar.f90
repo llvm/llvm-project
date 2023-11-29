@@ -1,7 +1,7 @@
 ! This test checks lowering of `LASTPRIVATE` clause for scalar types.
 
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: flang-new -fc1 -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 !CHECK: func @_QPlastprivate_character(%[[ARG1:.*]]: !fir.boxchar<1>{{.*}}) {
 !CHECK-DAG: %[[ARG1_UNBOX:.*]]:2 = fir.unboxchar
@@ -14,7 +14,7 @@
 ! Check that we are accessing the clone inside the loop
 !CHECK-DAG: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 !CHECK-DAG: %[[NEG_ONE:.*]] = arith.constant -1 : i32
-!CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQcl.
+!CHECK-NEXT: %[[ADDR:.*]] = fir.address_of(@_QQclX
 !CHECK-NEXT: %[[CVT0:.*]] = fir.convert %[[ADDR]] 
 !CHECK-NEXT: %[[CNST:.*]] = arith.constant
 !CHECK-NEXT: %[[CALL_BEGIN_IO:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[NEG_ONE]], %[[CVT0]], %[[CNST]]) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>

@@ -87,6 +87,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
+  __algorithm/pstl_equal.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
@@ -817,7 +818,6 @@ set(files
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
   __type_traits/operation_traits.h
-  __type_traits/predicate_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -921,22 +921,12 @@ set(files
   experimental/__simd/traits.h
   experimental/__simd/utility.h
   experimental/__simd/vec_ext.h
-  experimental/deque
-  experimental/forward_list
   experimental/iterator
-  experimental/list
-  experimental/map
-  experimental/memory_resource
+  experimental/memory
   experimental/propagate_const
-  experimental/regex
-  experimental/set
   experimental/simd
-  experimental/string
   experimental/type_traits
-  experimental/unordered_map
-  experimental/unordered_set
   experimental/utility
-  experimental/vector
   ext/__hash
   ext/hash_map
   ext/hash_set
@@ -1000,6 +990,7 @@ set(files
   string.h
   string_view
   strstream
+  syncstream
   system_error
   tgmath.h
   thread

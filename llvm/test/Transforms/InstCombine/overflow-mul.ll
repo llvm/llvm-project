@@ -237,7 +237,8 @@ define i1 @pr21445(i8 %a) {
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = zext i8 %a to i32
-  %mul = mul i32 %ext, zext (i8 ptrtoint (ptr @pr21445_data to i8) to i32)
+  %ext2 = zext i8 ptrtoint (ptr @pr21445_data to i8) to i32
+  %mul = mul i32 %ext, %ext2
   %and = and i32 %mul, 255
   %cmp = icmp ne i32 %mul, %and
   ret i1 %cmp
@@ -306,7 +307,7 @@ define i32 @extra_and_use_small_mask(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UMUL_VALUE]], 268435455
-; CHECK-NEXT:    [[AND:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
 ; CHECK-NEXT:    call void @use.i64(i64 [[AND]])
 ; CHECK-NEXT:    [[RETVAL:%.*]] = zext i1 [[OVERFLOW]] to i32

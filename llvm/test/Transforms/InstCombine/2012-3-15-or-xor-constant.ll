@@ -15,7 +15,8 @@ define i32 @function(i32 %x) nounwind {
 entry:
   %xor = xor i32 %x, 1
   store volatile i32 %xor, ptr inttoptr (i64 1 to ptr), align 4
-  %or = or i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), 1
+  %ext = zext i1 icmp eq (ptr @g, ptr null) to i32
+  %or = or i32 %ext, 1
   %or4 = or i32 %or, %xor
   ret i32 %or4
 }

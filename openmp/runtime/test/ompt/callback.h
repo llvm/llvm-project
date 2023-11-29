@@ -189,9 +189,17 @@ ompt_label_##id:
 #elif KMP_ARCH_AARCH64
 // On AArch64 the NOP instruction is 4 bytes long, can be followed by inserted
 // store instruction (another 4 bytes long).
-#define print_possible_return_addresses(addr) \
-  printf("%" PRIu64 ": current_address=%p or %p\n", ompt_get_thread_data()->value, \
-         ((char *)addr) - 4, ((char *)addr) - 8)
+#if KMP_OS_DARWIN
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
+         ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
+         ((char *)addr) - 8, ((char *)addr) - 12)
+#else
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+         ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
+         ((char *)addr) - 8)
+#endif
 #elif KMP_ARCH_RISCV64
 #if __riscv_compressed
 // On RV64GC the C.NOP instruction is 2 byte long. In addition, the compiler
@@ -228,6 +236,22 @@ ompt_label_##id:
   printf("%" PRIu64 ": current_address=%p or %p\n",                            \
          ompt_get_thread_data()->value, ((char *)addr) - 8,                    \
          ((char *)addr) - 8)
+#elif KMP_ARCH_S390X
+// On s390x the NOP instruction is 2 bytes long. For non-void runtime
+// functions Clang inserts a STY instruction (but only if compiling under
+// -fno-PIC which will be the default with Clang 8.0, another 6 bytes).
+//
+// Another possibility is:
+//
+//                brasl %r14,__kmpc_end_master@plt
+//   a7 f4 00 02  j 0f
+//   47 00 00 00  0: nop
+//   a7 f4 00 02  j addr
+//                addr:
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
+         ompt_get_thread_data()->value, ((char *)addr) - 2,                    \
+         ((char *)addr) - 8, ((char *)addr) - 12)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif

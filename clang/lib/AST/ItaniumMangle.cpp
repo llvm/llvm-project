@@ -28,6 +28,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -3050,12 +3051,21 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
   //                 ::= Dh # IEEE 754r half-precision floating point (16 bits)
-  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point
-  //                 type _FloatN (N bits);
+  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point type _FloatN (N bits);
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+  //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
+  //
+  //  <fixed-point-size>
+  //                 ::= s # short
+  //                 ::= t # unsigned short
+  //                 ::= i # plain
+  //                 ::= j # unsigned
+  //                 ::= l # long
+  //                 ::= m # unsigned long
   std::string type_name;
   // Normalize integer types as vendor extended types:
   // u<length>i<type size>
@@ -3200,30 +3210,77 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "DF16_";
     break;
   case BuiltinType::ShortAccum:
+    Out << "DAs";
+    break;
   case BuiltinType::Accum:
+    Out << "DAi";
+    break;
   case BuiltinType::LongAccum:
+    Out << "DAl";
+    break;
   case BuiltinType::UShortAccum:
+    Out << "DAt";
+    break;
   case BuiltinType::UAccum:
+    Out << "DAj";
+    break;
   case BuiltinType::ULongAccum:
+    Out << "DAm";
+    break;
   case BuiltinType::ShortFract:
+    Out << "DRs";
+    break;
   case BuiltinType::Fract:
+    Out << "DRi";
+    break;
   case BuiltinType::LongFract:
+    Out << "DRl";
+    break;
   case BuiltinType::UShortFract:
+    Out << "DRt";
+    break;
   case BuiltinType::UFract:
+    Out << "DRj";
+    break;
   case BuiltinType::ULongFract:
+    Out << "DRm";
+    break;
   case BuiltinType::SatShortAccum:
+    Out << "DSDAs";
+    break;
   case BuiltinType::SatAccum:
+    Out << "DSDAi";
+    break;
   case BuiltinType::SatLongAccum:
+    Out << "DSDAl";
+    break;
   case BuiltinType::SatUShortAccum:
+    Out << "DSDAt";
+    break;
   case BuiltinType::SatUAccum:
+    Out << "DSDAj";
+    break;
   case BuiltinType::SatULongAccum:
+    Out << "DSDAm";
+    break;
   case BuiltinType::SatShortFract:
+    Out << "DSDRs";
+    break;
   case BuiltinType::SatFract:
+    Out << "DSDRi";
+    break;
   case BuiltinType::SatLongFract:
+    Out << "DSDRl";
+    break;
   case BuiltinType::SatUShortFract:
+    Out << "DSDRt";
+    break;
   case BuiltinType::SatUFract:
+    Out << "DSDRj";
+    break;
   case BuiltinType::SatULongFract:
-    llvm_unreachable("Fixed point types are disabled for c++");
+    Out << "DSDRm";
+    break;
   case BuiltinType::Half:
     Out << "Dh";
     break;
@@ -3972,7 +4029,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   case BuiltinType::ULong:
     TypeNameOS << "uint64";
     break;
-  case BuiltinType::Half:
+  case BuiltinType::Float16:
     TypeNameOS << "float16";
     break;
   case BuiltinType::Float:
@@ -4826,7 +4883,7 @@ recurse:
     Out << '_';
     mangleType(New->getAllocatedType());
     if (New->hasInitializer()) {
-      if (New->getInitializationStyle() == CXXNewExpr::ListInit)
+      if (New->getInitializationStyle() == CXXNewInitializationStyle::List)
         Out << "il";
       else
         Out << "pi";
@@ -4840,7 +4897,8 @@ recurse:
       } else if (const ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init)) {
         for (unsigned i = 0, e = PLE->getNumExprs(); i != e; ++i)
           mangleExpression(PLE->getExpr(i));
-      } else if (New->getInitializationStyle() == CXXNewExpr::ListInit &&
+      } else if (New->getInitializationStyle() ==
+                     CXXNewInitializationStyle::List &&
                  isa<InitListExpr>(Init)) {
         // Only take InitListExprs apart for list-initialization.
         mangleInitListElements(cast<InitListExpr>(Init));
@@ -5067,6 +5125,14 @@ recurse:
       Out << 'a';
       MangleAlignofSizeofArg();
       break;
+    case UETT_DataSizeOf: {
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID =
+          Diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                "cannot yet mangle __datasizeof expression");
+      Diags.Report(DiagID);
+      return;
+    }
     case UETT_VecStep: {
       DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,

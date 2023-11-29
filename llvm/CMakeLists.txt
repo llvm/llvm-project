@@ -392,9 +392,15 @@ endif()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
+option(LLVM_ADDITIONAL_BUILD_TYPES "Additional build types that are allowed to be passed into CMAKE_BUILD_TYPE" "")
+
+set(ALLOWED_BUILD_TYPES DEBUG RELEASE RELWITHDEBINFO MINSIZEREL ${LLVM_ADDITIONAL_BUILD_TYPES})
+string (REPLACE ";" "|" ALLOWED_BUILD_TYPES_STRING "${ALLOWED_BUILD_TYPES}")
+string (TOUPPER "${ALLOWED_BUILD_TYPES_STRING}" uppercase_ALLOWED_BUILD_TYPES)
+
 if (CMAKE_BUILD_TYPE AND
-    NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$")
-  message(WARNING "Unknown value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+    NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(${uppercase_ALLOWED_BUILD_TYPES})$")
+  message(FATAL_ERROR "Unknown value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif()
 
 # LLVM_INSTALL_PACKAGE_DIR needs to be declared prior to adding the tools
@@ -955,6 +961,8 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     endif()
   else()
     set(LLVM_ENUM_TARGETS "${LLVM_ENUM_TARGETS}LLVM_TARGET(${t})\n")
+    string(TOUPPER ${t} T_UPPER)
+    set(LLVM_HAS_${T_UPPER}_TARGET 1)
   endif()
 
   file(GLOB asmp_file "${td}/*AsmPrinter.cpp")

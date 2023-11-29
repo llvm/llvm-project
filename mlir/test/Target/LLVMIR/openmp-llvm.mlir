@@ -2552,6 +2552,28 @@ module attributes {omp.is_target_device = false} {
 
 // -----
 
+module attributes {omp.is_target_device = false} {
+  // CHECK: define void @filter_nohost
+  llvm.func @filter_nohost() -> ()
+      attributes {
+        omp.declare_target =
+          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+      } {
+    llvm.return
+  }
+
+  // CHECK: define void @filter_host
+  llvm.func @filter_host() -> ()
+      attributes {
+        omp.declare_target =
+          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+      } {
+    llvm.return
+  }
+}
+
+// -----
+
 module attributes {omp.is_target_device = true} {
   // CHECK: define void @filter_nohost
   llvm.func @filter_nohost() -> ()
@@ -2567,6 +2589,28 @@ module attributes {omp.is_target_device = true} {
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
+      } {
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {omp.is_target_device = true} {
+  // CHECK: define void @filter_nohost
+  llvm.func @filter_nohost() -> ()
+      attributes {
+        omp.declare_target =
+          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+      } {
+    llvm.return
+  }
+
+  // CHECK-NOT: define void @filter_host
+  llvm.func @filter_host() -> ()
+      attributes {
+        omp.declare_target =
+          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
       } {
     llvm.return
   }

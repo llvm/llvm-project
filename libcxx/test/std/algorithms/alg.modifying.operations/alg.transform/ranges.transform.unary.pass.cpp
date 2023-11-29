@@ -31,15 +31,15 @@
 #include "almost_satisfies_types.h"
 
 template <class Range>
-concept HasTranformR = requires(Range r, int* out) { std::ranges::transform(r, out, std::identity{}); };
+concept HasTransformR = requires(Range r, int* out) { std::ranges::transform(r, out, std::identity{}); };
 
-static_assert(HasTranformR<std::array<int, 1>>);
-static_assert(!HasTranformR<int>);
-static_assert(!HasTranformR<InputRangeNotDerivedFrom>);
-static_assert(!HasTranformR<InputRangeNotIndirectlyReadable>);
-static_assert(!HasTranformR<InputRangeNotInputOrOutputIterator>);
-static_assert(!HasTranformR<InputRangeNotSentinelSemiregular>);
-static_assert(!HasTranformR<InputRangeNotSentinelEqualityComparableWith>);
+static_assert(HasTransformR<std::array<int, 1>>);
+static_assert(!HasTransformR<int>);
+static_assert(!HasTransformR<InputRangeNotDerivedFrom>);
+static_assert(!HasTransformR<InputRangeNotIndirectlyReadable>);
+static_assert(!HasTransformR<InputRangeNotInputOrOutputIterator>);
+static_assert(!HasTransformR<InputRangeNotSentinelSemiregular>);
+static_assert(!HasTransformR<InputRangeNotSentinelEqualityComparableWith>);
 
 template <class It, class Sent = It>
 concept HasTransformIt =

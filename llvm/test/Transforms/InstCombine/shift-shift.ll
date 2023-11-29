@@ -732,3 +732,15 @@ define <2 x i8> @lshr_shl_demand5_nonuniform_vec_both(<2 x i8> %x) {
   %r = and <2 x i8> %shl, <i8 -4, i8 -16>
   ret <2 x i8> %r
 }
+
+@g = external global i8, align 8
+
+define i64 @ashr_ashr_constexpr() {
+; CHECK-LABEL: @ashr_ashr_constexpr(
+; CHECK-NEXT:    [[SHR2:%.*]] = ashr exact i64 ptrtoint (ptr @g to i64), 3
+; CHECK-NEXT:    ret i64 [[SHR2]]
+;
+  %shr = ashr i64 ptrtoint (ptr @g to i64), 1
+  %shr2 = ashr i64 %shr, 2
+  ret i64 %shr2
+}

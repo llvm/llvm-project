@@ -216,8 +216,10 @@ let Defs = [SCC] in {
   def S_NOT_B64 : SOP1_64 <"s_not_b64",
     [(set i64:$sdst, (UniformUnaryFrag<not> i64:$src0))]
   >;
-  def S_WQM_B32 : SOP1_32 <"s_wqm_b32">;
-  def S_WQM_B64 : SOP1_64 <"s_wqm_b64">;
+  def S_WQM_B32 : SOP1_32 <"s_wqm_b32",
+    [(set i32:$sdst, (int_amdgcn_s_wqm i32:$src0))]>;
+  def S_WQM_B64 : SOP1_64 <"s_wqm_b64",
+    [(set i64:$sdst, (int_amdgcn_s_wqm i64:$src0))]>;
 } // End Defs = [SCC]
 
 
@@ -290,6 +292,7 @@ def S_BITSET0_B64 : SOP1_64_32 <"s_bitset0_b64", [], 1>;
 def S_BITSET1_B32 : SOP1_32    <"s_bitset1_b32", [], 1>;
 def S_BITSET1_B64 : SOP1_64_32 <"s_bitset1_b64", [], 1>;
 
+let isReMaterializable = 1 in
 def S_GETPC_B64 : SOP1_64_0  <"s_getpc_b64",
   [(set i64:$sdst, (int_amdgcn_s_getpc))]
 >;
@@ -422,7 +425,7 @@ let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
     def S_CEIL_F32  : SOP1_F32_Inst<"s_ceil_f32", fceil>;
     def S_FLOOR_F32 : SOP1_F32_Inst<"s_floor_f32", ffloor>;
     def S_TRUNC_F32 : SOP1_F32_Inst<"s_trunc_f32", ftrunc>;
-    def S_RNDNE_F32 : SOP1_F32_Inst<"s_rndne_f32", frint>;
+    def S_RNDNE_F32 : SOP1_F32_Inst<"s_rndne_f32", froundeven>;
 
     let FPDPRounding = 1 in
       def S_CVT_F16_F32 : SOP1_F32_Inst<"s_cvt_f16_f32", fpround, f16, f32>;
@@ -430,7 +433,7 @@ let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
     def S_CEIL_F16  : SOP1_F32_Inst<"s_ceil_f16", fceil, f16>;
     def S_FLOOR_F16 : SOP1_F32_Inst<"s_floor_f16", ffloor, f16>;
     def S_TRUNC_F16 : SOP1_F32_Inst<"s_trunc_f16", ftrunc, f16>;
-    def S_RNDNE_F16 : SOP1_F32_Inst<"s_rndne_f16", frint, f16>;
+    def S_RNDNE_F16 : SOP1_F32_Inst<"s_rndne_f16", froundeven, f16>;
   } // End mayRaiseFPException = 1
 } // End SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE]
   // SchedRW = [WriteSFPU], isReMaterializable = 1

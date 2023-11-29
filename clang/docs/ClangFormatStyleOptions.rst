@@ -2046,11 +2046,28 @@ the configuration (without a prefix: ``Auto``).
       };
     }
 
+.. _BreakAdjacentStringLiterals:
+
+**BreakAdjacentStringLiterals** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <BreakAdjacentStringLiterals>`
+  Break between adjacent string literals.
+
+  .. code-block:: c++
+
+     true:
+     return "Code"
+            "\0\52\26\55\55\0"
+            "x013"
+            "\02\xBA";
+     false:
+     return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
-  Break after a group of C++11 attributes before a function
-  declaration/definition name.
+  Break after a group of C++11 attributes before variable or function
+  (including constructor/destructor) declaration/definition names or before
+  control statements, i.e. ``if``, ``switch`` (including ``case`` and
+  ``default`` labels), ``for``, and ``while`` statements.
 
   Possible values:
 
@@ -2059,27 +2076,82 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
+      [[maybe_unused]]
+      const int i;
+      [[gnu::const]] [[maybe_unused]]
+      int j;
+
       [[nodiscard]]
       inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
+
+      [[likely]]
+      if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]]
+      case 1:
+        ++b;
+        break;
+      [[likely]]
+      default:
+        return;
+      }
 
   * ``ABS_Leave`` (in configuration: ``Leave``)
     Leave the line breaking after attributes as is.
 
     .. code-block:: c++
 
+      [[maybe_unused]] const int i;
+      [[gnu::const]] [[maybe_unused]]
+      int j;
+
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]]
       int g();
+
+      [[likely]] if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]] case 1:
+        ++b;
+        break;
+      [[likely]]
+      default:
+        return;
+      }
 
   * ``ABS_Never`` (in configuration: ``Never``)
     Never break after attributes.
 
     .. code-block:: c++
 
+      [[maybe_unused]] const int i;
+      [[gnu::const]] [[maybe_unused]] int j;
+
       [[nodiscard]] inline int f();
       [[gnu::const]] [[nodiscard]] int g();
+
+      [[likely]] if (a)
+        f();
+      else
+        g();
+
+      switch (b) {
+      [[unlikely]] case 1:
+        ++b;
+        break;
+      [[likely]] default:
+        return;
+      }
 
 
 

@@ -318,6 +318,9 @@ def MustProgress : EnumAttr<"mustprogress", [FnAttr]>;
 /// Function is a presplit coroutine.
 def PresplitCoroutine : EnumAttr<"presplitcoroutine", [FnAttr]>;
 
+/// The coroutine would only be destroyed when it is complete.
+def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", [FnAttr]>;
+
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;

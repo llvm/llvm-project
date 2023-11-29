@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_HAS_BUILTIN
 #include "src/__support/macros/properties/architectures.h"
 #include "src/errno/libc_errno.h"
 
@@ -28,7 +29,7 @@
 // the apple condition here should be removed.
 #elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
 #include "x86_64/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP)
 #include "arm/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/FEnvImpl.h"

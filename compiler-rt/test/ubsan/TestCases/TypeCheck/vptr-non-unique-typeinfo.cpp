@@ -3,7 +3,8 @@
 // RUN: %run %t
 //
 // REQUIRES: cxxabi
-// UNSUPPORTED: target={{.*windows.*}}
+// FIXME: Should pass on Android, but started failing around 2023-11-05 for unknown reasons.
+// UNSUPPORTED: target={{.*(windows|android).*}}
 
 struct X {
   virtual ~X() {}

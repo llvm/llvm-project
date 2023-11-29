@@ -141,9 +141,9 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT: bb.2.Flow:
   ; SI-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI undef %32:vgpr_32, %bb.1, %10, %bb.4
-  ; SI-NEXT:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI undef %33:vgpr_32, %bb.1, %9, %bb.4
-  ; SI-NEXT:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[PHI1]], %bb.1, undef %35:vgpr_32, %bb.4
+  ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI undef %31:vgpr_32, %bb.1, %10, %bb.4
+  ; SI-NEXT:   [[PHI3:%[0-9]+]]:vgpr_32 = PHI undef %32:vgpr_32, %bb.1, %9, %bb.4
+  ; SI-NEXT:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[PHI1]], %bb.1, undef %34:vgpr_32, %bb.4
   ; SI-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32 = SI_ELSE killed [[SI_IF]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.3
   ; SI-NEXT: {{  $}}
@@ -158,7 +158,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT:   successors: %bb.2(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[V_MUL_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[COPY2]], 0, [[PHI1]], 0, 0, implicit $mode, implicit $exec
-  ; SI-NEXT:   [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 killed [[PHI1]], 3, implicit $exec
+  ; SI-NEXT:   [[V_LSHL_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_LSHL_ADD_U32_e64 killed [[PHI1]], 1, [[PHI1]], implicit $exec
   ; SI-NEXT:   S_BRANCH %bb.2
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.5.if.end:

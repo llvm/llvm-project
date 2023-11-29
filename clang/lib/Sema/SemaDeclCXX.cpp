@@ -1781,9 +1781,12 @@ static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
 /// \returns diagnostic %select index.
 static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
-  case TTK_Struct: return 0;
-  case TTK_Interface: return 1;
-  case TTK_Class:  return 2;
+  case TagTypeKind::Struct:
+    return 0;
+  case TagTypeKind::Interface:
+    return 1;
+  case TagTypeKind::Class:
+    return 2;
   default: llvm_unreachable("Invalid tag kind for record diagnostic!");
   }
 }
@@ -2680,7 +2683,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                          TypeSourceInfo *TInfo,
                          SourceLocation EllipsisLoc) {
   // In HLSL, unspecified class access is public rather than private.
-  if (getLangOpts().HLSL && Class->getTagKind() == TTK_Class &&
+  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
       Access == AS_none)
     Access = AS_public;
 
@@ -2733,9 +2736,9 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     // emitted.
     if (!Class->getTypeForDecl()->isDependentType())
       Class->setInvalidDecl();
-    return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                          Class->getTagKind() == TTK_Class,
-                                          Access, TInfo, EllipsisLoc);
+    return new (Context) CXXBaseSpecifier(
+        SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
+        Access, TInfo, EllipsisLoc);
   }
 
   // Base specifiers must be record types.
@@ -2821,9 +2824,9 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     Class->setInvalidDecl();
 
   // Create the base specifier.
-  return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                        Class->getTagKind() == TTK_Class,
-                                        Access, TInfo, EllipsisLoc);
+  return new (Context) CXXBaseSpecifier(
+      SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
+      Access, TInfo, EllipsisLoc);
 }
 
 /// ActOnBaseSpecifier - Parsed a base specifier. A base specifier is
@@ -7010,7 +7013,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
           (F->getType().isConstQualified() && F->getType()->isScalarType())) {
         if (!Complained) {
           Diag(Record->getLocation(), diag::warn_no_constructor_for_refconst)
-            << Record->getTagKind() << Record;
+              << llvm::to_underlying(Record->getTagKind()) << Record;
           Complained = true;
         }
 
@@ -15991,17 +15994,12 @@ static bool hasOneRealArgument(MultiExprArg Args) {
   return false;
 }
 
-ExprResult
-Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            NamedDecl *FoundDecl,
-                            CXXConstructorDecl *Constructor,
-                            MultiExprArg ExprArgs,
-                            bool HadMultipleCandidates,
-                            bool IsListInitialization,
-                            bool IsStdInitListInitialization,
-                            bool RequiresZeroInit,
-                            unsigned ConstructKind,
-                            SourceRange ParenRange) {
+ExprResult Sema::BuildCXXConstructExpr(
+    SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+    CXXConstructorDecl *Constructor, MultiExprArg ExprArgs,
+    bool HadMultipleCandidates, bool IsListInitialization,
+    bool IsStdInitListInitialization, bool RequiresZeroInit,
+    CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   bool Elidable = false;
 
   // C++0x [class.copy]p34:
@@ -16014,7 +16012,7 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
   //       with the same cv-unqualified type, the copy/move operation
   //       can be omitted by constructing the temporary object
   //       directly into the target of the omitted copy/move
-  if (ConstructKind == CXXConstructExpr::CK_Complete && Constructor &&
+  if (ConstructKind == CXXConstructionKind::Complete && Constructor &&
       // FIXME: Converting constructors should also be accepted.
       // But to fix this, the logic that digs down into a CXXConstructExpr
       // to find the source object needs to handle it.
@@ -16038,18 +16036,12 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
                                ConstructKind, ParenRange);
 }
 
-ExprResult
-Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            NamedDecl *FoundDecl,
-                            CXXConstructorDecl *Constructor,
-                            bool Elidable,
-                            MultiExprArg ExprArgs,
-                            bool HadMultipleCandidates,
-                            bool IsListInitialization,
-                            bool IsStdInitListInitialization,
-                            bool RequiresZeroInit,
-                            unsigned ConstructKind,
-                            SourceRange ParenRange) {
+ExprResult Sema::BuildCXXConstructExpr(
+    SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+    CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg ExprArgs,
+    bool HadMultipleCandidates, bool IsListInitialization,
+    bool IsStdInitListInitialization, bool RequiresZeroInit,
+    CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl)) {
     Constructor = findInheritingConstructor(ConstructLoc, Constructor, Shadow);
     // The only way to get here is if we did overlaod resolution to find the
@@ -16067,17 +16059,12 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
 
 /// BuildCXXConstructExpr - Creates a complete call to a constructor,
 /// including handling of its default argument expressions.
-ExprResult
-Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                            CXXConstructorDecl *Constructor,
-                            bool Elidable,
-                            MultiExprArg ExprArgs,
-                            bool HadMultipleCandidates,
-                            bool IsListInitialization,
-                            bool IsStdInitListInitialization,
-                            bool RequiresZeroInit,
-                            unsigned ConstructKind,
-                            SourceRange ParenRange) {
+ExprResult Sema::BuildCXXConstructExpr(
+    SourceLocation ConstructLoc, QualType DeclInitType,
+    CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg ExprArgs,
+    bool HadMultipleCandidates, bool IsListInitialization,
+    bool IsStdInitListInitialization, bool RequiresZeroInit,
+    CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   assert(declaresSameEntity(
              Constructor->getParent(),
              DeclInitType->getBaseElementTypeUnsafe()->getAsCXXRecordDecl()) &&
@@ -16091,8 +16078,7 @@ Sema::BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
           Context, DeclInitType, ConstructLoc, Constructor, Elidable, ExprArgs,
           HadMultipleCandidates, IsListInitialization,
           IsStdInitListInitialization, RequiresZeroInit,
-          static_cast<CXXConstructExpr::ConstructionKind>(ConstructKind),
-          ParenRange),
+          static_cast<CXXConstructionKind>(ConstructKind), ParenRange),
       Constructor);
 }
 
@@ -16812,8 +16798,7 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   /// If the declaration is already in global module fragment, we don't
   /// need to attach it again.
   if (getLangOpts().CPlusPlusModules && isCurrentModulePurview()) {
-    Module *GlobalModule = PushImplicitGlobalModuleFragment(
-        ExternLoc, /*IsExported=*/D->isInExportDeclContext());
+    Module *GlobalModule = PushImplicitGlobalModuleFragment(ExternLoc);
     D->setLocalOwningModule(GlobalModule);
   }
 
@@ -17233,10 +17218,10 @@ static bool UsefulToPrintExpr(const Expr *E) {
   if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E))
     return UsefulToPrintExpr(UnaryOp->getSubExpr());
 
-  // Ignore nested binary operators. This could be a FIXME for improvements
-  // to the diagnostics in the future.
-  if (isa<BinaryOperator>(E))
-    return false;
+  // Only print nested arithmetic operators.
+  if (const auto *BO = dyn_cast<BinaryOperator>(E))
+    return (BO->isShiftOp() || BO->isAdditiveOp() || BO->isMultiplicativeOp() ||
+            BO->isBitwiseOp());
 
   return true;
 }
@@ -17306,33 +17291,15 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
 
   auto FindMember = [&](StringRef Member, bool &Empty,
                         bool Diag = false) -> std::optional<LookupResult> {
-    QualType ObjectType = Message->getType();
-    Expr::Classification ObjectClassification =
-        Message->Classify(getASTContext());
-
     DeclarationName DN = PP.getIdentifierInfo(Member);
     LookupResult MemberLookup(*this, DN, Loc, Sema::LookupMemberName);
     LookupQualifiedName(MemberLookup, RD);
     Empty = MemberLookup.empty();
     OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
                                     OverloadCandidateSet::CSK_Normal);
-    for (NamedDecl *D : MemberLookup) {
-      AddMethodCandidate(DeclAccessPair::make(D, D->getAccess()), ObjectType,
-                         ObjectClassification, /*Args=*/{}, Candidates);
-    }
-    OverloadCandidateSet::iterator Best;
-    switch (Candidates.BestViableFunction(*this, Loc, Best)) {
-    case OR_Success:
-      return std::move(MemberLookup);
-    default:
-      if (Diag)
-        Candidates.NoteCandidates(
-            PartialDiagnosticAt(
-                Loc, PDiag(diag::err_static_assert_invalid_mem_fn_ret_ty)
-                         << (Member == "data")),
-            *this, OCD_AllCandidates, /*Args=*/{});
-    }
-    return std::nullopt;
+    if (MemberLookup.empty())
+      return std::nullopt;
+    return std::move(MemberLookup);
   };
 
   bool SizeNotFound, DataNotFound;

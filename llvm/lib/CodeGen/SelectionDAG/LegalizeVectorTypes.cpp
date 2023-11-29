@@ -1209,6 +1209,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UDIVFIXSAT:
     SplitVecRes_FIX(N, Lo, Hi);
     break;
+  case ISD::EXPERIMENTAL_VP_REVERSE:
+    SplitVecRes_VP_REVERSE(N, Lo, Hi);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -1236,7 +1239,7 @@ void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,
   } else {
     MPI = N->getPointerInfo().getWithOffset(IncrementSize);
     // Increment the pointer to the other half.
-    Ptr = DAG.getObjectPtrOffset(DL, Ptr, TypeSize::Fixed(IncrementSize));
+    Ptr = DAG.getObjectPtrOffset(DL, Ptr, TypeSize::getFixed(IncrementSize));
   }
 }
 
@@ -2857,6 +2860,56 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SPLICE(SDNode *N, SDValue &Lo,
                   DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
 }
 
+void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  EVT VT = N->getValueType(0);
+  SDValue Val = N->getOperand(0);
+  SDValue Mask = N->getOperand(1);
+  SDValue EVL = N->getOperand(2);
+  SDLoc DL(N);
+
+  // Fallback to VP_STRIDED_STORE to stack followed by VP_LOAD.
+  Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
+
+  EVT MemVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                               VT.getVectorElementCount());
+  SDValue StackPtr = DAG.CreateStackTemporary(MemVT.getStoreSize(), Alignment);
+  EVT PtrVT = StackPtr.getValueType();
+  auto &MF = DAG.getMachineFunction();
+  auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+  MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemoryLocation::UnknownSize,
+      Alignment);
+  MachineMemOperand *LoadMMO = DAG.getMachineFunction().getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize,
+      Alignment);
+
+  unsigned EltWidth = VT.getScalarSizeInBits() / 8;
+  SDValue NumElemMinus1 =
+      DAG.getNode(ISD::SUB, DL, PtrVT, DAG.getZExtOrTrunc(EVL, DL, PtrVT),
+                  DAG.getConstant(1, DL, PtrVT));
+  SDValue StartOffset = DAG.getNode(ISD::MUL, DL, PtrVT, NumElemMinus1,
+                                    DAG.getConstant(EltWidth, DL, PtrVT));
+  SDValue StorePtr = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, StartOffset);
+  SDValue Stride = DAG.getConstant(-(int64_t)EltWidth, DL, PtrVT);
+
+  SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
+  SDValue Store = DAG.getStridedStoreVP(DAG.getEntryNode(), DL, Val, StorePtr,
+                                        DAG.getUNDEF(PtrVT), Stride, TrueMask,
+                                        EVL, MemVT, StoreMMO, ISD::UNINDEXED);
+
+  SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
+
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
+  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Load,
+                   DAG.getVectorIdxConstant(0, DL));
+  Hi =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, Load,
+                  DAG.getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+}
+
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
 
   SDValue Op0Lo, Op0Hi, Op1Lo, Op1Hi;
@@ -4204,6 +4257,11 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_FP_TO_XINT_SAT(N);
     break;
 
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    Res = WidenVecRes_XRINT(N);
+    break;
+
   case ISD::FABS:
   case ISD::FCEIL:
   case ISD::FCOS:
@@ -4216,8 +4274,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG2:
   case ISD::FNEARBYINT:
   case ISD::FRINT:
-  case ISD::LRINT:
-  case ISD::LLRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
@@ -4789,6 +4845,27 @@ SDValue DAGTypeLegalizer::WidenVecRes_FP_TO_XINT_SAT(SDNode *N) {
     return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
 
   return DAG.getNode(N->getOpcode(), dl, WidenVT, Src, N->getOperand(1));
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_XRINT(SDNode *N) {
+  SDLoc dl(N);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  ElementCount WidenNumElts = WidenVT.getVectorElementCount();
+
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  // Also widen the input.
+  if (getTypeAction(SrcVT) == TargetLowering::TypeWidenVector) {
+    Src = GetWidenedVector(Src);
+    SrcVT = Src.getValueType();
+  }
+
+  // Input and output not widened to the same size, give up.
+  if (WidenNumElts != SrcVT.getVectorElementCount())
+    return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
+
+  return DAG.getNode(N->getOpcode(), dl, WidenVT, Src);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Convert_StrictFP(SDNode *N) {
@@ -7130,7 +7207,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
   unsigned i = 0, Offset = Increment;
   for (i=1; i < NumElts; ++i, Offset += Increment) {
     SDValue NewBasePtr =
-        DAG.getObjectPtrOffset(dl, BasePtr, TypeSize::Fixed(Offset));
+        DAG.getObjectPtrOffset(dl, BasePtr, TypeSize::getFixed(Offset));
     Ops[i] = DAG.getExtLoad(ExtType, dl, EltVT, Chain, NewBasePtr,
                             LD->getPointerInfo().getWithOffset(Offset), LdEltVT,
                             LD->getOriginalAlign(), MMOFlags, AAInfo);

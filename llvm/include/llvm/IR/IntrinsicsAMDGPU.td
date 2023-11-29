@@ -199,6 +199,11 @@ def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
+// Represent a relocation constant.
+def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_metadata_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Intrinsics
@@ -1944,6 +1949,12 @@ def int_amdgcn_s_bitreplicate :
 def int_amdgcn_s_quadmask :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
+// Lowers to S_WQM_B{32,64}
+// The argument must be uniform; otherwise, the result is undefined.
+// Does not set WQM; merely calculates the bitmask.
+def int_amdgcn_s_wqm :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
+
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
     [data_ty],
     [
@@ -2124,6 +2135,17 @@ def int_amdgcn_strict_wqm : Intrinsic<[llvm_any_ty],
 // program ever uses WQM, then the instruction and the first source will be
 // computed in WQM.
 def int_amdgcn_set_inactive :
+  Intrinsic<[llvm_anyint_ty],
+            [LLVMMatchType<0>, // value to be copied
+             LLVMMatchType<0>], // value for the inactive lanes to take
+            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+// Similar to int_amdgcn_set_inactive, but the value for the inactive lanes must
+// be a VGPR function argument.
+// Can only be used in functions with the `amdgpu_cs_chain` or
+// `amdgpu_cs_chain_preserve` calling conventions, and only in uniform control
+// flow.
+def int_amdgcn_set_inactive_chain_arg :
   Intrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>, // value to be copied
              LLVMMatchType<0>], // value for the inactive lanes to take
@@ -2758,12 +2780,6 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
   DefaultAttrsIntrinsic<[llvm_i32_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-
-// Represent a relocation constant.
-def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
-  [llvm_i32_ty], [llvm_metadata_ty],
-  [IntrNoMem, IntrSpeculatable]
->;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

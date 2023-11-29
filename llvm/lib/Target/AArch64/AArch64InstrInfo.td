@@ -137,7 +137,7 @@ def HasSVE           : Predicate<"Subtarget->hasSVE()">,
 def HasSVE2          : Predicate<"Subtarget->hasSVE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2), "sve2">;
 def HasSVE2p1        : Predicate<"Subtarget->hasSVE2p1()">,
-                                 AssemblerPredicate<(any_of FeatureSVE2p1), "sve2p1">;
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE2p1), "sve2p1">;
 def HasSVE2AES       : Predicate<"Subtarget->hasSVE2AES()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2AES), "sve2-aes">;
 def HasSVE2SM4       : Predicate<"Subtarget->hasSVE2SM4()">,
@@ -154,6 +154,8 @@ def HasSMEF64F64     : Predicate<"Subtarget->hasSMEF64F64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF64F64), "sme-f64f64">;
 def HasSMEF16F16     : Predicate<"Subtarget->hasSMEF16F16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF16F16), "sme-f16f16">;
+def HasSMEFA64       : Predicate<"Subtarget->hasSMEFA64()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEFA64), "sme-fa64">;
 def HasSMEI16I64     : Predicate<"Subtarget->hasSMEI16I64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI16I64), "sme-i16i64">;
 def HasSME2          : Predicate<"Subtarget->hasSME2()">,
@@ -191,6 +193,10 @@ def HasLUT          : Predicate<"Subtarget->hasLUT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLUT), "lut">;
 def HasSME_LUTv2     : Predicate<"Subtarget->hasSME_LUTv2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME_LUTv2), "sme-lutv2">;
+def HasSMEF8F16     : Predicate<"Subtarget->hasSMEF8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F16), "sme-f8f16">;
+def HasSMEF8F32     : Predicate<"Subtarget->hasSMEF8F32()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF8F32), "sme-f8f32">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -3920,6 +3926,11 @@ defm STURBB : StoreUnscaled<0b00, 0, 0b00, GPR32z, "sturb",
                          [(truncstorei8 GPR32z:$Rt,
                                   (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 
+// bf16 store pattern
+def : Pat<(store (bf16 FPR16Op:$Rt),
+                 (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
+          (STURHi FPR16:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+
 // Armv8.4 Weaker Release Consistency enhancements
 //         LDAPR & STLR with Immediate Offset instructions
 let Predicates = [HasRCPC_IMMO] in {
@@ -6672,6 +6683,22 @@ def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
           ssub))>;
 }
 
+// For vecreduce_add, used by GlobalISel not SDAG
+def : Pat<(i8 (vecreduce_add (v8i8 V64:$Rn))), 
+          (i8 (ADDVv8i8v V64:$Rn))>;
+def : Pat<(i8 (vecreduce_add (v16i8 V128:$Rn))), 
+          (i8 (ADDVv16i8v V128:$Rn))>;
+def : Pat<(i16 (vecreduce_add (v4i16 V64:$Rn))), 
+          (i16 (ADDVv4i16v V64:$Rn))>;
+def : Pat<(i16 (vecreduce_add (v8i16 V128:$Rn))), 
+          (i16 (ADDVv8i16v V128:$Rn))>;
+def : Pat<(i32 (vecreduce_add (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (ADDPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))), 
+          (i32 (ADDVv4i32v V128:$Rn))>;
+def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))), 
+          (i64 (ADDPv2i64p V128:$Rn))>;
+
 defm : SIMDAcrossLanesSignedIntrinsic<"ADDV",  AArch64saddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64saddv (v2i32 V64:$Rn))),
@@ -6697,6 +6724,43 @@ def : Pat<(v2i32 (AArch64umaxv (v2i32 V64:$Rn))),
 defm : SIMDAcrossLanesUnsignedIntrinsic<"UMINV", AArch64uminv>;
 def : Pat<(v2i32 (AArch64uminv (v2i32 V64:$Rn))),
           (UMINPv2i32 V64:$Rn, V64:$Rn)>;
+
+// For vecreduce_{opc} used by GlobalISel, not SDAG at the moment
+// because GlobalISel allows us to specify the return register to be a FPR
+multiclass SIMDAcrossLanesVecReductionIntrinsic<string baseOpc,
+                                               SDPatternOperator opNode> {
+def : Pat<(i8 (opNode (v8i8 FPR64:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) FPR64:$Rn)>;
+
+def : Pat<(i8 (opNode (v16i8 FPR128:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) FPR128:$Rn)>;
+
+def : Pat<(i16 (opNode (v4i16 FPR64:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) FPR64:$Rn)>;
+
+def : Pat<(i16 (opNode (v8i16 FPR128:$Rn))),
+          (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) FPR128:$Rn)>;
+
+def : Pat<(i32 (opNode (v4i32 V128:$Rn))), 
+          (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn)>;
+}
+
+// For v2i32 source type, the pairwise instruction can be used instead
+defm : SIMDAcrossLanesVecReductionIntrinsic<"UMINV", vecreduce_umin>;
+def : Pat<(i32 (vecreduce_umin (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (UMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"UMAXV", vecreduce_umax>;
+def : Pat<(i32 (vecreduce_umax (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (UMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"SMINV", vecreduce_smin>;
+def : Pat<(i32 (vecreduce_smin (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (SMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
+
+defm : SIMDAcrossLanesVecReductionIntrinsic<"SMAXV", vecreduce_smax>;
+def : Pat<(i32 (vecreduce_smax (v2i32 V64:$Rn))), 
+          (i32 (EXTRACT_SUBREG (SMAXPv2i32 V64:$Rn, V64:$Rn), ssub))>;
 
 multiclass SIMDAcrossLanesSignedLongIntrinsic<string baseOpc, Intrinsic intOp> {
   def : Pat<(i32 (intOp (v8i8 V64:$Rn))),

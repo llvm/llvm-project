@@ -25,12 +25,3 @@ define void @"NewCasts" (i16 %x) {
   %z = addrspacecast <4 x ptr> %s to <4 x ptr addrspace(2)>
   ret void
 }
-
-
-define i16 @"ZExtConst" () {
-  ret i16 trunc ( i32 zext ( i16 42 to i32) to i16 )
-}
-
-define i16 @"SExtConst" () {
-  ret i16 trunc (i32 sext (i16 42 to i32) to i16 )
-}

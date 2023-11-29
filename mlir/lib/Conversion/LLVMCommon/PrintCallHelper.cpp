@@ -51,16 +51,16 @@ void mlir::LLVM::createPrintStrCall(
       loc, arrayTy, /*constant=*/true, LLVM::Linkage::Private,
       ensureSymbolNameIsUnique(moduleOp, symbolName), dataAttr);
 
+  auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
   // Emit call to `printStr` in runtime library.
   builder.restoreInsertionPoint(ip);
-  auto msgAddr = builder.create<LLVM::AddressOfOp>(
-      loc, typeConverter.getPointerType(arrayTy), globalOp.getName());
+  auto msgAddr =
+      builder.create<LLVM::AddressOfOp>(loc, ptrTy, globalOp.getName());
   SmallVector<LLVM::GEPArg> indices(1, 0);
-  Value gep = builder.create<LLVM::GEPOp>(
-      loc, typeConverter.getPointerType(builder.getI8Type()), arrayTy, msgAddr,
-      indices);
-  Operation *printer = LLVM::lookupOrCreatePrintStringFn(
-      moduleOp, typeConverter.useOpaquePointers(), runtimeFunctionName);
+  Value gep =
+      builder.create<LLVM::GEPOp>(loc, ptrTy, arrayTy, msgAddr, indices);
+  Operation *printer =
+      LLVM::lookupOrCreatePrintStringFn(moduleOp, runtimeFunctionName);
   builder.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(printer),
                                gep);
 }

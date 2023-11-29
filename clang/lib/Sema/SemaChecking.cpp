@@ -3052,6 +3052,18 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 7))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck1_1:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck1_3:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 3))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck1_7:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 7))
+        HasError = true;
+      break;
     case SVETypeFlags::ImmCheckExtract:
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0,
                                       (2048 / ElementSizeInBits) - 1))
@@ -6046,6 +6058,11 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D) {
       !TI.hasFeature("zvfh") && !TI.hasFeature("zvfhmin"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D)
         << Ty << "zvfh or zvfhmin";
+  // Check if enabled zvfbfmin for BFloat16
+  if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ false,
+                    /* IsBFloat */ true) &&
+      !TI.hasFeature("experimental-zvfbfmin"))
+    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
   if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
       !TI.hasFeature("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
@@ -10130,7 +10147,7 @@ class FormatStringLiteral {
   unsigned getLength() const { return FExpr->getLength() - Offset; }
   unsigned getCharByteWidth() const { return FExpr->getCharByteWidth(); }
 
-  StringLiteral::StringKind getKind() const { return FExpr->getKind(); }
+  StringLiteralKind getKind() const { return FExpr->getKind(); }
 
   QualType getType() const { return FExpr->getType(); }
 

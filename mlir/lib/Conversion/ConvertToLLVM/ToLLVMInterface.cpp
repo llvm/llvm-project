@@ -23,7 +23,7 @@ void mlir::populateConversionTargetFromOperation(
       return;
     // First time we encounter this dialect: if it implements the interface,
     // let's populate patterns !
-    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
     if (!iface)
       return;
     iface->populateConvertToLLVMConversionPatterns(target, typeConverter,

@@ -41,19 +41,19 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX906-LABEL: v_udot4_cast_v4i8:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_mov_b32 s5, 8
-; GFX906-NEXT:    s_movk_i32 s4, 0xff
-; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, s5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX906-NEXT:    v_and_or_b32 v0, v0, s4, v1
+; GFX906-NEXT:    v_mov_b32_e32 v10, 8
+; GFX906-NEXT:    v_mov_b32_e32 v9, 0xff
+; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, v10, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX906-NEXT:    v_and_or_b32 v0, v0, v9, v1
 ; GFX906-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX906-NEXT:    v_and_b32_e32 v2, 0xff, v3
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
 ; GFX906-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, s5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, v10, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX906-NEXT:    v_and_b32_e32 v2, 0xff, v6
 ; GFX906-NEXT:    v_and_b32_e32 v3, 0xff, v7
-; GFX906-NEXT:    v_and_or_b32 v1, v4, s4, v1
+; GFX906-NEXT:    v_and_or_b32 v1, v4, v9, v1
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
 ; GFX906-NEXT:    v_or3_b32 v1, v1, v2, v3
@@ -63,17 +63,17 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX10-LABEL: v_udot4_cast_v4i8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s4, 8
-; GFX10-NEXT:    v_lshlrev_b32_sdwa v1, s4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; GFX10-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
+; GFX10-NEXT:    v_mov_b32_e32 v9, 8
+; GFX10-NEXT:    v_lshlrev_b32_sdwa v1, v9, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-NEXT:    v_and_or_b32 v0, 0xff, v0, v1
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v2
 ; GFX10-NEXT:    v_and_b32_e32 v2, 0xff, v3
-; GFX10-NEXT:    v_lshlrev_b32_sdwa v3, s4, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-NEXT:    v_lshlrev_b32_sdwa v3, v9, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_and_b32_e32 v5, 0xff, v6
 ; GFX10-NEXT:    v_and_b32_e32 v6, 0xff, v7
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX10-NEXT:    v_and_or_b32 v3, v4, 0xff, v3
+; GFX10-NEXT:    v_and_or_b32 v3, 0xff, v4, v3
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v5, 24, v6
 ; GFX10-NEXT:    v_or3_b32 v0, v0, v1, v2
@@ -92,10 +92,10 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 8, v5
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
-; GFX11-NEXT:    v_and_or_b32 v0, v0, 0xff, v1
+; GFX11-NEXT:    v_and_or_b32 v0, 0xff, v0, v1
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xff, v6
 ; GFX11-NEXT:    v_and_b32_e32 v6, 0xff, v7
-; GFX11-NEXT:    v_and_or_b32 v4, v4, 0xff, v5
+; GFX11-NEXT:    v_and_or_b32 v4, 0xff, v4, v5
 ; GFX11-NEXT:    v_or3_b32 v0, v0, v2, v3
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v5, 24, v6

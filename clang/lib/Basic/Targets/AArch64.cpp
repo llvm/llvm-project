@@ -333,6 +333,12 @@ void AArch64TargetInfo::getTargetDefinesARMV94A(const LangOptions &Opts,
   getTargetDefinesARMV89A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.5-A does not have a v8.* equivalent, but is a superset of v9.4-A.
+  getTargetDefinesARMV94A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -565,6 +571,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV93A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_4A)
     getTargetDefinesARMV94A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
+    getTargetDefinesARMV95A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -677,6 +685,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme", HasSME)
       .Case("sme-f64f64", HasSMEF64F64)
       .Case("sme-i16i64", HasSMEI16I64)
+      .Case("sme-fa64", HasSMEFA64)
       .Cases("memtag", "memtag2", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
@@ -806,6 +815,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasBFloat16 = true;
       HasFullFP16 = true;
     }
+    if (Feature == "+sme-fa64") {
+      FPU |= NeonMode;
+      FPU |= SveMode;
+      HasSME = true;
+      HasSVE2 = true;
+      HasSMEFA64 = true;
+    }
     if (Feature == "+sb")
       HasSB = true;
     if (Feature == "+predres")
@@ -899,6 +915,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.4a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_4A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_4A;
+    if (Feature == "+v9.5a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_5A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1302,6 +1321,12 @@ bool AArch64TargetInfo::validateAsmConstraint(
     if (Name[1] == 'p' &&
         (Name[2] == 'l' || Name[2] == 'a' || Name[2] == 'h')) {
       // SVE predicate registers ("Upa"=P0-15, "Upl"=P0-P7, "Uph"=P8-P15)
+      Info.setAllowsRegister();
+      Name += 2;
+      return true;
+    }
+    if (Name[1] == 'c' && (Name[2] == 'i' || Name[2] == 'j')) {
+      // Gpr registers ("Uci"=w8-11, "Ucj"=w12-15)
       Info.setAllowsRegister();
       Name += 2;
       return true;

@@ -191,7 +191,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     : ExternalSource(nullptr), CurFPFeatures(pp.getLangOpts()),
       LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
       Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
-      CollectStats(false), CodeCompleter(CodeCompleter), CurContext(nullptr),
+      APINotes(SourceMgr, LangOpts), CollectStats(false),
+      CodeCompleter(CodeCompleter), CurContext(nullptr),
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
@@ -329,8 +330,9 @@ void Sema::Initialize() {
   if (getLangOpts().MSVCCompat) {
     if (getLangOpts().CPlusPlus &&
         IdResolver.begin(&Context.Idents.get("type_info")) == IdResolver.end())
-      PushOnScopeChains(Context.buildImplicitRecord("type_info", TTK_Class),
-                        TUScope);
+      PushOnScopeChains(
+          Context.buildImplicitRecord("type_info", TagTypeKind::Class),
+          TUScope);
 
     addImplicitTypedef("size_t", Context.getSizeType());
   }
@@ -1285,8 +1287,6 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (auto *FD = dyn_cast<FunctionDecl>(D)) {
         bool DefInPMF = false;
         if (auto *FDD = FD->getDefinition()) {
-          assert(FDD->getOwningModule() &&
-                 FDD->getOwningModule()->isModulePurview());
           DefInPMF = FDD->getOwningModule()->isPrivateModule();
           if (!DefInPMF)
             continue;

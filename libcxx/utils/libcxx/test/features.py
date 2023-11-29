@@ -58,8 +58,66 @@ def _getAndroidDeviceApi(cfg):
         )
     )
 
-
+# Lit features are evaluated in order. Some checks may require the compiler detection to have
+# run first in order to work properly.
 DEFAULT_FEATURES = [
+    Feature(name="apple-clang", when=_isAppleClang),
+    Feature(
+        name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
+        when=_isAppleClang,
+    ),
+    Feature(
+        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
+        when=_isAppleClang,
+    ),
+    Feature(
+        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
+        when=_isAppleClang,
+    ),
+    Feature(name="clang", when=_isClang),
+    Feature(
+        name=lambda cfg: "clang-{__clang_major__}".format(**compilerMacros(cfg)),
+        when=_isClang,
+    ),
+    Feature(
+        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
+        when=_isClang,
+    ),
+    Feature(
+        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
+        when=_isClang,
+    ),
+    # Note: Due to a GCC bug (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104760), we must disable deprecation warnings
+    #       on GCC or spurious diagnostics are issued.
+    #
+    # TODO:
+    # - Enable -Wplacement-new with GCC.
+    # - Enable -Wclass-memaccess with GCC.
+    Feature(
+        name="gcc",
+        when=_isGCC,
+        actions=[
+            AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
+            AddCompileFlag("-Wno-placement-new"),
+            AddCompileFlag("-Wno-class-memaccess"),
+            AddFeature("GCC-ALWAYS_INLINE-FIXME"),
+        ],
+    ),
+    Feature(
+        name=lambda cfg: "gcc-{__GNUC__}".format(**compilerMacros(cfg)), when=_isGCC
+    ),
+    Feature(
+        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}".format(**compilerMacros(cfg)),
+        when=_isGCC,
+    ),
+    Feature(
+        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}".format(**compilerMacros(cfg)),
+        when=_isGCC,
+    ),
+    Feature(name="msvc", when=_isMSVC),
+    Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
+    Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
+
     Feature(
         name="thread-safety",
         when=lambda cfg: hasCompileFlag(cfg, "-Werror=thread-safety"),
@@ -109,6 +167,16 @@ DEFAULT_FEATURES = [
     Feature(
         name="verify-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
+    ),
+    Feature(
+        name="has-latomic",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            int main(int, char**) { return 0; }
+          """,
+            ["-latomic"],
+        ),
     ),
     Feature(
         name="non-lockfree-atomics",
@@ -221,62 +289,6 @@ DEFAULT_FEATURES = [
             AddSubstitution("%{clang-tidy}", lambda cfg: _getSuitableClangTidy(cfg))
         ],
     ),
-    Feature(name="apple-clang", when=_isAppleClang),
-    Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}".format(**compilerMacros(cfg)),
-        when=_isAppleClang,
-    ),
-    Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
-        when=_isAppleClang,
-    ),
-    Feature(
-        name=lambda cfg: "apple-clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
-        when=_isAppleClang,
-    ),
-    Feature(name="clang", when=_isClang),
-    Feature(
-        name=lambda cfg: "clang-{__clang_major__}".format(**compilerMacros(cfg)),
-        when=_isClang,
-    ),
-    Feature(
-        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}".format(**compilerMacros(cfg)),
-        when=_isClang,
-    ),
-    Feature(
-        name=lambda cfg: "clang-{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(**compilerMacros(cfg)),
-        when=_isClang,
-    ),
-    # Note: Due to a GCC bug (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104760), we must disable deprecation warnings
-    #       on GCC or spurious diagnostics are issued.
-    #
-    # TODO:
-    # - Enable -Wplacement-new with GCC.
-    # - Enable -Wclass-memaccess with GCC.
-    Feature(
-        name="gcc",
-        when=_isGCC,
-        actions=[
-            AddCompileFlag("-D_LIBCPP_DISABLE_DEPRECATION_WARNINGS"),
-            AddCompileFlag("-Wno-placement-new"),
-            AddCompileFlag("-Wno-class-memaccess"),
-            AddFeature("GCC-ALWAYS_INLINE-FIXME"),
-        ],
-    ),
-    Feature(
-        name=lambda cfg: "gcc-{__GNUC__}".format(**compilerMacros(cfg)), when=_isGCC
-    ),
-    Feature(
-        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}".format(**compilerMacros(cfg)),
-        when=_isGCC,
-    ),
-    Feature(
-        name=lambda cfg: "gcc-{__GNUC__}.{__GNUC_MINOR__}.{__GNUC_PATCHLEVEL__}".format(**compilerMacros(cfg)),
-        when=_isGCC,
-    ),
-    Feature(name="msvc", when=_isMSVC),
-    Feature(name=lambda cfg: "msvc-{}".format(*_msvcVersion(cfg)), when=_isMSVC),
-    Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
@@ -296,6 +308,7 @@ macros = {
     "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",

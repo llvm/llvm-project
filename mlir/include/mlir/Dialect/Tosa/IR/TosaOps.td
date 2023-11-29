@@ -107,7 +107,8 @@ def Tosa_Conv2DOp : Tosa_InferShapedTypeOp<"conv2d"> {
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
-    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
   let results = (outs
@@ -136,7 +137,8 @@ def Tosa_Conv3DOp : Tosa_InferShapedTypeOp<"conv3d"> {
     Tosa_IntArrayAttr6:$pad,
     Tosa_IntArrayAttr3:$stride,
     Tosa_IntArrayAttr3:$dilation,
-    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
   let results = (outs
@@ -166,7 +168,8 @@ def Tosa_DepthwiseConv2DOp : Tosa_InferShapedTypeOp<"depthwise_conv2d"> {
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
-    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
   let results = (outs
@@ -201,7 +204,8 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d"> {
     Tosa_Tensor3D:$input_real,
     Tosa_Tensor3D:$input_imag,
 
-    BoolAttr:$inverse
+    BoolAttr:$inverse,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
   let results = (outs
@@ -315,7 +319,8 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$input
+    Tosa_Tensor3D:$input,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
   let results = (outs
@@ -347,7 +352,8 @@ def Tosa_TransposeConv2DOp : Tosa_InferShapedTypeOp<"transpose_conv2d"> {
     Tosa_IntArrayAttr4:$out_pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttrUpto4:$out_shape,
-    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info
+    OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
   let results = (outs
@@ -1931,11 +1937,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     not expected to be portable across TOSA implementations. The input and
     output signatures must be expressed in the corresponding TOSA node.
 
-    `identifier` is a string that tells the backend which custom operator is being
-    called.
+    `operator_name` is a string that tells the backend which custom operator is
+    being called.
 
-    `config` is a string identifier which can help avoid name collisions on the
-    identifier field.
+    `domain_name` is a string identifier which can help avoid name collisions on
+    the identifier field.
 
     `implementation_attrs` is a string which is a backend and identifier specific
     set of attributes to the custom operator.
@@ -1948,14 +1954,15 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     Example:
 
     ```mlir
-    %out = tosa.custom %in {config = "tosa_mlir_test", identifier = "custom_test",
-           implementation_attrs = ""} : (tensor<10xi32>) -> (tensor<10xi32>)
+    %out = tosa.custom %in {domain_name = "tosa_mlir_test", operator_name =
+           "custom_test", implementation_attrs = ""}: (tensor<10xi32>) ->
+           (tensor<10xi32>)
     ```
   }];
 
   let arguments = (ins
-    StrAttr:$identifier,
-    StrAttr:$config,
+    StrAttr:$operator_name,
+    StrAttr:$domain_name,
     StrAttr:$implementation_attrs,
     Variadic<Tosa_Tensor>:$inputs
   );
