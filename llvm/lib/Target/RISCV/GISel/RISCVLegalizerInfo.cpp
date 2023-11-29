@@ -82,16 +82,19 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({s32, sXLen})
-      .legalIf(all(typeInSet(0, AllVecTys),
-                   LegalityPredicate([=, &ST](const LegalityQuery &Query) {
-                     return ST.hasVInstructions() && 
-										 (Query.Types[0].getScalarSizeInBits() != 64 || ST.hasVInstructionsI64()) &&
-										 (Query.Types[0].getElementCount().getKnownMinValue() != 1 || ST.getELen() == 64);
-                   })))
+      .legalIf(all(
+          typeInSet(0, AllVecTys),
+          LegalityPredicate([=, &ST](const LegalityQuery &Query) {
+						return ST.hasVInstructions() &&
+                   (Query.Types[0].getScalarSizeInBits() != 64 || ST.hasVInstructionsI64()) &&
+                   (Query.Types[0].getElementCount().getKnownMinValue() != 1 ||
+                    ST.getELen() == 64);
+          })))
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, sXLen);
 
-  getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
+  getActionDefinitionsBuilder(
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO}).lower();
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
@@ -349,7 +352,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   // FIXME: We can do custom inline expansion like SelectionDAG.
   // FIXME: Legal with Zfa.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR}).libcallFor({s32, s64});
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
+      .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_VASTART).customFor({p0});
 
