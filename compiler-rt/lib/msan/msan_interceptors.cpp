@@ -252,7 +252,7 @@ static NOINLINE void clear_mallinfo(T *sret) {
   __msan_unpoison(sret, sizeof(*sret));
 }
 
-// Interceptor relies on NRVO and assumes that sret will be pre-allocated in
+// Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
 INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
   __sanitizer_struct_mallinfo sret;
@@ -260,8 +260,6 @@ INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
   return sret;
 }
 
-// Interceptor relies on NRVO and assumes that sret will be pre-allocated in
-// caller frame.
 INTERCEPTOR(__sanitizer_struct_mallinfo2, mallinfo2) {
   __sanitizer_struct_mallinfo2 sret;
   clear_mallinfo(&sret);
