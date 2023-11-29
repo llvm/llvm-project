@@ -3,6 +3,19 @@
 ; RUN: llvm-objdump --macho --section-headers %t | FileCheck %s --check-prefix=SECTIONS
 ; RUN: llvm-objdump --macho --reloc %t | FileCheck %s --check-prefix=RELOCS
 
+; CHECK:     .section __DATA,__data
+; CHECK: _i1.lazy_pointer:
+; CHECK:     .section __TEXT,__text,regular,pure_instructions
+; CHECK: _i1:
+; CHECK: _i1.stub_helper:
+; CHECK:     .section __DATA,__data
+; CHECK: _i2.lazy_pointer:
+; CHECK:     .section __TEXT,__text,regular,pure_instructions
+; CHECK: _i2:
+; CHECK: _i2.stub_helper:
+
+; CHECK:     .section __DWARF
+
 ; CHECK:			.addrsig{{$}}
 ; CHECK-NEXT:	.addrsig_sym _func03_takeaddr
 ; CHECK-NEXT:	.addrsig_sym _f1

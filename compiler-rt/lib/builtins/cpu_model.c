@@ -948,6 +948,8 @@ _Bool __aarch64_have_lse_atomics
 #if defined(__has_include)
 #if __has_include(<sys/auxv.h>)
 #include <sys/auxv.h>
+#define HAVE_SYS_AUXV
+#endif
 
 #if __has_include(<sys/ifunc.h>)
 #include <sys/ifunc.h>
@@ -961,6 +963,8 @@ typedef struct __ifunc_arg_t {
 
 #if __has_include(<asm/hwcap.h>)
 #include <asm/hwcap.h>
+#include HAVE_SYS_HWCAP
+#endif
 
 #if defined(__ANDROID__)
 #include <string.h>
@@ -996,6 +1000,9 @@ typedef struct __ifunc_arg_t {
 #endif
 #ifndef HWCAP_SHA2
 #define HWCAP_SHA2 (1 << 6)
+#endif
+#ifndef HWCAP_CRC32
+#define HWCAP_CRC32 (1 << 7)
 #endif
 #ifndef HWCAP_ATOMICS
 #define HWCAP_ATOMICS (1 << 8)
@@ -1149,6 +1156,7 @@ typedef struct __ifunc_arg_t {
   if (__system_property_get("ro.arch", arch) > 0 &&                            \
       strncmp(arch, "exynos9810", sizeof("exynos9810") - 1) == 0)
 
+#if !defined(__APPLE__)
 static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
 #if defined(__FreeBSD__)
   unsigned long hwcap;
@@ -1162,7 +1170,7 @@ static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
   zx_status_t status = _zx_system_get_features(ZX_FEATURE_KIND_CPU, &features);
   __aarch64_have_lse_atomics =
       status == ZX_OK && (features & ZX_ARM64_FEATURE_ISA_ATOMICS) != 0;
-#else
+#elif defined(HAVE_SYS_AUXV)
   unsigned long hwcap = getauxval(AT_HWCAP);
   _Bool result = (hwcap & HWCAP_ATOMICS) != 0;
 #if defined(__ANDROID__)
@@ -1180,8 +1188,11 @@ static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
   }
 #endif // defined(__ANDROID__)
   __aarch64_have_lse_atomics = result;
+#else
+#error No support for checking for lse atomics on this platfrom yet.
 #endif // defined(__FreeBSD__)
 }
+#endif // !defined(__APPLE__)
 
 #if !defined(DISABLE_AARCH64_FMV)
 // CPUFeatures must correspond to the same AArch64 features in
@@ -1259,6 +1270,72 @@ struct {
   // As features grows new fields could be added
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX || TARGET_OS_IPHONE
+#include <dispatch/dispatch.h>
+#include <sys/sysctl.h>
+
+static bool isKnownAndSupported(const char *name) {
+  int32_t val = 0;
+  size_t size = sizeof(val);
+  if (sysctlbyname(name, &val, &size, NULL, 0))
+    return false;
+  return val;
+}
+
+void __init_cpu_features_resolver(void) {
+  // On Darwin platforms, this may be called concurrently by multiple threads
+  // because the resolvers that use it are called lazily at runtime (unlike on
+  // ELF platforms, where IFuncs are resolved serially at load time).  This
+  // function's effect on __aarch64_cpu_features should be idempotent, but even
+  // so we need dispatch_once to resolve the race condition.  Dispatch is
+  // available through libSystem, which we need anyway for the sysctl, so this
+  // does not add a new dependency.
+
+  static dispatch_once_t onceToken = 0;
+  dispatch_once(&onceToken, ^{
+    // https://developer.apple.com/documentation/kernel/1387446-sysctlbyname/determining_instruction_set_characteristics
+    static struct {
+      const char *sysctl_name;
+      enum CPUFeatures feature;
+    } features[] = {
+        {"hw.optional.arm.FEAT_FlagM", FEAT_FLAGM},
+        {"hw.optional.arm.FEAT_FlagM2", FEAT_FLAGM2},
+        {"hw.optional.arm.FEAT_FHM", FEAT_FP16FML},
+        {"hw.optional.arm.FEAT_DotProd", FEAT_DOTPROD},
+        {"hw.optional.arm.FEAT_RDM", FEAT_RDM},
+        {"hw.optional.arm.FEAT_LSE", FEAT_LSE},
+        {"hw.optional.floatingpoint", FEAT_FP},
+        {"hw.optional.AdvSIMD", FEAT_SIMD},
+        {"hw.optional.armv8_crc32", FEAT_CRC},
+        {"hw.optional.arm.FEAT_SHA1", FEAT_SHA1},
+        {"hw.optional.arm.FEAT_SHA256", FEAT_SHA2},
+        {"hw.optional.armv8_2_sha3", FEAT_SHA3},
+        {"hw.optional.arm.FEAT_AES", FEAT_AES},
+        {"hw.optional.arm.FEAT_PMULL", FEAT_PMULL},
+        {"hw.optional.arm.FEAT_FP16", FEAT_FP16},
+        {"hw.optional.arm.FEAT_JSCVT", FEAT_JSCVT},
+        {"hw.optional.arm.FEAT_FCMA", FEAT_FCMA},
+        {"hw.optional.arm.FEAT_LRCPC", FEAT_RCPC},
+        {"hw.optional.arm.FEAT_LRCPC2", FEAT_RCPC2},
+        {"hw.optional.arm.FEAT_FRINTTS", FEAT_FRINTTS},
+        {"hw.optional.arm.FEAT_I8MM", FEAT_I8MM},
+        {"hw.optional.arm.FEAT_BF16", FEAT_BF16},
+        {"hw.optional.arm.FEAT_SB", FEAT_SB},
+        {"hw.optional.arm.FEAT_SSBS", FEAT_SSBS2},
+        {"hw.optional.arm.FEAT_BTI", FEAT_BTI},
+    };
+
+    for (size_t I = 0, E = sizeof(features) / sizeof(features[0]); I != E; ++I)
+      if (isKnownAndSupported(features[I].sysctl_name))
+        __aarch64_cpu_features.features |= (1ULL << features[I].feature);
+
+    __aarch64_cpu_features.features |= (1ULL << FEAT_INIT);
+  });
+}
+#endif // TARGET_OS_OSX || TARGET_OS_IPHONE
+#else  // defined(__APPLE__)
 static void __init_cpu_features_constructor(unsigned long hwcap,
                                             const __ifunc_arg_t *arg) {
 #define setCPUFeature(F) __aarch64_cpu_features.features |= 1ULL << F
@@ -1467,8 +1544,8 @@ void __init_cpu_features_resolver(unsigned long hwcap,
 }
 
 void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
-  unsigned long hwcap;
-  unsigned long hwcap2;
+  unsigned long hwcap = 0;
+  unsigned long hwcap2 = 0;
   // CPU features already initialized.
   if (__aarch64_cpu_features.features)
     return;
@@ -1478,7 +1555,7 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   res |= elf_aux_info(AT_HWCAP2, &hwcap2, sizeof hwcap2);
   if (res)
     return;
-#else
+#elif defined(HAVE_SYS_AUXV)
 #if defined(__ANDROID__)
   // Don't set any CPU features,
   // detection could be wrong on Exynos 9810.
@@ -1486,6 +1563,8 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
 #endif // defined(__ANDROID__)
   hwcap = getauxval(AT_HWCAP);
   hwcap2 = getauxval(AT_HWCAP2);
+#else
+#error No support for checking hwcap on this platform yet.
 #endif // defined(__FreeBSD__)
   __ifunc_arg_t arg;
   arg._size = sizeof(__ifunc_arg_t);
@@ -1497,8 +1576,7 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
 #undef setCPUFeature
 #undef IF_EXYNOS9810
 }
+#endif // defined(__APPLE__)
 #endif // !defined(DISABLE_AARCH64_FMV)
 #endif // defined(__has_include)
-#endif // __has_include(<sys/auxv.h>)
-#endif // __has_include(<asm/hwcap.h>)
 #endif // defined(__aarch64__)
