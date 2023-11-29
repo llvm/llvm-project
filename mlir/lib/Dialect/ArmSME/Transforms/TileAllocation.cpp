@@ -45,6 +45,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 #define DEBUG_TYPE "allocate-arm-sme-tiles"
 
@@ -151,47 +152,52 @@ static FailureOr<unsigned> allocateTileId(ArmSMETileType tileType,
 /// Collects transitive uses of a root value through control flow. This can
 /// handle basic SCF constructs, along with control flow (br and cond_br).
 /// Simple loops work at the SCF level, while more complex control flow can be
-/// delt with after lowering to CF. This can be used to implement basic tile
+/// dealt with after lowering to CF. This is used to implement basic tile
 /// allocation.
 static void findDependantOps(Value rootValue,
                              SetVector<Operation *> &dependantOps) {
   auto traverseCorrespondingValues = [&](auto inputValues, auto exitValues) {
     for (auto [idx, value] : llvm::enumerate(inputValues)) {
-      if (value != rootValue)
-        continue;
-      findDependantOps(exitValues[idx], dependantOps);
+      if (value == rootValue)
+        findDependantOps(exitValues[idx], dependantOps);
     }
   };
   for (Operation *user : rootValue.getUsers()) {
     if (dependantOps.contains(user))
       continue;
     dependantOps.insert(user);
-    if (auto branchOp = llvm::dyn_cast<cf::BranchOp>(user)) {
-      // (CF) Follow branch.
-      traverseCorrespondingValues(branchOp.getDestOperands(),
-                                  branchOp.getDest()->getArguments());
-    } else if (auto condBranchOp = llvm::dyn_cast<cf::CondBranchOp>(user)) {
-      // (CF) Follow true branch.
-      traverseCorrespondingValues(condBranchOp.getTrueOperands(),
-                                  condBranchOp.getTrueDest()->getArguments());
-      // (CF) Follow false branch.
-      traverseCorrespondingValues(condBranchOp.getFalseOperands(),
-                                  condBranchOp.getFalseDest()->getArguments());
-    } else if (auto loop = llvm::dyn_cast<LoopLikeOpInterface>(user)) {
-      // (SCF) Follow iter_args of (basic) loops (e.g. for loops).
-      traverseCorrespondingValues(loop.getInits(), loop.getRegionIterArgs());
-    } else if (user->hasTrait<OpTrait::ReturnLike>()) {
-      // (SCF) Follow yields of (basic) control flow (e.g. for loops).
-      auto parent = user->getParentOp();
-      // Don't traverse outside a function.
-      if (llvm::isa<FunctionOpInterface>(parent))
-        continue;
-      traverseCorrespondingValues(user->getOperands(), parent->getResults());
-    } else {
-      // Otherwise, assume users of _any_ result are dependant.
-      for (Value result : user->getResults())
-        findDependantOps(result, dependantOps);
-    }
+    TypeSwitch<Operation *>(user)
+        .Case<cf::BranchOp>([&](auto branchOp) {
+          // (CF) Follow branch.
+          traverseCorrespondingValues(branchOp.getDestOperands(),
+                                      branchOp.getDest()->getArguments());
+        })
+        .Case<cf::CondBranchOp>([&](auto condBranchOp) {
+          // (CF) Follow true branch.
+          traverseCorrespondingValues(
+              condBranchOp.getTrueOperands(),
+              condBranchOp.getTrueDest()->getArguments());
+          // (CF) Follow false branch.
+          traverseCorrespondingValues(
+              condBranchOp.getFalseOperands(),
+              condBranchOp.getFalseDest()->getArguments());
+        })
+        .Case<LoopLikeOpInterface>([&](auto loopOp) {
+          // (SCF) Follow iter_args of (basic) loops (e.g. for loops).
+          traverseCorrespondingValues(loopOp.getInits(),
+                                      loopOp.getRegionIterArgs());
+        })
+        .Case<scf::YieldOp>([&](auto yieldOp) {
+          // (SCF) Follow yields of (basic) control flow (e.g. for loops).
+          auto parent = user->getParentOp();
+          traverseCorrespondingValues(user->getOperands(),
+                                      parent->getResults());
+        })
+        .Default([&](auto) {
+          // Otherwise, assume users of _any_ result are dependant.
+          for (Value result : user->getResults())
+            findDependantOps(result, dependantOps);
+        });
   }
 }
 
@@ -208,27 +214,26 @@ struct AssignTileIDsPattern
       return rewriter.notifyMatchFailure(tileOp, "op does not allocate a tile");
 
     auto func = tileOp->getParentOfType<FunctionOpInterface>();
-    TileMask tilesInUse;
-    if (auto tilesInUseAttr = func->getAttrOfType<IntegerAttr>(kTilesInUseAttr))
+    TileMask tilesInUse = TileMask::kNone;
+    if (auto tilesInUseAttr = llvm::dyn_cast_or_null<IntegerAttr>(
+            func->getDiscardableAttr(kTilesInUseAttr)))
       tilesInUse = static_cast<TileMask>(tilesInUseAttr.getInt());
-    else
-      tilesInUse = TileMask::kNone;
 
     auto tileId = allocateTileId(*tileType, tilesInUse);
     if (failed(tileId))
       return tileOp.emitError("ran out of SME virtual tiles!");
 
-    func->setAttr(kTilesInUseAttr,
-                  rewriter.getI32IntegerAttr((unsigned)tilesInUse));
+    func->setDiscardableAttr(kTilesInUseAttr,
+                             rewriter.getI32IntegerAttr((unsigned)tilesInUse));
 
     // Find all the ops that (transitively) depend on this tile.
     SetVector<Operation *> dependantOps;
     findDependantOps(tileOp->getResult(0), dependantOps);
 
-    // Set all operations to use the same tile ID.
+    // Set all operations dependent on `tileOp` to use the same tile ID.
     // This is a naive tile allocation scheme, but works for common cases. For
     // example, as this only allocates tile IDs to existing ops, it can't solve
-    // cases like:
+    // cases like this (%tileA and %tileB come from different root operations):
     //
     // %tile = scf.if %some_cond -> vector<[4]x[4]xi32> {
     //   scf.yield %tileA {tile_id = 0} : vector<[4]x[4]xi32>
@@ -236,10 +241,9 @@ struct AssignTileIDsPattern
     //   scf.yield %tileB {tile_id = 1} : vector<[4]x[4]xi32>
     // }
     //
-    // Where %tileA and %tileB come from different root operations. This case
-    // would require allocating a new tile for the result of the scf.if, and
-    // moving the contents of %tileA or %tileB to result tile (based on the
-    // %some_cond).
+    // This case would require allocating a new tile for the result of the
+    // scf.if, and moving the contents of %tileA or %tileB to result tile (based
+    // on the %some_cond).
     auto tileIDAttr = rewriter.getI32IntegerAttr(*tileId);
     tileOp.setTileId(tileIDAttr);
     for (auto *op : dependantOps) {
