@@ -14202,11 +14202,13 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
     if (CC == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
-        isa<ConstantSDNode>(LHS.getOperand(1)) &&
-        cast<ConstantSDNode>(LHS.getOperand(1))->getAPIntValue().isPowerOf2() &&
-        isNullConstant(RHS))
-      return DAG.getSelect(
-          DL, VT, DAG.getSetCC(DL, CondVT, LHS, RHS, ISD::SETNE), False, True);
+        isa<ConstantSDNode>(LHS.getOperand(1)) && isNullConstant(RHS)) {
+      uint64_t MaskVal = LHS.getConstantOperandVal(1);
+      if (isPowerOf2_64(MaskVal) && !isInt<12>(MaskVal))
+        return DAG.getSelect(DL, VT,
+                             DAG.getSetCC(DL, CondVT, LHS, RHS, ISD::SETNE),
+                             False, True);
+    }
   }
   return SDValue();
 }

@@ -3645,7 +3645,7 @@ define i64 @single_bit(i64 %x) {
 ;
 ; RV64XVENTANACONDOPS-LABEL: single_bit:
 ; RV64XVENTANACONDOPS:       # %bb.0: # %entry
-; RV64XVENTANACONDOPS-NEXT:    bexti a1, a0, 10
+; RV64XVENTANACONDOPS-NEXT:    andi a1, a0, 1024
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a1
 ; RV64XVENTANACONDOPS-NEXT:    ret
 ;
@@ -3658,14 +3658,14 @@ define i64 @single_bit(i64 %x) {
 ;
 ; RV32ZICOND-LABEL: single_bit:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    bexti a2, a0, 10
+; RV32ZICOND-NEXT:    andi a2, a0, 1024
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
 ; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: single_bit:
 ; RV64ZICOND:       # %bb.0: # %entry
-; RV64ZICOND-NEXT:    bexti a1, a0, 10
+; RV64ZICOND-NEXT:    andi a1, a0, 1024
 ; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
 entry:
