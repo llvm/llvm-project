@@ -25,6 +25,7 @@ class AssumptionCache;
 class DominatorTree;
 class ScalarEvolution;
 class SCEV;
+class AAResults;
 
 struct AlignmentFromAssumptionsPass
     : public PassInfoMixin<AlignmentFromAssumptionsPass> {
@@ -32,10 +33,11 @@ struct AlignmentFromAssumptionsPass
 
   // Glue for old PM.
   bool runImpl(Function &F, AssumptionCache &AC, ScalarEvolution *SE_,
-               DominatorTree *DT_);
+               DominatorTree *DT_, AAResults *AA_);
 
   ScalarEvolution *SE = nullptr;
   DominatorTree *DT = nullptr;
+  AAResults *AA = nullptr;
 
   bool extractAlignmentInfo(CallInst *I, unsigned Idx, Value *&AAPtr,
                             const SCEV *&AlignSCEV, const SCEV *&OffSCEV);
