@@ -272,10 +272,8 @@ static void emitSourceLink(StringRef inputFilename, raw_ostream &os) {
 
   StringRef inputFromMlirInclude = inputFilename.substr(pathBegin);
 
-  os << "<span class=\"op-definitions-source-link\">\n";
-  os << "  <a href=\"https://github.com/llvm/llvm-project/blob/main/"
-     << inputFromMlirInclude << "\">source</a>\n";
-  os << "</span>\n\n";
+  os << "[source](https://github.com/llvm/llvm-project/blob/main/"
+     << inputFromMlirInclude << ")\n\n";
 }
 
 static void emitOpDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
