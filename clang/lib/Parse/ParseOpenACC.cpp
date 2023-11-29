@@ -45,6 +45,7 @@ OpenACCDirectiveKindEx getOpenACCDirectiveKind(StringRef Name) {
           .Case("data", OpenACCDirectiveKind::Data)
           .Case("host_data", OpenACCDirectiveKind::HostData)
           .Case("loop", OpenACCDirectiveKind::Loop)
+          .Case("cache", OpenACCDirectiveKind::Cache)
           .Case("atomic", OpenACCDirectiveKind::Atomic)
           .Case("routine", OpenACCDirectiveKind::Routine)
           .Case("declare", OpenACCDirectiveKind::Declare)
@@ -88,6 +89,8 @@ bool isOpenACCDirectiveKind(OpenACCDirectiveKind Kind, StringRef Tok) {
     return Tok == "host_data";
   case OpenACCDirectiveKind::Loop:
     return Tok == "loop";
+  case OpenACCDirectiveKind::Cache:
+    return Tok == "cache";
 
   case OpenACCDirectiveKind::ParallelLoop:
   case OpenACCDirectiveKind::SerialLoop:
@@ -237,10 +240,7 @@ void ParseOpenACCClauseList(Parser &P) {
 
 } // namespace
 
-// Routine has an optional paren-wrapped name of a function in the local scope.
-// We parse the name, emitting any diagnostics
-ExprResult Parser::ParseOpenACCRoutineName() {
-
+ExprResult Parser::ParseOpenACCIDExpression() {
   ExprResult Res;
   if (getLangOpts().CPlusPlus) {
     Res = ParseCXXIdExpression(/*isAddressOfOperand=*/false);
@@ -248,8 +248,10 @@ ExprResult Parser::ParseOpenACCRoutineName() {
     // There isn't anything quite the same as ParseCXXIdExpression for C, so we
     // need to get the identifier, then call into Sema ourselves.
 
-    if (expectIdentifier())
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_expected) << tok::identifier;
       return ExprError();
+    }
 
     Token FuncName = getCurToken();
     UnqualifiedId Name;
@@ -266,6 +268,71 @@ ExprResult Parser::ParseOpenACCRoutineName() {
   }
 
   return getActions().CorrectDelayedTyposInExpr(Res);
+}
+
+void Parser::ParseOpenACCCacheVar() {
+  ExprResult ArrayName = ParseOpenACCIDExpression();
+  // FIXME: Pass this to Sema.
+  (void)ArrayName;
+
+  // If the expression is invalid, just continue parsing the brackets, there
+  // is likely other useful diagnostics we can emit inside of those.
+
+  BalancedDelimiterTracker SquareBrackets(*this, tok::l_square,
+                                          tok::annot_pragma_openacc_end);
+
+  // Square brackets are required, so error here, and try to recover by moving
+  // until the next comma, or the close paren/end of pragma.
+  if (SquareBrackets.expectAndConsume()) {
+    SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openacc_end,
+              Parser::StopBeforeMatch);
+    return;
+  }
+
+  ExprResult Lower = getActions().CorrectDelayedTyposInExpr(ParseExpression());
+  // FIXME: Pass this to Sema.
+  (void)Lower;
+
+  // The 'length' expression is optional, as this could be a single array
+  // element. If there is no colon, we can treat it as that.
+  if (getCurToken().is(tok::colon)) {
+    ConsumeToken();
+    ExprResult Length =
+        getActions().CorrectDelayedTyposInExpr(ParseExpression());
+    // FIXME: Pass this to Sema.
+    (void)Length;
+  }
+
+  // Diagnose the square bracket being in the wrong place and continue.
+  SquareBrackets.consumeClose();
+}
+
+void Parser::ParseOpenACCCacheVarList() {
+  // If this is the end of the line, just return 'false' and count on the close
+  // paren diagnostic to catch the issue.
+  if (getCurToken().isAnnotation())
+    return;
+
+  // The VarList is an optional `readonly:` followed by a list of a variable
+  // specifications.  First, see if we have `readonly:`, else we back-out and
+  // treat it like the beginning of a reference to a potentially-existing
+  // `readonly` variable.
+  if (getPreprocessor().getSpelling(getCurToken()) == "readonly" &&
+      NextToken().is(tok::colon)) {
+    // Consume both tokens.
+    ConsumeToken();
+    ConsumeToken();
+    // FIXME: Record that this is a 'readonly' so that we can use that during
+    // Sema/AST generation.
+  }
+
+  bool FirstArray = true;
+  while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
+    if (!FirstArray)
+      ExpectAndConsume(tok::comma);
+    FirstArray = false;
+    ParseOpenACCCacheVar();
+  }
 }
 
 void Parser::ParseOpenACCDirective() {
@@ -289,7 +356,9 @@ void Parser::ParseOpenACCDirective() {
       T.skipToEnd();
       break;
     case OpenACCDirectiveKind::Routine: {
-      ExprResult RoutineName = ParseOpenACCRoutineName();
+      // Routine has an optional paren-wrapped name of a function in the local
+      // scope. We parse the name, emitting any diagnostics
+      ExprResult RoutineName = ParseOpenACCIDExpression();
       // If the routine name is invalid, just skip until the closing paren to
       // recover more gracefully.
       if (RoutineName.isInvalid())
@@ -298,7 +367,18 @@ void Parser::ParseOpenACCDirective() {
         T.consumeClose();
       break;
     }
+    case OpenACCDirectiveKind::Cache:
+      ParseOpenACCCacheVarList();
+      // The ParseOpenACCCacheVarList function manages to recover from failures,
+      // so we can always consume the close.
+      T.consumeClose();
+      break;
     }
+  } else if (DirKind == OpenACCDirectiveKind::Cache) {
+    // Cache's paren var-list is required, so error here if it isn't provided.
+    // We know that the consumeOpen above left the first non-paren here, so use
+    // expectAndConsume to emit the proper dialog, then continue.
+    (void)T.expectAndConsume();
   }
 
   // Parses the list of clauses, if present.

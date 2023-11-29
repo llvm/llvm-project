@@ -34,7 +34,7 @@ enum class OpenACCDirectiveKind {
 
   // Misc.
   Loop,
-  // FIXME: 'cache'
+  Cache,
 
   // Combined Constructs.
   ParallelLoop,
