@@ -86,7 +86,7 @@ Other tips are:
 
 
 Setting Up and Formatting for Contributions to libc++
-====================================================
+=====================================================
 
 To ensure code consistency and avoid common formatting issues, it's recommended to use provided scripts to setup and
 format your libc++ changes. You can use ``install-formatting-hooks.sh`` and ``pre-commit-formatting-hook.sh`` scripts
