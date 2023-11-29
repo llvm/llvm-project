@@ -1118,8 +1118,8 @@ let Command = "thread plan list" in {
 }
 
 let Command = "thread select" in {
-  def thread_thread_id : Option<"thread_id", "t">,
-    Desc<"Provide a thread ID instead of a thread index.">;
+  def thread_select_thread_id : Option<"thread-id", "t">, Group<2>,
+    Arg<"ThreadID">, Desc<"Provide a thread ID instead of a thread index.">;
 }
 
 let Command = "thread trace dump function calls" in {

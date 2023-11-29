@@ -20,18 +20,28 @@ class TestCase(TestBase):
         self.expect(
             "thread select -t 0x1ffffffff",
             error=True,
-            startstr="error: Invalid thread ID '0x1ffffffff'",
+            startstr="error: Invalid thread ID",
+        )
+        self.expect(
+            "thread select 1 2 3",
+            error=True,
+            startstr="error: 'thread select' takes exactly one thread index argument, or a thread ID option:",
+        )
+        self.expect(
+            "thread select -t 1234 1",
+            error=True,
+            startstr="error: 'thread select' cannot take both a thread ID option and a thread index argument:",
         )
         # Parses but not a valid thread id.
         self.expect(
             "thread select 0xffffffff",
             error=True,
-            startstr="error: invalid thread #0xffffffff.",
+            startstr="error: Invalid thread #0xffffffff.",
         )
         self.expect(
             "thread select -t 0xffffffff",
             error=True,
-            startstr="error: invalid thread ID 0xffffffff.",
+            startstr="error: Invalid thread ID",
         )
 
     def test_thread_select_tid(self):
