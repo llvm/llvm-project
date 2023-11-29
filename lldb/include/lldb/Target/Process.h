@@ -22,9 +22,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "lldb/Breakpoint/BreakpointSite.h"
-#include "lldb/Breakpoint/StopPointSiteList.h"
-#include "lldb/Breakpoint/WatchpointResource.h"
+#include "lldb/Breakpoint/BreakpointSiteList.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceManager.h"
@@ -2150,10 +2148,9 @@ public:
   // doesn't work for a specific process plug-in.
   virtual Status DisableSoftwareBreakpoint(BreakpointSite *bp_site);
 
-  StopPointSiteList<lldb_private::BreakpointSite> &GetBreakpointSiteList();
+  BreakpointSiteList &GetBreakpointSiteList();
 
-  const StopPointSiteList<lldb_private::BreakpointSite> &
-  GetBreakpointSiteList() const;
+  const BreakpointSiteList &GetBreakpointSiteList() const;
 
   void DisableAllBreakpointSites();
 
@@ -2166,17 +2163,16 @@ public:
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
 
-  // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
-  // themselves from the constituent's list of this breakpoint sites.
-  void RemoveConstituentFromBreakpointSite(lldb::user_id_t site_id,
-                                           lldb::user_id_t constituent_id,
-                                           lldb::BreakpointSiteSP &bp_site_sp);
+  // BreakpointLocations use RemoveOwnerFromBreakpointSite to remove themselves
+  // from the owner's list of this breakpoint sites.
+  void RemoveOwnerFromBreakpointSite(lldb::user_id_t owner_id,
+                                     lldb::user_id_t owner_loc_id,
+                                     lldb::BreakpointSiteSP &bp_site_sp);
 
   // Process Watchpoints (optional)
-  virtual Status EnableWatchpoint(lldb::WatchpointSP wp_sp, bool notify = true);
+  virtual Status EnableWatchpoint(Watchpoint *wp, bool notify = true);
 
-  virtual Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
-                                   bool notify = true);
+  virtual Status DisableWatchpoint(Watchpoint *wp, bool notify = true);
 
   // Thread Queries
 
@@ -2194,11 +2190,6 @@ public:
   void UpdateThreadListIfNeeded();
 
   ThreadList &GetThreadList() { return m_thread_list; }
-
-  StopPointSiteList<lldb_private::WatchpointResource> &
-  GetWatchpointResourceList() {
-    return m_watchpoint_resource_list;
-  }
 
   // When ExtendedBacktraces are requested, the HistoryThreads that are created
   // need an owner -- they're saved here in the Process.  The threads in this
@@ -3055,15 +3046,12 @@ protected:
       m_queue_list; ///< The list of libdispatch queues at a given stop point
   uint32_t m_queue_list_stop_id; ///< The natural stop id when queue list was
                                  ///last fetched
-  StopPointSiteList<lldb_private::WatchpointResource>
-      m_watchpoint_resource_list; ///< Watchpoint resources currently in use.
   std::vector<Notifications> m_notifications; ///< The list of notifications
                                               ///that this process can deliver.
   std::vector<lldb::addr_t> m_image_tokens;
-  StopPointSiteList<lldb_private::BreakpointSite>
-      m_breakpoint_site_list; ///< This is the list of breakpoint
-                              /// locations we intend to insert in
-                              /// the target.
+  BreakpointSiteList m_breakpoint_site_list; ///< This is the list of breakpoint
+                                             ///locations we intend to insert in
+                                             ///the target.
   lldb::DynamicLoaderUP m_dyld_up;
   lldb::JITLoaderListUP m_jit_loaders_up;
   lldb::DynamicCheckerFunctionsUP m_dynamic_checkers_up; ///< The functions used
