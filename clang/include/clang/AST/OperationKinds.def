@@ -362,7 +362,7 @@ CAST_OPERATION(AddressSpaceConversion)
 CAST_OPERATION(IntToOCLSampler)
 
 // Truncate a vector type (HLSL only).
-CAST_OPERATION(VectorTruncation)
+CAST_OPERATION(HLSLVectorTruncation)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.

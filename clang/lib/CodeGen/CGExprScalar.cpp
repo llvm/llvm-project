@@ -2475,7 +2475,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntToOCLSampler:
     return CGF.CGM.createOpenCLIntToSamplerConversion(E, CGF);
 
-  case CK_VectorTruncation: {
+  case CK_HLSLVectorTruncation: {
     assert(DestTy->isVectorType() && "Expected dest type to be vector type");
     Value *Vec = Visit(const_cast<Expr *>(E));
     SmallVector<int, 16> Mask;

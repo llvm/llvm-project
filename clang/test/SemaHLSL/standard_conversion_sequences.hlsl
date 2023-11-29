@@ -17,7 +17,7 @@ void test() {
   vector<double,4> d4 = f3.xyzx; // No warnings for promotion or explicit extension.
 
   // CHECK: VarDecl {{.*}} used f2 'vector<float, 2>':'float __attribute__((ext_vector_type(2)))' cinit
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(2)))' <VectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float __attribute__((ext_vector_type(2)))' <HLSLVectorTruncation>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 3>':'float __attribute__((ext_vector_type(3)))' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 3>':'float __attribute__((ext_vector_type(3)))' lvalue Var {{.*}} 'f3' 'vector<float, 3>':'float __attribute__((ext_vector_type(3)))'
   // expected-warning@#f2{{implicit conversion truncates vector: 'vector<float, 3>' (vector of 3 'float' values) to 'float __attribute__((ext_vector_type(2)))' (vector of 2 'float' values)}}
@@ -25,7 +25,7 @@ void test() {
 
   // CHECK: VarDecl {{.*}} f2_2 'vector<float, 2>':'float __attribute__((ext_vector_type(2)))' cinit
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 2>':'float __attribute__((ext_vector_type(2)))' <FloatingCast>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <VectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <HLSLVectorTruncation>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))' lvalue Var {{.*}} 'd4' 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))'
   // expected-warning@#f2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
@@ -41,7 +41,7 @@ void test() {
   
   // CHECK: VarDecl {{.*}} i2_2 'vector<int, 2>':'int __attribute__((ext_vector_type(2)))' cinit
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>':'int __attribute__((ext_vector_type(2)))' <FloatingToIntegral>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <VectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <HLSLVectorTruncation>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))' lvalue Var {{.*}} 'd4' 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))'
   // expected-warning@#i2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
@@ -58,7 +58,7 @@ void test() {
 
   // CHECK: VarDecl {{.*}} used i2_3 'vector<int, 2>':'int __attribute__((ext_vector_type(2)))' cinit
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>':'int __attribute__((ext_vector_type(2)))' <IntegralCast>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'long __attribute__((ext_vector_type(2)))' <VectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'long __attribute__((ext_vector_type(2)))' <HLSLVectorTruncation>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<long, 4>':'long __attribute__((ext_vector_type(4)))' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<long, 4>':'long __attribute__((ext_vector_type(4)))' lvalue Var {{.*}} 'i64_4' 'vector<long, 4>':'long __attribute__((ext_vector_type(4)))'
   // expected-warning@#i2_3{{implicit conversion loses integer precision: 'vector<long, 4>' (vector of 4 'long' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
@@ -73,7 +73,7 @@ void test() {
 
   // CHECK: VarDecl {{.*}} b2_2 'vector<bool, 2>':'bool __attribute__((ext_vector_type(2)))' cinit
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<bool, 2>':'bool __attribute__((ext_vector_type(2)))' <FloatingToBoolean>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <VectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'double __attribute__((ext_vector_type(2)))' <HLSLVectorTruncation>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))' lvalue Var {{.*}} 'd4' 'vector<double, 4>':'double __attribute__((ext_vector_type(4)))'
   // expected-warning@#b2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<bool, 2>' (vector of 2 'bool' values)}}

@@ -4772,7 +4772,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     QualType ElType = FromVec->getElementType();
     QualType TruncTy =
         Context.getExtVectorType(ElType, ToVec->getNumElements());
-    From = ImpCastExprToType(From, TruncTy, CK_VectorTruncation,
+    From = ImpCastExprToType(From, TruncTy, CK_HLSLVectorTruncation,
                              From->getValueKind())
                .get();
     break;
