@@ -316,10 +316,6 @@ bool SparseTensorEncodingAttr::isAllDense() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isDenseLT);
 }
 
-bool SparseTensorEncodingAttr::isCOO() const {
-  return getImpl() && isCOOType(*this, 0, true);
-}
-
 bool SparseTensorEncodingAttr::isAllOrdered() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedLT);
 }

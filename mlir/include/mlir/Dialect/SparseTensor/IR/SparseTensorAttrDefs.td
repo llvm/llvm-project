@@ -382,9 +382,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// the null encoding (since dense-tensors are always all-dense).
     bool isAllDense() const;
 
-    /// Returns true if it is a sparse tensor encoding in COO format.
-    bool isCOO() const;
-
     /// Returns true if every level is ordered.  Also returns true for
     /// the null encoding (since dense-tensors are always all-ordered).
     bool isAllOrdered() const;
