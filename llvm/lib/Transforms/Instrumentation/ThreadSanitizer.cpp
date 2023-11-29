@@ -67,6 +67,9 @@ static cl::opt<bool> ClInstrumentAtomics("tsan-instrument-atomics",
                                          cl::init(true),
                                          cl::desc("Instrument atomics"),
                                          cl::Hidden);
+static cl::opt<bool> ClInstrumentSimd("tsan-instrument-simd", cl::init(true),
+                                      cl::desc("Instrument simd instructions"),
+                                      cl::Hidden);
 static cl::opt<bool> ClInstrumentMemIntrinsics(
     "tsan-instrument-memintrinsics", cl::init(true),
     cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
@@ -142,6 +145,7 @@ private:
   bool addrPointsToConstantData(Value *Addr);
   int getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr, const DataLayout &DL);
   void InsertRuntimeIgnores(Function &F);
+  bool instrumentGatherOrScatter(Instruction *I, const DataLayout &DL);
 
   Type *IntptrTy;
   FunctionCallee TsanFuncEntry;
@@ -149,7 +153,7 @@ private:
   FunctionCallee TsanIgnoreBegin;
   FunctionCallee TsanIgnoreEnd;
   // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
-  static const size_t kNumberOfAccessSizes = 5;
+  static const size_t kNumberOfAccessSizes = 9;
   FunctionCallee TsanRead[kNumberOfAccessSizes];
   FunctionCallee TsanWrite[kNumberOfAccessSizes];
   FunctionCallee TsanUnalignedRead[kNumberOfAccessSizes];
@@ -170,6 +174,8 @@ private:
   FunctionCallee TsanVptrUpdate;
   FunctionCallee TsanVptrLoad;
   FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
+  FunctionCallee TsanVectorScatter[2];
+  FunctionCallee TsanVectorGather[2];
 };
 
 void insertModuleCtor(Module &M) {
@@ -213,6 +219,26 @@ void ThreadSanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   TsanIgnoreEnd =
       M.getOrInsertFunction("__tsan_ignore_thread_end", Attr, IRB.getVoidTy());
   IntegerType *OrdTy = IRB.getInt32Ty();
+
+  TsanVectorScatter[0] = M.getOrInsertFunction(
+      SmallString<32>("__tsan_scatter_vector4"), Attr, IRB.getVoidTy(),
+      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(4)),
+      IRB.getInt32Ty(), IRB.getInt8Ty());
+  TsanVectorScatter[1] = M.getOrInsertFunction(
+      SmallString<32>("__tsan_scatter_vector8"), Attr, IRB.getVoidTy(),
+      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(8)),
+      IRB.getInt32Ty(),
+      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(4)),
+      IRB.getInt32Ty(), IRB.getInt8Ty());
+  TsanVectorGather[0] = M.getOrInsertFunction(
+      SmallString<32>("__tsan_gather_vector4"), Attr, IRB.getVoidTy(),
+      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(4)),
+      IRB.getInt32Ty(), IRB.getInt8Ty());
+  TsanVectorGather[1] = M.getOrInsertFunction(
+      SmallString<32>("__tsan_gather_vector8"), Attr, IRB.getVoidTy(),
+      VectorType::get(IRB.getIntPtrTy(DL, 8), ElementCount::getFixed(8)),
+      IRB.getInt32Ty(), IRB.getInt8Ty());
+
   for (size_t i = 0; i < kNumberOfAccessSizes; ++i) {
     const unsigned ByteSize = 1U << i;
     const unsigned BitSize = ByteSize * 8;
@@ -506,30 +532,40 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
 
   initialize(*F.getParent(), TLI);
   SmallVector<InstructionInfo, 8> AllLoadsAndStores;
-  SmallVector<Instruction*, 8> LocalLoadsAndStores;
-  SmallVector<Instruction*, 8> AtomicAccesses;
-  SmallVector<Instruction*, 8> MemIntrinCalls;
+  SmallVector<Instruction *, 8> LocalLoadsAndStores;
+  SmallVector<Instruction *, 8> AtomicAccesses;
+  SmallVector<Instruction *, 8> MemIntrinCalls;
+  SmallVector<Instruction *, 8> AllGathersAndScatters;
+
   bool Res = false;
   bool HasCalls = false;
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
   const DataLayout &DL = F.getParent()->getDataLayout();
 
-  // Traverse all instructions, collect loads/stores/returns, check for calls.
+  // Traverse all instructions, collect loads/stores/returns/gathers/scatters,
+  // check for calls.
   for (auto &BB : F) {
     for (auto &Inst : BB) {
       // Skip instructions inserted by another instrumentation.
       if (Inst.hasMetadata(LLVMContext::MD_nosanitize))
         continue;
-      if (isTsanAtomic(&Inst))
+      if (isTsanAtomic(&Inst)) {
         AtomicAccesses.push_back(&Inst);
-      else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
+      } else if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst)) {
         LocalLoadsAndStores.push_back(&Inst);
-      else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
-               isa<InvokeInst>(Inst)) {
-        if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+      } else if ((isa<CallInst>(Inst) && !isa<DbgInfoIntrinsic>(Inst)) ||
+                 isa<InvokeInst>(Inst)) {
+        if (CallInst *CI = dyn_cast<CallInst>(&Inst)) {
+          auto CFunc = CI->getCalledFunction();
+          if (CFunc && (CFunc->getName().contains("llvm.masked.scatter") ||
+                        CFunc->getName().contains("llvm.masked.gather"))) {
+            AllGathersAndScatters.push_back(&Inst);
+          }
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
-        if (isa<MemIntrinsic>(Inst))
+        }
+        if (isa<MemIntrinsic>(Inst)) {
           MemIntrinCalls.push_back(&Inst);
+        }
         HasCalls = true;
         chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
                                        DL);
@@ -546,6 +582,12 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   if (ClInstrumentMemoryAccesses && SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
+    }
+
+  // Instrument gather and scatter memory accesses
+  if (ClInstrumentSimd && ClInstrumentMemoryAccesses && SanitizeFunction)
+    for (const auto &II : AllGathersAndScatters) {
+      Res |= instrumentGatherOrScatter(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
@@ -655,6 +697,29 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
     NumInstrumentedWrites++;
   if (IsCompoundRW || !IsWrite)
     NumInstrumentedReads++;
+  return true;
+}
+
+bool ThreadSanitizer::instrumentGatherOrScatter(Instruction *I,
+                                                const DataLayout &DL) {
+  InstrumentationIRBuilder IRB(I);
+  StringRef FunctionNameRef =
+      dyn_cast<CallInst>(I)->getCalledFunction()->getName();
+  bool IsScatter = FunctionNameRef.contains("scatter");
+  unsigned OperandIdx = IsScatter ? 0 : 3;
+  unsigned NumElements =
+      cast<FixedVectorType>(I->getOperand(OperandIdx)->getType())
+          ->getNumElements();
+  unsigned BytesPerElement =
+      DL.getTypeSizeInBits(I->getOperand(OperandIdx)->getType()) / NumElements /
+      8;
+  FunctionCallee *TsanVector = IsScatter ? TsanVectorScatter : TsanVectorGather;
+  std::vector<Value *> Args{
+      I->getOperand(IsScatter ? 1 : 0),
+      llvm::ConstantInt::get(I->getContext(), llvm::APInt(32, BytesPerElement)),
+      IRB.CreateBitCast(I->getOperand(IsScatter ? 3 : 2), IRB.getInt8Ty())};
+  IRB.CreateCall(TsanVector[NumElements == 4 ? 0 : 1], Args);
+
   return true;
 }
 
@@ -804,8 +869,8 @@ int ThreadSanitizer::getMemoryAccessFuncIndex(Type *OrigTy, Value *Addr,
                                               const DataLayout &DL) {
   assert(OrigTy->isSized());
   uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
-  if (TypeSize != 8  && TypeSize != 16 &&
-      TypeSize != 32 && TypeSize != 64 && TypeSize != 128) {
+  if (TypeSize != 8 && TypeSize != 16 && TypeSize != 32 && TypeSize != 64 &&
+      TypeSize != 128 && TypeSize != 256 && TypeSize != 512) {
     NumAccessesWithBadSize++;
     // Ignore all unusual sizes.
     return -1;
