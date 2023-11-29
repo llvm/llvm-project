@@ -81,6 +81,11 @@ void naivelyFuseParallelOps(Region &region);
 LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
                                            scf::ForOp &partialIteration);
 
+/// Peel the first iteration out of the scf.for loop. If there is only one
+/// iteration, return the original loop.
+LogicalResult peelFirstIterationForLoop(RewriterBase &rewriter, ForOp forOp,
+                                        scf::ForOp &partialIteration);
+
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
 ///                                             step (%arg4, %arg5)

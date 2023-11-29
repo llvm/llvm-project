@@ -193,13 +193,24 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
   scf::ForOp result;
-  LogicalResult status =
-      scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
-  if (failed(status)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                       << "failed to peel";
-    return diag;
+  if (getPeelFront()) {
+    LogicalResult status =
+        scf::peelFirstIterationForLoop(rewriter, target, result);
+    if (failed(status)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "failed to peel the first iteration";
+      return diag;
+    }
+  } else {
+    LogicalResult status =
+        scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
+    if (failed(status)) {
+      DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                         << "failed to peel the last iteration";
+      return diag;
+    }
   }
+
   results.push_back(target);
   results.push_back(result);
 
