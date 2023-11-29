@@ -791,8 +791,8 @@ static bool allSameType(ArrayRef<Value *> VL) {
 
 /// \returns True if in-tree use also needs extract. This refers to
 /// possible scalar operand in vectorized instruction.
-static bool InTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
-                                    TargetLibraryInfo *TLI) {
+static bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
+                                        TargetLibraryInfo *TLI) {
   unsigned Opcode = UserInst->getOpcode();
   switch (Opcode) {
   case Instruction::Load: {
@@ -1836,7 +1836,7 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          auto It = HashMap.find(NumFreeOpsHash.Hash);
+          auto *It = HashMap.find(NumFreeOpsHash.Hash);
           if (It == HashMap.end())
             HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
           else
@@ -2982,25 +2982,25 @@ private:
   /// is invariant in the calling loop.
   bool isAliased(const MemoryLocation &Loc1, Instruction *Inst1,
                  Instruction *Inst2) {
+    if (!Loc1.Ptr || !isSimple(Inst1) || !isSimple(Inst2))
+      return true;
     // First check if the result is already in the cache.
-    AliasCacheKey key = std::make_pair(Inst1, Inst2);
-    std::optional<bool> &result = AliasCache[key];
-    if (result) {
-      return *result;
-    }
-    bool aliased = true;
-    if (Loc1.Ptr && isSimple(Inst1))
-      aliased = isModOrRefSet(BatchAA.getModRefInfo(Inst2, Loc1));
+    AliasCacheKey Key = std::make_pair(Inst1, Inst2);
+    auto It = AliasCache.find(Key);
+    if (It != AliasCache.end())
+      return It->second;
+    bool Aliased = isModOrRefSet(BatchAA.getModRefInfo(Inst2, Loc1));
     // Store the result in the cache.
-    result = aliased;
-    return aliased;
+    AliasCache.try_emplace(Key, Aliased);
+    AliasCache.try_emplace(std::make_pair(Inst2, Inst1), Aliased);
+    return Aliased;
   }
 
   using AliasCacheKey = std::pair<Instruction *, Instruction *>;
 
   /// Cache for alias results.
   /// TODO: consider moving this to the AliasAnalysis itself.
-  DenseMap<AliasCacheKey, std::optional<bool>> AliasCache;
+  DenseMap<AliasCacheKey, bool> AliasCache;
 
   // Cache for pointerMayBeCaptured calls inside AA.  This is preserved
   // globally through SLP because we don't perform any action which
@@ -3034,7 +3034,7 @@ private:
   SetVector<Instruction *> GatherShuffleExtractSeq;
 
   /// A list of blocks that we are going to CSE.
-  SetVector<BasicBlock *> CSEBlocks;
+  DenseSet<BasicBlock *> CSEBlocks;
 
   /// Contains all scheduling relevant data for an instruction.
   /// A ScheduleData either represents a single instruction or a member of an
@@ -3663,7 +3663,7 @@ template <> struct GraphTraits<BoUpSLP *> {
 template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
   using TreeEntry = BoUpSLP::TreeEntry;
 
-  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
   std::string getNodeLabel(const TreeEntry *Entry, const BoUpSLP *R) {
     std::string Str;
@@ -4922,7 +4922,7 @@ void BoUpSLP::buildExternalUses(
       int FoundLane = Entry->findLaneForValue(Scalar);
 
       // Check if the scalar is externally used as an extra arg.
-      auto ExtI = ExternallyUsedValues.find(Scalar);
+      const auto *ExtI = ExternallyUsedValues.find(Scalar);
       if (ExtI != ExternallyUsedValues.end()) {
         LLVM_DEBUG(dbgs() << "SLP: Need to extract: Extra arg from lane "
                           << Lane << " from " << *Scalar << ".\n");
@@ -4947,7 +4947,7 @@ void BoUpSLP::buildExternalUses(
           if (UseScalar != U ||
               UseEntry->State == TreeEntry::ScatterVectorize ||
               UseEntry->State == TreeEntry::PossibleStridedVectorize ||
-              !InTreeUserNeedToExtract(Scalar, UserInst, TLI)) {
+              !doesInTreeUserNeedToExtract(Scalar, UserInst, TLI)) {
             LLVM_DEBUG(dbgs() << "SLP: \tInternal user will be removed:" << *U
                               << ".\n");
             assert(UseEntry->State != TreeEntry::NeedToGather && "Bad state");
@@ -6065,13 +6065,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       LLVM_DEBUG(dbgs() << "SLP: added a vector of casts.\n");
 
       TE->setOperandsInOrder();
-      for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
+      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands())) {
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL)
-          Operands.push_back(cast<Instruction>(V)->getOperand(i));
+          Operands.push_back(cast<Instruction>(V)->getOperand(I));
 
-        buildTree_rec(Operands, Depth + 1, {TE, i});
+        buildTree_rec(Operands, Depth + 1, {TE, I});
       }
       return;
     }
@@ -6145,13 +6145,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
 
       TE->setOperandsInOrder();
-      for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
+      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands())) {
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL)
-          Operands.push_back(cast<Instruction>(V)->getOperand(i));
+          Operands.push_back(cast<Instruction>(V)->getOperand(I));
 
-        buildTree_rec(Operands, Depth + 1, {TE, i});
+        buildTree_rec(Operands, Depth + 1, {TE, I});
       }
       return;
     }
@@ -6246,18 +6246,18 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
                                    ReuseShuffleIndicies);
       TE->setOperandsInOrder();
-      for (unsigned i = 0, e = CI->arg_size(); i != e; ++i) {
+      for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         // For scalar operands no need to create an entry since no need to
         // vectorize it.
-        if (isVectorIntrinsicWithScalarOpAtArg(ID, i))
+        if (isVectorIntrinsicWithScalarOpAtArg(ID, I))
           continue;
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL) {
           auto *CI2 = cast<CallInst>(V);
-          Operands.push_back(CI2->getArgOperand(i));
+          Operands.push_back(CI2->getArgOperand(I));
         }
-        buildTree_rec(Operands, Depth + 1, {TE, i});
+        buildTree_rec(Operands, Depth + 1, {TE, I});
       }
       return;
     }
@@ -6308,13 +6308,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
 
       TE->setOperandsInOrder();
-      for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
+      for (unsigned I : seq<unsigned>(0, VL0->getNumOperands())) {
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL)
-          Operands.push_back(cast<Instruction>(V)->getOperand(i));
+          Operands.push_back(cast<Instruction>(V)->getOperand(I));
 
-        buildTree_rec(Operands, Depth + 1, {TE, i});
+        buildTree_rec(Operands, Depth + 1, {TE, I});
       }
       return;
     }
@@ -10093,12 +10093,12 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     /// Holds all of the instructions that we gathered.
     SetVector<Instruction *> &GatherShuffleExtractSeq;
     /// A list of blocks that we are going to CSE.
-    SetVector<BasicBlock *> &CSEBlocks;
+    DenseSet<BasicBlock *> &CSEBlocks;
 
   public:
     ShuffleIRBuilder(IRBuilderBase &Builder,
                      SetVector<Instruction *> &GatherShuffleExtractSeq,
-                     SetVector<BasicBlock *> &CSEBlocks)
+                     DenseSet<BasicBlock *> &CSEBlocks)
         : Builder(Builder), GatherShuffleExtractSeq(GatherShuffleExtractSeq),
           CSEBlocks(CSEBlocks) {}
     ~ShuffleIRBuilder() = default;
@@ -11111,9 +11111,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       // visit every block once.
       SmallPtrSet<BasicBlock *, 4> VisitedBBs;
 
-      for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
+      for (unsigned I : seq<unsigned>(0, PH->getNumIncomingValues())) {
         ValueList Operands;
-        BasicBlock *IBB = PH->getIncomingBlock(i);
+        BasicBlock *IBB = PH->getIncomingBlock(I);
 
         // Stop emission if all incoming values are generated.
         if (NewPhi->getNumIncomingValues() == PH->getNumIncomingValues()) {
@@ -11128,9 +11128,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
 
         Builder.SetInsertPoint(IBB->getTerminator());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
-        Value *Vec = vectorizeOperand(E, i, /*PostponedPHIs=*/true);
+        Value *Vec = vectorizeOperand(E, I, /*PostponedPHIs=*/true);
         if (VecTy != Vec->getType()) {
-          assert(MinBWs.contains(PH->getIncomingValue(i)) &&
+          assert(MinBWs.contains(PH->getIncomingValue(I)) &&
                  "Expected item in MinBWs.");
           Vec = Builder.CreateIntCast(Vec, VecTy, It->second.second);
         }
@@ -11640,27 +11640,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
         TysForDecl.push_back(
             FixedVectorType::get(CI->getType(), E->Scalars.size()));
-      for (int j = 0, e = CI->arg_size(); j < e; ++j) {
+      for (unsigned I : seq<unsigned>(0, CI->arg_size())) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
         // vectorized.
-        if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(IID, j)) {
+        if (UseIntrinsic && isVectorIntrinsicWithScalarOpAtArg(IID, I)) {
           CallInst *CEI = cast<CallInst>(VL0);
-          ScalarArg = CEI->getArgOperand(j);
-          OpVecs.push_back(CEI->getArgOperand(j));
-          if (isVectorIntrinsicWithOverloadTypeAtArg(IID, j))
+          ScalarArg = CEI->getArgOperand(I);
+          OpVecs.push_back(CEI->getArgOperand(I));
+          if (isVectorIntrinsicWithOverloadTypeAtArg(IID, I))
             TysForDecl.push_back(ScalarArg->getType());
           continue;
         }
 
-        Value *OpVec = vectorizeOperand(E, j, PostponedPHIs);
+        Value *OpVec = vectorizeOperand(E, I, PostponedPHIs);
         if (E->VectorizedValue) {
           LLVM_DEBUG(dbgs() << "SLP: Diamond merged for " << *VL0 << ".\n");
           return E->VectorizedValue;
         }
-        LLVM_DEBUG(dbgs() << "SLP: OpVec[" << j << "]: " << *OpVec << "\n");
+        LLVM_DEBUG(dbgs() << "SLP: OpVec[" << I << "]: " << *OpVec << "\n");
         OpVecs.push_back(OpVec);
-        if (isVectorIntrinsicWithOverloadTypeAtArg(IID, j))
+        if (isVectorIntrinsicWithOverloadTypeAtArg(IID, I))
           TysForDecl.push_back(OpVec->getType());
       }
 
@@ -12079,18 +12079,18 @@ Value *BoUpSLP::vectorizeTree(
     // Find the insertion point for the extractelement lane.
     if (auto *VecI = dyn_cast<Instruction>(Vec)) {
       if (PHINode *PH = dyn_cast<PHINode>(User)) {
-        for (int i = 0, e = PH->getNumIncomingValues(); i != e; ++i) {
-          if (PH->getIncomingValue(i) == Scalar) {
+        for (unsigned I : seq<unsigned>(0, PH->getNumIncomingValues())) {
+          if (PH->getIncomingValue(I) == Scalar) {
             Instruction *IncomingTerminator =
-                PH->getIncomingBlock(i)->getTerminator();
+                PH->getIncomingBlock(I)->getTerminator();
             if (isa<CatchSwitchInst>(IncomingTerminator)) {
               Builder.SetInsertPoint(VecI->getParent(),
                                      std::next(VecI->getIterator()));
             } else {
-              Builder.SetInsertPoint(PH->getIncomingBlock(i)->getTerminator());
+              Builder.SetInsertPoint(PH->getIncomingBlock(I)->getTerminator());
             }
             Value *NewInst = ExtractAndExtendIfNeeded(Vec);
-            PH->setOperand(i, NewInst);
+            PH->setOperand(I, NewInst);
           }
         }
       } else {
@@ -12763,7 +12763,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       }
 
-      auto makeControlDependent = [&](Instruction *I) {
+      auto MakeControlDependent = [&](Instruction *I) {
         auto *DepDest = getScheduleData(I);
         assert(DepDest && "must be in schedule window");
         DepDest->ControlDependencies.push_back(BundleMember);
@@ -12785,7 +12785,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
             continue;
 
           // Add the dependency
-          makeControlDependent(I);
+          MakeControlDependent(I);
 
           if (!isGuaranteedToTransferExecutionToSuccessor(I))
             // Everything past here must be control dependent on I.
@@ -12811,7 +12811,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
               continue;
 
             // Add the dependency
-            makeControlDependent(I);
+            MakeControlDependent(I);
           }
         }
 
@@ -12829,7 +12829,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
               continue;
 
             // Add the dependency
-            makeControlDependent(I);
+            MakeControlDependent(I);
             break;
           }
         }
@@ -12844,7 +12844,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
              "NextLoadStore list for non memory effecting bundle?");
       MemoryLocation SrcLoc = getLocation(SrcInst);
       bool SrcMayWrite = BundleMember->Inst->mayWriteToMemory();
-      unsigned numAliased = 0;
+      unsigned NumAliased = 0;
       unsigned DistToSrc = 1;
 
       for (; DepDest; DepDest = DepDest->NextLoadStore) {
@@ -12859,13 +12859,13 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         //    check this limit even between two read-only instructions.
         if (DistToSrc >= MaxMemDepDistance ||
             ((SrcMayWrite || DepDest->Inst->mayWriteToMemory()) &&
-             (numAliased >= AliasedCheckLimit ||
+             (NumAliased >= AliasedCheckLimit ||
               SLP->isAliased(SrcLoc, SrcInst, DepDest->Inst)))) {
 
           // We increment the counter only if the locations are aliased
           // (instead of counting all alias checks). This gives a better
           // balance between reduced runtime and accurate dependencies.
-          numAliased++;
+          NumAliased++;
 
           DepDest->MemoryDependencies.push_back(BundleMember);
           BundleMember->Dependencies++;
@@ -12967,20 +12967,20 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
   // Do the "real" scheduling.
   while (!ReadyInsts.empty()) {
-    ScheduleData *picked = *ReadyInsts.begin();
+    ScheduleData *Picked = *ReadyInsts.begin();
     ReadyInsts.erase(ReadyInsts.begin());
 
     // Move the scheduled instruction(s) to their dedicated places, if not
     // there yet.
-    for (ScheduleData *BundleMember = picked; BundleMember;
+    for (ScheduleData *BundleMember = Picked; BundleMember;
          BundleMember = BundleMember->NextInBundle) {
-      Instruction *pickedInst = BundleMember->Inst;
-      if (pickedInst->getNextNode() != LastScheduledInst)
-        pickedInst->moveBefore(LastScheduledInst);
-      LastScheduledInst = pickedInst;
+      Instruction *PickedInst = BundleMember->Inst;
+      if (PickedInst->getNextNode() != LastScheduledInst)
+        PickedInst->moveBefore(LastScheduledInst);
+      LastScheduledInst = PickedInst;
     }
 
-    BS->schedule(picked, ReadyInsts);
+    BS->schedule(Picked, ReadyInsts);
   }
 
   // Check that we didn't break any of our invariants.
@@ -13660,7 +13660,7 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     // constant index, or a pointer operand that doesn't point to a scalar
     // type.
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-      auto Idx = GEP->idx_begin()->get();
+      Value *Idx = GEP->idx_begin()->get();
       if (GEP->getNumIndices() > 1 || isa<Constant>(Idx))
         continue;
       if (!isValidElementType(Idx->getType()))
@@ -13695,8 +13695,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       // NOTE: the following will give user internal llvm type name, which may
       // not be useful.
       R.getORE()->emit([&]() {
-        std::string type_str;
-        llvm::raw_string_ostream rso(type_str);
+        std::string TypeStr;
+        llvm::raw_string_ostream rso(TypeStr);
         Ty->print(rso);
         return OptimizationRemarkMissed(SV_NAME, "UnsupportedType", I0)
                << "Cannot SLP vectorize list: type "
@@ -16036,41 +16036,41 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     return I->use_empty() &&
            (I->getType()->isVoidTy() || isa<CallInst, InvokeInst>(I));
   };
-  for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
+  for (BasicBlock::iterator It = BB->begin(), E = BB->end(); It != E; ++It) {
     // Skip instructions with scalable type. The num of elements is unknown at
     // compile-time for scalable type.
-    if (isa<ScalableVectorType>(it->getType()))
+    if (isa<ScalableVectorType>(It->getType()))
       continue;
 
     // Skip instructions marked for the deletion.
-    if (R.isDeleted(&*it))
+    if (R.isDeleted(&*It))
       continue;
     // We may go through BB multiple times so skip the one we have checked.
-    if (!VisitedInstrs.insert(&*it).second) {
-      if (HasNoUsers(&*it) &&
-          VectorizeInsertsAndCmps(/*VectorizeCmps=*/it->isTerminator())) {
+    if (!VisitedInstrs.insert(&*It).second) {
+      if (HasNoUsers(&*It) &&
+          VectorizeInsertsAndCmps(/*VectorizeCmps=*/It->isTerminator())) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
         Changed = true;
-        it = BB->begin();
-        e = BB->end();
+        It = BB->begin();
+        E = BB->end();
       }
       continue;
     }
 
-    if (isa<DbgInfoIntrinsic>(it))
+    if (isa<DbgInfoIntrinsic>(It))
       continue;
 
     // Try to vectorize reductions that use PHINodes.
-    if (PHINode *P = dyn_cast<PHINode>(it)) {
+    if (PHINode *P = dyn_cast<PHINode>(It)) {
       // Check that the PHI is a reduction PHI.
       if (P->getNumIncomingValues() == 2) {
         // Try to match and vectorize a horizontal reduction.
         Instruction *Root = getReductionInstr(DT, P, BB, LI);
         if (Root && vectorizeRootInstruction(P, Root, BB, R, TTI)) {
           Changed = true;
-          it = BB->begin();
-          e = BB->end();
+          It = BB->begin();
+          E = BB->end();
           continue;
         }
       }
@@ -16095,12 +16095,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       continue;
     }
 
-    if (HasNoUsers(&*it)) {
+    if (HasNoUsers(&*It)) {
       bool OpsChanged = false;
-      auto *SI = dyn_cast<StoreInst>(it);
+      auto *SI = dyn_cast<StoreInst>(It);
       bool TryToVectorizeRoot = ShouldStartVectorizeHorAtStore || !SI;
       if (SI) {
-        auto I = Stores.find(getUnderlyingObject(SI->getPointerOperand()));
+        auto *I = Stores.find(getUnderlyingObject(SI->getPointerOperand()));
         // Try to vectorize chain in store, if this is the only store to the
         // address in the block.
         // TODO: This is just a temporarily solution to save compile time. Need
@@ -16111,7 +16111,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
                               SI->getValueOperand()->hasOneUse();
       }
       if (TryToVectorizeRoot) {
-        for (auto *V : it->operand_values()) {
+        for (auto *V : It->operand_values()) {
           // Postponed instructions should not be vectorized here, delay their
           // vectorization.
           if (auto *VI = dyn_cast<Instruction>(V);
@@ -16124,21 +16124,21 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // top-tree instructions to try to vectorize as many instructions as
       // possible.
       OpsChanged |=
-          VectorizeInsertsAndCmps(/*VectorizeCmps=*/it->isTerminator());
+          VectorizeInsertsAndCmps(/*VectorizeCmps=*/It->isTerminator());
       if (OpsChanged) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
         Changed = true;
-        it = BB->begin();
-        e = BB->end();
+        It = BB->begin();
+        E = BB->end();
         continue;
       }
     }
 
-    if (isa<InsertElementInst, InsertValueInst>(it))
-      PostProcessInserts.insert(&*it);
-    else if (isa<CmpInst>(it))
-      PostProcessCmps.insert(cast<CmpInst>(&*it));
+    if (isa<InsertElementInst, InsertValueInst>(It))
+      PostProcessInserts.insert(&*It);
+    else if (isa<CmpInst>(It))
+      PostProcessCmps.insert(cast<CmpInst>(&*It));
   }
 
   return Changed;

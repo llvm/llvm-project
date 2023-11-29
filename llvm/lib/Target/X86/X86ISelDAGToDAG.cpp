@@ -881,6 +881,10 @@ static bool isEndbrImm64(uint64_t Imm) {
   return false;
 }
 
+static bool needBWI(MVT VT) {
+  return (VT == MVT::v32i16 || VT == MVT::v32f16 || VT == MVT::v64i8);
+}
+
 void X86DAGToDAGISel::PreprocessISelDAG() {
   bool MadeChange = false;
   for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
@@ -986,15 +990,15 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case X86ISD::VBROADCAST: {
       MVT VT = N->getSimpleValueType(0);
       // Emulate v32i16/v64i8 broadcast without BWI.
-      if (!Subtarget->hasBWI() && (VT == MVT::v32i16 || VT == MVT::v64i8)) {
-        MVT NarrowVT = VT == MVT::v32i16 ? MVT::v16i16 : MVT::v32i8;
+      if (!Subtarget->hasBWI() && needBWI(VT)) {
+        MVT NarrowVT = VT.getHalfNumVectorElementsVT();
         SDLoc dl(N);
         SDValue NarrowBCast =
             CurDAG->getNode(X86ISD::VBROADCAST, dl, NarrowVT, N->getOperand(0));
         SDValue Res =
             CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, CurDAG->getUNDEF(VT),
                             NarrowBCast, CurDAG->getIntPtrConstant(0, dl));
-        unsigned Index = VT == MVT::v32i16 ? 16 : 32;
+        unsigned Index = NarrowVT.getVectorMinNumElements();
         Res = CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, NarrowBCast,
                               CurDAG->getIntPtrConstant(Index, dl));
 
@@ -1010,8 +1014,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case X86ISD::VBROADCAST_LOAD: {
       MVT VT = N->getSimpleValueType(0);
       // Emulate v32i16/v64i8 broadcast without BWI.
-      if (!Subtarget->hasBWI() && (VT == MVT::v32i16 || VT == MVT::v64i8)) {
-        MVT NarrowVT = VT == MVT::v32i16 ? MVT::v16i16 : MVT::v32i8;
+      if (!Subtarget->hasBWI() && needBWI(VT)) {
+        MVT NarrowVT = VT.getHalfNumVectorElementsVT();
         auto *MemNode = cast<MemSDNode>(N);
         SDLoc dl(N);
         SDVTList VTs = CurDAG->getVTList(NarrowVT, MVT::Other);
@@ -1022,7 +1026,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         SDValue Res =
             CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, CurDAG->getUNDEF(VT),
                             NarrowBCast, CurDAG->getIntPtrConstant(0, dl));
-        unsigned Index = VT == MVT::v32i16 ? 16 : 32;
+        unsigned Index = NarrowVT.getVectorMinNumElements();
         Res = CurDAG->getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, NarrowBCast,
                               CurDAG->getIntPtrConstant(Index, dl));
 
@@ -1050,7 +1054,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDValue Ptr = Ld->getBasePtr();
       SDValue Chain = Ld->getChain();
       for (SDNode *User : Ptr->uses()) {
-        auto *UserLd = dyn_cast<LoadSDNode>(N);
+        auto *UserLd = dyn_cast<LoadSDNode>(User);
         MVT UserVT = User->getSimpleValueType(0);
         if (User != N && UserLd && ISD::isNormalLoad(User) &&
             UserLd->getBasePtr() == Ptr && UserLd->getChain() == Chain &&

@@ -60,21 +60,6 @@ void computeKnownBits(const Value *V, KnownBits &Known, const DataLayout &DL,
                       const DominatorTree *DT = nullptr,
                       bool UseInstrInfo = true);
 
-/// Determine which bits of V are known to be either zero or one and return
-/// them in the KnownZero/KnownOne bit sets.
-///
-/// This function is defined on values with integer type, values with pointer
-/// type, and vectors of integers.  In the case
-/// where V is a vector, the known zero and known one values are the
-/// same width as the vector element, and the bit is set only if it is true
-/// for all of the demanded elements in the vector.
-void computeKnownBits(const Value *V, const APInt &DemandedElts,
-                      KnownBits &Known, const DataLayout &DL,
-                      unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                      const Instruction *CxtI = nullptr,
-                      const DominatorTree *DT = nullptr,
-                      bool UseInstrInfo = true);
-
 /// Returns the known bits rather than passing by reference.
 KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                            unsigned Depth = 0, AssumptionCache *AC = nullptr,
@@ -96,14 +81,17 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
 KnownBits computeKnownBits(const Value *V, unsigned Depth,
                            const SimplifyQuery &Q);
 
+void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
+                      const SimplifyQuery &Q);
+
 /// Compute known bits from the range metadata.
 /// \p KnownZero the set of bits that are known to be zero
 /// \p KnownOne the set of bits that are known to be one
 void computeKnownBitsFromRangeMetadata(const MDNode &Ranges, KnownBits &Known);
 
-/// Merge bits known from assumes into Known.
-void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
-                                unsigned Depth, const SimplifyQuery &Q);
+/// Merge bits known from context-dependent facts into Known.
+void computeKnownBitsFromContext(const Value *V, KnownBits &Known,
+                                 unsigned Depth, const SimplifyQuery &Q);
 
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
 KnownBits analyzeKnownBitsFromAndXorOr(

@@ -21,11 +21,12 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -105,7 +106,7 @@ MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionName,
   FunctionType *FunctionType =
       FunctionType::get(ReturnType, {MemParamType}, false);
   Function *const F = Function::Create(
-      FunctionType, GlobalValue::InternalLinkage, FunctionName, Module);
+      FunctionType, GlobalValue::ExternalLinkage, FunctionName, Module);
   BasicBlock *BB = BasicBlock::Create(Module->getContext(), "", F);
   new UnreachableInst(Module->getContext(), BB);
   return MMI->getOrCreateMachineFunction(*F);
@@ -324,66 +325,48 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename) {
   return cantFail(object::ObjectFile::createObjectFile(Filename));
 }
 
-namespace {
-
-// Implementation of this class relies on the fact that a single object with a
-// single function will be loaded into memory.
-class TrackingSectionMemoryManager : public SectionMemoryManager {
-public:
-  explicit TrackingSectionMemoryManager(uintptr_t *CodeSize)
-      : CodeSize(CodeSize) {}
-
-  uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                               unsigned SectionID,
-                               StringRef SectionName) override {
-    *CodeSize = Size;
-    return SectionMemoryManager::allocateCodeSection(Size, Alignment, SectionID,
-                                                     SectionName);
-  }
-
-private:
-  uintptr_t *const CodeSize = nullptr;
-};
-
-} // namespace
-
 Expected<ExecutableFunction> ExecutableFunction::create(
     std::unique_ptr<LLVMTargetMachine> TM,
     object::OwningBinary<object::ObjectFile> &&ObjectFileHolder) {
   assert(ObjectFileHolder.getBinary() && "cannot create object file");
   std::unique_ptr<LLVMContext> Ctx = std::make_unique<LLVMContext>();
-  // Initializing the execution engine.
-  // We need to use the JIT EngineKind to be able to add an object file.
-  LLVMLinkInMCJIT();
-  uintptr_t CodeSize = 0;
-  std::string Error;
-  std::unique_ptr<ExecutionEngine> EE(
-      EngineBuilder(createModule(Ctx, TM->createDataLayout()))
-          .setErrorStr(&Error)
-          .setMCPU(TM->getTargetCPU())
-          .setEngineKind(EngineKind::JIT)
-          .setMCJITMemoryManager(
-              std::make_unique<TrackingSectionMemoryManager>(&CodeSize))
-          .create(TM.release()));
-  if (!EE)
-    return make_error<StringError>(Twine(Error), inconvertibleErrorCode());
-  // Adding the generated object file containing the assembled function.
-  // The ExecutionEngine makes sure the object file is copied into an
-  // executable page.
-  EE->addObjectFile(std::move(ObjectFileHolder));
-  // Fetching function bytes.
-  const uint64_t FunctionAddress = EE->getFunctionAddress(FunctionID);
+
+  auto SymbolSizes = object::computeSymbolSizes(*ObjectFileHolder.getBinary());
+  // Get the size of the function that we want to call into (with the name of
+  // FunctionID). This should always be the third symbol returned by
+  // calculateSymbolSizes.
+  assert(SymbolSizes.size() == 3);
+  assert(cantFail(std::get<0>(SymbolSizes[2]).getName()) == FunctionID);
+  uintptr_t CodeSize = std::get<1>(SymbolSizes[2]);
+
+  auto EJITOrErr = orc::LLJITBuilder().create();
+  if (!EJITOrErr)
+    return EJITOrErr.takeError();
+
+  auto EJIT = std::move(*EJITOrErr);
+
+  if (auto ObjErr =
+          EJIT->addObjectFile(std::get<1>(ObjectFileHolder.takeBinary())))
+    return std::move(ObjErr);
+
+  auto FunctionAddressOrErr = EJIT->lookup(FunctionID);
+  if (!FunctionAddressOrErr)
+    return FunctionAddressOrErr.takeError();
+
+  const uint64_t FunctionAddress = FunctionAddressOrErr->getValue();
+
   assert(isAligned(kFunctionAlignment, FunctionAddress) &&
          "function is not properly aligned");
+
   StringRef FBytes =
       StringRef(reinterpret_cast<const char *>(FunctionAddress), CodeSize);
-  return ExecutableFunction(std::move(Ctx), std::move(EE), FBytes);
+  return ExecutableFunction(std::move(Ctx), std::move(EJIT), FBytes);
 }
 
 ExecutableFunction::ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
-                                       std::unique_ptr<ExecutionEngine> EE,
+                                       std::unique_ptr<orc::LLJIT> EJIT,
                                        StringRef FB)
-    : FunctionBytes(FB), Context(std::move(Ctx)), ExecEngine(std::move(EE)) {}
+    : FunctionBytes(FB), Context(std::move(Ctx)), ExecJIT(std::move(EJIT)) {}
 
 Error getBenchmarkFunctionBytes(const StringRef InputData,
                                 std::vector<uint8_t> &Bytes) {

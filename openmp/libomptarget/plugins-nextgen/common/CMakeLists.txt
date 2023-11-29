@@ -12,5 +12,3 @@
 
 add_subdirectory(OMPT)
 add_subdirectory(PluginInterface)
-add_subdirectory(MemoryManager)
-add_subdirectory(elf_common)
