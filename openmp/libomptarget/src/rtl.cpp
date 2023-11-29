@@ -13,6 +13,7 @@
 #include "llvm/Object/OffloadBinary.h"
 
 #include "OpenMP/OMPT/Callback.h"
+#include "PluginManager.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -38,8 +39,6 @@ static const char *RTLNames[] = {
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
 };
-
-PluginManager *PM;
 
 static char *ProfileTraceFile = nullptr;
 

@@ -13,6 +13,7 @@
 #include "device.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "PluginManager.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
