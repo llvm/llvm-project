@@ -59,19 +59,19 @@ struct anon_struct {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test1(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]], i32 noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2:![0-9]+]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6:![0-9]+]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7:![0-9]+]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2:![0-9]+]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT3:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3:![0-9]+]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 [[TMP4]]) #[[ATTR4:[0-9]+]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont7:
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP1]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[VAL]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 [[TMP5]]) #[[ATTR8:[0-9]+]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont3:
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[VAL]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test1(
@@ -105,30 +105,30 @@ void test1(struct annotated *p, int index, int val) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test2(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], [[INDEX]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP2]], label [[CONT12:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], [[INDEX]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT3:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB4:[0-9]+]], i64 [[INDEX]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont12:
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB4:[0-9]+]], i64 [[INDEX]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont3:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[INDEX]]
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP0]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = shl nsw i32 [[TMP0]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP3]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[NARROW]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = shl nsw i32 [[TMP1]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP4]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[NARROW]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test2(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[TMP0]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP0]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP1]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[INDEX]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[NARROW]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
@@ -154,33 +154,33 @@ void test2(struct annotated *p, size_t index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test3(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], [[INDEX]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP2]], label [[CONT12:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], [[INDEX]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT3:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB5:[0-9]+]], i64 [[INDEX]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont12:
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB5:[0-9]+]], i64 [[INDEX]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont3:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[INDEX]]
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP0]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = shl nsw i32 [[TMP0]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP3]], i32 4)
-// SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = add nuw i32 [[TMP4]], 12
-// SANITIZE-WITH-ATTR-NEXT:    [[NARROW15:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[NARROW]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[NARROW15]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = shl nsw i32 [[TMP1]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP4]], i32 4)
+// SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = add nuw i32 [[TMP5]], 12
+// SANITIZE-WITH-ATTR-NEXT:    [[NARROW6:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[NARROW]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[NARROW6]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test3(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[TMP0]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 4)
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = add nuw i32 [[TMP2]], 12
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP0]], 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP2]], i32 4)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = add nuw i32 [[TMP3]], 12
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW2:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[NARROW]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[INDEX]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[NARROW2]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
@@ -209,97 +209,97 @@ void test3(struct annotated *p, size_t index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test4(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]], i32 noundef [[FAM_IDX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT13:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT4:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB6:[0-9]+]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont13:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP0]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], 244
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 252
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV3:%.*]] = select i1 [[TMP5]], i32 [[TMP8]], i32 0
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP1]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV3]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP9:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB6:[0-9]+]], i64 [[TMP5]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont4:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP1]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP1]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 244
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 252
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV1:%.*]] = select i1 [[TMP6]], i32 [[TMP9]], i32 0
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV1]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP0]], align 4
 // SANITIZE-WITH-ATTR-NEXT:    [[ADD:%.*]] = add nsw i32 [[INDEX]], 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP10:%.*]] = sext i32 [[ADD]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP9]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP10]], [[TMP11]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP12]], label [[CONT34:%.*]], label [[HANDLER_OUT_OF_BOUNDS29:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       handler.out_of_bounds29:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP13:%.*]] = zext i32 [[ADD]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB7:[0-9]+]], i64 [[TMP13]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont34:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[TMP9]], 3
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP15:%.*]] = shl i32 [[TMP9]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP16:%.*]] = add i32 [[TMP15]], 240
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP17:%.*]] = and i32 [[TMP16]], 252
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV20:%.*]] = select i1 [[TMP14]], i32 [[TMP17]], i32 0
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX32:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP10]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV20]], ptr [[ARRAYIDX32]], align 4, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP18:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[ADD45:%.*]] = add nsw i32 [[INDEX]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP19:%.*]] = sext i32 [[ADD45]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP18]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP21:%.*]] = icmp ult i64 [[TMP19]], [[TMP20]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP21]], label [[CONT56:%.*]], label [[HANDLER_OUT_OF_BOUNDS51:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       handler.out_of_bounds51:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD45]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB8:[0-9]+]], i64 [[TMP22]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont56:
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX54:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP19]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP23:%.*]] = sub nsw i32 [[TMP18]], [[FAM_IDX]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP24:%.*]] = or i32 [[TMP23]], [[FAM_IDX]]
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP24]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP25:%.*]] = shl i32 [[TMP23]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP26:%.*]] = and i32 [[TMP25]], 252
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV41:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP26]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV41]], ptr [[ARRAYIDX54]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP11:%.*]] = sext i32 [[ADD]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP10]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], [[TMP12]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP13]], label [[CONT15:%.*]], label [[HANDLER_OUT_OF_BOUNDS10:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.out_of_bounds10:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP14:%.*]] = zext i32 [[ADD]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB7:[0-9]+]], i64 [[TMP14]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont15:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP15:%.*]] = icmp sgt i32 [[TMP10]], 3
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP16:%.*]] = shl i32 [[TMP10]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 240
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP18:%.*]] = and i32 [[TMP17]], 252
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV6:%.*]] = select i1 [[TMP15]], i32 [[TMP18]], i32 0
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP11]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV6]], ptr [[ARRAYIDX13]], align 4, !tbaa [[TBAA4]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[ADD21:%.*]] = add nsw i32 [[INDEX]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP20:%.*]] = sext i32 [[ADD21]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP19]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP22:%.*]] = icmp ult i64 [[TMP20]], [[TMP21]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP22]], label [[CONT27:%.*]], label [[HANDLER_OUT_OF_BOUNDS22:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.out_of_bounds22:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP23:%.*]] = zext i32 [[ADD21]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB8:[0-9]+]], i64 [[TMP23]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont27:
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX25:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP20]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP24:%.*]] = sub nsw i32 [[TMP19]], [[FAM_IDX]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP25:%.*]] = or i32 [[TMP24]], [[FAM_IDX]]
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP25]], 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP26:%.*]] = shl i32 [[TMP24]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP27:%.*]] = and i32 [[TMP26]], 252
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV17:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP27]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV17]], ptr [[ARRAYIDX25]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test4(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]], i32 noundef [[FAM_IDX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[TMP0]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP0]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 244
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 252
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV1:%.*]] = select i1 [[TMP1]], i32 [[TMP4]], i32 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 244
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 252
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV1:%.*]] = select i1 [[TMP2]], i32 [[TMP5]], i32 0
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[IDXPROM]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV1]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP5]], 3
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = shl i32 [[TMP5]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 240
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 252
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV4:%.*]] = select i1 [[TMP6]], i32 [[TMP9]], i32 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP0]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP6]], 3
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP8:%.*]] = shl i32 [[TMP6]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], 240
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP10:%.*]] = and i32 [[TMP9]], 252
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV3:%.*]] = select i1 [[TMP7]], i32 [[TMP10]], i32 0
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ADD:%.*]] = add nsw i32 [[INDEX]], 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM6:%.*]] = sext i32 [[ADD]] to i64
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[IDXPROM6]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV4]], ptr [[ARRAYIDX7]], align 4, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP10:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP11:%.*]] = sub nsw i32 [[TMP10]], [[FAM_IDX]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP12:%.*]] = or i32 [[TMP11]], [[FAM_IDX]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP12]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP13:%.*]] = shl i32 [[TMP11]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP14:%.*]] = and i32 [[TMP13]], 252
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV10:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP14]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ADD12:%.*]] = add nsw i32 [[INDEX]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM13:%.*]] = sext i32 [[ADD12]] to i64
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[IDXPROM13]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV10]], ptr [[ARRAYIDX14]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[ADD]] to i64
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[IDXPROM5]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV3]], ptr [[ARRAYIDX6]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP0]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP12:%.*]] = sub nsw i32 [[TMP11]], [[FAM_IDX]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP13:%.*]] = or i32 [[TMP12]], [[FAM_IDX]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP13]], 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP14:%.*]] = shl i32 [[TMP12]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP15:%.*]] = and i32 [[TMP14]], 252
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV8:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP15]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ADD10:%.*]] = add nsw i32 [[INDEX]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[ADD10]] to i64
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[IDXPROM11]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV8]], ptr [[ARRAYIDX12]], align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local void @test4(
@@ -344,36 +344,36 @@ void test4(struct annotated *p, int index, int fam_idx) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test5(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COUNT]], align 8, !tbaa [[TBAA8:![0-9]+]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP0]], [[TMP1]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP2]], label [[CONT12:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT3:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB9:[0-9]+]], i64 [[TMP3]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont12:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB9:[0-9]+]], i64 [[TMP4]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont3:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT]], ptr [[P]], i64 1
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[TMP1]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.umax.i64(i64 [[TMP4]], i64 16)
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP0]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP6]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP1]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = tail call i64 @llvm.umax.i64(i64 [[TMP5]], i64 16)
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP1]], 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP7]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test5(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COUNT]], align 8, !tbaa [[TBAA6:![0-9]+]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.umax.i64(i64 [[TMP1]], i64 16)
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP0]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP3]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.umax.i64(i64 [[TMP2]], i64 16)
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP1]], 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP4]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT]], ptr [[P]], i64 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[IDXPROM]]
@@ -405,34 +405,34 @@ void test5(struct anon_struct *p, int index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test6(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COUNT]], align 8, !tbaa [[TBAA8]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP0]], [[TMP1]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP2]], label [[CONT12:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP1]], [[TMP2]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT3:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB10:[0-9]+]], i64 [[TMP3]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont12:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB10:[0-9]+]], i64 [[TMP4]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont3:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT]], ptr [[P]], i64 1
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[TMP1]]
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP0]], 0
-// SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP0]] to i32
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = shl i32 [[DOTTR]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP4]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP1]], 0
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP1]] to i32
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = shl i32 [[DOTTR]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP5]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test6(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR1]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COUNT]], align 8, !tbaa [[TBAA6]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP0]], 0
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP0]] to i32
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl i32 [[DOTTR]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP1]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 8
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i64 [[TMP1]], 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP1]] to i32
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = shl i32 [[DOTTR]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i32 0, i32 [[TMP2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT]], ptr [[P]], i64 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[IDXPROM]]
@@ -464,32 +464,32 @@ void test6(struct anon_struct *p, int index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test7(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 255
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[TMP2]], [[INDEX]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT23:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB12:[0-9]+]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont23:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB12:[0-9]+]], i64 [[TMP4]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont7:
 // SANITIZE-WITH-ATTR-NEXT:    [[INTS:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[TMP5]]
 // SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 12)
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP8:%.*]] = add i8 [[TMP7]], 4
 // SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i8 0, i8 [[TMP8]]
-// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA10:![0-9]+]]
+// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test7(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 12)
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
@@ -498,7 +498,7 @@ void test6(struct anon_struct *p, int index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[INTS:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[IDXPROM]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA6:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local void @test7(
@@ -526,33 +526,33 @@ void test7(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test8(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i64
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT24:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB13:[0-9]+]], i64 [[TMP5]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont24:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB13:[0-9]+]], i64 [[TMP5]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont7:
 // SANITIZE-WITH-ATTR-NEXT:    [[INTS:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[TMP3]]
 // SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = tail call i8 @llvm.smax.i8(i8 [[TMP1]], i8 0)
-// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA10]]
+// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test8(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 8, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = tail call i8 @llvm.smax.i8(i8 [[TMP1]], i8 0)
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[INTS:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[IDXPROM]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[NARROW]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[NARROW]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local void @test8(
@@ -580,17 +580,17 @@ void test8(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test9(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT24:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB14:[0-9]+]], i64 [[TMP5]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont24:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB14:[0-9]+]], i64 [[TMP5]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont7:
 // SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[TMP2]]
 // SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
@@ -598,14 +598,14 @@ void test8(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP8:%.*]] = add i8 [[TMP7]], 4
 // SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = select i1 [[DOTINV]], i8 0, i8 [[TMP8]]
-// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA10]]
+// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test9(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 12)
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTINV:%.*]] = icmp slt i32 [[TMP1]], 0
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
@@ -614,7 +614,7 @@ void test8(struct union_of_fams *p, int index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[IDXPROM]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local void @test9(
@@ -642,35 +642,35 @@ void test9(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test10(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA10]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT24:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB15:[0-9]+]], i64 [[TMP5]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont24:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB15:[0-9]+]], i64 [[TMP5]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont7:
 // SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[TMP2]]
 // SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
 // SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = trunc i32 [[NARROW]] to i8
-// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA10]]
+// SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test10(
 // NO-SANITIZE-WITH-ATTR-SAME: ptr nocapture noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // NO-SANITIZE-WITH-ATTR-NEXT:  entry:
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1, i32 0, i32 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[NARROW:%.*]] = tail call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = trunc i32 [[NARROW]] to i8
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[IDXPROM]]
-// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA8]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA6]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // SANITIZE-WITHOUT-ATTR-LABEL: define dso_local void @test10(
@@ -698,19 +698,19 @@ void test10(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-LABEL: define dso_local void @test11(
 // SANITIZE-WITH-ATTR-SAME: ptr noundef [[P:%.*]], i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SANITIZE-WITH-ATTR-NEXT:  entry:
-// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], [[TMP2]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP3]], label [[CONT7:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF7]], !nosanitize [[META6]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP2]], [[TMP3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP4]], label [[CONT3:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // SANITIZE-WITH-ATTR:       handler.out_of_bounds:
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB16:[0-9]+]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META6]]
-// SANITIZE-WITH-ATTR:       cont7:
-// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP1]]
-// SANITIZE-WITH-ATTR-NEXT:    store i32 4, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[INDEX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB16:[0-9]+]], i64 [[TMP5]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont3:
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[TMP2]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 4, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
 // NO-SANITIZE-WITH-ATTR-LABEL: define dso_local void @test11(
@@ -739,4 +739,226 @@ void test10(struct union_of_fams *p, int index) {
 //
 void test11(struct annotated *p, int index) {
   p->array[index] = __builtin_dynamic_object_size(&p->count, 1);
+}
+
+struct {
+  struct {
+    struct {
+      int num_entries;
+    };
+  };
+  int entries[] __attribute__((__counted_by__(num_entries)));
+} test12_foo;
+
+struct hang {
+  int entries[6];
+} test12_bar;
+
+int test12_a, test12_b;
+
+// SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test12(
+// SANITIZE-WITH-ATTR-SAME: i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// SANITIZE-WITH-ATTR-NEXT:  entry:
+// SANITIZE-WITH-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BAZ]]) #[[ATTR9:[0-9]+]]
+// SANITIZE-WITH-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT9:![0-9]+]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[INDEX]], 6
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP0]], label [[CONT:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.out_of_bounds:
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB18:[0-9]+]], i64 [[TMP1]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       cont:
+// SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [6 x i32], ptr [[BAZ]], i64 0, i64 [[TMP1]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA4]]
+// SANITIZE-WITH-ATTR-NEXT:    store i32 [[TMP2]], ptr @test12_b, align 4, !tbaa [[TBAA4]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = load i32, ptr @test12_foo, align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[DOTNOT]], label [[HANDLER_OUT_OF_BOUNDS4:%.*]], label [[HANDLER_TYPE_MISMATCH6:%.*]], !prof [[PROF10:![0-9]+]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.out_of_bounds4:
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB19:[0-9]+]], i64 0) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.type_mismatch6:
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB20:[0-9]+]], i64 ptrtoint (ptr getelementptr inbounds ([[STRUCT_ANON_5:%.*]], ptr @test12_foo, i64 1, i32 0, i32 0, i32 0) to i64)) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+//
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test12(
+// NO-SANITIZE-WITH-ATTR-SAME: i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// NO-SANITIZE-WITH-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BAZ]]) #[[ATTR10:[0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [6 x i32], ptr [[BAZ]], i64 0, i64 [[IDXPROM]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[TMP0]], ptr @test12_b, align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_ANON_5:%.*]], ptr @test12_foo, i64 1, i32 0, i32 0, i32 0), align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[TMP1]], ptr @test12_a, align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    br label [[FOR_COND:%.*]]
+// NO-SANITIZE-WITH-ATTR:       for.cond:
+// NO-SANITIZE-WITH-ATTR-NEXT:    br label [[FOR_COND]]
+//
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test12(
+// SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
+// SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BAZ]]) #[[ATTR6:[0-9]+]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[INDEX]], 6
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
+// SANITIZE-WITHOUT-ATTR-NEXT:    br i1 [[TMP0]], label [[CONT:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF8:![0-9]+]], !nosanitize [[META9:![0-9]+]]
+// SANITIZE-WITHOUT-ATTR:       handler.out_of_bounds:
+// SANITIZE-WITHOUT-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB2:[0-9]+]], i64 [[TMP1]]) #[[ATTR7:[0-9]+]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    unreachable, !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR:       cont:
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [6 x i32], ptr [[BAZ]], i64 0, i64 [[TMP1]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    store i32 [[TMP2]], ptr @test12_b, align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP3:%.*]] = load i32, ptr @test12_foo, align 4
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
+// SANITIZE-WITHOUT-ATTR-NEXT:    br i1 [[DOTNOT]], label [[HANDLER_OUT_OF_BOUNDS4:%.*]], label [[HANDLER_TYPE_MISMATCH6:%.*]], !prof [[PROF10:![0-9]+]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR:       handler.out_of_bounds4:
+// SANITIZE-WITHOUT-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB4:[0-9]+]], i64 0) #[[ATTR7]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    unreachable, !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR:       handler.type_mismatch6:
+// SANITIZE-WITHOUT-ATTR-NEXT:    tail call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB5:[0-9]+]], i64 ptrtoint (ptr getelementptr inbounds ([[STRUCT_ANON_5:%.*]], ptr @test12_foo, i64 1, i32 0, i32 0, i32 0) to i64)) #[[ATTR7]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    unreachable, !nosanitize [[META9]]
+//
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test12(
+// NO-SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[BAZ:%.*]] = alloca [[STRUCT_HANG:%.*]], align 4
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BAZ]]) #[[ATTR7:[0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(24) [[BAZ]], ptr noundef nonnull align 4 dereferenceable(24) @test12_bar, i64 24, i1 false), !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [6 x i32], ptr [[BAZ]], i64 0, i64 [[IDXPROM]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 [[TMP0]], ptr @test12_b, align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_ANON_5:%.*]], ptr @test12_foo, i64 1, i32 0, i32 0, i32 0), align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 [[TMP1]], ptr @test12_a, align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    br label [[FOR_COND:%.*]]
+// NO-SANITIZE-WITHOUT-ATTR:       for.cond:
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    br label [[FOR_COND]]
+//
+int test12(int index) {
+  struct hang baz = test12_bar;
+
+  for (;; test12_a = (&test12_foo)->entries[0])
+    test12_b = baz.entries[index];
+
+  return test12_b;
+}
+
+struct test13_foo {
+  struct test13_bar *domain;
+} test13_f;
+
+struct test13_bar {
+  struct test13_bar *parent;
+  int revmap_size;
+  struct test13_foo *revmap[] __attribute__((__counted_by__(revmap_size)));
+};
+
+// SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test13(
+// SANITIZE-WITH-ATTR-SAME: i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// SANITIZE-WITH-ATTR-NEXT:  entry:
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @llvm.trap() #[[ATTR8]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable
+//
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test13(
+// NO-SANITIZE-WITH-ATTR-SAME: i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// NO-SANITIZE-WITH-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @test13_f, align 8, !tbaa [[TBAA8:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_TEST13_BAR:%.*]], ptr [[TMP0]], i64 0, i32 2, i64 [[INDEX]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    store ptr null, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA11:![0-9]+]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    ret i32 0
+//
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test13(
+// SANITIZE-WITHOUT-ATTR-SAME: i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// SANITIZE-WITHOUT-ATTR-NEXT:    tail call void @llvm.trap() #[[ATTR7]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    unreachable
+//
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test13(
+// NO-SANITIZE-WITHOUT-ATTR-SAME: i64 noundef [[INDEX:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load ptr, ptr @test13_f, align 8, !tbaa [[TBAA8:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_TEST13_BAR:%.*]], ptr [[TMP0]], i64 0, i32 2, i64 [[INDEX]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store ptr null, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA11:![0-9]+]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 0
+//
+int test13(long index) {
+  test13_f.domain->revmap[index] = 0;
+  return 0;
+}
+
+struct test14_foo {
+  int x, y;
+  int blah[] __attribute__((counted_by(x)));
+};
+
+// SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test14(
+// SANITIZE-WITH-ATTR-SAME: i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// SANITIZE-WITH-ATTR-NEXT:  entry:
+// SANITIZE-WITH-ATTR-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca [[STRUCT_TEST14_FOO:%.*]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    store i32 1, ptr [[DOTCOMPOUNDLITERAL]], align 4, !tbaa [[TBAA4]]
+// SANITIZE-WITH-ATTR-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 1
+// SANITIZE-WITH-ATTR-NEXT:    store i32 2, ptr [[Y]], align 4, !tbaa [[TBAA4]]
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IDX]], 0
+// SANITIZE-WITH-ATTR-NEXT:    br i1 [[TMP0]], label [[HANDLER_TYPE_MISMATCH5:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF3]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.out_of_bounds:
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[IDX]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB21:[0-9]+]], i64 [[TMP1]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR:       handler.type_mismatch5:
+// SANITIZE-WITH-ATTR-NEXT:    [[BLAH:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[BLAH]] to i64, !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB22:[0-9]+]], i64 [[TMP2]]) #[[ATTR8]], !nosanitize [[META2]]
+// SANITIZE-WITH-ATTR-NEXT:    unreachable, !nosanitize [[META2]]
+//
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local i32 @test14(
+// NO-SANITIZE-WITH-ATTR-SAME: i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR8:[0-9]+]] {
+// NO-SANITIZE-WITH-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca [[STRUCT_TEST14_FOO:%.*]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 1, ptr [[DOTCOMPOUNDLITERAL]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 1
+// NO-SANITIZE-WITH-ATTR-NEXT:    store i32 2, ptr [[Y]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 2, i64 [[IDXPROM]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITH-ATTR-NEXT:    ret i32 [[TMP0]]
+//
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test14(
+// SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca [[STRUCT_TEST14_FOO:%.*]], align 4
+// SANITIZE-WITHOUT-ATTR-NEXT:    store i32 1, ptr [[DOTCOMPOUNDLITERAL]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 1
+// SANITIZE-WITHOUT-ATTR-NEXT:    store i32 2, ptr [[Y]], align 4, !tbaa [[TBAA2]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IDX]], 0
+// SANITIZE-WITHOUT-ATTR-NEXT:    br i1 [[TMP0]], label [[HANDLER_TYPE_MISMATCH5:%.*]], label [[HANDLER_OUT_OF_BOUNDS:%.*]], !prof [[PROF8]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR:       handler.out_of_bounds:
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP1:%.*]] = zext i32 [[IDX]] to i64, !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    tail call void @__ubsan_handle_out_of_bounds_abort(ptr nonnull @[[GLOB6:[0-9]+]], i64 [[TMP1]]) #[[ATTR7]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    unreachable, !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR:       handler.type_mismatch5:
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[BLAH:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 2
+// SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[BLAH]] to i64, !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr nonnull @[[GLOB7:[0-9]+]], i64 [[TMP2]]) #[[ATTR7]], !nosanitize [[META9]]
+// SANITIZE-WITHOUT-ATTR-NEXT:    unreachable, !nosanitize [[META9]]
+//
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i32 @test14(
+// NO-SANITIZE-WITHOUT-ATTR-SAME: i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca [[STRUCT_TEST14_FOO:%.*]], align 4
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 1, ptr [[DOTCOMPOUNDLITERAL]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 1
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    store i32 2, ptr [[Y]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_TEST14_FOO]], ptr [[DOTCOMPOUNDLITERAL]], i64 0, i32 2, i64 [[IDXPROM]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i32 [[TMP0]]
+//
+int test14(int idx) {
+  return (struct test14_foo){ 1, 2 }.blah[idx];
 }

@@ -967,6 +967,19 @@ struct MemberExprBaseVisitor
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
 
+  // Note: if we build C++ support for counted_by, then we'll have to handle
+  // horrors like this:
+  //
+  //     struct S {
+  //       int x, y;
+  //       int blah[] __attribute__((counted_by(x)));
+  //     } s;
+  //
+  //     int foo(int index, int val) {
+  //       int (S::*IHatePMDs)[] = &S::blah;
+  //       (s.*IHatePMDs)[index] = val;
+  //     }
+
   Expr *Visit(Expr *E) {
     return StmtVisitor<MemberExprBaseVisitor, Expr *>::Visit(E);
   }
@@ -975,6 +988,7 @@ struct MemberExprBaseVisitor
     return Visit(E->getBase());
   }
   Expr *VisitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) { return E; }
   Expr *VisitDeclRefExpr(DeclRefExpr *E) { return E; }
   Expr *VisitMemberExpr(MemberExpr *E) { return Visit(E->getBase()); }
   Expr *VisitParenExpr(ParenExpr *E) { return Visit(E->getSubExpr()); }
@@ -988,13 +1002,14 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
                                         const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr = MemberExprBaseVisitor().Visit(const_cast<Expr *>(Base));
-  if (!CountedByExpr || !isa<DeclRefExpr>(CountedByExpr))
+  if (!CountedByExpr)
     return nullptr;
 
-  llvm::Value *Res = CountedByExpr->getType()->isPointerType()
-                         ? EmitPointerWithAlignment(CountedByExpr).getPointer()
-                         : EmitDeclRefLValue(cast<DeclRefExpr>(CountedByExpr))
-                               .getPointer(*this);
+  llvm::Value *Res = nullptr;
+  if (CountedByExpr->getType()->isPointerType())
+    Res = EmitPointerWithAlignment(CountedByExpr).getPointer();
+  else
+    Res = EmitLValue(CountedByExpr).getPointer(*this);
 
   auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
   SmallVector<llvm::Value *, 4> Indices{Zero};
