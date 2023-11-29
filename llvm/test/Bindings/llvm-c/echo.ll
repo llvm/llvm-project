@@ -268,6 +268,17 @@ exit:
   ret void
 }
 
+define void @operandbundles() personality ptr @personalityFn {
+  call void @decl() [ "foo"(), "bar\00x"(i32 0, ptr null, token none) ]
+  invoke void @decl() [ "baz"(label %bar) ] to label %foo unwind label %bar
+foo:
+  ret void
+bar:
+  %1 = landingpad { ptr, i32 }
+          cleanup
+  ret void
+}
+
 define void @with_debuginfo() !dbg !4 {
   ret void, !dbg !7
 }
