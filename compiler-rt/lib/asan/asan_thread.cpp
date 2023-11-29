@@ -27,6 +27,10 @@ namespace __asan {
 
 // AsanThreadContext implementation.
 
+#if SANITIZER_WINDOWS
+static atomic_uint8_t main_thread_created{0};
+#endif
+
 void AsanThreadContext::OnCreated(void *arg) {
   CreateThreadContextArgs *args = static_cast<CreateThreadContextArgs *>(arg);
   if (args->stack)
@@ -93,6 +97,12 @@ AsanThreadContext *GetThreadContextByTidLocked(u32 tid) {
 AsanThread *AsanThread::Create(const void *start_data, uptr data_size,
                                u32 parent_tid, StackTrace *stack,
                                bool detached) {
+#if SANITIZER_WINDOWS
+  while (atomic_load(&main_thread_created, memory_order_acquire) == 0) {
+    // If another thread is trying to be created before the main thread, wait.
+    internal_sched_yield();
+  }
+#endif
   uptr PageSize = GetPageSizeCached();
   uptr size = RoundUpTo(sizeof(AsanThread), PageSize);
   AsanThread *thread = (AsanThread *)MmapOrDie(size, __func__);
@@ -288,11 +298,25 @@ void AsanThread::ThreadStart(tid_t os_id) {
 }
 
 AsanThread *CreateMainThread() {
+// Depending on the loading thread, specifically in managed scenarios, the main
+// thread can be created after other threads on Windows. This ensures we start
+// the main thread before those threads.
+#  if SANITIZER_WINDOWS
+  uptr PageSize = GetPageSizeCached();
+  uptr size = RoundUpTo(sizeof(AsanThread), PageSize);
+  AsanThread *main_thread = (AsanThread *)MmapOrDie(size, __func__);
+  AsanThreadContext::CreateThreadContextArgs args = {main_thread, nullptr};
+  asanThreadRegistry().CreateThread(0, true, kMainTid, &args);
+  SetCurrentThread(main_thread);
+  main_thread->ThreadStart(internal_getpid());
+  atomic_store(&main_thread_created, 1, memory_order_release);
+#  else
   AsanThread *main_thread = AsanThread::Create(
       /* parent_tid */ kMainTid,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
   main_thread->ThreadStart(internal_getpid());
+#  endif
   return main_thread;
 }
 
