@@ -934,10 +934,11 @@ IFuncs
 -------
 
 IFuncs, like as aliases, don't create any new data or func. They are just a new
-symbol that dynamic linker resolves at runtime by calling a resolver function.
+symbol that is resolved at runtime by calling a resolver function.
 
-IFuncs have a name and a resolver that is a function called by dynamic linker
-that returns address of another function associated with the name.
+On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
+Mach-O platforms, they are lowered in terms of ``.symbol_resolver`` functions,
+which lazily resolve the callee the first time they are called.
 
 IFunc may have an optional :ref:`linkage type <linkage>` and an optional
 :ref:`visibility style <visibility>`.

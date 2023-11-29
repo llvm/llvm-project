@@ -14,6 +14,7 @@
 #include "X86AsmPrinter.h"
 #include "MCTargetDesc/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
+#include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86InstrInfo.h"
@@ -34,6 +35,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -528,6 +530,118 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
     }
   }
   O << ']';
+}
+
+void X86AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
+  if (!TM.getTargetTriple().isOSBinFormatMachO())
+    return AsmPrinter::emitGlobalIFunc(M, GI);
+
+  auto EmitLinkage = [&](MCSymbol *Sym) {
+    if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_WeakReference);
+    else
+      assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
+  };
+
+  MCSymbol *LazyPointer =
+      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
+          "_" + GI.getName() + ".lazy_pointer");
+  MCSymbol *StubHelper =
+      TM.getObjFileLowering()->getContext().getOrCreateSymbol(
+          "_" + GI.getName() + ".stub_helper");
+
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+
+  // _ifunc.lazy_pointer:
+  //  .quad _ifunc.stub_helper
+
+  EmitLinkage(LazyPointer);
+  OutStreamer->emitLabel(LazyPointer);
+  emitVisibility(LazyPointer, GI.getVisibility());
+  OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);
+
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
+
+  // _ifunc:
+  //   jmpq *lazy_pointer(%rip)
+
+  MCSymbol *Stub = getSymbol(&GI);
+  EmitLinkage(Stub);
+  OutStreamer->emitCodeAlignment(Align(16), Subtarget);
+  OutStreamer->emitLabel(Stub);
+  emitVisibility(Stub, GI.getVisibility());
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JMP32m)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(LazyPointer, OutContext)))
+          .addReg(0),
+      *Subtarget);
+
+  // _ifunc.stub_helper:
+  //   push %rax
+  //   push %rdi
+  //   push %rsi
+  //   push %rdx
+  //   push %rcx
+  //   push %r8
+  //   push %r9
+  //   callq foo
+  //   movq %rax,lazy_pointer(%rip)
+  //   pop %r9
+  //   pop %r8
+  //   pop %rcx
+  //   pop %rdx
+  //   pop %rsi
+  //   pop %rdi
+  //   pop %rax
+  //   jmpq *lazy_pointer(%rip)
+
+  EmitLinkage(StubHelper);
+  OutStreamer->emitCodeAlignment(Align(16), Subtarget);
+  OutStreamer->emitLabel(StubHelper);
+  emitVisibility(StubHelper, GI.getVisibility());
+
+  for (int Reg :
+       {X86::RAX, X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9})
+    OutStreamer->emitInstruction(MCInstBuilder(X86::PUSH64r).addReg(Reg),
+                                 *Subtarget);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::CALL64pcrel32)
+          .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))),
+      *Subtarget);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::MOV64mr)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(LazyPointer, OutContext)))
+          .addReg(0)
+          .addReg(X86::RAX),
+      *Subtarget);
+
+  for (int Reg :
+       {X86::R9, X86::R8, X86::RCX, X86::RDX, X86::RSI, X86::RDI, X86::RAX})
+    OutStreamer->emitInstruction(MCInstBuilder(X86::POP64r).addReg(Reg),
+                                 *Subtarget);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JMP32m)
+          .addReg(X86::RIP)
+          .addImm(1)
+          .addReg(0)
+          .addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(LazyPointer, OutContext)))
+          .addReg(0),
+      *Subtarget);
 }
 
 static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
