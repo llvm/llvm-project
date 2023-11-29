@@ -53,7 +53,8 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
     VRGATHER_VI,
     VSLIDE,
     VMERGE,
-    VMV,
+    VMV_V,
+    VMV_SX,
     VSIMPLE_INT,       // ICMP
     VNARROWING,        // VNSRL
     VSIMPLE_INT_RED,   // VREDSUM, VREDAND, VREDOR, VREDXOR

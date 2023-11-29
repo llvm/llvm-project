@@ -69,8 +69,10 @@ RISCVTTIImpl::getRISCVInstructionCost(RISCVInstruction Inst, MVT VT,
       }
       return VL;
     }
+    case RISCVInstruction::VMV_SX:
+      // FIXME: VMV_SX doesn't use LMUL, just return NumInstr
+    case RISCVInstruction::VMV_V:
     case RISCVInstruction::VMERGE:
-    case RISCVInstruction::VMV:
     case RISCVInstruction::VSIMPLE_INT:
     case RISCVInstruction::VNARROWING:
       return Cost;
@@ -431,7 +433,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // vmerge.vvm   v8, v9, v8, v0
     return LT.first *
            (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for li
-            getRISCVInstructionCost(RISCVInstruction::VMV, LT.second, 1,
+            getRISCVInstructionCost(RISCVInstruction::VMV_SX, LT.second, 1,
                                     CostKind) +
             getRISCVInstructionCost(RISCVInstruction::VMERGE, LT.second, 1,
                                     CostKind));
@@ -448,7 +450,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         //   vmsne.vi v0, v8, 0
         return LT.first *
                (TLI->getLMULCost(LT.second) + // FIXME: should be 1 for andi
-                getRISCVInstructionCost(RISCVInstruction::VMV, LT.second, 1,
+                getRISCVInstructionCost(RISCVInstruction::VMV_V, LT.second, 1,
                                         CostKind) +
                 getRISCVInstructionCost(RISCVInstruction::VSIMPLE_INT,
                                         LT.second, 1, CostKind));
@@ -464,7 +466,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
       return LT.first *
              (TLI->getLMULCost(LT.second) + // FIXME: this should be 1 for andi
-              getRISCVInstructionCost(RISCVInstruction::VMV, LT.second, 3,
+              TLI->getLMULCost(
+                  LT.second) + // FIXME: vmv.x.s is the same as extractelement
+              getRISCVInstructionCost(RISCVInstruction::VMV_V, LT.second, 2,
                                       CostKind) +
               getRISCVInstructionCost(RISCVInstruction::VMERGE, LT.second, 1,
                                       CostKind) +
@@ -475,7 +479,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (HasScalar) {
       // Example sequence:
       //   vmv.v.x v8, a0
-      return LT.first * getRISCVInstructionCost(RISCVInstruction::VMV,
+      return LT.first * getRISCVInstructionCost(RISCVInstruction::VMV_V,
                                                 LT.second, 1, CostKind);
     }
 
