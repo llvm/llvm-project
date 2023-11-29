@@ -1313,11 +1313,8 @@ void FormatTokenLexer::readRawToken(FormatToken &Tok) {
     }
   }
 
-  if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Proto ||
-       Style.Language == FormatStyle::LK_TextProto) &&
-      Tok.is(tok::char_constant)) {
+  if ((Style.isJavaScript() || Style.isProto()) && Tok.is(tok::char_constant))
     Tok.Tok.setKind(tok::string_literal);
-  }
 
   if (Tok.is(tok::comment) && isClangFormatOn(Tok.TokenText))
     FormattingDisabled = false;
