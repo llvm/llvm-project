@@ -202,7 +202,7 @@ static T getLEB128(StringRef Data, uint64_t *OffsetPtr, Error *Err,
   if (isError(Err))
     return T();
 
-  const char *error = nullptr;
+  const char *error;
   unsigned bytes_read;
   T result =
       Decoder(Bytes.data() + *OffsetPtr, &bytes_read, Bytes.end(), &error);

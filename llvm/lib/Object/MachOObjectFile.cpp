@@ -2996,7 +2996,7 @@ void ExportEntry::pushNode(uint64_t offset) {
   ErrorAsOutParameter ErrAsOutParam(E);
   const uint8_t *Ptr = Trie.begin() + offset;
   NodeState State(Ptr);
-  const char *error = nullptr;
+  const char *error;
   uint64_t ExportInfoSize = readULEB128(State.Current, &error);
   if (error) {
     *E = malformedError("export info size " + Twine(error) +
@@ -3131,7 +3131,7 @@ void ExportEntry::pushNode(uint64_t offset) {
 
 void ExportEntry::pushDownUntilBottom() {
   ErrorAsOutParameter ErrAsOutParam(E);
-  const char *error = nullptr;
+  const char *error;
   while (Stack.back().NextChildIndex < Stack.back().ChildCount) {
     NodeState &Top = Stack.back();
     CumulativeString.resize(Top.ParentStringLength);
