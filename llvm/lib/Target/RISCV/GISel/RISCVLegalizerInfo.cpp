@@ -345,7 +345,7 @@ bool RISCVLegalizerInfo::legalizeBRJT(MachineInstr &MI,
   Register TargetReg;
   switch (MJTI->getEntryKind()) {
   default:
-    llvm_unreachable("Unexpected jumptable entry kind");
+    return false;
   case MachineJumpTableInfo::EK_LabelDifference32: {
     // For PIC, the sequence is:
     // BRIND(load(Jumptable + index) + RelocBase)
