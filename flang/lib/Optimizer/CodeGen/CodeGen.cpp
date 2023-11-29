@@ -3667,9 +3667,9 @@ struct BoxOffsetOpConversion : public FIROpConversion<fir::BoxOffsetOp> {
     mlir::Type boxType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
     mlir::Type llvmBoxTy =
         lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
-    unsigned fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
-                           ? getTypeDescFieldId(boxType)
-                           : kAddrPosInBox;
+    int fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
+                      ? getTypeDescFieldId(boxType)
+                      : kAddrPosInBox;
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
         boxOffset, pty, llvmBoxTy, adaptor.getBoxRef(),
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, fieldId});
