@@ -61,8 +61,13 @@ struct AllocContext {
 struct DeallocContext {
   void *Ptr;
 };
+struct ReallocContext {
+  void *Begin;
+  void *End;
+};
 static AllocContext AC;
 static DeallocContext DC;
+static ReallocContext RC;
 
 #if (SCUDO_ENABLE_HOOKS_TESTS == 1)
 __attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
@@ -72,6 +77,14 @@ __attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
 }
 __attribute__((visibility("default"))) void __scudo_deallocate_hook(void *Ptr) {
   DC.Ptr = Ptr;
+}
+__attribute__((visibility("default"))) void
+__scudo_realloc_begin_hook(void *Ptr) {
+  RC.Begin = Ptr;
+}
+__attribute__((visibility("default"))) void
+__scudo_realloc_end_hook(void *Ptr) {
+  RC.End = Ptr;
 }
 #endif // (SCUDO_ENABLE_HOOKS_TESTS == 1)
 }
@@ -88,6 +101,7 @@ protected:
       void *InvalidPtr = reinterpret_cast<void *>(0xdeadbeef);
       AC.Ptr = InvalidPtr;
       DC.Ptr = InvalidPtr;
+      RC.Begin = RC.End = InvalidPtr;
     }
   }
   void verifyAllocHookPtr(UNUSED void *Ptr) {
@@ -101,6 +115,12 @@ protected:
   void verifyDeallocHookPtr(UNUSED void *Ptr) {
     if (SCUDO_ENABLE_HOOKS_TESTS)
       EXPECT_EQ(Ptr, DC.Ptr);
+  }
+  void verifyReallocHooksScope(UNUSED void *Ptr) {
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
+      EXPECT_EQ(Ptr, RC.Begin);
+      EXPECT_EQ(Ptr, RC.End);
+    }
   }
 };
 using ScudoWrappersCDeathTest = ScudoWrappersCTest;
@@ -297,6 +317,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
     verifyAllocHookSize(Size * 2U);
     verifyDeallocHookPtr(OldP);
   }
+  verifyReallocHooksScope(OldP);
 
   invalidateHookPtrs();
   OldP = P;
@@ -312,6 +333,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
     verifyAllocHookPtr(P);
     verifyAllocHookSize(Size / 2U);
   }
+  verifyReallocHooksScope(OldP);
   free(P);
 
   EXPECT_DEATH(P = realloc(P, Size), "");
