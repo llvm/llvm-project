@@ -660,7 +660,7 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
     AnyFortranValue:$source,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
-    Builtin_StringAttr:$uniq_name,
+    OptionalAttr<Builtin_StringAttr>:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
   );
 
@@ -672,9 +672,13 @@ def hlfir_AssociateOp : hlfir_Op<"associate", [AttrSizedOperandSegments,
   }];
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$source, "llvm::StringRef":$uniq_name,
+    OpBuilder<(ins "mlir::Value":$source, CArg<"llvm::StringRef", "{}">:$uniq_name,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>];
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>,
+    OpBuilder<(ins "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
+      CArg<"mlir::ValueRange", "{}">:$typeparams, 
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
 
   let extraClassDeclaration = [{
     /// Override FortranVariableInterface default implementation
