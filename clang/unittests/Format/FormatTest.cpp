@@ -6361,6 +6361,13 @@ TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
                "  int   quux      = 4;\n"
                "}",
                Style);
+  verifyFormat("auto foo = [] { return; };\n"
+               "#if FOO\n"
+               "#else\n"
+               "count = bar;\n"
+               "mbid  = bid;\n"
+               "#endif",
+               Style);
 
   // Test with a mix of #if and #else blocks.
   verifyFormat("void f1() {\n"
