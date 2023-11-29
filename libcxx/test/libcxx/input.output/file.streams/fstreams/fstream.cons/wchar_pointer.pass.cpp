@@ -16,6 +16,7 @@
 // This extension is only provided on Windows.
 // REQUIRES: windows
 // UNSUPPORTED: no-wide-characters
+// ADDITIONAL_COMPILE_FLAGS:-D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
 
 #include <fstream>
 #include <cassert>
