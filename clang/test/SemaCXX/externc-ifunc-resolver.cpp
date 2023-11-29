@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple x86_64-linux-gnu -verify %s
+// RUN: %clang_cc1 -emit-llvm-only -triple x86_64-apple-macosx -verify %s
+// RUN: %clang_cc1 -emit-llvm-only -triple arm64-apple-macosx -verify %s
 // RUN: not %clang_cc1 -triple x86_64-linux -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -triple x86_64-apple-macosx -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -triple arm64-apple-macosx -emit-llvm-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 extern "C" {
 __attribute__((used)) static void *resolve_foo() { return 0; }
