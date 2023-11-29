@@ -175,10 +175,24 @@ INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
     return nullptr;
   }
 
+  // Given that the reporting of deallocation and allocation are not atomic, we
+  // always pretend the old pointer will be released so that the user doesn't
+  // need to worry about the false double-use case from the view of hooks.
+  //
+  // For example, assume that `realloc` releases the old pointer and allocates a
+  // new pointer. Before the reporting of both operations has been done, another
+  // thread may get the old pointer from `malloc`. It may be misinterpreted as
+  // double-use if it's not handled properly on the hook side.
+  reportDeallocation(ptr);
   void *NewPtr = SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT);
-  if (NewPtr != ptr) {
+  if (NewPtr != nullptr) {
+    // Note that even if NewPtr == ptr, the size has changed. We still need to
+    // report the new size.
     reportAllocation(NewPtr, size);
-    reportDeallocation(ptr);
+  } else {
+    // If `realloc` fails, the old pointer is not released. Report the old
+    // pointer as allocated back.
+    reportAllocation(ptr, SCUDO_ALLOCATOR.getAllocSize(ptr));
   }
 
   return scudo::setErrnoOnNull(NewPtr);
