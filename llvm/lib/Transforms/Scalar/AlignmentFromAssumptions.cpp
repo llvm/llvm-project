@@ -272,7 +272,6 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
           }
         }
       }
-
   }
 
   return true;
