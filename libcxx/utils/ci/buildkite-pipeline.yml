@@ -46,6 +46,7 @@ agents_definitions:
   _windows_agent: &windows_agent
     agents:
       queue: windows
+
   # Mac OS Builders
   _mac_agent_x86: &mac_agent_x86
     agents:
@@ -206,6 +207,11 @@ steps:
   - label: Armv7 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
     <<: *arm_agent_armv8l
+    <<: *common
+
+  - label: Armv7-M picolibc
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
+    <<: *arm_agent_aarch64
     <<: *common
 
 - group: AIX
