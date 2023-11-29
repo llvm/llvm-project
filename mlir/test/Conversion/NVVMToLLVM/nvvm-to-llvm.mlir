@@ -615,9 +615,9 @@ llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
 // -----
 
 func.func @set_max_register() {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.inc.sync.aligned.u32 [$0];", "n"
-  nvvm.setmaxregister.sync.aligned increase 232
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.dec.sync.aligned.u32 [$0];", "n"
-  nvvm.setmaxregister.sync.aligned decrease 40
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.inc.sync.aligned.u32 $0;", "n"
+  nvvm.setmaxregister increase 232
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.dec.sync.aligned.u32 $0;", "n"
+  nvvm.setmaxregister decrease 40
   func.return
 }

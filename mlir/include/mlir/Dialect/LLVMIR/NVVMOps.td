@@ -409,9 +409,9 @@ def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max reg
 }
 def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
 
-def NVVM_SetMaxRegisterOp : NVVM_PTXBuilder_Op<"setmaxregister.sync.aligned"> {
-  let arguments = (ins I32Attr:$count, SetMaxRegisterActionAttr:$action);
-  let assemblyFormat = "$action $count attr-dict";
+def NVVM_SetMaxRegisterOp : NVVM_PTXBuilder_Op<"setmaxregister"> {
+  let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
+  let assemblyFormat = "$action $regCount attr-dict";
   let extraClassDefinition = [{        
     std::string $cppClass::getPtx() {
       if(getAction() == NVVM::SetMaxRegisterAction::increase)

@@ -132,3 +132,10 @@ func.func @wgmma_f32_m32(%descA : i64, %descB : i64) {
       -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)> 
   return 
 }
+// -----
+
+func.func @set_max_register() {
+  // expected-error @+1 {{new register size must be in between 24 to 256}}
+  nvvm.setmaxregister decrease 8
+  func.return
+}
