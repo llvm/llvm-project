@@ -937,8 +937,8 @@ IFuncs, like as aliases, don't create any new data or func. They are just a new
 symbol that is resolved at runtime by calling a resolver function.
 
 On ELF platforms, IFuncs are resolved by the dynamic linker at load time. On
-Mach-O platforms, they are lowered in terms of ``.symbol_resolver``s, which
-lazily resolve the callee the first time they are called.
+Mach-O platforms, they are lowered in terms of ``.symbol_resolver`` functions,
+which lazily resolve the callee the first time they are called.
 
 IFunc may have an optional :ref:`linkage type <linkage>` and an optional
 :ref:`visibility style <visibility>`.
