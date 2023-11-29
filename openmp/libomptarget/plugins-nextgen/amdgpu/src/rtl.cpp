@@ -632,12 +632,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
         return Err;
     }
 
-    // Get the currently set dynamic stack size from the device as 32bit value.
-    assert(Device.getTargetStackSize() <=
-               std::numeric_limits<uint32_t>::max() &&
-           "AMDGPU Private Address Space may not exceed 32bit range");
-    TargetStackSize = static_cast<uint32_t>(Device.getTargetStackSize());
-
     // Make sure it is a kernel symbol.
     if (SymbolType != HSA_SYMBOL_KIND_KERNEL)
       return Plugin::error("Symbol %s is not a kernel function");
@@ -714,10 +708,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   uint32_t getPrivateSize() const { return PrivateSize; }
   uint16_t getConstWGSize() const { return ConstWGSize; }
 
-  // Get dynamic callstack information.
-  bool hasDynamicCallstack() const { return DynCallstack; }
-  uint32_t getTargetStackSize() const { return TargetStackSize; }
-
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
@@ -737,14 +727,6 @@ private:
   uint32_t GroupSize;
   uint32_t PrivateSize;
   bool DynamicStack;
-
-  // The kernel meta data if a dynamic callstack is being used.
-  bool DynCallstack;
-
-  // The dynamic / target callstack size (from environmental variable).
-  // Note: While the EnVar is provided as uint64_t, the amdgpu private address
-  // space uses 32 bit.
-  uint32_t TargetStackSize;
 
   /// The size of implicit kernel arguments.
   uint32_t ImplicitArgsSize;
@@ -1161,7 +1143,7 @@ struct AMDGPUQueueTy {
   /// signal and can define an optional input signal (nullptr if none).
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
-                         uint32_t GroupSize, uint64_t StackSize,
+                         uint32_t GroupSize, uint32_t StackSize,
                          AMDGPUSignalTy *OutputSignal,
                          AMDGPUSignalTy *InputSignal) {
     assert(OutputSignal && "Invalid kernel output signal");
@@ -1200,7 +1182,8 @@ struct AMDGPUQueueTy {
     Packet->grid_size_y = 1;
     Packet->grid_size_z = 1;
     Packet->private_segment_size =
-        Kernel.usesDynamicStack() ? StackSize : Kernel.getPrivateSize();
+        Kernel.usesDynamicStack() ? std::max(Kernel.getPrivateSize(), StackSize)
+                                  : Kernel.getPrivateSize();
     Packet->group_segment_size = GroupSize;
     Packet->kernel_object = Kernel.getKernelObject();
     Packet->kernarg_address = KernelArgs;
@@ -1735,7 +1718,7 @@ public:
   /// the kernel args buffer to the specified memory manager.
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
-                         uint32_t GroupSize, uint64_t StackSize,
+                         uint32_t GroupSize, uint32_t StackSize,
                          AMDGPUMemoryManagerTy &MemoryManager) {
     if (Queue == nullptr)
       return Plugin::error("Target queue was nullptr");
@@ -2565,6 +2548,24 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       GridValues = getAMDGPUGridValues<64>();
     else
       return Plugin::error("Unexpected AMDGPU wavefront %d", WavefrontSize);
+
+    // To determine the correct scratch memory size per thread, we need to check
+    // the device architecure generation. Hence, we slice the major GFX version
+    // from the agent info (e.g. 'gfx90a' -> 9).
+    StringRef Arch(ComputeUnitKind);
+    unsigned GfxGen = 0u;
+    if (!llvm::to_integer(Arch.slice(sizeof("gfx") - 1, Arch.size() - 2),
+                          GfxGen))
+      return Plugin::error("Invalid GFX architecture string");
+
+    // TODO: Will try to eliminate this calculation, since its duplicated.
+    // See: 'getMaxWaveScratchSize' in 'llvm/lib/Target/AMDGPU/GCNSubtarget.h'.
+    // But we need to divide by WavefrontSize.
+    // For generations pre-gfx11: use 13-bit field in units of 256-dword,
+    // otherwise: 15-bit field in units of 64-dword.
+    MaxThreadScratchSize = (GfxGen < 11)
+                               ? ((256 * 4) / WavefrontSize) * ((1 << 13) - 1)
+                               : ((64 * 4) / WavefrontSize) * ((1 << 15) - 1);
 
     // Get maximum number of workitems per workgroup.
     uint16_t WorkgroupMaxDim[3];
@@ -3416,7 +3417,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
   Error setDeviceStackSize(uint64_t Value) override {
-    StackSize = Value;
+    if (Value > MaxThreadScratchSize) {
+      // Cap device scratch size.
+      MESSAGE("Scratch memory size will be set to %d. Reason: Requested size "
+              "%ld would exceed available resources.",
+              MaxThreadScratchSize, Value);
+      StackSize = MaxThreadScratchSize;
+    } else {
+      // Apply device scratch size, since it is within limits.
+      StackSize = Value;
+    }
+
     return Plugin::success();
   }
   Error getDeviceHeapSize(uint64_t &Value) override {
@@ -3663,7 +3674,12 @@ private:
 
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
-  uint64_t StackSize = 16 * 1024 /* 16 KB */;
+  /// Default: 1024, in conformity to hipLimitStackSize.
+  uint32_t StackSize = 1024 /* 1 KB */;
+
+  // The maximum scratch memory size per thread.
+  // See COMPUTE_TMPRING_SIZE.WAVESIZE (divided by threads per wave).
+  uint32_t MaxThreadScratchSize;
 };
 
 Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
@@ -4375,7 +4391,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
-                                  GroupSize, StackSize, ArgsMemoryManager);
+                                  GroupSize, static_cast<uint32_t>(StackSize),
+                                  ArgsMemoryManager);
 }
 
 void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
