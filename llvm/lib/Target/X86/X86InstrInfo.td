@@ -878,6 +878,8 @@ def relocImm : ComplexPattern<iAny, 1, "selectRelocImm",
 // X86 Instruction Predicate Definitions.
 def TruePredicate : Predicate<"true">;
 
+def HasEGPR : Predicate<"Subtarget->hasEGPR()">;
+def NoEGPR : Predicate<"!Subtarget->hasEGPR()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 

@@ -466,10 +466,15 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWkm))
-      .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
-    auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWkm))
-      .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
+    bool HasEGPR = STI->hasEGPR();
+    auto MIBLo =
+        BuildMI(MBB, MBBI, DL,
+                TII->get(HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm))
+            .addReg(Reg0, RegState::Define | getDeadRegState(DstIsDead));
+    auto MIBHi =
+        BuildMI(MBB, MBBI, DL,
+                TII->get(HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm))
+            .addReg(Reg1, RegState::Define | getDeadRegState(DstIsDead));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(1 + i));
