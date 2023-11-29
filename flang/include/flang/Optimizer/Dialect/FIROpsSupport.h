@@ -141,6 +141,22 @@ inline std::optional<std::int64_t> getIntIfConstant(mlir::Value value) {
   return {};
 }
 
+static constexpr llvm::StringRef getAdaptToByRefAttrName() {
+  return "adapt.valuebyref";
+}
+
+// Attribute for an alloca that is a trivial adaptor for converting a value to
+// pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
+// eliminate these.
+// Template is used to avoid compiler errors in places that don't include
+// FIRBuilder.h
+template <typename Builder>
+inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
+  return {mlir::StringAttr::get(builder.getContext(),
+                                fir::getAdaptToByRefAttrName()),
+          builder.getUnitAttr()};
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H
