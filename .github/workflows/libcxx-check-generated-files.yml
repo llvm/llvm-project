@@ -9,7 +9,8 @@ permissions:
 
 jobs:
   check_generated_files:
-    runs-on: [ libcxx-runners-1 ]
+    runs-on:
+      group: libcxx-runners-1
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
