@@ -1528,13 +1528,13 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
 
       // A faster non-TOC-based local-exec sequence is represented by
-      // `lwa`/`ld`/`std` directingly loading or storing off of the thread
-      // pointer and with an immediate operand having the MO_TPREL_FLAG.
+      // directingly loading or storing off of the thread pointer and with
+      // an immediate operand having the MO_TPREL_FLAG.
       // Such instructions do not otherwise arise.
       unsigned Flag = MO.getTargetFlags();
       if (Flag == PPCII::MO_TPREL_FLAG) {
         assert(HasAIXSmallLocalExecTLS &&
-               "lwa/ld/std with thread-pointer only expected with "
+               "loads/stores with thread-pointer only expected with "
                "local-exec small TLS");
         int64_t Offset = MO.getOffset();
         LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
