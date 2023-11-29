@@ -27,7 +27,7 @@
 #include "llvm/Support/YAMLTraits.h"
 using namespace llvm::ELF;
 
-#include "elf_common.h"
+#include "Utils/ELF.h"
 
 namespace llvm {
 namespace omp {
@@ -164,7 +164,7 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
 [[nodiscard]] XnackBuildMode
 extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
   assert((TgtImage != nullptr) && "TgtImage is nullptr.");
-  u_int16_t EFlags = elf_get_eflags(TgtImage);
+  u_int16_t EFlags = ::utils::elf::elf_get_eflags(TgtImage);
 
   unsigned XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
 
