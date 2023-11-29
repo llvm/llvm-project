@@ -1496,6 +1496,9 @@ public:
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
+  /// \p Offset1 and \p Offset2 are the byte offsets for the memory
+  /// operations, while \p OffsetIsScalable1 and \p OffsetIsScalable2 indicate
+  /// if the offset is scaled gby a runtime quantity.
   /// \p ClusterSize is the number of operations in the resulting load/store
   /// cluster if this hook returns true.
   /// \p NumBytes is the number of bytes that will be loaded from all the
