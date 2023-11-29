@@ -336,7 +336,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             // Example sequence:
             //   vnsrl.wi   v10, v8, 0
             if (equal(DeinterleaveMask, Mask))
-              return LT.first * getRISCVInstructionCost({RISCV::VNSRL_WI},
+              return LT.first * getRISCVInstructionCost(RISCV::VNSRL_WI,
                                                         LT.second, CostKind);
           }
         }
@@ -348,8 +348,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
            LT.second.getVectorNumElements() <= 256)) {
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-        return IndexCost + getRISCVInstructionCost({RISCV::VRGATHER_VV},
-                                                   LT.second, CostKind);
+        return IndexCost +
+               getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
       }
       [[fallthrough]];
     }
@@ -426,13 +426,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
     return LT.first *
-           getRISCVInstructionCost({RISCV::VSLIDEDOWN_VI}, LT.second, CostKind);
+           getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI, LT.second, CostKind);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
     return LT.first *
-           getRISCVInstructionCost({RISCV::VSLIDEUP_VI}, LT.second, CostKind);
+           getRISCVInstructionCost(RISCV::VSLIDEUP_VI, LT.second, CostKind);
   case TTI::SK_Select: {
     // Example sequence:
     // li           a0, 90
@@ -481,13 +481,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // Example sequence:
       //   vmv.v.x v8, a0
       return LT.first *
-             getRISCVInstructionCost({RISCV::VMV_V_X}, LT.second, CostKind);
+             getRISCVInstructionCost(RISCV::VMV_V_X, LT.second, CostKind);
     }
 
     // Example sequence:
     //   vrgather.vi     v9, v8, 0
     return LT.first *
-           getRISCVInstructionCost({RISCV::VRGATHER_VI}, LT.second, CostKind);
+           getRISCVInstructionCost(RISCV::VRGATHER_VI, LT.second, CostKind);
   }
   case TTI::SK_Splice:
     // vslidedown+vslideup.
@@ -518,7 +518,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // FIXME: replace the constant `2` below with cost of VSIMPLE_INT (vid.v &
     // vrsub.vx)
     InstructionCost GatherCost =
-        2 + getRISCVInstructionCost({RISCV::VRGATHER_VV}, LT.second, CostKind);
+        2 + getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
     return LT.first * (LenCost + GatherCost + ExtendCost);
