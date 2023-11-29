@@ -4154,15 +4154,15 @@ IntrinsicLibrary::genLoc(mlir::Type resultType,
          "argument must have been lowered to box type");
   bool isFunc = box.getType().isa<fir::BoxProcType>();
   if (!isOptional(box)) {
-    // Optional assumed shape case. Note that the other OPTIONAL cases do
-    // not fall here since `box` was created when preparing the argument cases,
-    // but the box can be safely be used for all those cases and the address
-    // will be null if absent.
     mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
     return builder.createConvert(loc, resultType, argAddr);
   }
-  // Although this is not specified in this GNU intrinsic extension, it accepts
-  // absent optional and returns zero in that case.
+  // Optional assumed shape case.  Although this is not specified in this GNU
+  // intrinsic extension, LOC accepts absent optional and returns zero in that
+  // case.
+  // Note that the other OPTIONAL cases do not fall here since `box` was
+  // created when preparing the argument cases, but the box can be safely be
+  // used for all those cases and the address will be null if absent.
   mlir::Value isPresent =
       builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), box);
   return builder
