@@ -532,7 +532,7 @@ static void *findLastDebugDescriptorEntryPtr() {
 }
 }
 
-#if defined(_AIX) or (not defined(__ELF__) and not defined(__MACH__))
+#if defined(_AIX) or not defined(__ELF__)
 TEST_F(OrcCAPITestBase, DISABLED_EnableDebugSupport) {
 #else
 TEST_F(OrcCAPITestBase, EnableDebugSupport) {
