@@ -101,20 +101,6 @@ environment_definitions:
 
 
 steps:
-- label: Bootstrapping build
-  command: libcxx/utils/ci/run-buildbot bootstrapping-build
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Benchmarks
-  command: libcxx/utils/ci/run-buildbot benchmarks
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
 - group: ':windows: Windows'
   steps:
   - label: Clang-cl (DLL)
