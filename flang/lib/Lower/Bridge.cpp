@@ -2382,11 +2382,25 @@ private:
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
-    genOpenACCConstruct(*this, bridge.getSemanticsContext(), getEval(), acc);
+    mlir::Value exitCond = genOpenACCConstruct(
+        *this, bridge.getSemanticsContext(), getEval(), acc);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
+
+    const Fortran::parser::OpenACCLoopConstruct *accLoop =
+        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
+    if (accLoop && exitCond) {
+      Fortran::lower::pft::FunctionLikeUnit *funit =
+          getEval().getOwningProcedure();
+      assert(funit && "not inside main program, function or subroutine");
+      mlir::Block *continueBlock =
+          builder->getBlock()->splitBlock(builder->getBlock()->end());
+      builder->create<mlir::cf::CondBranchOp>(toLocation(), exitCond,
+                                              funit->finalBlock, continueBlock);
+      builder->setInsertionPointToEnd(continueBlock);
+    }
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
@@ -4091,10 +4105,15 @@ private:
     // Branch to the last block of the SUBROUTINE, which has the actual return.
     if (!funit->finalBlock) {
       mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      Fortran::lower::setInsertionPointAfterOpenACCLoopIfInside(*builder);
       funit->finalBlock = builder->createBlock(&builder->getRegion());
       builder->restoreInsertionPoint(insPt);
     }
-    builder->create<mlir::cf::BranchOp>(loc, funit->finalBlock);
+
+    if (Fortran::lower::isInOpenACCLoop(*builder))
+      Fortran::lower::genEarlyReturnInOpenACCLoop(*builder, loc);
+    else
+      builder->create<mlir::cf::BranchOp>(loc, funit->finalBlock);
   }
 
   void genFIR(const Fortran::parser::CycleStmt &) {
