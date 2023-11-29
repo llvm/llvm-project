@@ -17,7 +17,7 @@
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/Utils.h"
 
 #include <cassert>
 #include <climits>
@@ -561,11 +561,6 @@ int32_t DeviceTy::initOnce() {
   if (IsInit)
     return OFFLOAD_SUCCESS;
   return OFFLOAD_FAIL;
-}
-
-void DeviceTy::deinit() {
-  if (RTL->deinit_device)
-    RTL->deinit_device(RTLDeviceID);
 }
 
 // Load binary to device.

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_MEMORYMANAGER_H
-#define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_MEMORYMANAGER_H
+#ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
+#define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H
 
 #include <cassert>
 #include <functional>
@@ -21,7 +21,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+#include "Shared/Utils.h"
+#include "omptarget.h"
 
 /// Base class of per-device allocator.
 class DeviceAllocatorTy {
@@ -322,16 +324,15 @@ public:
   /// manager explicitly by setting the var to 0. If user doesn't specify
   /// anything, returns <0, true>.
   static std::pair<size_t, bool> getSizeThresholdFromEnv() {
-    size_t Threshold = 0;
+    static llvm::omp::target::UInt32Envar MemoryManagerThreshold(
+        "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD", 0);
 
-    if (const char *Env =
-            std::getenv("LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD")) {
-      Threshold = std::stoul(Env);
-      if (Threshold == 0) {
-        DP("Disabled memory manager as user set "
-           "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.\n");
-        return std::make_pair(0, false);
-      }
+    size_t Threshold = MemoryManagerThreshold.get();
+
+    if (MemoryManagerThreshold.isPresent() && Threshold == 0) {
+      DP("Disabled memory manager as user set "
+         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD=0.\n");
+      return std::make_pair(0, false);
     }
 
     return std::make_pair(Threshold, true);
@@ -343,4 +344,4 @@ public:
 constexpr const size_t MemoryManagerTy::BucketSize[];
 constexpr const int MemoryManagerTy::NumBuckets;
 
-#endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_MEMORYMANAGER_H
+#endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_MEMORYMANAGER_H

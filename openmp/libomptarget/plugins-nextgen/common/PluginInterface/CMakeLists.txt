@@ -13,7 +13,12 @@
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginInterface OBJECT
-  PluginInterface.cpp GlobalHandler.cpp JIT.cpp RPC.cpp)
+  PluginInterface.cpp
+  GlobalHandler.cpp
+  JIT.cpp
+  RPC.cpp
+  Utils/ELF.cpp
+)
 
 # Only enable JIT for those targets that LLVM can support.
 string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
@@ -58,8 +63,6 @@ endif()
 target_link_libraries(PluginInterface
   PUBLIC
     ${llvm_libs}
-    elf_common
-    MemoryManager
 )
 
 # Include the RPC server from the `libc` project if availible.
