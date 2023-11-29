@@ -6,38 +6,47 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/common.h"
 #include "src/__support/endian.h"
 
 namespace LIBC_NAMESPACE {
 namespace internal {
+
+// GPU architectures are 64-bit but use 32-bit general purpose registers.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+using bitmask_t = uint32_t;
+#else
+using bitmask_t = uintptr_t;
+#endif
+
 // Helper function to spread a byte across the whole word.
 // Accumutively, the procedure looks like:
 //    byte                  = 0x00000000000000ff
 //    byte | (byte << 8)    = 0x000000000000ffff
 //    byte | (byte << 16)   = 0x00000000ffffffff
 //    byte | (byte << 32)   = 0xffffffffffffffff
-LIBC_INLINE constexpr uintptr_t repeat_byte(uintptr_t byte) {
+LIBC_INLINE constexpr bitmask_t repeat_byte(bitmask_t byte) {
   size_t shift_amount = 8;
-  while (shift_amount < sizeof(uintptr_t) * 8) {
+  while (shift_amount < sizeof(bitmask_t) * 8) {
     byte |= byte << shift_amount;
     shift_amount <<= 1;
   }
   return byte;
 }
 
-using BitMask = BitMaskAdaptor<uintptr_t, repeat_byte(0x80), 0x8ull>;
+using BitMask = BitMaskAdaptor<bitmask_t, repeat_byte(0x80), 0x8ull>;
 using IteratableBitMask = IteratableBitMaskAdaptor<BitMask>;
 
 struct Group {
-  uintptr_t data;
+  bitmask_t data;
 
   // Load a group of control words from an arbitary address.
   LIBC_INLINE static Group load(const void *__restrict addr) {
     union {
-      uintptr_t value;
-      char bytes[sizeof(uintptr_t)];
+      bitmask_t value;
+      char bytes[sizeof(bitmask_t)];
     } data;
-    for (size_t i = 0; i < sizeof(uintptr_t); ++i)
+    for (size_t i = 0; i < sizeof(bitmask_t); ++i)
       data.bytes[i] = static_cast<const char *>(addr)[i];
     return {data.value};
   }
