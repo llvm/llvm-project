@@ -1168,9 +1168,9 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                             /*isUnordered=*/true);
 
   if (preserveLowerBounds && source.hasNonDefaultLowerBounds()) {
-    hlfir::AssociateOp associate = genAssociateExpr(
-        loc, builder, hlfir::Entity{convertedRhs}, convertedRhs.getType(),
-        ".tmp.keeplbounds");
+    hlfir::AssociateOp associate =
+        genAssociateExpr(loc, builder, hlfir::Entity{convertedRhs},
+                         convertedRhs.getType(), ".tmp.keeplbounds");
     fir::ShapeOp shapeOp = associate.getShape().getDefiningOp<fir::ShapeOp>();
     assert(shapeOp && "associate shape must be a fir.shape");
     const unsigned rank = shapeOp.getExtents().size();
