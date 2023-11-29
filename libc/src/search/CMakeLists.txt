@@ -36,6 +36,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.search.hsearch.global
     libc.src.__support.HashTable.table
+    libc.src.__support.HashTable.randomness
     libc.src.__support.libc_assert
     libc.src.errno.errno
     libc.include.search

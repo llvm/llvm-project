@@ -12,7 +12,7 @@ namespace internal {
 // With SSE2, every bitmask is iteratable as
 // we use single bit to encode the data.
 
-using BitMask = BitMaskAdaptor<uint16_t, 0xffffu, 0x1u>;
+using BitMask = BitMaskAdaptor<uint16_t, 0x1u>;
 using IteratableBitMask = IteratableBitMaskAdaptor<BitMask>;
 
 struct Group {
@@ -21,6 +21,11 @@ struct Group {
   // Load a group of control words from an arbitary address.
   LIBC_INLINE static Group load(const void *__restrict addr) {
     return {_mm_loadu_si128(static_cast<const __m128i *>(addr))};
+  }
+
+  // Load a group of control words from an arbitary address.
+  LIBC_INLINE static Group load_aligned(const void *__restrict addr) {
+    return {_mm_load_si128(static_cast<const __m128i *>(addr))};
   }
 
   // Find out the lanes equal to the given byte and return the bitmask
@@ -34,6 +39,10 @@ struct Group {
   LIBC_INLINE BitMask mask_available() const {
     auto bitmask = static_cast<uint16_t>(_mm_movemask_epi8(data));
     return {bitmask};
+  }
+
+  LIBC_INLINE IteratableBitMask occupied() const {
+    return {static_cast<uint16_t>(~mask_available().word)};
   }
 };
 } // namespace internal
