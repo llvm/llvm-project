@@ -24,12 +24,7 @@ jobs:
           head_ref: ${{ github.event.pull_request.head.sha }}
           deepen_length: 500
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v39
-        with:
-          separator: ","
-          skip_initial_fetch: true
+
       - name: Install Precommit Hooks
         run: bash ./libcxx/utils/formatting/install-formatting-hooks.sh --force
 
@@ -38,7 +33,7 @@ jobs:
 
       # Reset the git branch to have all of the modified files staged but not committed.
       - name: Reset git state
-        run: git reset --soft origin/${{ github.base_ref }}
+        run: git reset --soft ${{ github.event.pull_request.base.ref }}
 
       - name: Check generated files
         run: bash ./libcxx/utils/formatting/pre-commit-formatting-hook.sh
