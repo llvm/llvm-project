@@ -13,7 +13,8 @@
 
 #include "llvm/Support/DynamicLibrary.h"
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+
 #include "dlwrap.h"
 #include "hsa.h"
 #include "hsa_ext_amd.h"

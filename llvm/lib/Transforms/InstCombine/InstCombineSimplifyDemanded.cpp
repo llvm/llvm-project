@@ -1052,7 +1052,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown & RHSKnown;
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1072,7 +1072,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown | RHSKnown;
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1094,7 +1094,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = LHSKnown ^ RHSKnown;
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1127,7 +1127,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     Known = KnownBits::computeForAddSub(/*Add*/ true, NSW, LHSKnown, RHSKnown);
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::Sub: {
@@ -1143,7 +1143,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::AShr: {

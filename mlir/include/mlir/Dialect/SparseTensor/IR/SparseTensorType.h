@@ -282,8 +282,8 @@ public:
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
   int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
-  ArrayRef<DimLevelType> getLvlTypes() const { return enc.getLvlTypes(); }
-  DimLevelType getLvlType(Level l) const {
+  ArrayRef<LevelType> getLvlTypes() const { return enc.getLvlTypes(); }
+  LevelType getLvlType(Level l) const {
     // This OOB check is for dense-tensors, since this class knows
     // their lvlRank (whereas STEA::getLvlType will/can only check
     // OOB for sparse-tensors).

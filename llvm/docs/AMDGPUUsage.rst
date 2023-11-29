@@ -826,6 +826,8 @@ supported for the ``amdgcn`` target.
   that reach other lanes or by explicitly constructing the scratch buffer descriptor,
   triggers undefined behavior when it modifies the scratch values of other lanes.
   The compiler may assume that such modifications do not occur.
+  When using code object V5 ``LIBOMPTARGET_STACK_SIZE`` may be used to provide the
+  private segment size in bytes, for cases where a dynamic stack is used.
 
 **Constant 32-bit**
   *TODO*
@@ -2041,7 +2043,8 @@ Kernel entry point
 Relocation Records
 ------------------
 
-AMDGPU backend generates ``Elf64_Rela`` relocation records. Supported
+The AMDGPU backend generates ``Elf64_Rela`` relocation records for
+AMDHSA or ``Elf64_Rel`` relocation records for Mesa/AMDPAL. Supported
 relocatable fields are:
 
 ``word32``
@@ -2057,7 +2060,12 @@ relocatable fields are:
 Following notations are used for specifying relocation calculations:
 
 **A**
-  Represents the addend used to compute the value of the relocatable field.
+  Represents the addend used to compute the value of the relocatable field. If
+  the addend field is smaller than 64 bits then it is zero-extended to 64 bits
+  for use in the calculations below. (In practice this only affects ``_HI``
+  relocation types on Mesa/AMDPAL, where the addend comes from the 32-bit field
+  but the result of the calculation depends on the high part of the full 64-bit
+  address.)
 
 **G**
   Represents the offset into the global offset table at which the relocation
