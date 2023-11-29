@@ -1216,15 +1216,18 @@ protected:
     if (process == nullptr) {
       result.AppendError("no process");
       return;
-    } else if (m_options.m_thread_id == LLDB_INVALID_THREAD_ID && command.GetArgumentCount() != 1) {
+    } else if (m_options.m_thread_id == LLDB_INVALID_THREAD_ID &&
+               command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one thread index argument, or a thread ID option:\nUsage: %s\n",
+          "'%s' takes exactly one thread index argument, or a thread ID "
+          "option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
       return;
-    } else if (m_options.m_thread_id != LLDB_INVALID_THREAD_ID && command.GetArgumentCount() != 0) {
-      result.AppendErrorWithFormat(
-          "'%s' cannot take both a thread ID option and a thread index argument:\nUsage: %s\n",
-          m_cmd_name.c_str(), m_cmd_syntax.c_str());
+    } else if (m_options.m_thread_id != LLDB_INVALID_THREAD_ID &&
+               command.GetArgumentCount() != 0) {
+      result.AppendErrorWithFormat("'%s' cannot take both a thread ID option "
+                                   "and a thread index argument:\nUsage: %s\n",
+                                   m_cmd_name.c_str(), m_cmd_syntax.c_str());
       return;
     }
 
@@ -1239,11 +1242,12 @@ protected:
       new_thread = process->GetThreadList().FindThreadByIndexID(index_id).get();
       if (new_thread == nullptr) {
         result.AppendErrorWithFormat("Invalid thread #%s.\n",
-                                    command.GetArgumentAtIndex(0));
+                                     command.GetArgumentAtIndex(0));
         return;
       }
     } else {
-      new_thread = process->GetThreadList().FindThreadByID(m_options.m_thread_id).get();
+      new_thread =
+          process->GetThreadList().FindThreadByID(m_options.m_thread_id).get();
       if (new_thread == nullptr) {
         result.AppendErrorWithFormat("Invalid thread ID %lu.\n",
                                      m_options.m_thread_id);
