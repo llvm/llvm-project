@@ -1,4 +1,4 @@
-//===------- SourceInfo.h - Target independent OpenMP target RTL -- C++ -*-===//
+//===-- SharedSourceInfo.h - Target independent OpenMP target RTL - C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _SOURCE_INFO_H_
-#define _SOURCE_INFO_H_
+#ifndef OMPTARGET_SHARED_SOURCE_INFO_H
+#define OMPTARGET_SHARED_SOURCE_INFO_H
 
 #include <string>
 
@@ -110,4 +110,4 @@ static inline std::string getNameFromMapping(const map_var_info_t Name) {
   return NameStr.substr(Begin + 1, End - Begin - 1);
 }
 
-#endif
+#endif // OMPTARGET_SHARED_SOURCE_INFO_H

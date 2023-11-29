@@ -124,7 +124,7 @@ void test_layout_mapping_right() {
 int main(int, char**) {
   constexpr size_t D = std::dynamic_extent;
   test_layout_mapping_right<std::extents<int>>();
-  test_layout_mapping_right<std::extents<char, 4, 5>>();
+  test_layout_mapping_right<std::extents<signed char, 4, 5>>();
   test_layout_mapping_right<std::extents<unsigned, D, 4>>();
   test_layout_mapping_right<std::extents<size_t, D, D, D, D>>();
   return 0;

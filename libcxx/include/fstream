@@ -244,7 +244,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 17
     _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_INLINE_VISIBILITY
-    basic_filebuf* open(const _VSTD_FS::path& __p, ios_base::openmode __mode) {
+    basic_filebuf* open(const filesystem::path& __p, ios_base::openmode __mode) {
       return open(__p.c_str(), __mode);
     }
 #endif
