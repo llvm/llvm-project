@@ -63,7 +63,8 @@ public:
 
   template <class _FormatContext>
   _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(char __value, _FormatContext& __ctx) const
-      requires(same_as<_CharT, wchar_t>) {
+    requires(same_as<_CharT, wchar_t>)
+  {
     return format(static_cast<wchar_t>(static_cast<unsigned char>(__value)), __ctx);
   }
 
