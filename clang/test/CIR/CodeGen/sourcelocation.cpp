@@ -85,6 +85,6 @@ int s0(int a, int b) {
 // LLVM: !llvm.dbg.cu = !{!1}
 // LLVM: !0 = !{i32 2, !"Debug Info Version", i32 3}
 // LLVM: !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
-// LLVM: !2 = !DIFile(filename: "sourcelocation.cpp", directory: "{{.*}}clang/test/CIR/CodeGen")
+// LLVM: !2 = !DIFile(filename: "sourcelocation.cpp", directory: "{{.*}}CodeGen")
 // LLVM: ![[#SP]] = distinct !DISubprogram(name: "_Z2s0ii", linkageName: "_Z2s0ii", scope: !2, file: !2, line: 6, type: !4, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
 // LLVM: ![[#LOC1]] = !DILocation(line: 6, scope: ![[#SP]])
