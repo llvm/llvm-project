@@ -987,6 +987,8 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
                                          const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr = MemberExprBaseVisitor().Visit(const_cast<Expr *>(Base));
+  if (!CountedByExpr || !isa<DeclRefExpr>(CountedByExpr))
+    return nullptr;
 
   llvm::Value *Res = CountedByExpr->getType()->isPointerType()
                          ? EmitPointerWithAlignment(CountedByExpr).getPointer()
