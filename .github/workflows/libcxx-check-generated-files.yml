@@ -15,14 +15,7 @@ jobs:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Checkout through merge base
-        uses: rmacklin/fetch-through-merge-base@v0
-        with:
-          base_ref: ${{ github.event.pull_request.base.ref }}
-          head_ref: ${{ github.event.pull_request.head.sha }}
-          deepen_length: 500
+          fetch-depth: 0
 
 
       - name: Install Precommit Hooks
@@ -33,7 +26,7 @@ jobs:
 
       # Reset the git branch to have all of the modified files staged but not committed.
       - name: Reset git state
-        run: git reset --soft ${{ github.event.pull_request.base.ref }}
+        run: git reset --soft origin/main
 
       - name: Check generated files
         run: bash ./libcxx/utils/formatting/pre-commit-formatting-hook.sh
