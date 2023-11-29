@@ -1251,8 +1251,8 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-# FIXME: These tests are currently spurious for NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+# FIXME: These tests are currently spurious for the GPU.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     nexttoward_test
     SUITE

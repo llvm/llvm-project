@@ -186,6 +186,13 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -203,7 +210,7 @@ struct RunPassOption {
       getRunPassNames().push_back(std::string(PassName));
   }
 };
-}
+} // namespace
 
 static RunPassOption RunPassOpt;
 
@@ -376,6 +383,17 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm system compiler\n");
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format, if it's built in.
+#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
+  if (TryUseNewDbgInfoFormat) {
+    // If LLVM was built with support for this, turn the new debug-info format
+    // on.
+    UseNewDbgInfoFormat = true;
+  }
+#endif
+  (void)TryUseNewDbgInfoFormat;
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);

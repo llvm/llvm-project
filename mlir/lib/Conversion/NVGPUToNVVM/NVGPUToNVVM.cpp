@@ -973,10 +973,9 @@ struct NVGPUTmaAsyncLoadOpLowering
     for (auto [index, value] : llvm::enumerate(coords)) {
       coords[index] = truncToI32(b, value);
     }
-
     rewriter.replaceOpWithNewOp<NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp>(
-        op, dest, adaptor.getTensorMapDescriptor(), barrier, Value(), coords,
-        adaptor.getPredicate());
+        op, dest, adaptor.getTensorMapDescriptor(), coords, barrier,
+        ValueRange{}, Value{}, Value{}, adaptor.getPredicate());
     return success();
   }
 };

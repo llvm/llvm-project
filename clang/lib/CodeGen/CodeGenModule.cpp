@@ -847,7 +847,7 @@ void CodeGenModule::Release() {
     // Emit amdgpu_code_object_version module flag, which is code object version
     // times 100.
     if (getTarget().getTargetOpts().CodeObjectVersion !=
-        TargetOptions::COV_None) {
+        llvm::CodeObjectVersionKind::COV_None) {
       getModule().addModuleFlag(llvm::Module::Error,
                                 "amdgpu_code_object_version",
                                 getTarget().getTargetOpts().CodeObjectVersion);
@@ -984,6 +984,41 @@ void CodeGenModule::Release() {
   uint64_t WCharWidth =
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
+
+  if (getTriple().isOSzOS()) {
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "zos_product_major_version",
+                              uint32_t(CLANG_VERSION_MAJOR));
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "zos_product_minor_version",
+                              uint32_t(CLANG_VERSION_MINOR));
+    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
+                              uint32_t(CLANG_VERSION_PATCHLEVEL));
+    std::string ProductId;
+#ifdef CLANG_VENDOR
+    ProductId = #CLANG_VENDOR;
+#else
+    ProductId = "clang";
+#endif
+    getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
+                              llvm::MDString::get(VMContext, ProductId));
+
+    // Record the language because we need it for the PPA2.
+    StringRef lang_str = languageToString(
+        LangStandard::getLangStandardForKind(LangOpts.LangStd).Language);
+    getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
+                              llvm::MDString::get(VMContext, lang_str));
+
+    time_t TT = PreprocessorOpts.SourceDateEpoch
+                    ? *PreprocessorOpts.SourceDateEpoch
+                    : std::time(nullptr);
+    getModule().addModuleFlag(llvm::Module::Max, "zos_translation_time",
+                              static_cast<uint64_t>(TT));
+
+    // Multiple modes will be supported here.
+    getModule().addModuleFlag(llvm::Module::Error, "zos_le_char_mode",
+                              llvm::MDString::get(VMContext, "ascii"));
+  }
 
   llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
   if (   Arch == llvm::Triple::arm

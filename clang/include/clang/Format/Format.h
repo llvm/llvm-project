@@ -1424,6 +1424,19 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
+  /// Break between adjacent string literals.
+  /// \code
+  ///    true:
+  ///    return "Code"
+  ///           "\0\52\26\55\55\0"
+  ///           "x013"
+  ///           "\02\xBA";
+  ///    false:
+  ///    return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+  /// \endcode
+  /// \version 18
+  bool BreakAdjacentStringLiterals;
+
   /// Different ways to break after attributes.
   enum AttributeBreakingStyle : int8_t {
     /// Always break after attributes.
@@ -4745,6 +4758,7 @@ struct FormatStyle {
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
+           BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&

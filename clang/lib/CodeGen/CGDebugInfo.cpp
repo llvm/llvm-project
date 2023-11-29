@@ -1657,8 +1657,10 @@ void CGDebugInfo::CollectRecordLambdaFields(
       FieldDecl *f = *Field;
       llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
       QualType type = f->getType();
+      StringRef ThisName =
+          CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
       llvm::DIType *fieldType = createFieldType(
-          "this", type, f->getLocation(), f->getAccess(),
+          ThisName, type, f->getLocation(), f->getAccess(),
           layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
 
       elements.push_back(fieldType);
@@ -1678,14 +1680,26 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   unsigned LineNumber = getLineNumber(Var->getLocation());
   StringRef VName = Var->getName();
 
+  // FIXME: to avoid complications with type merging we should
+  // emit the constant on the definition instead of the declaration.
+  llvm::Constant *C = nullptr;
+  if (Var->getInit()) {
+    const APValue *Value = Var->evaluateValue();
+    if (Value) {
+      if (Value->isInt())
+        C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
+      if (Value->isFloat())
+        C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+    }
+  }
+
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
                  ? llvm::dwarf::DW_TAG_variable
                  : llvm::dwarf::DW_TAG_member;
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
-  llvm::DIDerivedType *GV =
-      DBuilder.createStaticMemberType(RecordTy, VName, VUnit, LineNumber, VTy,
-                                      Flags, /* Val */ nullptr, Tag, Align);
+  llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Tag, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
   StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;

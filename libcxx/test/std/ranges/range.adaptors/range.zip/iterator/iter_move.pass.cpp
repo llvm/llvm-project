@@ -20,7 +20,7 @@
 
 struct ThrowingMove {
   ThrowingMove() = default;
-  ThrowingMove(ThrowingMove&&){};
+  ThrowingMove(ThrowingMove&&) {}
 };
 
 constexpr bool test() {

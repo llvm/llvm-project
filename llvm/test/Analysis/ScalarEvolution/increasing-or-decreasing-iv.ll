@@ -22,7 +22,7 @@ define void @f0(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
   %start = select i1 %c, i32 127, i32 0
@@ -90,7 +90,7 @@ define void @f1(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 15
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 15
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 16
+; CHECK-NEXT:  Loop %loop: Trip multiple is 16
 ;
 entry:
   %start = select i1 %c, i32 120, i32 0
@@ -151,7 +151,7 @@ define void @f2(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
   %start = select i1 %c, i32 127, i32 0
@@ -194,7 +194,7 @@ define void @f3(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
 
@@ -244,7 +244,7 @@ define void @f4(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 
 entry:
@@ -288,7 +288,7 @@ define void @f5(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
   %start = select i1 %c, i32 127, i32 0
@@ -334,7 +334,7 @@ define void @f6(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
   %start = select i1 %c, i32 127, i32 0
@@ -383,7 +383,7 @@ define void @f7(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 127
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 127
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 128
+; CHECK-NEXT:  Loop %loop: Trip multiple is 128
 ;
 entry:
   %start = select i1 %c, i32 127, i32 0

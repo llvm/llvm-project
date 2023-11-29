@@ -12,7 +12,7 @@ define void @max_backedge_taken_count_by_wrapping1_nsw_nuw(i8 %N, ptr %ptr) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%N /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -37,7 +37,7 @@ define void @max_backedge_taken_count_by_wrapping1_nuw(i8 %N, ptr %ptr) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (%N /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%N /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -62,7 +62,7 @@ define void @max_backedge_taken_count_by_wrapping2_nsw_nuw(i8 %N, ptr %ptr) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-64 + %N) /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-64 + %N) /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -87,7 +87,7 @@ define void @max_backedge_taken_count_by_wrapping2_nuw(i8 %N, ptr %ptr) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-64 + %N) /u 4)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-64 + %N) /u 4)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

@@ -159,7 +159,7 @@ public:
   ArrayRef<APINotesReader *> getCurrentModuleReaders() const {
     bool HasPublic = CurrentModuleReaders[ReaderKind::Public];
     bool HasPrivate = CurrentModuleReaders[ReaderKind::Private];
-    assert(!HasPrivate || HasPublic && "private module requires public module");
+    assert(!HasPrivate || (HasPublic && "private module requires public module"));
     if (!HasPrivate && !HasPublic)
       return {};
     return ArrayRef(CurrentModuleReaders).slice(0, HasPrivate ? 2 : 1);

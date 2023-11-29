@@ -1402,6 +1402,98 @@ struct FoldArithExtIntoContractionOp
   }
 };
 
+/// Pattern to fold chained reduction to a series of vector additions and a
+/// final reduction. This form should require fewer subgroup operations.
+///
+/// ```mlir
+/// %a = vector.reduction <add> %x, %acc
+/// %b = vector.reduction <add> %y, %a
+///  ==>
+/// %a = arith.addf %x, %y
+/// %b = vector.reduction <add> %a, %acc
+/// ```
+struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ReductionOp op,
+                                PatternRewriter &rewriter) const override {
+    // TODO: Handle other combining kinds.
+    if (op.getKind() != vector::CombiningKind::ADD)
+      return failure();
+
+    // Accumulator is optional.
+    Value acc = op.getAcc();
+    if (!acc)
+      return failure();
+
+    if (!acc.getType().isIntOrFloat())
+      return failure();
+
+    auto parentReduction = acc.getDefiningOp<vector::ReductionOp>();
+    if (!parentReduction)
+      return failure();
+
+    Location loc = op.getLoc();
+    Value vAdd;
+    if (isa<IntegerType>(acc.getType())) {
+      vAdd = rewriter.createOrFold<arith::AddIOp>(
+          loc, parentReduction.getVector(), op.getVector());
+    } else {
+      vAdd = rewriter.create<arith::AddFOp>(loc, parentReduction.getVector(),
+                                            op.getVector());
+    }
+    rewriter.replaceOpWithNewOp<vector::ReductionOp>(op, op.getKind(), vAdd,
+                                                     parentReduction.getAcc());
+    return success();
+  }
+};
+
+/// Pattern to eliminate redundant zero-constants added to reduction operands.
+/// It's enough for there to be one initial zero value, so we can eliminate the
+/// extra ones that feed into `vector.reduction <add>`. These get created by the
+/// `ChainedReduction` pattern.
+///
+/// ```mlir
+/// %a = arith.addf %x, %zero
+/// %b = arith.addf %a, %y
+/// %c = vector.reduction <add> %b, %acc
+///  ==>
+/// %b = arith.addf %a, %y
+/// %c = vector.reduction <add> %b, %acc
+/// ```
+struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ReductionOp op,
+                                PatternRewriter &rewriter) const override {
+    // TODO: Handle other reduction kinds and their identity values.
+    if (op.getKind() != vector::CombiningKind::ADD)
+      return failure();
+
+    Type elemType = op.getSourceVectorType().getElementType();
+    // The integer case should be handled by `arith.addi` folders, only check
+    // for floats here.
+    if (!isa<FloatType>(elemType))
+      return failure();
+
+    auto vAdd = op.getVector().getDefiningOp<arith::AddFOp>();
+    if (!vAdd)
+      return failure();
+    auto addLhs = vAdd.getLhs().getDefiningOp<arith::AddFOp>();
+    if (!addLhs)
+      return failure();
+
+    if (!matchPattern(addLhs.getRhs(), m_AnyZeroFloat()))
+      return failure();
+
+    auto newAdd = rewriter.create<arith::AddFOp>(vAdd.getLoc(), addLhs.getLhs(),
+                                                 vAdd.getRhs());
+    rewriter.replaceOpWithNewOp<vector::ReductionOp>(op, op.getKind(), newAdd,
+                                                     op.getAcc());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateFoldArithExtensionPatterns(
@@ -1465,6 +1557,13 @@ void mlir::vector::populateSinkVectorBroadcastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnBroadcast>(
       patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateChainedVectorReductionFoldingPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<ChainedReduction>(patterns.getContext(), benefit);
+  patterns.add<ReduceRedundantZero>(patterns.getContext(),
+                                    PatternBenefit(benefit.getBenefit() + 1));
 }
 
 //===----------------------------------------------------------------------===//

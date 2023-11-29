@@ -130,6 +130,7 @@ Changes to the RISC-V Backend
 
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -197,6 +198,9 @@ Changes to the C API
   an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
   The option structure exposes an additional setting (i.e., the target ABI) and
   provides default values for unspecified settings.
+
+* Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for setting/getting the new nneg flag
+  on zext instructions
 
 Changes to the CodeGen infrastructure
 -------------------------------------

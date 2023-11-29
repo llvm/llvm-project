@@ -5718,12 +5718,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // Skip unnecessary zext_inreg pattern:
     // (zext (trunc x)) -> x iff the upper bits are known zero.
-    // TODO: Generalize to just the MaskedValueIsZero check?
+    // TODO: Remove (zext (trunc (and x, c))) exception which some targets
+    // use to recognise zext_inreg patterns.
     if (OpOpcode == ISD::TRUNCATE) {
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        if (OpOp.getOpcode() == ISD::AssertZext ||
-            OpOp.getOpcode() == ISD::SRL) {
+        if (OpOp.getOpcode() != ISD::AND) {
           APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
                                                N1.getScalarValueSizeInBits());
           if (MaskedValueIsZero(OpOp, HiBits)) {
@@ -7561,7 +7561,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
       if (Value.getNode()) {
         Store = DAG.getStore(
             Chain, dl, Value,
-            DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+            DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
             DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
         OutChains.push_back(Store);
       }
@@ -7586,14 +7586,14 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
       Value = DAG.getExtLoad(
           ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getMemBasePlusOffset(Src, TypeSize::Fixed(SrcOff), dl),
+          DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
           commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
-          DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+          DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
           DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
@@ -7730,7 +7730,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     Value = DAG.getLoad(
         VT, dl, Chain,
-        DAG.getMemBasePlusOffset(Src, TypeSize::Fixed(SrcOff), dl),
+        DAG.getMemBasePlusOffset(Src, TypeSize::getFixed(SrcOff), dl),
         SrcPtrInfo.getWithOffset(SrcOff), *SrcAlign, SrcMMOFlags, NewAAInfo);
     LoadValues.push_back(Value);
     LoadChains.push_back(Value.getValue(1));
@@ -7745,7 +7745,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
 
     Store = DAG.getStore(
         Chain, dl, LoadValues[i],
-        DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
         DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VTSize;
@@ -7877,7 +7877,7 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     assert(Value.getValueType() == VT && "Value with wrong type.");
     SDValue Store = DAG.getStore(
         Chain, dl, Value,
-        DAG.getMemBasePlusOffset(Dst, TypeSize::Fixed(DstOff), dl),
+        DAG.getMemBasePlusOffset(Dst, TypeSize::getFixed(DstOff), dl),
         DstPtrInfo.getWithOffset(DstOff), Alignment,
         isVol ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone,
         NewAAInfo);

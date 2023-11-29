@@ -11,7 +11,6 @@
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtExec = 0x04
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
-// CHECK-NEXT: alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv = false
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: assume-controlled-environment = false
@@ -116,6 +115,7 @@
 // CHECK-NEXT: region-store-small-array-limit = 5
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false
+// CHECK-NEXT: security.cert.env.InvalidPtr:InvalidatingGetEnv = false
 // CHECK-NEXT: serialize-stats = false
 // CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false

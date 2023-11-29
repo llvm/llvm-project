@@ -310,6 +310,9 @@ let TargetGuard = "sve2p1" in {
   def SVLD1Q_GATHER_U64BASE_OFFSET : MInst<"svld1q_gather[_{2}base]_offset_{d}", "dPgl", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
   def SVLD1Q_GATHER_U64BASE : MInst<"svld1q_gather[_{2}base]_{d}", "dPg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
 
+  // Load one vector (scalar base + vector offset)
+  def SVLD1Q_GATHER_U64OFFSET : MInst<"svld1q_gather_[{3}]offset[_{d}]", "dPcg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_vector_offset">;
+
   // Load N-element structure into N vectors (scalar base)
   defm SVLD2Q : StructLoad<"svld2q[_{2}]", "2Pc", "aarch64_sve_ld2q_sret">;
   defm SVLD3Q : StructLoad<"svld3q[_{2}]", "3Pc", "aarch64_sve_ld3q_sret">;
@@ -460,6 +463,9 @@ let TargetGuard = "sve2p1" in {
   // Store one vector (vector base + scalar offset)
   def SVST1Q_SCATTER_U64BASE_OFFSET : MInst<"svst1q_scatter[_{2}base]_offset[_{d}]",  "vPgld", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
   def SVST1Q_SCATTER_U64BASE : MInst<"svst1q_scatter[_{2}base][_{d}]",  "vPgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
+
+  // Store one vector (scalar base + vector offset)
+  def SVST1Q_SCATTER_U64OFFSET : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPpgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
 
   // Store N vectors into N-element structure (scalar base)
   defm SVST2Q : StructStore<"svst2q[_{d}]", "vPc2", "aarch64_sve_st2q">;
@@ -2093,6 +2099,16 @@ let TargetGuard = "sme2" in {
 // == FMINNM / FMAXNM ==
   defm SVMINNM : SInstMinMaxByVector<"min">;
   defm SVMAXNM : SInstMinMaxByVector<"max">;
+}
+
+let TargetGuard = "sme2" in {
+  def SVSCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "csil",     MergeNone, "aarch64_sve_sclamp_single_x2",  [IsStreaming], []>;
+  def SVUCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "UcUsUiUl", MergeNone, "aarch64_sve_uclamp_single_x2",  [IsStreaming], []>;
+  def SVFCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x2",  [IsStreaming], []>;
+
+  def SVSCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "csil",     MergeNone, "aarch64_sve_sclamp_single_x4",  [IsStreaming], []>;
+  def SVUCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "UcUsUiUl", MergeNone, "aarch64_sve_uclamp_single_x4",  [IsStreaming], []>;
+  def SVFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x4",  [IsStreaming], []>;
 }
 
 let TargetGuard = "sme2" in {
