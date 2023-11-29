@@ -4734,7 +4734,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true;
     }
     // Don't add spaces between a casting type and the quote or repetition count
-    // and the brace.  The case of tagged union expressions is handled by the
+    // and the brace. The case of tagged union expressions is handled by the
     // previous rule.
     if ((Right.is(Keywords.kw_apostrophe) ||
          (Right.is(BK_BracedInit) && Right.is(tok::l_brace))) &&
