@@ -4790,7 +4790,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   }
 
   if (SCS.Element != ICK_Identity) {
-    // if SCS.Element is not ICK_Identity the To and From types must be HLSL
+    // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices. HLSL matrices aren't yet supported so this code only
     // handles vectors for now.
 
