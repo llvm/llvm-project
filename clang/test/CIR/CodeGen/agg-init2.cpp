@@ -1,8 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -Wno-unused-value -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// XFAIL: *
 
-// CHECK: !ty_22Zero22 = !cir.struct<struct "Zero" {!u8i}>
+// CHECK: !ty_22Zero22 = !cir.struct<struct "Zero" {!cir.int<u, 8>}>
 
 struct Zero {
   void yolo();

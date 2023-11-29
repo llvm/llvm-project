@@ -22,6 +22,7 @@
 #include "mlir/IR/SymbolTable.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -257,7 +258,11 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
     }
   }
 
-  if (!constant) {
+  // NOTE(cir): In case we have a constant initializer, we can just emit a
+  // store. But, in CIR, we wish to retain any ctor calls, so if it is a
+  // CXX temporary object creation, we ensure the ctor call is used deferring
+  // its removal/optimization to the CIR lowering.
+  if (!constant || isa<CXXTemporaryObjectExpr>(Init)) {
     initializeWhatIsTechnicallyUninitialized(Loc);
     LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
     buildExprAsInit(Init, &D, lv);
