@@ -92,6 +92,69 @@ TEST_P(RISCVInstrInfoTest, IsAddImmediate) {
   }
 }
 
+TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
+  const RISCVInstrInfo *TII = ST->getInstrInfo();
+  const TargetRegisterInfo *TRI = ST->getRegisterInfo();
+  DebugLoc DL;
+
+  SmallVector<const MachineOperand *> BaseOps;
+  unsigned Width;
+  int64_t Offset;
+  bool OffsetIsScalable;
+
+  auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                      MachineMemOperand::MOLoad, 1, Align(1));
+  MachineInstr *MI = BuildMI(*MF, DL, TII->get(RISCV::LB), RISCV::X1)
+                         .addReg(RISCV::X2)
+                         .addImm(-128)
+                         .addMemOperand(MMO)
+                         .getInstr();
+  bool Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
+                                                OffsetIsScalable, Width, TRI);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(BaseOps.size(), 1u);
+  ASSERT_TRUE(BaseOps.front()->isReg());
+  EXPECT_EQ(BaseOps.front()->getReg(), RISCV::X2);
+  EXPECT_EQ(Offset, -128);
+  EXPECT_FALSE(OffsetIsScalable);
+  EXPECT_EQ(Width, 1u);
+
+  BaseOps.clear();
+  MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                 MachineMemOperand::MOStore, 4, Align(4));
+  MI = BuildMI(*MF, DL, TII->get(RISCV::FSW))
+           .addReg(RISCV::F3_F)
+           .addReg(RISCV::X3)
+           .addImm(36)
+           .addMemOperand(MMO);
+  Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
+                                           OffsetIsScalable, Width, TRI);
+  ASSERT_TRUE(Res);
+  ASSERT_EQ(BaseOps.size(), 1u);
+  ASSERT_TRUE(BaseOps.front()->isReg());
+  EXPECT_EQ(BaseOps.front()->getReg(), RISCV::X3);
+  EXPECT_EQ(Offset, 36);
+  EXPECT_FALSE(OffsetIsScalable);
+  EXPECT_EQ(Width, 4u);
+
+  BaseOps.clear();
+  MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                 MachineMemOperand::MOStore, 16, Align(16));
+  MI = BuildMI(*MF, DL, TII->get(RISCV::PseudoVLE32_V_M1), RISCV::V8)
+           .addReg(RISCV::X3)
+           .addMemOperand(MMO);
+  Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
+                                           OffsetIsScalable, Width, TRI);
+  ASSERT_FALSE(Res); // Vector loads/stored are not handled for now.
+
+  BaseOps.clear();
+  MI = BuildMI(*MF, DL, TII->get(RISCV::ADDI), RISCV::X4)
+           .addReg(RISCV::X5)
+           .addImm(16);
+  Res = TII->getMemOperandsWithOffsetWidth(*MI, BaseOps, Offset,
+                                           OffsetIsScalable, Width, TRI);
+}
+
 } // namespace
 
 INSTANTIATE_TEST_SUITE_P(RV32And64, RISCVInstrInfoTest,
