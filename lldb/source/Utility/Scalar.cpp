@@ -31,7 +31,7 @@ using llvm::APSInt;
 Scalar::PromotionKey Scalar::GetPromoKey() const {
   switch (m_type) {
   case e_void:
-    return PromotionKey{e_void, 0, false};
+    return PromotionKey{e_void, 0, false                   };
   case e_int:
     return PromotionKey{e_int, m_integer.getBitWidth(), m_integer.isUnsigned()};
   case e_float:
