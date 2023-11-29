@@ -2257,7 +2257,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
 
   IRBuilder<>::InsertPoint AfterIP = OMPBuilder.applyWorkshareLoop(
       DL, CLI, AllocaIP, true, OMP_SCHEDULE_Static, nullptr, false, false,
-      false, false, OpenMPIRBuilder::WorksharingLoopType::ForStaticLoop);
+      false, false, WorksharingLoopType::ForStaticLoop);
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
 
@@ -2265,18 +2265,22 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 
   CallInst *WorkshareLoopRuntimeCall = nullptr;
+  int WorkshareLoopRuntimeCallCnt = 0;
   for (auto Inst = Preheader->begin(); Inst != Preheader->end(); ++Inst) {
     CallInst *Call = dyn_cast<CallInst>(Inst);
-    if (Call) {
-      if (Call->getCalledFunction()) {
-        if (Call->getCalledFunction()->getName() ==
-            "__kmpc_for_static_loop_4u") {
-          WorkshareLoopRuntimeCall = Call;
-        }
-      }
+    if (!Call)
+      continue;
+    if (!Call->getCalledFunction())
+      continue;
+
+    if (Call->getCalledFunction()->getName() == "__kmpc_for_static_loop_4u") {
+      WorkshareLoopRuntimeCall = Call;
+      WorkshareLoopRuntimeCallCnt++;
     }
   }
   EXPECT_NE(WorkshareLoopRuntimeCall, nullptr);
+  // Verify that there is only one call to workshare loop function
+  EXPECT_EQ(WorkshareLoopRuntimeCallCnt, 1);
   // Check that pointer to loop body function is passed as second argument
   Value *LoopBodyFuncArg = WorkshareLoopRuntimeCall->getArgOperand(1);
   EXPECT_EQ(Builder.getPtrTy(), LoopBodyFuncArg->getType());

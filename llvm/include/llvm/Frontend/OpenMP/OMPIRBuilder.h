@@ -439,16 +439,6 @@ private:
 /// Each OpenMP directive has a corresponding public generator method.
 class OpenMPIRBuilder {
 public:
-  /// A type of worksharing loop construct
-  enum class WorksharingLoopType {
-    // Worksharing `for`-loop
-    ForStaticLoop,
-    // Worksharing `distrbute`-loop
-    DistributeStaticLoop,
-    // Worksharing `distrbute parallel for`-loop
-    DistributeForStaticLoop
-  };
-
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
@@ -913,8 +903,8 @@ private:
   /// Modifies the canonical loop to be a statically-scheduled workshare loop
   /// which is executed on the device
   ///
-  /// This takes a \p LoopInfo representing a canonical loop, such as the one
-  /// created by \p createCanonicalLoop and emits additional instructions to
+  /// This takes a \p CLI representing a canonical loop, such as the one
+  /// created by \see createCanonicalLoop and emits additional instructions to
   /// turn it into a workshare loop. In particular, it calls to an OpenMP
   /// runtime function in the preheader to call OpenMP device rtl function
   /// which handles worksharing of loop body interations.
@@ -930,7 +920,7 @@ private:
   /// \returns Point where to insert code after the workshare construct.
   InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
                                          InsertPointTy AllocaIP,
-                                         WorksharingLoopType LoopType);
+                                         omp::WorksharingLoopType LoopType);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1055,7 +1045,8 @@ public:
       Value *ChunkSize = nullptr, bool HasSimdModifier = false,
       bool HasMonotonicModifier = false, bool HasNonmonotonicModifier = false,
       bool HasOrderedClause = false,
-      WorksharingLoopType LoopType = WorksharingLoopType::ForStaticLoop);
+      omp::WorksharingLoopType LoopType =
+          omp::WorksharingLoopType::ForStaticLoop);
 
   /// Tile a loop nest.
   ///

@@ -277,6 +277,16 @@ enum class RTLDependenceKindTy {
   DepOmpAllMem = 0x80,
 };
 
+/// A type of worksharing loop construct
+enum class WorksharingLoopType {
+  // Worksharing `for`-loop
+  ForStaticLoop,
+  // Worksharing `distrbute`-loop
+  DistributeStaticLoop,
+  // Worksharing `distrbute parallel for`-loop
+  DistributeForStaticLoop
+};
+
 } // end namespace omp
 
 } // end namespace llvm
