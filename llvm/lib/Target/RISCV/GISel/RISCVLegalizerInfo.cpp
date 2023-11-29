@@ -254,6 +254,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
       .legalIf(typeIsScalarFPArith(0, ST));
 
+  getActionDefinitionsBuilder(G_FCOPYSIGN)
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
+
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
         return (ST.hasStdExtD() && typeIs(0, s32)(Query) &&
