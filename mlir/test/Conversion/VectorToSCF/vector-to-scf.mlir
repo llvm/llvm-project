@@ -752,11 +752,11 @@ func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector
 
 //  -----
 
-// TARGET-RANK-ZERO-LABEL: func @cannot_further_unroll_transfer_write
-func.func @cannot_further_unroll_transfer_write(%vec : vector<2xi32>) {
-  // TARGET-RANK-ZERO-NOT: vector.extract
-  // TARGET-RANK-ZERO: vector.transfer_write
-  // TARGET-RANK-ZERO-NOT: vector.extract
+// TARGET-RANK-ZERO-LABEL: func @unroll_transfer_write_target_rank_zero
+func.func @unroll_transfer_write_target_rank_zero(%vec : vector<2xi32>) {
+  // TARGET-RANK-ZERO: %[[EXTRACTED:.*]] = vector.extract
+  // TARGET-RANK-ZERO: %[[BROADCASTED:.*]] = vector.broadcast %[[EXTRACTED]]
+  // TARGET-RANK-ZERO: vector.transfer_write %[[BROADCASTED]]
   %alloc = memref.alloc() : memref<4xi32>
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %alloc[%c0] : vector<2xi32>, memref<4xi32>
