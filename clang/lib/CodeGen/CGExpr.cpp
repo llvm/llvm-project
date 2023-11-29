@@ -941,7 +941,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
     if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
       IndexedType = Base->getType();
-      return CGF.BuildCountedByFieldExpr(Base, VD);
+      return CGF.EmitCountedByFieldExpr(Base, VD);
     }
   }
 
@@ -958,6 +958,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
 namespace {
 
+/// \p MemberExprBaseVisitor returns the base \p DeclRefExpr of a field access.
 struct MemberExprBaseVisitor
     : public StmtVisitor<MemberExprBaseVisitor, Expr *> {
   MemberExprBaseVisitor() = default;
@@ -983,7 +984,7 @@ struct MemberExprBaseVisitor
 } // end anonymous namespace
 
 llvm::Value *
-CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
+CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
                                          const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr = MemberExprBaseVisitor().Visit(const_cast<Expr *>(Base));
@@ -999,13 +1000,13 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
   SmallVector<llvm::Value *, 4> Indices{Zero};
   if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
     Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
-  } else if (const auto *I = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
-    for (NamedDecl *ND : I->chain()) {
+  } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
+    for (NamedDecl *ND : IFD->chain())
       if (auto *FD = dyn_cast<FieldDecl>(ND)) {
-        Indices.emplace_back(
-            llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
+        const RecordDecl *RD = FD->getParent();
+        unsigned Idx = CGM.getTypes().getCGRecordLayout(RD).getLLVMFieldNo(FD);
+        Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, Idx));
       }
-    }
   }
 
   const DeclContext *DC = CountedByVD->getLexicalDeclContext();
@@ -1013,15 +1014,14 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
 
   llvm::Type *Ty =
       CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
-  Res = Builder.CreateGEP(Ty, Res, Indices);
+  Res = Builder.CreateInBoundsGEP(Ty, Res, Indices);
 
   QualType CountedByTy(CountedByVD->getType());
   TypeInfo TI = getContext().getTypeInfo(CountedByTy);
   Ty = CGM.getTypes().ConvertType(CountedByTy);
   Address Addr(Res, Ty,
                CharUnits::fromQuantity(TI.Align / getContext().getCharWidth()));
-
-  return Builder.CreateLoad(Addr, Res);
+  return Builder.CreateLoad(Addr, /*IsVolatile=*/false);
 }
 
 const ValueDecl *
