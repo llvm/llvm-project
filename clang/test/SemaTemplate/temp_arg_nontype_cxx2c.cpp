@@ -72,3 +72,33 @@ struct J2 {
   constexpr J2(const J2&) {}
 };
 B<J2{}> j2;  // expected-error {{pointer to temporary object is not allowed in a template argument}}
+
+
+namespace GH58434 {
+
+template<int>
+void f();
+
+void test() {
+  f<{42}>();
+}
+
+}
+
+namespace GH73666 {
+
+template<class T, int I>
+struct A {
+    T x[I];
+};
+
+template< class T, class... U >
+A( T, U... ) -> A<T, 1 + sizeof...(U)>;
+
+template<A a> void foo() { }
+
+void bar() {
+    foo<{1}>();
+}
+
+}
