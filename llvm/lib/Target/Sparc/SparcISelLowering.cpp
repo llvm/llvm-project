@@ -805,6 +805,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   bool &isTailCall                      = CLI.IsTailCall;
   CallingConv::ID CallConv              = CLI.CallConv;
   bool isVarArg                         = CLI.IsVarArg;
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1055,6 +1056,10 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice)
            ? TRI->getRTCallPreservedMask(CallConv)
            : TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv));
+
+  if (TRI->isAnyArgRegReserved(MF))
+    TRI->emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -1125,6 +1130,19 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
     .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
     .Default(0);
 
+  const SparcRegisterInfo *MRI = Subtarget->getRegisterInfo();
+  unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
+  if (!MRI->isReservedReg(MF, Reg)) {
+    bool IsG = DwarfRegNum < 8, IsO = DwarfRegNum >= 8 && DwarfRegNum < 16,
+         IsL = DwarfRegNum >= 16 && DwarfRegNum < 24, IsI = DwarfRegNum >= 24;
+    unsigned NumInBank = DwarfRegNum % 8;
+    if ((IsG && !Subtarget->isGRegisterReserved(NumInBank)) ||
+        (IsO && !Subtarget->isORegisterReserved(NumInBank)) ||
+        (IsL && !Subtarget->isLRegisterReserved(NumInBank)) ||
+        (IsI && !Subtarget->isIRegisterReserved(NumInBank)))
+      Reg = 0;
+  }
+
   if (Reg)
     return Reg;
 
@@ -1189,6 +1207,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SDLoc DL = CLI.DL;
   SDValue Chain = CLI.Chain;
   auto PtrVT = getPointerTy(DAG.getDataLayout());
+  MachineFunction &MF = DAG.getMachineFunction();
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -1372,6 +1391,10 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
       ((hasReturnsTwice) ? TRI->getRTCallPreservedMask(CLI.CallConv)
                          : TRI->getCallPreservedMask(DAG.getMachineFunction(),
                                                      CLI.CallConv));
+
+  if (TRI->isAnyArgRegReserved(MF))
+    TRI->emitReservedArgRegCallError(MF);
+
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 

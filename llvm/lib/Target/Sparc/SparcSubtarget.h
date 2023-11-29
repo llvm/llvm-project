@@ -29,6 +29,12 @@ namespace llvm {
 class StringRef;
 
 class SparcSubtarget : public SparcGenSubtargetInfo {
+  // Reserve*Register[i] - *#i is not available as a general purpose register.
+  BitVector ReserveGRegister;
+  BitVector ReserveORegister;
+  BitVector ReserveLRegister;
+  BitVector ReserveIRegister;
+
   Triple TargetTriple;
   virtual void anchor();
 
@@ -81,6 +87,11 @@ public:
   int64_t getStackPointerBias() const {
     return is64Bit() ? 2047 : 0;
   }
+
+  bool isGRegisterReserved(size_t i) const { return ReserveGRegister[i]; }
+  bool isORegisterReserved(size_t i) const { return ReserveORegister[i]; }
+  bool isLRegisterReserved(size_t i) const { return ReserveLRegister[i]; }
+  bool isIRegisterReserved(size_t i) const { return ReserveIRegister[i]; }
 
   /// Given a actual stack size as determined by FrameInfo, this function
   /// returns adjusted framesize which includes space for register window

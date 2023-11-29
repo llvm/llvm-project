@@ -12,7 +12,6 @@
 
 #include "SparcRegisterInfo.h"
 #include "Sparc.h"
-#include "SparcMachineFunctionInfo.h"
 #include "SparcSubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -20,6 +19,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -98,7 +98,50 @@ BitVector SparcRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (unsigned n = 0; n < 31; n++)
     Reserved.set(SP::ASR1 + n);
 
+  for (size_t i = 0; i < SP::IntRegsRegClass.getNumRegs() / 4; ++i) {
+    // Mark both single register and register pairs.
+    if (MF.getSubtarget<SparcSubtarget>().isGRegisterReserved(i)) {
+      Reserved.set(SP::G0 + i);
+      Reserved.set(SP::G0_G1 + i / 2);
+    }
+    if (MF.getSubtarget<SparcSubtarget>().isORegisterReserved(i)) {
+      Reserved.set(SP::O0 + i);
+      Reserved.set(SP::O0_O1 + i / 2);
+    }
+    if (MF.getSubtarget<SparcSubtarget>().isLRegisterReserved(i)) {
+      Reserved.set(SP::L0 + i);
+      Reserved.set(SP::L0_L1 + i / 2);
+    }
+    if (MF.getSubtarget<SparcSubtarget>().isIRegisterReserved(i)) {
+      Reserved.set(SP::I0 + i);
+      Reserved.set(SP::I0_I1 + i / 2);
+    }
+  }
+
   return Reserved;
+}
+
+bool SparcRegisterInfo::isReservedReg(const MachineFunction &MF,
+                                      MCRegister Reg) const {
+  return getReservedRegs(MF)[Reg];
+}
+
+bool SparcRegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
+  bool Outgoing =
+      llvm::any_of(*SP::GPROutgoingArgRegClass.MC,
+                   [this, &MF](MCPhysReg r) { return isReservedReg(MF, r); });
+  bool Incoming =
+      llvm::any_of(*SP::GPRIncomingArgRegClass.MC,
+                   [this, &MF](MCPhysReg r) { return isReservedReg(MF, r); });
+  return Outgoing || Incoming;
+}
+
+void SparcRegisterInfo::emitReservedArgRegCallError(
+    const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  F.getContext().diagnose(DiagnosticInfoUnsupported{
+      F, ("SPARC doesn't support"
+          " function calls if any of the argument registers is reserved.")});
 }
 
 const TargetRegisterClass*

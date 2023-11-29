@@ -72,6 +72,20 @@ def TuneSlowRDPC : SubtargetFeature<"slow-rdpc", "HasSlowRDPC", "true",
 //==== Features added predmoninantly for LEON subtarget support
 include "LeonFeatures.td"
 
+//==== Register allocation tweaks needed by some low-level software
+foreach i = {1-7} in
+    def FeatureReserveG#i : SubtargetFeature<"reserve-g"#i, "ReserveGRegister["#i#"]", "true",
+                                             "Reserve G"#i#", making it unavailable as a GPR">;
+foreach i = {0-5} in
+    def FeatureReserveO#i : SubtargetFeature<"reserve-o"#i, "ReserveORegister["#i#"]", "true",
+                                             "Reserve O"#i#", making it unavailable as a GPR">;
+foreach i = {0-7} in
+    def FeatureReserveL#i : SubtargetFeature<"reserve-l"#i, "ReserveLRegister["#i#"]", "true",
+                                             "Reserve L"#i#", making it unavailable as a GPR">;
+foreach i = {0-5} in
+    def FeatureReserveI#i : SubtargetFeature<"reserve-i"#i, "ReserveIRegister["#i#"]", "true",
+                                             "Reserve I"#i#", making it unavailable as a GPR">;
+
 //===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
