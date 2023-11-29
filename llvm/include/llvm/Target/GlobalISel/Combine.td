@@ -260,10 +260,10 @@ def sext_inreg_to_zext_inreg : GICombineRule<
 >;
 
 def combine_extracted_vector_load : GICombineRule<
-  (defs root:$root),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
-         [{ return Helper.matchCombineExtractedVectorLoad(*${root}); }]),
-  (apply [{ Helper.applyCombineExtractedVectorLoad(*${root}); }])>;
+        [{ return Helper.matchCombineExtractedVectorLoad(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
   
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),

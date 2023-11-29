@@ -1165,72 +1165,69 @@ bool CombinerHelper::findPreIndexCandidate(GLoadStore &LdSt, Register &Addr,
   return RealUse;
 }
 
-bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI) {
+bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI,
+                                                     BuildFnTy &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
 
   // Check if there is a load that defines the vector being extracted from.
-  MachineInstr *LoadMI =
-      getOpcodeDef(TargetOpcode::G_LOAD, MI.getOperand(1).getReg(), MRI);
+  auto *LoadMI = getOpcodeDef<GLoad>(MI.getOperand(1).getReg(), MRI);
   if (!LoadMI)
     return false;
 
   Register Vector = MI.getOperand(1).getReg();
-  LLT VecEltVT = MRI.getType(Vector).getElementType();
-  LLT ResultVT = MRI.getType(MI.getOperand(0).getReg());
+  LLT VecEltTy = MRI.getType(Vector).getElementType();
+  LLT ResultTy = MRI.getType(MI.getOperand(0).getReg());
 
-  // Do not combine when result type and vector element type are not the same.
-  if (ResultVT != VecEltVT)
-    return false;
+  assert(ResultTy == VecEltTy);
 
   // Checking whether we should reduce the load width.
-  if (VecEltVT.isVector() || !MRI.hasOneUse(Vector))
+  if (!MRI.hasOneNonDBGUse(Vector))
     return false;
 
-  GLoadStore *GLoadMI = cast<GLoadStore>(LoadMI);
-
   // Check if the defining load is simple.
-  if (!GLoadMI->isSimple())
+  if (!LoadMI->isSimple())
     return false;
 
   // If the vector element type is not a multiple of a byte then we are unable
   // to correctly compute an address to load only the extracted element as a
   // scalar.
-  if (!VecEltVT.isByteSized())
+  if (!VecEltTy.isByteSized())
     return false;
 
   // Check if the new load that we are going to create is legal
   // if we are in the post-legalization phase.
-  MachineMemOperand MMO = GLoadMI->getMMO();
+  MachineMemOperand MMO = LoadMI->getMMO();
+  Align Alignment = MMO.getAlign();
   MachinePointerInfo PtrInfo;
-
-  Register Index = MI.getOperand(2).getReg();
+  uint64_t Offset;
 
   // Finding the appropriate PtrInfo if offset is a known constant.
   // This is required to create the memory operand for the narrowed load.
   // This machine memory operand object helps us infer about legality
   // before we proceed to combine the instruction.
-  if (MRI.getVRegDef(Index)->getOpcode() == TargetOpcode::G_CONSTANT) {
-    MachineInstr *ConstMI = MRI.getVRegDef(Index);
-    const ConstantInt *CVal = ConstMI->getOperand(1).getCImm();
+  if (auto CVal = getIConstantVRegVal(Vector, MRI)) {
     int Elt = CVal->getZExtValue();
     // FIXME: should be (ABI size)*Elt.
-    unsigned PtrOff = VecEltVT.getSizeInBits() * Elt / 8;
-    PtrInfo = MMO.getPointerInfo().getWithOffset(PtrOff);
+    Offset = VecEltTy.getSizeInBits() * Elt / 8;
+    PtrInfo = MMO.getPointerInfo().getWithOffset(Offset);
   } else {
     // Discard the pointer info except the address space because the memory
     // operand can't represent this new access since the offset is variable.
+    Offset = VecEltTy.getSizeInBits() / 8;
     PtrInfo = MachinePointerInfo(MMO.getPointerInfo().getAddrSpace());
   }
 
-  Register VecPtr = GLoadMI->getOperand(1).getReg();
+  Alignment = commonAlignment(Alignment, Offset);
+
+  Register VecPtr = LoadMI->getPointerReg();
   LLT PtrTy = MRI.getType(VecPtr);
 
   MachineFunction &MF = *MI.getMF();
-  auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, VecEltVT);
+  auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, VecEltTy);
 
   LegalityQuery::MemDesc MMDesc(*NewMMO);
 
-  LegalityQuery Q = {TargetOpcode::G_LOAD, {VecEltVT, PtrTy}, {MMDesc}};
+  LegalityQuery Q = {TargetOpcode::G_LOAD, {VecEltTy, PtrTy}, {MMDesc}};
 
   if (!isLegalOrBeforeLegalizer(Q))
     return false;
@@ -1239,64 +1236,28 @@ bool CombinerHelper::matchCombineExtractedVectorLoad(MachineInstr &MI) {
   LLVMContext &C = MF.getFunction().getContext();
   auto &DL = MF.getDataLayout();
   unsigned Fast = 0;
-  if (!getTargetLowering().allowsMemoryAccess(C, DL, VecEltVT, *NewMMO,
+  if (!getTargetLowering().allowsMemoryAccess(C, DL, VecEltTy, *NewMMO,
                                               &Fast) ||
       !Fast)
     return false;
 
-  return true;
-}
-
-void CombinerHelper::applyCombineExtractedVectorLoad(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT);
-
-  // Get the original load instruction.
-  MachineInstr *LoadMI =
-      getOpcodeDef(TargetOpcode::G_LOAD, MI.getOperand(1).getReg(), MRI);
-
-  GLoadStore *GLoadMI = cast<GLoadStore>(LoadMI);
-
-  Register Index = MI.getOperand(2).getReg();
-  LLT VecEltVT = MRI.getType(GLoadMI->getOperand(0).getReg()).getElementType();
   Register Result = MI.getOperand(0).getReg();
+  Register Index = MI.getOperand(2).getReg();
 
-  Align Alignment = GLoadMI->getMMO().getAlign();
-  uint64_t Offset;
-  MachinePointerInfo PtrInfo;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    GISelObserverWrapper DummyObserver;
+    LegalizerHelper Helper(B.getMF(), DummyObserver, B);
+    //// Get pointer to the vector element.
+    Register finalPtr = Helper.getVectorElementPointer(
+        LoadMI->getPointerReg(), MRI.getType(LoadMI->getOperand(0).getReg()),
+        Index);
+    // New G_LOAD instruction.
+    B.buildLoad(Result, finalPtr, PtrInfo, Alignment);
+    // Remove original GLOAD instruction.
+    LoadMI->eraseFromParent();
+  };
 
-  // Check if Index to extract element from is constant.
-  if (MRI.getVRegDef(Index)->getOpcode() == TargetOpcode::G_CONSTANT) {
-    MachineInstr *ConstMI = MRI.getVRegDef(Index);
-    const ConstantInt *CVal = ConstMI->getOperand(1).getCImm();
-    int Elt = CVal->getZExtValue();
-    // FIXME: should be (ABI size)*Elt.
-    Offset = VecEltVT.getSizeInBits() * Elt / 8;
-    PtrInfo = GLoadMI->getMMO().getPointerInfo().getWithOffset(Offset);
-  } else {
-    // Discard the pointer info except the address space because the memory
-    // operand can't represent this new access since the offset is variable.
-    Offset = VecEltVT.getSizeInBits() / 8;
-    PtrInfo =
-        MachinePointerInfo(GLoadMI->getMMO().getPointerInfo().getAddrSpace());
-  }
-
-  Alignment = commonAlignment(Alignment, Offset);
-
-  MachineOperand &BasePtr = GLoadMI->getOperand(1);
-  MachineIRBuilder MIRBuilder(MI);
-
-  // Get pointer to the vector element.
-  GISelObserverWrapper DummyObserver;
-  LegalizerHelper Helper(MIRBuilder.getMF(), DummyObserver, MIRBuilder);
-  Register finalPtr = Helper.getVectorElementPointer(
-      BasePtr.getReg(), MRI.getType(GLoadMI->getOperand(0).getReg()), Index);
-
-  // New G_LOAD instruction.
-  MIRBuilder.buildLoad(Result, finalPtr, PtrInfo, Alignment);
-
-  // Remove original Extract Element MI and GLOAD instructions.
-  MI.eraseFromParent();
-  GLoadMI->eraseFromParent();
+  return true;
 }
 
 bool CombinerHelper::matchCombineIndexedLoadStore(

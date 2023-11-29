@@ -302,22 +302,48 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_vgpr_idx(ptr addrspace(4) inreg 
 }
 
 define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx0(ptr addrspace(4) inreg %ptr) {
-; GCN-LABEL: extractelement_sgpr_v4i16_idx0:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[2:3], 0x0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: extractelement_sgpr_v4i16_idx0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: extractelement_sgpr_v4i16_idx0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: extractelement_sgpr_v4i16_idx0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: extractelement_sgpr_v4i16_idx0:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    global_load_ushort v0, v0, s[2:3]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: extractelement_sgpr_v4i16_idx0:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %vector = load <4 x i16>, ptr addrspace(4) %ptr
   %element = extractelement <4 x i16> %vector, i32 0
@@ -378,32 +404,48 @@ define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx1(ptr addrspace(4) inreg %ptr
 define amdgpu_ps i16 @extractelement_sgpr_v4i16_idx2(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: extractelement_sgpr_v4i16_idx2:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x4
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3] offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: extractelement_sgpr_v4i16_idx2:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s0, s[2:3], 0x4
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    s_add_u32 s0, s2, 4
+; GFX8-NEXT:    s_addc_u32 s1, s3, 0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: extractelement_sgpr_v4i16_idx2:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s0, s[2:3], 0x1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:4
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: extractelement_sgpr_v4i16_idx2:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x4
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    global_load_ushort v0, v0, s[2:3] offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: extractelement_sgpr_v4i16_idx2:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x4
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:4
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %vector = load <4 x i16>, ptr addrspace(4) %ptr
   %element = extractelement <4 x i16> %vector, i32 2
@@ -936,22 +978,48 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_vgpr_idx(ptr addrspace(4) inreg 
 }
 
 define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx0(ptr addrspace(4) inreg %ptr) {
-; GCN-LABEL: extractelement_sgpr_v8i16_idx0:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[2:3], 0x0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: extractelement_sgpr_v8i16_idx0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3]
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: extractelement_sgpr_v8i16_idx0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s2
+; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX7-LABEL: extractelement_sgpr_v8i16_idx0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: extractelement_sgpr_v8i16_idx0:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    global_load_ushort v0, v0, s[2:3]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx0:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %vector = load <8 x i16>, ptr addrspace(4) %ptr
   %element = extractelement <8 x i16> %vector, i32 0
@@ -1012,32 +1080,48 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx1(ptr addrspace(4) inreg %ptr
 define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx2(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: extractelement_sgpr_v8i16_idx2:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x4
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3] offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: extractelement_sgpr_v8i16_idx2:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s0, s[2:3], 0x4
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    s_add_u32 s0, s2, 4
+; GFX8-NEXT:    s_addc_u32 s1, s3, 0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: extractelement_sgpr_v8i16_idx2:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s0, s[2:3], 0x1
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:4
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: extractelement_sgpr_v8i16_idx2:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x4
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    global_load_ushort v0, v0, s[2:3] offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx2:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x4
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:4
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %vector = load <8 x i16>, ptr addrspace(4) %ptr
   %element = extractelement <8 x i16> %vector, i32 2
@@ -1098,32 +1182,48 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx3(ptr addrspace(4) inreg %ptr
 define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx4(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: extractelement_sgpr_v8i16_idx4:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0x8
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3] offset:8
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: extractelement_sgpr_v8i16_idx4:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s0, s[2:3], 0x8
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    s_add_u32 s0, s2, 8
+; GFX8-NEXT:    s_addc_u32 s1, s3, 0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: extractelement_sgpr_v8i16_idx4:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s0, s[2:3], 0x2
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:8
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: extractelement_sgpr_v8i16_idx4:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0x8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    global_load_ushort v0, v0, s[2:3] offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx4:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x8
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:8
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %vector = load <8 x i16>, ptr addrspace(4) %ptr
   %element = extractelement <8 x i16> %vector, i32 4
@@ -1184,32 +1284,48 @@ define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx5(ptr addrspace(4) inreg %ptr
 define amdgpu_ps i16 @extractelement_sgpr_v8i16_idx6(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: extractelement_sgpr_v8i16_idx6:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[2:3], 0xc
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    global_load_ushort v0, v0, s[2:3] offset:12
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: extractelement_sgpr_v8i16_idx6:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dword s0, s[2:3], 0xc
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    s_add_u32 s0, s2, 12
+; GFX8-NEXT:    s_addc_u32 s1, s3, 0
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: extractelement_sgpr_v8i16_idx6:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_load_dword s0, s[2:3], 0x3
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0 offset:12
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: extractelement_sgpr_v8i16_idx6:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[2:3], 0xc
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    global_load_ushort v0, v0, s[2:3] offset:12
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: extractelement_sgpr_v8i16_idx6:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0xc
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_u16 v0, v0, s[2:3] offset:12
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %vector = load <8 x i16>, ptr addrspace(4) %ptr
   %element = extractelement <8 x i16> %vector, i32 6
@@ -1624,3 +1740,5 @@ define i16 @extractelement_vgpr_v8i16_idx7(ptr addrspace(1) %ptr) {
   %element = extractelement <8 x i16> %vector, i32 7
   ret i16 %element
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GCN: {{.*}}

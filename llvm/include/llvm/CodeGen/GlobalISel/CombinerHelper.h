@@ -198,8 +198,7 @@ public:
 
   /// Combine a G_EXTRACT_VECTOR_ELT of a load into a narrowed
   /// load.
-  bool matchCombineExtractedVectorLoad(MachineInstr &MI);
-  void applyCombineExtractedVectorLoad(MachineInstr &MI);
+  bool matchCombineExtractedVectorLoad(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
