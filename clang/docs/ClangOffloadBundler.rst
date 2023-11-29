@@ -410,9 +410,17 @@ collection of device binaries for a specific target.
   where, Fi-Tj-DeviceBinary.X represents device binary of i-th bundled device
   binary file for target Tj.
 
-clang-offload-bundler extracts compatible device binaries for a given target
+The clang-offload-bundler extracts compatible device binaries for a given target
 from the bundled device binaries in a heterogeneous device archive and creates
 a target-specific device archive without bundling.
+
+The clang-offload-bundler determines whether a device binary is compatible
+with a target by comparing bundle IDs. Two bundle IDs are considered
+compatible if:
+
+  * Their offload kind are the same
+  * Their target triple are the same
+  * Their GPUArch are the same
 
 Creating a Heterogeneous Device Archive
 ---------------------------------------
@@ -491,17 +499,13 @@ Additional Options while Archive Unbundling
   Check if input heterogeneous device archive follows rules for composition
   as defined in :ref:`code-object-composition` before creating device-specific
   archive(s).
-clang-offload-bundler determines whether a device binary is compatible with a
-target by comparing bundle ID's. Two bundle ID's are considered compatible if:
+
 
 **-debug-only=CodeObjectCompatibility**
   Verbose printing of matched/unmatched comparisons between bundle entry id of
   a device binary from HDA and bundle entry ID of a given target processor
   (see :ref:`compatibility-bundle-entry-id`).
 
-  * Their offload kind are the same
-  * Their target triple are the same
-  * Their GPUArch are the same
 
 Compression and Decompression
 =============================
