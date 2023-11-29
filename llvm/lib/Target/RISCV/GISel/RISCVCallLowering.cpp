@@ -483,7 +483,11 @@ void RISCVCallLowering::saveVarArgRegisters(
     FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
     auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
     auto MPO = MachinePointerInfo::getFixedStack(MF, FI);
-    MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+    auto Store =
+        MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+    // This was taken from  SelectionDAG, but we are not sure why it exists.
+    // It is being investigated in github.com/llvm/llvm-project/issues/73735.
+    Store->memoperands()[0]->setValue((Value *)nullptr);
   }
 }
 
