@@ -43,14 +43,9 @@ definitions:
 
 # Define agents using YAML anchors to reduce duplication
 agents_definitions:
-  _linux_agent: &linux_agent
-    agents:
-      queue: libcxx-builders
-      os: linux
   _windows_agent: &windows_agent
     agents:
       queue: windows
-
   # Mac OS Builders
   _mac_agent_x86: &mac_agent_x86
     agents:
