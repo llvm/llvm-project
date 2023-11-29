@@ -3508,7 +3508,8 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
     Symbol &ultimate{symbol->GetUltimate()};
     if (ultimate.has<ObjectEntityDetails>() ||
         ultimate.has<AssocEntityDetails>() ||
-        CouldBeDataPointerValuedFunction(&ultimate)) {
+        CouldBeDataPointerValuedFunction(&ultimate) ||
+        (&symbol->owner() == &currScope() && IsFunctionResult(*symbol))) {
       misparsedStmtFuncFound_ = true;
       return false;
     }
