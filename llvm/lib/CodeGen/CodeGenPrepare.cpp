@@ -461,7 +461,6 @@ private:
   bool fixupDbgValue(Instruction *I);
   bool fixupDPValue(DPValue &I);
   bool placeDbgValues(Function &F);
-  bool placeDPValues(Instruction &I, DominatorTree &DT);
   bool placePseudoProbes(Function &F);
   bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
                     LoadInst *&LI, Instruction *&Inst, bool HasPromoted);
@@ -8416,6 +8415,23 @@ bool CodeGenPrepare::fixupDPValue(DPValue &DPV) {
   return AnyChange;
 }
 
+static void DbgInserterHelper(DbgValueInst *DVI, Instruction *VI) {
+  DVI->removeFromParent();
+  if (isa<PHINode>(VI))
+    DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
+  else
+    DVI->insertAfter(VI);
+}
+
+static void DbgInserterHelper(DPValue *DPV, Instruction *VI) {
+  DPV->removeFromParent();
+  BasicBlock *VIBB = VI->getParent();
+  if (isa<PHINode>(VI))
+    VIBB->insertDPValueBefore(DPV, VIBB->getFirstInsertionPt());
+  else
+    VIBB->insertDPValueAfter(DPV, VI);
+}
+
 // A llvm.dbg.value may be using a value before its definition, due to
 // optimizations in this pass and others. Scan for such dbg.values, and rescue
 // them by moving the dbg.value to immediately after the value definition.
@@ -8425,81 +8441,16 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
   bool MadeChange = false;
   DominatorTree DT(F);
 
-  for (BasicBlock &BB : F) {
-    for (Instruction &Insn : llvm::make_early_inc_range(BB)) {
-      DbgValueInst *DVI = dyn_cast<DbgValueInst>(&Insn);
-      if (!DVI) {
-        MadeChange |= placeDPValues(Insn, DT);
-        continue;
-      }
-
-      SmallVector<Instruction *, 4> VIs;
-      for (Value *V : DVI->getValues())
-        if (Instruction *VI = dyn_cast_or_null<Instruction>(V))
-          VIs.push_back(VI);
-
-      // This DVI may depend on multiple instructions, complicating any
-      // potential sink. This block takes the defensive approach, opting to
-      // "undef" the DVI if it has more than one instruction and any of them do
-      // not dominate DVI.
-      for (Instruction *VI : VIs) {
-        if (VI->isTerminator())
-          continue;
-
-        // If VI is a phi in a block with an EHPad terminator, we can't insert
-        // after it.
-        if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
-          continue;
-
-        // If the defining instruction dominates the dbg.value, we do not need
-        // to move the dbg.value.
-        if (DT.dominates(VI, DVI))
-          continue;
-
-        // If we depend on multiple instructions and any of them doesn't
-        // dominate this DVI, we probably can't salvage it: moving it to
-        // after any of the instructions could cause us to lose the others.
-        if (VIs.size() > 1) {
-          LLVM_DEBUG(
-              dbgs()
-              << "Unable to find valid location for Debug Value, undefing:\n"
-              << *DVI);
-          DVI->setKillLocation();
-          break;
-        }
-
-        LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
-                          << *DVI << ' ' << *VI);
-        DVI->removeFromParent();
-        if (isa<PHINode>(VI))
-          DVI->insertBefore(&*VI->getParent()->getFirstInsertionPt());
-        else
-          DVI->insertAfter(VI);
-        MadeChange = true;
-        ++NumDbgValueMoved;
-      }
-    }
-  }
-
-  return MadeChange;
-}
-
-bool CodeGenPrepare::placeDPValues(Instruction &I, DominatorTree &DT) {
-  bool MadeChange = false;
-
-  for (DPValue &DPV : llvm::make_early_inc_range(I.getDbgValueRange())) {
-    if (DPV.Type != DPValue::LocationType::Value)
-      continue;
-
+  auto DbgProcessor = [&](auto *DbgItem, Instruction *Position) {
     SmallVector<Instruction *, 4> VIs;
-    for (Value *V : DPV.location_ops())
+    for (Value *V : DbgItem->location_ops())
       if (Instruction *VI = dyn_cast_or_null<Instruction>(V))
         VIs.push_back(VI);
 
-    // This DPV may depend on multiple instructions, complicating any
+    // This item may depend on multiple instructions, complicating any
     // potential sink. This block takes the defensive approach, opting to
-    // "undef" the DVI if it has more than one instruction and any of them do
-    // not dominate DVI.
+    // "undef" the item if it has more than one instruction and any of them do
+    // not dominate iem.
     for (Instruction *VI : VIs) {
       if (VI->isTerminator())
         continue;
@@ -8509,36 +8460,50 @@ bool CodeGenPrepare::placeDPValues(Instruction &I, DominatorTree &DT) {
       if (isa<PHINode>(VI) && VI->getParent()->getTerminator()->isEHPad())
         continue;
 
-      // If the defining instruction dominates the position, we do not need
+      // If the defining instruction dominates the dbg.value, we do not need
       // to move the dbg.value.
-      if (DT.dominates(VI, &I))
+      if (DT.dominates(VI, Position))
         continue;
 
       // If we depend on multiple instructions and any of them doesn't
-      // dominate this DPV, we probably can't salvage it: moving it to
+      // dominate this DVI, we probably can't salvage it: moving it to
       // after any of the instructions could cause us to lose the others.
       if (VIs.size() > 1) {
         LLVM_DEBUG(
             dbgs()
             << "Unable to find valid location for Debug Value, undefing:\n"
-            << DPV);
-        DPV.setKillLocation();
+            << *DbgItem);
+        DbgItem->setKillLocation();
         break;
       }
 
       LLVM_DEBUG(dbgs() << "Moving Debug Value before :\n"
-                        << DPV << ' ' << *VI);
-      DPV.removeFromParent();
-      BasicBlock *VIBB = VI->getParent();
-      if (isa<PHINode>(VI)) {
-        VIBB->insertDPValueBefore(&DPV, VIBB->getFirstInsertionPt());
-      } else {
-        VIBB->insertDPValueAfter(&DPV, VI);
-      }
+                        << *DbgItem << ' ' << *VI);
+      DbgInserterHelper(DbgItem, VI);
       MadeChange = true;
       ++NumDbgValueMoved;
     }
+  };
+
+  for (BasicBlock &BB : F) {
+    for (Instruction &Insn : llvm::make_early_inc_range(BB)) {
+      // Process dbg.value intrinsics.
+      DbgValueInst *DVI = dyn_cast<DbgValueInst>(&Insn);
+      if (DVI) {
+        DbgProcessor(DVI, DVI);
+        continue;
+      }
+
+      // If this isn't a dbg.value, process any attached DPValue records
+      // attached to this instruction.
+      for (DPValue &DPV : llvm::make_early_inc_range(Insn.getDbgValueRange())) {
+        if (DPV.Type != DPValue::LocationType::Value)
+          continue;
+        DbgProcessor(&DPV, &Insn);
+      }
+    }
   }
+
   return MadeChange;
 }
 
