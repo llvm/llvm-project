@@ -1012,7 +1012,6 @@ struct AdditionalKeywords {
     kw_synchronized = &IdentTable.get("synchronized");
     kw_throws = &IdentTable.get("throws");
     kw___except = &IdentTable.get("__except");
-    kw___has_embed = &IdentTable.get("__has_embed");
     kw___has_include = &IdentTable.get("__has_include");
     kw___has_include_next = &IdentTable.get("__has_include_next");
 
@@ -1310,7 +1309,6 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_NS_ERROR_ENUM;
   IdentifierInfo *kw_NS_OPTIONS;
   IdentifierInfo *kw___except;
-  IdentifierInfo *kw___has_embed;
   IdentifierInfo *kw___has_include;
   IdentifierInfo *kw___has_include_next;
 
