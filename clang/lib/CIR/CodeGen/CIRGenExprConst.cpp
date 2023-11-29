@@ -1062,7 +1062,7 @@ private:
 
     llvm::SmallVector<mlir::Attribute, 3> Indices;
     for (auto I : Idx) {
-      auto Attr = mlir::cir::IntAttr::get(CGM.getBuilder().getSInt64Ty(), I);
+      auto Attr = CGM.getBuilder().getI32IntegerAttr(I);
       Indices.push_back(Attr);
     }
 

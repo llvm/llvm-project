@@ -85,7 +85,7 @@ public:
 // CHECK:   cir.global "private" constant external @_ZTI1A : !cir.ptr<!u8i>
 
 // typeinfo for B
-// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [#cir.int<2> : !s64i]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}> : ![[TypeInfoB]]
+// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}> : ![[TypeInfoB]]
 
 // Checks for dtors in dtors.cpp
 

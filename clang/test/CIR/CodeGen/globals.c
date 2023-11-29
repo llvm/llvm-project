@@ -48,7 +48,7 @@ struct {
 // CHECK: cir.global external @nestedStringPtr = #cir.const_struct<{#cir.global_view<@".str"> : !cir.ptr<!s8i>}>
 
 int *globalPtr = &nestedString.y[1];
-// CHECK: cir.global external @globalPtr = #cir.global_view<@nestedString, [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<1> : !s64i]>
+// CHECK: cir.global external @globalPtr = #cir.global_view<@nestedString, [0 : i32, 1 : i32, 1 : i32]>
 
 // TODO: test tentatives with internal linkage.
 

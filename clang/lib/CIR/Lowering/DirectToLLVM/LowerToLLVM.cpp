@@ -240,9 +240,9 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   if (globalAttr.getIndices()) {
     llvm::SmallVector<mlir::LLVM::GEPArg> indices;
     for (auto idx : globalAttr.getIndices()) {
-      auto intAttr = dyn_cast<mlir::cir::IntAttr>(idx);
+      auto intAttr = dyn_cast<mlir::IntegerAttr>(idx);
       assert(intAttr && "index must be integers");
-      indices.push_back(intAttr.getSInt());
+      indices.push_back(intAttr.getValue().getSExtValue());
     }
     auto resTy = addrOp.getType();
     auto eltTy = converter->convertType(sourceType);
