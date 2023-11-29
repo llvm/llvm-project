@@ -138,11 +138,8 @@ bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
 bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
 
 /// Returns true if the give value is known to be non-negative.
-bool isKnownNonNegative(const Value *V, const DataLayout &DL,
-                        unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                        const Instruction *CxtI = nullptr,
-                        const DominatorTree *DT = nullptr,
-                        bool UseInstrInfo = true);
+bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
+                        unsigned Depth = 0);
 
 /// Returns true if the given value is known be positive (i.e. non-negative
 /// and non-zero).
