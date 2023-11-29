@@ -132,15 +132,9 @@ static void sizesForTensor(OpBuilder &builder, SmallVectorImpl<Value> &sizes,
   }
 }
 
-// TODO: The dim level property of the COO type relies on input tensors, the
-// shape relies on the output tensor
-static RankedTensorType getCOOType(const SparseTensorType &stt, bool ordered) {
-  return getCOOFromTypeWithOrdering(stt, stt.getDimToLvl(), ordered);
-}
-
 static RankedTensorType getBufferType(const SparseTensorType &stt,
                                       bool needTmpCOO) {
-  return needTmpCOO ? getCOOType(stt, /*ordered=*/false)
+  return needTmpCOO ? stt.getCOOType(/*ordered=*/false)
                     : stt.getRankedTensorType();
 }
 
@@ -1195,7 +1189,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     //   %t = sparse_tensor.convert %orderedCoo
     // with enveloping reinterpreted_map ops for non-permutations.
     RankedTensorType dstTp = stt.getRankedTensorType();
-    RankedTensorType cooTp = getCOOType(dstTp, /*ordered=*/true);
+    RankedTensorType cooTp = stt.getCOOType(/*ordered=*/true);
     Value cooTensor = rewriter.create<NewOp>(loc, cooTp, op.getSource());
     Value convert = cooTensor;
     if (!stt.isPermutation()) { // demap coo, demap dstTp
