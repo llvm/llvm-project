@@ -31,11 +31,11 @@ template <typename T> LIBC_INLINE int constexpr correct_zero(T val, int bits) {
 template <typename T> LIBC_INLINE constexpr int clz(T val);
 template <> LIBC_INLINE int clz<unsigned char>(unsigned char val) {
   return __builtin_clz(static_cast<unsigned int>(val)) -
-         8 * (sizeof(unsigned int) - sizeof(unsigned char));
+         8 * static_cast<int>(sizeof(unsigned int) - sizeof(unsigned char));
 }
 template <> LIBC_INLINE int clz<unsigned short>(unsigned short val) {
   return __builtin_clz(static_cast<unsigned int>(val)) -
-         8 * (sizeof(unsigned int) - sizeof(unsigned short));
+         8 * static_cast<int>(sizeof(unsigned int) - sizeof(unsigned short));
 }
 template <> LIBC_INLINE int clz<unsigned int>(unsigned int val) {
   return __builtin_clz(val);
