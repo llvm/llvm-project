@@ -28,7 +28,7 @@ namespace fir::support {
 /// These attributes are replaced if they were already set.
 void setMLIRDataLayout(mlir::ModuleOp mlirModule, const llvm::DataLayout &dl);
 
-/// Create an mlir::DataLayoutSpecInterface from the llvm>data_layout attribute
+/// Create an mlir::DataLayoutSpecInterface from the llvm.data_layout attribute
 /// if one is provided. If such attribute is not available, create a default
 /// target independent layout when allowDefaultLayout is true. Otherwise do
 /// nothing.
