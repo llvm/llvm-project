@@ -2,28 +2,29 @@
 // RUN: FileCheck --input-file=%t.mlir %s
 // XFAIL: *
 
+!s32i = !cir.int<s, 32>
 module {
-  cir.func @dot(%arg0: !cir.ptr<f64>) -> i32 {
+  cir.func @dot(%arg0: !cir.ptr<f64>) -> !s32i {
     %0 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["x", init] {alignment = 8 : i64}
-    %1 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
     %2 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["y", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
     %3 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
     cir.store %3, %2 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
-    %4 = cir.const(0 : i32) : i32
-    %5 = cir.load %1 : cir.ptr <i32>, i32
-    cir.return %5 : i32
+    %4 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %5 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    cir.return %5 : !s32i
   }
 }
 
 //      CHECK: module {
-// CHECK-NEXT:   func.func @dot(%arg0: memref<?xf64>) -> i32 {
-// CHECK-NEXT:     %alloca = memref.alloca() {alignment = 8 : i64} : memref<memref<?xf64>>
+// CHECK-NEXT:   func.func @dot(%arg0: memref<f64>) -> i32 {
+// CHECK-NEXT:     %alloca = memref.alloca() {alignment = 8 : i64} : memref<memref<f64>>
 // CHECK-NEXT:     %alloca_0 = memref.alloca() {alignment = 4 : i64} : memref<i32>
-// CHECK-NEXT:     %alloca_1 = memref.alloca() {alignment = 8 : i64} : memref<memref<?xf64>>
-// CHECK-NEXT:     memref.store %arg0, %alloca[] : memref<memref<?xf64>>
-// CHECK-NEXT:     %0 = memref.load %alloca[] : memref<memref<?xf64>>
-// CHECK-NEXT:     memref.store %0, %alloca_1[] : memref<memref<?xf64>>
+// CHECK-NEXT:     %alloca_1 = memref.alloca() {alignment = 8 : i64} : memref<memref<f64>>
+// CHECK-NEXT:     memref.store %arg0, %alloca[] : memref<memref<f64>>
+// CHECK-NEXT:     %0 = memref.load %alloca[] : memref<memref<f64>>
+// CHECK-NEXT:     memref.store %0, %alloca_1[] : memref<memref<f64>>
 // CHECK-NEXT:     %c0_i32 = arith.constant 0 : i32
 // CHECK-NEXT:     %1 = memref.load %alloca_0[] : memref<i32>
 // CHECK-NEXT:     return %1 : i32
