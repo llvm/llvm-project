@@ -120,7 +120,6 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2);
 
-// clang-format off - disable clang format for this block.
 /// GetConversionRank - Retrieve the implicit conversion rank
 /// corresponding to the given implicit conversion kind.
 ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
@@ -165,7 +164,6 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
 }
-// clang-format on
 
 /// GetImplicitConversionName - Return the name of this kind of
 /// implicit conversion.
