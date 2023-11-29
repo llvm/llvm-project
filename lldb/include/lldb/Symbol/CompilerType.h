@@ -112,7 +112,9 @@ public:
 
   /// Tests.
   /// \{
-  explicit operator bool() const { return m_type_system.lock() && m_type; }
+  explicit operator bool() const {
+    return m_type_system.lock() && m_type;
+  }
 
   bool IsValid() const { return (bool)*this; }
 
@@ -193,12 +195,16 @@ public:
 
   bool IsVoidType() const;
 
+  /// This determines if the type is a shared, unique or weak pointer, either
+  /// from stdlibc++ or libc+++.
   bool IsSmartPtrType() const;
 
+  /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 
   bool IsFloat() const;
 
+  /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
 
   bool IsUnscopedEnumerationType() const;
@@ -221,9 +227,15 @@ public:
 
   bool IsRecordType() const;
 
+  //// Checks whether `target_base` is a virtual base of `type` (direct or
+  /// indirect). If it is, stores the first virtual base type on the path from
+  /// `type` to `target_type`. Parameter "virtual_base" is where the first
+  /// virtual base type gets stored. Note: This may only be defined in
+  /// TypeSystemClang.
   bool IsVirtualBase(CompilerType target_base, CompilerType *virtual_base,
                      bool carry_virtual = false) const;
 
+  /// This may only be defined in TypeSystemClang.
   bool IsContextuallyConvertibleToBool() const;
 
   bool IsBasicType() const;
@@ -234,6 +246,7 @@ public:
 
   const char *GetTypeTag();
 
+  /// Go through the base classes and count non-empty ones.
   uint32_t GetNumberOfNonEmptyBaseClasses();
 
   CompilerType GetTemplateArgumentType(uint32_t idx);
@@ -482,8 +495,8 @@ public:
                      ExecutionContextScope *exe_scope);
 
   /// Dump to stdout.
-  void DumpTypeDescription(
-      lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) const;
+  void DumpTypeDescription(lldb::DescriptionLevel level =
+                           lldb::eDescriptionLevelFull) const;
 
   /// Print a description of the type to a stream. The exact implementation
   /// varies, but the expectation is that eDescriptionLevelFull returns a
