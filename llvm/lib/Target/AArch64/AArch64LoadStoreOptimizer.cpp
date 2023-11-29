@@ -941,11 +941,11 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
               }
             }
           }
-          LLVM_DEBUG(dbgs() << "Renamed " << MI << "\n");
+          LLVM_DEBUG(dbgs() << "Renamed " << MI);
           return true;
         };
     forAllMIsUntilDef(MergeForward ? *I : *std::prev(Paired), RegToRename, TRI,
-                      LdStLimit, UpdateMIs);
+                      UINT32_MAX, UpdateMIs);
 
 #if !defined(NDEBUG)
     // For forward merging store:
@@ -1464,7 +1464,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
                        MOP.isImplicit() && MOP.isKill() &&
                        TRI->regsOverlap(RegToRename, MOP.getReg());
               })) {
-    LLVM_DEBUG(dbgs() << "  Operand not killed at " << FirstMI << "\n");
+    LLVM_DEBUG(dbgs() << "  Operand not killed at " << FirstMI);
     return false;
   }
 
@@ -1476,11 +1476,11 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
   // * collect the registers used and required register classes for RegToRename.
   std::function<bool(MachineInstr &, bool)> CheckMIs = [&](MachineInstr &MI,
                                                            bool IsDef) {
-    LLVM_DEBUG(dbgs() << "Checking " << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Checking " << MI);
     // Currently we do not try to rename across frame-setup instructions.
     if (MI.getFlag(MachineInstr::FrameSetup)) {
-      LLVM_DEBUG(dbgs() << "  Cannot rename framesetup instructions currently ("
-                        << MI << ")\n");
+      LLVM_DEBUG(dbgs() << "  Cannot rename framesetup instructions "
+                        << "currently\n");
       return false;
     }
 
@@ -1500,8 +1500,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
       //       1. Insert an extra copy, to materialize the def.
       //       2. Skip pseudo-defs until we find an non-pseudo def.
       if (MI.isPseudo()) {
-        LLVM_DEBUG(dbgs() << "  Cannot rename pseudo instruction " << MI
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "  Cannot rename pseudo/bundle instruction\n");
         return false;
       }
 
@@ -1510,8 +1509,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
           continue;
         if (!canRenameMOP(MOP, TRI)) {
-          LLVM_DEBUG(dbgs()
-                     << "  Cannot rename " << MOP << " in " << MI << "\n");
+          LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
         RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1524,8 +1522,7 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
           continue;
 
         if (!canRenameMOP(MOP, TRI)) {
-          LLVM_DEBUG(dbgs()
-                     << "  Cannot rename " << MOP << " in " << MI << "\n");
+          LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
           return false;
         }
         RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));
@@ -1565,15 +1562,12 @@ static bool canRenameUntilSecondLoad(
   auto RegToRename = getLdStRegOp(FirstLoad).getReg();
   bool Success = std::all_of(
       FirstLoad.getIterator(), SecondLoad.getIterator(),
-      [&](MachineBasicBlock::iterator MBBI) {
-        MachineInstr &MI = *MBBI;
-
-        LLVM_DEBUG(dbgs() << "Checking " << MI << "\n");
+      [&](MachineInstr &MI) {
+        LLVM_DEBUG(dbgs() << "Checking " << MI);
         // Currently we do not try to rename across frame-setup instructions.
         if (MI.getFlag(MachineInstr::FrameSetup)) {
-          LLVM_DEBUG(dbgs()
-                     << "  Cannot rename framesetup instructions currently ("
-                     << MI << ")\n");
+          LLVM_DEBUG(dbgs() << "  Cannot rename framesetup instructions "
+                            << "currently\n");
           return false;
         }
 
@@ -1582,8 +1576,7 @@ static bool canRenameUntilSecondLoad(
               !TRI->regsOverlap(MOP.getReg(), RegToRename))
             continue;
           if (!canRenameMOP(MOP, TRI)) {
-            LLVM_DEBUG(dbgs()
-                       << "  Cannot rename " << MOP << " in " << MI << "\n");
+            LLVM_DEBUG(dbgs() << "  Cannot rename " << MOP << " in " << MI);
             return false;
           }
           RequiredClasses.insert(TRI->getMinimalPhysRegClass(MOP.getReg()));

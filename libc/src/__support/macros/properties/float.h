@@ -15,32 +15,70 @@
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/os.h"
 
-// https://developer.arm.com/documentation/dui0491/i/C-and-C---Implementation-Details/Basic-data-types
-// https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms
-// https://docs.amd.com/bundle/HIP-Programming-Guide-v5.1/page/Programming_with_HIP.html
-#if defined(LIBC_TARGET_OS_IS_WINDOWS) ||                                      \
-    (defined(LIBC_TARGET_OS_IS_MACOS) &&                                       \
-     defined(LIBC_TARGET_ARCH_IS_AARCH64)) ||                                  \
-    defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_NVPTX) ||  \
-    defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#include <float.h> // LDBL_MANT_DIG
+
+// 'long double' properties.
+#if (LDBL_MANT_DIG == DBL_MANT_DIG)
+// TODO: Replace with LIBC_LONG_DOUBLE_IS_DOUBLE
 #define LONG_DOUBLE_IS_DOUBLE
 #endif
-
-#if !defined(LONG_DOUBLE_IS_DOUBLE) && defined(LIBC_TARGET_ARCH_IS_X86)
+#if (LDBL_MANT_DIG == 64)
+// TODO: Replace with LIBC_LONG_DOUBLE_IS_X86_BIN80
 #define SPECIAL_X86_LONG_DOUBLE
+#elif (LDBL_MANT_DIG == 113)
+#define LIBC_LONG_DOUBLE_IS_IEEE754_BIN128
 #endif
 
-// Check compiler features
-#if defined(FLT128_MANT_DIG)
-#define LIBC_COMPILER_HAS_FLOAT128
+// float16 support.
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 1500)) || \
+    (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1201))
+#define LIBC_COMPILER_HAS_C23_FLOAT16
+#endif
+#endif
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 900)) ||  \
+    (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1301))
+#define LIBC_COMPILER_HAS_C23_FLOAT16
+#endif
+#endif
+#if defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 1300)) || \
+    (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1301))
+#define LIBC_COMPILER_HAS_C23_FLOAT16
+#endif
+#endif
+
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT16)
+using float16 = _Float16;
+#define LIBC_HAS_FLOAT16
+#endif
+
+// float128 support.
+#if (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1301)) &&     \
+    (defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                   \
+     defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) ||                                 \
+     defined(LIBC_TARGET_ARCH_IS_X86_64))
+#define LIBC_COMPILER_HAS_C23_FLOAT128
+#endif
+#if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 500)) &&  \
+    (defined(LIBC_TARGET_ARCH_IS_X86_64))
+#define LIBC_COMPILER_HAS_FLOAT128_EXTENSION
+#endif
+
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT128)
 using float128 = _Float128;
-#elif defined(__SIZEOF_FLOAT128__)
-#define LIBC_COMPILER_HAS_FLOAT128
+#elif defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
 using float128 = __float128;
-#elif (defined(__linux__) && defined(__aarch64__))
-#define LIBC_COMPILER_HAS_FLOAT128
-#define LIBC_FLOAT128_IS_LONG_DOUBLE
+#elif defined(LIBC_LONG_DOUBLE_IS_IEEE754_BIN128)
 using float128 = long double;
+#endif
+
+#if defined(LIBC_COMPILER_HAS_C23_FLOAT128) ||                                 \
+    defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION) ||                           \
+    defined(LIBC_LONG_DOUBLE_IS_IEEE754_BIN128)
+// TODO: Replace with LIBC_HAS_FLOAT128
+#define LIBC_COMPILER_HAS_FLOAT128
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_FLOAT_H

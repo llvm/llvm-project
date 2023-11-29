@@ -6596,7 +6596,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
           MF, MI, OpNum, MOs, InsertPt, Size, Alignment))
     return CustomMI;
 
-  const X86MemoryFoldTableEntry *I = nullptr;
+  const X86FoldTableEntry *I = nullptr;
 
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
@@ -7304,7 +7304,7 @@ extractStoreMMOs(ArrayRef<MachineMemOperand *> MMOs, MachineFunction &MF) {
   return StoreMMOs;
 }
 
-static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
+static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
                                    const TargetRegisterClass *RC,
                                    const X86Subtarget &STI) {
   assert(STI.hasAVX512() && "Expected at least AVX512!");
@@ -7352,7 +7352,7 @@ static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
 bool X86InstrInfo::unfoldMemoryOperand(
     MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
+  const X86FoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
   if (I == nullptr)
     return false;
   unsigned Opc = I->DstOp;
@@ -7494,7 +7494,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   if (!N->isMachineOpcode())
     return false;
 
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(N->getMachineOpcode());
+  const X86FoldTableEntry *I = lookupUnfoldTable(N->getMachineOpcode());
   if (I == nullptr)
     return false;
   unsigned Opc = I->DstOp;
@@ -7617,7 +7617,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
 unsigned X86InstrInfo::getOpcodeAfterMemoryUnfold(unsigned Opc,
                                       bool UnfoldLoad, bool UnfoldStore,
                                       unsigned *LoadRegIndex) const {
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(Opc);
+  const X86FoldTableEntry *I = lookupUnfoldTable(Opc);
   if (I == nullptr)
     return 0;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
@@ -10271,6 +10271,15 @@ void X86InstrInfo::genAlternativeCodeSequence(
                                  InstrIdxForVirtReg);
     return;
   }
+}
+
+// See also: X86DAGToDAGISel::SelectInlineAsmMemoryOperand().
+void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
+                                         int FI) const {
+  X86AddressMode M;
+  M.BaseType = X86AddressMode::FrameIndexBase;
+  M.Base.FrameIndex = FI;
+  M.getFullAddress(Ops);
 }
 
 #define GET_INSTRINFO_HELPERS

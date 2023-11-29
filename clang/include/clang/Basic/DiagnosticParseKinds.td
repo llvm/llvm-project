@@ -1364,6 +1364,8 @@ def warn_pragma_acc_unimplemented_clause_parsing
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive '%select{%1|%1 %2}0'">;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
+def err_acc_invalid_open_paren
+    : Error<"expected clause-list or newline in OpenACC directive">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
@@ -1592,11 +1594,12 @@ def note_pragma_loop_invalid_vectorize_option : Note<
   "vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')">;
 
 def err_pragma_fp_invalid_option : Error<
-  "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract', 'reassociate' or 'exceptions'">;
+  "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract', 'reassociate', 'reciprocal', or 'exceptions'">;
 def err_pragma_fp_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma clang fp %1'; expected "
   "%select{"
   "'fast' or 'on' or 'off'|"
+  "'on' or 'off'|"
   "'on' or 'off'|"
   "'ignore', 'maytrap' or 'strict'|"
   "'source', 'double' or 'extended'}2">;

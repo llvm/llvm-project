@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_NO_DESTROY_H
 
 #include <__config>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,26 +29,32 @@ struct __uninitialized_tag {};
 // initialization using __emplace.
 template <class _Tp>
 struct __no_destroy {
-  _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(__uninitialized_tag) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(__uninitialized_tag) : __dummy_() {
+    if (__libcpp_is_constant_evaluated()) {
+      __dummy_ = char();
+    }
+  }
   _LIBCPP_HIDE_FROM_ABI ~__no_destroy() {
     // nothing
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args) : __obj_(std::forward<_Args>(__args)...) {}
+  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args)
+      : __obj_(std::forward<_Args>(__args)...) {}
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _Tp& __emplace(_Args&&... __args) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp& __emplace(_Args&&... __args) {
     new (&__obj_) _Tp(std::forward<_Args>(__args)...);
     return __obj_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp& __get() { return __obj_; }
-  _LIBCPP_HIDE_FROM_ABI _Tp const& __get() const { return __obj_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp& __get() { return __obj_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp const& __get() const { return __obj_; }
 
 private:
   union {
     _Tp __obj_;
+    char __dummy_; // so we can initialize a member even with __uninitialized_tag for constexpr-friendliness
   };
 };
 

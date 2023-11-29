@@ -176,7 +176,7 @@ public:
 
   friend constexpr void swap(mapping& x, mapping& y) noexcept {
     swap(x.extents_, y.extents_);
-    if !consteval {
+    if (!std::is_constant_evaluated()) {
       swap_counter()++;
     }
   }
@@ -317,7 +317,7 @@ public:
 
   friend constexpr void swap(mapping& x, mapping& y) noexcept {
     swap(x.extents_, y.extents_);
-    if !consteval {
+    if (!std::is_constant_evaluated()) {
       swap_counter()++;
     }
   }

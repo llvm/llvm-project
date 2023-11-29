@@ -2055,6 +2055,9 @@ private:
     } else if (Current.is(tok::arrow) &&
                Style.Language == FormatStyle::LK_Java) {
       Current.setType(TT_TrailingReturnArrow);
+    } else if (Current.is(tok::arrow) && Style.isVerilog()) {
+      // The implication operator.
+      Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::arrow) && AutoFound &&
                Line.MightBeFunctionDecl && Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
@@ -4744,6 +4747,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
       return false;
     }
+    // Add spaces around the implication operator `->`.
+    if (Left.is(tok::arrow) || Right.is(tok::arrow))
+      return true;
     // Don't add spaces between two at signs. Like in a coverage event.
     // Don't add spaces between at and a sensitivity list like
     // `@(posedge clk)`.
@@ -5104,11 +5110,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
-  } else if (Style.Language == FormatStyle::LK_Cpp ||
-             Style.Language == FormatStyle::LK_ObjC ||
-             Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TableGen ||
-             Style.Language == FormatStyle::LK_TextProto) {
+  } else if (Style.BreakAdjacentStringLiterals &&
+             (Style.isCpp() || Style.isProto() ||
+              Style.Language == FormatStyle::LK_TableGen ||
+              Style.Language == FormatStyle::LK_TextProto)) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }

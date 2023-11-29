@@ -53,6 +53,7 @@ Implemented Papers
 - P2918R2 - Runtime format strings II
 - P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
 - P2870R3 - Remove basic_string::reserve()
+- P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
 
 
 Improvements and New Features
@@ -101,17 +102,14 @@ Deprecations and Removals
   Please see the updated documentation about the hardening modes in libc++ and in particular the
   ``_LIBCPP_VERBOSE_ABORT`` macro for details.
 
-Upcoming Deprecations and Removals
-----------------------------------
-
-LLVM 18
-~~~~~~~
-
 - The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
   ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,
   ``<experimental/string>``, ``<experimental/unordered_map>``, ``<experimental/unordered_set>``,
-  and ``<experimental/vector>`` will be removed in LLVM 18, as all their contents will have been implemented in
-  namespace ``std`` for at least two releases.
+  and ``<experimental/vector>`` have been removed in LLVM 18, as all their contents will have been
+  implemented in namespace ``std`` for at least two releases.
+
+Upcoming Deprecations and Removals
+----------------------------------
 
 LLVM 19
 ~~~~~~~

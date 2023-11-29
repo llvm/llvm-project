@@ -10628,7 +10628,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   bool AllowExplicit = !Kind.isCopyInit() || ListInit;
 
-  // Return true is the candidate is added successfully, false otherwise.
+  // Return true if the candidate is added successfully, false otherwise.
   auto addDeductionCandidate = [&](FunctionTemplateDecl *TD,
                                    CXXDeductionGuideDecl *GD,
                                    DeclAccessPair FoundDecl,

@@ -257,6 +257,14 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   }
 }
 
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+  }
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -280,6 +288,9 @@ void Flang::addTargetOptions(const ArgList &Args,
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAMDGPUTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);

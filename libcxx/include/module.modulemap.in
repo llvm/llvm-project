@@ -517,41 +517,16 @@ module std_wctype_h [system] {
 
 // Experimental C++ standard library interfaces
 module std_experimental [system] {
-  module deque {
-    header "experimental/deque"
-    export *
-  }
-  module forward_list {
-    header "experimental/forward_list"
-    export *
-  }
   module iterator {
     header "experimental/iterator"
-    export *
-  }
-  module list {
-    header "experimental/list"
-    export *
-  }
-  module map {
-    header "experimental/map"
     export *
   }
   module memory {
     header "experimental/memory"
     export *
   }
-  module memory_resource {
-    header "experimental/memory_resource"
-    export *
-  }
   module propagate_const {
     header "experimental/propagate_const"
-    export *
-  }
-  module regex {
-    @requires_LIBCXX_ENABLE_LOCALIZATION@
-    header "experimental/regex"
     export *
   }
   module simd {
@@ -570,32 +545,12 @@ module std_experimental [system] {
     header "experimental/simd"
     export *
   }
-  module set {
-    header "experimental/set"
-    export *
-  }
-  module string {
-    header "experimental/string"
-    export *
-  }
   module type_traits {
     header "experimental/type_traits"
     export *
   }
-  module unordered_map {
-    header "experimental/unordered_map"
-    export *
-  }
-  module unordered_set {
-    header "experimental/unordered_set"
-    export *
-  }
   module utility {
     header "experimental/utility"
-    export *
-  }
-  module vector {
-    header "experimental/vector"
     export *
   }
   module __config {
@@ -793,6 +748,7 @@ module std_private_algorithm_pstl_backends_cpu_backends_transform        [system
 module std_private_algorithm_pstl_backends_cpu_backends_transform_reduce [system] { header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h" }
 module std_private_algorithm_pstl_copy                                   [system] { header "__algorithm/pstl_copy.h" }
 module std_private_algorithm_pstl_count                                  [system] { header "__algorithm/pstl_count.h" }
+module std_private_algorithm_pstl_equal                                  [system] { header "__algorithm/pstl_equal.h" }
 module std_private_algorithm_pstl_fill                                   [system] { header "__algorithm/pstl_fill.h" }
 module std_private_algorithm_pstl_find                                   [system] {
   header "__algorithm/pstl_find.h"

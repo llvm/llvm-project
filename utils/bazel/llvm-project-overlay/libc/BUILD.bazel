@@ -205,6 +205,9 @@ libc_support_library(
 libc_support_library(
     name = "__support_cpp_limits",
     hdrs = ["src/__support/CPP/limits.h"],
+    deps = [
+        "__support_macros_attributes",
+    ],
 )
 
 libc_support_library(
@@ -672,6 +675,7 @@ libc_support_library(
     name = "__support_fputil_float_properties",
     hdrs = ["src/__support/FPUtil/FloatProperties.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_properties_float",
         ":__support_uint128",
     ],
@@ -687,6 +691,7 @@ libc_support_library(
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_fputil_float_properties",
+        ":__support_macros_attributes",
         ":__support_uint128",
     ],
 )
@@ -746,6 +751,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_macros_attributes",
     ],
 )
 
