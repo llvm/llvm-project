@@ -9,6 +9,7 @@
 // UNSUPPORTED: target={{.+}}-windows-gnu
 // XFAIL: LIBCXX-AIX-FIXME
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !has-64-bit-atomics
 // Hangs with msan.
 // UNSUPPORTED: msan
 

@@ -2194,8 +2194,8 @@ public:
   /// finalize-isel. Example:
   /// INLINEASM ... 262190 /* mem:m */, %stack.0.x.addr, 1, $noreg, 0, $noreg
   /// we would add placeholders for:                     ^  ^       ^  ^
-  virtual void
-  getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops) const {
+  virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
+                                     int FI) const {
     llvm_unreachable("unknown number of operands necessary");
   }
 

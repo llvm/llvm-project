@@ -110,16 +110,13 @@ extern "C" {
  * The struct is identical to the one in the kmp.h file.
  * We maintain the same data structure for compatibility.
  */
-typedef int kmp_int32;
-typedef int64_t kmp_int64;
-
 typedef void *omp_depend_t;
 struct kmp_task;
-typedef kmp_int32 (*kmp_routine_entry_t)(kmp_int32, struct kmp_task *);
+typedef int32_t (*kmp_routine_entry_t)(int32_t, struct kmp_task *);
 typedef struct kmp_task {
   void *shareds;
   kmp_routine_entry_t routine;
-  kmp_int32 part_id;
+  int32_t part_id;
 } kmp_task_t;
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
@@ -157,26 +154,26 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
-void **__kmpc_omp_get_target_async_handle_ptr(kmp_int32 gtid)
+void **__kmpc_omp_get_target_async_handle_ptr(int32_t gtid)
     __attribute__((weak));
-bool __kmpc_omp_has_task_team(kmp_int32 gtid) __attribute__((weak));
-kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
-                                  kmp_int32 flags, size_t sizeof_kmp_task_t,
+bool __kmpc_omp_has_task_team(int32_t gtid) __attribute__((weak));
+kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
+                                  size_t sizeof_kmp_task_t,
                                   size_t sizeof_shareds,
                                   kmp_routine_entry_t task_entry)
     __attribute__((weak));
 
 kmp_task_t *
-__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 flags,
+__kmpc_omp_target_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
                              size_t sizeof_kmp_task_t, size_t sizeof_shareds,
-                             kmp_routine_entry_t task_entry,
-                             kmp_int64 device_id) __attribute__((weak));
+                             kmp_routine_entry_t task_entry, int64_t device_id)
+    __attribute__((weak));
 
-kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
-                                    kmp_task_t *new_task, kmp_int32 ndeps,
-                                    kmp_depend_info_t *dep_list,
-                                    kmp_int32 ndeps_noalias,
-                                    kmp_depend_info_t *noalias_dep_list)
+int32_t __kmpc_omp_task_with_deps(ident_t *loc_ref, int32_t gtid,
+                                  kmp_task_t *new_task, int32_t ndeps,
+                                  kmp_depend_info_t *dep_list,
+                                  int32_t ndeps_noalias,
+                                  kmp_depend_info_t *noalias_dep_list)
     __attribute__((weak));
 
 /**
@@ -413,24 +410,5 @@ public:
 
   bool isAboveThreshold() const { return Count > CountThreshold; }
 };
-
-#include "llvm/Support/TimeProfiler.h"
-#define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
-#define TIMESCOPE_WITH_IDENT(IDENT)                                            \
-  SourceInfo SI(IDENT);                                                        \
-  llvm::TimeTraceScope TimeScope(__FUNCTION__, SI.getProfileLocation())
-#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)                             \
-  SourceInfo SI(IDENT);                                                        \
-  llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
-#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                     \
-  SourceInfo SI(IDENT);                                                        \
-  std::string ProfileLocation = SI.getProfileLocation();                       \
-  std::string RTM = RegionTypeMsg;                                             \
-  llvm::TimeTraceScope TimeScope(__FUNCTION__, ProfileLocation + RTM)
-#else
-#define TIMESCOPE()
-#define TIMESCOPE_WITH_IDENT(IDENT)
-#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
-#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)
 
 #endif

@@ -20,7 +20,7 @@
 #include "omptargetplugin.h"
 
 #ifdef OMPT_SUPPORT
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "omp-tools.h"
 #endif
 

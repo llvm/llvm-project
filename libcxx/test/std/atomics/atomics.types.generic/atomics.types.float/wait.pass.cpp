@@ -11,6 +11,7 @@
 // XFAIL: tsan
 // XFAIL: target={{x86_64-.*}} && msan
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !has-64-bit-atomics
 
 // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;
 // void wait(T old, memory_order order = memory_order::seq_cst) const noexcept;

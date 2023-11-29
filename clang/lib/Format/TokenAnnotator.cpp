@@ -2028,6 +2028,9 @@ private:
     } else if (Current.is(tok::arrow) &&
                Style.Language == FormatStyle::LK_Java) {
       Current.setType(TT_TrailingReturnArrow);
+    } else if (Current.is(tok::arrow) && Style.isVerilog()) {
+      // The implication operator.
+      Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::arrow) && AutoFound &&
                Line.MightBeFunctionDecl && Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
@@ -4717,6 +4720,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
       return false;
     }
+    // Add spaces around the implication operator `->`.
+    if (Left.is(tok::arrow) || Right.is(tok::arrow))
+      return true;
     // Don't add spaces between two at signs. Like in a coverage event.
     // Don't add spaces between at and a sensitivity list like
     // `@(posedge clk)`.
