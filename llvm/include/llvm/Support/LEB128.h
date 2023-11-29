@@ -138,15 +138,17 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
     if (p == end) {
       if (error)
         *error = "malformed uleb128, extends past end";
-      Value = 0;
-      break;
+      if (n)
+        *n = (unsigned)(p - orig_p);
+      return 0;
     }
     uint64_t Slice = *p & 0x7f;
     if ((Shift >= 64 && Slice != 0) || Slice << Shift >> Shift != Slice) {
       if (error)
         *error = "uleb128 too big for uint64";
-      Value = 0;
-      break;
+      if (n)
+        *n = (unsigned)(p - orig_p);
+      return 0;
     }
     Value += Slice << Shift;
     Shift += 7;
