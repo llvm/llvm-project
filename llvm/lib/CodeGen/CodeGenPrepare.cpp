@@ -2069,7 +2069,7 @@ SinkShiftAndTruncate(BinaryOperator *ShiftI, Instruction *User, ConstantInt *CI,
       BasicBlock::iterator TruncInsertPt = TruncUserBB->getFirstInsertionPt();
       TruncInsertPt++;
       // It will go ahead of any debug-info.
-      TruncInsertPt.setHeadBit(true); // not covered by any test at all.
+      TruncInsertPt.setHeadBit(true);
       assert(TruncInsertPt != TruncUserBB->end());
 
       InsertedTrunc = CastInst::Create(TruncI->getOpcode(), InsertedShift,
@@ -2241,7 +2241,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   // constant if the input to the intrinsic is zero.
   BasicBlock::iterator SplitPt = std::next(BasicBlock::iterator(CountZeros));
   // Any debug-info after CountZeros should not be included.
-  SplitPt.setHeadBit(true); // coveredy by Transforms/CodeGenPrepare/X86/cttz-ctlz.ll
+  SplitPt.setHeadBit(true);
   BasicBlock *EndBlock = CallBlock->splitBasicBlock(SplitPt, "cond.end");
   if (IsHugeFunc)
     FreshBBs.insert(EndBlock);
@@ -2836,7 +2836,7 @@ class TypePromotionTransaction {
       Instruction *PrevInst;
       BasicBlock *BB;
     } Point;
-    std::optional<DPValue::self_iterator> beforeDPValue = std::nullopt;
+    std::optional<DPValue::self_iterator> BeforeDPValue = std::nullopt;
 
     /// Remember whether or not the instruction had a previous instruction.
     bool HasPrevInstruction;
@@ -2851,7 +2851,7 @@ class TypePromotionTransaction {
       // of DPValues, if we ended up reinserting.
       if (BB->IsNewDbgInfoFormat) {
         DPMarker *DPM = BB->createMarker(Inst);
-        beforeDPValue = DPM->getReinsertionPosition();
+        BeforeDPValue = DPM->getReinsertionPosition();
       }
 
       if (HasPrevInstruction) {
@@ -2875,7 +2875,7 @@ class TypePromotionTransaction {
           Inst->insertBefore(*Point.BB, Position);
       }
 
-      Inst->getParent()->reinsertInstInDPValues(Inst, beforeDPValue);
+      Inst->getParent()->reinsertInstInDPValues(Inst, BeforeDPValue);
     }
   };
 
@@ -2901,7 +2901,6 @@ class TypePromotionTransaction {
   };
 
   /// Set the operand of an instruction with a new value.
-  // XXX jmorse -- what about for dbg.values?
   class OperandSetter : public TypePromotionAction {
     /// Original operand of the instruction.
     Value *Origin;
@@ -7033,7 +7032,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   BasicBlock *StartBlock = SI->getParent();
   BasicBlock::iterator SplitPt = std::next(BasicBlock::iterator(LastSI));
   // We should split before any debug-info.
-  SplitPt.setHeadBit(true); // covered by X86/select.ll
+  SplitPt.setHeadBit(true);
 
   IRBuilder<> IB(SI);
   auto *CondFr = IB.CreateFreeze(SI->getCondition(), SI->getName() + ".frozen");
@@ -8391,6 +8390,8 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
   return AnyChange;
 }
 
+// FIXME: should updating debug-info really cause the "changed" flag to fire,
+// which can cause a function to be reprocessed?
 bool CodeGenPrepare::fixupDPValue(DPValue &DPV) {
   if (DPV.Type != DPValue::LocationType::Value)
     return false;
