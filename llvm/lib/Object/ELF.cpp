@@ -705,9 +705,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
 
   uint8_t Version = 0;
   uint8_t Feature = 0;
-  bool FuncEntryCountEnabled = false;
-  bool BBFreqEnabled = false;
-  bool BrProbEnabled = false;
+  PGOAnalysisMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
          Cur.tell() < Content.size()) {
     if (Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
@@ -718,10 +716,11 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
       Feature = Data.getU8(Cur); // Feature byte
-      FuncEntryCountEnabled =
-          Feature & uint8_t(PGOAnalysisMap::Features::FuncEntryCnt);
-      BBFreqEnabled = Feature & uint8_t(PGOAnalysisMap::Features::BBFreq);
-      BrProbEnabled = Feature & uint8_t(PGOAnalysisMap::Features::BrProb);
+      auto FeatEnableOrErr = PGOAnalysisMap::Features::decode(Feature);
+      if (!FeatEnableOrErr && Cur)
+        return FeatEnableOrErr.takeError();
+      FeatEnable =
+          FeatEnableOrErr ? *FeatEnableOrErr : PGOAnalysisMap::Features{};
       if (Feature != 0 && Version < 2 && Cur)
         return createError(
             "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
@@ -772,10 +771,10 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     }
     FunctionEntries.emplace_back(Address, std::move(BBEntries));
 
-    if (FuncEntryCountEnabled || BBFreqEnabled || BrProbEnabled) {
+    if (FeatEnable.FuncEntryCount || FeatEnable.BBFreq || FeatEnable.BrProb) {
       // Function entry count
       uint64_t FuncEntryCount =
-          FuncEntryCountEnabled
+          FeatEnable.FuncEntryCount
               ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
               : 0;
 
@@ -784,13 +783,14 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
                                     (BlockIndex < NumBlocks);
            ++BlockIndex) {
         // Block frequency
-        uint64_t BBF =
-            BBFreqEnabled ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr) : 0;
+        uint64_t BBF = FeatEnable.BBFreq
+                           ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
+                           : 0;
 
         // Branch probability
         llvm::SmallVector<PGOAnalysisMap::PGOBBEntry::SuccessorEntry, 2>
             Successors;
-        if (BrProbEnabled) {
+        if (FeatEnable.BrProb) {
           auto SuccCount = readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr);
           for (uint64_t I = 0; I < SuccCount; ++I) {
             uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
@@ -805,9 +805,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       }
 
       if (PGOAnalyses)
-        PGOAnalyses->push_back({FuncEntryCount, std::move(PGOBBEntries),
-                                FuncEntryCountEnabled, BBFreqEnabled,
-                                BrProbEnabled});
+        PGOAnalyses->push_back(
+            {FuncEntryCount, std::move(PGOBBEntries), FeatEnable});
     }
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr or

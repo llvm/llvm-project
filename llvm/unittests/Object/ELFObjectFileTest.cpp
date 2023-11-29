@@ -684,7 +684,7 @@ Sections:
         ElfOrErr->getELFFile().getSection(1);
     ASSERT_THAT_EXPECTED(BBAddrMapSecOrErr, Succeeded());
     auto BBAddrMaps = ElfOrErr->readBBAddrMap(TextSectionIndex);
-    EXPECT_THAT_EXPECTED(BBAddrMaps, Succeeded());
+    ASSERT_THAT_EXPECTED(BBAddrMaps, Succeeded());
     EXPECT_EQ(*BBAddrMaps, ExpectedResult);
   };
 
@@ -745,8 +745,8 @@ Sections:
                   Section1BBAddrMaps);
 }
 
-// Tests for error paths of the ELFFile::decodeBBAddrMap with PGOBBAddrMap API.
-TEST(ELFObjectFileTest, InvalidDecodePGOBBAddrMap) {
+// Tests for error paths of the ELFFile::decodeBBAddrMap with PGOAnalysisMap API.
+TEST(ELFObjectFileTest, InvalidDecodePGOAnalysisMap) {
   if (IsHostWindows())
     GTEST_SKIP();
   StringRef CommonYamlString(R"(
@@ -780,7 +780,7 @@ Sections:
         FailedWithMessage(ErrMsg));
   };
 
-  // Check that we can detect unsupported versions that is too low
+  // Check that we can detect unsupported versions that are too old
   SmallString<128> UnsupportedLowVersionYamlString(CommonYamlString);
   UnsupportedLowVersionYamlString += R"(
         Version: 1
@@ -820,7 +820,7 @@ Sections:
   SmallString<128> MissingBBFreq(CommonYamlString);
   MissingBBFreq += R"(
         Version: 2
-        Feature: 0x02
+        Feature: 0x04
         BBEntries:
           - ID:            1
             AddressOffset: 0x0
@@ -859,8 +859,8 @@ Sections:
                          "malformed uleb128, extends past end");
 }
 
-// Test for the ELFObjectFile::readPGOBBAddrMap API.
-TEST(ELFObjectFileTest, ReadPGOBBAddrMap) {
+// Test for the ELFObjectFile::readBBAddrMap API with PGOAnalysisMap
+TEST(ELFObjectFileTest, ReadPGOAnalysisMap) {
   if (IsHostWindows())
     GTEST_SKIP();
   StringRef CommonYamlString(R"(
@@ -980,9 +980,9 @@ Sections:
 )");
 
   BBAddrMap E1(0x11111, {{1, 0x0, 0x1, {false, true, false, false, false}}});
-  PGOAnalysisMap P1 = {892, {{}}, true, false, false};
+  PGOAnalysisMap P1 = {892, {{}}, {true, false, false}};
   BBAddrMap E2(0x22222, {{2, 0x0, 0x2, {false, false, true, false, false}}});
-  PGOAnalysisMap P2 = {{}, {{BlockFrequency(343), {}}}, false, true, false};
+  PGOAnalysisMap P2 = {{}, {{BlockFrequency(343), {}}}, {false, true, false}};
   BBAddrMap E3(0x33333, {{0, 0x0, 0x3, {false, true, true, false, false}},
                          {1, 0x3, 0x3, {false, false, true, false, false}},
                          {2, 0x6, 0x3, {false, false, false, false, false}}});
@@ -992,9 +992,7 @@ Sections:
                           {2, BranchProbability::getRaw(0xeeee'eeee)}}},
                         {{}, {{2, BranchProbability::getRaw(0xffff'ffff)}}},
                         {{}, {}}},
-                       false,
-                       false,
-                       true};
+                       {false, false, true}};
   BBAddrMap E4(0x44444, {{0, 0x0, 0x4, {false, false, false, true, true}},
                          {1, 0x4, 0x4, {false, false, false, false, false}},
                          {2, 0x8, 0x4, {false, false, false, false, false}},
@@ -1010,9 +1008,7 @@ Sections:
          {3, BranchProbability::getRaw(0xeeee'eeee)}}},
        {BlockFrequency(18), {{3, BranchProbability::getRaw(0xffff'ffff)}}},
        {BlockFrequency(1000), {}}},
-      true,
-      true,
-      true};
+      {true, true, true}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
@@ -1040,7 +1036,7 @@ Sections:
         std::vector<PGOAnalysisMap> PGOAnalyses;
         auto BBAddrMaps = ElfOrErr->readBBAddrMap(
             TextSectionIndex, ExpectedPGO ? &PGOAnalyses : nullptr);
-        EXPECT_THAT_EXPECTED(BBAddrMaps, Succeeded());
+        ASSERT_THAT_EXPECTED(BBAddrMaps, Succeeded());
         EXPECT_EQ(*BBAddrMaps, ExpectedResult);
         if (ExpectedPGO) {
           EXPECT_EQ(BBAddrMaps->size(), PGOAnalyses.size());

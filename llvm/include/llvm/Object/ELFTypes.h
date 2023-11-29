@@ -879,11 +879,36 @@ struct BBAddrMap {
 
 /// A feature extension of BBAddrMap that holds information relevant to PGO.
 struct PGOAnalysisMap {
-  /// Bitmask of optional features to include in the PGO extended map.
-  enum class Features {
-    FuncEntryCnt = (1 << 0),
-    BBFreq = (1 << 1),
-    BrProb = (1 << 2),
+  /// Bitfield of optional features to include in the PGO extended map.
+  struct Features {
+    bool FuncEntryCount : 1;
+    bool BBFreq : 1;
+    bool BrProb : 1;
+
+    // Encodes to minimum bit width representation.
+    uint8_t encode() const {
+      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
+             (static_cast<uint8_t>(BBFreq) << 1) |
+             (static_cast<uint8_t>(BrProb) << 2);
+    }
+
+    // Decodes from minimum bit width representation and validates no
+    // unnecessary bits are used.
+    static Expected<Features> decode(uint8_t Val) {
+      Features Feat{static_cast<bool>(Val & (1 << 0)),
+                    static_cast<bool>(Val & (1 << 1)),
+                    static_cast<bool>(Val & (1 << 2))};
+      if (Feat.encode() != Val)
+        return createStringError(
+            std::error_code(),
+            "invalid encoding for PGOAnalysisMap::Features: 0x%x", Val);
+      return Feat;
+    }
+
+    bool operator==(const Features &Other) const {
+      return std::tie(FuncEntryCount, BBFreq, BrProb) ==
+             std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb);
+    }
   };
 
   /// Extra basic block data with fields for block frequency and branch
@@ -917,16 +942,11 @@ struct PGOAnalysisMap {
   std::vector<PGOBBEntry> BBEntries; // Extended basic block entries
 
   // Flags to indicate if each PGO related info was enabled in this function
-  bool FuncEntryCountEnabled : 1;
-  bool BBFreqEnabled : 1;
-  bool BBSuccProbEnabled : 1;
+  Features FeatEnable;
 
   bool operator==(const PGOAnalysisMap &Other) const {
-    return std::tie(FuncEntryCount, BBEntries, FuncEntryCountEnabled,
-                    BBFreqEnabled, BBSuccProbEnabled) ==
-           std::tie(Other.FuncEntryCount, Other.BBEntries,
-                    Other.FuncEntryCountEnabled, Other.BBFreqEnabled,
-                    Other.BBSuccProbEnabled);
+    return std::tie(FuncEntryCount, BBEntries, FeatEnable) ==
+           std::tie(Other.FuncEntryCount, Other.BBEntries, Other.FeatEnable);
   }
 };
 
