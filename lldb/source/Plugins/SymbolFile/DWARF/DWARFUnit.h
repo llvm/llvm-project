@@ -76,7 +76,7 @@ public:
     return m_unit_type == llvm::dwarf::DW_UT_type ||
            m_unit_type == llvm::dwarf::DW_UT_split_type;
   }
-  uint32_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
+  dw_offset_t GetNextUnitOffset() const { return m_offset + m_length + 4; }
 
   llvm::Error ApplyIndexEntry(const llvm::DWARFUnitIndex::Entry *index_entry);
 
@@ -157,7 +157,7 @@ public:
   // Size of the CU data (without initial length and without header).
   size_t GetDebugInfoSize() const;
   // Size of the CU data incl. header but without initial length.
-  uint32_t GetLength() const { return m_header.GetLength(); }
+  dw_offset_t GetLength() const { return m_header.GetLength(); }
   uint16_t GetVersion() const { return m_header.GetVersion(); }
   const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
