@@ -634,6 +634,7 @@ void request_attach(const llvm::json::Object &request) {
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
   attach_info.SetWaitForLaunch(wait_for, false /*async*/);
+  g_dap.ParsePrivateConfiguration(arguments->getObject("privateConfiguration"));
   g_dap.init_commands = GetStrings(arguments, "initCommands");
   g_dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
   g_dap.stop_commands = GetStrings(arguments, "stopCommands");
@@ -664,6 +665,7 @@ void request_attach(const llvm::json::Object &request) {
     llvm::sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json
+  g_dap.RunPrivateInitCommands();
   g_dap.RunInitCommands();
 
   SetSourceMapFromArguments(*arguments);
@@ -1270,7 +1272,8 @@ void request_evaluate(const llvm::json::Object &request) {
     if (frame.IsValid()) {
       g_dap.focus_tid = frame.GetThread().GetThreadID();
     }
-    auto result = RunLLDBCommands(llvm::StringRef(), {std::string(expression)});
+    auto result =
+        RunLLDBCommands(llvm::StringRef(), {std::string(expression)}).first;
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1792,6 +1795,7 @@ void request_launch(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   auto arguments = request.getObject("arguments");
+  g_dap.ParsePrivateConfiguration(arguments->getObject("privateConfiguration"));
   g_dap.init_commands = GetStrings(arguments, "initCommands");
   g_dap.pre_run_commands = GetStrings(arguments, "preRunCommands");
   g_dap.stop_commands = GetStrings(arguments, "stopCommands");
@@ -1820,6 +1824,7 @@ void request_launch(const llvm::json::Object &request) {
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
+  g_dap.RunPrivateInitCommands();
   g_dap.RunInitCommands();
 
   SetSourceMapFromArguments(*arguments);

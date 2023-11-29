@@ -357,6 +357,7 @@ class DAPTestCaseBase(TestBase):
         commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        privateConfiguration=None,
     ):
         """Sending launch request to dap"""
 
@@ -398,6 +399,7 @@ class DAPTestCaseBase(TestBase):
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
             customThreadFormat=customThreadFormat,
+            privateConfiguration=privateConfiguration,
         )
 
         if expectFailure:
@@ -437,6 +439,7 @@ class DAPTestCaseBase(TestBase):
         commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        privateConfiguration=None,
     ):
         """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
@@ -470,4 +473,5 @@ class DAPTestCaseBase(TestBase):
             commandEscapePrefix=commandEscapePrefix,
             customFrameFormat=customFrameFormat,
             customThreadFormat=customThreadFormat,
+            privateConfiguration=privateConfiguration,
         )

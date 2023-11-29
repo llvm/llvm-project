@@ -143,6 +143,16 @@ struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
+  /// Enum that controls when to print the output of a series of LLDB commands.
+  enum CommandsPrintMode {
+    /// The output is always printed to the user.
+    Always,
+    /// The output is only printed if one of the commands fails.
+    OnError,
+    /// The output is never printed.
+    Never,
+  };
+
   std::string debug_adaptor_path;
   InputStream input;
   OutputStream output;
@@ -161,6 +171,14 @@ struct DAP {
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+
+  struct PrivateConfiguration {
+    struct {
+      std::vector<std::string> commands;
+      CommandsPrintMode print_mode = CommandsPrintMode::OnError;
+    } init_commands;
+  } private_configuration;
+
   // A copy of the last LaunchRequest or AttachRequest so we can reuse its
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
@@ -227,9 +245,11 @@ struct DAP {
   ExpressionContext DetectExpressionContext(lldb::SBFrame &frame,
                                             std::string &text);
 
-  void RunLLDBCommands(llvm::StringRef prefix,
-                       const std::vector<std::string> &commands);
+  void
+  RunLLDBCommands(llvm::StringRef prefix, llvm::ArrayRef<std::string> commands,
+                  CommandsPrintMode print_mode = CommandsPrintMode::Always);
 
+  void RunPrivateInitCommands();
   void RunInitCommands();
   void RunPreRunCommands();
   void RunStopCommands();
@@ -311,6 +331,11 @@ struct DAP {
   void SetFrameFormat(llvm::StringRef format);
 
   void SetThreadFormat(llvm::StringRef format);
+
+  /// Parse the `privateConfiguration` JSON object. If \b nullptr, this method
+  /// does nothing.
+  void
+  ParsePrivateConfiguration(const llvm::json::Object *private_configuration);
 
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the

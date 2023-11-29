@@ -11,11 +11,13 @@
 
 namespace lldb_dap {
 
-void RunLLDBCommands(llvm::StringRef prefix,
+bool RunLLDBCommands(llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
                      llvm::raw_ostream &strm) {
   if (commands.empty())
-    return;
+    return true;
+  bool success = true;
+
   lldb::SBCommandInterpreter interp = g_dap.debugger.GetCommandInterpreter();
   if (!prefix.empty())
     strm << prefix << "\n";
@@ -32,17 +34,20 @@ void RunLLDBCommands(llvm::StringRef prefix,
     if (error_len) {
       const char *error = result.GetError();
       strm << error;
+      success = false;
     }
   }
+  return success;
 }
 
-std::string RunLLDBCommands(llvm::StringRef prefix,
-                            const llvm::ArrayRef<std::string> &commands) {
+std::pair<std::string, bool>
+RunLLDBCommands(llvm::StringRef prefix,
+                const llvm::ArrayRef<std::string> &commands) {
   std::string s;
   llvm::raw_string_ostream strm(s);
-  RunLLDBCommands(prefix, commands, strm);
+  bool success = RunLLDBCommands(prefix, commands, strm);
   strm.flush();
-  return s;
+  return {s, success};
 }
 
 bool ThreadHasStopReason(lldb::SBThread &thread) {

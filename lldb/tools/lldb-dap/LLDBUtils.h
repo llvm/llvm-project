@@ -33,7 +33,10 @@ namespace lldb_dap {
 /// \param[in] strm
 ///     The stream that will receive the prefix, prompt + command and
 ///     all command output.
-void RunLLDBCommands(llvm::StringRef prefix,
+///
+/// \return
+///     \b true if and only if all the commands executed successfully.
+bool RunLLDBCommands(llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
                      llvm::raw_ostream &strm);
 
@@ -50,10 +53,12 @@ void RunLLDBCommands(llvm::StringRef prefix,
 ///     An array of LLDB commands to execute.
 ///
 /// \return
-///     A std::string that contains the prefix and all commands and
-///     command output
-std::string RunLLDBCommands(llvm::StringRef prefix,
-                            const llvm::ArrayRef<std::string> &commands);
+///     A \a std::string that contains the prefix and all commands and
+///     command output, along with a \a bool that signals whether the
+///     entire execution of commands succeeded or not.
+std::pair<std::string, bool>
+RunLLDBCommands(llvm::StringRef prefix,
+                const llvm::ArrayRef<std::string> &commands);
 
 /// Check if a thread has a stop reason.
 ///

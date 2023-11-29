@@ -734,6 +734,7 @@ class DebugCommunication(object):
         commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        privateConfiguration=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -779,6 +780,8 @@ class DebugCommunication(object):
             args_dict["customFrameFormat"] = customFrameFormat
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
+        if privateConfiguration:
+            args_dict["privateConfiguration"] = privateConfiguration
 
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging

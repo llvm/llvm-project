@@ -435,9 +435,19 @@ ExpressionContext DAP::DetectExpressionContext(lldb::SBFrame &frame,
 }
 
 void DAP::RunLLDBCommands(llvm::StringRef prefix,
-                          const std::vector<std::string> &commands) {
-  SendOutput(OutputType::Console,
-             llvm::StringRef(::RunLLDBCommands(prefix, commands)));
+                          llvm::ArrayRef<std::string> commands,
+                          CommandsPrintMode print_mode) {
+  auto [output, success] = ::RunLLDBCommands(prefix, commands);
+  if (print_mode == CommandsPrintMode::Always ||
+      (!success && print_mode == CommandsPrintMode::OnError)) {
+    SendOutput(OutputType::Console, output);
+  }
+}
+
+void DAP::RunPrivateInitCommands() {
+  RunLLDBCommands("Running privateInitCommands:",
+                  private_configuration.init_commands.commands,
+                  private_configuration.init_commands.print_mode);
 }
 
 void DAP::RunInitCommands() {
@@ -851,6 +861,23 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
             "The provided thread format '{0}' couldn't be parsed: {1}\n",
             format, error.GetCString())
             .str());
+  }
+}
+
+void DAP::ParsePrivateConfiguration(
+    const llvm::json::Object *private_configuration) {
+  if (!private_configuration)
+    return;
+  if (auto *init_commands = private_configuration->getObject("initCommands")) {
+    if (std::optional<llvm::StringRef> print_mode =
+            init_commands->getString("printMode")) {
+      this->private_configuration.init_commands.print_mode =
+          print_mode == "onError" ? CommandsPrintMode::OnError
+          : print_mode == "never" ? CommandsPrintMode::Never
+                                  : CommandsPrintMode::Always;
+    }
+    this->private_configuration.init_commands.commands =
+        GetStrings(init_commands, "commands");
   }
 }
 
