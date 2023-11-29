@@ -20,9 +20,9 @@
 #include <vector>
 
 #include "Shared/Debug.h"
+#include "Shared/Environment.h"
 #include "Shared/Utils.h"
 
-#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
