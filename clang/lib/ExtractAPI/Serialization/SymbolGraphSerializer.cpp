@@ -101,8 +101,8 @@ Object serializeSourcePosition(const PresumedLoc &Loc) {
   assert(Loc.isValid() && "invalid source position");
 
   Object SourcePosition;
-  SourcePosition["line"] = Loc.getLine();
-  SourcePosition["character"] = Loc.getColumn();
+  SourcePosition["line"] = Loc.getLine() - 1;
+  SourcePosition["character"] = Loc.getColumn() - 1;
 
   return SourcePosition;
 }

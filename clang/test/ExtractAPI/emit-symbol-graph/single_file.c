@@ -85,8 +85,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 5,
-          "line": 4
+          "character": 4,
+          "line": 3
         },
         "uri": "file://INPUT_DIR/main.c"
       },
@@ -135,8 +135,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 1
+          "character": 8,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/main.c"
       },
@@ -185,8 +185,8 @@ int main ()
       },
       "location": {
         "position": {
-          "character": 9,
-          "line": 2
+          "character": 8,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/main.c"
       },

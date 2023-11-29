@@ -82,8 +82,8 @@ char objc;
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 1
+          "character": 5,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/c.h"
       },
@@ -162,8 +162,8 @@ char objc;
       },
       "location": {
         "position": {
-          "character": 6,
-          "line": 1
+          "character": 5,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/objc.h"
       },
