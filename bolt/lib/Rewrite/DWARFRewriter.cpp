@@ -961,8 +961,7 @@ void DWARFRewriter::updateUnitDebugInfo(
               std::move(OutputRanges), CachedRanges);
           OutputRanges.clear();
         } else if (OutputRanges.empty()) {
-          OutputRanges.push_back({RangesOrError.get().front().LowPC,
-                                  RangesOrError.get().front().HighPC});
+          OutputRanges.push_back({0, RangesOrError.get().front().HighPC});
         }
       } else if (!RangesOrError) {
         consumeError(RangesOrError.takeError());
