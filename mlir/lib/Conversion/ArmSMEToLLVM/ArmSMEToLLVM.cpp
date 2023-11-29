@@ -539,7 +539,7 @@ struct ConvertArmSMEToLLVMPass
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext());
-    configureArmSMEToLLVMConversionLegality(target, converter);
+    configureArmSMEToLLVMConversionLegality(target);
     populateArmSMEToLLVMConversionPatterns(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
@@ -550,8 +550,7 @@ struct ConvertArmSMEToLLVMPass
 
 } // namespace
 
-void mlir::configureArmSMEToLLVMConversionLegality(
-    ConversionTarget &target, LLVMTypeConverter &typeConverter) {
+void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
   target.addIllegalDialect<arm_sme::ArmSMEDialect>();
   target.addLegalOp<
       arm_sme::MaterializeSSATileOp, arm_sme::aarch64_sme_zero,
@@ -570,17 +569,18 @@ void mlir::configureArmSMEToLLVMConversionLegality(
       arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa>();
   target.addLegalDialect<arith::ArithDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
-  typeConverter.addConversion([&](VectorType type) -> std::optional<Type> {
+}
+
+void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns) {
+  converter.addConversion([&](VectorType type) -> std::optional<Type> {
     // There's no LLVM type for SME tiles, but after lowering to intrinsics all
     // SME vector types should be eliminated.
     if (arm_sme::isValidSMETileVectorType(type))
       return type;
     return std::nullopt;
   });
-}
 
-void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                  RewritePatternSet &patterns) {
   patterns.add<LoadTileSliceConversion, MoveTileSliceToVectorConversion,
                MoveVectorToTileSliceConversion, StoreTileSliceConversion,
                OuterProductOpConversion, ZeroOpConversion, GetTileConversion>(

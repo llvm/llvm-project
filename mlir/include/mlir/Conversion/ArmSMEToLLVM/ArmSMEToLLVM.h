@@ -24,8 +24,7 @@ class RewritePatternSet;
 std::unique_ptr<Pass> createConvertArmSMEToLLVMPass();
 
 /// Configure target to convert from the ArmSME dialect to LLVM intrinsics.
-void configureArmSMEToLLVMConversionLegality(ConversionTarget &target,
-                                             LLVMTypeConverter &typeConverter);
+void configureArmSMEToLLVMConversionLegality(ConversionTarget &target);
 
 /// Populate the given list with patterns that convert from the ArmSME dialect
 /// to LLVM intrinsics.
