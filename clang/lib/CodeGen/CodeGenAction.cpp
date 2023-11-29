@@ -257,6 +257,19 @@ bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
     CurLinkModule = LM.Module.get();
     bool Err;
 
+    auto DoLink = [&](auto &Mod) {
+      if (LM.Internalize) {
+        Err = Linker::linkModules(
+            *M, std::move(Mod), LM.LinkFlags,
+            [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+              internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+                return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+              });
+            });
+      } else
+        Err = Linker::linkModules(*M, std::move(Mod), LM.LinkFlags);
+    };
+
     // Create a Clone to move to the linker, which preserves the original
     // linking modules, allowing them to be linked again in the future
     if (ClRelinkBuiltinBitcodePostop) {
@@ -267,35 +280,11 @@ bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
 
       std::unique_ptr<llvm::Module> Clone = llvm::CloneModule(*LM.Module);
 
-      if (LM.Internalize) {
-        Err = Linker::linkModules(
-            *M, std::move(Clone), LM.LinkFlags,
-            [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-              internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-                return !GV.hasName() || (GVS.count(GV.getName()) == 0);
-              });
-            });
-      } else
-        Err = Linker::linkModules(*M, std::move(Clone), LM.LinkFlags);
-
-      if (Err)
-        return true;
+      DoLink(Clone);
     }
     // Otherwise we can link (and clean up) the original modules
     else {
-      if (LM.Internalize) {
-        Err = Linker::linkModules(
-            *M, std::move(LM.Module), LM.LinkFlags,
-            [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-              internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-                return !GV.hasName() || (GVS.count(GV.getName()) == 0);
-              });
-            });
-      } else
-        Err = Linker::linkModules(*M, std::move(LM.Module), LM.LinkFlags);
-
-      if (Err)
-        return true;
+      DoLink(LM.Module);
     }
   }
 
