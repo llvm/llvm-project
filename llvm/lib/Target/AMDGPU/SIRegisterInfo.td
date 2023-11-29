@@ -1332,6 +1332,10 @@ def VRegSrc_256 : RegisterOperand<VReg_256> {
   let DecoderMethod = "decodeOperand_VReg_256";
 }
 
+def VRegSrc_512 : RegisterOperand<VReg_512> {
+  let DecoderMethod = "decodeOperand_VReg_512";
+}
+
 def VRegOrLdsSrc_32 : RegisterOperand<VRegOrLds_32> {
   let DecoderMethod = "decodeOperand_VRegOrLds_32";
 }
@@ -1393,6 +1397,7 @@ def VISrc_256_f32 : RegOrF32 <"VReg_256", "OPERAND_REG_INLINE_C">;
 def VISrc_256_f64 : RegOrF64 <"VReg_256", "OPERAND_REG_INLINE_C">;
 def VISrc_512_b32 : RegOrB32 <"VReg_512", "OPERAND_REG_INLINE_C">;
 def VISrc_512_f32 : RegOrF32 <"VReg_512", "OPERAND_REG_INLINE_C">;
+def VISrc_512_f64 : RegOrF64 <"VReg_512", "OPERAND_REG_INLINE_C">;
 def VISrc_1024_b32 : RegOrB32 <"VReg_1024", "OPERAND_REG_INLINE_C">;
 def VISrc_1024_f32 : RegOrF32 <"VReg_1024", "OPERAND_REG_INLINE_C">;
 

@@ -725,6 +725,10 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VReg_256RegClassID, MVT::f64);
   }
 
+   bool isVISrc_512F64() const {
+    return isRegOrInlineNoMods(AMDGPU::VReg_512RegClassID, MVT::f64);
+  }
+
   bool isVISrc_128B16() const {
     return isRegOrInlineNoMods(AMDGPU::VReg_128RegClassID, MVT::i16);
   }
