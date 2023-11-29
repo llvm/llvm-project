@@ -43,7 +43,7 @@ public:
 
   virtual ~SplitStrategy() = default;
   virtual bool canSplit(const BinaryFunction &BF) = 0;
-  virtual bool keepEmpty() = 0;
+  virtual bool compactFragments() = 0;
   virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
 };
 

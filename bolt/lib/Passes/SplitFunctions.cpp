@@ -129,7 +129,7 @@ struct SplitProfile2 final : public SplitStrategy {
     return BF.hasValidProfile() && hasFullProfile(BF) && !allBlocksCold(BF);
   }
 
-  bool keepEmpty() override { return false; }
+  bool compactFragments() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
@@ -149,7 +149,7 @@ struct SplitCacheDirected final : public SplitStrategy {
   // When some functions are hot-warm split and others are hot-warm-cold split,
   // we do not want to change the fragment numbers of the blocks in the hot-warm
   // split functions.
-  bool keepEmpty() override { return true; }
+  bool compactFragments() override { return false; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     BasicBlockOrder BlockOrder(Start, End);
@@ -191,7 +191,7 @@ struct SplitRandom2 final : public SplitStrategy {
 
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  bool keepEmpty() override { return false; }
+  bool compactFragments() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
@@ -218,7 +218,7 @@ struct SplitRandomN final : public SplitStrategy {
 
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  bool keepEmpty() override { return false; }
+  bool compactFragments() override { return true; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     using DiffT = typename std::iterator_traits<BlockIt>::difference_type;
@@ -265,10 +265,10 @@ struct SplitRandomN final : public SplitStrategy {
 struct SplitAll final : public SplitStrategy {
   bool canSplit(const BinaryFunction &BF) override { return true; }
 
-  bool keepEmpty() override {
+  bool compactFragments() override {
     // Keeping empty fragments allows us to test, that empty fragments do not
     // generate symbols.
-    return true;
+    return false;
   }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
@@ -446,7 +446,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy &S) {
     CurrentFragment = BB->getFragmentNum();
   }
 
-  if (!S.keepEmpty()) {
+  if (S.compactFragments()) {
     FragmentNum CurrentFragment = FragmentNum::main();
     FragmentNum NewFragment = FragmentNum::main();
     for (BinaryBasicBlock *const BB : NewLayout) {
