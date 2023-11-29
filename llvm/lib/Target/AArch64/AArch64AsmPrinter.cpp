@@ -1901,6 +1901,9 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
 
   OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
 
+  // _ifunc.lazy_pointer:
+  //   .quad _ifunc.stub_helper
+
   EmitLinkage(LazyPointer);
   OutStreamer->emitLabel(LazyPointer);
   emitVisibility(LazyPointer, GI.getVisibility());
@@ -1908,17 +1911,17 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
 
   OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
 
-  MCSymbol *Stub = getSymbol(&GI);
+  // _ifunc:
+  //   adrp	x16, lazy_pointer@GOTPAGE
+  //   ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
+  //   ldr	x16, [x16]
+  //   br	x16
 
+  MCSymbol *Stub = getSymbol(&GI);
   EmitLinkage(Stub);
   OutStreamer->emitCodeAlignment(Align(4), STI);
   OutStreamer->emitLabel(Stub);
   emitVisibility(Stub, GI.getVisibility());
-
-  // adrp	x16, lazy_pointer@GOTPAGE
-  // ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
-  // ldr	x16, [x16]
-  // br	x16
 
   {
     MCInst Adrp;
@@ -1960,38 +1963,39 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
                                    .addReg(AArch64::X16),
                                *STI);
 
+  // _ifunc.stub_helper:
+  //   stp	fp, lr, [sp, #-16]
+  //   sub	fp, sp, 16
+  //   stp	x1, x0, [sp, #-32]
+  //   stp	x3, x2, [sp, #-48]
+  //   stp	x5, x4, [sp, #-64]
+  //   stp	x7, x6, [sp, #-80]
+  //   stp	d1, d0, [sp, #-96]
+  //   stp	d3, d2, [sp, #-112]
+  //   stp	d5, d4, [sp, #-128]
+  //   stp	d7, d6, [sp, #-144]
+  //   sub	sp, sp, 144
+  //   bl	_resolver
+  //   adrp	x16, lazy_pointer@GOTPAGE
+  //   ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
+  //   str	x0, [x16]
+  //   mov	x16, x0
+  //   add	sp, sp, 144
+  //   ldp	d7, d6, [sp, #-144]
+  //   ldp	d5, d4, [sp, #-128]
+  //   ldp	d3, d2, [sp, #-112]
+  //   ldp	d1, d0, [sp, #-96]
+  //   ldp	x7, x6, [sp, #-80]
+  //   ldp	x5, x4, [sp, #-64]
+  //   ldp	x3, x2, [sp, #-48]
+  //   ldp	x1, x0, [sp, #-32]
+  //   ldp	fp, lr, [sp, #-16]
+  //   br	x16
+
   EmitLinkage(StubHelper);
   OutStreamer->emitCodeAlignment(Align(4), STI);
   OutStreamer->emitLabel(StubHelper);
   emitVisibility(StubHelper, GI.getVisibility());
-
-  // stp	fp, lr, [sp, #-16]
-  // sub	fp, sp, 16
-  // stp	x1, x0, [sp, #-32]
-  // stp	x3, x2, [sp, #-48]
-  // stp	x5, x4, [sp, #-64]
-  // stp	x7, x6, [sp, #-80]
-  // stp	d1, d0, [sp, #-96]
-  // stp	d3, d2, [sp, #-112]
-  // stp	d5, d4, [sp, #-128]
-  // stp	d7, d6, [sp, #-144]
-  // sub	sp, sp, 144
-  // bl	_resolver
-  // adrp	x16, lazy_pointer@GOTPAGE
-  // ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
-  // str	x0, [x16]
-  // mov	x16, x0
-  // add	sp, sp, 144
-  // ldp	d7, d6, [sp, #-144]
-  // ldp	d5, d4, [sp, #-128]
-  // ldp	d3, d2, [sp, #-112]
-  // ldp	d1, d0, [sp, #-96]
-  // ldp	x7, x6, [sp, #-80]
-  // ldp	x5, x4, [sp, #-64]
-  // ldp	x3, x2, [sp, #-48]
-  // ldp	x1, x0, [sp, #-32]
-  // ldp	fp, lr, [sp, #-16]
-  // br	x16
 
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXi)
                                    .addReg(AArch64::FP)
