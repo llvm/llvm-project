@@ -862,22 +862,21 @@ public:
 } // namespace ompx
 
 #define OMP_LOOP_ENTRY(BW, TY)                                                 \
-  [[gnu::flatten, clang::always_inline]]                                       \
-  void __kmpc_distribute_for_static_loop##BW(                                  \
-      IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
-      TY num_threads, TY block_chunk, TY thread_chunk) {                       \
+  [[gnu::flatten, clang::always_inline]] void                                  \
+      __kmpc_distribute_for_static_loop##BW(                                   \
+          IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
+          TY num_threads, TY block_chunk, TY thread_chunk) {                   \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
         loc, fn, arg, num_iters + 1, num_threads, block_chunk, thread_chunk);  \
   }                                                                            \
-  [[gnu::flatten, clang::always_inline]]                                       \
-  void __kmpc_distribute_static_loop##BW(                                      \
-      IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
-      TY block_chunk) {                                                        \
+  [[gnu::flatten, clang::always_inline]] void                                  \
+      __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),  \
+                                        void *arg, TY num_iters,               \
+                                        TY block_chunk) {                      \
     ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters + 1,       \
                                             block_chunk);                      \
   }                                                                            \
-  [[gnu::flatten, clang::always_inline]]                                       \
-  void __kmpc_for_static_loop##BW(                                             \
+  [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
       TY num_threads, TY thread_chunk) {                                       \
     ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters + 1, num_threads, \
