@@ -129,7 +129,6 @@ define i64 @zero_singlebit1(i64 %rs1, i64 %rs2) {
   ret i64 %sel
 }
 
-; TODO: Optimize Zicond case.
 define i64 @zero_singlebit2(i64 %rs1, i64 %rs2) {
 ; RV32I-LABEL: zero_singlebit2:
 ; RV32I:       # %bb.0:
@@ -148,9 +147,8 @@ define i64 @zero_singlebit2(i64 %rs1, i64 %rs2) {
 ;
 ; RV64XVENTANACONDOPS-LABEL: zero_singlebit2:
 ; RV64XVENTANACONDOPS:       # %bb.0:
-; RV64XVENTANACONDOPS-NEXT:    slli a1, a1, 51
-; RV64XVENTANACONDOPS-NEXT:    srai a1, a1, 63
-; RV64XVENTANACONDOPS-NEXT:    and a0, a1, a0
+; RV64XVENTANACONDOPS-NEXT:    bexti a1, a1, 12
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a1
 ; RV64XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XTHEADCONDMOV-LABEL: zero_singlebit2:
@@ -162,17 +160,15 @@ define i64 @zero_singlebit2(i64 %rs1, i64 %rs2) {
 ;
 ; RV32ZICOND-LABEL: zero_singlebit2:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    slli a2, a2, 19
-; RV32ZICOND-NEXT:    srai a2, a2, 31
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a2, a1
+; RV32ZICOND-NEXT:    bexti a2, a2, 12
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
+; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: zero_singlebit2:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    slli a1, a1, 51
-; RV64ZICOND-NEXT:    srai a1, a1, 63
-; RV64ZICOND-NEXT:    and a0, a1, a0
+; RV64ZICOND-NEXT:    bexti a1, a1, 12
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %and = and i64 %rs2, 4096
   %rc = icmp eq i64 %and, 0
@@ -3694,9 +3690,8 @@ define i64 @single_bit2(i64 %x) {
 ;
 ; RV64XVENTANACONDOPS-LABEL: single_bit2:
 ; RV64XVENTANACONDOPS:       # %bb.0: # %entry
-; RV64XVENTANACONDOPS-NEXT:    slli a1, a0, 52
-; RV64XVENTANACONDOPS-NEXT:    srai a1, a1, 63
-; RV64XVENTANACONDOPS-NEXT:    and a0, a1, a0
+; RV64XVENTANACONDOPS-NEXT:    bexti a1, a0, 11
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a1
 ; RV64XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XTHEADCONDMOV-LABEL: single_bit2:
@@ -3708,17 +3703,15 @@ define i64 @single_bit2(i64 %x) {
 ;
 ; RV32ZICOND-LABEL: single_bit2:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    slli a2, a0, 20
-; RV32ZICOND-NEXT:    srai a2, a2, 31
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a2, a1
+; RV32ZICOND-NEXT:    bexti a2, a0, 11
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
+; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: single_bit2:
 ; RV64ZICOND:       # %bb.0: # %entry
-; RV64ZICOND-NEXT:    slli a1, a0, 52
-; RV64ZICOND-NEXT:    srai a1, a1, 63
-; RV64ZICOND-NEXT:    and a0, a1, a0
+; RV64ZICOND-NEXT:    bexti a1, a0, 11
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
 entry:
   %and = and i64 %x, 2048
