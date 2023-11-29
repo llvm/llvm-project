@@ -330,10 +330,10 @@ static bool FormattedDerivedTypeIO(IoStatementState &io,
       }
     }
   }
-  if (const typeInfo::SpecialBinding *special{
-          type->FindSpecialBinding(DIR == Direction::Input
-                  ? typeInfo::SpecialBinding::Which::ReadFormatted
-                  : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
+  if (const typeInfo::SpecialBinding *
+      special{type->FindSpecialBinding(DIR == Direction::Input
+              ? typeInfo::SpecialBinding::Which::ReadFormatted
+              : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
     if (!table || !table->ignoreNonTbpEntries || special->isTypeBound()) {
       if (std::optional<bool> wasDefined{
               DefinedFormattedIo(io, descriptor, *type, *special)}) {
@@ -353,8 +353,8 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
     const Descriptor &descriptor, const NonTbpDefinedIoTable *table = nullptr) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   const DescriptorAddendum *addendum{descriptor.Addendum()};
-  if (const typeInfo::DerivedType *type{
-          addendum ? addendum->derivedType() : nullptr}) {
+  if (const typeInfo::DerivedType *
+      type{addendum ? addendum->derivedType() : nullptr}) {
     // derived type unformatted I/O
     if (table) {
       if (const auto *definedIo{table->Find(*type,
@@ -375,10 +375,10 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
         }
       }
     }
-    if (const typeInfo::SpecialBinding *special{
-            type->FindSpecialBinding(DIR == Direction::Input
-                    ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                    : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
+    if (const typeInfo::SpecialBinding *
+        special{type->FindSpecialBinding(DIR == Direction::Input
+                ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
       if (!table || !table->ignoreNonTbpEntries || special->isTypeBound()) {
         // defined derived type unformatted I/O
         return DefinedUnformattedIo(io, descriptor, *type, *special);
