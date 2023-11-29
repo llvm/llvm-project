@@ -257,11 +257,6 @@ struct TargetMemsetArgsTy {
 }
 #endif
 
-#define TARGET_NAME Libomptarget
-#ifndef DEBUG_PREFIX
-#define DEBUG_PREFIX GETNAME(TARGET_NAME)
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 /// dump a table of all the host-target pointer pairs on failure
 static inline void dumpTargetPointerMappings(const ident_t *Loc,

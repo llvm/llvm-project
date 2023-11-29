@@ -44,6 +44,12 @@ if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 endif()
 
+# Define the TARGET_NAME and DEBUG_PREFIX.
+target_compile_definitions(omptarget PRIVATE
+  TARGET_NAME=omptarget
+  DEBUG_PREFIX="omptarget"
+)
+
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
