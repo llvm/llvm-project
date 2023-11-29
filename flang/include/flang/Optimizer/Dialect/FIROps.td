@@ -3047,9 +3047,9 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
     FIR while providing access to the pointer addresses in the runtime
     descriptor for OpenMP/OpenACC target mapping.
 
-    To avoid requiring too much about the fields that the runtime descriptor
-    implementation must have, only the base_addr and derived_type descriptor
-    fields can be addressed.
+    To avoid requiring too much information about the fields that the runtime
+    descriptor implementation must have, only the base_addr and derived_type
+    descriptor fields can be addressed.
 
     ```
         %addr = fir.box_offset %box base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
