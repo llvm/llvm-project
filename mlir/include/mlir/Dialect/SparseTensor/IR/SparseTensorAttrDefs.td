@@ -467,10 +467,6 @@ def SparseTensorStorageSpecifierKindAttr
 def IsSparseTensorPred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
 
-def IsCOOPred
-  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
-          "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isCOO()">;
-
 def IsSparseTensorSlicePred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
@@ -478,22 +474,14 @@ def IsSparseTensorSlicePred
 class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
 
-class COOSparseTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsCOOPred], "COO sparse tensor">;
-
 class SparseTensorSliceOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
-
-class RankedSparseTensorOf<list<Type> allowedTypes>
-  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
 
 class ScalarLikeOf<list<Type> allowedTypes>
   : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>], "scalar like">;
 
 def AnySparseTensor : SparseTensorOf<[AnyType]>;
-def AnyCOOSparseTensor : COOSparseTensorOf<[AnyType]>;
 def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
-def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
 def AnyIndexingScalarLike : ScalarLikeOf<[AnySignlessIntegerOrIndex]>;
 
 //===----------------------------------------------------------------------===//
