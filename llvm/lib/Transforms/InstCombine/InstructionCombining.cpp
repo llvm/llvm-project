@@ -3812,10 +3812,10 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
     MoveBefore =
         FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
   } else {
-    Instruction *IOp = cast<Instruction>(Op);
-    MoveBefore = IOp->getInsertionPointAfterDef();
-    if (MoveBefore == IOp->getParent()->end())
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
       return false;
+    MoveBefore = *MoveBeforeOpt;
   }
 
   // Don't move to the position of a debug intrinsic.

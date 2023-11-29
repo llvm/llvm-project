@@ -923,9 +923,10 @@ static Value *NegateValue(Value *V, Instruction *BI,
 
     BasicBlock::iterator InsertPt;
     if (Instruction *InstInput = dyn_cast<Instruction>(V)) {
-      InsertPt = InstInput->getInsertionPointAfterDef();
-      if (InsertPt == InstInput->getParent()->end())
+      auto InsertPtOpt = InstInput->getInsertionPointAfterDef();
+      if (!InsertPtOpt)
         continue;
+      InsertPt = *InsertPtOpt;
     } else {
       InsertPt = TheNeg->getFunction()
                      ->getEntryBlock()

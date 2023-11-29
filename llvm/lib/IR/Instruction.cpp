@@ -274,20 +274,23 @@ bool Instruction::comesBefore(const Instruction *Other) const {
   return Order < Other->Order;
 }
 
-BasicBlock::iterator Instruction::getInsertionPointAfterDef() {
+std::optional<BasicBlock::iterator> Instruction::getInsertionPointAfterDef() {
   assert(!getType()->isVoidTy() && "Instruction must define result");
+  BasicBlock *InsertBB;
   BasicBlock::iterator InsertPt;
   if (auto *PN = dyn_cast<PHINode>(this)) {
-    InsertPt = getParent()->getFirstInsertionPt();
+    InsertBB = PN->getParent();
+    InsertPt = InsertBB->getFirstInsertionPt();
   } else if (auto *II = dyn_cast<InvokeInst>(this)) {
-    BasicBlock *InsertBB = II->getNormalDest();
+    InsertBB = II->getNormalDest();
     InsertPt = InsertBB->getFirstInsertionPt();
   } else if (isa<CallBrInst>(this)) {
     // Def is available in multiple successors, there's no single dominating
     // insertion point.
-    return getParent()->end();
+    return std::nullopt;
   } else {
     assert(!isTerminator() && "Only invoke/callbr terminators return value");
+    InsertBB = getParent();
     InsertPt = std::next(getIterator());
     // Any instruction inserted immediately after "this" will come before any
     // debug-info records take effect -- thus, set the head bit indicating that
@@ -296,8 +299,9 @@ BasicBlock::iterator Instruction::getInsertionPointAfterDef() {
   }
 
   // catchswitch blocks don't have any legal insertion point (because they
-  // are both an exception pad and a terminator), and will cause end() to be
-  // returned here.
+  // are both an exception pad and a terminator).
+  if (InsertPt == InsertBB->end())
+    return std::nullopt;
   return InsertPt;
 }
 

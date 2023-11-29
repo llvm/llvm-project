@@ -603,12 +603,12 @@ getFreezeInsertPt(Value *V, const DominatorTree &DT) {
   if (!I)
     return DT.getRoot()->getFirstNonPHIOrDbgOrAlloca()->getIterator();
 
-  BasicBlock::iterator Res = I->getInsertionPointAfterDef();
+  std::optional<BasicBlock::iterator> Res = I->getInsertionPointAfterDef();
   // If there is no place to add freeze - return nullptr.
-  if (Res == I->getParent()->end() || !DT.dominates(I, &*Res))
+  if (!Res || !DT.dominates(I, &**Res))
     return std::nullopt;
 
-  Instruction *ResInst = &*Res;
+  Instruction *ResInst = &**Res;
 
   // If there is a User dominated by original I, then it should be dominated
   // by Freeze instruction as well.

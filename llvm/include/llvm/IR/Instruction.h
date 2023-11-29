@@ -222,9 +222,10 @@ public:
   /// Get the first insertion point at which the result of this instruction
   /// is defined. This is *not* the directly following instruction in a number
   /// of cases, e.g. phi nodes or terminators that return values. This function
-  /// may return getParent()->end() if the insertion after the definition is not
-  /// possible, e.g. due to a catchswitch terminator.
-  SymbolTableList<Instruction, ilist_iterator_bits<true>>::iterator
+  /// may return null if the insertion after the definition is not possible,
+  /// e.g. due to a catchswitch terminator.
+  std::optional<
+      SymbolTableList<Instruction, ilist_iterator_bits<true>>::iterator>
   getInsertionPointAfterDef();
 
   //===--------------------------------------------------------------------===//
