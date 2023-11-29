@@ -1007,6 +1007,12 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
   }
 }
 
+LogicalResult NVVM::SetMaxRegisterOp::verify() {
+  if (getCount() % 8)
+    return emitOpError("new register size must be multiple of 8");
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
