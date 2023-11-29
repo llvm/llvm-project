@@ -382,9 +382,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     /// the null encoding (since dense-tensors are always all-dense).
     bool isAllDense() const;
 
-    /// Returns true if it is a sparse tensor encoding in COO format.
-    bool isCOO() const;
-
     /// Returns true if every level is ordered.  Also returns true for
     /// the null encoding (since dense-tensors are always all-ordered).
     bool isAllOrdered() const;
@@ -467,37 +464,22 @@ def SparseTensorStorageSpecifierKindAttr
 def IsSparseTensorPred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self)">;
 
-def IsCOOPred
-  : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
-          "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isCOO()">;
-
 def IsSparseTensorSlicePred
   : CPred<"!!::mlir::sparse_tensor::getSparseTensorEncoding($_self) && "
           "  ::mlir::sparse_tensor::getSparseTensorEncoding($_self).isSlice()">;
 
-// The following four follow the same idiom as `TensorOf`, `AnyTensor`,
-// `RankedTensorOf`, `AnyRankedTensor`.
-
 class SparseTensorOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorPred], "sparse tensor">;
-
-class COOSparseTensorOf<list<Type> allowedTypes>
-  : TensorOf<allowedTypes, [IsCOOPred], "COO sparse tensor">;
 
 class SparseTensorSliceOf<list<Type> allowedTypes>
   : TensorOf<allowedTypes, [IsSparseTensorSlicePred], "sparse tensor slice">;
 
-def AnySparseTensor : SparseTensorOf<[AnyType]>;
-def AnyCOOSparseTensor : COOSparseTensorOf<[AnyType]>;
-def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
-
-class RankedSparseTensorOf<list<Type> allowedTypes>
-  : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
-
-def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
-
 class ScalarLikeOf<list<Type> allowedTypes>
-  : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>]>;
+  : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>], "scalar like">;
+
+def AnySparseTensor : SparseTensorOf<[AnyType]>;
+def AnySparseTensorSlice : SparseTensorSliceOf<[AnyType]>;
+def AnyIndexingScalarLike : ScalarLikeOf<[AnySignlessIntegerOrIndex]>;
 
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Sorting Algorithm Attribute.

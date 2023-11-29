@@ -7073,7 +7073,7 @@ Parameters annotated with `in` or with no annotation are passed by value from
 the caller to the callee.
 
 Parameters annotated with `out` are written to the argument after the callee
-returns (Note: arguments values passed into `out` parameters _are not_ copied
+returns (Note: arguments values passed into `out` parameters *are not* copied
 into the callee).
 
 Parameters annotated with `inout` are copied into the callee via a temporary,
