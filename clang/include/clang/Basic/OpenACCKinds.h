@@ -55,7 +55,8 @@ enum class OpenACCDirectiveKind {
   Update,
   // FIXME: wait construct.
 
-  // FIXME: routine construct.
+  // Procedure Calls in Compute Regions.
+  Routine,
 
   // Invalid.
   Invalid,

@@ -38,7 +38,7 @@ void __libcpp_verbose_abort(const char *__format, ...);
 // make sure that the program terminates but without taking any complex dependencies in this header.
 #if !defined(_LIBCPP_VERBOSE_ABORT)
 
-#  if defined(_LIBCPP_AVAILABILITY_HAS_NO_VERBOSE_ABORT)
+#  if !_LIBCPP_AVAILABILITY_HAS_VERBOSE_ABORT
 // The decltype is there to suppress -Wunused warnings in this configuration.
 void __use(const char*, ...);
 #    define _LIBCPP_VERBOSE_ABORT(...) (decltype(::std::__use(__VA_ARGS__))(), __builtin_abort())

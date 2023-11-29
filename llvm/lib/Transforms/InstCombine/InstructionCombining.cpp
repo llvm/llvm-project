@@ -2436,14 +2436,30 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (match(GEP.getOperand(1),
               m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
       //   %idx = add i64 %idx1, %idx2
-      //   %gep = getelementptr i32, i32* %ptr, i64 %idx
+      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
-      //   %newptr = getelementptr i32, i32* %ptr, i64 %idx1
-      //   %newgep = getelementptr i32, i32* %newptr, i64 %idx2
+      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
+      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
       auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
                                        GEP.getPointerOperand(), Idx1);
       return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
                                        Idx2);
+    }
+    ConstantInt *C;
+    if (match(GEP.getOperand(1), m_OneUse(m_SExt(m_OneUse(m_NSWAdd(
+                                     m_Value(Idx1), m_ConstantInt(C))))))) {
+      // %add = add nsw i32 %idx1, idx2
+      // %sidx = sext i32 %add to i64
+      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      // as:
+      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
+      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      auto *NewPtr = Builder.CreateGEP(
+          GEP.getResultElementType(), GEP.getPointerOperand(),
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
+      return GetElementPtrInst::Create(
+          GEP.getResultElementType(), NewPtr,
+          Builder.CreateSExt(C, GEP.getOperand(1)->getType()));
     }
   }
 

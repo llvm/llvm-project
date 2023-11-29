@@ -135,7 +135,7 @@ protected:
     LiveRootWorklistItemTy(const LiveRootWorklistItemTy &) = default;
     LiveRootWorklistItemTy(LiveRootWorklistActionTy Action,
                            UnitEntryPairTy RootEntry) {
-      RootCU.setInt(static_cast<uint8_t>(Action));
+      RootCU.setInt(Action);
       RootCU.setPointer(RootEntry.CU);
 
       RootDieEntry = RootEntry.DieEntry;
@@ -144,7 +144,7 @@ protected:
                            UnitEntryPairTy RootEntry,
                            UnitEntryPairTy ReferencedBy) {
       RootCU.setPointer(RootEntry.CU);
-      RootCU.setInt(static_cast<uint8_t>(Action));
+      RootCU.setInt(Action);
       RootDieEntry = RootEntry.DieEntry;
 
       ReferencedByCU = ReferencedBy.CU;
@@ -175,7 +175,22 @@ protected:
     /// Root entry.
     /// ASSUMPTION: 3 bits are used to store LiveRootWorklistActionTy value.
     /// Thus LiveRootWorklistActionTy should have no more eight elements.
-    PointerIntPair<CompileUnit *, 3> RootCU;
+
+    /// Pointer traits for CompileUnit.
+    struct CompileUnitPointerTraits {
+      static inline void *getAsVoidPointer(CompileUnit *P) { return P; }
+      static inline CompileUnit *getFromVoidPointer(void *P) {
+        return (CompileUnit *)P;
+      }
+      static constexpr int NumLowBitsAvailable = 3;
+      static_assert(
+          alignof(CompileUnit) >= (1 << NumLowBitsAvailable),
+          "CompileUnit insufficiently aligned to have enough low bits.");
+    };
+
+    PointerIntPair<CompileUnit *, 3, LiveRootWorklistActionTy,
+                   CompileUnitPointerTraits>
+        RootCU;
     const DWARFDebugInfoEntry *RootDieEntry = nullptr;
 
     /// Another root entry which references this RootDieEntry.

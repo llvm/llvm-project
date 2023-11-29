@@ -7061,6 +7061,26 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
   }];
 }
 
+def HLSLParamQualifierDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "HLSL Parameter Modifiers";
+  let Content = [{
+HLSL function parameters are passed by value. Parameter declarations support
+three qualifiers to denote parameter passing behavior. The three qualifiers are
+`in`, `out` and `inout`.
+
+Parameters annotated with `in` or with no annotation are passed by value from
+the caller to the callee.
+
+Parameters annotated with `out` are written to the argument after the callee
+returns (Note: arguments values passed into `out` parameters _are not_ copied
+into the callee).
+
+Parameters annotated with `inout` are copied into the callee via a temporary,
+and copied back to the argument after the callee returns.
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -7585,7 +7605,7 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a `coroutine return type (`CRT`_) (i.e.
+to a coroutine return type (`CRT`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
 All parameters of a function are considered to be lifetime bound. See `documentation`_

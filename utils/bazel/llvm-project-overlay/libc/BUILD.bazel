@@ -76,6 +76,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_macros_properties_os",
+    hdrs = ["src/__support/macros/properties/os.h"],
+)
+
+libc_support_library(
+    name = "__support_macros_properties_float",
+    hdrs = ["src/__support/macros/properties/float.h"],
+    deps = [
+        ":__support_macros_properties_architectures",
+        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_os",
+    ],
+)
+
+libc_support_library(
     name = "__support_macros_properties_cpu_features",
     hdrs = ["src/__support/macros/properties/cpu_features.h"],
     deps = [
@@ -308,7 +323,7 @@ libc_support_library(
     deps = [
         ":__support_macros_attributes",
         ":__support_macros_config",
-        ":__support_macros_properties_compiler",
+        ":__support_macros_properties_float",
     ],
 )
 
@@ -657,6 +672,7 @@ libc_support_library(
     name = "__support_fputil_float_properties",
     hdrs = ["src/__support/FPUtil/FloatProperties.h"],
     deps = [
+        ":__support_macros_properties_float",
         ":__support_uint128",
     ],
 )

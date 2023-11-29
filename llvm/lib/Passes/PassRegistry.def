@@ -400,6 +400,7 @@ FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(dbgs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(dbgs()))
 FUNCTION_PASS("print<inliner-size-estimator>",
   InlineSizeEstimatorAnalysisPrinterPass(dbgs()))
+FUNCTION_PASS("print<lazy-value-info>", LazyValueInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(dbgs()))
 FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(dbgs()))
 FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(dbgs()))
@@ -446,6 +447,8 @@ FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM));
 FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM));
+FUNCTION_PASS("dwarfehprepare", DwarfEHPreparePass(TM));
+FUNCTION_PASS("callbrprepare", CallBrPreparePass());
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS

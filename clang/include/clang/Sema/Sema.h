@@ -3737,6 +3737,9 @@ public:
                                               int X, int Y, int Z);
   HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                       HLSLShaderAttr::ShaderType ShaderType);
+  HLSLParamModifierAttr *
+  mergeHLSLParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
+                             HLSLParamModifierAttr::Spelling Spelling);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
@@ -3849,6 +3852,12 @@ public:
                                   const FunctionProtoType *NewType,
                                   unsigned *ArgPos = nullptr,
                                   bool Reversed = false);
+
+  bool FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
+                                           const FunctionDecl *NewFunction,
+                                           unsigned *ArgPos = nullptr,
+                                           bool Reversed = false);
+
   void HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
                                   QualType FromType, QualType ToType);
 
@@ -10996,7 +11005,10 @@ public:
 
   /// Called on well formed
   /// \#pragma clang fp reassociate
-  void ActOnPragmaFPReassociate(SourceLocation Loc, bool IsEnabled);
+  /// or
+  /// \#pragma clang fp reciprocal
+  void ActOnPragmaFPValueChangingOption(SourceLocation Loc, PragmaFPKind Kind,
+                                        bool IsEnabled);
 
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
@@ -12198,6 +12210,13 @@ public:
   /// Called on well-formed 'compare' clause.
   OMPClause *ActOnOpenMPCompareClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'fail' clause.
+  OMPClause *ActOnOpenMPFailClause(SourceLocation StartLoc,
+                                   SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPFailClause(
+      OpenMPClauseKind Kind, SourceLocation KindLoc,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+
   /// Called on well-formed 'seq_cst' clause.
   OMPClause *ActOnOpenMPSeqCstClause(SourceLocation StartLoc,
                                      SourceLocation EndLoc);

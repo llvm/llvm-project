@@ -175,43 +175,8 @@ public:
         if (MachineInstr *MI = I->second.MI) {
           std::optional<DestSourcePair> CopyOperands =
               isCopyInstr(*MI, TII, UseCopyInstr);
-
-          MCRegister Def = CopyOperands->Destination->getReg().asMCReg();
-          MCRegister Src = CopyOperands->Source->getReg().asMCReg();
-
-          markRegsUnavailable(Def, TRI);
-
-          // Since we clobber the destination of a copy, the semantic of Src's
-          // "DefRegs" to contain Def is no longer effectual. We will also need
-          // to remove the record from the copy maps that indicates Src defined
-          // Def. Failing to do so might cause the target to miss some
-          // opportunities to further eliminate redundant copy instructions.
-          // Consider the following sequence during the
-          // ForwardCopyPropagateBlock procedure:
-          // L1: r0 = COPY r9     <- TrackMI
-          // L2: r0 = COPY r8     <- TrackMI (Remove r9 defined r0 from tracker)
-          // L3: use r0           <- Remove L2 from MaybeDeadCopies
-          // L4: early-clobber r9 <- Clobber r9 (L2 is still valid in tracker)
-          // L5: r0 = COPY r8     <- Remove NopCopy
-          for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
-            auto SrcCopy = Copies.find(SrcUnit);
-            if (SrcCopy != Copies.end() && SrcCopy->second.LastSeenUseInCopy) {
-              // If SrcCopy defines multiple values, we only need
-              // to erase the record for Def in DefRegs.
-              for (auto itr = SrcCopy->second.DefRegs.begin();
-                   itr != SrcCopy->second.DefRegs.end(); itr++) {
-                if (*itr == Def) {
-                  SrcCopy->second.DefRegs.erase(itr);
-                  // If DefReg becomes empty after removal, we can directly
-                  // remove SrcCopy from the tracker's copy maps.
-                  if (SrcCopy->second.DefRegs.empty()) {
-                    Copies.erase(SrcCopy);
-                  }
-                  break;
-                }
-              }
-            }
-          }
+          markRegsUnavailable({CopyOperands->Destination->getReg().asMCReg()},
+                              TRI);
         }
         // Now we can erase the copy.
         Copies.erase(I);
@@ -820,7 +785,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // ...
         // %xmm2 = copy %xmm9
         Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr);
-
         for (const MachineOperand &MO : MI.implicit_operands()) {
           if (!MO.isReg() || !MO.isDef())
             continue;
@@ -831,6 +795,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         }
 
         Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
+
         continue;
       }
     }

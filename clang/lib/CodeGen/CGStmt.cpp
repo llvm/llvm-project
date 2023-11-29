@@ -407,7 +407,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPInteropDirective(cast<OMPInteropDirective>(*S));
     break;
   case Stmt::OMPDispatchDirectiveClass:
-    llvm_unreachable("Dispatch directive not supported yet.");
+    CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
     break;
   case Stmt::OMPScopeDirectiveClass:
     llvm_unreachable("scope not supported with FE outlining");

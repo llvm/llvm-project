@@ -357,6 +357,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<PossiblyExactOperator>(this)->setIsExact(false);
     break;
 
+  case Instruction::Or:
+    cast<PossiblyDisjointInst>(this)->setIsDisjoint(false);
+    break;
+
   case Instruction::GetElementPtr:
     cast<GetElementPtrInst>(this)->setIsInBounds(false);
     break;
@@ -532,6 +536,10 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (isa<PossiblyExactOperator>(this))
       setIsExact(PE->isExact());
 
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(SrcPD->isDisjoint());
+
   // Copy the fast-math flags.
   if (auto *FP = dyn_cast<FPMathOperator>(V))
     if (isa<FPMathOperator>(this))
@@ -557,6 +565,10 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
       setIsExact(isExact() && PE->isExact());
+
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(DestPD->isDisjoint() && SrcPD->isDisjoint());
 
   if (auto *FP = dyn_cast<FPMathOperator>(V)) {
     if (isa<FPMathOperator>(this)) {
