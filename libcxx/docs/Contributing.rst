@@ -85,6 +85,47 @@ Other tips are:
   self-contained sub-tasks.
 
 
+Setting Up and Formatting for Contributions to libc++
+====================================================
+
+To ensure code consistency and avoid common formatting issues, it's recommended to use provided scripts to setup and
+format your libc++ changes. You can use ``install-formatting-hooks.sh`` and ``pre-commit-formatting-hook.sh`` scripts
+provided in the ``libcxx/utils/formatting/`` directory. Here is the guide to use these scripts:
+
+Setting Up the Formatting Hooks
+-------------------------------
+
+Run the ``install-formatting-hooks.sh`` script. This will check if ``git-clang-format`` is installed in your system,
+setup configuration for git-clang-format to correctly format files in libc++, and install ``pre-commit-formatting-hook.sh``
+in your pre-commit hook. Run using the following command:
+
+.. code-block:: bash
+
+   ./libcxx/utils/formatting/install-formatting-hooks.sh
+
+You have the following options:
+
+- ``--force``: automatically say 'yes' to prompts
+- Simply pressing ``ENTER`` or ``Y`` when prompted will set the necessary git config keys and install the pre-commit hooks.
+
+Using Pre-commit Formatting Hook
+--------------------------------
+
+Once the pre-commit formatting hook is installed, it will automatically run before every commit you make in your local
+development environment, checking if all staged files have been formatted with git-clang-format.
+
+If any of your staged files have not been correctly formatted, the hook will show a diff of your current staged files
+and the formatted version. After showing the diff, it will ask you whether it should format the files for you. Simply
+pressing ``ENTER`` or ``Y`` will format the files, and the hook will automatically stage the formatted changes.
+
+If there is any issue in formatting, or if you choose not to format the files when prompted, the hook will stop the
+commit from being made. You must reformat the files manually or choose to format them when prompted by the hook, if
+this happens.
+
+By using these two scripts, you can ensure that your changes to libc++ are always in the proper format, thereby
+reducing the chances of minor formatting-related revisions during the pull request review process.
+
+
 Resources
 =========
 
