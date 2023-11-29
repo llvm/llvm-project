@@ -2938,7 +2938,7 @@ def err_c23_thread_local_constexpr : Error<
 def err_c23_extern_constexpr : Error<
   "extern specifier is not allowed with constexpr">;
 def err_c23_constexpr_not_variable : Error<
-  "constexpr is only allowed in variable declarations">;
+  "'constexpr' can only be used in variable declarations">;
 def err_c23_constexpr_invalid_type : Error<
   "constexpr variable cannot have type %0">;
 def err_c23_constexpr_init_not_representable : Error<

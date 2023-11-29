@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c2x -verify -triple x86_64 -pedantic -Wno-conversion -Wno-constant-conversion -Wno-div-by-zero %s
 
 // Check that constexpr only applies to variables.
-constexpr void f0() {} // expected-error {{constexpr is only allowed in variable declarations}}
-constexpr const int f1() { return 0; } // expected-error {{constexpr is only allowed in variable declarations}}
+constexpr void f0() {} // expected-error {{'constexpr' can only be used in variable declarations}}
+constexpr const int f1() { return 0; } // expected-error {{'constexpr' can only be used in variable declarations}}
 
 constexpr struct S1 { int f; }; //expected-error {{struct cannot be marked constexpr}}
 constexpr struct S2 ; // expected-error {{struct cannot be marked constexpr}}
@@ -18,7 +18,7 @@ struct S3 {
   // expected-error@-2 {{expected ';' at end}}
 };
 
-constexpr; // expected-error {{constexpr is only allowed in variable declarations}}
+constexpr; // expected-error {{'constexpr' can only be used in variable declarations}}
 constexpr int V1 = 3;
 constexpr float V2 = 7.0;
 int V3 = (constexpr)3; // expected-error {{expected expression}}
@@ -40,12 +40,12 @@ void f3(constexpr register int P1) { // expected-error {{function parameter cann
   constexpr register auto V10 = 0.0;
 }
 
-constexpr thread_local int V11 = 38; // expected-error {{thread-local storage is not allowed with constexpr}}
-constexpr static thread_local double V12 = 38; // expected-error {{thread-local storage is not allowed with constexpr}}
-constexpr extern thread_local char V13; // expected-error {{extern specifier is not allowed with constexpr}}
-// expected-error@-1 {{thread-local storage is not allowed with constexpr}}
+constexpr thread_local int V11 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
+constexpr static thread_local double V12 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
+constexpr extern thread_local char V13; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
+// expected-error@-1 {{cannot combine with previous 'extern' declaration specifier}}
 // expected-error@-2 {{constexpr variable declaration must be a definition}}
-constexpr thread_local short V14 = 38; // expected-error {{thread-local storage is not allowed with constexpr}}
+constexpr thread_local short V14 = 38; // expected-error {{cannot combine with previous '_Thread_local' declaration specifier}}
 
 // Check how constexpr works with qualifiers.
 constexpr _Atomic int V15 = 0; // expected-error {{constexpr variable cannot have type 'const _Atomic(int)'}}
@@ -250,6 +250,16 @@ void f5() {
   // expected-error@-1 {{constexpr initializer for type 'int' is of type 'const _Complex float'}}
 
 }
+
+constexpr char string[] = "test""ing this out\xFF";
+constexpr unsigned char ustring[] = "test""ing this out\xFF";
+// expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
+constexpr char wstring[] = u8"test"u8"ing this out\xFF";
+constexpr unsigned char wustring[] = u8"test"u8"ing this out\xFF";
+// expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
+
+constexpr int i = (12);
+constexpr int j = (i);
 
 // Check that initializer for pointer constexpr variable should be null.
 constexpr int V80 = 3;

@@ -5172,17 +5172,15 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     // and definitions of functions and variables.
     // C++2a [dcl.constexpr]p1: The consteval specifier shall be applied only to
     // the declaration of a function or function template
-    if (Tag) {
+    if (Tag)
       Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_tag)
           << GetDiagnosticTypeSpecifierID(DS)
           << static_cast<int>(DS.getConstexprSpecifier());
-    } else {
-      if (getLangOpts().C23)
-        Diag(DS.getConstexprSpecLoc(), diag::err_c23_constexpr_not_variable);
-      else
-        Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_wrong_decl_kind)
-            << static_cast<int>(DS.getConstexprSpecifier());
-    }
+    else if (getLangOpts().C23)
+      Diag(DS.getConstexprSpecLoc(), diag::err_c23_constexpr_not_variable);
+    else
+      Diag(DS.getConstexprSpecLoc(), diag::err_constexpr_wrong_decl_kind)
+          << static_cast<int>(DS.getConstexprSpecifier());
     // Don't emit warnings after this error.
     return TagD;
   }
@@ -7918,17 +7916,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
         (getLangOpts().CPlusPlus17 ||
          Context.getTargetInfo().getCXXABI().isMicrosoft()))
       NewVD->setImplicitlyInline();
-
-    if (getLangOpts().C23) {
-      DeclSpec::TSCS TSC = D.getDeclSpec().getThreadStorageClassSpec();
-      if (TSC != TSCS_unspecified) {
-        Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
-             diag::err_c23_thread_local_constexpr);
-      }
-      if (NewVD->hasExternalStorage())
-        Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
-             diag::err_c23_extern_constexpr);
-    }
     break;
 
   case ConstexprSpecKind::Constinit:
@@ -8640,13 +8627,21 @@ static bool checkForConflictWithNonVisibleExternC(Sema &S, const T *ND,
   return false;
 }
 
-static bool CheckC23ConstexprVarTypeQualifiers(Sema &SemaRef,
-                                               SourceLocation VarLoc,
-                                               QualType T) {
-  if (const auto *A = SemaRef.Context.getAsArrayType(T)) {
-    T = A->getElementType();
+static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
+                                     QualType T) {
+
+  if (T->isVariableArrayType()) {
+    SemaRef.Diag(VarLoc, diag::err_c23_constexpr_invalid_type) << T;
+    return true;
   }
 
+  // Arrays are qualified by their element type, so get the base type (this
+  // works on non-arrays as well).
+  T = SemaRef.Context.getBaseElementType(T);
+
+  // C23 6.7.1p4: An object declared with storage-class specifier constexpr or
+  // any of its members, even recursively, shall not have an atomic type, or a
+  // variably modified type, or a type that is volatile or restrict qualified.
   if (T->isAtomicType() || T.isVolatileQualified() || T.isRestrictQualified()) {
     SemaRef.Diag(VarLoc, diag::err_c23_constexpr_invalid_type) << T;
     return true;
@@ -8654,9 +8649,10 @@ static bool CheckC23ConstexprVarTypeQualifiers(Sema &SemaRef,
 
   if (T->isRecordType()) {
     const RecordDecl *RD = T->getAsRecordDecl();
-    for (const auto &F : RD->fields())
-      if (CheckC23ConstexprVarTypeQualifiers(SemaRef, VarLoc, F->getType()))
-        return true;
+    if (llvm::any_of(RD->fields(), [&SemaRef, VarLoc](const FieldDecl *F) {
+          return CheckC23ConstexprVarType(SemaRef, VarLoc, F->getType());
+        }))
+      return true;
   }
 
   return false;
@@ -8912,11 +8908,15 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     return;
   }
 
+  if (getLangOpts().C23 && NewVD->isConstexpr() &&
+      CheckC23ConstexprVarType(*this, NewVD->getLocation(), T)) {
+    NewVD->setInvalidDecl();
+    return;
+  }
+
   if (NewVD->isConstexpr() && !T->isDependentType() &&
       RequireLiteralType(NewVD->getLocation(), T,
-                         getLangOpts().C23
-                             ? diag::err_c23_constexpr_invalid_type
-                             : diag::err_constexpr_var_non_literal)) {
+                         diag::err_constexpr_var_non_literal)) {
     NewVD->setInvalidDecl();
     return;
   }
@@ -8925,12 +8925,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       !NewVD->isLocalVarDecl() &&
       CheckPPCMMAType(T, NewVD->getLocation())) {
-    NewVD->setInvalidDecl();
-    return;
-  }
-
-  if (getLangOpts().C23 && NewVD->isConstexpr() &&
-      CheckC23ConstexprVarTypeQualifiers(*this, NewVD->getLocation(), T)) {
     NewVD->setInvalidDecl();
     return;
   }
@@ -14314,7 +14308,7 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
                                                       : IdentLoc);
 }
 
-static ImplicitConversionKind getConversionKind(QualType FromType,
+static ImplicitConversionKind GetConversionKind(QualType FromType,
                                                 QualType ToType) {
   if (ToType->isIntegerType()) {
     if (FromType->isComplexType())
@@ -14337,16 +14331,16 @@ static ImplicitConversionKind getConversionKind(QualType FromType,
   return ICK_Identity;
 }
 
-static bool checkC23ConstexprInitConversion(Sema &S, const Expr *Init) {
+static bool CheckC23ConstexprInitConversion(Sema &S, const Expr *Init) {
   assert(S.getLangOpts().C23);
-  const Expr *InitNoCast = Init->IgnoreImpCasts();
+  const Expr *InitNoCast = Init->IgnoreParenImpCasts();
   StandardConversionSequence SCS;
   SCS.setAsIdentityConversion();
   auto FromType = InitNoCast->getType();
   auto ToType = Init->getType();
   SCS.setToType(0, FromType);
   SCS.setToType(1, ToType);
-  SCS.Second = getConversionKind(FromType, ToType);
+  SCS.Second = GetConversionKind(FromType, ToType);
 
   APValue Value;
   QualType PreNarrowingType;
@@ -14375,7 +14369,7 @@ static bool checkC23ConstexprInitConversion(Sema &S, const Expr *Init) {
   llvm_unreachable("unhandled case in switch");
 }
 
-static bool checkC23ConstexprInitStringLiteral(const StringLiteral *SE,
+static bool CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
                                                Sema &SemaRef,
                                                SourceLocation Loc) {
   assert(SemaRef.getLangOpts().C23);
@@ -14400,24 +14394,23 @@ static bool checkC23ConstexprInitStringLiteral(const StringLiteral *SE,
   return false;
 }
 
-static bool checkC23ConstexprInitializer(Sema &S, const Expr *Init) {
-  const Expr *InitNoCast = Init->IgnoreImpCasts();
+static bool CheckC23ConstexprInitializer(Sema &S, const Expr *Init) {
+  const Expr *InitNoCast = Init->IgnoreParenImpCasts();
   if (Init->getType() != InitNoCast->getType())
-    if (checkC23ConstexprInitConversion(S, Init))
+    if (CheckC23ConstexprInitConversion(S, Init))
       return true;
 
-  if (auto *SE = dyn_cast<StringLiteral>(Init))
-    if (checkC23ConstexprInitStringLiteral(SE, S, Init->getBeginLoc()))
+  if (const auto *SE = dyn_cast<StringLiteral>(Init))
+    if (CheckC23ConstexprInitStringLiteral(SE, S, Init->getBeginLoc()))
       return true;
 
   for (const Stmt *SubStmt : Init->children()) {
-    const Expr *ChildExpr = dyn_cast_or_null<const Expr>(SubStmt);
+    const Expr *ChildExpr = dyn_cast_or_null<Expr>(SubStmt);
     if (!ChildExpr)
       continue;
 
-    if (checkC23ConstexprInitializer(S, ChildExpr)) {
+    if (CheckC23ConstexprInitializer(S, ChildExpr))
       return true;
-    }
   }
   return false;
 }
@@ -14619,7 +14612,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     if (HasConstInit) {
       // FIXME: Consider replacing the initializer with a ConstantExpr.
       if (getLangOpts().C23 && var->isConstexpr())
-        checkC23ConstexprInitializer(*this, Init);
+        CheckC23ConstexprInitializer(*this, Init);
     } else if (var->isConstexpr()) {
       SourceLocation DiagLoc = var->getLocation();
       // If the note doesn't add any useful information other than a source
