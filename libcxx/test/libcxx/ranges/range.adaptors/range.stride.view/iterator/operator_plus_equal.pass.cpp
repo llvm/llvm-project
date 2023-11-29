@@ -11,10 +11,6 @@
 // UNSUPPORTED: !libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 
-// <ranges>
-
-// Call ....
-
 #include "check_assertion.h"
 #include <ranges>
 
