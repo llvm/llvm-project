@@ -20,9 +20,9 @@
 
 #include "Shared/Debug.h"
 
-#include "OmptCallback.h"
-#include "OmptConnector.h"
-#include "OmptInterface.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Connector.h"
+#include "OpenMP/OMPT/Interface.h"
 
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
