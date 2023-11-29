@@ -177,9 +177,14 @@ struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
     Value carrysVal =
         rewriter.create<spirv::ConstantOp>(loc, constituentType, carrys);
 
-    Value constituents[2] = {addsVal, carrysVal};
-    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
-                                                             constituents);
+    // Create empty struct
+    Value undef = rewriter.create<spirv::UndefOp>(loc, op.getType());
+    // Fill in adds at id 0
+    Value intermediate =
+        rewriter.create<spirv::CompositeInsertOp>(loc, addsVal, undef, 0);
+    // Fill in carrys at id 1
+    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, carrysVal,
+                                                          intermediate, 1);
     return success();
   }
 };
@@ -257,9 +262,14 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
     Value highBitsVal =
         rewriter.create<spirv::ConstantOp>(loc, constituentType, highBits);
 
-    Value constituents[2] = {lowBitsVal, highBitsVal};
-    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
-                                                             constituents);
+    // Create empty struct
+    Value undef = rewriter.create<spirv::UndefOp>(loc, op.getType());
+    // Fill in lowBits at id 0
+    Value intermediate =
+        rewriter.create<spirv::CompositeInsertOp>(loc, lowBitsVal, undef, 0);
+    // Fill in highBits at id 1
+    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, highBitsVal,
+                                                          intermediate, 1);
     return success();
   }
 };
