@@ -2267,7 +2267,7 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
 
 bool RISCVInstrInfo::shouldClusterMemOps(
     ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned NumLoads,
+    ArrayRef<const MachineOperand *> BaseOps2, unsigned ClusterSize,
     unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
@@ -2283,7 +2283,7 @@ bool RISCVInstrInfo::shouldClusterMemOps(
 
   // TODO: Use a more carefully chosen heuristic, e.g. only cluster if offsets
   // indicate they likely share a cache line.
-  return NumLoads <= 4;
+  return ClusterSize <= 4;
 }
 
 // Set BaseReg (the base register operand), Offset (the byte offset being

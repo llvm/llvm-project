@@ -159,7 +159,7 @@ public:
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            ArrayRef<const MachineOperand *> BaseOps2,
-                           unsigned NumLoads, unsigned NumBytes) const override;
+                           unsigned ClusterSize, unsigned NumBytes) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
