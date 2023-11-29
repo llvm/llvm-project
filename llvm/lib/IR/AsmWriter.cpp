@@ -1502,16 +1502,35 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
 static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
                                   AsmWriterContext &WriterCtx) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV)) {
-    if (CI->getType()->isIntegerTy(1)) {
-      Out << (CI->getZExtValue() ? "true" : "false");
-      return;
+    if (CI->getType()->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(CI->getType()->getScalarType(), Out);
+      Out << " ";
     }
-    Out << CI->getValue();
+
+    if (CI->getType()->getScalarType()->isIntegerTy(1))
+      Out << (CI->getZExtValue() ? "true" : "false");
+    else
+      Out << CI->getValue();
+
+    if (CI->getType()->isVectorTy())
+      Out << ")";
+
     return;
   }
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CV)) {
+    if (CFP->getType()->isVectorTy()) {
+      Out << "splat (";
+      WriterCtx.TypePrinter->print(CFP->getType()->getScalarType(), Out);
+      Out << " ";
+    }
+
     WriteAPFloatInternal(Out, CFP->getValueAPF());
+
+    if (CFP->getType()->isVectorTy())
+      Out << ")";
+
     return;
   }
 

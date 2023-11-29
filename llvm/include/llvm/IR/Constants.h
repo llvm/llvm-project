@@ -81,7 +81,7 @@ class ConstantInt final : public ConstantData {
 
   APInt Val;
 
-  ConstantInt(IntegerType *Ty, const APInt &V);
+  ConstantInt(Type *Ty, const APInt &V);
 
   void destroyConstantImpl();
 
@@ -123,6 +123,12 @@ public:
   /// type is the integer type that corresponds to the bit width of the value.
   static ConstantInt *get(LLVMContext &Context, const APInt &V);
 
+  /// Return a ConstantInt with the specified value and an implied Type. The
+  /// type is the vector type whose integer element type corresponds to the bit
+  /// width of the value.
+  static ConstantInt *get(LLVMContext &Context, ElementCount EC,
+                          const APInt &V);
+
   /// Return a ConstantInt constructed from the string strStart with the given
   /// radix.
   static ConstantInt *get(IntegerType *Ty, StringRef Str, uint8_t Radix);
@@ -136,7 +142,7 @@ public:
   /// Return the constant's value.
   inline const APInt &getValue() const { return Val; }
 
-  /// getBitWidth - Return the bitwidth of this constant.
+  /// getBitWidth - Return the scalar bitwidth of this constant.
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 
   /// Return the constant as a 64-bit unsigned integer value after it
@@ -281,6 +287,8 @@ public:
 
   static Constant *get(Type *Ty, StringRef Str);
   static ConstantFP *get(LLVMContext &Context, const APFloat &V);
+  static ConstantFP *get(LLVMContext &Context, ElementCount EC,
+                         const APFloat &V);
   static Constant *getNaN(Type *Ty, bool Negative = false,
                           uint64_t Payload = 0);
   static Constant *getQNaN(Type *Ty, bool Negative = false,
