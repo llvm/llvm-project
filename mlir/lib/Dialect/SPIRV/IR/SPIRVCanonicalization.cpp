@@ -71,7 +71,6 @@ static Attribute extractCompositeElement(Attribute composite,
 
 static bool isDivZeroOrOverflow(const APInt &a, const APInt &b) {
   bool div0 = b.isZero();
-
   bool overflow = a.isMinSignedValue() && b.isAllOnes();
 
   return div0 || overflow;
@@ -314,7 +313,7 @@ OpFoldResult spirv::SDivOp::fold(FoldAdaptor adaptor) {
   // 0. Behavior is undefined if Operand 2 is -1 and Operand 1 is the minimum
   // representable value for the operands' type, causing signed overflow.
   //
-  // So don't fold during undefined behaviour.
+  // So don't fold during undefined behavior.
   bool div0OrOverflow = false;
   auto res = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
@@ -345,7 +344,7 @@ OpFoldResult spirv::SModOp::fold(FoldAdaptor adaptor) {
   // result is the remainder r of Operand 1 divided by Operand 2 where if
   // r ≠ 0, the sign of r is the same as the sign of Operand 2.
   //
-  // So don't fold during undefined behaviour
+  // So don't fold during undefined behavior
   bool div0OrOverflow = false;
   auto res = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
@@ -383,7 +382,7 @@ OpFoldResult spirv::SRemOp::fold(FoldAdaptor adaptor) {
   // result is the remainder r of Operand 1 divided by Operand 2 where if
   // r ≠ 0, the sign of r is the same as the sign of Operand 1.
 
-  // Don't fold if it would do undefined behaviour.
+  // Don't fold if it would do undefined behavior.
   bool div0OrOverflow = false;
   auto res = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](APInt a, const APInt &b) {
@@ -410,7 +409,7 @@ OpFoldResult spirv::UDivOp::fold(FoldAdaptor adaptor) {
   // Unsigned-integer division of Operand 1 divided by Operand 2. Behavior is
   // undefined if Operand 2 is 0.
   //
-  // So don't fold during undefined behaviour.
+  // So don't fold during undefined behavior.
   bool div0 = false;
   auto res = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
@@ -437,7 +436,7 @@ OpFoldResult spirv::UModOp::fold(FoldAdaptor adaptor) {
   // Unsigned modulo operation of Operand 1 modulo Operand 2. Behavior is
   // undefined if Operand 2 is 0.
   //
-  // So don't fold during undefined behaviour.
+  // So don't fold during undefined behavior.
   bool div0 = false;
   auto res = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
