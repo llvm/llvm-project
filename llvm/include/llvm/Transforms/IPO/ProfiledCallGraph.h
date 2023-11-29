@@ -210,7 +210,8 @@ private:
   ProfiledCallGraphNode Root;
   // backing buffer for ProfiledCallGraphNodes.
   std::list<ProfiledCallGraphNode> ProfiledCallGraphNodeList;
-  llvm::DenseMap<FunctionId, ProfiledCallGraphNode*> ProfiledFunctions;
+  HashKeyMap<llvm::DenseMap, FunctionId, ProfiledCallGraphNode*>
+      ProfiledFunctions;
 };
 
 } // end namespace sampleprof
