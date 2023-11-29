@@ -26,6 +26,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/SourceManager.h"
@@ -940,8 +941,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
     if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
       IndexedType = Base->getType();
-      const Expr *E = CGF.BuildCountedByFieldExpr(Base, VD);
-      return CGF.EmitAnyExprToTemp(E).getScalarVal();
+      return CGF.BuildCountedByFieldExpr(Base, VD);
     }
   }
 
@@ -956,42 +956,77 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-const Expr *
+namespace  {
+
+struct MemberExprBaseVisitor
+    : public StmtVisitor<MemberExprBaseVisitor, Expr *> {
+  MemberExprBaseVisitor() = default;
+
+  //===--------------------------------------------------------------------===//
+  //                            Visitor Methods
+  //===--------------------------------------------------------------------===//
+
+  Expr *Visit(Expr *E) {
+    return StmtVisitor<MemberExprBaseVisitor, Expr *>::Visit(E);
+  }
+
+  Expr *VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
+    return Visit(E->getBase());
+  }
+  Expr *VisitCastExpr(CastExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  Expr *VisitDeclRefExpr(DeclRefExpr *E) {
+    return E;
+  }
+  Expr *VisitMemberExpr(MemberExpr *E) {
+    return Visit(E->getBase());
+  }
+  Expr *VisitParenExpr(ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  Expr *VisitUnaryOperator(UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
+llvm::Value *
 CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
                                          const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Expr *CountedByExpr = const_cast<Expr *>(Base)->IgnoreParenImpCasts();
+  Expr *CountedByExpr = MemberExprBaseVisitor().Visit(const_cast<Expr *>(Base));
 
-  // Work our way up the expression until we reach the DeclRefExpr.
-  while (!isa<DeclRefExpr>(CountedByExpr))
-    if (const auto *ME = dyn_cast<MemberExpr>(CountedByExpr))
-      CountedByExpr = ME->getBase()->IgnoreParenImpCasts();
+  llvm::Value *Res =
+      CountedByExpr->getType()->isPointerType()
+          ? EmitPointerWithAlignment(CountedByExpr).getPointer()
+          : EmitDeclRefLValue(cast<DeclRefExpr>(CountedByExpr)).getPointer(*this);
 
-  // Add back an implicit cast to create the required pr-value.
-  CountedByExpr = ImplicitCastExpr::Create(
-      getContext(), CountedByExpr->getType(), CK_LValueToRValue, CountedByExpr,
-      nullptr, VK_PRValue, FPOptionsOverride());
-
-  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
-    // The counted_by field is inside an anonymous struct / union. The
-    // IndirectFieldDecl has the correct order of FieldDecls to build this
-    // easily. (Yay!)
-    for (NamedDecl *ND : IFD->chain()) {
-      auto *VD = cast<ValueDecl>(ND);
-      CountedByExpr =
-          MemberExpr::CreateImplicit(getContext(), CountedByExpr,
-                                     CountedByExpr->getType()->isPointerType(),
-                                     VD, VD->getType(), VK_LValue, OK_Ordinary);
+  auto *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+  SmallVector<llvm::Value *, 4> Indices{Zero};
+  if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
+    Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
+  } else if (const auto *I = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
+    for (auto *ND : I->chain()) {
+      if (auto *FD = dyn_cast<FieldDecl>(ND)) {
+        Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
+      }
     }
-  } else {
-    CountedByExpr = MemberExpr::CreateImplicit(
-        getContext(), const_cast<Expr *>(CountedByExpr),
-        CountedByExpr->getType()->isPointerType(),
-        const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(), VK_LValue,
-        OK_Ordinary);
   }
 
-  return CountedByExpr;
+  const DeclContext *DC = CountedByVD->getLexicalDeclContext();
+  const auto *CountedByRD = cast<RecordDecl>(DC);
+
+  llvm::Type *Ty = CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
+  Res = Builder.CreateGEP(Ty, Res, Indices, "bork");
+
+  QualType CountedByTy(CountedByVD->getType());
+  TypeInfo TI = getContext().getTypeInfo(CountedByTy);
+  Ty = CGM.getTypes().ConvertType(CountedByTy);
+  Address Addr(Res, Ty, CharUnits::fromQuantity(TI.Align / getContext().getCharWidth()));
+
+  return Builder.CreateLoad(Addr, Res, "fork");
 }
 
 const ValueDecl *

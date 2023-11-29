@@ -916,8 +916,7 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   // Build a load of the counted_by field.
   bool IsSigned = CountedByFD->getType()->isSignedIntegerType();
-  const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
-  Value *CountedByInst = EmitAnyExprToTemp(CountedByExpr).getScalarVal();
+  Value *CountedByInst = BuildCountedByFieldExpr(Base, CountedByFD);
   llvm::Type *CountedByTy = CountedByInst->getType();
 
   // Build a load of the index and subtract it from the count.
