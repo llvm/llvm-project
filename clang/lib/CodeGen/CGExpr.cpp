@@ -985,7 +985,7 @@ struct MemberExprBaseVisitor
 
 llvm::Value *
 CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
-                                         const ValueDecl *CountedByVD) {
+                                        const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
   Expr *CountedByExpr = MemberExprBaseVisitor().Visit(const_cast<Expr *>(Base));
   if (!CountedByExpr || !isa<DeclRefExpr>(CountedByExpr))
