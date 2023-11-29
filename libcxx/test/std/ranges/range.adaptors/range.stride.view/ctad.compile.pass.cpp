@@ -8,34 +8,30 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// std::views::stride_view
+// template <class _Range>
+// stride_view(_Range&&, range_difference_t<_Range>) -> stride_view<views::all_t<_Range>>;
 
-#include "test.h"
 #include <concepts>
 #include <ranges>
-#include <utility>
 
-constexpr bool test() {
-  int arr[]{1, 2, 3};
+struct View : std::ranges::view_base {
+  int* begin() const;
+  int* end() const;
+};
 
-  MovedCopiedTrackedBasicView<int> bv{arr, arr + 3};
-  InstrumentedBasicRange<int> br{};
+struct Range {
+  int* begin() const;
+  int* end() const;
+};
 
-  static_assert(std::same_as< decltype(std::ranges::stride_view(bv, 2)), std::ranges::stride_view<decltype(bv)> >);
+void testCTAD() {
+  View v;
+  Range r;
+
+  static_assert(std::same_as< decltype(std::ranges::stride_view(v, 5)), std::ranges::stride_view<View> >);
+  static_assert(std::same_as< decltype(std::ranges::stride_view(std::move(v), 5)), std::ranges::stride_view<View> >);
   static_assert(
-      std::same_as< decltype(std::ranges::stride_view(std::move(bv), 2)), std::ranges::stride_view<decltype(bv)> >);
-
-  static_assert(std::same_as< decltype(std::ranges::drop_view(br, 0)),
-                              std::ranges::drop_view<std::ranges::ref_view<InstrumentedBasicRange<int>>> >);
-
-  static_assert(std::same_as< decltype(std::ranges::drop_view(std::move(br), 0)),
-                              std::ranges::drop_view<std::ranges::owning_view<InstrumentedBasicRange<int>>> >);
-  return true;
-}
-
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  return 0;
+      std::same_as< decltype(std::ranges::stride_view(r, 5)), std::ranges::stride_view<std::ranges::ref_view<Range>> >);
+  static_assert(std::same_as< decltype(std::ranges::stride_view(std::move(r), 5)),
+                              std::ranges::stride_view<std::ranges::owning_view<Range>> >);
 }
