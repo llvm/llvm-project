@@ -295,9 +295,9 @@ Compatibility Rules for Bundle Entry ID
   A code object, specified using its Bundle Entry ID, can be loaded and
   executed on a target processor, if:
 
-  * Their offload kind are the same.
-  * Their target triple are compatible.
-  * Their Target ID are compatible as defined in :ref:`compatibility-target-id`.
+  * Their offload kinds are the same.
+  * Their target triples are compatible.
+  * Their Target IDs are compatible as defined in :ref:`compatibility-target-id`.
 
 .. _clang-target-id:
 
@@ -418,9 +418,9 @@ The clang-offload-bundler determines whether a device binary is compatible
 with a target by comparing bundle IDs. Two bundle IDs are considered
 compatible if:
 
-  * Their offload kind are the same
-  * Their target triple are the same
-  * Their GPUArch are the same
+  * Their offload kinds are the same
+  * Their target triples are the same
+  * Their Target IDs are the same
 
 Creating a Heterogeneous Device Archive
 ---------------------------------------
@@ -505,7 +505,6 @@ Additional Options while Archive Unbundling
   Verbose printing of matched/unmatched comparisons between bundle entry id of
   a device binary from HDA and bundle entry ID of a given target processor
   (see :ref:`compatibility-bundle-entry-id`).
-
 
 Compression and Decompression
 =============================
