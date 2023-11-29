@@ -86,8 +86,10 @@ namespace {
 
 class DebugDirectoryChunk : public NonSectionChunk {
 public:
-  DebugDirectoryChunk(const COFFLinkerContext &c, bool writeRepro)
-      : writeRepro(writeRepro), ctx(c) {}
+  DebugDirectoryChunk(const COFFLinkerContext &c,
+                      const std::vector<std::pair<COFF::DebugType, Chunk *>> &r,
+                      bool writeRepro)
+      : records(r), writeRepro(writeRepro), ctx(c) {}
 
   size_t getSize() const override {
     return (records.size() + int(writeRepro)) * sizeof(debug_directory);
@@ -119,10 +121,6 @@ public:
       *tds = timeDateStamp;
   }
 
-  void addRecord(COFF::DebugType type, Chunk *c) {
-    records.emplace_back(type, c);
-  }
-
 private:
   void fillEntry(debug_directory *d, COFF::DebugType debugType, size_t size,
                  uint64_t rva, uint64_t offs) const {
@@ -139,7 +137,7 @@ private:
   }
 
   mutable std::vector<support::ulittle32_t *> timeDateStamps;
-  std::vector<std::pair<COFF::DebugType, Chunk *>> records;
+  const std::vector<std::pair<COFF::DebugType, Chunk *>> &records;
   bool writeRepro;
   const COFFLinkerContext &ctx;
 };
@@ -286,6 +284,7 @@ private:
   uint32_t tlsAlignment = 0;
 
   DebugDirectoryChunk *debugDirectory = nullptr;
+  std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
   CVDebugRecordChunk *buildId = nullptr;
   ArrayRef<uint8_t> sectionTable;
 
@@ -1043,11 +1042,11 @@ void Writer::createMiscChunks() {
   }
 
   // Create Debug Information Chunks
-  std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
   debugInfoSec = config->mingw ? buildidSec : rdataSec;
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
       config->repro || config->cetCompat) {
-    debugDirectory = make<DebugDirectoryChunk>(ctx, config->repro);
+    debugDirectory =
+        make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
     debugInfoSec->addChunk(debugDirectory);
   }
@@ -1071,7 +1070,6 @@ void Writer::createMiscChunks() {
   for (std::pair<COFF::DebugType, Chunk *> r : debugRecords) {
     r.second->setAlignment(4);
     debugInfoSec->addChunk(r.second);
-    debugDirectory->addRecord(r.first, r.second);
   }
 
   // Create SEH table. x86-only.

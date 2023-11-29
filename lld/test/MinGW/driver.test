@@ -399,4 +399,6 @@ BUILD_ID_WARN: unsupported build id hashing: fast, using default hashing.
 BUILD_ID_WARN: -build-id{{ }}
 
 RUN: ld.lld -### foo.o -m i386pep --build-id=none 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
+RUN: ld.lld -### foo.o -m i386pep -s 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
+RUN: ld.lld -### foo.o -m i386pep -S 2>&1 | FileCheck -check-prefix=NO_BUILD_ID %s
 NO_BUILD_ID: -build-id:no
