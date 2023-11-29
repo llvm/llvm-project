@@ -13,6 +13,7 @@
 #include "RISCVLegalizerInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -335,7 +336,6 @@ static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
   return IntegerType::get(C, Ty.getSizeInBits());
 }
 
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
@@ -352,22 +352,18 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     const DataLayout &DL = MIRBuilder.getDataLayout();
     LLVMContext &Ctx = MF.getFunction().getContext();
 
-    Register DstLst = MI.getOperand(0).getReg();
+    Register DstLst = MI.getOperand(1).getReg();
     LLT PtrTy = MRI.getType(DstLst);
 
     // Load the source va_list
     Align Alignment = Align(DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx)));
-    MachineMemOperand *LoadMMO =
-        MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                                MachineMemOperand::MOLoad, PtrTy, Alignment);
-    Register Tmp = MRI.createGenericVirtualRegister(PtrTy);
-    Register SrcLst = MI.getOperand(1).getReg();
-    MIRBuilder.buildLoad(Tmp, SrcLst, *LoadMMO);
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, Alignment);
+    auto Tmp = MIRBuilder.buildLoad(PtrTy, MI.getOperand(2), *LoadMMO);
 
     // Store the result in the destination va_list
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                                MachineMemOperand::MOStore, PtrTy, Alignment);
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, Alignment);
     MIRBuilder.buildStore(DstLst, Tmp, *StoreMMO);
 
     MI.eraseFromParent();

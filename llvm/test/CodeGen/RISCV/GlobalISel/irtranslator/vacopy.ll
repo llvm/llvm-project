@@ -12,7 +12,7 @@ define void @test_va_copy(ptr %dest_list, ptr %src_list) {
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV32I-NEXT:   G_VACOPY [[COPY]](p0), [[COPY1]]
+  ; RV32I-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[COPY]](p0), [[COPY1]](p0)
   ; RV32I-NEXT:   PseudoRET
   ;
   ; RV64I-LABEL: name: test_va_copy
@@ -21,7 +21,7 @@ define void @test_va_copy(ptr %dest_list, ptr %src_list) {
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x10
   ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
-  ; RV64I-NEXT:   G_VACOPY [[COPY]](p0), [[COPY1]]
+  ; RV64I-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[COPY]](p0), [[COPY1]](p0)
   ; RV64I-NEXT:   PseudoRET
   call void @llvm.va_copy(ptr %dest_list, ptr %src_list)
   ret void
