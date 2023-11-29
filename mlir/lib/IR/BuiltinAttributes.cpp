@@ -17,6 +17,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1821,4 +1822,44 @@ AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
   }
 
   return AffineMap::get(strides.size(), nSymbols, expr);
+}
+
+void mlir::printShape(OpAsmPrinter &printer, Operation *op,
+                      ArrayRef<int64_t> shape) {
+  if (!shape.empty())
+    printer << "[";
+
+  for (size_t i = 0; i < shape.size(); ++i) {
+    if (ShapedType::isDynamic(shape[i]))
+      printer << '?';
+    else
+      printer << shape[i];
+    if (i != shape.size() - 1) {
+      printer << 'x';
+    }
+  }
+
+  if (!shape.empty())
+    printer << "]";
+}
+
+ParseResult mlir::parseShape(OpAsmParser &parser, DenseI64ArrayAttr &shape) {
+  bool hasOpeningSquare = succeeded(parser.parseOptionalLSquare());
+  SmallVector<int64_t> shapeArr;
+  if (failed(parser.parseDimensionList(shapeArr, true, false))) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing shape.";
+  }
+  if (shapeArr.empty() && !hasOpeningSquare) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing shape. Did you mean a 0-rank shape? It must be "
+              "denoted by \"[]\".";
+  }
+  if (hasOpeningSquare && failed(parser.parseRSquare())) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing shape.";
+  }
+
+  shape = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
+  return success();
 }
