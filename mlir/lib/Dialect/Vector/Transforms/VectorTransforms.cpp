@@ -455,7 +455,7 @@ struct ReorderCastOpsOnBroadcast
 
     Type castResTy = getElementTypeOrSelf(op->getResult(0));
     if (auto vecTy = dyn_cast<VectorType>(bcastOp.getSourceType()))
-      castResTy = VectorType::get(vecTy.getShape(), castResTy);
+      castResTy = vecTy.clone(castResTy);
     auto *castOp =
         rewriter.create(op->getLoc(), op->getName().getIdentifier(),
                         bcastOp.getSource(), castResTy, op->getAttrs());
@@ -527,16 +527,14 @@ struct ReorderElementwiseOpsOnTranspose final
         srcValues.push_back(transposeOp.getVector());
       } else {
         // This is a constant. Create a reverse transpose op for it.
-        auto vectorType = VectorType::get(
-            srcType.getShape(),
-            cast<VectorType>(operand.getType()).getElementType());
+        auto vectorType =
+            srcType.clone(cast<VectorType>(operand.getType()).getElementType());
         srcValues.push_back(rewriter.create<vector::TransposeOp>(
             operand.getLoc(), vectorType, operand, invOrder));
       }
     }
 
-    auto vectorType = VectorType::get(
-        srcType.getShape(),
+    auto vectorType = srcType.clone(
         cast<VectorType>(op->getResultTypes()[0]).getElementType());
     Operation *elementwiseOp =
         rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
@@ -1314,8 +1312,8 @@ struct CanonicalizeContractMatmulToMMT final
         Value trans =
             rewriter.create<vector::TransposeOp>(loc, sext.getIn(), perm);
         VectorType newType =
-            VectorType::get(cast<VectorType>(trans.getType()).getShape(),
-                            cast<VectorType>(mat.getType()).getElementType());
+            cast<VectorType>(trans.getType())
+                .clone(cast<VectorType>(mat.getType()).getElementType());
         return rewriter.create<arith::ExtSIOp>(loc, newType, trans);
       }
       if (auto zext = mat.getDefiningOp<arith::ExtUIOp>()) {
