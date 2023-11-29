@@ -19,6 +19,7 @@ entry:
 
 ; MACHO:           .section __DATA,__data
 ; MACHO-NEXT:      .globl _foo_ifunc.lazy_pointer
+; MACHO-NEXT:      .p2align 3, 0x0
 ; MACHO-NEXT:  _foo_ifunc.lazy_pointer:
 ; MACHO-NEXT:      .quad _foo_ifunc.stub_helper
 ; MACHO-NEXT:      .section __TEXT,__text,regular,pure_instructions
