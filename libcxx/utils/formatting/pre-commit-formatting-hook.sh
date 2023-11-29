@@ -28,8 +28,7 @@ if [[ "$formatting_diff" != "no modified files to format" && "$formatting_diff" 
     git-clang-format --diff -- $staged_files
     read -p "Format the files [Y/n]? " -n $FORCE -r
       echo
-    if [[ $REPLY =~ ^[Yy]$ ]]
-    then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
           git-clang-format -- $staged_files
           git add $staged_files
           exit 0
