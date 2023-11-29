@@ -37,3 +37,8 @@
 
 # RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -r -s (ma|n$)' | FileCheck %s --check-prefix CHECK7
 # CHECK7:         Summary: {{.+}}`{{.+}}31mma{{.+}}0mi{{.+}}31mn{{.+}}0m at main.c:2
+
+# Checking no colorization without regex search
+
+# RUN: %lldb %t -b -o 'settings set use-color true' -o 'image lookup -s main' | FileCheck %s --check-prefix CHECK8
+# CHECK8:        Summary: {{.+}}`main at main.c:2

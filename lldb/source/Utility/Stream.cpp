@@ -85,13 +85,13 @@ void Stream::PutCStringColorHighlighted(llvm::StringRef text,
   llvm::StringRef remaining = text;
   std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
       "${ansi.fg.red}%s${ansi.normal}");
-  size_t last_pos = 0;
   while (reg_pattern.match(remaining, &matches)) {
     llvm::StringRef match = matches[0];
     size_t match_start_pos = match.data() - remaining.data();
     Write(remaining.data(), match_start_pos);
+    size_t last_pos = match_start_pos;
     Printf(format_str.c_str(), match.str().c_str());
-    last_pos = match_start_pos + match.size();
+    last_pos += match.size();
     remaining = remaining.drop_front(last_pos);
   }
   if (remaining.size())

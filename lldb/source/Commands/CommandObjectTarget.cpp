@@ -1622,7 +1622,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
           DumpAddress(
               interpreter.GetExecutionContext().GetBestExecutionContextScope(),
               symbol->GetAddressRef(), verbose, all_ranges, strm,
-              use_color ? name : nullptr);
+              use_color && name_is_regex ? name : nullptr);
           strm.EOL();
         } else {
           strm.IndentMore();
