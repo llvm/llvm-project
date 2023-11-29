@@ -11,7 +11,7 @@
 // UNSUPPORTED: c++03, c++11
 
 // ignore deprecated volatile return types
-// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile
+// ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-deprecated-volatile
 
 #include <type_traits>
 #include <utility>

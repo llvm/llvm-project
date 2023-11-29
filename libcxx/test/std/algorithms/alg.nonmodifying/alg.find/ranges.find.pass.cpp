@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-sign-compare
 
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>

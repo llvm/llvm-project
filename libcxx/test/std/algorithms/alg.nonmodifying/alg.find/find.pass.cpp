@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+// ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-sign-compare
 
 // <algorithm>
 

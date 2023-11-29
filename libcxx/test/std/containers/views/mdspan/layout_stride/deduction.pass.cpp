@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// ADDITIONAL_COMPILE_FLAGS: -Wno-ctad-maybe-unsupported
+// ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-ctad-maybe-unsupported
 
 // <mdspan>
 
