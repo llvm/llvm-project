@@ -332,37 +332,42 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // everything has to be on GPR.
     unsigned NumFP = 0;
 
-    // Check if the uses of the result always produce floating point values.
-    //
-    // For example:
-    //
-    // %z = G_SELECT %cond %x %y
-    // fpr = G_FOO %z ...
-    if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-               [&](const MachineInstr &UseMI) {
-                 return onlyUsesFP(UseMI, MRI, TRI);
-               }))
-      ++NumFP;
-
-    // Check if the defs of the source values always produce floating point
-    // values.
-    //
-    // For example:
-    //
-    // %x = G_SOMETHING_ALWAYS_FLOAT %a ...
-    // %z = G_SELECT %cond %x %y
-    //
-    // Also check whether or not the sources have already been decided to be
-    // FPR. Keep track of this.
-    //
-    // This doesn't check the condition, since the condition is always an
-    // integer.
-    for (unsigned Idx = 2; Idx < 4; ++Idx) {
-      Register VReg = MI.getOperand(Idx).getReg();
-      MachineInstr *DefMI = MRI.getVRegDef(VReg);
-      if (getRegBank(VReg, MRI, TRI) == &RISCV::FPRBRegBank ||
-          onlyDefinesFP(*DefMI, MRI, TRI))
+    // Use FPR64 for s64 select on rv32.
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      NumFP = 3;
+    } else {
+      // Check if the uses of the result always produce floating point values.
+      //
+      // For example:
+      //
+      // %z = G_SELECT %cond %x %y
+      // fpr = G_FOO %z ...
+      if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                 [&](const MachineInstr &UseMI) {
+                   return onlyUsesFP(UseMI, MRI, TRI);
+                 }))
         ++NumFP;
+
+      // Check if the defs of the source values always produce floating point
+      // values.
+      //
+      // For example:
+      //
+      // %x = G_SOMETHING_ALWAYS_FLOAT %a ...
+      // %z = G_SELECT %cond %x %y
+      //
+      // Also check whether or not the sources have already been decided to be
+      // FPR. Keep track of this.
+      //
+      // This doesn't check the condition, since the condition is always an
+      // integer.
+      for (unsigned Idx = 2; Idx < 4; ++Idx) {
+        Register VReg = MI.getOperand(Idx).getReg();
+        MachineInstr *DefMI = MRI.getVRegDef(VReg);
+        if (getRegBank(VReg, MRI, TRI) == &RISCV::FPRBRegBank ||
+            onlyDefinesFP(*DefMI, MRI, TRI))
+          ++NumFP;
+      }
     }
 
     // Condition operand is always GPR.
