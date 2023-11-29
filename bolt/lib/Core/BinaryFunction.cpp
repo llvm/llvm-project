@@ -3296,7 +3296,7 @@ void BinaryFunction::fixBranches() {
       BB->eraseInstruction(BB->findInstruction(UncondBranch));
 
     // Basic block that follows the current one in the final layout.
-    const BinaryBasicBlock *NextBB =
+    const BinaryBasicBlock *const NextBB =
         Layout.getBasicBlockAfter(BB, /*IgnoreSplits=*/false);
 
     if (BB->succ_size() == 1) {
@@ -3313,39 +3313,54 @@ void BinaryFunction::fixBranches() {
       assert(CondBranch && "conditional branch expected");
       const BinaryBasicBlock *TSuccessor = BB->getConditionalSuccessor(true);
       const BinaryBasicBlock *FSuccessor = BB->getConditionalSuccessor(false);
-      // Check whether we support reversing this branch direction
-      const bool IsSupported = !MIB->isUnsupportedBranch(*CondBranch);
-      if (NextBB && NextBB == TSuccessor && IsSupported) {
+
+      // Eliminate unnecessary conditional branch.
+      if (TSuccessor == FSuccessor) {
+        BB->removeDuplicateConditionalSuccessor(CondBranch);
+        if (TSuccessor != NextBB)
+          BB->addBranchInstruction(TSuccessor);
+        continue;
+      }
+
+      // Reverse branch condition and swap successors.
+      auto swapSuccessors = [&]() {
+        if (MIB->isUnsupportedBranch(*CondBranch))
+          return false;
         std::swap(TSuccessor, FSuccessor);
-        {
-          auto L = BC.scopeLock();
-          MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
-        }
         BB->swapConditionalSuccessors();
-      } else {
+        auto L = BC.scopeLock();
+        MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
+        return true;
+      };
+
+      // Check whether the next block is a "taken" target and try to swap it
+      // with a "fall-through" target.
+      if (TSuccessor == NextBB && swapSuccessors())
+        continue;
+
+      // Update conditional branch destination if needed.
+      if (MIB->getTargetSymbol(*CondBranch) != TSuccessor->getLabel()) {
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(*CondBranch, TSuccessor->getLabel(), Ctx);
       }
-      if (TSuccessor == FSuccessor)
-        BB->removeDuplicateConditionalSuccessor(CondBranch);
-      if (!NextBB ||
-          ((NextBB != TSuccessor || !IsSupported) && NextBB != FSuccessor)) {
-        // If one of the branches is guaranteed to be "long" while the other
-        // could be "short", then prioritize short for "taken". This will
-        // generate a sequence 1 byte shorter on x86.
-        if (IsSupported && BC.isX86() &&
-            TSuccessor->getFragmentNum() != FSuccessor->getFragmentNum() &&
-            BB->getFragmentNum() != TSuccessor->getFragmentNum()) {
-          std::swap(TSuccessor, FSuccessor);
-          {
-            auto L = BC.scopeLock();
-            MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(),
-                                        Ctx);
-          }
-          BB->swapConditionalSuccessors();
-        }
-        BB->addBranchInstruction(FSuccessor);
+
+      // No need for the unconditional branch.
+      if (FSuccessor == NextBB)
+        continue;
+
+      if (BC.isX86()) {
+        // We are going to generate two branches. Check if their targets are in
+        // the same fragment as this block. If only one target is in the same
+        // fragment, make it the destination of the conditional branch. There
+        // is a chance it will be a short branch which takes 5 bytes fewer than
+        // a long conditional branch. For unconditional branch, the difference
+        // is 4 bytes.
+        if (BB->getFragmentNum() != TSuccessor->getFragmentNum() &&
+            BB->getFragmentNum() == FSuccessor->getFragmentNum())
+          swapSuccessors();
       }
+
+      BB->addBranchInstruction(FSuccessor);
     }
     // Cases where the number of successors is 0 (block ends with a
     // terminator) or more than 2 (switch table) don't require branch
