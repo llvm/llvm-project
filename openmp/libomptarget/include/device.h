@@ -29,7 +29,7 @@
 #include "OpenMP/Mapping.h"
 
 // Forward declarations.
-struct RTLInfoTy;
+struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
@@ -51,7 +51,7 @@ typedef std::map<__tgt_bin_desc *, PendingCtorDtorListsTy>
 
 struct DeviceTy {
   int32_t DeviceID;
-  RTLInfoTy *RTL;
+  PluginAdaptorTy *RTL;
   int32_t RTLDeviceID;
 
   bool IsInit;
@@ -75,7 +75,7 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx;
 
-  DeviceTy(RTLInfoTy *RTL);
+  DeviceTy(PluginAdaptorTy *RTL);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;

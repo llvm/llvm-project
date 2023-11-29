@@ -59,7 +59,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(RTLInfoTy *RTL)
+DeviceTy::DeviceTy(PluginAdaptorTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
       HasPendingGlobals(false), PendingCtorsDtors(), PendingGlobalsMtx() {}
 
