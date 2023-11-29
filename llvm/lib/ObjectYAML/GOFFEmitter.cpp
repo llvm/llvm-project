@@ -66,7 +66,6 @@ ZerosImpl zeros(const size_t NumBytes) { return ZerosImpl{NumBytes}; }
 // physical records are created for the data. Possible fill bytes at the end of
 // a physical record are written automatically.
 class GOFFOstream : public raw_ostream {
-
 public:
   explicit GOFFOstream(raw_ostream &OS)
       : OS(OS), LogicalRecords(0), RemainingSize(0), NewLogicalRecord(false) {
@@ -75,7 +74,7 @@ public:
 
   ~GOFFOstream() { finalize(); }
 
-  void newRecord(GOFF::RecordType Type, size_t Size);
+  void makeNewRecord(GOFF::RecordType Type, size_t Size);
 
   void finalize() { fillRecord(); }
 
@@ -133,7 +132,7 @@ void GOFFOstream::writeRecordPrefix(raw_ostream &OS, GOFF::RecordType Type,
      << binaryBe(static_cast<unsigned char>(0));
 }
 
-void GOFFOstream::newRecord(GOFF::RecordType Type, size_t Size) {
+void GOFFOstream::makeNewRecord(GOFF::RecordType Type, size_t Size) {
   fillRecord();
   CurrentType = Type;
   RemainingSize = Size;
@@ -229,7 +228,7 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
     LangProd.resize(16);
   }
 
-  GW.newRecord(GOFF::RT_HDR, GOFF::PayloadLength);
+  GW.makeNewRecord(GOFF::RT_HDR, GOFF::PayloadLength);
   GW << binaryBe(FileHdr.TargetEnvironment)     // TargetEnvironment
      << binaryBe(FileHdr.TargetOperatingSystem) // TargetOperatingSystem
      << zeros(2)                                // Reserved
@@ -257,7 +256,7 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
 }
 
 void GOFFState::writeEnd() {
-  GW.newRecord(GOFF::RT_END, GOFF::PayloadLength);
+  GW.makeNewRecord(GOFF::RT_END, GOFF::PayloadLength);
   GW << binaryBe(uint8_t(0)) // No entry point
      << binaryBe(uint8_t(0)) // No AMODE
      << zeros(3)             // Reserved
