@@ -28,4 +28,6 @@ int main(int, char**) {
       std::views::join | std::views::transform([](auto const& sm) { return std::string_view(sm.first, sm.second); });
 
   assert(std::ranges::equal(lower, std::to_array<std::string_view>({"e", "l", "l", "o"})));
+
+  return 0;
 }
