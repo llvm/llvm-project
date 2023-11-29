@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-windows -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -emit-llvm-only -DCHECK_ALIASES %s
 // RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fsyntax-only -verify -emit-llvm-only %s
 
 #if defined(_WIN32)
 void foo(void) {}
@@ -35,6 +36,25 @@ void *f6_resolver_resolver(void) { return 0; }
 void *f6_resolver(void) __attribute__((ifunc("f6_resolver_resolver")));
 void f6(void) __attribute__((ifunc("f6_resolver")));
 // expected-error@-1 {{ifunc must point to a defined function}}
+
+#elif defined(__APPLE__)
+
+// NOTE: aliases are not supported on Darwin, so the above tests are not relevant.
+
+#define STR2(X) #X
+#define STR(X) STR2(X)
+#define PREFIX STR(__USER_LABEL_PREFIX__)
+
+void f1a(void) __asm("f1");
+void f1a(void) {}
+// expected-note@-1 {{previous definition is here}}
+void f1(void) __attribute__((ifunc(PREFIX "f1_ifunc"))) __asm("f1");
+// expected-error@-1 {{definition with same mangled name '<U+0001>f1' as another definition}}
+void *f1_ifunc(void) { return 0; }
+
+void *f6_ifunc(int i);
+void __attribute__((ifunc(PREFIX "f6_ifunc"))) f6(void) {}
+// expected-error@-1 {{definition 'f6' cannot also be an ifunc}}
 
 #else
 void f1a(void) __asm("f1");
