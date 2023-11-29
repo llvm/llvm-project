@@ -330,10 +330,10 @@ static bool FormattedDerivedTypeIO(IoStatementState &io,
       }
     }
   }
-  if (const typeInfo::SpecialBinding *
-      special{type->FindSpecialBinding(DIR == Direction::Input
-              ? typeInfo::SpecialBinding::Which::ReadFormatted
-              : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
+  if (const typeInfo::SpecialBinding *special{
+          type->FindSpecialBinding(DIR == Direction::Input
+                  ? typeInfo::SpecialBinding::Which::ReadFormatted
+                  : typeInfo::SpecialBinding::Which::WriteFormatted)}) {
     if (!table || !table->ignoreNonTbpEntries || special->isTypeBound()) {
       if (std::optional<bool> wasDefined{
               DefinedFormattedIo(io, descriptor, *type, *special)}) {
@@ -353,8 +353,8 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
     const Descriptor &descriptor, const NonTbpDefinedIoTable *table = nullptr) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   const DescriptorAddendum *addendum{descriptor.Addendum()};
-  if (const typeInfo::DerivedType *
-      type{addendum ? addendum->derivedType() : nullptr}) {
+  if (const typeInfo::DerivedType *type{
+          addendum ? addendum->derivedType() : nullptr}) {
     // derived type unformatted I/O
     if (table) {
       if (const auto *definedIo{table->Find(*type,
@@ -375,10 +375,10 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
         }
       }
     }
-    if (const typeInfo::SpecialBinding *
-        special{type->FindSpecialBinding(DIR == Direction::Input
-                ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
+    if (const typeInfo::SpecialBinding *special{
+            type->FindSpecialBinding(DIR == Direction::Input
+                    ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                    : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
       if (!table || !table->ignoreNonTbpEntries || special->isTypeBound()) {
         // defined derived type unformatted I/O
         return DefinedUnformattedIo(io, descriptor, *type, *special);
@@ -483,8 +483,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedIntegerIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented INTEGER kind (%d) in descriptor",
-            kind);
+            "not yet implemented: INTEGER(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Real:
@@ -504,7 +503,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedRealIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented REAL kind (%d) in descriptor", kind);
+            "not yet implemented: REAL(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Complex:
@@ -524,8 +523,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedComplexIO<16, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented COMPLEX kind (%d) in descriptor",
-            kind);
+            "not yet implemented: COMPLEX(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Character:
@@ -538,8 +536,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedCharacterIO<char32_t, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented CHARACTER kind (%d) in descriptor",
-            kind);
+            "not yet implemented: CHARACTER(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Logical:
@@ -554,8 +551,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor,
         return FormattedLogicalIO<8, DIR>(io, descriptor);
       default:
         handler.Crash(
-            "DescriptorIO: Unimplemented LOGICAL kind (%d) in descriptor",
-            kind);
+            "not yet implemented: LOGICAL(KIND=%d) in formatted IO", kind);
         return false;
       }
     case TypeCategory::Derived:
