@@ -64,6 +64,7 @@ namespace llvm {
       t_Poison,              // No value.
       t_EmptyArray,          // No value:  []
       t_Constant,            // Value in ConstantVal.
+      t_ConstantSplat,       // Value in ConstantVal.
       t_InlineAsm,           // Value in FTy/StrVal/StrVal2/UIntVal.
       t_ConstantStruct,      // Value in ConstantStructElts.
       t_PackedConstantStruct // Value in ConstantStructElts.
