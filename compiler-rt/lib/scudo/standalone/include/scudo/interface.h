@@ -17,9 +17,14 @@ extern "C" {
 __attribute__((weak)) const char *__scudo_default_options(void);
 
 // Post-allocation & pre-deallocation hooks.
-// They must be thread-safe and not use heap related functions.
 __attribute__((weak)) void __scudo_allocate_hook(void *ptr, size_t size);
 __attribute__((weak)) void __scudo_deallocate_hook(void *ptr);
+
+// These hooks are used to mark the scope of doing realloc(). Note that the
+// allocation/deallocation are still reported through the hooks above, this is
+// only used when you want to group two operations in the realloc().
+__attribute__((weak)) void __scudo_realloc_begin_hook(void *old_ptr);
+__attribute__((weak)) void __scudo_realloc_end_hook(void *old_ptr);
 
 void __scudo_print_stats(void);
 

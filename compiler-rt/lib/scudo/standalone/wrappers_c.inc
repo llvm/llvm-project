@@ -27,6 +27,51 @@ static void reportDeallocation(void *ptr) {
     if (__scudo_deallocate_hook)
       __scudo_deallocate_hook(ptr);
 }
+static void reportReallocBegin(void *old_ptr) {
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_realloc_begin_hook)
+      __scudo_realloc_begin_hook(old_ptr);
+}
+static void reportReallocEnd(void *old_ptr) {
+  if (SCUDO_ENABLE_HOOKS)
+    if (__scudo_realloc_end_hook)
+      __scudo_realloc_end_hook(old_ptr);
+}
+
+static void *reallocImpl(void *ptr, size_t size) {
+  if (!ptr) {
+    void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc,
+                                         SCUDO_MALLOC_ALIGNMENT);
+    reportAllocation(Ptr, size);
+    return Ptr;
+  }
+  if (size == 0) {
+    reportDeallocation(ptr);
+    SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
+    return nullptr;
+  }
+
+  // Given that the reporting of deallocation and allocation are not atomic, we
+  // always pretend the old pointer will be released so that the user don't need
+  // to worry about the false double-use case from the view of hooks.
+  // For example, before the reporting all the events in the `realloc` has
+  // finished, another thread may have got the pointer released by the
+  // `realloc` and report it to the hook. It may be misinterpreted as double-use
+  // if it's not handled properly on the hook side.
+  reportDeallocation(ptr);
+  void *NewPtr = SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT);
+  if (NewPtr != nullptr) {
+    // Note that even if NewPtr == ptr, the size has changed. We still need to
+    // report the new size.
+    reportAllocation(NewPtr, size);
+  } else {
+    // If `realloc` fails, the old pointer is not released. Report the old
+    // pointer as allocated.
+    reportAllocation(ptr, SCUDO_ALLOCATOR.getAllocSize(ptr));
+  }
+
+  return NewPtr;
+}
 
 extern "C" {
 
@@ -163,23 +208,11 @@ INTERFACE WEAK void *SCUDO_PREFIX(pvalloc)(size_t size) {
 }
 
 INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
-  if (!ptr) {
-    void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc,
-                                         SCUDO_MALLOC_ALIGNMENT);
-    reportAllocation(Ptr, size);
-    return scudo::setErrnoOnNull(Ptr);
-  }
-  if (size == 0) {
-    reportDeallocation(ptr);
-    SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
-    return nullptr;
-  }
+  reportReallocBegin(ptr);
 
-  void *NewPtr = SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT);
-  if (NewPtr != ptr) {
-    reportAllocation(NewPtr, size);
-    reportDeallocation(ptr);
-  }
+  void *NewPtr = reallocImpl(ptr, size);
+
+  reportReallocEnd(ptr);
 
   return scudo::setErrnoOnNull(NewPtr);
 }

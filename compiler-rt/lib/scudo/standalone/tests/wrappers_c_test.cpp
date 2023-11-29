@@ -61,8 +61,13 @@ struct AllocContext {
 struct DeallocContext {
   void *Ptr;
 };
+struct ReallocContext {
+  void *Begin;
+  void *End;
+};
 static AllocContext AC;
 static DeallocContext DC;
+static ReallocContext RC;
 
 #if (SCUDO_ENABLE_HOOKS_TESTS == 1)
 __attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
@@ -72,6 +77,14 @@ __attribute__((visibility("default"))) void __scudo_allocate_hook(void *Ptr,
 }
 __attribute__((visibility("default"))) void __scudo_deallocate_hook(void *Ptr) {
   DC.Ptr = Ptr;
+}
+__attribute__((visibility("default"))) void
+__scudo_realloc_begin_hook(void *Ptr) {
+  RC.Begin = Ptr;
+}
+__attribute__((visibility("default"))) void
+__scudo_realloc_end_hook(void *Ptr) {
+  RC.End = Ptr;
 }
 #endif // (SCUDO_ENABLE_HOOKS_TESTS == 1)
 }
@@ -83,9 +96,12 @@ protected:
       printf("Hooks are enabled but hooks tests are disabled.\n");
   }
 
-  void invalidateAllocHookPtrAs(UNUSED void *Ptr) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
+  void invalidateHookPtrsAs(UNUSED void *Ptr) {
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
       AC.Ptr = Ptr;
+      DC.Ptr = Ptr;
+      RC.Begin = RC.End = Ptr;
+    }
   }
   void verifyAllocHookPtr(UNUSED void *Ptr) {
     if (SCUDO_ENABLE_HOOKS_TESTS)
@@ -98,6 +114,12 @@ protected:
   void verifyDeallocHookPtr(UNUSED void *Ptr) {
     if (SCUDO_ENABLE_HOOKS_TESTS)
       EXPECT_EQ(Ptr, DC.Ptr);
+  }
+  void verifyReallocHooksScope(UNUSED void *Ptr) {
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
+      EXPECT_EQ(Ptr, RC.Begin);
+      EXPECT_EQ(Ptr, RC.End);
+    }
   }
 };
 using ScudoWrappersCDeathTest = ScudoWrappersCTest;
@@ -258,26 +280,30 @@ TEST_F(ScudoWrappersCTest, AlignedAlloc) {
 }
 
 TEST_F(ScudoWrappersCDeathTest, Realloc) {
+  invalidateHookPtrsAs(reinterpret_cast<void *>(0xdeadbeef));
   // realloc(nullptr, N) is malloc(N)
   void *P = realloc(nullptr, Size);
   EXPECT_NE(P, nullptr);
   verifyAllocHookPtr(P);
   verifyAllocHookSize(Size);
+  verifyReallocHooksScope(nullptr);
   free(P);
   verifyDeallocHookPtr(P);
 
+  invalidateHookPtrsAs(reinterpret_cast<void *>(0xdeadbeef));
   P = malloc(Size);
   EXPECT_NE(P, nullptr);
   // realloc(P, 0U) is free(P) and returns nullptr
   EXPECT_EQ(realloc(P, 0U), nullptr);
   verifyDeallocHookPtr(P);
+  verifyReallocHooksScope(P);
 
   P = malloc(Size);
   EXPECT_NE(P, nullptr);
   EXPECT_LE(Size, malloc_usable_size(P));
   memset(P, 0x42, Size);
 
-  invalidateAllocHookPtrAs(reinterpret_cast<void *>(0xdeadbeef));
+  invalidateHookPtrsAs(reinterpret_cast<void *>(0xdeadbeef));
   void *OldP = P;
   P = realloc(P, Size * 2U);
   EXPECT_NE(P, nullptr);
@@ -285,14 +311,16 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   for (size_t I = 0; I < Size; I++)
     EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
   if (OldP == P) {
-    verifyAllocHookPtr(reinterpret_cast<void *>(0xdeadbeef));
+    verifyDeallocHookPtr(OldP);
+    verifyAllocHookPtr(OldP);
   } else {
     verifyAllocHookPtr(P);
     verifyAllocHookSize(Size * 2U);
     verifyDeallocHookPtr(OldP);
   }
+  verifyReallocHooksScope(OldP);
 
-  invalidateAllocHookPtrAs(reinterpret_cast<void *>(0xdeadbeef));
+  invalidateHookPtrsAs(reinterpret_cast<void *>(0xdeadbeef));
   OldP = P;
   P = realloc(P, Size / 2U);
   EXPECT_NE(P, nullptr);
@@ -300,11 +328,13 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   for (size_t I = 0; I < Size / 2U; I++)
     EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
   if (OldP == P) {
-    verifyAllocHookPtr(reinterpret_cast<void *>(0xdeadbeef));
+    verifyDeallocHookPtr(OldP);
+    verifyAllocHookPtr(OldP);
   } else {
     verifyAllocHookPtr(P);
     verifyAllocHookSize(Size / 2U);
   }
+  verifyReallocHooksScope(OldP);
   free(P);
 
   EXPECT_DEATH(P = realloc(P, Size), "");
