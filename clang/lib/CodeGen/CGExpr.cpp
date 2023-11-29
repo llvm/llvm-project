@@ -974,7 +974,7 @@ class MemberExprBaseVisitor
 
 public:
   MemberExprBaseVisitor(const RecordDecl *ExpectedRD)
-      : ExpectedRD(ExpectedRD) { }
+      : ExpectedRD(ExpectedRD) {}
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
