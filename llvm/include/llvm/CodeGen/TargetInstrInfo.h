@@ -1497,8 +1497,7 @@ public:
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
   /// \p Offset1 and \p Offset2 are the byte offsets for the memory
-  /// operations, and \p Offset2 is guaranteed to be greater than or equal to
-  /// Offset1.
+  /// operations.
   /// \p OffsetIsScalable1 and \p OffsetIsScalable2 indicate if the offset is
   /// scaled by a runtime quantity.
   /// \p ClusterSize is the number of operations in the resulting load/store
