@@ -601,6 +601,11 @@ inline constexpr CpuInfo CpuInfos[] = {
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
           AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a17", ARMV8_6A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+
     {"apple-m1", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
@@ -609,6 +614,11 @@ inline constexpr CpuInfo CpuInfos[] = {
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
           AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-m3", ARMV8_6A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+
     {"apple-s4", ARMV8_3A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16}))},
