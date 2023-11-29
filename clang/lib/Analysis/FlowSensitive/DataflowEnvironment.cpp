@@ -367,6 +367,16 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   }
 }
 
+Environment::Environment(DataflowAnalysisContext &DACtx)
+    : DACtx(&DACtx),
+      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
+
+Environment::Environment(DataflowAnalysisContext &DACtx,
+                         const DeclContext &DeclCtx)
+    : Environment(DACtx) {
+  CallStack.push_back(&DeclCtx);
+}
+
 // FIXME: Add support for resetting globals after function calls to enable
 // the implementation of sound analyses.
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
@@ -416,57 +426,10 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   }
 }
 
-Environment::Environment(DataflowAnalysisContext &DACtx)
-    : DACtx(&DACtx),
-      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
-
 Environment Environment::fork() const {
   Environment Copy(*this);
   Copy.FlowConditionToken = DACtx->forkFlowCondition(FlowConditionToken);
   return Copy;
-}
-
-Environment::Environment(DataflowAnalysisContext &DACtx,
-                         const DeclContext &DeclCtx)
-    : Environment(DACtx) {
-  CallStack.push_back(&DeclCtx);
-
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
-    assert(FuncDecl->getBody() != nullptr);
-
-    initFieldsGlobalsAndFuncs(FuncDecl);
-
-    for (const auto *ParamDecl : FuncDecl->parameters()) {
-      assert(ParamDecl != nullptr);
-      setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
-    }
-  }
-
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
-    auto *Parent = MethodDecl->getParent();
-    assert(Parent != nullptr);
-
-    if (Parent->isLambda()) {
-      for (auto Capture : Parent->captures()) {
-        if (Capture.capturesVariable()) {
-          const auto *VarDecl = Capture.getCapturedVar();
-          assert(VarDecl != nullptr);
-          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
-        } else if (Capture.capturesThis()) {
-          const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(DeclCtx.getNonClosureAncestor());
-          QualType ThisPointeeType =
-              SurroundingMethodDecl->getFunctionObjectParameterType();
-          ThisPointeeLoc =
-              &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
-        }
-      }
-    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
-      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
-      ThisPointeeLoc =
-          &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
-    }
-  }
 }
 
 bool Environment::canDescend(unsigned MaxDepth,
@@ -725,10 +688,6 @@ StorageLocation *Environment::getStorageLocation(const Expr &E) const {
   assert(E.isGLValue() ||
          E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
   return getStorageLocationInternal(E);
-}
-
-RecordStorageLocation *Environment::getThisPointeeStorageLocation() const {
-  return ThisPointeeLoc;
 }
 
 RecordStorageLocation &
