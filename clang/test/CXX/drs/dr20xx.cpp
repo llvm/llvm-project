@@ -66,6 +66,7 @@ namespace dr2049 { // dr2049: 18 drafting
 template <int* x = {}> struct X {};
 X<> a;
 X<nullptr> b;
+static_assert(__is_same(decltype(a), decltype(b)));
 #endif
 }
 
