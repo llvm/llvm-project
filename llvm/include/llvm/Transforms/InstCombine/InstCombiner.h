@@ -464,12 +464,12 @@ public:
 
   void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
                         const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
+    llvm::computeKnownBits(V, Known, Depth, SQ.getWithInstruction(CxtI));
   }
 
   KnownBits computeKnownBits(const Value *V, unsigned Depth,
                              const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
+    return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,

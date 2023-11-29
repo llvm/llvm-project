@@ -9,11 +9,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginInterface.h"
-#include "Debug.h"
-#include "Environment.h"
+
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+
 #include "GlobalHandler.h"
 #include "JIT.h"
-#include "elf_common.h"
+#include "Utils/ELF.h"
 #include "omptarget.h"
 #include "omptargetplugin.h"
 
@@ -1636,7 +1638,7 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *TgtImage) {
   if (!Plugin::isActive())
     return false;
 
-  if (elf_check_machine(TgtImage, Plugin::get().getMagicElfBits()))
+  if (utils::elf::checkMachine(TgtImage, Plugin::get().getMagicElfBits()))
     return true;
 
   return Plugin::get().getJIT().checkBitcodeImage(*TgtImage);

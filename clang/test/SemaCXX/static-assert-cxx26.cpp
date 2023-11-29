@@ -179,18 +179,20 @@ static_assert(false, Message{}); // expected-error {{static assertion failed: He
 }
 
 struct MessageInvalidSize {
-    constexpr auto size(int) const; // expected-note {{candidate function not viable: requires 1 argument, but 0 were provided}}
-    constexpr auto data() const;
+    constexpr unsigned long size(int) const; // expected-note {{'size' declared here}}
+    constexpr const char* data() const;
 };
 struct MessageInvalidData {
-    constexpr auto size() const;
-    constexpr auto data(int) const; // expected-note {{candidate function not viable: requires 1 argument, but 0 were provided}}
+    constexpr unsigned long size() const;
+    constexpr const char* data(int) const; // expected-note {{'data' declared here}}
 };
 
 static_assert(false, MessageInvalidSize{});  // expected-error {{static assertion failed}} \
-                                             // expected-error {{the message in a static assertion must have a 'size()' member function returning an object convertible to 'std::size_t'}}
+                                             // expected-error {{the message in a static assertion must have a 'size()' member function returning an object convertible to 'std::size_t'}} \
+                                             // expected-error {{too few arguments to function call, expected 1, have 0}}
 static_assert(false, MessageInvalidData{});  // expected-error {{static assertion failed}} \
-                                             // expected-error {{the message in a static assertion must have a 'data()' member function returning an object convertible to 'const char *'}}
+                                             // expected-error {{the message in a static assertion must have a 'data()' member function returning an object convertible to 'const char *'}} \
+                                             // expected-error {{too few arguments to function call, expected 1, have 0}}
 
 struct NonConstMembers {
     constexpr int size() {
@@ -227,14 +229,14 @@ static_assert(false, Variadic{}); // expected-error {{static assertion failed: O
 
 template <typename T>
 struct DeleteAndRequires {
-    constexpr int size() = delete; // expected-note {{candidate function has been explicitly deleted}}
-    constexpr const char* data() requires false; // expected-note {{candidate function not viable: constraints not satisfied}} \
-                                                 // expected-note {{because 'false' evaluated to false}}
+    constexpr int size() = delete; // expected-note {{'size' has been explicitly marked deleted here}}
+    constexpr const char* data() requires false; // expected-note {{because 'false' evaluated to false}}
 };
 static_assert(false, DeleteAndRequires<void>{});
 // expected-error@-1 {{static assertion failed}} \
 // expected-error@-1 {{the message in a static assertion must have a 'size()' member function returning an object convertible to 'std::size_t'}}\
-// expected-error@-1 {{the message in a static assertion must have a 'data()' member function returning an object convertible to 'const char *'}}
+// expected-error@-1 {{invalid reference to function 'data': constraints not satisfied}} \
+// expected-error@-1 {{attempt to use a deleted function}}
 
 class Private {
     constexpr int size(int i = 0) { // expected-note {{implicitly declared private here}}
@@ -294,6 +296,9 @@ struct Frobble {
   constexpr const char *data() const { return "hello"; }
 };
 
+constexpr Frobble operator ""_myd (const char *, unsigned long) { return Frobble{}; }
+static_assert (false, "foo"_myd); // expected-error {{static assertion failed: hello}}
+
 Good<Frobble> a; // expected-note {{in instantiation}}
 Bad<int> b; // expected-note {{in instantiation}}
 
@@ -307,3 +312,32 @@ static_assert((char8_t)-128 == (char8_t)-123, ""); // expected-error {{failed}} 
 static_assert((char16_t)0xFEFF == (char16_t)0xDB93, ""); // expected-error {{failed}} \
                                                          // expected-note {{evaluates to 'u'﻿' (0xFEFF, 65279) == u'\xDB93' (0xDB93, 56211)'}}
 }
+
+struct Static {
+  static constexpr int size() { return 5; }
+  static constexpr const char *data() { return "hello"; }
+};
+static_assert(false, Static{}); // expected-error {{static assertion failed: hello}}
+
+struct Data {
+    unsigned long size = 0;
+    const char* data = "hello";
+};
+static_assert(false, Data{}); // expected-error {{called object type 'unsigned long' is not a function or function pointer}} \
+                              // expected-error {{called object type 'const char *' is not a function or function pointer}} \
+                              // expected-error {{the message in a static assertion must have a 'size()' member function returning an object convertible to 'std::size_t'}} \
+                              // expected-error {{static assertion failed}}
+
+struct Callable {
+    struct {
+        constexpr auto operator()() const {
+            return 5;
+        };
+    } size;
+    struct {
+        constexpr auto operator()() const {
+            return "hello";
+        };
+    } data;
+};
+static_assert(false, Callable{}); // expected-error {{static assertion failed: hello}}

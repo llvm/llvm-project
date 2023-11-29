@@ -339,9 +339,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       const SparseTensorType stt(rtp);
       lvlRank = stt.getLvlRank();
 
-      // We always treat sparse output tensor as dense so that we always iterate
-      // it based on lvl size.
-      if (stt.hasEncoding() && !(isOutputTensor(tid) && isSparseOut)) {
+      if (stt.hasEncoding()) {
         const auto enc = stt.getEncoding();
         isSparseSlices[tid] = enc.isSlice();
         for (auto lvlTp : enc.getLvlTypes())

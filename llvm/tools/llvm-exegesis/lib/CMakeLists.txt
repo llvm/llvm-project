@@ -29,10 +29,10 @@ set(LLVM_LINK_COMPONENTS
   MC
   MCA
   MCDisassembler
-  MCJIT
   MCParser
   Object
   ObjectYAML
+  OrcJIT
   RuntimeDyld
   Support
   TargetParser

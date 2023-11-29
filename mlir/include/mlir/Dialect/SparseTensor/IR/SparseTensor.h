@@ -102,12 +102,6 @@ bool isUniqueCOOType(Type tp);
 /// the level-rank.
 Level getCOOStart(SparseTensorEncodingAttr enc);
 
-/// Helpers to setup a COO type.
-RankedTensorType getCOOFromTypeWithOrdering(RankedTensorType src,
-                                            AffineMap ordering, bool ordered);
-
-RankedTensorType getCOOFromType(RankedTensorType src, bool ordered);
-
 /// Returns true iff MLIR operand has any sparse operand.
 inline bool hasAnySparseOperand(Operation *op) {
   return llvm::any_of(op->getOperands().getTypes(), [](Type t) {

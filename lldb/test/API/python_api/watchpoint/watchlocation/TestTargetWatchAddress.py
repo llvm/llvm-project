@@ -135,5 +135,5 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
             self.expect(
                 error.GetCString(),
                 exe=False,
-                substrs=["Setting one of the watchpoint resources failed"],
+                substrs=["watch size of %d is not supported" % 365],
             )

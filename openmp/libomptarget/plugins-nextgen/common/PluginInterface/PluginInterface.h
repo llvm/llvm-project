@@ -19,13 +19,14 @@
 #include <shared_mutex>
 #include <vector>
 
-#include "Debug.h"
-#include "Environment.h"
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+#include "Shared/Utils.h"
+
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
 #include "RPC.h"
-#include "Utilities.h"
 #include "omptarget.h"
 
 #ifdef OMPT_SUPPORT

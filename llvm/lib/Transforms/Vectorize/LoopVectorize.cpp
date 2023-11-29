@@ -7027,6 +7027,14 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
           switch (Param.ParamKind) {
           case VFParamKind::Vector:
             break;
+          case VFParamKind::OMP_Uniform: {
+            Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
+            // Make sure the scalar parameter in the loop is invariant.
+            if (!PSE.getSE()->isLoopInvariant(PSE.getSCEV(ScalarParam),
+                                              TheLoop))
+              ParamsOk = false;
+            break;
+          }
           case VFParamKind::GlobalPredicate:
             UsesMask = true;
             break;
