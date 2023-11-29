@@ -2,10 +2,6 @@
 
 # RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mode=latency -snippets-file=%s -execution-mode=subprocess | FileCheck %s
 
-# See comment in ./subprocess-abnormal-exit-code.s on the transient
-# PTRACE_ATTACH failure.
-# ALLOW_RETRIES: 2
-
 # Check that we can set the value of RSP in subprocess mode without
 # segfaulting as we need to restore it after the rest of the setup is
 # complete to prevent loading from the stack where we set it instead

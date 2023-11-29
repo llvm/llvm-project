@@ -170,12 +170,6 @@ public:
         "configurePerfCounter is not implemented on the current architecture");
   }
 
-  // Returns the stack register for the platform.
-  virtual unsigned getStackRegister() const {
-    report_fatal_error(
-        "getStackRegister is not implemented on the current architecture");
-  }
-
   // Gets the ABI dependent registers that are used to pass arguments in a
   // function call.
   virtual std::vector<unsigned> getArgumentRegisters() const {

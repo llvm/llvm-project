@@ -745,8 +745,6 @@ private:
 
   std::vector<MCInst> configurePerfCounter(long Request, bool SaveRegisters) const override;
 
-  unsigned getStackRegister() const override;
-
   std::vector<unsigned> getArgumentRegisters() const override;
 
   std::vector<unsigned> getRegistersNeedSaving() const override;
@@ -1212,8 +1210,6 @@ ExegesisX86Target::configurePerfCounter(long Request, bool SaveRegisters) const 
   }
   return ConfigurePerfCounterCode;
 }
-
-unsigned ExegesisX86Target::getStackRegister() const { return X86::RSP; }
 
 std::vector<unsigned> ExegesisX86Target::getArgumentRegisters() const {
   return {X86::RDI, X86::RSI};

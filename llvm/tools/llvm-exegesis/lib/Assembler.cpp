@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -64,7 +65,9 @@ static bool generateSnippetSetupCode(
       // If we're generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
       // the setup.
-      if (RV.Register == ET.getStackRegister())
+      if (RV.Register == BBF.MF.getSubtarget()
+                             .getTargetLowering()
+                             ->getStackPointerRegisterToSaveRestore())
         continue;
     }
     // Load a constant in the register.
@@ -81,7 +84,9 @@ static bool generateSnippetSetupCode(
       // Load in the stack register now as we're done using it elsewhere
       // and need to set the value in preparation for executing the
       // snippet.
-      if (RV.Register != ET.getStackRegister())
+      if (RV.Register == BBF.MF.getSubtarget()
+                             .getTargetLowering()
+                             ->getStackPointerRegisterToSaveRestore())
         continue;
       const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
       if (SetRegisterCode.empty())
