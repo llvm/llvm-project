@@ -127,15 +127,13 @@ struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
   LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto operands = op.getOperands();
-
-    SmallVector<Value> constituents;
-    Type constituentType = operands[0].getType();
+    Value lhs = op.getOperand1();
+    Value rhs = op.getOperand2();
+    Type constituentType = lhs.getType();
 
     // iaddcarry (x, 0) = <0, x>
-    if (matchPattern(operands[1], m_Zero())) {
-      constituents.push_back(operands[1]);
-      constituents.push_back(operands[0]);
+    if (matchPattern(rhs, m_Zero())) {
+      Value constituents[2] = {rhs, lhs};
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                                constituents);
       return success();
@@ -152,19 +150,20 @@ struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
     //  Member 1 of the result gets the high-order (carry) bit of the result of
     //  the addition. That is, it gets the value 1 if the addition overflowed
     //  the component width, and 0 otherwise.
-    Attribute lhs;
-    Attribute rhs;
-    if (!matchPattern(operands[0], m_Constant(&lhs)) ||
-        !matchPattern(operands[1], m_Constant(&rhs)))
+    Attribute lhsAttr;
+    Attribute rhsAttr;
+    if (!matchPattern(lhs, m_Constant(&lhsAttr)) ||
+        !matchPattern(rhs, m_Constant(&rhsAttr)))
       return failure();
 
     auto adds = constFoldBinaryOp<IntegerAttr>(
-        {lhs, rhs}, [](const APInt &a, const APInt &b) { return a + b; });
+        {lhsAttr, rhsAttr},
+        [](const APInt &a, const APInt &b) { return a + b; });
     if (!adds)
       return failure();
 
     auto carrys = constFoldBinaryOp<IntegerAttr>(
-        ArrayRef{adds, lhs}, [](const APInt &a, const APInt &b) {
+        ArrayRef{adds, lhsAttr}, [](const APInt &a, const APInt &b) {
           APInt zero = APInt::getZero(a.getBitWidth());
           return a.ult(b) ? (zero + 1) : zero;
         });
@@ -174,12 +173,11 @@ struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
 
     Value addsVal =
         rewriter.create<spirv::ConstantOp>(loc, constituentType, adds);
-    constituents.push_back(addsVal);
 
     Value carrysVal =
         rewriter.create<spirv::ConstantOp>(loc, constituentType, carrys);
-    constituents.push_back(carrysVal);
 
+    Value constituents[2] = {addsVal, carrysVal};
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                              constituents);
     return success();
@@ -204,16 +202,14 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
   LogicalResult matchAndRewrite(MulOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto operands = op.getOperands();
-
-    SmallVector<Value> constituents;
-    Type constituentType = operands[0].getType();
+    Value lhs = op.getOperand1();
+    Value rhs = op.getOperand2();
+    Type constituentType = lhs.getType();
 
     // [su]mulextended (x, 0) = <0, 0>
-    if (matchPattern(operands[1], m_Zero())) {
+    if (matchPattern(rhs, m_Zero())) {
       Value zero = spirv::ConstantOp::getZero(constituentType, loc, rewriter);
-      constituents.push_back(zero);
-      constituents.push_back(zero);
+      Value constituents[2] = {zero, zero};
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                                constituents);
       return success();
@@ -227,20 +223,21 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
     // Member 0 of the result gets the low-order bits of the multiplication.
     //
     // Member 1 of the result gets the high-order bits of the multiplication.
-    Attribute lhs;
-    Attribute rhs;
-    if (!matchPattern(operands[0], m_Constant(&lhs)) ||
-        !matchPattern(operands[1], m_Constant(&rhs)))
+    Attribute lhsAttr;
+    Attribute rhsAttr;
+    if (!matchPattern(lhs, m_Constant(&lhsAttr)) ||
+        !matchPattern(rhs, m_Constant(&rhsAttr)))
       return failure();
 
     auto lowBits = constFoldBinaryOp<IntegerAttr>(
-        {lhs, rhs}, [](const APInt &a, const APInt &b) { return a * b; });
+        {lhsAttr, rhsAttr},
+        [](const APInt &a, const APInt &b) { return a * b; });
 
     if (!lowBits)
       return failure();
 
     auto highBits = constFoldBinaryOp<IntegerAttr>(
-        {lhs, rhs}, [](const APInt &a, const APInt &b) {
+        {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
           unsigned bitWidth = a.getBitWidth();
           APInt c;
           if (IsSigned) {
@@ -256,12 +253,11 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
 
     Value lowBitsVal =
         rewriter.create<spirv::ConstantOp>(loc, constituentType, lowBits);
-    constituents.push_back(lowBitsVal);
 
     Value highBitsVal =
         rewriter.create<spirv::ConstantOp>(loc, constituentType, highBits);
-    constituents.push_back(highBitsVal);
 
+    Value constituents[2] = {lowBitsVal, highBitsVal};
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                              constituents);
     return success();
@@ -280,16 +276,14 @@ struct UMulExtendedOpXOne final : OpRewritePattern<spirv::UMulExtendedOp> {
   LogicalResult matchAndRewrite(spirv::UMulExtendedOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    auto operands = op.getOperands();
-
-    SmallVector<Value> constituents;
-    Type constituentType = operands[0].getType();
+    Value lhs = op.getOperand1();
+    Value rhs = op.getOperand2();
+    Type constituentType = lhs.getType();
 
     // umulextended (x, 1) = <x, 0>
-    if (matchPattern(operands[1], m_One())) {
+    if (matchPattern(rhs, m_One())) {
       Value zero = spirv::ConstantOp::getZero(constituentType, loc, rewriter);
-      constituents.push_back(operands[0]);
-      constituents.push_back(zero);
+      Value constituents[2] = {lhs, zero};
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                                constituents);
       return success();

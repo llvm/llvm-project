@@ -342,10 +342,11 @@ func.func @iadd_poison(%arg0: i32) -> i32 {
 
 // CHECK-LABEL: @iaddcarry_x_0
 func.func @iaddcarry_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct
   %c0 = spirv.Constant 0 : i32
-
-  // CHECK: spirv.CompositeConstruct
   %0 = spirv.IAddCarry %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
   return %0 : !spirv.struct<(i32, i32)>
 }
 
@@ -355,15 +356,16 @@ func.func @const_fold_scalar_iaddcarry() -> (!spirv.struct<(i32, i32)>, !spirv.s
   %cn5 = spirv.Constant -5 : i32
   %cn8 = spirv.Constant -8 : i32
 
-  // CHECK-DAG: spirv.Constant 0
-  // CHECK-DAG: spirv.Constant -3
-  // CHECK-DAG: spirv.CompositeConstruct
-  // CHECK-DAG: spirv.Constant 1
-  // CHECK-DAG: spirv.Constant -13
-  // CHECK-DAG: spirv.CompositeConstruct
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN3:.*]] = spirv.Constant -3
+  // CHECK-DAG: %[[CC_CN3_C0:.*]] = spirv.CompositeConstruct %[[CN3]], %[[C0]]
+  // CHECK-DAG: %[[C1:.*]] = spirv.Constant 1
+  // CHECK-DAG: %[[CN13:.*]] = spirv.Constant -13
+  // CHECK-DAG: %[[CC_CN13_C1:.*]] = spirv.CompositeConstruct %[[CN13]], %[[C1]]
   %0 = spirv.IAddCarry %c5, %cn8 : !spirv.struct<(i32, i32)>
   %1 = spirv.IAddCarry %cn5, %cn8 : !spirv.struct<(i32, i32)>
 
+  // CHECK: return %[[CC_CN3_C0]], %[[CC_CN13_C1]]
   return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
 }
 
@@ -372,12 +374,13 @@ func.func @const_fold_vector_iaddcarry() -> !spirv.struct<(vector<3xi32>, vector
   %v0 = spirv.Constant dense<[5, -3, -1]> : vector<3xi32>
   %v1 = spirv.Constant dense<[-8, -8, 1]> : vector<3xi32>
 
-  // CHECK-DAG: spirv.Constant dense<[0, 1, 1]>
-  // CHECK-DAG: spirv.Constant dense<[-3, -11, 0]>
-  // CHECK-DAG: spirv.CompositeConstruct
+  // CHECK-DAG: %[[CV1:.*]] = spirv.Constant dense<[-3, -11, 0]>
+  // CHECK-DAG: %[[CV2:.*]] = spirv.Constant dense<[0, 1, 1]>
+  // CHECK-DAG: %[[CC_CV1_CV2:.*]] = spirv.CompositeConstruct %[[CV1]], %[[CV2]]
   %0 = spirv.IAddCarry %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
-  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 
+  // CHECK: return %[[CC_CV1_CV2]]
+  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 }
 
 // -----
@@ -452,10 +455,12 @@ func.func @const_fold_vector_imul() -> vector<3xi32> {
 
 // CHECK-LABEL: @smulextended_x_0
 func.func @smulextended_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[C0]], %[[C0]]
   %c0 = spirv.Constant 0 : i32
-
-  // CHECK: spirv.CompositeConstruct
   %0 = spirv.SMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
   return %0 : !spirv.struct<(i32, i32)>
 }
 
@@ -465,15 +470,16 @@ func.func @const_fold_scalar_smulextended() -> (!spirv.struct<(i32, i32)>, !spir
   %cn5 = spirv.Constant -5 : i32
   %cn8 = spirv.Constant -8 : i32
 
-  // CHECK-DAG: spirv.Constant -40
-  // CHECK-DAG: spirv.Constant -1
-  // CHECK-DAG: spirv.CompositeConstruct
-  // CHECK-DAG: spirv.Constant 40
-  // CHECK-DAG: spirv.Constant 0
-  // CHECK-DAG: spirv.CompositeConstruct
+  // CHECK-DAG: %[[CN40:.*]] = spirv.Constant -40
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  // CHECK-DAG: %[[CC_CN40_CN1:.*]] = spirv.CompositeConstruct %[[CN40]], %[[CN1]]
+  // CHECK-DAG: %[[C40:.*]] = spirv.Constant 40
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CC_C40_C0:.*]] = spirv.CompositeConstruct %[[C40]], %[[C0]]
   %0 = spirv.SMulExtended %c5, %cn8 : !spirv.struct<(i32, i32)>
   %1 = spirv.SMulExtended %cn5, %cn8 : !spirv.struct<(i32, i32)>
 
+  // CHECK: return %[[CC_CN40_CN1]], %[[CC_C40_C0]]
   return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
 }
 
@@ -482,10 +488,12 @@ func.func @const_fold_vector_smulextended() -> !spirv.struct<(vector<3xi32>, vec
   %v0 = spirv.Constant dense<[2147483647, -5, -1]> : vector<3xi32>
   %v1 = spirv.Constant dense<[5, -8, 1]> : vector<3xi32>
 
-  // CHECK: spirv.Constant dense<[2147483643, 40, -1]>
-  // CHECK-NEXT: spirv.Constant dense<[2, 0, -1]>
-  // CHECK-NEXT: spirv.CompositeConstruct
+  // CHECK-DAG: %[[CV1:.*]] = spirv.Constant dense<[2147483643, 40, -1]>
+  // CHECK-DAG: %[[CV2:.*]] = spirv.Constant dense<[2, 0, -1]>
+  // CHECK-DAG: %[[CC_CV1_CV2:.*]] = spirv.CompositeConstruct %[[CV1]], %[[CV2]]
   %0 = spirv.SMulExtended %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+
+  // CHECK: return %[[CC_CV1_CV2]]
   return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 
 }
@@ -498,19 +506,24 @@ func.func @const_fold_vector_smulextended() -> !spirv.struct<(vector<3xi32>, vec
 
 // CHECK-LABEL: @umulextended_x_0
 func.func @umulextended_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[C0]], %[[C0]]
   %c0 = spirv.Constant 0 : i32
-
-  // CHECK: spirv.CompositeConstruct
   %0 = spirv.UMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
   return %0 : !spirv.struct<(i32, i32)>
 }
 
 // CHECK-LABEL: @umulextended_x_1
+// CHECK-SAME: (%[[ARG:.*]]: i32)
 func.func @umulextended_x_1(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[ARG]], %[[C0]]
   %c0 = spirv.Constant 1 : i32
-
-  // CHECK: spirv.CompositeConstruct
   %0 = spirv.UMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
   return %0 : !spirv.struct<(i32, i32)>
 }
 
@@ -520,15 +533,16 @@ func.func @const_fold_scalar_umulextended() -> (!spirv.struct<(i32, i32)>, !spir
   %cn5 = spirv.Constant -5 : i32
   %cn8 = spirv.Constant -8 : i32
 
-  // CHECK-DAG: spirv.Constant 40
-  // CHECK-DAG: spirv.Constant -13
-  // CHECK-DAG: spirv.CompositeConstruct
-  // CHECK-DAG: spirv.Constant -40
-  // CHECK-DAG: spirv.Constant 4
-  // CHECK-DAG: spirv.CompositeConstruct
+  // CHECK-DAG: %[[C40:.*]] = spirv.Constant 40
+  // CHECK-DAG: %[[CN13:.*]] = spirv.Constant -13
+  // CHECK-DAG: %[[CC_C40_CN13:.*]] = spirv.CompositeConstruct %[[C40]], %[[CN13]]
+  // CHECK-DAG: %[[CN40:.*]] = spirv.Constant -40
+  // CHECK-DAG: %[[C4:.*]] = spirv.Constant 4
+  // CHECK-DAG: %[[CC_CN40_C4:.*]] = spirv.CompositeConstruct %[[CN40]], %[[C4]]
   %0 = spirv.UMulExtended %c5, %cn8 : !spirv.struct<(i32, i32)>
   %1 = spirv.UMulExtended %cn5, %cn8 : !spirv.struct<(i32, i32)>
 
+  // CHECK: return %[[CC_CN40_C4]], %[[CC_C40_CN13]]
   return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
 }
 
@@ -537,12 +551,13 @@ func.func @const_fold_vector_umulextended() -> !spirv.struct<(vector<3xi32>, vec
   %v0 = spirv.Constant dense<[2147483647, -5, -1]> : vector<3xi32>
   %v1 = spirv.Constant dense<[5, -8, 1]> : vector<3xi32>
 
-  // CHECK: spirv.Constant dense<[2147483643, 40, -1]>
-  // CHECK-NEXT: spirv.Constant dense<[2, -13, 0]>
-  // CHECK-NEXT: spirv.CompositeConstruct
+  // CHECK-DAG: %[[CV1:.*]] = spirv.Constant dense<[2147483643, 40, -1]>
+  // CHECK-DAG: %[[CV2:.*]] = spirv.Constant dense<[2, -13, 0]>
+  // CHECK-DAG: %[[CC_CV1_CV2:.*]] = spirv.CompositeConstruct %[[CV1]], %[[CV2]]
   %0 = spirv.UMulExtended %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
-  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 
+  // CHECK: return %[[CC_CV1_CV2]]
+  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 }
 
 // -----
