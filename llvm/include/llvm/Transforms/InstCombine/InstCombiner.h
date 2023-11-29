@@ -480,7 +480,7 @@ public:
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
                          const Instruction *CxtI = nullptr) const {
-    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
+    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
   }
 
   unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,

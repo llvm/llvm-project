@@ -2445,13 +2445,13 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (C2->isMask() && // C2 == 0+1+
           match(A, m_c_Add(m_Specific(B), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C2, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C2, Q))
           return A;
       }
       // Or commutes, try both ways.
       if (C1->isMask() && match(B, m_c_Add(m_Specific(A), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C1, Q))
           return B;
       }
     }
@@ -6202,7 +6202,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // ctpop(and X, 1) --> and X, 1
     unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
     if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
-                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+                          Q))
       return Op0;
     break;
   }
