@@ -330,11 +330,11 @@ bool RISCVLegalizerInfo::legalizeBRJT(MachineInstr &MI,
   Register IndexReg = MI.getOperand(2).getReg();
   LLT IndexTy = MRI.getType(IndexReg);
 
-  if (isPowerOf2_32(EntrySize)) {
-    auto ShiftAmt = MIRBuilder.buildConstant(IndexTy, Log2_32(EntrySize));
-    IndexReg = MIRBuilder.buildShl(IndexTy, IndexReg, ShiftAmt).getReg(0);
-  } else
+  if (!isPowerOf2_32(EntrySize))
     return false;
+
+  auto ShiftAmt = MIRBuilder.buildConstant(IndexTy, Log2_32(EntrySize));
+  IndexReg = MIRBuilder.buildShl(IndexTy, IndexReg, ShiftAmt).getReg(0);
 
   auto Addr = MIRBuilder.buildPtrAdd(PtrTy, PtrReg, IndexReg);
 
