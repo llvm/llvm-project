@@ -1568,10 +1568,10 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   //     point to a variable in the wrong scope.
   SmallDenseMap<DINode *, DINode *> RemappedMetadata;
   SmallVector<Instruction *, 4> DebugIntrinsicsToDelete;
-  SmallVector<DPValue*, 4> DPVsToDelete;
+  SmallVector<DPValue *, 4> DPVsToDelete;
   DenseMap<const MDNode *, MDNode *> Cache;
 
-  auto GetUpdatedDIVariable = [&] (DILocalVariable *OldVar) {
+  auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar) {
     DINode *&NewVar = RemappedMetadata[OldVar];
     if (!NewVar) {
       DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
@@ -1595,7 +1595,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       }
       if (!DPV.getDebugLoc().getInlinedAt())
         DPV.setVariable(GetUpdatedDIVariable(DPV.getVariable()));
-      DPV.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DPV.getDebugLoc(), *NewSP, Ctx, Cache));
+      DPV.setDebugLoc(DebugLoc::replaceInlinedAtSubprogram(DPV.getDebugLoc(),
+                                                           *NewSP, Ctx, Cache));
     }
   };
 
