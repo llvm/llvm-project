@@ -998,7 +998,7 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
   if (const auto *FD = dyn_cast<FieldDecl>(CountedByVD)) {
     Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
   } else if (const auto *I = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
-    for (auto *ND : I->chain()) {
+    for (NamedDecl *ND : I->chain()) {
       if (auto *FD = dyn_cast<FieldDecl>(ND)) {
         Indices.emplace_back(
             llvm::ConstantInt::get(Int32Ty, FD->getFieldIndex()));
@@ -1011,7 +1011,7 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
 
   llvm::Type *Ty =
       CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
-  Res = Builder.CreateGEP(Ty, Res, Indices, "bork");
+  Res = Builder.CreateGEP(Ty, Res, Indices);
 
   QualType CountedByTy(CountedByVD->getType());
   TypeInfo TI = getContext().getTypeInfo(CountedByTy);
@@ -1019,7 +1019,7 @@ CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
   Address Addr(Res, Ty,
                CharUnits::fromQuantity(TI.Align / getContext().getCharWidth()));
 
-  return Builder.CreateLoad(Addr, Res, "fork");
+  return Builder.CreateLoad(Addr, Res);
 }
 
 const ValueDecl *
