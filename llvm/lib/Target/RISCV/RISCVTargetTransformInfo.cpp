@@ -784,7 +784,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::experimental_stepvector: {
     unsigned Cost = 1; // vid
     auto LT = getTypeLegalizationCost(RetTy);
-    return Cost + (LT.first - 1) * TLI->getLMULCost(LT.second);
+    return (Cost + (LT.first - 1)) * TLI->getLMULCost(LT.second);
   }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
@@ -1079,7 +1079,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         // vmandn.mm v8, v8, v9
         // vmand.mm v9, v0, v9
         // vmor.mm v0, v9, v8
-        return LT.first * TLI->getLMULCost(LT.second) * 3;
+        return LT.first * 3;
       }
       // vselect and max/min are supported natively.
       return LT.first * TLI->getLMULCost(LT.second) * 1;
@@ -1091,7 +1091,7 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       //  vmandn.mm v8, v8, v9
       //  vmand.mm v9, v0, v9
       //  vmor.mm v0, v9, v8
-      return LT.first * TLI->getLMULCost(LT.second) * 5;
+      return LT.first * (2 * TLI->getLMULCost(LT.second) + 3);
     }
 
     // vmv.v.x v10, a0
