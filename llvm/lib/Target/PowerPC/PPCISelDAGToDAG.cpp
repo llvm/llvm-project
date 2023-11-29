@@ -7621,13 +7621,23 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
     return;
 
   // At this point, InitialADDI can be folded into a non-TOC-based local-exec
-  // access. The first operand of InitialADDI should be the thread pointer.
+  // access. The first operand of InitialADDI should be the thread pointer,
+  // which has been checked in isEligibleToFoldADDIForLocalExecAccesses().
   SDValue TPRegNode = InitialADDI.getOperand(0);
+  RegisterSDNode *TPReg = dyn_cast_or_null<RegisterSDNode>(TPRegNode.getNode());
+  const PPCSubtarget &Subtarget =
+      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  assert((TPReg && (TPReg->getReg() == Subtarget.getThreadPointerRegister())) &&
+         "Expecting the first operand to be a thread pointer for folding addi "
+         "in local-exec accesses!");
 
   // The second operand of the InitialADDI should be the global TLS address
   // (the local-exec TLS variable), with the MO_TPREL_FLAG target flag.
+  // This has been checked in isEligibleToFoldADDIForLocalExecAccesses().
   SDValue TLSVarNode = InitialADDI.getOperand(1);
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(TLSVarNode);
+  assert(GA && "Expecting a valid GlobalAddressSDNode when folding addi into "
+               "local-exec accesses!");
   unsigned TargetFlags = GA->getTargetFlags();
 
   // The second operand of the addi that we want to preserve will be an

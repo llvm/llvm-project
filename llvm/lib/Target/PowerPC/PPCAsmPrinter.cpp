@@ -2891,8 +2891,6 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   // For all TLS variables, calculate their corresponding addresses and store
   // them into TLSVarsToAddressMapping, which will be used to determine whether
   // or not local-exec TLS variables require special assembly printing.
-  // This address calculation follows the same method seen within
-  // assignAddressesAndIndices() in XCOFFObjectWriter.cpp.
   uint64_t Address = 0;
   uint64_t TLSVarAddress = 0;
   auto DL = M.getDataLayout();
