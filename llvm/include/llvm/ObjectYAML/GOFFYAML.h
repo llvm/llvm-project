@@ -38,23 +38,12 @@ struct FileHeader {
 
 struct Object {
   FileHeader Header;
-
   Object();
 };
-
 } // end namespace GOFFYAML
-
 } // end namespace llvm
-
 
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::FileHeader)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(GOFFYAML::Object)
-
-namespace llvm {
-namespace yaml {
-
-
-} // end namespace yaml
-} // end namespace llvm
 
 #endif // LLVM_OBJECTYAML_GOFFYAML_H

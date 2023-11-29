@@ -22,7 +22,6 @@ using namespace llvm;
 
 namespace {
 
-
 // Common flag values on records.
 enum {
   // Flag: This record is continued.
@@ -195,8 +194,7 @@ class GOFFState {
 
   GOFFState(raw_ostream &OS, GOFFYAML::Object &Doc,
             yaml::ErrorHandler ErrHandler)
-      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), HasError(false) {
-  }
+      : GW(OS), Doc(Doc), ErrHandler(ErrHandler), HasError(false) {}
 
   ~GOFFState() { GW.finalize(); }
 
