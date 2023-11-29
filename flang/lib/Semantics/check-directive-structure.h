@@ -15,7 +15,6 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
-#include <type_traits>
 #include <unordered_map>
 
 namespace Fortran::semantics {
