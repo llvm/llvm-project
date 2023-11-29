@@ -594,6 +594,7 @@ libc_support_library(
     name = "__support_bit",
     hdrs = ["src/__support/bit.h"],
     deps = [
+        ":__support_cpp_type_traits",
         ":__support_macros_attributes",
     ],
 )
