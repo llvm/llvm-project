@@ -14,6 +14,22 @@ jobs:
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout through merge base
+        uses: rmacklin/fetch-through-merge-base@v0
+        with:
+          base_ref: ${{ github.event.pull_request.base.ref }}
+          head_ref: ${{ github.event.pull_request.head.sha }}
+          deepen_length: 500
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v39
+        with:
+          separator: ","
+          skip_initial_fetch: true
       - name: Install Precommit Hooks
         run: bash ./libcxx/utils/formatting/install-formatting-hooks.sh --force
 
