@@ -1905,6 +1905,7 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
   //   .quad _ifunc.stub_helper
 
   EmitLinkage(LazyPointer);
+  OutStreamer->emitValueToAlignment(Align(8), /*Value=*/0);
   OutStreamer->emitLabel(LazyPointer);
   emitVisibility(LazyPointer, GI.getVisibility());
   OutStreamer->emitValue(MCSymbolRefExpr::create(StubHelper, OutContext), 8);

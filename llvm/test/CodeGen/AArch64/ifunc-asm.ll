@@ -35,6 +35,7 @@ entry:
 
 ; MACHO-MANUAL:           .section __DATA,__data
 ; MACHO-MANUAL-NEXT:      .globl _global_ifunc.lazy_pointer
+; MACHO-MANUAL-NEXT:      .p2align 3, 0x0
 ; MACHO-MANUAL-NEXT:  _global_ifunc.lazy_pointer:
 ; MACHO-MANUAL-NEXT:      .quad _global_ifunc.stub_helper
 
