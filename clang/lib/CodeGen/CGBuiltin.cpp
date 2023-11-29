@@ -20480,7 +20480,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_memory_randomtag: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_memory_randomtag);
-    return Builder.CreateCall(Callee);
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(Callee, {Ptr});
   }
   default:
     return nullptr;
