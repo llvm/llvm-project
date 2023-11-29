@@ -310,10 +310,10 @@ void MultiplexExternalSemaSource::ReadPendingInstantiations(
     Sources[i]->ReadPendingInstantiations(Pending);
 }
 
-void MultiplexExternalSemaSource::ReadPendingOfInstantiationsForConstexprEntity(
+void MultiplexExternalSemaSource::ReadPendingInstantiationsOfConstexprEntity(
     const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) {
   for (size_t i = 0; i < Sources.size(); ++i)
-    Sources[i]->ReadPendingOfInstantiationsForConstexprEntity(D, Decls);
+    Sources[i]->ReadPendingInstantiationsOfConstexprEntity(D, Decls);
 };
 
 void MultiplexExternalSemaSource::ReadLateParsedTemplates(

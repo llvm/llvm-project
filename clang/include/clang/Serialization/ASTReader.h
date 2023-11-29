@@ -2104,7 +2104,7 @@ public:
                   SmallVectorImpl<std::pair<ValueDecl *,
                                             SourceLocation>> &Pending) override;
 
-  virtual void ReadPendingOfInstantiationsForConstexprEntity(
+  virtual void ReadPendingInstantiationsOfConstexprEntity(
       const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) override;
 
   void ReadLateParsedTemplates(

@@ -10413,8 +10413,7 @@ public:
                                      bool DefinitionRequired = false,
                                      bool AtEndOfTU = false);
 
-  void InstantiateFunctionTemplateSpecializations(
-      SourceLocation PointOfInstantiation, FunctionDecl *Template);
+  void PerformPendingInstantiationsOfConstexprFunctions(FunctionDecl *Template);
 
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,

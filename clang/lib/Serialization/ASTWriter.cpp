@@ -4837,7 +4837,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   assert(SemaRef.PendingLocalImplicitInstantiations.empty() &&
          "There are local ones at end of translation unit!");
 
-  // Build a record containing all of pending instantiations of constexpr
+  // Build a record containing all pending instantiations of constexpr
   // entities.
   RecordData PendingInstantiationsOfConstexprEntities;
   for (const auto &I : SemaRef.PendingInstantiationsOfConstexprEntities) {

@@ -105,12 +105,13 @@ template <typename T>
 constexpr int f(T t);
 
 auto a = &f<char>;
-auto b = &f<int>; // expected-error {{immediate function 'f<int>' used before it is defined}}
+auto b = &f<int>; // expected-error {{immediate function 'f<int>' used before it is defined}} \
+                  // expected-note {{in instantiation of function template specialization}}
 
 template <typename T>
 constexpr int f(T t) { // expected-note {{'f<int>' defined here}}
     return id(t); // expected-note {{'f<int>' is an immediate function because its body contains a call to a consteval function 'id' and that call is not a constant expression}}
-} // expected-note {{in instantiation of function template specialization}}
+}
 
 
 

@@ -16276,7 +16276,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
   if (FD && FD->isConstexpr() && FD->isTemplated())
-    InstantiateFunctionTemplateSpecializations(FD->getEndLoc(), FD);
+    PerformPendingInstantiationsOfConstexprFunctions(FD);
 
   return dcl;
 }

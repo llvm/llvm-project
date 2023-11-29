@@ -8731,9 +8731,11 @@ void ASTReader::ReadPendingInstantiations(
   PendingInstantiations.clear();
 }
 
-void ASTReader::ReadPendingOfInstantiationsForConstexprEntity(
+void ASTReader::ReadPendingInstantiationsOfConstexprEntity(
     const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) {
   for (auto *Redecl : D->redecls()) {
+    if (!Redecl->isFromASTFile())
+      continue;
     DeclID Id = Redecl->getGlobalID();
     auto It = PendingInstantiationsOfConstexprEntities.find(Id);
     if (It == PendingInstantiationsOfConstexprEntities.end())

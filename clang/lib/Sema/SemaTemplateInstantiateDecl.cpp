@@ -6496,28 +6496,29 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
 }
 
 // Instantiate all referenced specializations of the given function template
-// definition. This make sure that function template that are defined after the
-// point of instantiation of their used can be evaluated after they are defined.
-// see CWG2497.
-void Sema::InstantiateFunctionTemplateSpecializations(
-    SourceLocation PointOfInstantiation, FunctionDecl *Tpl) {
+// definition. This make sure that constexpr function templates that are defined
+// after the point of instantiation of their use can be evaluated after they
+// are defined. see CWG2497.
+void Sema::PerformPendingInstantiationsOfConstexprFunctions(FunctionDecl *Tpl) {
 
   auto InstantiateAll = [&](const auto &Range) {
-    for (NamedDecl *Fun : Range) {
-      InstantiateFunctionDefinition(PointOfInstantiation,
-                                    cast<FunctionDecl>(Fun));
+    for (NamedDecl *D : Range) {
+      FunctionDecl *Fun = cast<FunctionDecl>(D);
+      InstantiateFunctionDefinition(Fun->getPointOfInstantiation(), Fun);
     }
   };
 
   auto It =
       PendingInstantiationsOfConstexprEntities.find(Tpl->getCanonicalDecl());
   if (It != PendingInstantiationsOfConstexprEntities.end()) {
-    InstantiateAll(It->second);
+    auto Decls = std::move(It->second);
+    PendingInstantiationsOfConstexprEntities.erase(It);
+    InstantiateAll(Decls);
   }
 
   llvm::SmallSetVector<NamedDecl *, 4> Decls;
   if (ExternalSource) {
-    ExternalSource->ReadPendingOfInstantiationsForConstexprEntity(Tpl, Decls);
+    ExternalSource->ReadPendingInstantiationsOfConstexprEntity(Tpl, Decls);
     InstantiateAll(Decls);
   }
 }
