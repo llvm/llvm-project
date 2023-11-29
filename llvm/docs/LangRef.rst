@@ -362,8 +362,9 @@ added in the future:
 
     - On X86-64 the callee preserves all general purpose registers, except for
       R11 and return registers, if any. R11 can be used as a scratch register.
-      Floating-point registers (XMMs/YMMs) are not preserved and need to be
-      saved by the caller.
+      The treatment of floating-point registers (XMMs/YMMs) matches the OS's C
+      calling convention: on most platforms, they are not preserved and need to
+      be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
     - On AArch64 the callee preserve all general purpose registers, except X0-X8
       and X16-X18.
