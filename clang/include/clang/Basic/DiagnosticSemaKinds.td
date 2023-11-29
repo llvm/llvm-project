@@ -2933,10 +2933,6 @@ def note_private_extern : Note<
   "use __attribute__((visibility(\"hidden\"))) attribute instead">;
 
 // C23 constexpr
-def err_c23_thread_local_constexpr : Error<
-  "thread-local storage is not allowed with constexpr">;
-def err_c23_extern_constexpr : Error<
-  "extern specifier is not allowed with constexpr">;
 def err_c23_constexpr_not_variable : Error<
   "'constexpr' can only be used in variable declarations">;
 def err_c23_constexpr_invalid_type : Error<
