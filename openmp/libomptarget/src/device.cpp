@@ -672,6 +672,16 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                   DstPtr, Size, AsyncInfo);
 }
 
+// Run a "fill memory" operation (aka "memset") on the target device
+int32_t DeviceTy::fillMemory(void *Ptr, int32_t Val, uint64_t NumValues,
+                             AsyncInfoTy &AsyncInfo) {
+  if (!AsyncInfo || !RTL->fill_memory_async || !RTL->synchronize) {
+    assert(RTL->fill_memory && "RTL->fill_memory is nullptr");
+    return RTL->fill_memory(RTLDeviceID, Ptr, Val, NumValues);
+  }
+  return RTL->fill_memory_async(RTLDeviceID, Ptr, Val, NumValues, AsyncInfo);
+}
+
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
   if (!RTL->data_notify_mapped)
     return OFFLOAD_SUCCESS;

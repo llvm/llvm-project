@@ -528,6 +528,10 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  /// Fill memory on the target device (aka memset)
+  int32_t fillMemory(void *Ptr, int32_t Val, uint64_t NumValues,
+                     AsyncInfoTy &AsyncInfo);
+
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);

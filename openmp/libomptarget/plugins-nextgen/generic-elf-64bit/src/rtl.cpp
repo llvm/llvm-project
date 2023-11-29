@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstring>
 #include <ffi.h>
 #include <string>
 #include <unordered_map>
@@ -265,6 +266,14 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     // This function should never be called because the function
     // GenELF64PluginTy::isDataExchangable() returns false.
     return Plugin::error("dataExchangeImpl not supported");
+  }
+
+  /// Fill memory on the target device (aka memset).
+  Error fillMemoryImpl(void *Ptr, int32_t Val, uint64_t NumValues,
+                       AsyncInfoWrapperTy &AsyncInfoWrapperTy) override {
+    (void)std::memset(Ptr, Val,
+                      static_cast<size_t>(NumValues) * sizeof(int32_t));
+    return Plugin::success();
   }
 
   /// All functions are already synchronous. No need to do anything on this

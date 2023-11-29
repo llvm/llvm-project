@@ -775,6 +775,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                                  void *DstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Fill memory on the target device (aka memset).
+  Error fillMemory(void *Ptr, int32_t Val, uint64_t NumValues,
+                   __tgt_async_info *AsyncInfo);
+  virtual Error fillMemoryImpl(void *Ptr, int32_t Val, uint64_t NumValue,
+                               AsyncInfoWrapperTy &AsyncInfo) = 0;
+
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
                      KernelArgsTy &KernelArgs, __tgt_async_info *AsyncInfo);

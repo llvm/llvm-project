@@ -320,21 +320,31 @@ EXTERN void *omp_target_memset(void *Ptr, int ByteVal, size_t NumBytes,
     // That will require the ability to execute a kernel from within
     // libomptarget.so (which we do not have at the moment).
 
-    // This is a very slow path: create a filled array on the host and upload
-    // it to the GPU device.
-    int InitialDevice = omp_get_initial_device();
-    void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
-    if (Shadow) {
-      (void)memset(Shadow, ByteVal, NumBytes);
-      (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
-                              InitialDevice);
-      (void)omp_target_free(Shadow, InitialDevice);
+    if (NumBytes % sizeof(int32_t) == 0) {
+      DeviceTy &Dev = *PM->Devices[DeviceNum];
+      AsyncInfoTy AsyncInfo(Dev);
+      int32_t Val =
+          ByteVal + (ByteVal << 8) + (ByteVal << 16) + (ByteVal << 24);
+      uint64_t NumValues = NumBytes / sizeof(int32_t);
+      int Rc = Dev.fillMemory(Ptr, Val, NumValues, AsyncInfo);
+      printf("--> Rc=%d\n", Rc);
     } else {
-      // If the omp_target_alloc has failed, let's just not do anything.
-      // omp_target_memset does not have any good way to fail, so we
-      // simply avoid a catastrophic failure of the process for now.
-      DP("omp_target_memset failed to fill memory due to error with "
-         "omp_target_alloc");
+      // This is a very slow path: create a filled array on the host and upload
+      // it to the GPU device.
+      int InitialDevice = omp_get_initial_device();
+      void *Shadow = omp_target_alloc(NumBytes, InitialDevice);
+      if (Shadow) {
+        (void)memset(Shadow, ByteVal, NumBytes);
+        (void)omp_target_memcpy(Ptr, Shadow, NumBytes, 0, 0, DeviceNum,
+                                InitialDevice);
+        (void)omp_target_free(Shadow, InitialDevice);
+      } else {
+        // If the omp_target_alloc has failed, let's just not do anything.
+        // omp_target_memset does not have any good way to fail, so we
+        // simply avoid a catastrophic failure of the process for now.
+        DP("omp_target_memset failed to fill memory due to error with "
+           "omp_target_alloc");
+      }
     }
   }
 
@@ -462,7 +472,7 @@ EXTERN int omp_target_memcpy_rect_async(
      "src offsets " DPxMOD ", dst dims " DPxMOD ", src dims " DPxMOD ", "
      "volume " DPxMOD ", element size %zu, num_dims %d\n",
      DstDevice, SrcDevice, DPxPTR(Dst), DPxPTR(Src), DPxPTR(DstOffsets),
-     DPxPTR(SrcOffsets), DPxPTR(DstDimensions), DPxPTR(SrcDimensions),
+     DPxPTR(SrcOffsets), DPxPTR(DstDimensimons), DPxPTR(SrcDimensions),
      DPxPTR(Volume), ElementSize, NumDims);
 
   // Need to check this first to not return OFFLOAD_FAIL instead

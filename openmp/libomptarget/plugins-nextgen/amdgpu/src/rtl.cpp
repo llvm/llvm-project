@@ -2357,6 +2357,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           getAgent(), (uint64_t)Size);
   }
 
+  /// Fill memory on the target device (aka memset)
+  Error fillMemoryImpl(void *Ptr, int32_t Val, uint64_t NumValues,
+                       AsyncInfoWrapperTy &AsyncInfoWrapperTy) override {
+    hsa_status_t Status =
+        hsa_amd_memory_fill(const_cast<void *>(Ptr), Val, NumValues);
+    return Plugin::check(Status, "Error in hsa_amd_memory_fill: %s");
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     // TODO: Implement this function.

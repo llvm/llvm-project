@@ -209,6 +209,10 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
   *((void **)&RTL.data_exchange_async) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
+  *((void **)&RTL.fill_memory) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_fill_memory");
+  *((void **)&RTL.fill_memory_async) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_fill_memory_async");
   *((void **)&RTL.is_data_exchangable) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
   *((void **)&RTL.supports_empty_images) =
