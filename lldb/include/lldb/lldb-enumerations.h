@@ -1296,10 +1296,11 @@ enum CompletionType {
   eRemoteDiskFileCompletion = (1u << 22),
   eRemoteDiskDirectoryCompletion = (1u << 23),
   eTypeCategoryNameCompletion = (1u << 24),
+  eThreadIDCompletion = (1u << 25),
   // This item serves two purposes.  It is the last element in the enum, so
   // you can add custom enums starting from here in your Option class. Also
   // if you & in this bit the base code will not process the option.
-  eCustomCompletion = (1u << 25)
+  eCustomCompletion = (1u << 26)
 };
 
 } // namespace lldb

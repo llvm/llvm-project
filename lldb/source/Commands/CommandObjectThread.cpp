@@ -1172,7 +1172,8 @@ public:
 
   CommandObjectThreadSelect(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "thread select",
-                            "Change the currently selected thread.", nullptr,
+                            "Change the currently selected thread.",
+                            "thread select <thread-index> (or -t <thread-id>)",
                             eCommandRequiresProcess | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
                                 eCommandProcessMustBePaused) {
@@ -1241,7 +1242,7 @@ protected:
       }
       new_thread = process->GetThreadList().FindThreadByIndexID(index_id).get();
       if (new_thread == nullptr) {
-        result.AppendErrorWithFormat("Invalid thread #%s.\n",
+        result.AppendErrorWithFormat("Invalid thread index #%s.\n",
                                      command.GetArgumentAtIndex(0));
         return;
       }
@@ -1249,7 +1250,7 @@ protected:
       new_thread =
           process->GetThreadList().FindThreadByID(m_options.m_thread_id).get();
       if (new_thread == nullptr) {
-        result.AppendErrorWithFormat("Invalid thread ID %lu.\n",
+        result.AppendErrorWithFormat("Invalid thread ID %" PRIu64 ".\n",
                                      m_options.m_thread_id);
         return;
       }

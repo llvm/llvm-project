@@ -191,6 +191,7 @@ static constexpr OptionEnumValueElement g_completion_type[] = {
      "Completes to a remote disk directory."},
     {lldb::eTypeCategoryNameCompletion, "type-category-name",
      "Completes to a type category name."},
+    {lldb::eThreadIDCompletion, "thread-id", "Completes to a thread ID."},
     {lldb::eCustomCompletion, "custom", "Custom completion."},
 };
 

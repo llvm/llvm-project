@@ -36,7 +36,7 @@ class TestCase(TestBase):
         self.expect(
             "thread select 0xffffffff",
             error=True,
-            startstr="error: Invalid thread #0xffffffff.",
+            startstr="error: Invalid thread index #0xffffffff.",
         )
         self.expect(
             "thread select -t 0xffffffff",

@@ -83,6 +83,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
        CommandCompletions::RemoteDiskDirectories},
       {lldb::eTypeCategoryNameCompletion,
        CommandCompletions::TypeCategoryNames},
+      {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
       {lldb::CompletionType::eNoCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -805,6 +806,23 @@ void CommandCompletions::TypeCategoryNames(CommandInterpreter &interpreter,
                                       category_sp->GetDescription());
         return true;
       });
+}
+
+void CommandCompletions::ThreadIDs(CommandInterpreter &interpreter,
+                                   CompletionRequest &request,
+                                   SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasProcessScope())
+    return;
+
+  ThreadList &threads = exe_ctx.GetProcessPtr()->GetThreadList();
+  lldb::ThreadSP thread_sp;
+  for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
+    StreamString strm;
+    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    request.TryCompleteCurrentArg(std::to_string(thread_sp->GetID()),
+                                  strm.GetString());
+  }
 }
 
 void CommandCompletions::CompleteModifiableCmdPathArgs(
