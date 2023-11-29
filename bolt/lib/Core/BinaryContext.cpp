@@ -2331,14 +2331,36 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   MCAsmLayout Layout(Assembler);
   Assembler.layout(Layout);
 
+  // Obtain fragment sizes.
+  std::vector<uint64_t> FragmentSizes;
+  // Main fragment size.
   const uint64_t HotSize =
       Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
-  const uint64_t ColdSize =
-      std::accumulate(SplitLabels.begin(), SplitLabels.end(), 0ULL,
-                      [&](const uint64_t Accu, const LabelRange &Labels) {
-                        return Accu + Layout.getSymbolOffset(*Labels.second) -
-                               Layout.getSymbolOffset(*Labels.first);
-                      });
+  FragmentSizes.push_back(HotSize);
+  // Split fragment sizes.
+  uint64_t ColdSize = 0;
+  for (const auto &Labels : SplitLabels) {
+    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
+                    Layout.getSymbolOffset(*Labels.first);
+    FragmentSizes.push_back(Size);
+    ColdSize += Size;
+  }
+
+  // Populate new start and end offsets of each basic block.
+  uint64_t FragmentIndex = 0;
+  for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    BinaryBasicBlock *PrevBB = nullptr;
+    for (BinaryBasicBlock *BB : FF) {
+      const uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      BB->setOutputStartAddress(BBStartOffset);
+      if (PrevBB)
+        PrevBB->setOutputEndAddress(BBStartOffset);
+      PrevBB = BB;
+    }
+    if (PrevBB)
+      PrevBB->setOutputEndAddress(FragmentSizes[FragmentIndex]);
+    FragmentIndex++;
+  }
 
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {

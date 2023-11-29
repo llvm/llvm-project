@@ -1988,6 +1988,10 @@ bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10(STI);
 }
 
+bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI) {
   return isVI(STI) || isGFX9(STI) || isGFX10(STI);
 }
@@ -2004,6 +2008,10 @@ bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
 
+bool isGFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
   return isGFX10(STI) || isGFX11Plus(STI);
 }
@@ -2013,8 +2021,16 @@ bool isGFX11(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
-  return isGFX11(STI);
+  return isGFX11(STI) || isGFX12Plus(STI);
 }
+
+bool isGFX12(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
+}
+
+bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+
+bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
   return !isGFX11Plus(STI);
@@ -2042,6 +2058,10 @@ bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10_3Insts);
+}
+
+bool isGFX10_3_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10_BEncoding(STI) && !isGFX12Plus(STI);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
@@ -2485,6 +2505,16 @@ bool isInlinableIntLiteralV216(int32_t Literal) {
   if (!(Literal & 0xffff))
     return isInlinableIntLiteral(Hi16);
   return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
+}
+
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType) {
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    return isInlinableLiteralV216(Literal, HasInv2Pi);
+  default:
+    return isInlinableIntLiteralV216(Literal);
+  }
 }
 
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {

@@ -310,6 +310,9 @@ let TargetGuard = "sve2p1" in {
   def SVLD1Q_GATHER_U64BASE_OFFSET : MInst<"svld1q_gather[_{2}base]_offset_{d}", "dPgl", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
   def SVLD1Q_GATHER_U64BASE : MInst<"svld1q_gather[_{2}base]_{d}", "dPg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_scalar_offset">;
 
+  // Load one vector (scalar base + vector offset)
+  def SVLD1Q_GATHER_U64OFFSET : MInst<"svld1q_gather_[{3}]offset[_{d}]", "dPcg", "cUcsUsiUilUlfhdb", [IsGatherLoad, IsByteIndexed], MemEltTyDefault, "aarch64_sve_ld1q_gather_vector_offset">;
+
   // Load N-element structure into N vectors (scalar base)
   defm SVLD2Q : StructLoad<"svld2q[_{2}]", "2Pc", "aarch64_sve_ld2q_sret">;
   defm SVLD3Q : StructLoad<"svld3q[_{2}]", "3Pc", "aarch64_sve_ld3q_sret">;
@@ -460,6 +463,9 @@ let TargetGuard = "sve2p1" in {
   // Store one vector (vector base + scalar offset)
   def SVST1Q_SCATTER_U64BASE_OFFSET : MInst<"svst1q_scatter[_{2}base]_offset[_{d}]",  "vPgld", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
   def SVST1Q_SCATTER_U64BASE : MInst<"svst1q_scatter[_{2}base][_{d}]",  "vPgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_scalar_offset">;
+
+  // Store one vector (scalar base + vector offset)
+  def SVST1Q_SCATTER_U64OFFSET : MInst<"svst1q_scatter_[{3}]offset[_{d}]", "vPpgd", "cUcsUsiUilUlfhdb", [IsScatterStore, IsByteIndexed], MemEltTyDefault, "aarch64_sve_st1q_scatter_vector_offset">;
 
   // Store N vectors into N-element structure (scalar base)
   defm SVST2Q : StructStore<"svst2q[_{d}]", "vPc2", "aarch64_sve_st2q">;
@@ -2039,7 +2045,23 @@ def SVCNTP_COUNT : SInst<"svcntp_{d}", "n}i", "QcQsQiQl", MergeNone, "aarch64_sv
 defm SVREVD : SInstZPZ<"svrevd", "csilUcUsUiUl", "aarch64_sve_revd">;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+
+let TargetGuard = "sve2p1,b16b16" in {
+defm SVMUL_BF  : SInstZPZZ<"svmul",  "b", "aarch64_sve_fmul",   "aarch64_sve_fmul_u">;
+defm SVADD_BF  : SInstZPZZ<"svadd",  "b", "aarch64_sve_fadd",   "aarch64_sve_fadd_u">;
+defm SVSUB_BF  : SInstZPZZ<"svsub",  "b", "aarch64_sve_fsub",   "aarch64_sve_fsub_u">;
+defm SVMAXNM_BF  : SInstZPZZ<"svmaxnm","b", "aarch64_sve_fmaxnm", "aarch64_sve_fmaxnm_u">;
+defm SVMINNM_BF  : SInstZPZZ<"svminnm","b", "aarch64_sve_fminnm", "aarch64_sve_fminnm_u">;
+defm SVMAX_BF    : SInstZPZZ<"svmax",  "b", "aarch64_sve_fmax",   "aarch64_sve_fmax_u">;
+defm SVMIN_BF    : SInstZPZZ<"svmin",  "b", "aarch64_sve_fmin",   "aarch64_sve_fmin_u">;
+defm SVMLA_BF  : SInstZPZZZ<"svmla",  "b", "aarch64_sve_fmla",  "aarch64_sve_fmla_u", []>;
+defm SVMLS_BF  : SInstZPZZZ<"svmls",  "b", "aarch64_sve_fmls",  "aarch64_sve_fmls_u", []>;
+def SVMLA_LANE_BF  : SInst<"svmla_lane[_{d}]",  "ddddi",  "b", MergeNone, "aarch64_sve_fmla_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMLS_LANE_BF  : SInst<"svmls_lane[_{d}]",  "ddddi",  "b", MergeNone, "aarch64_sve_fmls_lane", [], [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+def SVMUL_LANE_BF  : SInst<"svmul_lane[_{d}]", "dddi", "b", MergeNone, "aarch64_sve_fmul_lane", [], [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
+def SVFCLAMP_BF   : SInst<"svclamp[_{d}]", "dddd", "b", MergeNone, "aarch64_sve_fclamp", [], []>;
+} //sve2p1,b16b16
+
 // SME2
 
 // SME intrinsics which operate only on vectors and do not require ZA should be added here,

@@ -195,9 +195,5 @@ int main(int argc, char **argv) {
 
   delete[] recored_data;
 
-  // TODO: calling unregister lib causes plugin deinit error for nextgen
-  // plugins.
-  //__tgt_unregister_lib(&Desc);
-
   return 0;
 }

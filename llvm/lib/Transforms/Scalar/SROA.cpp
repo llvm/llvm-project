@@ -2879,7 +2879,7 @@ private:
                                 "endian_shift");
           }
     } else {
-      Type *LTy = TargetTy->getPointerTo(AS);
+      Type *LTy = IRB.getPtrTy(AS);
       LoadInst *NewLI =
           IRB.CreateAlignedLoad(TargetTy, getNewAllocaSlicePtr(IRB, LTy),
                                 getSliceAlign(), LI.isVolatile(), LI.getName());
@@ -2909,9 +2909,9 @@ private:
       // basis for the new value. This allows us to replace the uses of LI with
       // the computed value, and then replace the placeholder with LI, leaving
       // LI only used for this computation.
-      Value *Placeholder = new LoadInst(
-          LI.getType(), PoisonValue::get(LI.getType()->getPointerTo(AS)), "",
-          false, Align(1));
+      Value *Placeholder =
+          new LoadInst(LI.getType(), PoisonValue::get(IRB.getPtrTy(AS)), "",
+                       false, Align(1));
       V = insertInteger(DL, IRB, Placeholder, V, NewBeginOffset - BeginOffset,
                         "insert");
       LI.replaceAllUsesWith(V);
@@ -3034,7 +3034,7 @@ private:
           IRB.CreateAlignedStore(V, NewPtr, NewAI.getAlign(), SI.isVolatile());
     } else {
       unsigned AS = SI.getPointerAddressSpace();
-      Value *NewPtr = getNewAllocaSlicePtr(IRB, V->getType()->getPointerTo(AS));
+      Value *NewPtr = getNewAllocaSlicePtr(IRB, IRB.getPtrTy(AS));
       NewSI =
           IRB.CreateAlignedStore(V, NewPtr, getSliceAlign(), SI.isVolatile());
     }
@@ -3389,7 +3389,6 @@ private:
     } else {
       OtherTy = NewAllocaTy;
     }
-    OtherPtrTy = OtherTy->getPointerTo(OtherAS);
 
     Value *AdjPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
                                    OtherPtr->getName() + ".");
@@ -3502,7 +3501,7 @@ private:
                          NewEndOffset - NewBeginOffset);
     // Lifetime intrinsics always expect an i8* so directly get such a pointer
     // for the new alloca slice.
-    Type *PointerTy = IRB.getInt8PtrTy(OldPtr->getType()->getPointerAddressSpace());
+    Type *PointerTy = IRB.getPtrTy(OldPtr->getType()->getPointerAddressSpace());
     Value *Ptr = getNewAllocaSlicePtr(IRB, PointerTy);
     Value *New;
     if (II.getIntrinsicID() == Intrinsic::lifetime_start)

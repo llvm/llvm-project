@@ -242,10 +242,12 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
-  opts.AliasAnalysis =
-      args.hasFlag(clang::driver::options::OPT_falias_analysis,
-                   clang::driver::options::OPT_fno_alias_analysis,
-                   /*default=*/false);
+  opts.AliasAnalysis = opts.OptimizationLevel > 0;
+  if (auto *arg =
+          args.getLastArg(clang::driver::options::OPT_falias_analysis,
+                          clang::driver::options::OPT_fno_alias_analysis))
+    opts.AliasAnalysis =
+        arg->getOption().matches(clang::driver::options::OPT_falias_analysis);
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
@@ -264,6 +266,17 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.PrepareForFullLTO = true;
     else
       opts.PrepareForThinLTO = true;
+  }
+
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mcode_object_version_EQ)) {
+    llvm::StringRef s = a->getValue();
+    if (s == "5")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
+    if (s == "4")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_4;
+    if (s == "none")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_None;
   }
 
   // -f[no-]save-optimization-record[=<format>]

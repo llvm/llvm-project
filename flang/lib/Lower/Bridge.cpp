@@ -3095,6 +3095,17 @@ private:
       const Fortran::lower::SomeExpr *expr =
           Fortran::semantics::GetExpr(pointerObject);
       assert(expr);
+      if (Fortran::evaluate::IsProcedurePointer(*expr)) {
+        Fortran::lower::StatementContext stmtCtx;
+        hlfir::Entity pptr = Fortran::lower::convertExprToHLFIR(
+            loc, *this, *expr, localSymbols, stmtCtx);
+        auto boxTy{
+            Fortran::lower::getUntypedBoxProcType(builder->getContext())};
+        hlfir::Entity nullBoxProc(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, nullBoxProc, pptr);
+        return;
+      }
       fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
       fir::factory::disassociateMutableBox(*builder, loc, box);
     }
@@ -3241,8 +3252,24 @@ private:
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
-    if (Fortran::evaluate::IsProcedure(assign.rhs))
+
+    if (!lowerToHighLevelFIR() && Fortran::evaluate::IsProcedure(assign.rhs))
       TODO(loc, "procedure pointer assignment");
+    if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
+      hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
+          loc, *this, assign.lhs, localSymbols, stmtCtx);
+      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        hlfir::Entity rhs(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, rhs, lhs);
+        return;
+      }
+      hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, stmtCtx)));
+      builder->createStoreWithConvert(loc, rhs, lhs);
+      return;
+    }
 
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();

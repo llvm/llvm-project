@@ -2045,6 +2045,26 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "ArmSMEToLLVM",
+    srcs = glob(["lib/Conversion/ArmSMEToLLVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArmSMEToLLVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArmSMEDialect",
+        ":ArmSMETransforms",
+        ":ArmSMEUtils",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":Transforms",
+        ":VectorDialect",
+    ],
+)
+
 ##---------------------------------------------------------------------------##
 # ArmSVE dialect.
 ##---------------------------------------------------------------------------##
@@ -3788,6 +3808,7 @@ cc_library(
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
+        ":ArmSMEToLLVM",
         ":ArmSMEToSCF",
         ":AsyncToLLVM",
         ":BufferizationToMemRef",
@@ -5192,6 +5213,7 @@ cc_library(
         ":MemRefDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )

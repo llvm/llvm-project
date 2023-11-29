@@ -4516,6 +4516,9 @@ void Parser::ParseDeclarationSpecifiers(
       break;
 
     case tok::kw_groupshared:
+    case tok::kw_in:
+    case tok::kw_inout:
+    case tok::kw_out:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;
@@ -5552,7 +5555,6 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___read_write:
   case tok::kw___write_only:
   case tok::kw___funcref:
-  case tok::kw_groupshared:
     return true;
 
   case tok::kw_private:
@@ -5561,6 +5563,13 @@ bool Parser::isTypeSpecifierQualifier() {
   // C11 _Atomic
   case tok::kw__Atomic:
     return true;
+
+  // HLSL type qualifiers
+  case tok::kw_groupshared:
+  case tok::kw_in:
+  case tok::kw_inout:
+  case tok::kw_out:
+    return getLangOpts().HLSL;
   }
 }
 
@@ -6060,6 +6069,9 @@ void Parser::ParseTypeQualifierListOpt(
       break;
 
     case tok::kw_groupshared:
+    case tok::kw_in:
+    case tok::kw_inout:
+    case tok::kw_out:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
       continue;

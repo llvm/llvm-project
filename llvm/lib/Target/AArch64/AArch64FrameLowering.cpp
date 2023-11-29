@@ -1423,6 +1423,20 @@ static void emitDefineCFAWithFP(MachineFunction &MF, MachineBasicBlock &MBB,
       .setMIFlags(MachineInstr::FrameSetup);
 }
 
+#ifndef NDEBUG
+/// Collect live registers from the end of \p MI's parent up to (including) \p
+/// MI in \p LiveRegs.
+static void getLivePhysRegsUpTo(MachineInstr &MI, const TargetRegisterInfo &TRI,
+                                LivePhysRegs &LiveRegs) {
+
+  MachineBasicBlock &MBB = *MI.getParent();
+  LiveRegs.addLiveOuts(MBB);
+  for (const MachineInstr &MI :
+       reverse(make_range(MI.getIterator(), MBB.instr_end())))
+    LiveRegs.stepBackward(MI);
+}
+#endif
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1431,6 +1445,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+
   MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool EmitCFI = AFI->needsDwarfUnwindInfo(MF);
@@ -1439,6 +1454,40 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   bool NeedsWinCFI = needsWinCFI(MF);
   bool HasWinCFI = false;
   auto Cleanup = make_scope_exit([&]() { MF.setHasWinCFI(HasWinCFI); });
+
+  MachineBasicBlock::iterator End = MBB.end();
+#ifndef NDEBUG
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  // Collect live register from the end of MBB up to the start of the existing
+  // frame setup instructions.
+  MachineBasicBlock::iterator NonFrameStart = MBB.begin();
+  while (NonFrameStart != End &&
+         NonFrameStart->getFlag(MachineInstr::FrameSetup))
+    ++NonFrameStart;
+
+  LivePhysRegs LiveRegs(*TRI);
+  if (NonFrameStart != MBB.end()) {
+    getLivePhysRegsUpTo(*NonFrameStart, *TRI, LiveRegs);
+    // Ignore registers used for stack management for now.
+    LiveRegs.removeReg(AArch64::SP);
+    LiveRegs.removeReg(AArch64::X19);
+    LiveRegs.removeReg(AArch64::FP);
+    LiveRegs.removeReg(AArch64::LR);
+  }
+
+  auto VerifyClobberOnExit = make_scope_exit([&]() {
+    if (NonFrameStart == MBB.end())
+      return;
+    // Check if any of the newly instructions clobber any of the live registers.
+    for (MachineInstr &MI :
+         make_range(MBB.instr_begin(), NonFrameStart->getIterator())) {
+      for (auto &Op : MI.operands())
+        if (Op.isReg() && Op.isDef())
+          assert(!LiveRegs.contains(Op.getReg()) &&
+                 "live register clobbered by inserted prologue instructions");
+    }
+  });
+#endif
 
   bool IsFunclet = MBB.isEHFuncletEntry();
 
@@ -1608,7 +1657,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // Move past the saves of the callee-saved registers, fixing up the offsets
   // and pre-inc if we decided to combine the callee-save and local stack
   // pointer bump above.
-  MachineBasicBlock::iterator End = MBB.end();
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
     if (CombineSPBump)

@@ -154,6 +154,9 @@ def FeatureExperimentalZeroingPseudos
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
+def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
+    "true", "Enable BFloat16 Extension (FEAT_BF16)" >;
+
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
 
@@ -178,7 +181,7 @@ def FeatureSVE2p1: SubtargetFeature<"sve2p1", "HasSVE2p1", "true",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
 def FeatureB16B16 : SubtargetFeature<"b16b16", "HasB16B16", "true",
-  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions (FEAT_B16B16)", []>;
+  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions (FEAT_B16B16)", [FeatureBF16]>;
 
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
@@ -446,9 +449,6 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
-
-def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
-    "true", "Enable BFloat16 Extension (FEAT_BF16)" >;
 
 def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
     "true", "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
@@ -1147,6 +1147,22 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureZCRegMove,
                                     FeatureZCZeroing]>;
 
+def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
+                                    "Apple A17", [
+                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureArithmeticCbzFusion,
+                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureFuseAddress,
+                                    FeatureFuseAES,
+                                    FeatureFuseArithmeticLogic,
+                                    FeatureFuseCCSelect,
+                                    FeatureFuseCryptoEOR,
+                                    FeatureFuseLiterals,
+                                    FeatureStorePairSuppress,
+                                    FeatureZCRegMove,
+                                    FeatureZCZeroing]>;
+
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureExynosCheapAsMoveHandling,
@@ -1446,6 +1462,10 @@ def ProcessorFeatures {
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
                                      FeatureHCX];
+  list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                     FeatureFullFP16, FeatureFP16FML,
+                                     FeatureHCX];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
@@ -1629,12 +1649,15 @@ def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
 def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
-
+def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
+                     [TuneAppleA17]>;
 // Mac CPUs
 def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
 def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
+def : ProcessorModel<"apple-m3", CycloneModel, ProcessorFeatures.AppleA16,
+                     [TuneAppleA16]>;
 
 // watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,

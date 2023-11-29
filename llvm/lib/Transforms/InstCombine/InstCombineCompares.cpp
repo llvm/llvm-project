@@ -18,6 +18,7 @@
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
@@ -413,7 +414,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 /// Returns true if we can rewrite Start as a GEP with pointer Base
 /// and some integer offset. The nodes that need to be re-written
 /// for this transformation will be added to Explored.
-static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
+static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
                                   const DataLayout &DL,
                                   SetVector<Value *> &Explored) {
   SmallVector<Value *, 16> WorkList(1, Start);
@@ -447,11 +448,9 @@ static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
         return false;
 
       if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-        // We're limiting the GEP to having one index. This will preserve
-        // the original pointer type. We could handle more cases in the
-        // future.
-        if (GEP->getNumIndices() != 1 || !GEP->isInBounds() ||
-            GEP->getSourceElementType() != ElemTy)
+        // Only allow inbounds GEPs with at most one variable offset.
+        auto IsNonConst = [](Value *V) { return !isa<ConstantInt>(V); };
+        if (!GEP->isInBounds() || count_if(GEP->indices(), IsNonConst) > 1)
           return false;
 
         if (!Explored.contains(GEP->getOperand(0)))
@@ -528,7 +527,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
 
 /// Returns a re-written value of Start as an indexed GEP using Base as a
 /// pointer.
-static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
+static Value *rewriteGEPAsOffset(Value *Start, Value *Base,
                                  const DataLayout &DL,
                                  SetVector<Value *> &Explored,
                                  InstCombiner &IC) {
@@ -559,29 +558,18 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
 
   // Create all the other instructions.
   for (Value *Val : Explored) {
-
     if (NewInsts.contains(Val))
       continue;
 
     if (auto *GEP = dyn_cast<GEPOperator>(Val)) {
-      Value *Index = NewInsts[GEP->getOperand(1)] ? NewInsts[GEP->getOperand(1)]
-                                                  : GEP->getOperand(1);
       setInsertionPoint(Builder, GEP);
-      // Indices might need to be sign extended. GEPs will magically do
-      // this, but we need to do it ourselves here.
-      if (Index->getType()->getScalarSizeInBits() !=
-          NewInsts[GEP->getOperand(0)]->getType()->getScalarSizeInBits()) {
-        Index = Builder.CreateSExtOrTrunc(
-            Index, NewInsts[GEP->getOperand(0)]->getType(),
-            GEP->getOperand(0)->getName() + ".sext");
-      }
-
-      auto *Op = NewInsts[GEP->getOperand(0)];
+      Value *Op = NewInsts[GEP->getOperand(0)];
+      Value *OffsetV = emitGEPOffset(&Builder, DL, GEP);
       if (isa<ConstantInt>(Op) && cast<ConstantInt>(Op)->isZero())
-        NewInsts[GEP] = Index;
+        NewInsts[GEP] = OffsetV;
       else
         NewInsts[GEP] = Builder.CreateNSWAdd(
-            Op, Index, GEP->getOperand(0)->getName() + ".add");
+            Op, OffsetV, GEP->getOperand(0)->getName() + ".add");
       continue;
     }
     if (isa<PHINode>(Val))
@@ -609,23 +597,14 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     }
   }
 
-  PointerType *PtrTy = PointerType::get(
-      Base->getContext(), Start->getType()->getPointerAddressSpace());
   for (Value *Val : Explored) {
     if (Val == Base)
       continue;
 
-    // Depending on the type, for external users we have to emit
-    // a GEP or a GEP + ptrtoint.
     setInsertionPoint(Builder, Val, false);
-
-    // Cast base to the expected type.
-    Value *NewVal = Builder.CreateBitOrPointerCast(
-        Base, PtrTy, Start->getName() + "to.ptr");
-    NewVal = Builder.CreateInBoundsGEP(ElemTy, NewVal, ArrayRef(NewInsts[Val]),
-                                       Val->getName() + ".ptr");
-    NewVal = Builder.CreateBitOrPointerCast(
-        NewVal, Val->getType(), Val->getName() + ".conv");
+    // Create GEP for external users.
+    Value *NewVal = Builder.CreateInBoundsGEP(
+        Builder.getInt8Ty(), Base, NewInsts[Val], Val->getName() + ".ptr");
     IC.replaceInstUsesWith(*cast<Instruction>(Val), NewVal);
     // Add old instruction to worklist for DCE. We don't directly remove it
     // here because the original compare is one of the users.
@@ -633,32 +612,6 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
   }
 
   return NewInsts[Start];
-}
-
-/// Looks through GEPs in order to express the input Value as a constant
-/// indexed GEP. Returns a pair containing the GEPs Pointer and Index.
-static std::pair<Value *, Value *>
-getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
-  Type *IndexType = IntegerType::get(V->getContext(),
-                                     DL.getIndexTypeSizeInBits(V->getType()));
-
-  Constant *Index = ConstantInt::getNullValue(IndexType);
-  while (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-    // We accept only inbouds GEPs here to exclude the possibility of
-    // overflow.
-    if (!GEP->isInBounds())
-      break;
-    if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
-        GEP->getSourceElementType() == ElemTy &&
-        GEP->getOperand(1)->getType() == IndexType) {
-      V = GEP->getOperand(0);
-      Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
-      Index = ConstantExpr::getAdd(Index, GEPIndex);
-      continue;
-    }
-    break;
-  }
-  return {V, Index};
 }
 
 /// Converts (CMP GEPLHS, RHS) if this change would make RHS a constant.
@@ -675,14 +628,19 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   if (!GEPLHS->hasAllConstantIndices())
     return nullptr;
 
-  Type *ElemTy = GEPLHS->getSourceElementType();
-  Value *PtrBase, *Index;
-  std::tie(PtrBase, Index) = getAsConstantIndexedAddress(ElemTy, GEPLHS, DL);
+  APInt Offset(DL.getIndexTypeSizeInBits(GEPLHS->getType()), 0);
+  Value *PtrBase =
+      GEPLHS->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                /*AllowNonInbounds*/ false);
+
+  // Bail if we looked through addrspacecast.
+  if (PtrBase->getType() != GEPLHS->getType())
+    return nullptr;
 
   // The set of nodes that will take part in this transformation.
   SetVector<Value *> Nodes;
 
-  if (!canRewriteGEPAsOffset(ElemTy, RHS, PtrBase, DL, Nodes))
+  if (!canRewriteGEPAsOffset(RHS, PtrBase, DL, Nodes))
     return nullptr;
 
   // We know we can re-write this as
@@ -691,13 +649,14 @@ static Instruction *transformToIndexedCompare(GEPOperator *GEPLHS, Value *RHS,
   // can't have overflow on either side. We can therefore re-write
   // this as:
   //   OFFSET1 cmp OFFSET2
-  Value *NewRHS = rewriteGEPAsOffset(ElemTy, RHS, PtrBase, DL, Nodes, IC);
+  Value *NewRHS = rewriteGEPAsOffset(RHS, PtrBase, DL, Nodes, IC);
 
   // RewriteGEPAsOffset has replaced RHS and all of its uses with a re-written
   // GEP having PtrBase as the pointer base, and has returned in NewRHS the
   // offset. Since Index is the offset of LHS to the base pointer, we will now
   // compare the offsets instead of comparing the pointers.
-  return new ICmpInst(ICmpInst::getSignedPredicate(Cond), Index, NewRHS);
+  return new ICmpInst(ICmpInst::getSignedPredicate(Cond),
+                      IC.Builder.getInt(Offset), NewRHS);
 }
 
 /// Fold comparisons between a GEP instruction and something else. At this point
@@ -1243,9 +1202,9 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   if (Pred == ICmpInst::ICMP_SGT) {
     Value *A, *B;
     if (match(Cmp.getOperand(0), m_SMin(m_Value(A), m_Value(B)))) {
-      if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
+      if (isKnownPositive(A, SQ.getWithInstruction(&Cmp)))
         return new ICmpInst(Pred, B, Cmp.getOperand(1));
-      if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))
+      if (isKnownPositive(B, SQ.getWithInstruction(&Cmp)))
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }

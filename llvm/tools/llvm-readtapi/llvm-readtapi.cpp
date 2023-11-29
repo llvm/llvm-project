@@ -17,7 +17,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include "llvm/TextAPI/TextAPIReader.h"
@@ -57,9 +56,16 @@ public:
   }
 };
 
+// Use unique exit code to differentiate failures not directly caused from
+// TextAPI operations. This is used for wrapping `compare` operations in
+// automation and scripting.
+const int NON_TAPI_EXIT_CODE = 2;
+const std::string TOOLNAME = "llvm-readtapi";
+ExitOnError ExitOnErr;
+
 // Handle error reporting in cases where `ExitOnError` is not used.
 void reportError(Twine Message, int ExitCode = EXIT_FAILURE) {
-  WithColor::error(errs()) << Message << "\n";
+  errs() << TOOLNAME << ": error: " << Message << "\n";
   errs().flush();
   exit(ExitCode);
 }
@@ -69,11 +75,12 @@ struct Context {
   std::unique_ptr<llvm::raw_fd_stream> OutStream;
   FileType WriteFT = FileType::TBD_V5;
   bool Compact = false;
+  Architecture Arch = AK_unknown;
 };
 
 std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
-                                                ExitOnError &ExitOnErr) {
-  ExitOnErr.setBanner("error: '" + Filename.str() + "' ");
+                                                bool ResetBanner = true) {
+  ExitOnErr.setBanner(TOOLNAME + ": error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Filename);
   if (BufferOrErr.getError())
@@ -82,22 +89,21 @@ std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
       TextAPIReader::get((*BufferOrErr)->getMemBufferRef());
   if (!IF)
     ExitOnErr(IF.takeError());
+  if (ResetBanner)
+    ExitOnErr.setBanner(TOOLNAME + ": error: ");
   return std::move(*IF);
 }
-
-// Use unique exit code to differentiate failures not directly caused from
-// TextAPI operations. This is used for wrapping `compare` operations in
-// automation and scripting.
-const int NON_TAPI_EXIT_CODE = 2;
 
 bool handleCompareAction(const Context &Ctx) {
   if (Ctx.Inputs.size() != 2)
     reportError("compare only supports two input files",
                 /*ExitCode=*/NON_TAPI_EXIT_CODE);
 
-  ExitOnError ExitOnErr("error: ", /*DefaultErrorExitCode=*/NON_TAPI_EXIT_CODE);
-  auto LeftIF = getInterfaceFile(Ctx.Inputs.front(), ExitOnErr);
-  auto RightIF = getInterfaceFile(Ctx.Inputs.at(1), ExitOnErr);
+  // Override default exit code.
+  ExitOnErr = ExitOnError(TOOLNAME + ": error: ",
+                          /*DefaultErrorExitCode=*/NON_TAPI_EXIT_CODE);
+  auto LeftIF = getInterfaceFile(Ctx.Inputs.front());
+  auto RightIF = getInterfaceFile(Ctx.Inputs.at(1));
 
   raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
   return DiffEngine(LeftIF.get(), RightIF.get()).compareFiles(OS);
@@ -105,11 +111,10 @@ bool handleCompareAction(const Context &Ctx) {
 
 bool handleWriteAction(const Context &Ctx,
                        std::unique_ptr<InterfaceFile> Out = nullptr) {
-  ExitOnError ExitOnErr("error: ");
   if (!Out) {
     if (Ctx.Inputs.size() != 1)
       reportError("write only supports one input file");
-    Out = getInterfaceFile(Ctx.Inputs.front(), ExitOnErr);
+    Out = getInterfaceFile(Ctx.Inputs.front());
   }
   raw_ostream &OS = Ctx.OutStream ? *Ctx.OutStream : outs();
   ExitOnErr(TextAPIWriter::writeToStream(OS, *Out, Ctx.WriteFT, Ctx.Compact));
@@ -120,10 +125,9 @@ bool handleMergeAction(const Context &Ctx) {
   if (Ctx.Inputs.size() < 2)
     reportError("merge requires at least two input files");
 
-  ExitOnError ExitOnErr("error: ");
   std::unique_ptr<InterfaceFile> Out;
   for (StringRef FileName : Ctx.Inputs) {
-    auto IF = getInterfaceFile(FileName, ExitOnErr);
+    auto IF = getInterfaceFile(FileName);
     // On the first iteration copy the input file and skip merge.
     if (!Out) {
       Out = std::move(IF);
@@ -137,6 +141,24 @@ bool handleMergeAction(const Context &Ctx) {
   return handleWriteAction(Ctx, std::move(Out));
 }
 
+using IFOperation =
+    std::function<llvm::Expected<std::unique_ptr<InterfaceFile>>(
+        const llvm::MachO::InterfaceFile &, Architecture)>;
+bool handleSingleFileAction(const Context &Ctx, const StringRef Action,
+                            IFOperation act) {
+  if (Ctx.Inputs.size() != 1)
+    reportError(Action + " only supports one input file");
+  if (Ctx.Arch == AK_unknown)
+    reportError(Action + " requires -arch <arch>");
+
+  auto IF = getInterfaceFile(Ctx.Inputs.front(), /*ResetBanner=*/false);
+  auto OutIF = act(*IF, Ctx.Arch);
+  if (!OutIF)
+    ExitOnErr(OutIF.takeError());
+
+  return handleWriteAction(Ctx, std::move(*OutIF));
+}
+
 } // anonymous namespace
 
 int main(int Argc, char **Argv) {
@@ -145,13 +167,13 @@ int main(int Argc, char **Argv) {
   StringSaver Saver(A);
   TAPIOptTable Tbl;
   Context Ctx;
-  opt::InputArgList Args =
-      Tbl.parseArgs(Argc, Argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
-        WithColor::error(errs(), "llvm-readtapi") << Msg << "\n";
-        exit(1);
-      });
+  ExitOnErr.setBanner(TOOLNAME + ": error:");
+  opt::InputArgList Args = Tbl.parseArgs(
+      Argc, Argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) { reportError(Msg); });
   if (Args.hasArg(OPT_help)) {
-    Tbl.printHelp(outs(), "llvm-readtapi [options] <inputs>",
+    Tbl.printHelp(outs(),
+                  "USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o "
+                  "<output>]*",
                   "LLVM TAPI file reader and manipulator");
     return EXIT_SUCCESS;
   }
@@ -163,11 +185,9 @@ int main(int Argc, char **Argv) {
     std::string OutputLoc = std::move(A->getValue());
     std::error_code EC;
     Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);
-    if (EC) {
-      llvm::errs() << "error opening the file '" << OutputLoc
-                   << "': " << EC.message() << "\n";
-      return NON_TAPI_EXIT_CODE;
-    }
+    if (EC)
+      reportError("error opening the file '" + OutputLoc + EC.message(),
+                  NON_TAPI_EXIT_CODE);
   }
 
   Ctx.Compact = Args.hasArg(OPT_compact);
@@ -181,6 +201,12 @@ int main(int Argc, char **Argv) {
       reportError("unsupported filetype '" + FT + "'");
   }
 
+  if (opt::Arg *A = Args.getLastArg(OPT_arch_EQ)) {
+    StringRef Arch = A->getValue();
+    Ctx.Arch = getArchitectureFromName(Arch);
+    if (Ctx.Arch == AK_unknown)
+      reportError("unsupported architecture '" + Arch);
+  }
   // Handle top level and exclusive operation.
   SmallVector<opt::Arg *, 1> ActionArgs(Args.filtered(OPT_action_group));
 
@@ -202,6 +228,10 @@ int main(int Argc, char **Argv) {
     return handleCompareAction(Ctx);
   case OPT_merge:
     return handleMergeAction(Ctx);
+  case OPT_extract:
+    return handleSingleFileAction(Ctx, "extract", &InterfaceFile::extract);
+  case OPT_remove:
+    return handleSingleFileAction(Ctx, "remove", &InterfaceFile::remove);
   }
 
   return EXIT_SUCCESS;

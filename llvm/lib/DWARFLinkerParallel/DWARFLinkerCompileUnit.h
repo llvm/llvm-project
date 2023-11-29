@@ -10,7 +10,6 @@
 #define LLVM_LIB_DWARFLINKERPARALLEL_DWARFLINKERCOMPILEUNIT_H
 
 #include "DWARFLinkerUnit.h"
-#include "IndexedValuesMap.h"
 #include "llvm/DWARFLinkerParallel/DWARFFile.h"
 #include <optional>
 
@@ -20,6 +19,26 @@ namespace dwarflinker_parallel {
 using OffsetToUnitTy = function_ref<CompileUnit *(uint64_t Offset)>;
 
 struct AttributesInfo;
+class SyntheticTypeNameBuilder;
+class DIEGenerator;
+class TypeUnit;
+class DependencyTracker;
+
+class CompileUnit;
+
+/// This is a helper structure which keeps a debug info entry
+/// with it's containing compilation unit.
+struct UnitEntryPairTy {
+  UnitEntryPairTy() = default;
+  UnitEntryPairTy(CompileUnit *CU, const DWARFDebugInfoEntry *DieEntry)
+      : CU(CU), DieEntry(DieEntry) {}
+
+  CompileUnit *CU = nullptr;
+  const DWARFDebugInfoEntry *DieEntry = nullptr;
+
+  UnitEntryPairTy getNamespaceOrigin();
+  std::optional<UnitEntryPairTy> getParent();
+};
 
 enum ResolveInterCUReferencesMode : bool {
   Resolve = true,
@@ -28,7 +47,9 @@ enum ResolveInterCUReferencesMode : bool {
 
 /// Stores all information related to a compile unit, be it in its original
 /// instance of the object file or its brand new cloned and generated DIE tree.
-class CompileUnit : public DwarfUnit {
+/// NOTE: we need alignment of at least 8 bytes as we use
+///       PointerIntPair<CompileUnit *, 3> in the DependencyTracker.h
+class alignas(8) CompileUnit : public DwarfUnit {
 public:
   /// The stages of new compile unit processing.
   enum class Stage : uint8_t {
@@ -42,6 +63,13 @@ public:
     /// discovered, type names are assigned if ODR is requested).
     LivenessAnalysisDone,
 
+    /// Check if dependencies have incompatible placement.
+    /// If that is the case modify placement to be compatible.
+    UpdateDependenciesCompleteness,
+
+    /// Type names assigned to DIEs.
+    TypeNamesAssigned,
+
     /// Output DWARF is generated.
     Cloned,
 
@@ -50,38 +78,20 @@ public:
 
     /// Resources(Input DWARF, Output DWARF tree) are released.
     Cleaned,
+
+    /// Compile Unit should be skipped
+    Skipped
   };
 
   CompileUnit(LinkingGlobalData &GlobalData, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
               OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
-              llvm::endianness Endianess)
-      : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
-        getUnitFromOffset(UnitFromOffset), Stage(Stage::CreatedNotLoaded) {
-    UnitName = File.FileName;
-    setOutputFormat(Format, Endianess);
-  }
+              llvm::endianness Endianess);
 
   CompileUnit(LinkingGlobalData &GlobalData, DWARFUnit &OrigUnit, unsigned ID,
               StringRef ClangModuleName, DWARFFile &File,
               OffsetToUnitTy UnitFromOffset, dwarf::FormParams Format,
-              llvm::endianness Endianess)
-      : DwarfUnit(GlobalData, ID, ClangModuleName), File(File),
-        OrigUnit(&OrigUnit), getUnitFromOffset(UnitFromOffset),
-        Stage(Stage::CreatedNotLoaded) {
-    DWARFDie CUDie = OrigUnit.getUnitDIE();
-    if (!CUDie)
-      return;
-
-    setOutputFormat(Format, Endianess);
-
-    Language = dwarf::toUnsigned(CUDie.find(dwarf::DW_AT_language), 0);
-    if (const char *CUName = CUDie.getName(DINameKind::ShortName))
-      UnitName = CUName;
-    else
-      UnitName = File.FileName;
-    SysRoot = dwarf::toStringRef(CUDie.find(dwarf::DW_AT_LLVM_sysroot)).str();
-  }
+              llvm::endianness Endianess);
 
   /// Returns stage of overall processing.
   Stage getStage() const { return Stage; }
@@ -114,7 +124,7 @@ public:
 
   /// Navigate DWARF tree and set die properties.
   void analyzeDWARFStructure() {
-    analyzeDWARFStructureRec(getUnitDIE().getDebugInfoEntry(), false, false);
+    analyzeDWARFStructureRec(getUnitDIE().getDebugInfoEntry(), false);
   }
 
   /// Cleanup unneeded resources after compile unit is cloned.
@@ -124,25 +134,34 @@ public:
   /// This method copies output offsets for referenced DIEs into DIEs patches.
   void updateDieRefPatchesWithClonedOffsets();
 
+  /// Search for subprograms and variables referencing live code and discover
+  /// dependend DIEs. Mark live DIEs, set placement for DIEs.
+  bool resolveDependenciesAndMarkLiveness(
+      bool InterCUProcessingStarted,
+      std::atomic<bool> &HasNewInterconnectedCUs);
+
+  /// Check dependend DIEs for incompatible placement.
+  /// Make placement to be consistent.
+  bool updateDependenciesCompleteness();
+
+  /// Check DIEs to have a consistent marking(keep marking, placement marking).
+  void verifyDependencies();
+
+  /// Search for type entries and assign names.
+  Error assignTypeNames(TypePool &TypePoolRef);
+
   /// Kinds of placement for the output die.
   enum DieOutputPlacement : uint8_t {
     NotSet = 0,
 
     /// Corresponding DIE goes to the type table only.
-    /// NOTE: Not used yet.
     TypeTable = 1,
 
     /// Corresponding DIE goes to the plain dwarf only.
     PlainDwarf = 2,
 
     /// Corresponding DIE goes to type table and to plain dwarf.
-    /// NOTE: Not used yet.
     Both = 3,
-
-    /// Corresponding DIE needs to examine parent to determine
-    /// the point of placement.
-    /// NOTE: Not used yet.
-    Parent = 4
   };
 
   /// Information gathered about source DIEs.
@@ -204,16 +223,28 @@ public:
     SINGLE_FLAG_METHODS_SET(Keep, 0x08)
 
     /// DIE has children which are part of the linked output.
-    SINGLE_FLAG_METHODS_SET(KeepChildren, 0x10)
+    SINGLE_FLAG_METHODS_SET(KeepPlainChildren, 0x10)
 
-    /// DIE is referenced by other DIE.
-    SINGLE_FLAG_METHODS_SET(ReferrencedBy, 0x20)
+    /// DIE has children which are part of the type table.
+    SINGLE_FLAG_METHODS_SET(KeepTypeChildren, 0x20)
 
     /// DIE is in module scope.
     SINGLE_FLAG_METHODS_SET(IsInMouduleScope, 0x40)
 
     /// DIE is in function scope.
     SINGLE_FLAG_METHODS_SET(IsInFunctionScope, 0x80)
+
+    /// DIE is in anonymous namespace scope.
+    SINGLE_FLAG_METHODS_SET(IsInAnonNamespaceScope, 0x100)
+
+    /// DIE is available for ODR type deduplication.
+    SINGLE_FLAG_METHODS_SET(ODRAvailable, 0x200)
+
+    /// Track liveness for the DIE.
+    SINGLE_FLAG_METHODS_SET(TrackLiveness, 0x400)
+
+    /// Track liveness for the DIE.
+    SINGLE_FLAG_METHODS_SET(HasAnAddress, 0x800)
 
     void unsetFlagsWhichSetDuringLiveAnalysis() {
       auto InputData = Flags.load();
@@ -228,6 +259,18 @@ public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump();
 #endif
+
+    bool needToPlaceInTypeTable() const {
+      return (getKeep() && (getPlacement() == CompileUnit::TypeTable ||
+                            getPlacement() == CompileUnit::Both)) ||
+             getKeepTypeChildren();
+    }
+
+    bool needToKeepInPlainDwarf() const {
+      return (getKeep() && (getPlacement() == CompileUnit::PlainDwarf ||
+                            getPlacement() == CompileUnit::Both)) ||
+             getKeepPlainChildren();
+    }
   };
 
   /// \defgroup Group of functions returning DIE info.
@@ -274,10 +317,49 @@ public:
   }
 
   /// \p Idx index of the DIE.
+  /// \returns type entry.
+  TypeEntry *getDieTypeEntry(uint32_t Idx) {
+    return reinterpret_cast<std::atomic<TypeEntry *> *>(&TypeEntries[Idx])
+        ->load();
+  }
+
+  /// \p InputDieEntry debug info entry.
+  /// \returns DieInfo descriptor.
+  uint64_t getDieOutOffset(const DWARFDebugInfoEntry *InputDieEntry) {
+    return reinterpret_cast<std::atomic<uint64_t> *>(
+               &OutDieOffsetArray[getOrigUnit().getDIEIndex(InputDieEntry)])
+        ->load();
+  }
+
+  /// \p InputDieEntry debug info entry.
+  /// \returns type entry.
+  TypeEntry *getDieTypeEntry(const DWARFDebugInfoEntry *InputDieEntry) {
+    return reinterpret_cast<std::atomic<TypeEntry *> *>(
+               &TypeEntries[getOrigUnit().getDIEIndex(InputDieEntry)])
+        ->load();
+  }
+
+  /// \p Idx index of the DIE.
   /// \returns DieInfo descriptor.
   void rememberDieOutOffset(uint32_t Idx, uint64_t Offset) {
     reinterpret_cast<std::atomic<uint64_t> *>(&OutDieOffsetArray[Idx])
         ->store(Offset);
+  }
+
+  /// \p Idx index of the DIE.
+  /// \p Type entry.
+  void setDieTypeEntry(uint32_t Idx, TypeEntry *Entry) {
+    reinterpret_cast<std::atomic<TypeEntry *> *>(&TypeEntries[Idx])
+        ->store(Entry);
+  }
+
+  /// \p InputDieEntry debug info entry.
+  /// \p Type entry.
+  void setDieTypeEntry(const DWARFDebugInfoEntry *InputDieEntry,
+                       TypeEntry *Entry) {
+    reinterpret_cast<std::atomic<TypeEntry *> *>(
+        &TypeEntries[getOrigUnit().getDIEIndex(InputDieEntry)])
+        ->store(Entry);
   }
 
   /// @}
@@ -299,9 +381,15 @@ public:
   /// RefValue. The resulting DIE might be in another CompileUnit.
   /// \returns referenced die and corresponding compilation unit.
   ///          compilation unit is null if reference could not be resolved.
-  std::optional<std::pair<CompileUnit *, uint32_t>>
+  std::optional<UnitEntryPairTy>
   resolveDIEReference(const DWARFFormValue &RefValue,
                       ResolveInterCUReferencesMode CanResolveInterCUReferences);
+
+  std::optional<UnitEntryPairTy>
+  resolveDIEReference(const DWARFDebugInfoEntry *DieEntry,
+                      dwarf::Attribute Attr,
+                      ResolveInterCUReferencesMode CanResolveInterCUReferences);
+
   /// @}
 
   /// Add a function range [\p LowPC, \p HighPC) that is relocated by applying
@@ -312,7 +400,8 @@ public:
   const RangesTy &getFunctionRanges() const { return Ranges; }
 
   /// Clone and emit this compilation unit.
-  Error cloneAndEmit(std::optional<Triple> TargetTriple);
+  Error cloneAndEmit(std::optional<Triple> TargetTriple,
+                     TypeUnit *ArtificialTypeUnit);
 
   /// Clone and emit debug locations(.debug_loc/.debug_loclists).
   Error cloneAndEmitDebugLocations();
@@ -324,10 +413,12 @@ public:
   Error cloneAndEmitDebugMacro();
 
   // Clone input DIE entry.
-  DIE *cloneDIE(const DWARFDebugInfoEntry *InputDieEntry, uint64_t OutOffset,
-                std::optional<int64_t> FuncAddressAdjustment,
-                std::optional<int64_t> VarAddressAdjustment,
-                BumpPtrAllocator &Allocator);
+  std::pair<DIE *, TypeEntry *>
+  cloneDIE(const DWARFDebugInfoEntry *InputDieEntry,
+           TypeEntry *ClonedParentTypeDIE, uint64_t OutOffset,
+           std::optional<int64_t> FuncAddressAdjustment,
+           std::optional<int64_t> VarAddressAdjustment,
+           BumpPtrAllocator &Allocator, TypeUnit *ArtificialTypeUnit);
 
   // Clone and emit line table.
   Error cloneAndEmitLineTable(Triple &TargetTriple);
@@ -344,10 +435,13 @@ public:
     return DebugAddrIndexMap.getValueIndex(Addr);
   }
 
-  /// Returns index(inside .debug_str_offsets) of specified string.
-  uint64_t getDebugStrIndex(const StringEntry *String) {
-    return DebugStringIndexMap.getValueIndex(String);
-  }
+  /// Returns directory and file from the line table by index.
+  std::optional<std::pair<StringRef, StringRef>>
+  getDirAndFilenameFromLineTable(const DWARFFormValue &FileIdxValue);
+
+  /// Returns directory and file from the line table by index.
+  std::optional<std::pair<StringRef, StringRef>>
+  getDirAndFilenameFromLineTable(uint64_t FileIdx);
 
   /// \defgroup Helper methods to access OrigUnit.
   ///
@@ -469,10 +563,44 @@ public:
 
   /// @}
 
+  /// Save specified accelerator info \p Info.
+  void saveAcceleratorInfo(const DwarfUnit::AccelInfo &Info) {
+    AcceleratorRecords.add(Info);
+  }
+
+  /// Enumerates all units accelerator records.
+  void
+  forEachAcceleratorRecord(function_ref<void(AccelInfo &)> Handler) override {
+    AcceleratorRecords.forEach(Handler);
+  }
+
+  /// Output unit selector.
+  class OutputUnitVariantPtr {
+  public:
+    OutputUnitVariantPtr(CompileUnit *U);
+    OutputUnitVariantPtr(TypeUnit *U);
+
+    /// Accessor for common functionality.
+    DwarfUnit *operator->();
+
+    bool isCompileUnit();
+
+    bool isTypeUnit();
+
+    /// Returns CompileUnit if applicable.
+    CompileUnit *getAsCompileUnit();
+
+    /// Returns TypeUnit if applicable.
+    TypeUnit *getAsTypeUnit();
+
+  protected:
+    PointerUnion<CompileUnit *, TypeUnit *> Ptr;
+  };
+
 private:
   /// Navigate DWARF tree recursively and set die properties.
   void analyzeDWARFStructureRec(const DWARFDebugInfoEntry *DieEntry,
-                                bool IsInModule, bool IsInFunction);
+                                bool IsODRUnavailableFunctionScope);
 
   struct LinkedLocationExpressionsWithOffsetPatches {
     DWARFLocationExpression Expression;
@@ -494,9 +622,6 @@ private:
 
   /// Emit the .debug_addr section fragment for current unit.
   Error emitDebugAddrSection();
-
-  /// Emit the .debug_str_offsets section for current unit.
-  Error emitDebugStringOffsetSection();
 
   /// Emit .debug_aranges.
   void emitAranges(AddressRanges &LinkedFunctionRanges);
@@ -521,19 +646,34 @@ private:
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
                           uint64_t OffsetToMacroTable, bool hasDWARFv5Header);
 
-  /// Store accelerator information for the \p InputDieEntry.
-  void rememberAcceleratorEntries(const DWARFDebugInfoEntry *InputDieEntry,
-                                  uint64_t OutOffset, AttributesInfo &AttrInfo);
+  /// Creates DIE which would be placed into the "Plain" compile unit.
+  DIE *createPlainDIEandCloneAttributes(
+      const DWARFDebugInfoEntry *InputDieEntry, DIEGenerator &PlainDIEGenerator,
+      uint64_t &OutOffset, std::optional<int64_t> &FuncAddressAdjustment,
+      std::optional<int64_t> &VarAddressAdjustment);
 
-  /// Store ObjC accelerator information for the \p InputDieEntry.
-  void rememberObjCAccelerator(const DWARFDebugInfoEntry *InputDieEntry,
-                               uint64_t OutOffset, AttributesInfo &AttrInfo);
+  /// Creates DIE which would be placed into the "Type" compile unit.
+  TypeEntry *createTypeDIEandCloneAttributes(
+      const DWARFDebugInfoEntry *InputDieEntry, DIEGenerator &TypeDIEGenerator,
+      TypeEntry *ClonedParentTypeDIE, TypeUnit *ArtificialTypeUnit);
+
+  /// Create output DIE inside specified \p TypeDescriptor.
+  DIE *allocateTypeDie(TypeEntryBody *TypeDescriptor,
+                       DIEGenerator &TypeDIEGenerator, dwarf::Tag DieTag,
+                       bool IsDeclaration, bool IsParentDeclaration);
+
+  /// Enumerate \p DieEntry children and assign names for them.
+  Error assignTypeNamesRec(const DWARFDebugInfoEntry *DieEntry,
+                           SyntheticTypeNameBuilder &NameBuilder);
 
   /// DWARFFile containing this compile unit.
   DWARFFile &File;
 
   /// Pointer to the paired compile unit from the input DWARF.
   DWARFUnit *OrigUnit = nullptr;
+
+  /// The DW_AT_language of this unit.
+  std::optional<uint16_t> Language;
 
   /// Line table for this unit.
   const DWARFDebugLine::LineTable *LineTablePtr = nullptr;
@@ -547,16 +687,18 @@ private:
   /// Maps an address into the index inside .debug_addr section.
   IndexedValuesMap<uint64_t> DebugAddrIndexMap;
 
-  /// Maps a string into the index inside .debug_str_offsets section.
-  IndexedValuesMap<const StringEntry *> DebugStringIndexMap;
+  std::unique_ptr<DependencyTracker> Dependencies;
 
-  /// \defgroup Data Members accessed asinchroniously.
+  /// \defgroup Data Members accessed asinchronously.
   ///
   /// @{
   OffsetToUnitTy getUnitFromOffset;
 
   std::optional<uint64_t> LowPc;
   uint64_t HighPc = 0;
+
+  /// Flag indicating whether type de-duplication is forbidden.
+  bool NoODR = true;
 
   /// The ranges in that map are the PC ranges for functions in this unit,
   /// associated with the PC offset to apply to the addresses to get
@@ -565,7 +707,8 @@ private:
   std::mutex RangesMutex;
 
   /// The DW_AT_low_pc of each DW_TAG_label.
-  SmallDenseMap<uint64_t, uint64_t, 1> Labels;
+  using LabelMapTy = SmallDenseMap<uint64_t, uint64_t, 1>;
+  LabelMapTy Labels;
   std::mutex LabelsMutex;
 
   /// This field keeps current stage of overall compile unit processing.
@@ -574,8 +717,18 @@ private:
   /// DIE info indexed by DIE index.
   SmallVector<DIEInfo> DieInfoArray;
   SmallVector<uint64_t> OutDieOffsetArray;
+  SmallVector<TypeEntry *> TypeEntries;
+
+  /// The list of accelerator records for this unit.
+  ArrayList<AccelInfo> AcceleratorRecords;
   /// @}
 };
+
+/// \returns list of attributes referencing type DIEs which might be
+/// deduplicated.
+/// Note: it does not include DW_AT_containing_type attribute to avoid
+/// infinite recursion.
+ArrayRef<dwarf::Attribute> getODRAttributes();
 
 } // end of namespace dwarflinker_parallel
 } // end namespace llvm

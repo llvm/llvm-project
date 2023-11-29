@@ -49,7 +49,8 @@ enum class GCCTypeClass {
   // literals.
   // Lang = 16,
   // OpaqueType = 17,
-  BitInt = 18
+  BitInt = 18,
+  Vector = 19
 };
 
 GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
