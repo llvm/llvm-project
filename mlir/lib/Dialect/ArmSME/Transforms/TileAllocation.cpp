@@ -266,7 +266,8 @@ struct TileAllocationPass
     RewritePatternSet patterns(&getContext());
     patterns.add<AssignTileIDsPattern>(patterns.getContext());
     GreedyRewriteConfig config;
-    // This ensures tiles are allocated in program order.
+    // Setting useTopDownTraversal ensures tiles are allocated in program
+    // order.
     config.useTopDownTraversal = true;
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             getOperation(), std::move(patterns), config))) {
