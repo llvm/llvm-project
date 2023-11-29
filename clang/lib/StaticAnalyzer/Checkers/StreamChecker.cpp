@@ -252,7 +252,10 @@ private:
         std::bind(&StreamChecker::evalFreadFwrite, _1, _2, _3, _4, false), 3}},
       {{{"fgetc"}, 1},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
-        std::bind(&StreamChecker::evalFgetc, _1, _2, _3, _4), 0}},
+        std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, true), 0}},
+      {{{"fgets"}, 3},
+       {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, true),
+        std::bind(&StreamChecker::evalFgetx, _1, _2, _3, _4, false), 2}},
       {{{"fputc"}, 2},
        {std::bind(&StreamChecker::preReadWrite, _1, _2, _3, _4, false),
         std::bind(&StreamChecker::evalFputx, _1, _2, _3, _4, true), 1}},
@@ -320,8 +323,8 @@ private:
   void evalFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
                        CheckerContext &C, bool IsFread) const;
 
-  void evalFgetc(const FnDescription *Desc, const CallEvent &Call,
-                 CheckerContext &C) const;
+  void evalFgetx(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C, bool SingleChar) const;
 
   void evalFputx(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C, bool IsSingleChar) const;
@@ -760,8 +763,8 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
     C.addTransition(StateFailed);
 }
 
-void StreamChecker::evalFgetc(const FnDescription *Desc, const CallEvent &Call,
-                              CheckerContext &C) const {
+void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C, bool SingleChar) const {
   ProgramStateRef State = C.getState();
   SymbolRef StreamSym = getStreamArg(Desc, Call).getAsSymbol();
   if (!StreamSym)
@@ -778,42 +781,61 @@ void StreamChecker::evalFgetc(const FnDescription *Desc, const CallEvent &Call,
   assertStreamStateOpened(OldSS);
 
   // `fgetc` returns the read character on success, otherwise returns EOF.
+  // `fgets` returns the read buffer address on success, otherwise returns NULL.
 
-  // Generate a transition for the success state of `fgetc`.
-  // If we know the state to be FEOF at fgetc, do not add a success state.
   if (OldSS->ErrorState != ErrorFEof) {
-    NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
-    ProgramStateRef StateNotFailed =
-        State->BindExpr(CE, C.getLocationContext(), RetVal);
-    SValBuilder &SVB = C.getSValBuilder();
-    ASTContext &ASTC = C.getASTContext();
-    // The returned 'unsigned char' of `fgetc` is converted to 'int',
-    // so we need to check if it is in range [0, 255].
-    auto CondLow =
-        SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(ASTC.IntTy),
-                      SVB.getConditionType())
-            .getAs<DefinedOrUnknownSVal>();
-    auto CondHigh =
-        SVB.evalBinOp(State, BO_LE, RetVal,
-                      SVB.makeIntVal(SVB.getBasicValueFactory()
-                                         .getMaxValue(ASTC.UnsignedCharTy)
-                                         .getLimitedValue(),
-                                     ASTC.IntTy),
-                      SVB.getConditionType())
-            .getAs<DefinedOrUnknownSVal>();
-    if (!CondLow || !CondHigh)
-      return;
-    StateNotFailed = StateNotFailed->assume(*CondLow, true);
-    if (!StateNotFailed)
-      return;
-    StateNotFailed = StateNotFailed->assume(*CondHigh, true);
-    if (!StateNotFailed)
-      return;
-    C.addTransition(StateNotFailed);
+    if (SingleChar) {
+      // Generate a transition for the success state of `fgetc`.
+      NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+      ProgramStateRef StateNotFailed =
+          State->BindExpr(CE, C.getLocationContext(), RetVal);
+      SValBuilder &SVB = C.getSValBuilder();
+      ASTContext &ASTC = C.getASTContext();
+      // The returned 'unsigned char' of `fgetc` is converted to 'int',
+      // so we need to check if it is in range [0, 255].
+      auto CondLow =
+          SVB.evalBinOp(State, BO_GE, RetVal, SVB.makeZeroVal(ASTC.IntTy),
+                        SVB.getConditionType())
+              .getAs<DefinedOrUnknownSVal>();
+      auto CondHigh =
+          SVB.evalBinOp(State, BO_LE, RetVal,
+                        SVB.makeIntVal(SVB.getBasicValueFactory()
+                                           .getMaxValue(ASTC.UnsignedCharTy)
+                                           .getLimitedValue(),
+                                       ASTC.IntTy),
+                        SVB.getConditionType())
+              .getAs<DefinedOrUnknownSVal>();
+      if (!CondLow || !CondHigh)
+        return;
+      StateNotFailed = StateNotFailed->assume(*CondLow, true);
+      if (!StateNotFailed)
+        return;
+      StateNotFailed = StateNotFailed->assume(*CondHigh, true);
+      if (!StateNotFailed)
+        return;
+      C.addTransition(StateNotFailed);
+    } else {
+      // Generate a transition for the success state of `fgets`.
+      std::optional<DefinedSVal> GetBuf =
+          Call.getArgSVal(0).getAs<DefinedSVal>();
+      if (!GetBuf)
+        return;
+      ProgramStateRef StateNotFailed =
+          State->BindExpr(CE, C.getLocationContext(), *GetBuf);
+      StateNotFailed = StateNotFailed->set<StreamMap>(
+          StreamSym, StreamState::getOpened(Desc));
+      C.addTransition(StateNotFailed);
+    }
   }
 
   // Add transition for the failed state.
-  ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
+  ProgramStateRef StateFailed;
+  if (SingleChar)
+    StateFailed = bindInt(*EofVal, State, C, CE);
+  else
+    StateFailed =
+        State->BindExpr(CE, C.getLocationContext(),
+                        C.getSValBuilder().makeNullWithType(CE->getType()));
 
   // If a (non-EOF) error occurs, the resulting value of the file position
   // indicator for the stream is indeterminate.
