@@ -139,3 +139,11 @@ func.func @set_max_register() {
   nvvm.setmaxregister decrease 8
   func.return
 }
+
+// -----
+
+func.func @set_max_register() {
+  // expected-error @+1 {{new register size must be multiple of 8}}
+  nvvm.setmaxregister decrease 51
+  func.return
+}
