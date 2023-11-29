@@ -1,18 +1,97 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-64-debug-names-type-comdat.s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-64-debug-names-type-comdat.s -o %t1.o
-// RUN: ld.lld %t.o %t1.o -o %t1
-// RUN: llvm-objdump -s %t1 | FileCheck %s
+# REQUIRES: x86
 
-// Test checks that LLD tombstones TU section that was de-duplicated using COMDAT to the maxium value.
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux --defsym DWARF32=1 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux --defsym DWARF32=1 %s -o %t1.o
+# RUN: ld.lld %t.o %t1.o -o %t1
+# RUN: llvm-objdump -s %t1 | FileCheck %s --check-prefix=CHECK32
 
-CHECK: Contents of section .debug_names:
-CHECK-NEXT:  0000 ffffffff 3f000000 00000000 05000000  ....?...........
-CHECK-NEXT:  0010 00000000 01000000 00000000 00000000  ................
-CHECK-NEXT:  0020 00000000 03000000 08000000 4c4c564d  ............LLVM
-CHECK-NEXT:  0030 30373030 00000000 00000000 00000000  0700............
-CHECK-NEXT:  0040 00000000 00000000 000000ff ffffff3f  ...............?
-CHECK-NEXT:  0050 00000000 00000005 00000000 00000001  ................
-CHECK-NEXT:  0060 00000000 00000000 00000000 00000003  ................
-CHECK-NEXT:  0070 00000008 0000004c 4c564d30 37303000  .......LLVM0700.
-CHECK-NEXT:  0080 00000000 000000ff ffffffff ffffff00  ................
+# Test checks that LLD tombstones TU section that was de-duplicated using COMDAT to the maxium value.
+
+# CHECK32:Contents of section .debug_names:
+# CHECK32-NEXT: 0000 37000000 05000000 00000000 01000000  7...............
+# CHECK32-NEXT: 0010 00000000 00000000 00000000 03000000  ................
+# CHECK32-NEXT: 0020 08000000 4c4c564d 30373030 00000000  ....LLVM0700....
+# CHECK32-NEXT: 0030 00000000 00000000 00000037 00000005  ...........7....
+# CHECK32-NEXT: 0040 00000000 00000001 00000000 00000000  ................
+# CHECK32-NEXT: 0050 00000000 00000003 00000008 0000004c  ...............L
+# CHECK32-NEXT: 0060 4c564d30 37303000 000000ff ffffff00  LVM0700.........
+
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux --defsym DWARF64=1 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux --defsym DWARF64=1 %s -o %t1.o
+# RUN: ld.lld %t.o %t1.o -o %t1
+# RUN: llvm-objdump -s %t1 | FileCheck %s --check-prefix=CHECK64
+
+# Test checks that LLD tombstones TU section that was de-duplicated using COMDAT to the maxium value.
+
+# CHECK64: Contents of section .debug_names:
+# CHECK64-NEXT:  0000 ffffffff 3f000000 00000000 05000000  ....?...........
+# CHECK64-NEXT:  0010 00000000 01000000 00000000 00000000  ................
+# CHECK64-NEXT:  0020 00000000 03000000 08000000 4c4c564d  ............LLVM
+# CHECK64-NEXT:  0030 30373030 00000000 00000000 00000000  0700............
+# CHECK64-NEXT:  0040 00000000 00000000 000000ff ffffff3f  ...............?
+# CHECK64-NEXT:  0050 00000000 00000005 00000000 00000001  ................
+# CHECK64-NEXT:  0060 00000000 00000000 00000000 00000003  ................
+# CHECK64-NEXT:  0070 00000008 0000004c 4c564d30 37303000  .......LLVM0700.
+# CHECK64-NEXT:  0080 00000000 000000ff ffffffff ffffff00  ................
+
+# Test generated with clang++ -g2 -gdwarf-5 -gpubnames -fdebug-types-section -S and then manually reduced.
+.ifdef DWARF32
+	.section	.debug_info,"G",@progbits,1175092228111723119,comdat
+.Ltu_begin0:
+	.section	.debug_names,"",@progbits
+	.long	.Lnames_end0-.Lnames_start0     # Header: unit length
+.Lnames_start0:
+	.short	5                               # Header: version
+	.short	0                               # Header: padding
+	.long	0                               # Header: compilation unit count
+	.long	1                               # Header: local type unit count
+	.long	0                               # Header: foreign type unit count
+	.long	0                               # Header: bucket count
+	.long	0                               # Header: name count
+	.long	.Lnames_abbrev_end0-.Lnames_abbrev_start0 # Header: abbreviation table size
+	.long	8                               # Header: augmentation string size
+	.ascii	"LLVM0700"                      # Header: augmentation string
+	.long	0                               # Compilation unit 0
+	.long	.Ltu_begin0                     # Type unit 0
+	.long	0                               # Bucket 0
+
+.Lnames_abbrev_start0:
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev list
+.Lnames_abbrev_end0:
+.Lnames_entries0:
+.Lnames_end0:
+.endif
+
+# Test generated with clang++ -g2 -gdwarf-5 -gdwarf64 -gpubnames -fdebug-types-section -S and then manually reduced.
+.ifdef DWARF64
+	.section	.debug_info,"G",@progbits,1175092228111723119,comdat
+.Ltu_begin0:
+	.section	.debug_names,"",@progbits
+	.long	4294967295                      # DWARF64 Mark
+	.quad	.Lnames_end0-.Lnames_start0     # Header: unit length
+.Lnames_start0:
+	.short	5                               # Header: version
+	.short	0                               # Header: padding
+	.long	0                               # Header: compilation unit count
+	.long	1                               # Header: local type unit count
+	.long	0                               # Header: foreign type unit count
+	.long	0                               # Header: bucket count
+	.long	0                               # Header: name count
+	.long	.Lnames_abbrev_end0-.Lnames_abbrev_start0 # Header: abbreviation table size
+	.long	8                               # Header: augmentation string size
+	.ascii	"LLVM0700"                      # Header: augmentation string
+	.quad	0                               # Compilation unit 0
+	.quad	.Ltu_begin0                     # Type unit 0
+	.long	0                               # Bucket 0
+
+.Lnames_abbrev_start0:
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev
+	.byte	0                               # End of abbrev list
+.Lnames_abbrev_end0:
+.Lnames_entries0:
+.Lnames_end0:
+.endif
