@@ -113,18 +113,8 @@ __riscv_sha512sig1l(uint32_t __x, uint32_t __y) {
 }
 
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
-__riscv_sha512sum0l(uint32_t __x, uint32_t __y) {
-  return __builtin_riscv_sha512sum0l(__x, __y);
-}
-
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_sha512sum0r(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_sha512sum0r(__x, __y);
-}
-
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
-__riscv_sha512sum1l(uint32_t __x, uint32_t __y) {
-  return __builtin_riscv_sha512sum1l(__x, __y);
 }
 
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
