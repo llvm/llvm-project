@@ -7349,7 +7349,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   bool IsConvertedConstantExpression = true;
   if (isa<InitListExpr>(Arg) || ParamType->isRecordType()) {
     InitializationKind Kind = InitializationKind::CreateForInit(
-        Arg->getBeginLoc(), /*DirectInit*/ false, Arg);
+        Arg->getBeginLoc(), /*DirectInit=*/false, Arg);
     Expr *Inits[1] = {Arg};
     InitializedEntity Entity =
         InitializedEntity::InitializeTemplateParameter(ParamType, Param);
@@ -7360,7 +7360,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     Result = ActOnConstantExpression(Result.get());
     if (Result.isInvalid() || !Result.get())
       return ExprError();
-    Arg = ActOnFinishFullExpr(Result.get(), Arg->getBeginLoc(), false,
+    Arg = ActOnFinishFullExpr(Result.get(), Arg->getBeginLoc(),
+                              /*DiscardedValue=*/false,
                               /*IsConstexpr=*/true, /*IsTemplateArgument=*/true)
               .get();
     IsConvertedConstantExpression = false;
