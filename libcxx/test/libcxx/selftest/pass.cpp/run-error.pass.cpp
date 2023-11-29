@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcxx-fake-executor
 // XFAIL: *
 
 // Make sure the test DOES NOT pass if it fails at runtime.
