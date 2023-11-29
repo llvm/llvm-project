@@ -1448,3 +1448,135 @@ define void @frem_v4f80(<4 x x86_fp80> %a0, <4 x x86_fp80> %a1, ptr%p3) nounwind
   store <4 x x86_fp80> %frem, ptr%p3
   ret void
 }
+
+define void @frem_f32_fast(float %a0, float %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_f32_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivss %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vroundss $11, %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm0
+; CHECK-NEXT:    vmovss %xmm2, (%rdi)
+; CHECK-NEXT:    retq
+  %frem = frem fast float %a0, %a1
+  store float %frem, ptr%p3
+  ret void
+}
+
+define void @frem_f64_fast(double %a0, double %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_f64_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivsd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vroundsd $11, %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vfnmadd213sd {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm0
+; CHECK-NEXT:    vmovsd %xmm2, (%rdi)
+; CHECK-NEXT:    retq
+  %frem = frem fast double %a0, %a1
+  store double %frem, ptr%p3
+  ret void
+}
+
+define void @frem_v16f32_fast(<16 x float> %a0, <16 x float> %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_v16f32_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpps %ymm3, %ymm4
+; CHECK-NEXT:    vmulps %ymm4, %ymm1, %ymm5
+; CHECK-NEXT:    vmovaps %ymm5, %ymm6
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} ymm6 = (ymm3 * ymm6) - ymm1
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm6 = -(ymm4 * ymm6) + ymm5
+; CHECK-NEXT:    vrcpps %ymm2, %ymm4
+; CHECK-NEXT:    vmulps %ymm4, %ymm0, %ymm5
+; CHECK-NEXT:    vmovaps %ymm5, %ymm7
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} ymm7 = (ymm2 * ymm7) - ymm0
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm7 = -(ymm4 * ymm7) + ymm5
+; CHECK-NEXT:    vroundps $11, %ymm7, %ymm4
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm4 = -(ymm2 * ymm4) + ymm0
+; CHECK-NEXT:    vroundps $11, %ymm6, %ymm0
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm1
+; CHECK-NEXT:    vmovaps %ymm0, 32(%rdi)
+; CHECK-NEXT:    vmovaps %ymm4, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %frem = frem fast <16 x float> %a0, %a1
+  store <16 x float> %frem, ptr%p3
+  ret void
+}
+
+define void @frem_v8f32_fast(<8 x float> %a0, <8 x float> %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_v8f32_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpps %ymm1, %ymm2
+; CHECK-NEXT:    vmulps %ymm2, %ymm0, %ymm3
+; CHECK-NEXT:    vmovaps %ymm3, %ymm4
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} ymm4 = (ymm1 * ymm4) - ymm0
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm4 = -(ymm2 * ymm4) + ymm3
+; CHECK-NEXT:    vroundps $11, %ymm4, %ymm2
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} ymm2 = -(ymm1 * ymm2) + ymm0
+; CHECK-NEXT:    vmovaps %ymm2, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %frem = frem fast <8 x float> %a0, %a1
+  store <8 x float> %frem, ptr%p3
+  ret void
+}
+
+define void @frem_v4f32_fast(<4 x float> %a0, <4 x float> %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_v4f32_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpps %xmm1, %xmm2
+; CHECK-NEXT:    vmulps %xmm2, %xmm0, %xmm3
+; CHECK-NEXT:    vmovaps %xmm3, %xmm4
+; CHECK-NEXT:    vfmsub213ps {{.*#+}} xmm4 = (xmm1 * xmm4) - xmm0
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} xmm4 = -(xmm2 * xmm4) + xmm3
+; CHECK-NEXT:    vroundps $11, %xmm4, %xmm2
+; CHECK-NEXT:    vfnmadd213ps {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm0
+; CHECK-NEXT:    vmovaps %xmm2, (%rdi)
+; CHECK-NEXT:    retq
+  %frem = frem fast <4 x float> %a0, %a1
+  store <4 x float> %frem, ptr%p3
+  ret void
+}
+
+define void @frem_v8f64_fast(<8 x double> %a0, <8 x double> %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_v8f64_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivpd %ymm2, %ymm0, %ymm4
+; CHECK-NEXT:    vroundpd $11, %ymm4, %ymm4
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} ymm4 = -(ymm2 * ymm4) + ymm0
+; CHECK-NEXT:    vdivpd %ymm3, %ymm1, %ymm0
+; CHECK-NEXT:    vroundpd $11, %ymm0, %ymm0
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm3 * ymm0) + ymm1
+; CHECK-NEXT:    vmovapd %ymm0, 32(%rdi)
+; CHECK-NEXT:    vmovapd %ymm4, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %frem = frem fast <8 x double> %a0, %a1
+  store <8 x double> %frem, ptr%p3
+  ret void
+}
+
+define void @frem_v4f64_fast(<4 x double> %a0, <4 x double> %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_v4f64_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivpd %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vroundpd $11, %ymm2, %ymm2
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} ymm2 = -(ymm1 * ymm2) + ymm0
+; CHECK-NEXT:    vmovapd %ymm2, (%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %frem = frem fast <4 x double> %a0, %a1
+  store <4 x double> %frem, ptr%p3
+  ret void
+}
+
+define void @frem_v2f64_fast(<2 x double> %a0, <2 x double> %a1, ptr%p3) nounwind {
+; CHECK-LABEL: frem_v2f64_fast:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vdivpd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vroundpd $11, %xmm2, %xmm2
+; CHECK-NEXT:    vfnmadd213pd {{.*#+}} xmm2 = -(xmm1 * xmm2) + xmm0
+; CHECK-NEXT:    vmovapd %xmm2, (%rdi)
+; CHECK-NEXT:    retq
+  %frem = frem fast <2 x double> %a0, %a1
+  store <2 x double> %frem, ptr%p3
+  ret void
+}
