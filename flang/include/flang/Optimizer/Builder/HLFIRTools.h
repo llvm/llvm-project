@@ -239,12 +239,11 @@ fir::FortranVariableOpInterface genDeclare(mlir::Location loc,
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
 /// properly typed when placed in memory.
-hlfir::AssociateOp genAssociateExpr(mlir::Location loc,
-                                    fir::FirOpBuilder &builder,
-                                    hlfir::Entity value,
-                                    mlir::Type variableType,
-                                    llvm::StringRef name,
-                                    std::optional<mlir::NamedAttribute> attr = std::nullopt);
+hlfir::AssociateOp
+genAssociateExpr(mlir::Location loc, fir::FirOpBuilder &builder,
+                 hlfir::Entity value, mlir::Type variableType,
+                 llvm::StringRef name,
+                 std::optional<mlir::NamedAttribute> attr = std::nullopt);
 
 /// Get the raw address of a variable (simple fir.ref/fir.ptr, or fir.heap
 /// value). The returned value should be used with care, it does not contain any

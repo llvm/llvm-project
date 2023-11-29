@@ -560,9 +560,8 @@ static hlfir::EntityWithAttributes genStmtFunctionRef(
       // Create an hlfir.associate to create a variable from a potential
       // value argument.
       mlir::Type argType = converter.genType(*arg);
-      auto associate =
-          hlfir::genAssociateExpr(loc, builder, loweredArg, argType,
-                                  toStringRef(arg->name()));
+      auto associate = hlfir::genAssociateExpr(
+          loc, builder, loweredArg, argType, toStringRef(arg->name()));
       exprAssociations.push_back(associate);
       variableIface = associate;
     }
@@ -1179,8 +1178,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // Pass-by-value argument of type(C_PTR/C_FUNPTR).
         // Load the __address component and pass it by value.
         if (value.isValue()) {
-          auto associate = hlfir::genAssociateExpr(
-              loc, builder, value, eleTy, "adapt.cptrbyval");
+          auto associate = hlfir::genAssociateExpr(loc, builder, value, eleTy,
+                                                   "adapt.cptrbyval");
           value = hlfir::Entity{genRecordCPtrValueArg(
               builder, loc, associate.getFirBase(), eleTy)};
           builder.create<hlfir::EndAssociateOp>(loc, associate);
@@ -1399,8 +1398,9 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
     CallContext &callContext) {
   auto &builder = callContext.getBuilder();
   const auto &loc = callContext.loc;
-  assert(intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-                          callContext.procRef, *intrinsic, callContext.converter));
+  assert(intrinsic &&
+         Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+             callContext.procRef, *intrinsic, callContext.converter));
 
   // helper to get a particular prepared argument
   auto getArgument = [&](std::size_t i, bool loadArg) -> fir::ExtendedValue {
