@@ -1392,7 +1392,6 @@ static Archive::Kind getDefaultArchiveKindForHost() {
                                                             : Archive::K_GNU;
 }
 
-
 /// @brief Computes a list of targets among all given targets which are
 /// compatible with this code object
 /// @param [in] CodeObjectInfo Code Object
