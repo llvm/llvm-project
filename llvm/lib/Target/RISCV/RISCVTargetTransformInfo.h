@@ -48,22 +48,7 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// actual target hardware.
   unsigned getEstimatedVLFor(VectorType *Ty);
 
-  enum class RISCVInstruction {
-    VRGATHER_VV,
-    VRGATHER_VI,
-    VSLIDE,
-    VMERGE,
-    VMV_V,
-    VMV_SX,
-    VSIMPLE_INT,       // ICMP
-    VNARROWING,        // VNSRL
-    VSIMPLE_INT_RED,   // VREDSUM, VREDAND, VREDOR, VREDXOR
-    VMINMAX_INTFP_RED, // VREDMAX, VREDMAXU, VREDMIN, VREDMINU
-    VUNORD_FP_RED,     // VFREDUSUM, VFREDMAX, VFREDMIN
-    VORD_FP_RED,       // VFREDOSUM
-  };
-
-  InstructionCost getRISCVInstructionCost(RISCVInstruction Inst, MVT VT,
+  InstructionCost getRISCVInstructionCost(unsigned OpCode, MVT VT,
                                           unsigned NumInstr,
                                           TTI::TargetCostKind CostKind);
 
