@@ -396,3 +396,73 @@ define i1 @test61_as1(ptr addrspace(1) %foo, i16 %i, i16 %j) {
   ret i1 %cmp
 ; Don't transform non-inbounds GEPs.
 }
+
+define i1 @test_scalable_same(ptr %x) {
+; CHECK-LABEL: @test_scalable_same(
+; CHECK-NEXT:    ret i1 false
+;
+  %a = getelementptr <vscale x 4 x i8>, ptr %x, i64 8
+  %b = getelementptr inbounds <vscale x 4 x i8>, ptr %x, i64 8
+  %c = icmp ugt ptr %a, %b
+  ret i1 %c
+}
+
+define i1 @test_scalable_x(ptr %x) {
+; CHECK-LABEL: @test_scalable_x(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[A_IDX_MASK:%.*]] = and i64 [[TMP1]], 576460752303423487
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[A_IDX_MASK]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = getelementptr <vscale x 4 x i8>, ptr %x, i64 8
+  %c = icmp eq ptr %a, %x
+  ret i1 %c
+}
+
+define i1 @test_scalable_xc(ptr %x) {
+; CHECK-LABEL: @test_scalable_xc(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[A_IDX_MASK:%.*]] = and i64 [[TMP1]], 576460752303423487
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[A_IDX_MASK]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = getelementptr <vscale x 4 x i8>, ptr %x, i64 8
+  %c = icmp eq ptr %x, %a
+  ret i1 %c
+}
+
+define i1 @test_scalable_xy(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test_scalable_xy(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP2]], [[J:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP4]], [[I:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[GEP2_IDX]], [[GEP1_IDX]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %bit = addrspacecast ptr %foo to ptr addrspace(3)
+  %gep1 = getelementptr inbounds <vscale x 4 x i32>, ptr addrspace(3) %bit, i64 %i
+  %gep2 = getelementptr inbounds <vscale x 4 x i8>, ptr %foo, i64 %j
+  %cast1 = addrspacecast ptr addrspace(3) %gep1 to ptr
+  %cmp = icmp ult ptr %cast1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @test_scalable_ij(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test_scalable_ij(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP2]], [[I:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP4]], [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[GEP1_IDX]], [[GEP2_IDX]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds <vscale x 4 x i32>, ptr %foo, i64 %i
+  %gep2 = getelementptr inbounds <vscale x 4 x i8>, ptr %foo, i64 %j
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}

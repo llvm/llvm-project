@@ -1090,15 +1090,18 @@ struct SymbolLocatorInstance
       CallbackType create_callback,
       SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
       SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
+      SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle)
       : PluginInstance<SymbolLocatorCreateInstance>(name, description,
                                                     create_callback),
         locate_executable_object_file(locate_executable_object_file),
         locate_executable_symbol_file(locate_executable_symbol_file),
+        download_object_symbol_file(download_object_symbol_file),
         find_symbol_file_in_bundle(find_symbol_file_in_bundle) {}
 
   SymbolLocatorLocateExecutableObjectFile locate_executable_object_file;
   SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file;
+  SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file;
   SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle;
 };
 typedef PluginInstances<SymbolLocatorInstance> SymbolLocatorInstances;
@@ -1113,10 +1116,12 @@ bool PluginManager::RegisterPlugin(
     SymbolLocatorCreateInstance create_callback,
     SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
     SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
+    SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file,
     SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle) {
   return GetSymbolLocatorInstances().RegisterPlugin(
       name, description, create_callback, locate_executable_object_file,
-      locate_executable_symbol_file, find_symbol_file_in_bundle);
+      locate_executable_symbol_file, download_object_symbol_file,
+      find_symbol_file_in_bundle);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -1155,6 +1160,21 @@ FileSpec PluginManager::LocateExecutableSymbolFile(
     }
   }
   return {};
+}
+
+bool PluginManager::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                                Status &error,
+                                                bool force_lookup,
+                                                bool copy_executable) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.download_object_symbol_file) {
+      if (instance.download_object_symbol_file(module_spec, error, force_lookup,
+                                               copy_executable))
+        return true;
+    }
+  }
+  return false;
 }
 
 FileSpec PluginManager::FindSymbolFileInBundle(const FileSpec &symfile_bundle,

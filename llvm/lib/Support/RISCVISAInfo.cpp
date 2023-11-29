@@ -71,7 +71,9 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"xcvalu", RISCVExtensionVersion{1, 0}},
     {"xcvbi", RISCVExtensionVersion{1, 0}},
     {"xcvbitmanip", RISCVExtensionVersion{1, 0}},
+    {"xcvelw", RISCVExtensionVersion{1, 0}},
     {"xcvmac", RISCVExtensionVersion{1, 0}},
+    {"xcvmem", RISCVExtensionVersion{1, 0}},
     {"xcvsimd", RISCVExtensionVersion{1, 0}},
     {"xsfcie", RISCVExtensionVersion{1, 0}},
     {"xsfvcp", RISCVExtensionVersion{1, 0}},
@@ -995,7 +997,7 @@ static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXsfvcp[] = {"zve32x"};
 static const char *ImpliedExtsXsfvfnrclipxfqf[] = {"zve32f"};
-static const char *ImpliedExtsXsfvfwmaccqqq[] = {"zve32f"};
+static const char *ImpliedExtsXsfvfwmaccqqq[] = {"zve32f", "zvfbfmin"};
 static const char *ImpliedExtsXsfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXsfvqmaccqoq[] = {"zve32x"};
 static const char *ImpliedExtsZacas[] = {"a"};

@@ -21,7 +21,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -51,7 +50,8 @@ SymbolLocatorDefault::SymbolLocatorDefault() : SymbolLocator() {}
 void SymbolLocatorDefault::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-      LocateExecutableObjectFile, LocateExecutableSymbolFile);
+      LocateExecutableObjectFile, LocateExecutableSymbolFile,
+      DownloadObjectAndSymbolFile);
 }
 
 void SymbolLocatorDefault::Terminate() {
@@ -229,4 +229,11 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
   }
 
   return {};
+}
+
+bool SymbolLocatorDefault::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                                       Status &error,
+                                                       bool force_lookup,
+                                                       bool copy_executable) {
+  return false;
 }

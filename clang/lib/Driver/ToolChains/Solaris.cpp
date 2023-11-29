@@ -49,11 +49,8 @@ static bool getPIE(const ArgList &Args, const ToolChain &TC) {
       Args.hasArg(options::OPT_r))
     return false;
 
-  Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
-                           options::OPT_nopie);
-  if (!A)
-    return TC.isPIEDefault(Args);
-  return A->getOption().matches(options::OPT_pie);
+  return Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                      TC.isPIEDefault(Args));
 }
 
 // FIXME: Need to handle CLANG_DEFAULT_LINKER here?
@@ -87,10 +84,12 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-  const Driver &D = getToolChain().getDriver();
-  const bool IsPIE = getPIE(Args, getToolChain());
+  const auto &ToolChain = static_cast<const Solaris &>(getToolChain());
+  const Driver &D = ToolChain.getDriver();
+  const llvm::Triple::ArchType Arch = ToolChain.getArch();
+  const bool IsPIE = getPIE(Args, ToolChain);
+  const bool LinkerIsGnuLd = isLinkerGnuLd(ToolChain, Args);
   ArgStringList CmdArgs;
-  bool LinkerIsGnuLd = isLinkerGnuLd(getToolChain(), Args);
 
   // Demangle C++ names in errors.  GNU ld already defaults to --demangle.
   if (!LinkerIsGnuLd)
@@ -126,9 +125,6 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (LinkerIsGnuLd) {
     // Set the correct linker emulation for 32- and 64-bit Solaris.
-    const auto &ToolChain = static_cast<const Solaris &>(getToolChain());
-    const llvm::Triple::ArchType Arch = ToolChain.getArch();
-
     switch (Arch) {
     case llvm::Triple::x86:
       CmdArgs.push_back("-m");
@@ -168,10 +164,9 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     if (!Args.hasArg(options::OPT_shared))
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crt1.o")));
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt1.o")));
 
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath("crti.o")));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
 
     const Arg *Std = Args.getLastArg(options::OPT_std_EQ, options::OPT_ansi);
     bool HaveAnsi = false;
@@ -186,43 +181,42 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use values-Xc.o for -ansi, -std=c*, -std=iso9899:199409.
     if (HaveAnsi || (LangStd && !LangStd->isGNUMode()))
       values_X = "values-Xc.o";
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath(values_X)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(values_X)));
 
     const char *values_xpg = "values-xpg6.o";
     // Use values-xpg4.o for -std=c90, -std=gnu90, -std=iso9899:199409.
     if (LangStd && LangStd->getLanguage() == Language::C && !LangStd->isC99())
       values_xpg = "values-xpg4.o";
-    CmdArgs.push_back(
-        Args.MakeArgString(getToolChain().GetFilePath(values_xpg)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(values_xpg)));
 
     const char *crtbegin = nullptr;
     if (Args.hasArg(options::OPT_shared) || IsPIE)
       crtbegin = "crtbeginS.o";
     else
       crtbegin = "crtbegin.o";
-    CmdArgs.push_back(Args.MakeArgString(getToolChain().GetFilePath(crtbegin)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
     // Add crtfastmath.o if available and fast math is enabled.
-    getToolChain().addFastMathRuntimeIfAvailable(Args, CmdArgs);
+    ToolChain.addFastMathRuntimeIfAvailable(Args, CmdArgs);
   }
 
-  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   Args.addAllArgs(CmdArgs,
                   {options::OPT_L, options::OPT_T_Group, options::OPT_r});
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
                         !Args.hasArg(options::OPT_static);
-    addOpenMPRuntime(CmdArgs, getToolChain(), Args, StaticOpenMP);
+    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
-      if (getToolChain().ShouldLinkCXXStdlib(Args))
-        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
     // Silence warnings when linking C code with a C++ '-stdlib' argument.
@@ -232,7 +226,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // these dependencies need to be listed before the C runtime below.
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-      addFortranRuntimeLibs(getToolChain(), CmdArgs);
+      addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
     if (Args.hasArg(options::OPT_fstack_protector) ||
@@ -244,26 +238,26 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
     // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
     // forcibly link with libatomic as a workaround.
-    if (getToolChain().getTriple().getArch() == llvm::Triple::sparc) {
-      addAsNeededOption(getToolChain(), Args, CmdArgs, true);
+    if (Arch == llvm::Triple::sparc) {
+      addAsNeededOption(ToolChain, Args, CmdArgs, true);
       CmdArgs.push_back("-latomic");
-      addAsNeededOption(getToolChain(), Args, CmdArgs, false);
+      addAsNeededOption(ToolChain, Args, CmdArgs, false);
     }
-    addAsNeededOption(getToolChain(), Args, CmdArgs, true);
+    addAsNeededOption(ToolChain, Args, CmdArgs, true);
     CmdArgs.push_back("-lgcc_s");
-    addAsNeededOption(getToolChain(), Args, CmdArgs, false);
+    addAsNeededOption(ToolChain, Args, CmdArgs, false);
     CmdArgs.push_back("-lc");
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-lgcc");
     }
-    const SanitizerArgs &SA = getToolChain().getSanitizerArgs(Args);
+    const SanitizerArgs &SA = ToolChain.getSanitizerArgs(Args);
     if (NeedsSanitizerDeps) {
-      linkSanitizerRuntimeDeps(getToolChain(), Args, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
 
       // Work around Solaris/amd64 ld bug when calling __tls_get_addr directly.
       // However, ld -z relax=transtls is available since Solaris 11.2, but not
       // in Illumos.
-      if (getToolChain().getTriple().getArch() == llvm::Triple::x86_64 &&
+      if (Arch == llvm::Triple::x86_64 &&
           (SA.needsAsanRt() || SA.needsStatsRt() ||
            (SA.needsUbsanRt() && !SA.requiresMinimalRuntime())) &&
           !LinkerIsGnuLd) {
@@ -272,7 +266,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       }
     }
     // Avoid AsanInitInternal cycle, Issue #64126.
-    if (getToolChain().getTriple().isX86() && SA.needsSharedRt() &&
+    if (ToolChain.getTriple().isX86() && SA.needsSharedRt() &&
         SA.needsAsanRt()) {
       CmdArgs.push_back("-z");
       CmdArgs.push_back("now");
@@ -281,17 +275,16 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
+    const char *crtend = nullptr;
     if (Args.hasArg(options::OPT_shared) || IsPIE)
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtendS.o")));
+      crtend = "crtendS.o";
     else
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
-    CmdArgs.push_back(
-        Args.MakeArgString(getToolChain().GetFilePath("crtn.o")));
+      crtend = "crtend.o";
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
   }
 
-  getToolChain().addProfileRTLibs(Args, CmdArgs);
+  ToolChain.addProfileRTLibs(Args, CmdArgs);
 
   const char *Exec = Args.MakeArgString(getLinkerPath(Args));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),

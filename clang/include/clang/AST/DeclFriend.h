@@ -73,6 +73,7 @@ private:
   /// True if this 'friend' declaration is unsupported.  Eventually we
   /// will support every possible friend declaration, but for now we
   /// silently ignore some and set this flag to authorize all access.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UnsupportedFriend : 1;
 
   // The number of "outer" template parameter lists in non-templatic

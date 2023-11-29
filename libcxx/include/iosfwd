@@ -90,6 +90,18 @@ using u8streampos = fpos<char_traits<char8_t>::state_type>; // C++20
 using u16streampos = fpos<char_traits<char16_t>::state_type>;
 using u32streampos = fpos<char_traits<char32_t>::state_type>;
 
+template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT>>
+    class basic_syncbuf;                          // C++20
+
+using syncbuf = basic_syncbuf<char>;              // C++20
+using wsyncbuf = basic_syncbuf<wchar_t>;          // C++20
+
+template <class charT, class traits = char_traits<charT>, class Allocator = allocator<charT>>
+    class basic_osyncstream;                      // C++20
+
+using osyncstream = basic_osyncstream<char>;      // C++20
+using wosyncstream = basic_osyncstream<wchar_t>;  // C++20
+
 }  // std
 
 */
@@ -129,6 +141,26 @@ typedef fpos<mbstate_t>    u8streampos;
 #endif
 typedef fpos<mbstate_t>    u16streampos;
 typedef fpos<mbstate_t>    u32streampos;
+
+#if _LIBCPP_STD_VER >= 20
+
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
+class basic_syncbuf;
+
+using syncbuf  = basic_syncbuf<char>;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wsyncbuf = basic_syncbuf<wchar_t>;
+#endif
+
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT>>
+class basic_osyncstream;
+
+using osyncstream  = basic_osyncstream<char>;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wosyncstream = basic_osyncstream<wchar_t>;
+#endif
+
+#endif // _LIBCPP_STD_VER >=20
 
 // Include other forward declarations here
 template <class _Tp, class _Alloc = allocator<_Tp> >

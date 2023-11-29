@@ -618,6 +618,23 @@ class RegisterCommandsTestCase(TestBase):
         # This has an alternative name according to the ABI.
         self.expect("register info x30", substrs=["Name: lr (x30)"])
 
+    @skipIfXmlSupportMissing
+    @skipUnlessPlatform(["linux"])
+    @skipIf(archs=no_match(["aarch64"]))
+    def test_register_read_fields(self):
+        """Test that when debugging a live process, we see the fields of certain
+        registers."""
+        self.build()
+        self.common_setup()
+
+        # N/Z/C/V bits will always be present, so check only for those.
+        self.expect("register read cpsr", substrs=["= (N = 0, Z = 1, C = 1, V = 0"])
+        self.expect("register read fpsr", substrs=["= (QC = 0, IDC = 0, IXC = 0"])
+        # AHP/DN/FZ/RMode always present, others may vary.
+        self.expect(
+            "register read fpcr", substrs=["= (AHP = 0, DN = 0, FZ = 0, RMode = 0"]
+        )
+
     @skipUnlessPlatform(["linux"])
     @skipIf(archs=no_match(["x86_64"]))
     def test_fs_gs_base(self):

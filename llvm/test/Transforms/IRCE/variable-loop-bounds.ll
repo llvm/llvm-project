@@ -942,7 +942,6 @@ for.inc:                                          ; preds = %for.body, %if.else
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
 
-;; Negative test
 define void @signed_var_imm_dec_eq(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %M) {
 ; CHECK-LABEL: define void @signed_var_imm_dec_eq(
 ; CHECK-SAME: ptr nocapture [[A:%.*]], ptr nocapture readonly [[B:%.*]], ptr nocapture readonly [[C:%.*]], i32 [[M:%.*]]) {
@@ -950,31 +949,108 @@ define void @signed_var_imm_dec_eq(ptr nocapture %a, ptr nocapture readonly %b, 
 ; CHECK-NEXT:    [[CMP14:%.*]] = icmp slt i32 [[M]], 1024
 ; CHECK-NEXT:    br i1 [[CMP14]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[M]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 1024)
+; CHECK-NEXT:    [[EXIT_PRELOOP_AT:%.*]] = add nsw i32 [[SMAX]], -1
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP0]], i32 0)
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = add nsw i32 [[SMAX1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 1024, [[EXIT_PRELOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
+; CHECK:       for.body.preloop.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PRELOOP:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
+; CHECK:       mainloop:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[INDVAR_END:%.*]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR_BODY_PREHEADER3:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       for.body.preheader3:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_INC:%.*]] ], [ 1024, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC:%.*]], [[FOR_INC:%.*]] ], [ [[IV_PRELOOP_COPY:%.*]], [[FOR_BODY_PREHEADER3]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[IV]], 1024
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[IV]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_INC]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_INC]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[MUL]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP5]], [[MUL]]
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[ADD]], [[IF_ELSE]] ], [ [[MUL]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[DEC]] = add nsw i32 [[IV]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], [[M]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[DEC]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MAIN_EXIT_SELECTOR:%.*]], label [[FOR_BODY]]
+; CHECK:       main.exit.selector:
+; CHECK-NEXT:    [[DEC_LCSSA:%.*]] = phi i32 [ [[DEC]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[DEC_LCSSA]], [[M]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MAIN_PSEUDO_EXIT]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       main.pseudo.exit:
+; CHECK-NEXT:    [[IV_COPY:%.*]] = phi i32 [ [[IV_PRELOOP_COPY]], [[MAINLOOP:%.*]] ], [ [[DEC_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END2:%.*]] = phi i32 [ [[INDVAR_END]], [[MAINLOOP]] ], [ [[DEC_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
+; CHECK:       for.body.preloop:
+; CHECK-NEXT:    [[IV_PRELOOP:%.*]] = phi i32 [ [[DEC_PRELOOP:%.*]], [[FOR_INC_PRELOOP:%.*]] ], [ 1024, [[FOR_BODY_PRELOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP1_PRELOOP:%.*]] = icmp slt i32 [[IV_PRELOOP]], 1024
+; CHECK-NEXT:    [[ARRAYIDX_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[IV_PRELOOP]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX_PRELOOP]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[IV_PRELOOP]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX2_PRELOOP]], align 4
+; CHECK-NEXT:    [[MUL_PRELOOP:%.*]] = mul nsw i32 [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[ARRAYIDX3_PRELOOP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[IV_PRELOOP]]
+; CHECK-NEXT:    br i1 [[CMP1_PRELOOP]], label [[FOR_INC_PRELOOP]], label [[IF_ELSE_PRELOOP:%.*]]
+; CHECK:       if.else.preloop:
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX3_PRELOOP]], align 4
+; CHECK-NEXT:    [[ADD_PRELOOP:%.*]] = add nsw i32 [[TMP11]], [[MUL_PRELOOP]]
+; CHECK-NEXT:    br label [[FOR_INC_PRELOOP]]
+; CHECK:       for.inc.preloop:
+; CHECK-NEXT:    [[STOREMERGE_PRELOOP:%.*]] = phi i32 [ [[ADD_PRELOOP]], [[IF_ELSE_PRELOOP]] ], [ [[MUL_PRELOOP]], [[FOR_BODY_PRELOOP]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE_PRELOOP]], ptr [[ARRAYIDX3_PRELOOP]], align 4
+; CHECK-NEXT:    [[DEC_PRELOOP]] = add nsw i32 [[IV_PRELOOP]], -1
+; CHECK-NEXT:    [[CMP_PRELOOP:%.*]] = icmp eq i32 [[DEC_PRELOOP]], [[M]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[DEC_PRELOOP]], [[EXIT_PRELOOP_AT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
+; CHECK-NEXT:    br i1 [[TMP13]], label [[PRELOOP_EXIT_SELECTOR:%.*]], label [[FOR_BODY_PRELOOP]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK:       preloop.exit.selector:
+; CHECK-NEXT:    [[DEC_PRELOOP_LCSSA:%.*]] = phi i32 [ [[DEC_PRELOOP]], [[FOR_INC_PRELOOP]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[DEC_PRELOOP_LCSSA]], [[M]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[PRELOOP_PSEUDO_EXIT]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       preloop.pseudo.exit:
+; CHECK-NEXT:    [[IV_PRELOOP_COPY]] = phi i32 [ 1024, [[FOR_BODY_PREHEADER]] ], [ [[DEC_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END]] = phi i32 [ 1024, [[FOR_BODY_PREHEADER]] ], [ [[DEC_PRELOOP_LCSSA]], [[PRELOOP_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    br label [[MAINLOOP]]
+; CHECK:       postloop:
+; CHECK-NEXT:    br label [[FOR_BODY_POSTLOOP:%.*]]
+; CHECK:       for.body.postloop:
+; CHECK-NEXT:    [[IV_POSTLOOP:%.*]] = phi i32 [ [[DEC_POSTLOOP:%.*]], [[FOR_INC_POSTLOOP:%.*]] ], [ [[IV_COPY]], [[POSTLOOP]] ]
+; CHECK-NEXT:    [[CMP1_POSTLOOP:%.*]] = icmp slt i32 [[IV_POSTLOOP]], 1024
+; CHECK-NEXT:    [[ARRAYIDX_POSTLOOP:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[IV_POSTLOOP]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[ARRAYIDX_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2_POSTLOOP:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[IV_POSTLOOP]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX2_POSTLOOP]], align 4
+; CHECK-NEXT:    [[MUL_POSTLOOP:%.*]] = mul nsw i32 [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[ARRAYIDX3_POSTLOOP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[IV_POSTLOOP]]
+; CHECK-NEXT:    br i1 [[CMP1_POSTLOOP]], label [[FOR_INC_POSTLOOP]], label [[IF_ELSE_POSTLOOP:%.*]]
+; CHECK:       if.else.postloop:
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX3_POSTLOOP]], align 4
+; CHECK-NEXT:    [[ADD_POSTLOOP:%.*]] = add nsw i32 [[TMP17]], [[MUL_POSTLOOP]]
+; CHECK-NEXT:    br label [[FOR_INC_POSTLOOP]]
+; CHECK:       for.inc.postloop:
+; CHECK-NEXT:    [[STOREMERGE_POSTLOOP:%.*]] = phi i32 [ [[ADD_POSTLOOP]], [[IF_ELSE_POSTLOOP]] ], [ [[MUL_POSTLOOP]], [[FOR_BODY_POSTLOOP]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE_POSTLOOP]], ptr [[ARRAYIDX3_POSTLOOP]], align 4
+; CHECK-NEXT:    [[DEC_POSTLOOP]] = add nsw i32 [[IV_POSTLOOP]], -1
+; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp eq i32 [[DEC_POSTLOOP]], [[M]]
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_POSTLOOP]], !llvm.loop [[LOOP16:![0-9]+]], !loop_constrainer.loop.clone !5
 ;
 entry:
   %cmp14 = icmp slt i32 %M, 1024

@@ -257,7 +257,12 @@ public:
       // initialize the state of each basic block differently.
       return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
     if (All.size() == 1)
-      return Owned.empty() ? All.front()->fork() : std::move(Owned.front());
+      // Join the environment with itself so that we discard the entries from
+      // `ExprToLoc` and `ExprToVal`.
+      // FIXME: We could consider writing special-case code for this that only
+      // does the discarding, but it's not clear if this is worth it.
+      return {All[0]->Lattice,
+              Environment::join(All[0]->Env, All[0]->Env, AC.Analysis)};
 
     auto Result = join(*All[0], *All[1]);
     for (unsigned I = 2; I < All.size(); ++I)

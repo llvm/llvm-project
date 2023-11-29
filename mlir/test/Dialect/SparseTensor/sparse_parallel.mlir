@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -sparsification="parallelization-strategy=none" | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="parallelization-strategy=none" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-PAR0
-// RUN: mlir-opt %s -sparsification="parallelization-strategy=dense-outer-loop" | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="parallelization-strategy=dense-outer-loop" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-PAR1
-// RUN: mlir-opt %s -sparsification="parallelization-strategy=any-storage-outer-loop" | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="parallelization-strategy=any-storage-outer-loop" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-PAR2
-// RUN: mlir-opt %s -sparsification="parallelization-strategy=dense-any-loop" | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="parallelization-strategy=dense-any-loop" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-PAR3
-// RUN: mlir-opt %s -sparsification="parallelization-strategy=any-storage-any-loop" | \
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification="parallelization-strategy=any-storage-any-loop" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-PAR4
 
 #DenseMatrix = #sparse_tensor.encoding<{

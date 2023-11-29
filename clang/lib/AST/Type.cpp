@@ -2475,9 +2475,10 @@ QualType Type::getSveEltType(const ASTContext &Ctx) const {
 bool Type::isRVVVLSBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
     switch (BT->getKind()) {
-#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, IsFP) \
-    case BuiltinType::Id: \
-      return NF == 1;
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP, IsBF)                                            \
+  case BuiltinType::Id:                                                        \
+    return NF == 1;
 #include "clang/Basic/RISCVVTypes.def"
     default:
       return false;
@@ -2647,6 +2648,8 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
   QualType BaseElementType = Context.getBaseElementType(*this);
 
   if (BaseElementType->isIncompleteType()) {
+    return false;
+  } else if (!BaseElementType->isObjectType()) {
     return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();

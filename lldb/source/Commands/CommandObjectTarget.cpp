@@ -12,6 +12,7 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
@@ -35,7 +36,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -436,8 +436,7 @@ protected:
           error = process_sp->LoadCore();
 
           if (error.Fail()) {
-            result.AppendError(
-                error.AsCString("can't find plug-in for core file"));
+            result.AppendError(error.AsCString("unknown core file format"));
             return;
           } else {
             result.AppendMessageWithFormatv(
@@ -447,9 +446,8 @@ protected:
             on_error.release();
           }
         } else {
-          result.AppendErrorWithFormatv(
-              "Unable to find process plug-in for core file '{0}'\n",
-              core_file.GetPath());
+          result.AppendErrorWithFormatv("Unknown core file format '{0}'\n",
+                                        core_file.GetPath());
         }
       } else {
         result.AppendMessageWithFormat(
@@ -2801,7 +2799,7 @@ protected:
           module_spec.GetSymbolFileSpec() =
               m_symbol_file.GetOptionValue().GetCurrentValue();
         Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
           ModuleSP module_sp(
               target->GetOrCreateModule(module_spec, true /* notify */));
           if (module_sp) {
@@ -4497,7 +4495,7 @@ protected:
   bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                    CommandReturnObject &result, bool &flush) {
     Status error;
-    if (Symbols::DownloadObjectAndSymbolFile(module_spec, error)) {
+    if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error)) {
       if (module_spec.GetSymbolFileSpec())
         return AddModuleSymbols(m_exe_ctx.GetTargetPtr(), module_spec, flush,
                                 result);

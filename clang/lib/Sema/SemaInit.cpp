@@ -93,7 +93,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   };
 
   switch (SL->getKind()) {
-  case StringLiteral::UTF8:
+  case StringLiteralKind::UTF8:
     // char8_t array can be initialized with a UTF-8 string.
     // - C++20 [dcl.init.string] (DR)
     //   Additionally, an array of char or unsigned char may be initialized
@@ -103,11 +103,11 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
          IsCharOrUnsignedChar(ElemTy.getCanonicalType())))
       return SIF_None;
     [[fallthrough]];
-  case StringLiteral::Ordinary:
+  case StringLiteralKind::Ordinary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
-      return (SL->getKind() == StringLiteral::UTF8 &&
+      return (SL->getKind() == StringLiteralKind::UTF8 &&
               Context.getLangOpts().Char8)
                  ? SIF_UTF8StringIntoPlainChar
                  : SIF_None;
@@ -121,7 +121,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
   // version of wchar_t, char16_t, or char32_t may be initialized by a wide
   // string literal with the corresponding encoding prefix (L, u, or U,
   // respectively), optionally enclosed in braces.
-  case StringLiteral::UTF16:
+  case StringLiteralKind::UTF16:
     if (Context.typesAreCompatible(Context.Char16Ty, ElemTy))
       return SIF_None;
     if (ElemTy->isCharType() || ElemTy->isChar8Type())
@@ -129,7 +129,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
-  case StringLiteral::UTF32:
+  case StringLiteralKind::UTF32:
     if (Context.typesAreCompatible(Context.Char32Ty, ElemTy))
       return SIF_None;
     if (ElemTy->isCharType() || ElemTy->isChar8Type())
@@ -137,7 +137,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
-  case StringLiteral::Wide:
+  case StringLiteralKind::Wide:
     if (Context.typesAreCompatible(Context.getWideCharType(), ElemTy))
       return SIF_None;
     if (ElemTy->isCharType() || ElemTy->isChar8Type())
@@ -145,7 +145,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
-  case StringLiteral::Unevaluated:
+  case StringLiteralKind::Unevaluated:
     assert(false && "Unevaluated string literal in initialization");
     break;
   }
@@ -6880,15 +6880,12 @@ static ExprResult CopyObject(Sema &S,
           CurInitExpr->getType());
 
   // Actually perform the constructor call.
-  CurInit = S.BuildCXXConstructExpr(Loc, T, Best->FoundDecl, Constructor,
-                                    Elidable,
-                                    ConstructorArgs,
-                                    HadMultipleCandidates,
-                                    /*ListInit*/ false,
-                                    /*StdInitListInit*/ false,
-                                    /*ZeroInit*/ false,
-                                    CXXConstructExpr::CK_Complete,
-                                    SourceRange());
+  CurInit = S.BuildCXXConstructExpr(
+      Loc, T, Best->FoundDecl, Constructor, Elidable, ConstructorArgs,
+      HadMultipleCandidates,
+      /*ListInit*/ false,
+      /*StdInitListInit*/ false,
+      /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
 
   // If we're supposed to bind temporaries, do so.
   if (!CurInit.isInvalid() && shouldBindAsTemporary(Entity))
@@ -7082,15 +7079,14 @@ PerformConstructorInitialization(Sema &S,
             ConstructorInitRequiresZeroInit),
         CalleeDecl);
   } else {
-    CXXConstructExpr::ConstructionKind ConstructKind =
-      CXXConstructExpr::CK_Complete;
+    CXXConstructionKind ConstructKind = CXXConstructionKind::Complete;
 
     if (Entity.getKind() == InitializedEntity::EK_Base) {
-      ConstructKind = Entity.getBaseSpecifier()->isVirtual() ?
-        CXXConstructExpr::CK_VirtualBase :
-        CXXConstructExpr::CK_NonVirtualBase;
+      ConstructKind = Entity.getBaseSpecifier()->isVirtual()
+                          ? CXXConstructionKind::VirtualBase
+                          : CXXConstructionKind::NonVirtualBase;
     } else if (Entity.getKind() == InitializedEntity::EK_Delegating) {
-      ConstructKind = CXXConstructExpr::CK_Delegating;
+      ConstructKind = CXXConstructionKind::Delegating;
     }
 
     // Only get the parenthesis or brace range if it is a list initialization or
@@ -7584,10 +7580,15 @@ static void visitLifetimeBoundArguments(IndirectLocalPath &Path, Expr *Call,
   if (ObjectArg && implicitObjectParamIsLifetimeBound(Callee))
     VisitLifetimeBoundArg(Callee, ObjectArg);
 
+  bool CheckCoroCall = false;
+  if (const auto *RD = Callee->getReturnType()->getAsRecordDecl()) {
+    CheckCoroCall = RD->hasAttr<CoroLifetimeBoundAttr>() &&
+                    RD->hasAttr<CoroReturnTypeAttr>();
+  }
   for (unsigned I = 0,
                 N = std::min<unsigned>(Callee->getNumParams(), Args.size());
        I != N; ++I) {
-    if (Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+    if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
       VisitLifetimeBoundArg(Callee->getParamDecl(I), Args[I]);
   }
 }
@@ -8871,15 +8872,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return ExprError();
 
         // Build an expression that constructs a temporary.
-        CurInit = S.BuildCXXConstructExpr(Loc, Step->Type,
-                                          FoundFn, Constructor,
-                                          ConstructorArgs,
-                                          HadMultipleCandidates,
-                                          /*ListInit*/ false,
-                                          /*StdInitListInit*/ false,
-                                          /*ZeroInit*/ false,
-                                          CXXConstructExpr::CK_Complete,
-                                          SourceRange());
+        CurInit = S.BuildCXXConstructExpr(
+            Loc, Step->Type, FoundFn, Constructor, ConstructorArgs,
+            HadMultipleCandidates,
+            /*ListInit*/ false,
+            /*StdInitListInit*/ false,
+            /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
         if (CurInit.isInvalid())
           return ExprError();
 
@@ -10630,7 +10628,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   bool AllowExplicit = !Kind.isCopyInit() || ListInit;
 
-  // Return true is the candidate is added successfully, false otherwise.
+  // Return true if the candidate is added successfully, false otherwise.
   auto addDeductionCandidate = [&](FunctionTemplateDecl *TD,
                                    CXXDeductionGuideDecl *GD,
                                    DeclAccessPair FoundDecl,

@@ -14,7 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
-#include "Environment.h"
+#include "Shared/Environment.h"
+#include "Shared/SourceInfo.h"
 
 #include <cstdint>
 #include <deque>
@@ -22,8 +23,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <type_traits>
-
-#include <SourceInfo.h>
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -450,7 +449,8 @@ void __tgt_set_info_flag(uint32_t);
 int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
-                                 void *VAddr, bool IsRecord, bool SaveOutput);
+                                 void *VAddr, bool IsRecord, bool SaveOutput,
+                                 uint64_t &ReqPtrArgOffset);
 
 #ifdef __cplusplus
 }

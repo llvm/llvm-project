@@ -1204,15 +1204,15 @@ define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[SMAX]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 65532
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 32764
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
-; CHECK-NEXT:    [[IND_END:%.*]] = or i16 [[DOTCAST]], 1
+; CHECK-NEXT:    [[IND_END:%.*]] = or disjoint i16 [[DOTCAST]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = or i16 [[DOTCAST1]], 1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = or disjoint i16 [[DOTCAST1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 4
@@ -1282,15 +1282,15 @@ define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[SMAX]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 65532
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 32764
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
-; CHECK-NEXT:    [[IND_END:%.*]] = or i16 [[DOTCAST]], 1
+; CHECK-NEXT:    [[IND_END:%.*]] = or disjoint i16 [[DOTCAST]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = or i16 [[DOTCAST1]], 1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = or disjoint i16 [[DOTCAST1]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 4

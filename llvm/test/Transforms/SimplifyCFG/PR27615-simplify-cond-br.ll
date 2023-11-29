@@ -1,6 +1,9 @@
 ; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -strip-debug < %s | FileCheck %s
 ; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -strip-debug < %s --try-experimental-debuginfo-iterators | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s --try-experimental-debuginfo-iterators | FileCheck %s
+
 ; Test case for BUG-27615
 ; Test that simplify cond branch produce same result for debug and non-debug builds
 ; CHECK: select i1 %or.cond, i32 -1, i32 5

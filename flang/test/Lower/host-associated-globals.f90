@@ -2,7 +2,7 @@
 ! A tuple function argument should not be created for associated globals, and
 ! instead globals should be instantiated with a fir.address_of inside the
 ! contained procedures.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module test_mod_used_in_host
   integer :: i, j_in_equiv

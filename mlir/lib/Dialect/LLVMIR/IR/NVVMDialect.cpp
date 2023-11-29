@@ -76,8 +76,18 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  if (getCoordinates().size() > 5)
-    return emitError("Maximum 5 coordinates and dimension is supported.");
+  if (getCoordinates().empty() || getCoordinates().size() > 5)
+    return emitError("expects coordinates between 1 to 5 dimension");
+
+  // Check for im2col mode
+  if (!getIm2colOffsets().empty()) {
+    if (getCoordinates().size() < 3)
+      return emitError(
+          "to use im2col mode, the tensor has to be at least 3-dimensional");
+    if (getCoordinates().size() != (getIm2colOffsets().size() + 2))
+      return emitError(
+          "im2col offsets must be 2 less than number of coordinates");
+  }
   return success();
 }
 
@@ -995,6 +1005,14 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
+}
+
+LogicalResult NVVM::SetMaxRegisterOp::verify() {
+  if (getRegCount() % 8)
+    return emitOpError("new register size must be multiple of 8");
+  if (getRegCount() < 24 || getRegCount() > 256)
+    return emitOpError("new register size must be in between 24 to 256");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

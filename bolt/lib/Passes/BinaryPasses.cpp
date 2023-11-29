@@ -317,38 +317,46 @@ void NormalizeCFG::runOnFunctions(BinaryContext &BC) {
 }
 
 void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
-  if (!Function.getLayout().block_empty()) {
-    unsigned Count;
-    uint64_t Bytes;
-    Function.markUnreachableBlocks();
-    LLVM_DEBUG({
-      for (BinaryBasicBlock &BB : Function) {
-        if (!BB.isValid()) {
-          dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
-                 << " in function " << Function << "\n";
-          Function.dump();
-        }
+  BinaryContext &BC = Function.getBinaryContext();
+  unsigned Count;
+  uint64_t Bytes;
+  Function.markUnreachableBlocks();
+  LLVM_DEBUG({
+    for (BinaryBasicBlock &BB : Function) {
+      if (!BB.isValid()) {
+        dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
+               << " in function " << Function << "\n";
+        Function.dump();
       }
-    });
-    std::tie(Count, Bytes) = Function.eraseInvalidBBs();
-    DeletedBlocks += Count;
-    DeletedBytes += Bytes;
-    if (Count) {
-      Modified.insert(&Function);
-      if (opts::Verbosity > 0)
-        outs() << "BOLT-INFO: removed " << Count
-               << " dead basic block(s) accounting for " << Bytes
-               << " bytes in function " << Function << '\n';
     }
+  });
+  BinaryContext::IndependentCodeEmitter Emitter =
+      BC.createIndependentMCCodeEmitter();
+  std::tie(Count, Bytes) = Function.eraseInvalidBBs(Emitter.MCE.get());
+  DeletedBlocks += Count;
+  DeletedBytes += Bytes;
+  if (Count) {
+    auto L = BC.scopeLock();
+    Modified.insert(&Function);
+    if (opts::Verbosity > 0)
+      outs() << "BOLT-INFO: removed " << Count
+             << " dead basic block(s) accounting for " << Bytes
+             << " bytes in function " << Function << '\n';
   }
 }
 
 void EliminateUnreachableBlocks::runOnFunctions(BinaryContext &BC) {
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
-    if (shouldOptimize(Function))
-      runOnFunction(Function);
-  }
+  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+    runOnFunction(BF);
+  };
+
+  ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
+    return !shouldOptimize(BF) || BF.getLayout().block_empty();
+  };
+
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_CONSTANT, WorkFun,
+      SkipPredicate, "elimininate-unreachable");
 
   if (DeletedBlocks)
     outs() << "BOLT-INFO: UCE removed " << DeletedBlocks << " blocks and "
@@ -574,65 +582,50 @@ bool CheckLargeFunctions::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
-  std::vector<std::pair<MCInst *, uint32_t>> PreservedOffsetAnnotations;
-  std::vector<std::pair<MCInst *, MCSymbol *>> PreservedLabelAnnotations;
-
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &BF = It.second;
-
-    for (FunctionFragment &FF : BF.getLayout().fragments()) {
+  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+    for (FunctionFragment &FF : BF->getLayout().fragments()) {
+      // Reset at the start of the new fragment.
       int64_t CurrentGnuArgsSize = 0;
 
       for (BinaryBasicBlock *const BB : FF) {
-        // First convert GnuArgsSize annotations into CFIs. This may change
-        // instr pointers, so do it before recording ptrs for preserved
-        // annotations
-        if (BF.usesGnuArgsSize()) {
-          for (auto II = BB->begin(); II != BB->end(); ++II) {
-            if (!BC.MIB->isInvoke(*II))
-              continue;
+        for (auto II = BB->begin(); II != BB->end(); ++II) {
+
+          // Convert GnuArgsSize annotations into CFIs.
+          if (BF->usesGnuArgsSize() && BC.MIB->isInvoke(*II)) {
             const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
             assert(NewGnuArgsSize >= 0 &&
-                   "expected non-negative GNU_args_size");
+                   "Expected non-negative GNU_args_size.");
             if (NewGnuArgsSize != CurrentGnuArgsSize) {
-              auto InsertII = BF.addCFIInstruction(
+              auto InsertII = BF->addCFIInstruction(
                   BB, II,
                   MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
               CurrentGnuArgsSize = NewGnuArgsSize;
               II = std::next(InsertII);
             }
           }
-        }
 
-        // Now record preserved annotations separately and then strip
-        // annotations.
-        for (auto II = BB->begin(); II != BB->end(); ++II) {
-          if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
-            PreservedOffsetAnnotations.emplace_back(&(*II),
-                                                    *BC.MIB->getOffset(*II));
-          if (auto Label = BC.MIB->getLabel(*II))
-            PreservedLabelAnnotations.emplace_back(&*II, *Label);
+          // Preserve selected annotations and strip the rest.
+          std::optional<uint32_t> Offset = BF->requiresAddressTranslation()
+                                               ? BC.MIB->getOffset(*II)
+                                               : std::nullopt;
+          std::optional<uint32_t> Size = BC.MIB->getSize(*II);
+          MCSymbol *Label = BC.MIB->getLabel(*II);
+
           BC.MIB->stripAnnotations(*II);
+
+          if (Offset)
+            BC.MIB->setOffset(*II, *Offset);
+          if (Size)
+            BC.MIB->setSize(*II, *Size);
+          if (Label)
+            BC.MIB->setLabel(*II, Label);
         }
       }
     }
   }
-  for (BinaryFunction *BF : BC.getInjectedBinaryFunctions())
-    for (BinaryBasicBlock &BB : *BF)
-      for (MCInst &Instruction : BB) {
-        if (auto Label = BC.MIB->getLabel(Instruction))
-          PreservedLabelAnnotations.emplace_back(&Instruction, *Label);
-        BC.MIB->stripAnnotations(Instruction);
-      }
 
   // Release all memory taken by annotations
   BC.MIB->freeAnnotations();
-
-  // Reinsert preserved annotations we need during code emission.
-  for (const std::pair<MCInst *, uint32_t> &Item : PreservedOffsetAnnotations)
-    BC.MIB->setOffset(*Item.first, Item.second);
-  for (auto [Instr, Label] : PreservedLabelAnnotations)
-    BC.MIB->setLabel(*Instr, Label);
 }
 
 // Check for dirty state in MCSymbol objects that might be a consequence

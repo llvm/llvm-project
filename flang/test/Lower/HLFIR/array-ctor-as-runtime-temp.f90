@@ -18,7 +18,7 @@ end subroutine
 ! CHECK:           %[[VAL_7:.*]] = arith.constant false
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<10xi64>>) -> !fir.llvm_ptr<i8>
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 80 : i32
-! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 7 : i32
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>

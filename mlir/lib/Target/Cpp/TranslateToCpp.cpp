@@ -412,25 +412,27 @@ static LogicalResult printOperation(CppEmitter &emitter, func::CallOp callOp) {
   return success();
 }
 
-static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::CallOpaqueOp callOpaqueOp) {
   raw_ostream &os = emitter.ostream();
-  Operation &op = *callOp.getOperation();
+  Operation &op = *callOpaqueOp.getOperation();
 
   if (failed(emitter.emitAssignPrefix(op)))
     return failure();
-  os << callOp.getCallee();
+  os << callOpaqueOp.getCallee();
 
   auto emitArgs = [&](Attribute attr) -> LogicalResult {
     if (auto t = dyn_cast<IntegerAttr>(attr)) {
       // Index attributes are treated specially as operand index.
       if (t.getType().isIndex()) {
         int64_t idx = t.getInt();
-        if ((idx < 0) || (idx >= op.getNumOperands()))
-          return op.emitOpError("invalid operand index");
-        if (!emitter.hasValueInScope(op.getOperand(idx)))
+        Value operand = op.getOperand(idx);
+        auto literalDef =
+            dyn_cast_if_present<LiteralOp>(operand.getDefiningOp());
+        if (!literalDef && !emitter.hasValueInScope(operand))
           return op.emitOpError("operand ")
                  << idx << "'s value not defined in scope";
-        os << emitter.getOrCreateName(op.getOperand(idx));
+        os << emitter.getOrCreateName(operand);
         return success();
       }
     }
@@ -440,10 +442,10 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
     return success();
   };
 
-  if (callOp.getTemplateArgs()) {
+  if (callOpaqueOp.getTemplateArgs()) {
     os << "<";
-    if (failed(
-            interleaveCommaWithError(*callOp.getTemplateArgs(), os, emitArgs)))
+    if (failed(interleaveCommaWithError(*callOpaqueOp.getTemplateArgs(), os,
+                                        emitArgs)))
       return failure();
     os << ">";
   }
@@ -451,8 +453,8 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
   os << "(";
 
   LogicalResult emittedArgs =
-      callOp.getArgs()
-          ? interleaveCommaWithError(*callOp.getArgs(), os, emitArgs)
+      callOpaqueOp.getArgs()
+          ? interleaveCommaWithError(*callOpaqueOp.getArgs(), os, emitArgs)
           : emitter.emitOperands(op);
   if (failed(emittedArgs))
     return failure();
@@ -637,6 +639,8 @@ static LogicalResult printOperation(CppEmitter &emitter,
     // regions.
     WalkResult result =
         functionOp.walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+          if (isa<emitc::LiteralOp>(op))
+            return WalkResult::skip();
           for (OpResult result : op->getResults()) {
             if (failed(emitter.emitVariableDeclaration(
                     result, /*trailingSemicolon=*/true))) {
@@ -839,7 +843,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
 
 LogicalResult CppEmitter::emitOperands(Operation &op) {
   auto emitOperandName = [&](Value result) -> LogicalResult {
-    if (!hasValueInScope(result))
+    auto literalDef = dyn_cast_if_present<LiteralOp>(result.getDefiningOp());
+    if (!literalDef && !hasValueInScope(result))
       return op.emitOpError() << "operand value not in scope";
     os << getOrCreateName(result);
     return success();
@@ -945,10 +950,11 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp, emitc::CallOp,
-                emitc::CastOp, emitc::CmpOp, emitc::ConstantOp, emitc::DivOp,
-                emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::MulOp,
-                emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
+                emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
+                emitc::ConstantOp, emitc::DivOp, emitc::ForOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::MulOp, emitc::RemOp, emitc::SubOp,
+                emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

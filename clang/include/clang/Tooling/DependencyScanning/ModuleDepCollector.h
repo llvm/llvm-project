@@ -16,6 +16,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringSet.h"
@@ -211,8 +212,9 @@ public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
-                     CompilerInvocation OriginalCI, bool OptimizeArgs,
-                     bool EagerLoadModules, bool IsStdModuleP1689Format);
+                     CompilerInvocation OriginalCI,
+                     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
+                     bool IsStdModuleP1689Format);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -254,7 +256,7 @@ private:
   /// for each individual module.
   CowCompilerInvocation CommonInvocation;
   /// Whether to optimize the modules' command-line arguments.
-  bool OptimizeArgs;
+  ScanningOptimizations OptimizeArgs;
   /// Whether to set up command-lines to load PCM files eagerly.
   bool EagerLoadModules;
   /// If we're generating dependency output in P1689 format

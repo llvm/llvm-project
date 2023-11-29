@@ -13,7 +13,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb_private;

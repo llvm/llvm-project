@@ -158,7 +158,8 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
                      // it was omitted by the patch that added
                      // ICK_Zero_Queue_Conversion
     ICR_C_Conversion,
-    ICR_C_Conversion_Extension
+    ICR_C_Conversion_Extension,
+    ICR_Conversion,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -197,7 +198,8 @@ static const char* GetImplicitConversionName(ImplicitConversionKind Kind) {
     "OpenCL Zero Event Conversion",
     "OpenCL Zero Queue Conversion",
     "C specific type conversion",
-    "Incompatible pointer conversion"
+    "Incompatible pointer conversion",
+    "Fixed point conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -2189,6 +2191,9 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              From->isIntegerConstantExpr(S.getASTContext())) {
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType;
+  } else if (ToType->isFixedPointType() || FromType->isFixedPointType()) {
+    SCS.Second = ICK_Fixed_Point_Conversion;
+    FromType = ToType;
   } else {
     // No second conversion required.
     SCS.Second = ICK_Identity;
@@ -3232,6 +3237,28 @@ bool Sema::FunctionParamTypesAreEqual(const FunctionProtoType *OldType,
                                       unsigned *ArgPos, bool Reversed) {
   return FunctionParamTypesAreEqual(OldType->param_types(),
                                     NewType->param_types(), ArgPos, Reversed);
+}
+
+bool Sema::FunctionNonObjectParamTypesAreEqual(const FunctionDecl *OldFunction,
+                                               const FunctionDecl *NewFunction,
+                                               unsigned *ArgPos,
+                                               bool Reversed) {
+
+  if (OldFunction->getNumNonObjectParams() !=
+      NewFunction->getNumNonObjectParams())
+    return false;
+
+  unsigned OldIgnore =
+      unsigned(OldFunction->hasCXXExplicitFunctionObjectParameter());
+  unsigned NewIgnore =
+      unsigned(NewFunction->hasCXXExplicitFunctionObjectParameter());
+
+  auto *OldPT = cast<FunctionProtoType>(OldFunction->getFunctionType());
+  auto *NewPT = cast<FunctionProtoType>(NewFunction->getFunctionType());
+
+  return FunctionParamTypesAreEqual(OldPT->param_types().slice(OldIgnore),
+                                    NewPT->param_types().slice(NewIgnore),
+                                    ArgPos, Reversed);
 }
 
 /// CheckPointerConversion - Check the pointer conversion from the
@@ -5947,6 +5974,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Zero_Event_Conversion:
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
+  case ICK_Fixed_Point_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
@@ -10115,22 +10143,41 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
 
 /// We're allowed to use constraints partial ordering only if the candidates
 /// have the same parameter types:
-/// [over.match.best]p2.6
-/// F1 and F2 are non-template functions with the same parameter-type-lists,
-/// and F1 is more constrained than F2 [...]
+/// [over.match.best.general]p2.6
+/// F1 and F2 are non-template functions with the same
+/// non-object-parameter-type-lists, and F1 is more constrained than F2 [...]
 static bool sameFunctionParameterTypeLists(Sema &S,
-                                          const OverloadCandidate &Cand1,
-                                          const OverloadCandidate &Cand2) {
-  if (Cand1.Function && Cand2.Function) {
-    auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());
-    auto *PT2 = cast<FunctionProtoType>(Cand2.Function->getFunctionType());
-    if (PT1->getNumParams() == PT2->getNumParams() &&
-        PT1->isVariadic() == PT2->isVariadic() &&
-        S.FunctionParamTypesAreEqual(PT1, PT2, nullptr,
-                                     Cand1.isReversed() ^ Cand2.isReversed()))
-      return true;
+                                           const OverloadCandidate &Cand1,
+                                           const OverloadCandidate &Cand2) {
+  if (!Cand1.Function || !Cand2.Function)
+    return false;
+
+  FunctionDecl *Fn1 = Cand1.Function;
+  FunctionDecl *Fn2 = Cand2.Function;
+
+  if (Fn1->isVariadic() != Fn1->isVariadic())
+    return false;
+
+  if (!S.FunctionNonObjectParamTypesAreEqual(
+          Fn1, Fn2, nullptr, Cand1.isReversed() ^ Cand2.isReversed()))
+    return false;
+
+  auto *Mem1 = dyn_cast<CXXMethodDecl>(Fn1);
+  auto *Mem2 = dyn_cast<CXXMethodDecl>(Fn2);
+  if (Mem1 && Mem2) {
+    // if they are member functions, both are direct members of the same class,
+    // and
+    if (Mem1->getParent() != Mem2->getParent())
+      return false;
+    // if both are non-static member functions, they have the same types for
+    // their object parameters
+    if (Mem1->isInstance() && Mem2->isInstance() &&
+        !S.getASTContext().hasSameType(
+            Mem1->getFunctionObjectParameterReferenceType(),
+            Mem1->getFunctionObjectParameterReferenceType()))
+      return false;
   }
-  return false;
+  return true;
 }
 
 /// isBetterOverloadCandidate - Determines whether the first overload
@@ -12107,9 +12154,12 @@ struct CompareOverloadCandidatesForDisplay {
         if (RFailureKind != ovl_fail_bad_deduction)
           return true;
 
-        if (L->DeductionFailure.Result != R->DeductionFailure.Result)
-          return RankDeductionFailure(L->DeductionFailure)
-               < RankDeductionFailure(R->DeductionFailure);
+        if (L->DeductionFailure.Result != R->DeductionFailure.Result) {
+          unsigned LRank = RankDeductionFailure(L->DeductionFailure);
+          unsigned RRank = RankDeductionFailure(R->DeductionFailure);
+          if (LRank != RRank)
+            return LRank < RRank;
+        }
       } else if (RFailureKind == ovl_fail_bad_deduction)
         return false;
 

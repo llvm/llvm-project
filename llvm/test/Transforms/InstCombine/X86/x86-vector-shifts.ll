@@ -2772,8 +2772,8 @@ define <2 x i64> @sse2_psll_q_128_masked_bitcast(<2 x i64> %v, <2 x i64> %a) {
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <4 x i32> [[M]], i32 0, i64 1
 ; CHECK-NEXT:    [[SHAMT:%.*]] = bitcast <4 x i32> [[I]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[SHAMT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[V:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i64> [[V:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %b = bitcast <2 x i64> %a to <4 x i32>
   %m = and <4 x i32> %b, <i32 31, i32 poison, i32 poison, i32 poison>
@@ -2856,7 +2856,7 @@ define <8 x i32> @avx2_psrai_d_256_masked(<8 x i32> %v, i32 %a) {
 define <8 x i64> @avx512_psrai_q_512_masked(<8 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx512_psrai_q_512_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <8 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2883,7 +2883,7 @@ define <4 x i32> @sse2_psrli_d_128_masked(<4 x i32> %v, i32 %a) {
 define <4 x i64> @avx2_psrli_q_256_masked(<4 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx2_psrli_q_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2911,7 +2911,7 @@ define <32 x i16> @avx512_psrli_w_512_masked(<32 x i16> %v, i32 %a) {
 define <2 x i64> @sse2_pslli_q_128_masked(<2 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @sse2_pslli_q_128_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[V:%.*]], [[DOTSPLAT]]

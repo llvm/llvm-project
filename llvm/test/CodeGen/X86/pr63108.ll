@@ -15,17 +15,17 @@ define i32 @PR63108() {
 ; SSE-NEXT:    jmp .LBB0_5
 ; SSE-NEXT:  .LBB0_2: # %vector.body.preheader
 ; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [57339,0,0,0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [57339,0,0,0]
 ; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    .p2align 4, 0x90
 ; SSE-NEXT:  .LBB0_3: # %vector.body
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
-; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    testb %al, %al
-; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    jne .LBB0_3
 ; SSE-NEXT:  # %bb.4: # %middle.block
-; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE-NEXT:    pxor %xmm0, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]

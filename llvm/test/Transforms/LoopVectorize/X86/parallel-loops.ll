@@ -71,9 +71,9 @@ define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4, !llvm.access.group [[ACC_GRP0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
@@ -100,7 +100,7 @@ define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable 
 ; CHECK-NEXT:    store i32 [[TMP23]], ptr [[TMP19]], align 4, !llvm.access.group [[ACC_GRP1]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP24]], ptr [[TMP20]], align 4, !llvm.access.group [[ACC_GRP1]]
-; CHECK-NEXT:    [[TMP25:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP25:%.*]] = or disjoint i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP26]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD1]], ptr [[TMP5]], align 4, !llvm.access.group [[ACC_GRP0]]

@@ -353,6 +353,8 @@ public:
           nullptr,
       SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file =
           nullptr,
+      SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
+          nullptr,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
@@ -365,6 +367,11 @@ public:
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
                              const FileSpecList &default_search_paths);
+
+  static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                          Status &error,
+                                          bool force_lookup = true,
+                                          bool copy_executable = true);
 
   static FileSpec FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                          const UUID *uuid,

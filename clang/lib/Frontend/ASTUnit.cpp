@@ -790,10 +790,9 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     const std::string &Filename, const PCHContainerReader &PCHContainerRdr,
     WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts,
-    std::shared_ptr<HeaderSearchOptions> HSOpts, bool UseDebugInfo,
-    bool OnlyLocalDecls, CaptureDiagsKind CaptureDiagnostics,
-    bool AllowASTWithCompilerErrors, bool UserFilesAreVolatile,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    std::shared_ptr<HeaderSearchOptions> HSOpts, bool OnlyLocalDecls,
+    CaptureDiagsKind CaptureDiagnostics, bool AllowASTWithCompilerErrors,
+    bool UserFilesAreVolatile, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
 
   // Recover resources if we crash before exiting this method.
@@ -883,7 +882,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   PP.setCounterValue(Counter);
 
   Module *M = HeaderInfo.lookupModule(AST->getLangOpts().CurrentModule);
-  if (M && AST->getLangOpts().isCompilingModule() && M->isModulePurview())
+  if (M && AST->getLangOpts().isCompilingModule() && M->isNamedModule())
     AST->Ctx->setCurrentNamedModule(M);
 
   // Create an AST consumer, even though it isn't used.

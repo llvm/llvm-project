@@ -1,5 +1,5 @@
 ! Test lowering of pointer components
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module pcomp
   implicit none

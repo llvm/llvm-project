@@ -15,11 +15,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// GCC does not understand __has_feature.
-#if !defined(__has_feature)
-#define __has_feature(x) 0
-#endif
-
 // Windows allows a user to set their default calling convention, but we always
 // use __cdecl
 #ifdef _WIN32
@@ -298,7 +293,7 @@ void SANITIZER_CDECL __sanitizer_symbolize_global(void *data_ptr,
 #define __sanitizer_return_address()                                           \
   __builtin_extract_return_addr(__builtin_return_address(0))
 #else
-void *SANITIZER_CDECL _ReturnAddress(void);
+void *_ReturnAddress(void);
 #pragma intrinsic(_ReturnAddress)
 #define __sanitizer_return_address() _ReturnAddress()
 #endif

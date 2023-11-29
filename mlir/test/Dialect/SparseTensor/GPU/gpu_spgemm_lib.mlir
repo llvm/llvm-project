@@ -1,14 +1,13 @@
-// RUN: mlir-opt %s --linalg-generalize-named-ops \
-// RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --linalg-generalize-named-ops --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 // CHECK-LABEL: func.func @matmulCSR(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<8x8xf32, #{{.*}}>,
 // CHECK-SAME:      %[[VAL_1:.*1]]: tensor<8x8xf32, #{{.*}}>) -> tensor<8x8xf32, #{{.*}}> {
-// CHECK:           %[[VAL_2:.*]] = arith.constant 8 : index
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 9 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 8 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 9 : index
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.number_of_entries %[[VAL_0]] : tensor<8x8xf32, #{{.*}}>
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.number_of_entries %[[VAL_1]] : tensor<8x8xf32, #{{.*}}>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<8x8xf32, #{{.*}}>

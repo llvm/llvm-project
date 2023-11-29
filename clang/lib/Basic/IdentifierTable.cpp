@@ -108,7 +108,8 @@ namespace {
     KEYSYCL       = 0x800000,
     KEYCUDA       = 0x1000000,
     KEYHLSL       = 0x2000000,
-    KEYMAX        = KEYHLSL, // The maximum key
+    KEYFIXEDPOINT = 0x4000000,
+    KEYMAX        = KEYFIXEDPOINT, // The maximum key
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
     KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
              ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
@@ -210,6 +211,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYNOMS18:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
+  case KEYFIXEDPOINT:
+    return LangOpts.FixedPoint ? KS_Enabled : KS_Disabled;
   default:
     llvm_unreachable("Unknown KeywordStatus flag");
   }

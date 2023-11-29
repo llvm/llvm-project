@@ -103,7 +103,7 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 
     ```
     %alloc = memref.alloc() : memref<10xf32>
-    memref.tensor_store %dest, %alloc : memref<10xf32>
+    bufferization.materialize_in_destination %dest in %alloc
     memref.store %f, %alloc[%pos] : memref<10xf32>
     %0 = bufferization.to_tensor %alloc restrict writable : memref<10xf32>
     ```
@@ -118,15 +118,16 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     An optional memory space attribute can be specified for the materialized
     buffer allocation.
 
-    If a memory copy is needed, a "memref.tensor_store" is used when possible.
-    This is an op with tensor semantics that will bufferize to a memory copy
-    later. Which concrete op will be used for the memory copy is up to the
-    bufferization framework. Alternatively, a custom memcpy op can be specified
-    via `memcpy_op`. Currently supported are "memref.copy" and "linalg.copy".
-    In that case, the source of each memcpy must not have a custom memory space.
-    Furthermore, because the future buffer layout unknown for a given tensor,
-    a fully dynamic layout is assumed for best compatibility. Users should use
-    "memref.tensor_store" when possible.
+    If a memory copy is needed, a "bufferization.materialize_in_destination" is
+    used when possible. This is an op with tensor semantics that will bufferize
+    to a memory copy later. Which concrete op will be used for the memory copy
+    is up to the bufferization framework. Alternatively, a custom memcpy op can
+    be specified via `memcpy_op`. Currently supported are "memref.copy" and
+    "linalg.copy". In that case, the source of each memcpy must not have a
+    custom memory space. Furthermore, because the future buffer layout unknown
+    for a given tensor, a fully dynamic layout is assumed for best
+    compatibility. Users should use "bufferization.materialize_in_destination"
+    when possible.
 
     "memref.alloc" is used for new buffer allocations. The buffer is deallocated
     at the end of the block if the "emit_dealloc" attribute is present. If this
@@ -148,7 +149,8 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        OptionalAttr<AnyAttr>:$memory_space,
-                       DefaultValuedAttr<StrAttr, "\"memref.tensor_store\"">:
+                       DefaultValuedAttr<StrAttr,
+                              "\"bufferization.materialize_in_destination\"">:
                            $memcpy_op,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
                            $alloc_op,
@@ -2248,50 +2250,49 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
 }
 
 //===----------------------------------------------------------------------===//
-// HoistRedundantTensorSubsetsOp
+// Transpose Conv2D
 //===----------------------------------------------------------------------===//
 
-def HoistRedundantTensorSubsetsOp :
-  Op<Transform_Dialect, "structured.hoist_redundant_tensor_subsets",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
+def TransposeConv2DOp : Op<Transform_Dialect,
+    "structured.transpose_conv2d",
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
      TransformOpInterface,
+     TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Hoists supported tensor subset extract/insert operation pairs out of
-    immediately enclosing loop iteratively, if the following conditions
-    are true:
-       1. The 2 ops access the same tensor subset.
-       2. All operands are invariant under the enclosing loop.
+    Convert linalg.conv_2d_nhwc_fhwc into linalg.conv_2d_nhwc_hwcf by introducing
+    a linalg.transpose on the filter tensor/memref.
 
-    The supported subset extract/insert operation pairs currently comprise:
-       - tensor.extract_slice / tensor.insert_slice
-       - vector.transfer_read / vector.transfer_write on tensors
+    Whilst the fhwc filter channel ordering can be desirable for certain targets
+    and is a more direct mapping to higher level dialects such as TOSA (which only
+    supports this ordering) hwcf is better suited for transformations such as
+    img2col which can make use of optimized BLAS routines such as GEMM.
 
-    Only scf.for loops are currently supported.
-
-    When applied to:
-       1. an scf.for loop, hoist out of this loop only.
-       2. a non-loop op, apply hoisting to all the contained loop ops.
+    Returns one handle:
+    - The final operation of the sequence that replaces the original
+      convolution.
 
     #### Return modes:
 
-    The operation always succeeds and returns nothing.
+    Returns a definite failure if target is not isolated from above.
+    Returns a silenceable failure if the pattern application failed.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs);
+  let results = (outs TransformHandleTypeInterface:$transformed);
 
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type(operands, results)
-  }];
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type($target, results)";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::Operation *target,
+        ::mlir::linalg::LinalgOp target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];

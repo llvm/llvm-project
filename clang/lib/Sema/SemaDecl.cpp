@@ -17,6 +17,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CommentDiagnostic.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -26,6 +27,7 @@
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -148,6 +150,9 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
   case tok::kw___auto_type:
@@ -1684,8 +1689,8 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
       return false;
   }
 
-  bool NewIsModuleInterface = NewM && NewM->isModulePurview();
-  bool OldIsModuleInterface = OldM && OldM->isModulePurview();
+  bool NewIsModuleInterface = NewM && NewM->isNamedModule();
+  bool OldIsModuleInterface = OldM && OldM->isNamedModule();
   if (NewIsModuleInterface || OldIsModuleInterface) {
     // C++ Modules TS [basic.def.odr] 6.2/6.7 [sic]:
     //   if a declaration of D [...] appears in the purview of a module, all
@@ -1819,7 +1824,7 @@ bool Sema::IsRedefinitionInModule(const NamedDecl *New,
   // [basic.def.odr]p14.3
   // Each such definition shall not be attached to a named module
   // ([module.unit]).
-  if ((NewM && NewM->isModulePurview()) || (OldM && OldM->isModulePurview()))
+  if ((NewM && NewM->isNamedModule()) || (OldM && OldM->isNamedModule()))
     return true;
 
   // Then New and Old lives in the same TU if their share one same module unit.
@@ -3366,6 +3371,26 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
     S.Diag(FirstVD->getLocation(),
            diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
+  }
+
+  // HLSL parameter declarations for inout and out must match between
+  // declarations. In HLSL inout and out are ambiguous at the call site, but
+  // have different calling behavior, so you cannot overload a method based on a
+  // difference between inout and out annotations.
+  if (S.getLangOpts().HLSL) {
+    const auto *NDAttr = newDecl->getAttr<HLSLParamModifierAttr>();
+    const auto *ODAttr = oldDecl->getAttr<HLSLParamModifierAttr>();
+    // We don't need to cover the case where one declaration doesn't have an
+    // attribute. The only possible case there is if one declaration has an `in`
+    // attribute and the other declaration has no attribute. This case is
+    // allowed since parameters are `in` by default.
+    if (NDAttr && ODAttr &&
+        NDAttr->getSpellingListIndex() != ODAttr->getSpellingListIndex()) {
+      S.Diag(newDecl->getLocation(), diag::err_hlsl_param_qualifier_mismatch)
+          << NDAttr << newDecl;
+      S.Diag(oldDecl->getLocation(), diag::note_previous_declaration_as)
+          << ODAttr;
+    }
   }
 
   if (!oldDecl->hasAttrs())
@@ -5346,16 +5371,21 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         TypeSpecType == DeclSpec::TST_interface ||
         TypeSpecType == DeclSpec::TST_union ||
         TypeSpecType == DeclSpec::TST_enum) {
-      for (const ParsedAttr &AL : DS.getAttributes())
-        Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
-                              ? diag::err_declspec_keyword_has_no_effect
-                              : diag::warn_declspec_attribute_ignored)
+
+      auto EmitAttributeDiagnostic = [this, &DS](const ParsedAttr &AL) {
+        unsigned DiagnosticId = diag::warn_declspec_attribute_ignored;
+        if (AL.isAlignas() && !getLangOpts().CPlusPlus)
+          DiagnosticId = diag::warn_attribute_ignored;
+        else if (AL.isRegularKeywordAttribute())
+          DiagnosticId = diag::err_declspec_keyword_has_no_effect;
+        else
+          DiagnosticId = diag::warn_declspec_attribute_ignored;
+        Diag(AL.getLoc(), DiagnosticId)
             << AL << GetDiagnosticTypeSpecifierID(DS);
-      for (const ParsedAttr &AL : DeclAttrs)
-        Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
-                              ? diag::err_declspec_keyword_has_no_effect
-                              : diag::warn_declspec_attribute_ignored)
-            << AL << GetDiagnosticTypeSpecifierID(DS);
+      };
+
+      llvm::for_each(DS.getAttributes(), EmitAttributeDiagnostic);
+      llvm::for_each(DeclAttrs, EmitAttributeDiagnostic);
     }
   }
 
@@ -10160,8 +10190,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // check at the end of the TU (or when the PMF starts) to see that we
     // have a definition at that point.
     if (isInline && !D.isFunctionDefinition() && getLangOpts().CPlusPlus20 &&
-        NewFD->hasOwningModule() &&
-        NewFD->getOwningModule()->isModulePurview()) {
+        NewFD->hasOwningModule() && NewFD->getOwningModule()->isNamedModule()) {
       PendingInlineFuncDecls.insert(NewFD);
     }
   }
@@ -15807,6 +15836,20 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+void Sema::CheckCoroutineWrapper(FunctionDecl *FD) {
+  if (!FD)
+    return;
+  RecordDecl *RD = FD->getReturnType()->getAsRecordDecl();
+  if (!RD || !RD->getUnderlyingDecl()->hasAttr<CoroReturnTypeAttr>())
+    return;
+  // Allow `get_return_object()`.
+  if (FD->getDeclName().isIdentifier() &&
+      FD->getName().equals("get_return_object") && FD->param_empty())
+    return;
+  if (!FD->hasAttr<CoroWrapperAttr>())
+    Diag(FD->getLocation(), diag::err_coroutine_return_type) << RD;
+}
+
 Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
                                     bool IsInstantiation) {
   FunctionScopeInfo *FSI = getCurFunction();
@@ -15818,8 +15861,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().Coroutines && FSI->isCoroutine())
-    CheckCompletedCoroutineBody(FD, Body);
+  if (getLangOpts().Coroutines) {
+    if (FSI->isCoroutine())
+      CheckCompletedCoroutineBody(FD, Body);
+    else
+      CheckCoroutineWrapper(FD);
+  }
 
   {
     // Do not call PopExpressionEvaluationContext() if it is a lambda because

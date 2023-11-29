@@ -1617,7 +1617,9 @@ func.func @omp_threadprivate() {
 func.func @omp_target(%map1: memref<?xi32>) {
   %mapv = omp.map_info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(delete) capture(ByRef) -> memref<?xi32> {name = ""}
   // expected-error @below {{to, from, tofrom and alloc map types are permitted}}
-  omp.target map_entries(%mapv : memref<?xi32>){}
+  omp.target map_entries(%mapv -> %arg0: memref<?xi32>) {
+    ^bb0(%arg0: memref<?xi32>):
+  }
   return
 }
 

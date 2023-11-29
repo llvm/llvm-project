@@ -24,20 +24,6 @@ class UUID;
 
 class Symbols {
 public:
-  // Locate the object and symbol file given a module specification.
-  //
-  // Locating the file can try to download the file from a corporate build
-  // repository, or using any other means necessary to locate both the
-  // unstripped object file and the debug symbols. The force_lookup argument
-  // controls whether the external program is called unconditionally to find
-  // the symbol file, or if the user's settings are checked to see if they've
-  // enabled the external program before calling.
-  //
-  static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                          Status &error,
-                                          bool force_lookup = true,
-                                          bool copy_executable = true);
-
   /// Locate the symbol file for the given UUID on a background thread. This
   /// function returns immediately. Under the hood it uses the debugger's
   /// thread pool to call DownloadObjectAndSymbolFile. If a symbol file is

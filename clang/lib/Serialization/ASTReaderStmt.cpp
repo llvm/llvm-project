@@ -558,8 +558,6 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
       Record.getContext().addDestruction(&E->APValueResult());
     }
     break;
-  default:
-    llvm_unreachable("unexpected ResultKind!");
   }
 
   E->setSubExpr(Record.readSubExpr());
@@ -682,7 +680,7 @@ void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
   VisitExpr(E);
   E->setValue(Record.readInt());
   E->setLocation(readSourceLocation());
-  E->setKind(static_cast<CharacterLiteral::CharacterKind>(Record.readInt()));
+  E->setKind(static_cast<CharacterLiteralKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitParenExpr(ParenExpr *E) {

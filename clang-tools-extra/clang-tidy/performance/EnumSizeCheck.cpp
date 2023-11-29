@@ -23,6 +23,8 @@ namespace clang::tidy::performance {
 
 namespace {
 
+AST_MATCHER(EnumDecl, hasEnumerators) { return !Node.enumerators().empty(); }
+
 const std::uint64_t Min8 =
     std::imaxabs(std::numeric_limits<std::int8_t>::min());
 const std::uint64_t Max8 = std::numeric_limits<std::int8_t>::max();
@@ -93,6 +95,7 @@ bool EnumSizeCheck::isLanguageVersionSupported(
 void EnumSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       enumDecl(unless(isExpansionInSystemHeader()), isDefinition(),
+               hasEnumerators(),
                unless(matchers::matchesAnyListedName(EnumIgnoreList)))
           .bind("e"),
       this);
