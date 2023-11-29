@@ -470,7 +470,8 @@ void RISCVCallLowering::saveVarArgRegisters(
 
   // Copy the integer registers that may have been used for passing varargs
   // to the vararg save area.
-  const LLT p0 = LLT::pointer(0, Subtarget.getXLen());
+  const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
+                              Subtarget.getXLen());
   const LLT sXLen = LLT::scalar(Subtarget.getXLen());
   const MVT XLenVT = Subtarget.getXLenVT();
   MachineRegisterInfo &MRI = MF.getRegInfo();
