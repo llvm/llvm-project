@@ -5,20 +5,44 @@ define internal ptr @foo_resolver() {
 entry:
   ret ptr null
 }
-; ELF: .type foo_resolver,@function
-; ELF-NEXT: foo_resolver:
+; ELF:             .type foo_resolver,@function
+; ELF-NEXT:    foo_resolver:
 
-; MACHO: .p2align 4, 0x90
-; MACHO-NEXT: _foo_resolver
+; MACHO:           .p2align 4, 0x90
+; MACHO-NEXT:  _foo_resolver
 
 
 @foo_ifunc = ifunc i32 (i32), ptr @foo_resolver
-; ELF:      .globl foo_ifunc
-; ELF-NEXT: .type foo_ifunc,@gnu_indirect_function
-; ELF-NEXT: .set foo_ifunc, foo_resolver
+; ELF:             .globl foo_ifunc
+; ELF-NEXT:        .type foo_ifunc,@gnu_indirect_function
+; ELF-NEXT:        .set foo_ifunc, foo_resolver
 
-; MACHO:      .globl _foo_ifunc
-; MACHO-NEXT: .p2align 4, 0x90
-; MACHO-NEXT: _foo_ifunc:
-; MACHO-NEXT: .symbol_resolver _foo_ifunc
-; MACHO-NEXT: jmp _foo_resolver
+; MACHO:           .section __DATA,__data
+; MACHO-NEXT:      .globl _foo_ifunc.lazy_pointer
+; MACHO-NEXT:  _foo_ifunc.lazy_pointer:
+; MACHO-NEXT:      .quad _foo_ifunc.stub_helper
+; MACHO-NEXT:      .section __TEXT,__text,regular,pure_instructions
+; MACHO-NEXT:      .globl _foo_ifunc
+; MACHO-NEXT:      .p2align 4, 0x90
+; MACHO-NEXT:  _foo_ifunc:
+; MACHO-NEXT:      jmpl   *_foo_ifunc.lazy_pointer(%rip)
+; MACHO-NEXT:      .globl _foo_ifunc.stub_helper
+; MACHO-NEXT:      .p2align 4, 0x90
+; MACHO-NEXT:  _foo_ifunc.stub_helper:
+; MACHO-NEXT:      pushq   %rax
+; MACHO-NEXT:      pushq   %rdi
+; MACHO-NEXT:      pushq   %rsi
+; MACHO-NEXT:      pushq   %rdx
+; MACHO-NEXT:      pushq   %rcx
+; MACHO-NEXT:      pushq   %r8
+; MACHO-NEXT:      pushq   %r9
+; MACHO-NEXT:      callq   _foo_resolver
+; MACHO-NEXT:      movq    %rax, _foo_ifunc.lazy_pointer(%rip)
+; MACHO-NEXT:      popq    %r9
+; MACHO-NEXT:      popq    %r8
+; MACHO-NEXT:      popq    %rcx
+; MACHO-NEXT:      popq    %rdx
+; MACHO-NEXT:      popq    %rsi
+; MACHO-NEXT:      popq    %rdi
+; MACHO-NEXT:      popq    %rax
+; MACHO-NEXT:      jmpl    *_foo_ifunc.lazy_pointer(%rip)
