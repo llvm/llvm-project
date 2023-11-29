@@ -11,9 +11,7 @@
 // UNSUPPORTED: !libcpp-hardening-mode=debug
 // XFAIL: availability-verbose_abort-missing
 
-// <ranges>
-
-// Call ....
+// constexpr stride_view::<iterator>& operator++() {
 
 #include "check_assertion.h"
 #include <ranges>
