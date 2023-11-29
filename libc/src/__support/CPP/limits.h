@@ -11,7 +11,7 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
-#include <limits.h>
+#include <limits.h> // CHAR_BIT
 
 namespace LIBC_NAMESPACE {
 namespace cpp {
@@ -36,41 +36,53 @@ template <> class numeric_limits<int> {
 public:
   LIBC_INLINE static constexpr int max() { return INT_MAX; }
   LIBC_INLINE static constexpr int min() { return INT_MIN; }
+  LIBC_INLINE_VAR static constexpr int digits = CHAR_BIT * sizeof(int) - 1;
 };
 template <> class numeric_limits<unsigned int> {
 public:
   LIBC_INLINE static constexpr unsigned int max() { return UINT_MAX; }
   LIBC_INLINE static constexpr unsigned int min() { return 0; }
+  LIBC_INLINE_VAR static constexpr int digits = CHAR_BIT * sizeof(unsigned int);
 };
 template <> class numeric_limits<long> {
 public:
   LIBC_INLINE static constexpr long max() { return LONG_MAX; }
   LIBC_INLINE static constexpr long min() { return LONG_MIN; }
+  LIBC_INLINE_VAR static constexpr int digits = CHAR_BIT * sizeof(long) - 1;
 };
 template <> class numeric_limits<unsigned long> {
 public:
   LIBC_INLINE static constexpr unsigned long max() { return ULONG_MAX; }
   LIBC_INLINE static constexpr unsigned long min() { return 0; }
+  LIBC_INLINE_VAR static constexpr int digits =
+      CHAR_BIT * sizeof(unsigned long);
 };
 template <> class numeric_limits<long long> {
 public:
   LIBC_INLINE static constexpr long long max() { return LLONG_MAX; }
   LIBC_INLINE static constexpr long long min() { return LLONG_MIN; }
+  LIBC_INLINE_VAR static constexpr int digits =
+      CHAR_BIT * sizeof(long long) - 1;
 };
 template <> class numeric_limits<unsigned long long> {
 public:
   LIBC_INLINE static constexpr unsigned long long max() { return ULLONG_MAX; }
   LIBC_INLINE static constexpr unsigned long long min() { return 0; }
+  LIBC_INLINE_VAR static constexpr int digits =
+      CHAR_BIT * sizeof(unsigned long long);
 };
 template <> class numeric_limits<short> {
 public:
   LIBC_INLINE static constexpr short max() { return SHRT_MAX; }
   LIBC_INLINE static constexpr short min() { return SHRT_MIN; }
+  LIBC_INLINE_VAR static constexpr int digits = CHAR_BIT * sizeof(short) - 1;
 };
 template <> class numeric_limits<unsigned short> {
 public:
   LIBC_INLINE static constexpr unsigned short max() { return USHRT_MAX; }
   LIBC_INLINE static constexpr unsigned short min() { return 0; }
+  LIBC_INLINE_VAR static constexpr int digits =
+      CHAR_BIT * sizeof(unsigned short);
 };
 template <> class numeric_limits<char> {
 public:
@@ -81,11 +93,13 @@ template <> class numeric_limits<signed char> {
 public:
   LIBC_INLINE static constexpr signed char max() { return SCHAR_MAX; }
   LIBC_INLINE static constexpr signed char min() { return SCHAR_MIN; }
+  LIBC_INLINE_VAR static constexpr int digits = CHAR_BIT - 1;
 };
 template <> class numeric_limits<unsigned char> {
 public:
   LIBC_INLINE static constexpr unsigned char max() { return UCHAR_MAX; }
   LIBC_INLINE static constexpr unsigned char min() { return 0; }
+  LIBC_INLINE_VAR static constexpr int digits = CHAR_BIT;
 };
 #ifdef __SIZEOF_INT128__
 // On platform where UInt128 resolves to __uint128_t, this specialization
@@ -94,6 +108,8 @@ template <> class numeric_limits<__uint128_t> {
 public:
   LIBC_INLINE static constexpr __uint128_t max() { return ~__uint128_t(0); }
   LIBC_INLINE static constexpr __uint128_t min() { return 0; }
+  LIBC_INLINE_VAR static constexpr int digits =
+      CHAR_BIT * sizeof(__uint128_t) - 1;
 };
 #endif
 
