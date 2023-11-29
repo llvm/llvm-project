@@ -51,8 +51,6 @@ end program
 
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   PolymorphicOpConversion
-! O2-NEXT:  AddAliasTags
-! O2-NEXT:  'func.func' Pipeline
 ! ALL-NEXT:   CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow

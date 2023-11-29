@@ -14236,10 +14236,44 @@ static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
   return DAG.getZExtOrTrunc(AndNode, SDLoc(N), N->getValueType(0));
 }
 
+static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  SDValue Cond = N->getOperand(0);
+  SDValue True = N->getOperand(1);
+  SDValue False = N->getOperand(2);
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT CondVT = Cond.getValueType();
+
+  if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse())
+    return SDValue();
+
+  // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
+  // BEXTI, where C is power of 2.
+  if (Subtarget.hasStdExtZbs() && VT.isScalarInteger() &&
+      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())) {
+    SDValue LHS = Cond.getOperand(0);
+    SDValue RHS = Cond.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    if (CC == ISD::SETEQ && LHS.getOpcode() == ISD::AND &&
+        isa<ConstantSDNode>(LHS.getOperand(1)) && isNullConstant(RHS)) {
+      uint64_t MaskVal = LHS.getConstantOperandVal(1);
+      if (isPowerOf2_64(MaskVal) && !isInt<12>(MaskVal))
+        return DAG.getSelect(DL, VT,
+                             DAG.getSetCC(DL, CondVT, LHS, RHS, ISD::SETNE),
+                             False, True);
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
                                     const RISCVSubtarget &Subtarget) {
   if (SDValue Folded = foldSelectOfCTTZOrCTLZ(N, DAG))
     return Folded;
+
+  if (SDValue V = useInversedSetcc(N, DAG, Subtarget))
+    return V;
 
   if (Subtarget.hasShortForwardBranchOpt())
     return SDValue();
@@ -19774,7 +19808,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
   if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())
-    return AndMask.ugt(1024);
+    return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
 

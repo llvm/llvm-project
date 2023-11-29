@@ -3454,6 +3454,16 @@ void LLVMSetExact(LLVMValueRef DivOrShrInst, LLVMBool IsExact) {
   cast<Instruction>(P)->setIsExact(IsExact);
 }
 
+LLVMBool LLVMGetNNeg(LLVMValueRef NonNegInst) {
+  Value *P = unwrap<Value>(NonNegInst);
+  return cast<Instruction>(P)->hasNonNeg();
+}
+
+void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg) {
+  Value *P = unwrap<Value>(NonNegInst);
+  cast<Instruction>(P)->setNonNeg(IsNonNeg);
+}
+
 /*--.. Memory ..............................................................--*/
 
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,

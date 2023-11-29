@@ -438,7 +438,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       [[fallthrough]];
     }
     case tok::kw_case:
-      if (Style.isProto() || Style.isVerilog() ||
+      if (Style.Language == FormatStyle::LK_Proto || Style.isVerilog() ||
           (Style.isJavaScript() && Line->MustBeDeclaration)) {
         // Proto: there are no switch/case statements
         // Verilog: Case labels don't have this word. We handle case
@@ -1527,7 +1527,7 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   case tok::kw_case:
     // Proto: there are no switch/case statements.
-    if (Style.isProto()) {
+    if (Style.Language == FormatStyle::LK_Proto) {
       nextToken();
       return;
     }
@@ -2034,7 +2034,7 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     case tok::kw_case:
       // Proto: there are no switch/case statements.
-      if (Style.isProto()) {
+      if (Style.Language == FormatStyle::LK_Proto) {
         nextToken();
         return;
       }

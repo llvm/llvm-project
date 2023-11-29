@@ -1202,9 +1202,9 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   if (Pred == ICmpInst::ICMP_SGT) {
     Value *A, *B;
     if (match(Cmp.getOperand(0), m_SMin(m_Value(A), m_Value(B)))) {
-      if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
+      if (isKnownPositive(A, SQ.getWithInstruction(&Cmp)))
         return new ICmpInst(Pred, B, Cmp.getOperand(1));
-      if (isKnownPositive(B, DL, 0, &AC, &Cmp, &DT))
+      if (isKnownPositive(B, SQ.getWithInstruction(&Cmp)))
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }
