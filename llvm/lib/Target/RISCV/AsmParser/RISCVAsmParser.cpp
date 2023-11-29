@@ -3579,7 +3579,7 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       return true;
     break;
   case RISCV::PseudoTLSDESCCall:
-    if(checkPseudoTLSDESCCall(Inst, Operands))
+    if (checkPseudoTLSDESCCall(Inst, Operands))
       return true;
     break;
   case RISCV::PseudoSEXT_B:
