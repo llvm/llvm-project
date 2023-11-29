@@ -2321,7 +2321,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   }
 
   // IFuncs must come before deubginfo in case the backend decides to emit them
-  // as actual functions, since on MachO targets, we cannot create regular
+  // as actual functions, since on Mach-O targets, we cannot create regular
   // sections after DWARF.
   for (const auto &IFunc : M.ifuncs())
     emitGlobalIFunc(M, IFunc);

@@ -1291,7 +1291,7 @@ void __init_cpu_features_resolver(void) {
     static struct {
       const char *sysctl_name;
       enum CPUFeatures feature;
-    } Features[] = {
+    } features[] = {
         {"hw.optional.arm.FEAT_FlagM", FEAT_FLAGM},
         {"hw.optional.arm.FEAT_FlagM2", FEAT_FLAGM2},
         {"hw.optional.arm.FEAT_FHM", FEAT_FP16FML},
@@ -1319,9 +1319,9 @@ void __init_cpu_features_resolver(void) {
         {"hw.optional.arm.FEAT_BTI", FEAT_BTI},
     };
 
-    for (size_t I = 0, E = sizeof(Features) / sizeof(Features[0]); I != E; ++I)
-      if (isKnownAndSupported(Features[I].sysctl_name))
-        __aarch64_cpu_features.features |= (1ULL << Features[I].feature);
+    for (size_t I = 0, E = sizeof(features) / sizeof(features[0]); I != E; ++I)
+      if (isKnownAndSupported(features[I].sysctl_name))
+        __aarch64_cpu_features.features |= (1ULL << features[I].feature);
 
     __aarch64_cpu_features.features |= (1ULL << FEAT_INIT);
   });

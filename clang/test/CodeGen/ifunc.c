@@ -3,9 +3,13 @@
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -fsanitize=memory -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=SAN
+// RUN: %clang_cc1 -triple arm64-apple-macosx -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -O2 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -fsanitize=thread -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -fsanitize=address -O2 -emit-llvm -o - %s | FileCheck %s --check-prefix=MACSAN
 
 int foo(int) __attribute__ ((ifunc("foo_ifunc")));
