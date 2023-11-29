@@ -228,7 +228,7 @@ struct ConvertVectorMaskedStore final
     //    %maskedload = [0x12, 0x34, 0x0]
     //    %bitcast = [0x1, 0x2, 0x3, 0x4, 0x0, 0x0]
     //    %select_using_original_mask = [0x7, 0x8, 0x9, 0x4, 0x0, 0x0]
-    //    %packed_data = [0x78, 0x94, 0x0, 0x0]
+    //    %packed_data = [0x78, 0x94, 0x00]
     //
     // Using the new mask to store %packed_data results in expected output.
     FailureOr<Operation *> newMask =
