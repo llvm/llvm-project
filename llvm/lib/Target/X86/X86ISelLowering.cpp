@@ -4556,15 +4556,17 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
+  return dyn_cast<ConstantPoolSDNode>(Ptr);
+}
 
-  auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
-
   return CNode->getConstVal();
 }
 
