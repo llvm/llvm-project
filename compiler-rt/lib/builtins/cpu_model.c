@@ -1285,6 +1285,14 @@ static bool isKnownAndSupported(const char *name) {
 }
 
 void __init_cpu_features_resolver(void) {
+  // On Darwin platforms, this may be called concurrently by multiple threads
+  // because the resolvers that use it are called lazily at runtime (unlike on
+  // ELF platforms, where IFuncs are resolved serially at load time).  This
+  // function's effect on __aarch64_cpu_features should be idempotent, but even
+  // so we need dispatch_once to resolve the race condition.  Dispatch is
+  // available through libSystem, which we need anyway for the sysctl, so this
+  // does not add a new dependency.
+
   static dispatch_once_t onceToken = 0;
   dispatch_once(&onceToken, ^{
     // https://developer.apple.com/documentation/kernel/1387446-sysctlbyname/determining_instruction_set_characteristics
