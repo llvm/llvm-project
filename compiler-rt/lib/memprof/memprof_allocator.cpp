@@ -743,6 +743,8 @@ void __memprof_profile_reset() {
   if (report_file.fd != kInvalidFd && report_file.fd != kStdoutFd &&
       report_file.fd != kStderrFd) {
     CloseFile(report_file.fd);
+    // Setting the file descriptor to kInvalidFd ensures that we will reopen the
+    // file when invoking Write again.
     report_file.fd = kInvalidFd;
   }
 }

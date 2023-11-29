@@ -9,9 +9,9 @@
 
 // Check both outputs, starting with the renamed initial dump, then remove it so
 // that the second glob matches a single file.
-// RUN: FileCheck %s --dump-input=always < %t.log.*.sv
+// RUN: FileCheck %s < %t.log.*.sv
 // RUN: rm -f %t.log.*.sv
-// RUN: FileCheck %s --dump-input=always < %t.log.*
+// RUN: FileCheck %s < %t.log.*
 // CHECK: Memory allocation stack id
 
 #include <sanitizer/memprof_interface.h>
