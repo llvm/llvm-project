@@ -2997,8 +2997,7 @@ enum ArmStreamingType {
   ArmNonStreaming,
   ArmStreaming,
   ArmStreamingCompatible,
-  ArmLocallyStreaming,
-  ArmStreamingOrSVE2p1
+  ArmLocallyStreaming
 };
 
 static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
@@ -3020,15 +3019,6 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
          "Unexpected locally_streaming attribute for builtin!");
 
   ArmStreamingType FnType = getArmStreamingFnType(FD);
-  if (BuiltinType == ArmStreamingOrSVE2p1) {
-    // Check intrinsics that are available in [sve2p1 or sme/sme2].
-    llvm::StringMap<bool> CallerFeatureMap;
-    S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-    if (Builtin::evaluateRequiredTargetFeatures("sve2p1", CallerFeatureMap))
-      BuiltinType = ArmStreamingCompatible;
-    else
-      BuiltinType = ArmStreaming;
-  }
 
   if ((FnType == ArmStreaming || FnType == ArmLocallyStreaming) &&
       BuiltinType == ArmNonStreaming) {
@@ -3041,11 +3031,6 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming compatible";
     return;
-  }
-
-  if (FnType == ArmNonStreaming && BuiltinType == ArmStreaming) {
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "non-streaming";
   }
 }
 
@@ -3205,27 +3190,19 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 bool Sema::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                         unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
-    std::optional<ArmStreamingType> BuiltinType;
 
-    bool IsNeon = false;
     switch (BuiltinID) {
     default:
       break;
 #define GET_NEON_BUILTINS
-#define TARGET_BUILTIN(id, x, y, z)                                            \
-  case NEON::BI##id:                                                           \
-    IsNeon = true;                                                             \
-    break;
-#define BUILTIN(id, x, y) TARGET_BUILTIN(id, x, y, "");
+#define TARGET_BUILTIN(id, ...) case NEON::BI##id:
+#define BUILTIN(id, ...) case NEON::BI##id:
 #include "clang/Basic/arm_neon.inc"
+      checkArmStreamingBuiltin(*this, TheCall, FD, ArmNonStreaming);
+      break;
 #undef TARGET_BUILTIN
 #undef BUILTIN
 #undef GET_NEON_BUILTINS
-    }
-
-    if (IsNeon) {
-      checkArmStreamingBuiltin(*this, TheCall, FD, ArmNonStreaming);
-      return true;
     }
   }
 
