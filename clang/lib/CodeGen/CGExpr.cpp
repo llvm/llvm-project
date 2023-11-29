@@ -939,9 +939,11 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
       // Ignore pass_object_size here. It's not applicable on decayed pointers.
     }
 
-    if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
-      IndexedType = Base->getType();
-      return CGF.EmitCountedByFieldExpr(Base, VD);
+    if (isa<MemberExpr>(Base->IgnoreParenImpCasts())) {
+      if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
+        IndexedType = Base->getType();
+        return CGF.EmitCountedByFieldExpr(Base, VD);
+      }
     }
   }
 
@@ -959,9 +961,20 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 namespace {
 
 /// \p MemberExprBaseVisitor returns the base \p DeclRefExpr of a field access.
-struct MemberExprBaseVisitor
+class MemberExprBaseVisitor
     : public StmtVisitor<MemberExprBaseVisitor, Expr *> {
-  MemberExprBaseVisitor() = default;
+  const RecordDecl *ExpectedRD;
+
+  bool IsExpectedRecordDecl(const Expr *E) const {
+    QualType Ty = E->getType();
+    if (Ty->isPointerType())
+      Ty = Ty->getPointeeType();
+    return ExpectedRD == Ty->getAsRecordDecl();
+  }
+
+public:
+  MemberExprBaseVisitor(const RecordDecl *ExpectedRD)
+      : ExpectedRD(ExpectedRD) { }
 
   //===--------------------------------------------------------------------===//
   //                            Visitor Methods
@@ -984,14 +997,27 @@ struct MemberExprBaseVisitor
     return StmtVisitor<MemberExprBaseVisitor, Expr *>::Visit(E);
   }
 
+  Expr *VisitCastExpr(CastExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : Visit(E->getSubExpr());
+  }
+  Expr *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
+  }
+  Expr *VisitDeclRefExpr(DeclRefExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : nullptr;
+  }
+  Expr *VisitMemberExpr(MemberExpr *E) {
+    Expr *Res = Visit(E->getBase());
+    return !Res && IsExpectedRecordDecl(E) ? E : Res;
+  }
+  Expr *VisitParenExpr(ParenExpr *E) {
+    return IsExpectedRecordDecl(E) ? E : Visit(E->getSubExpr());
+  }
+
   Expr *VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
     return Visit(E->getBase());
   }
-  Expr *VisitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
-  Expr *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) { return E; }
-  Expr *VisitDeclRefExpr(DeclRefExpr *E) { return E; }
-  Expr *VisitMemberExpr(MemberExpr *E) { return Visit(E->getBase()); }
-  Expr *VisitParenExpr(ParenExpr *E) { return Visit(E->getSubExpr()); }
+  Expr *VisitImplicitCastExpr(CastExpr *E) { return Visit(E->getSubExpr()); }
   Expr *VisitUnaryOperator(UnaryOperator *E) { return Visit(E->getSubExpr()); }
 };
 
@@ -1000,8 +1026,12 @@ struct MemberExprBaseVisitor
 llvm::Value *
 CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
                                         const ValueDecl *CountedByVD) {
+  const DeclContext *DC = CountedByVD->getLexicalDeclContext();
+  const auto *CountedByRD = cast<RecordDecl>(DC);
+
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Expr *CountedByExpr = MemberExprBaseVisitor().Visit(const_cast<Expr *>(Base));
+  Expr *CountedByExpr =
+      MemberExprBaseVisitor(CountedByRD).Visit(const_cast<Expr *>(Base));
   if (!CountedByExpr)
     return nullptr;
 
@@ -1023,9 +1053,6 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
         Indices.emplace_back(llvm::ConstantInt::get(Int32Ty, Idx));
       }
   }
-
-  const DeclContext *DC = CountedByVD->getLexicalDeclContext();
-  const auto *CountedByRD = cast<RecordDecl>(DC);
 
   llvm::Type *Ty =
       CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
