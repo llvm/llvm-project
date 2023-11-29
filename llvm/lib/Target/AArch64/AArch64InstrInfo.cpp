@@ -4230,8 +4230,9 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
 ///
 /// Only called for LdSt for which getMemOperandWithOffset returns true.
 bool AArch64InstrInfo::shouldClusterMemOps(
-    ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned ClusterSize,
+    ArrayRef<const MachineOperand *> BaseOps1, int64_t OpOffset1,
+    bool OffsetIsScalable1, ArrayRef<const MachineOperand *> BaseOps2,
+    int64_t OpOffset2, bool OffsetIsScalable2, unsigned ClusterSize,
     unsigned NumBytes) const {
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
   const MachineOperand &BaseOp1 = *BaseOps1.front();

@@ -1501,7 +1501,9 @@ public:
   /// \p NumBytes is the number of bytes that will be loaded from all the
   /// clustered loads if this hook returns true.
   virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                                   int64_t Offset1, bool OffsetIsScalable1,
                                    ArrayRef<const MachineOperand *> BaseOps2,
+                                   int64_t Offset2, bool OffsetIsScalable2,
                                    unsigned ClusterSize,
                                    unsigned NumBytes) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");

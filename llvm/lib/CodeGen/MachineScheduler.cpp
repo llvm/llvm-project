@@ -1698,11 +1698,12 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
     unsigned Width;
+    bool OffsetIsScalable;
 
     MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
-              int64_t Offset, unsigned Width)
+              int64_t Offset, bool OffsetIsScalable, unsigned Width)
         : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset),
-          Width(Width) {}
+          OffsetIsScalable(OffsetIsScalable), Width(Width) {}
 
     static bool Compare(const MachineOperand *const &A,
                         const MachineOperand *const &B) {
@@ -1831,8 +1832,10 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
           SUnit2ClusterInfo[MemOpa.SU->NodeNum].second + MemOpb.Width;
     }
 
-    if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpb.BaseOps, ClusterLength,
-                                  CurrentClusterBytes))
+    if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
+                                  MemOpa.OffsetIsScalable, MemOpb.BaseOps,
+                                  MemOpb.Offset, MemOpb.OffsetIsScalable,
+                                  ClusterLength, CurrentClusterBytes))
       continue;
 
     SUnit *SUa = MemOpa.SU;
@@ -1899,7 +1902,8 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     unsigned Width;
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
                                            OffsetIsScalable, Width, TRI)) {
-      MemOpRecords.push_back(MemOpInfo(&SU, BaseOps, Offset, Width));
+      MemOpRecords.push_back(
+          MemOpInfo(&SU, BaseOps, Offset, OffsetIsScalable, Width));
 
       LLVM_DEBUG(dbgs() << "Num BaseOps: " << BaseOps.size() << ", Offset: "
                         << Offset << ", OffsetIsScalable: " << OffsetIsScalable

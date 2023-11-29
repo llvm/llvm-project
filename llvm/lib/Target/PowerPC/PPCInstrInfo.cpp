@@ -2878,8 +2878,9 @@ static bool isClusterableLdStOpcPair(unsigned FirstOpc, unsigned SecondOpc,
 }
 
 bool PPCInstrInfo::shouldClusterMemOps(
-    ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned ClusterSize,
+    ArrayRef<const MachineOperand *> BaseOps1, int64_t OpOffset1,
+    bool OffsetIsScalable1, ArrayRef<const MachineOperand *> BaseOps2,
+    int64_t OpOffset2, bool OffsetIsScalable2, unsigned ClusterSize,
     unsigned NumBytes) const {
 
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
