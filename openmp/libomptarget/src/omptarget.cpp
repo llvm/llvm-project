@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
-#include "OmptCallback.h"
-#include "OmptInterface.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Interface.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
