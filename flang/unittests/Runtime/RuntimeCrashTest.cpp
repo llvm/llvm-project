@@ -43,9 +43,9 @@ TEST(TestTerminator, CheckFailedLocationTest) {
 }
 
 TEST(TestTerminator, CheckFailedTest) {
-  static Fortran::runtime::Terminator t;
+  static Fortran::runtime::Terminator t("someFileName");
   ASSERT_DEATH(t.CheckFailed("predicate"),
-      "RUNTIME_CHECK\\(predicate\\) failed at \\(null\\)\\(0\\)");
+      "RUNTIME_CHECK\\(predicate\\) failed at someFileName\\(0\\)");
 }
 
 //------------------------------------------------------------------------------

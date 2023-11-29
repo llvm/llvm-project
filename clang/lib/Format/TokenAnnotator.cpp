@@ -2391,9 +2391,8 @@ private:
       return true;
 
     // If a (non-string) literal follows, this is likely a cast.
-    if (Tok.Next->isNot(tok::string_literal) &&
-        (Tok.Next->Tok.isLiteral() ||
-         Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof))) {
+    if (Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof) ||
+        (Tok.Next->Tok.isLiteral() && Tok.Next->isNot(tok::string_literal))) {
       return true;
     }
 
@@ -5078,11 +5077,10 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
-  } else if (Style.Language == FormatStyle::LK_Cpp ||
-             Style.Language == FormatStyle::LK_ObjC ||
-             Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TableGen ||
-             Style.Language == FormatStyle::LK_TextProto) {
+  } else if (Style.BreakAdjacentStringLiterals &&
+             (Style.isCpp() || Style.isProto() ||
+              Style.Language == FormatStyle::LK_TableGen ||
+              Style.Language == FormatStyle::LK_TextProto)) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }

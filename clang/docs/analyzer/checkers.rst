@@ -755,6 +755,75 @@ security
 
 Security related checkers.
 
+.. _security-cert-env-InvalidPtr:
+
+security.cert.env.InvalidPtr
+""""""""""""""""""""""""""""""""""
+
+Corresponds to SEI CERT Rules `ENV31-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV31-C.+Do+not+rely+on+an+environment+pointer+following+an+operation+that+may+invalidate+it>`_ and `ENV34-C <https://wiki.sei.cmu.edu/confluence/display/c/ENV34-C.+Do+not+store+pointers+returned+by+certain+functions>`_.
+
+* **ENV31-C**:
+  Rule is about the possible problem with ``main`` function's third argument, environment pointer,
+  "envp". When environment array is modified using some modification function
+  such as ``putenv``, ``setenv`` or others, It may happen that memory is reallocated,
+  however "envp" is not updated to reflect the changes and points to old memory
+  region.
+
+* **ENV34-C**:
+  Some functions return a pointer to a statically allocated buffer.
+  Consequently, subsequent call of these functions will invalidate previous
+  pointer. These functions include: ``getenv``, ``localeconv``, ``asctime``, ``setlocale``, ``strerror``
+
+.. code-block:: c
+
+  int main(int argc, const char *argv[], const char *envp[]) {
+    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
+      // setenv call may invalidate 'envp'
+      /* Handle error */
+    }
+    if (envp != NULL) {
+      for (size_t i = 0; envp[i] != NULL; ++i) {
+        puts(envp[i]);
+        // envp may no longer point to the current environment
+        // this program has unanticipated behavior, since envp
+        // does not reflect changes made by setenv function.
+      }
+    }
+    return 0;
+  }
+
+  void previous_call_invalidation() {
+    char *p, *pp;
+
+    p = getenv("VAR");
+    setenv("SOMEVAR", "VALUE", /*overwrite = */1);
+    // call to 'setenv' may invalidate p
+
+    *p;
+    // dereferencing invalid pointer
+  }
+
+
+The ``InvalidatingGetEnv`` option is available for treating ``getenv`` calls as
+invalidating. When enabled, the checker issues a warning if ``getenv`` is called
+multiple times and their results are used without first creating a copy.
+This level of strictness might be considered overly pedantic for the commonly
+used ``getenv`` implementations.
+
+To enable this option, use:
+``-analyzer-config security.cert.env.InvalidPtr:InvalidatingGetEnv=true``.
+
+By default, this option is set to *false*.
+
+When this option is enabled, warnings will be generated for scenarios like the
+following:
+
+.. code-block:: c
+
+  char* p = getenv("VAR");
+  char* pp = getenv("VAR2"); // assumes this call can invalidate `env`
+  strlen(p); // warns about accessing invalid ptr
+
 .. _security-FloatLoopCounter:
 
 security.FloatLoopCounter (C)
@@ -2548,75 +2617,6 @@ alpha.security.cert.env
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
-
-.. _alpha-security-cert-env-InvalidPtr:
-
-alpha.security.cert.env.InvalidPtr
-""""""""""""""""""""""""""""""""""
-
-Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
-
-ENV31-C:
-Rule is about the possible problem with `main` function's third argument, environment pointer,
-"envp". When environment array is modified using some modification function
-such as putenv, setenv or others, It may happen that memory is reallocated,
-however "envp" is not updated to reflect the changes and points to old memory
-region.
-
-ENV34-C:
-Some functions return a pointer to a statically allocated buffer.
-Consequently, subsequent call of these functions will invalidate previous
-pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
-
-.. code-block:: c
-
-  int main(int argc, const char *argv[], const char *envp[]) {
-    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
-      // setenv call may invalidate 'envp'
-      /* Handle error */
-    }
-    if (envp != NULL) {
-      for (size_t i = 0; envp[i] != NULL; ++i) {
-        puts(envp[i]);
-        // envp may no longer point to the current environment
-        // this program has unanticipated behavior, since envp
-        // does not reflect changes made by setenv function.
-      }
-    }
-    return 0;
-  }
-
-  void previous_call_invalidation() {
-    char *p, *pp;
-
-    p = getenv("VAR");
-    setenv("SOMEVAR", "VALUE", /*overwrite = */1);
-    // call to 'setenv' may invalidate p
-
-    *p;
-    // dereferencing invalid pointer
-  }
-
-
-The ``InvalidatingGetEnv`` option is available for treating getenv calls as
-invalidating. When enabled, the checker issues a warning if getenv is called
-multiple times and their results are used without first creating a copy.
-This level of strictness might be considered overly pedantic for the commonly
-used getenv implementations.
-
-To enable this option, use:
-``-analyzer-config alpha.security.cert.env.InvalidPtr:InvalidatingGetEnv=true``.
-
-By default, this option is set to *false*.
-
-When this option is enabled, warnings will be generated for scenarios like the
-following:
-
-.. code-block:: c
-
-  char* p = getenv("VAR");
-  char* pp = getenv("VAR2"); // assumes this call can invalidate `env`
-  strlen(p); // warns about accessing invalid ptr
 
 alpha.security.taint
 ^^^^^^^^^^^^^^^^^^^^

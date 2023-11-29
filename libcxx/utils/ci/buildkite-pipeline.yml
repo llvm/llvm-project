@@ -264,13 +264,11 @@ steps:
   steps:
   - label: Android 5.0, x86 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
-    soft_fail: true
     <<: *android_agent
     <<: *common
 
   - label: Android 13, x86_64 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64
-    soft_fail: true
     <<: *android_agent
     <<: *common
 

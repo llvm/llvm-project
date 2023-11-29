@@ -669,19 +669,42 @@ EmitMatcher(const Matcher *N, const unsigned Indent, unsigned CurrentIdx,
 
   case Matcher::EmitInteger: {
     int64_t Val = cast<EmitIntegerMatcher>(N)->getValue();
-    OS << "OPC_EmitInteger, "
-       << getEnumName(cast<EmitIntegerMatcher>(N)->getVT()) << ", ";
-    unsigned Bytes = 2 + EmitSignedVBRValue(Val, OS);
+    MVT::SimpleValueType VT = cast<EmitIntegerMatcher>(N)->getVT();
+    unsigned OpBytes;
+    switch (VT) {
+    case MVT::i8:
+    case MVT::i16:
+    case MVT::i32:
+    case MVT::i64:
+      OpBytes = 1;
+      OS << "OPC_EmitInteger" << MVT(VT).getScalarSizeInBits() << ", ";
+      break;
+    default:
+      OpBytes = 2;
+      OS << "OPC_EmitInteger, " << getEnumName(VT) << ", ";
+      break;
+    }
+    unsigned Bytes = OpBytes + EmitSignedVBRValue(Val, OS);
     OS << '\n';
     return Bytes;
   }
   case Matcher::EmitStringInteger: {
     const std::string &Val = cast<EmitStringIntegerMatcher>(N)->getValue();
+    MVT::SimpleValueType VT = cast<EmitStringIntegerMatcher>(N)->getVT();
     // These should always fit into 7 bits.
-    OS << "OPC_EmitStringInteger, "
-       << getEnumName(cast<EmitStringIntegerMatcher>(N)->getVT()) << ", " << Val
-       << ",\n";
-    return 3;
+    unsigned OpBytes;
+    switch (VT) {
+    case MVT::i32:
+      OpBytes = 1;
+      OS << "OPC_EmitStringInteger" << MVT(VT).getScalarSizeInBits() << ", ";
+      break;
+    default:
+      OpBytes = 2;
+      OS << "OPC_EmitStringInteger, " << getEnumName(VT) << ", ";
+      break;
+    }
+    OS << Val << ",\n";
+    return OpBytes + 1;
   }
 
   case Matcher::EmitRegister: {

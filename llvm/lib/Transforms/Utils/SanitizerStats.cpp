@@ -42,20 +42,19 @@ StructType *SanitizerStatReport::makeModuleStatsTy() {
 void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
   Function *F = B.GetInsertBlock()->getParent();
   Module *M = F->getParent();
-  PointerType *Int8PtrTy = B.getInt8PtrTy();
+  PointerType *PtrTy = B.getPtrTy();
   IntegerType *IntPtrTy = B.getIntPtrTy(M->getDataLayout());
-  ArrayType *StatTy = ArrayType::get(Int8PtrTy, 2);
+  ArrayType *StatTy = ArrayType::get(PtrTy, 2);
 
   Inits.push_back(ConstantArray::get(
       StatTy,
-      {Constant::getNullValue(Int8PtrTy),
+      {Constant::getNullValue(PtrTy),
        ConstantExpr::getIntToPtr(
            ConstantInt::get(IntPtrTy, uint64_t(SK) << (IntPtrTy->getBitWidth() -
                                                        kSanitizerStatKindBits)),
-           Int8PtrTy)}));
+           PtrTy)}));
 
-  FunctionType *StatReportTy =
-      FunctionType::get(B.getVoidTy(), Int8PtrTy, false);
+  FunctionType *StatReportTy = FunctionType::get(B.getVoidTy(), PtrTy, false);
   FunctionCallee StatReport =
       M->getOrInsertFunction("__sanitizer_stat_report", StatReportTy);
 

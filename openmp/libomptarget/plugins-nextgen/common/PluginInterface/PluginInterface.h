@@ -19,13 +19,14 @@
 #include <shared_mutex>
 #include <vector>
 
-#include "Debug.h"
-#include "Environment.h"
+#include "Shared/Debug.h"
+#include "Shared/Environment.h"
+#include "Shared/Utils.h"
+
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
 #include "RPC.h"
-#include "Utilities.h"
 #include "omptarget.h"
 
 #ifdef OMPT_SUPPORT
@@ -1144,6 +1145,11 @@ class Plugin {
   static Error deinit() {
     assert(SpecificPlugin && "Plugin no longer valid");
 
+    for (int32_t DevNo = 0, NumDev = SpecificPlugin->getNumDevices();
+         DevNo < NumDev; ++DevNo)
+      if (auto Err = SpecificPlugin->deinitDevice(DevNo))
+        return Err;
+
     // Deinitialize the plugin.
     if (auto Err = SpecificPlugin->deinit())
       return Err;
@@ -1165,13 +1171,6 @@ public:
     get();
 
     return Error::success();
-  }
-
-  // Deinitialize the plugin if needed. The plugin could have been deinitialized
-  // because the plugin library was exiting.
-  static Error deinitIfNeeded() {
-    // Do nothing. The plugin is deinitialized automatically.
-    return Plugin::success();
   }
 
   /// Get a reference (or create if it was not created) to the plugin instance.

@@ -18,7 +18,8 @@
 #include <cstring>
 #include <memory>
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+
 #include "OmptCallback.h"
 #include "OmptConnector.h"
 #include "OmptInterface.h"

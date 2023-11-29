@@ -173,7 +173,7 @@ static_assert(std::is_same<index_type, uint64_t>::value,
 void *_mlir_ciface_newSparseTensor( // NOLINT
     StridedMemRefType<index_type, 1> *dimSizesRef,
     StridedMemRefType<index_type, 1> *lvlSizesRef,
-    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<LevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *dim2lvlRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef, OverheadType posTp,
     OverheadType crdTp, PrimaryType valTp, Action action, void *ptr) {
@@ -189,7 +189,7 @@ void *_mlir_ciface_newSparseTensor( // NOLINT
   ASSERT_USIZE_EQ(lvl2dimRef, dimRank);
   const index_type *dimSizes = MEMREF_GET_PAYLOAD(dimSizesRef);
   const index_type *lvlSizes = MEMREF_GET_PAYLOAD(lvlSizesRef);
-  const DimLevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
+  const LevelType *lvlTypes = MEMREF_GET_PAYLOAD(lvlTypesRef);
   const index_type *dim2lvl = MEMREF_GET_PAYLOAD(dim2lvlRef);
   const index_type *lvl2dim = MEMREF_GET_PAYLOAD(lvl2dimRef);
 

@@ -1970,19 +1970,23 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasVBMI2()) {
-      for (auto VT : { MVT::v8i16, MVT::v4i32, MVT::v2i64,
-                       MVT::v16i16, MVT::v8i32, MVT::v4i64,
-                       MVT::v32i16, MVT::v16i32, MVT::v8i64 }) {
+      for (auto VT : {MVT::v32i16, MVT::v16i32, MVT::v8i64}) {
         setOperationAction(ISD::FSHL, VT, Custom);
         setOperationAction(ISD::FSHR, VT, Custom);
       }
 
       setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
-      setOperationAction(ISD::ROTR, MVT::v8i16,  Custom);
-      setOperationAction(ISD::ROTR, MVT::v16i16, Custom);
       setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
     }
   }// useAVX512Regs
+
+  if (!Subtarget.useSoftFloat() && Subtarget.hasVBMI2()) {
+    for (auto VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v16i16, MVT::v8i32,
+                    MVT::v4i64}) {
+      setOperationAction(ISD::FSHL, VT, Custom);
+      setOperationAction(ISD::FSHR, VT, Custom);
+    }
+  }
 
   // This block controls legalization for operations that don't have
   // pre-AVX512 equivalents. Without VLX we use 512-bit operations for
@@ -2332,7 +2336,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasAMXTILE()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAMXTILE()) {
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
@@ -6223,8 +6227,8 @@ static SDValue getBROADCAST_LOAD(unsigned Opcode, const SDLoc &DL, EVT VT,
   if (!Mem || !Mem->readMem() || !Mem->isSimple() || Mem->isNonTemporal())
     return SDValue();
 
-  SDValue Ptr =
-      DAG.getMemBasePlusOffset(Mem->getBasePtr(), TypeSize::Fixed(Offset), DL);
+  SDValue Ptr = DAG.getMemBasePlusOffset(Mem->getBasePtr(),
+                                         TypeSize::getFixed(Offset), DL);
   SDVTList Tys = DAG.getVTList(VT, MVT::Other);
   SDValue Ops[] = {Mem->getChain(), Ptr};
   SDValue BcstLd = DAG.getMemIntrinsicNode(
@@ -12422,7 +12426,7 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     unsigned Offset = BroadcastIdx * SVT.getStoreSize();
     assert((int)(Offset * 8) == BitOffset && "Unexpected bit-offset");
     SDValue NewAddr =
-        DAG.getMemBasePlusOffset(BaseAddr, TypeSize::Fixed(Offset), DL);
+        DAG.getMemBasePlusOffset(BaseAddr, TypeSize::getFixed(Offset), DL);
 
     // Directly form VBROADCAST_LOAD if we're using VBROADCAST opcode rather
     // than MOVDDUP.
@@ -19675,7 +19679,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
     MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SSFI);
   if (SrcVT == MVT::i32) {
     SDValue OffsetSlot =
-        DAG.getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), dl);
+        DAG.getMemBasePlusOffset(StackSlot, TypeSize::getFixed(4), dl);
     SDValue Store1 = DAG.getStore(Chain, dl, Src, StackSlot, MPI, SlotAlign);
     SDValue Store2 = DAG.getStore(Store1, dl, DAG.getConstant(0, dl, MVT::i32),
                                   OffsetSlot, MPI.getWithOffset(4), SlotAlign);
@@ -24354,7 +24358,7 @@ static SDValue splitVectorStore(StoreSDNode *Store, SelectionDAG &DAG) {
   unsigned HalfOffset = Value0.getValueType().getStoreSize();
   SDValue Ptr0 = Store->getBasePtr();
   SDValue Ptr1 =
-      DAG.getMemBasePlusOffset(Ptr0, TypeSize::Fixed(HalfOffset), DL);
+      DAG.getMemBasePlusOffset(Ptr0, TypeSize::getFixed(HalfOffset), DL);
   SDValue Ch0 =
       DAG.getStore(Store->getChain(), DL, Value0, Ptr0, Store->getPointerInfo(),
                    Store->getOriginalAlign(),
@@ -24390,7 +24394,7 @@ static SDValue scalarizeVectorStore(StoreSDNode *Store, MVT StoreVT,
   for (unsigned i = 0; i != NumElems; ++i) {
     unsigned Offset = i * ScalarSize;
     SDValue Ptr = DAG.getMemBasePlusOffset(Store->getBasePtr(),
-                                           TypeSize::Fixed(Offset), DL);
+                                           TypeSize::getFixed(Offset), DL);
     SDValue Scl = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, StoreSVT, StoredVal,
                               DAG.getIntPtrConstant(i, DL));
     SDValue Ch = DAG.getStore(Store->getChain(), DL, Scl, Ptr,
@@ -24786,7 +24790,7 @@ SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MemOps.push_back(Store);
 
   // Store fp_offset
-  FIN = DAG.getMemBasePlusOffset(FIN, TypeSize::Fixed(4), DL);
+  FIN = DAG.getMemBasePlusOffset(FIN, TypeSize::getFixed(4), DL);
   Store = DAG.getStore(
       Op.getOperand(0), DL,
       DAG.getConstant(FuncInfo->getVarArgsFPOffset(), DL, MVT::i32), FIN,
@@ -39950,8 +39954,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
             LN->isSimple()) {
           unsigned Offset = ShiftAmt / 8;
           SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-          SDValue Ptr = DAG.getMemBasePlusOffset(LN->getBasePtr(),
-                                                 TypeSize::Fixed(Offset), DL);
+          SDValue Ptr = DAG.getMemBasePlusOffset(
+              LN->getBasePtr(), TypeSize::getFixed(Offset), DL);
           SDValue Ops[] = { LN->getChain(), Ptr };
           SDValue BcastLd = DAG.getMemIntrinsicNode(
               X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MVT::i16,
@@ -49843,7 +49847,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     unsigned HalfOffset = 16;
     SDValue Ptr1 = Ld->getBasePtr();
     SDValue Ptr2 =
-        DAG.getMemBasePlusOffset(Ptr1, TypeSize::Fixed(HalfOffset), dl);
+        DAG.getMemBasePlusOffset(Ptr1, TypeSize::getFixed(HalfOffset), dl);
     EVT HalfVT = EVT::getVectorVT(*DAG.getContext(), MemVT.getScalarType(),
                                   NumElems / 2);
     SDValue Load1 =
@@ -50018,7 +50022,7 @@ static bool getParamsForOneTrueMaskedElt(MaskedLoadStoreSDNode *MaskedOp,
   Addr = MaskedOp->getBasePtr();
   if (TrueMaskElt != 0) {
     Offset = TrueMaskElt * EltVT.getStoreSize();
-    Addr = DAG.getMemBasePlusOffset(Addr, TypeSize::Fixed(Offset),
+    Addr = DAG.getMemBasePlusOffset(Addr, TypeSize::getFixed(Offset),
                                     SDLoc(MaskedOp));
   }
 
@@ -50312,7 +50316,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       Hi = combinevXi1ConstantToInteger(Hi, DAG);
 
       SDValue Ptr0 = St->getBasePtr();
-      SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, TypeSize::Fixed(4), dl);
+      SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, TypeSize::getFixed(4), dl);
 
       SDValue Ch0 =
           DAG.getStore(St->getChain(), dl, Lo, Ptr0, St->getPointerInfo(),
@@ -50824,37 +50828,18 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   int CombineOpcode =
       N->getOpcode() == X86ISD::VFCMULC ? X86ISD::VFMULC : X86ISD::VFCMULC;
-  auto isConjugationConstant = [](const Constant *c) {
-    if (const auto *CI = dyn_cast<ConstantInt>(c)) {
-      APInt ConjugationInt32 = APInt(32, 0x80000000, true);
-      APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
-      switch (CI->getBitWidth()) {
-      case 16:
-        return false;
-      case 32:
-        return CI->getValue() == ConjugationInt32;
-      case 64:
-        return CI->getValue() == ConjugationInt64;
-      default:
-        llvm_unreachable("Unexpected bit width");
-      }
-    }
-    if (const auto *CF = dyn_cast<ConstantFP>(c))
-      return CF->getType()->isFloatTy() && CF->isNegativeZeroValue();
-    return false;
-  };
   auto combineConjugation = [&](SDValue &r) {
     if (LHS->getOpcode() == ISD::BITCAST && RHS.hasOneUse()) {
       SDValue XOR = LHS.getOperand(0);
       if (XOR->getOpcode() == ISD::XOR && XOR.hasOneUse()) {
-        SDValue XORRHS = XOR.getOperand(1);
-        if (XORRHS.getOpcode() == ISD::BITCAST && XORRHS.hasOneUse())
-          XORRHS = XORRHS.getOperand(0);
-        if (XORRHS.getOpcode() == X86ISD::VBROADCAST_LOAD &&
-            XORRHS.getOperand(1).getNumOperands()) {
-          ConstantPoolSDNode *CP =
-              dyn_cast<ConstantPoolSDNode>(XORRHS.getOperand(1).getOperand(0));
-          if (CP && isConjugationConstant(CP->getConstVal())) {
+        KnownBits XORRHS = DAG.computeKnownBits(XOR.getOperand(1));
+        if (XORRHS.isConstant()) {
+          APInt ConjugationInt32 = APInt(32, 0x80000000, true);
+          APInt ConjugationInt64 = APInt(64, 0x8000000080000000ULL, true);
+          if ((XORRHS.getBitWidth() == 32 &&
+               XORRHS.getConstant() == ConjugationInt32) ||
+              (XORRHS.getBitWidth() == 64 &&
+               XORRHS.getConstant() == ConjugationInt64)) {
             SelectionDAG::FlagInserter FlagsInserter(DAG, N);
             SDValue I2F = DAG.getBitcast(VT, LHS.getOperand(0).getOperand(0));
             SDValue FCMulC = DAG.getNode(CombineOpcode, SDLoc(N), VT, RHS, I2F);
@@ -50888,20 +50873,11 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
     return DAG.getTarget().Options.NoSignedZerosFPMath ||
            Flags.hasNoSignedZeros();
   };
-  auto IsVectorAllNegativeZero = [](const SDNode *N) {
-    if (N->getOpcode() != X86ISD::VBROADCAST_LOAD)
-      return false;
-    assert(N->getSimpleValueType(0).getScalarType() == MVT::f32 &&
-           "Unexpected vector type!");
-    if (ConstantPoolSDNode *CP =
-            dyn_cast<ConstantPoolSDNode>(N->getOperand(1)->getOperand(0))) {
-      APInt AI = APInt(32, 0x80008000, true);
-      if (const auto *CI = dyn_cast<ConstantInt>(CP->getConstVal()))
-        return CI->getValue() == AI;
-      if (const auto *CF = dyn_cast<ConstantFP>(CP->getConstVal()))
-        return CF->getValue() == APFloat(APFloat::IEEEsingle(), AI);
-    }
-    return false;
+  auto IsVectorAllNegativeZero = [&DAG](SDValue Op) {
+    APInt AI = APInt(32, 0x80008000, true);
+    KnownBits Bits = DAG.computeKnownBits(Op);
+    return Bits.getBitWidth() == 32 && Bits.isConstant() &&
+           Bits.getConstant() == AI;
   };
 
   if (N->getOpcode() != ISD::FADD || !Subtarget.hasFP16() ||
@@ -50933,7 +50909,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
       if ((Opcode == X86ISD::VFMADDC || Opcode == X86ISD::VFCMADDC) &&
           ((ISD::isBuildVectorAllZeros(Op0->getOperand(2).getNode()) &&
             HasNoSignedZero(Op0->getFlags())) ||
-           IsVectorAllNegativeZero(Op0->getOperand(2).getNode()))) {
+           IsVectorAllNegativeZero(Op0->getOperand(2)))) {
         MulOp0 = Op0.getOperand(0);
         MulOp1 = Op0.getOperand(1);
         IsConj = Opcode == X86ISD::VFCMADDC;
@@ -56963,13 +56939,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8RegClass);
+          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16RegClass);
+          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32RegClass);
+          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64RegClass);
+          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -56988,14 +56964,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, &X86::GR8RegClass);
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, &X86::GR16RegClass);
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, &X86::GR32RegClass);
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, &X86::GR64RegClass);
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
@@ -57264,7 +57240,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(X86::DF, &X86::DFCCRRegClass);
 
     // fpsr -> FPSW
-    if (StringRef("{fpsr}").equals_insensitive(Constraint))
+    // Only allow for clobber.
+    if (StringRef("{fpsr}").equals_insensitive(Constraint) && VT == MVT::Other)
       return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
     return Res;
