@@ -493,8 +493,7 @@ def ext_pp_gnu_line_directive : Extension<
 def err_pp_invalid_directive : Error<
   "invalid preprocessing directive%select{|, did you mean '#%1'?}0">;
 def warn_pp_invalid_directive : Warning<
-  err_pp_invalid_directive.Summary>,
-  InGroup<UnsupportedDirective>;
+  err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
 def warn_pp_unknown_parameter_ignored : Warning<
   "unknown%select{ | embed}0 preprocessor parameter '%1' ignored">,
   InGroup<UnknownDirectiveParameters>;
