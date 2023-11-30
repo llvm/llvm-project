@@ -559,6 +559,8 @@ body: |
   ; RPU-NEXT:   0     0      S_BRANCH %bb.1
   ; RPU-NEXT:   0     0
   ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ; RPU-NEXT: bb.1:
   ; RPU-NEXT:   Live-in:
   ; RPU-NEXT:   SGPR  VGPR
@@ -570,6 +572,8 @@ body: |
   ; RPU-NEXT:   0     1      %0:vreg_512 = V_INDIRECT_REG_WRITE_MOVREL_B32_V16 %0:vreg_512(tied-def 0), 42, 3, implicit $m0, implicit $exec
   ; RPU-NEXT:   0     1
   ; RPU-NEXT:   Live-out: %0:0000000000000C00
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ; RPU-NEXT: bb.2:
   ; RPU-NEXT:   Live-in:  %0:0000000000000C00
   ; RPU-NEXT:   SGPR  VGPR
@@ -581,6 +585,8 @@ body: |
   ; RPU-NEXT:   0     0      S_ENDPGM 0
   ; RPU-NEXT:   0     0
   ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
   ;
   ; RPD-LABEL: name: movrel
   ; RPD: bb.0:
@@ -608,6 +614,8 @@ body: |
   ; RPD-NEXT:   Live-out: %0:0000000000000C00
   ; RPD-NEXT:   mis LIS:
   ; RPD-NEXT:     %0:L0000000000000C00 isn't found in LIS reported set
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   ; RPD-NEXT: bb.1:
   ; RPD-NEXT:   Live-in:
   ; RPD-NEXT:   SGPR  VGPR
@@ -619,6 +627,8 @@ body: |
   ; RPD-NEXT:   0     16     %0:vreg_512 = V_INDIRECT_REG_WRITE_MOVREL_B32_V16 %0:vreg_512(tied-def 0), 42, 3, implicit $m0, implicit $exec
   ; RPD-NEXT:   0     1
   ; RPD-NEXT:   Live-out: %0:0000000000000C00
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   ; RPD-NEXT: bb.2:
   ; RPD-NEXT:   Live-in:  %0:0000000000000C00
   ; RPD-NEXT:   SGPR  VGPR
@@ -630,6 +640,8 @@ body: |
   ; RPD-NEXT:   0     0      S_ENDPGM 0
   ; RPD-NEXT:   0     0
   ; RPD-NEXT:   Live-out:
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
   bb.0:
     liveins: $sgpr1
     $sgpr0 = COPY $sgpr1
