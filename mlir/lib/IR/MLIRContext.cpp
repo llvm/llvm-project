@@ -215,8 +215,8 @@ public:
   /// This is a mapping from type name to the abstract type describing it.
   /// It is used by `AbstractType::lookup` to get an `AbstractType` from a name.
   /// As this map needs to be populated before `StringAttr` is loaded, we
-  /// cannot use `StringAttr` as the key, which would avoid string duplication.
-  llvm::StringMap<AbstractType *> nameToType;
+  /// cannot use `StringAttr` as the key.
+  llvm::DenseMap<StringRef, AbstractType *> nameToType;
 
   /// Cached Type Instances.
   Float8E5M2Type f8E5M2Ty;
@@ -246,8 +246,8 @@ public:
   /// it. It is used by `AbstractType::lookup` to get an `AbstractType` from a
   /// name.
   /// As this map needs to be populated before `StringAttr` is loaded, we
-  /// cannot use `StringAttr` as the key, which would avoid string duplication.
-  llvm::StringMap<AbstractAttribute *> nameToAttribute;
+  /// cannot use `StringAttr` as the key.
+  llvm::DenseMap<StringRef, AbstractAttribute *> nameToAttribute;
 
   /// Cached Attribute Instances.
   BoolAttr falseAttr, trueAttr;
