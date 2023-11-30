@@ -77,6 +77,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << (boolAttr.getValue() ? "true" : "false");
       return AliasResult::FinalAlias;
     }
+    if (auto bitfield = attr.dyn_cast<mlir::cir::BitfieldInfoAttr>()) {      
+      os << "bfi_" << bitfield.getName().str();
+      return AliasResult::FinalAlias;
+    }
 
     return AliasResult::NoAlias;
   }

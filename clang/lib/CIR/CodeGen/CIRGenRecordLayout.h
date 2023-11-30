@@ -91,6 +91,9 @@ struct CIRGenBitFieldInfo {
   /// The offset of the bitfield storage from the start of the struct.
   clang::CharUnits VolatileStorageOffset;
 
+  /// The name of a bitfield
+  llvm::StringRef Name;
+
   CIRGenBitFieldInfo()
       : Offset(), Size(), IsSigned(), StorageSize(), VolatileOffset(),
         VolatileStorageSize() {}

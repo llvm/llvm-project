@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRGenRecordLayout.h"
 #include "CIRDataLayout.h"
 #include "CIRGenTypeCache.h"
 #include "UnimplementedFeatureGuarding.h"
@@ -659,6 +660,26 @@ public:
   mlir::Value createGetGlobal(mlir::cir::GlobalOp global) {
     return create<mlir::cir::GetGlobalOp>(
         global.getLoc(), getPointerTo(global.getSymType()), global.getName());
+  }
+
+  mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
+                                mlir::Value addr, mlir::Type storageType,
+                                const CIRGenBitFieldInfo &info,
+                                bool useVolatile) {
+    auto offset = useVolatile ? info.VolatileOffset : info.Offset;
+    return create<mlir::cir::GetBitfieldOp>(loc, resultType, addr, storageType,
+                                            info.Name, info.Size,
+                                            offset, info.IsSigned);
+  }
+
+  mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
+                                mlir::Value dstAddr, mlir::Type storageType,
+                                mlir::Value src, const CIRGenBitFieldInfo &info,
+                                bool useVolatile) {
+    auto offset = useVolatile ? info.VolatileOffset : info.Offset;
+    return create<mlir::cir::SetBitfieldOp>(
+        loc, resultType, dstAddr, storageType, src, info.Name,
+        info.Size, offset, info.IsSigned);
   }
 
   /// Create a pointer to a record member.

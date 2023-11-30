@@ -227,7 +227,8 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *FD,
       (unsigned)(getFieldBitOffset(FD) - astContext.toBits(StartOffset));
   Info.Size = FD->getBitWidthValue(astContext);
   Info.StorageSize = getSizeInBits(StorageType).getQuantity();
-  Info.StorageOffset = StartOffset;
+  Info.StorageOffset = StartOffset;  
+  Info.Name = FD->getName();
 
   if (Info.Size > Info.StorageSize)
     Info.Size = Info.StorageSize;
