@@ -5548,12 +5548,55 @@ public:
   }
 };
 
+/// Folds transpose(shape_cast) into a new shape_cast, when the transpose just
+/// permutes a unit dim from the result of the shape_cast.
+class FoldTransposeShapeCast : public OpRewritePattern<TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TransposeOp transpOp,
+                                PatternRewriter &rewriter) const override {
+    Value transposeSrc = transpOp.getVector();
+    auto shapeCastOp = transposeSrc.getDefiningOp<vector::ShapeCastOp>();
+    if (!shapeCastOp)
+      return failure();
+
+    auto sourceType = transpOp.getSourceVectorType();
+    auto resultType = transpOp.getResultVectorType();
+
+    auto filterUnitDims = [](VectorType type) {
+      return llvm::make_filter_range(
+          llvm::zip_equal(type.getShape(), type.getScalableDims()),
+          [&](auto dim) {
+            auto [size, isScalble] = dim;
+            return size != 1 || isScalble;
+          });
+    };
+
+    auto sourceWithoutUnitDims = filterUnitDims(sourceType);
+    auto resultWithoutUnitDims = filterUnitDims(resultType);
+
+    // If this transpose just permutes a unit dim, then we can fold it into the
+    // shape_cast.
+    for (auto [srcDim, resDim] :
+         llvm::zip_equal(sourceWithoutUnitDims, resultWithoutUnitDims)) {
+      if (srcDim != resDim)
+        return failure();
+    }
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transpOp, resultType,
+                                                     shapeCastOp.getSource());
+
+    return success();
+  };
+};
+
 } // namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
-              TransposeFolder, FoldTransposeSplat>(context);
+              TransposeFolder, FoldTransposeSplat, FoldTransposeShapeCast>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
