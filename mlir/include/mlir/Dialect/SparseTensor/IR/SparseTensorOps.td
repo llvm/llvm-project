@@ -921,10 +921,9 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort">,
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort sort the `xs` values along with some `ys` values
-    that are put in a single linear buffer `xy`.
-    The affine map attribute `perm_map` specifies the permutation to be applied on
-    the `xs` before comparison, the rank of the permutation map
+    Sorts the `xs` values along with some `ys` values that are put in a single linear
+    buffer `xy`.  The affine map attribute `perm_map` specifies the permutation to be
+    applied on the `xs` before comparison, the rank of the permutation map
     also specifies the number of `xs` values in `xy`.
     The optional index attribute `ny` provides the number of `ys` values in `xy`.
     When `ny` is not explicitly specified, its value is 0.
@@ -950,14 +949,14 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort">,
 }
 
 def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]>,
-    Arguments<(ins AnyCOOSparseTensor: $input_coo,
+    Arguments<(ins AnySparseTensor: $input_coo,
                    SparseTensorSortKindAttr:$algorithm)>,
-    Results<(outs AnyCOOSparseTensor: $result_coo)> {
+    Results<(outs AnySparseTensor: $result_coo)> {
   let summary = "Reorder the input COO such that it has the the same order as "
                 "the output COO";
   let description = [{
-    sparse_tensor.reorder_coo reorder input COO to the same order as specified by
-    the output format. E.g., reorder an unordered COO into an ordered one.
+    Reorders the input COO to the same order as specified by the output format.
+    E.g., reorder an unordered COO into an ordered one.
 
     The input and result COO tensor must have the same element type, position type and
     coordinate type. At the moment, the operation also only supports ordering
