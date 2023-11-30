@@ -23,7 +23,7 @@ using namespace llvm;
 // are currently emitted in X86GenInstrInfo.inc in alphabetical order. Which
 // makes sorting these tables a simple matter of alphabetizing the table.
 #include "X86GenFoldTables.inc"
-static const X86MemoryFoldTableEntry BroadcastFoldTable2[] = {
+static const X86MemoryFoldTableEntry BroadcastTable2[] = {
   { X86::VADDPDZ128rr,   X86::VADDPDZ128rmb,   TB_BCAST_SD },
   { X86::VADDPDZ256rr,   X86::VADDPDZ256rmb,   TB_BCAST_SD },
   { X86::VADDPDZrr,      X86::VADDPDZrmb,      TB_BCAST_SD },
@@ -200,7 +200,7 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable2[] = {
   { X86::VXORPSZrr,      X86::VXORPSZrmb,      TB_BCAST_SS },
 };
 
-static const X86MemoryFoldTableEntry BroadcastFoldTable3[] = {
+static const X86MemoryFoldTableEntry BroadcastTable3[] = {
   { X86::VFMADD132PDZ128r,     X86::VFMADD132PDZ128mb,    TB_BCAST_SD },
   { X86::VFMADD132PDZ256r,     X86::VFMADD132PDZ256mb,    TB_BCAST_SD },
   { X86::VFMADD132PDZr,        X86::VFMADD132PDZmb,       TB_BCAST_SD },
@@ -319,7 +319,7 @@ static const X86MemoryFoldTableEntry BroadcastFoldTable3[] = {
 
 // Table to map instructions safe to broadcast using a different width from the
 // element width.
-static const X86MemoryFoldTableEntry BroadcastSizeFoldTable2[] = {
+static const X86MemoryFoldTableEntry BroadcastSizeTable2[] = {
   { X86::VANDNPDZ128rr,        X86::VANDNPSZ128rmb,       TB_BCAST_SS },
   { X86::VANDNPDZ256rr,        X86::VANDNPSZ256rmb,       TB_BCAST_SS },
   { X86::VANDNPDZrr,           X86::VANDNPSZrmb,          TB_BCAST_SS },
@@ -370,7 +370,7 @@ static const X86MemoryFoldTableEntry BroadcastSizeFoldTable2[] = {
   { X86::VXORPSZrr,            X86::VXORPDZrmb,           TB_BCAST_SD },
 };
 
-static const X86MemoryFoldTableEntry BroadcastSizeFoldTable3[] = {
+static const X86MemoryFoldTableEntry BroadcastSizeTable3[] = {
   { X86::VPTERNLOGDZ128rri,    X86::VPTERNLOGQZ128rmbi,   TB_BCAST_Q },
   { X86::VPTERNLOGDZ256rri,    X86::VPTERNLOGQZ256rmbi,   TB_BCAST_Q },
   { X86::VPTERNLOGDZrri,       X86::VPTERNLOGQZrmbi,      TB_BCAST_Q },
@@ -391,16 +391,16 @@ lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
   // Make sure the tables are sorted.
   static std::atomic<bool> FoldTablesChecked(false);
   if (!FoldTablesChecked.load(std::memory_order_relaxed)) {
-    CHECK_SORTED_UNIQUE(MemoryFoldTable2Addr)
-    CHECK_SORTED_UNIQUE(MemoryFoldTable0)
-    CHECK_SORTED_UNIQUE(MemoryFoldTable1)
-    CHECK_SORTED_UNIQUE(MemoryFoldTable2)
-    CHECK_SORTED_UNIQUE(MemoryFoldTable3)
-    CHECK_SORTED_UNIQUE(MemoryFoldTable4)
-    CHECK_SORTED_UNIQUE(BroadcastFoldTable2)
-    CHECK_SORTED_UNIQUE(BroadcastFoldTable3)
-    CHECK_SORTED_UNIQUE(BroadcastSizeFoldTable2)
-    CHECK_SORTED_UNIQUE(BroadcastSizeFoldTable3)
+    CHECK_SORTED_UNIQUE(Table2Addr)
+    CHECK_SORTED_UNIQUE(Table0)
+    CHECK_SORTED_UNIQUE(Table1)
+    CHECK_SORTED_UNIQUE(Table2)
+    CHECK_SORTED_UNIQUE(Table3)
+    CHECK_SORTED_UNIQUE(Table4)
+    CHECK_SORTED_UNIQUE(BroadcastTable2)
+    CHECK_SORTED_UNIQUE(BroadcastTable3)
+    CHECK_SORTED_UNIQUE(BroadcastSizeTable2)
+    CHECK_SORTED_UNIQUE(BroadcastSizeTable3)
     FoldTablesChecked.store(true, std::memory_order_relaxed);
   }
 #endif
@@ -414,22 +414,22 @@ lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
 
 const X86MemoryFoldTableEntry *
 llvm::lookupTwoAddrFoldTable(unsigned RegOp) {
-  return lookupFoldTableImpl(MemoryFoldTable2Addr, RegOp);
+  return lookupFoldTableImpl(Table2Addr, RegOp);
 }
 
 const X86MemoryFoldTableEntry *
 llvm::lookupFoldTable(unsigned RegOp, unsigned OpNum) {
   ArrayRef<X86MemoryFoldTableEntry> FoldTable;
   if (OpNum == 0)
-    FoldTable = ArrayRef(MemoryFoldTable0);
+    FoldTable = ArrayRef(Table0);
   else if (OpNum == 1)
-    FoldTable = ArrayRef(MemoryFoldTable1);
+    FoldTable = ArrayRef(Table1);
   else if (OpNum == 2)
-    FoldTable = ArrayRef(MemoryFoldTable2);
+    FoldTable = ArrayRef(Table2);
   else if (OpNum == 3)
-    FoldTable = ArrayRef(MemoryFoldTable3);
+    FoldTable = ArrayRef(Table3);
   else if (OpNum == 4)
-    FoldTable = ArrayRef(MemoryFoldTable4);
+    FoldTable = ArrayRef(Table4);
   else
     return nullptr;
 
@@ -445,36 +445,36 @@ struct X86MemUnfoldTable {
   std::vector<X86MemoryFoldTableEntry> Table;
 
   X86MemUnfoldTable() {
-    for (const X86MemoryFoldTableEntry &Entry : MemoryFoldTable2Addr)
+    for (const X86MemoryFoldTableEntry &Entry : Table2Addr)
       // Index 0, folded load and store, no alignment requirement.
       addTableEntry(Entry, TB_INDEX_0 | TB_FOLDED_LOAD | TB_FOLDED_STORE);
 
-    for (const X86MemoryFoldTableEntry &Entry : MemoryFoldTable0)
+    for (const X86MemoryFoldTableEntry &Entry : Table0)
       // Index 0, mix of loads and stores.
       addTableEntry(Entry, TB_INDEX_0);
 
-    for (const X86MemoryFoldTableEntry &Entry : MemoryFoldTable1)
+    for (const X86MemoryFoldTableEntry &Entry : Table1)
       // Index 1, folded load
       addTableEntry(Entry, TB_INDEX_1 | TB_FOLDED_LOAD);
 
-    for (const X86MemoryFoldTableEntry &Entry : MemoryFoldTable2)
+    for (const X86MemoryFoldTableEntry &Entry : Table2)
       // Index 2, folded load
       addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD);
 
-    for (const X86MemoryFoldTableEntry &Entry : MemoryFoldTable3)
+    for (const X86MemoryFoldTableEntry &Entry : Table3)
       // Index 3, folded load
       addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD);
 
-    for (const X86MemoryFoldTableEntry &Entry : MemoryFoldTable4)
+    for (const X86MemoryFoldTableEntry &Entry : Table4)
       // Index 4, folded load
       addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD);
 
     // Broadcast tables.
-    for (const X86MemoryFoldTableEntry &Entry : BroadcastFoldTable2)
+    for (const X86MemoryFoldTableEntry &Entry : BroadcastTable2)
       // Index 2, folded broadcast
       addTableEntry(Entry, TB_INDEX_2 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
-    for (const X86MemoryFoldTableEntry &Entry : BroadcastFoldTable3)
+    for (const X86MemoryFoldTableEntry &Entry : BroadcastTable3)
       // Index 3, folded broadcast
       addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
@@ -516,7 +516,7 @@ struct X86MemBroadcastFoldTable {
 
   X86MemBroadcastFoldTable() {
     // Broadcast tables.
-    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastFoldTable2) {
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastTable2) {
       unsigned RegOp = Reg2Bcst.KeyOp;
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 2)) {
@@ -526,7 +526,7 @@ struct X86MemBroadcastFoldTable {
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
-    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastSizeFoldTable2) {
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastSizeTable2) {
       unsigned RegOp = Reg2Bcst.KeyOp;
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 2)) {
@@ -537,7 +537,7 @@ struct X86MemBroadcastFoldTable {
       }
     }
 
-    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastFoldTable3) {
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastTable3) {
       unsigned RegOp = Reg2Bcst.KeyOp;
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
@@ -547,7 +547,7 @@ struct X86MemBroadcastFoldTable {
         Table.push_back({MemOp, BcstOp, Flags});
       }
     }
-    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastSizeFoldTable3) {
+    for (const X86MemoryFoldTableEntry &Reg2Bcst : BroadcastSizeTable3) {
       unsigned RegOp = Reg2Bcst.KeyOp;
       unsigned BcstOp = Reg2Bcst.DstOp;
       if (const X86MemoryFoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
