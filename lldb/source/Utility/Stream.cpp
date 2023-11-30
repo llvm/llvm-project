@@ -85,6 +85,7 @@ void Stream::PutCStringColorHighlighted(llvm::StringRef text,
   llvm::StringRef remaining = text;
   std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
       "${ansi.fg.red}%.*s${ansi.normal}");
+
   while (reg_pattern.match(remaining, &matches)) {
     llvm::StringRef match = matches[0];
     size_t match_start_pos = match.data() - remaining.data();
