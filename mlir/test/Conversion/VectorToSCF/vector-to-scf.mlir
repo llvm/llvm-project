@@ -754,11 +754,15 @@ func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector
 
 // TARGET-RANK-ZERO-LABEL: func @unroll_transfer_write_target_rank_zero
 func.func @unroll_transfer_write_target_rank_zero(%vec : vector<2xi32>) {
-  // TARGET-RANK-ZERO: %[[EXTRACTED:.*]] = vector.extract
-  // TARGET-RANK-ZERO: %[[BROADCASTED:.*]] = vector.broadcast %[[EXTRACTED]]
-  // TARGET-RANK-ZERO: vector.transfer_write %[[BROADCASTED]]
   %alloc = memref.alloc() : memref<4xi32>
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %alloc[%c0] : vector<2xi32>, memref<4xi32>
   return
 }
+// TARGET-RANK-ZERO: %[[ALLOC:.*]] = memref.alloc() : memref<4xi32>
+// TARGET-RANK-ZERO: %[[EXTRACTED1:.*]] = vector.extract {{.*}} : i32 from vector<2xi32>
+// TARGET-RANK-ZERO: %[[BROADCASTED1:.*]] = vector.broadcast %[[EXTRACTED1]] : i32 to vector<i32>
+// TARGET-RANK-ZERO: vector.transfer_write %[[BROADCASTED1]], %[[ALLOC]]{{.*}} : vector<i32>, memref<4xi32>
+// TARGET-RANK-ZERO: %[[EXTRACTED2:.*]] = vector.extract {{.*}} : i32 from vector<2xi32>
+// TARGET-RANK-ZERO: %[[BROADCASTED2:.*]] = vector.broadcast %[[EXTRACTED2]] : i32 to vector<i32>
+// TARGET-RANK-ZERO: vector.transfer_write %[[BROADCASTED2]], %[[ALLOC]]{{.*}} : vector<i32>, memref<4xi32>
