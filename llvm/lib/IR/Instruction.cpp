@@ -254,6 +254,19 @@ Instruction::getDbgValueRange() const {
   return DbgMarker->getDbgValueRange();
 }
 
+std::optional<DPValue::self_iterator> Instruction::getDbgReinsertionPosition() {
+  // Is there a marker on the next instruction?
+  DPMarker *NextMarker = getParent()->getNextMarker(this);
+  if (!NextMarker)
+    return std::nullopt;
+
+  // Are there any DPValues in the next marker?
+  if (NextMarker->StoredDPValues.empty())
+    return std::nullopt;
+
+  return NextMarker->StoredDPValues.begin();
+}
+
 bool Instruction::hasDbgValues() const { return !getDbgValueRange().empty(); }
 
 void Instruction::dropDbgValues() {
