@@ -454,15 +454,15 @@ public:
     typedef char mask;
     // In case char is signed, static_cast is needed to avoid warning on
     // positive value becomming negative.
-    static const mask space  = _S;
+    static const mask space  = static_cast<mask>(_S);
     static const mask print  = static_cast<mask>(_P | _U | _L | _N | _B);
-    static const mask cntrl  = _C;
-    static const mask upper  = _U;
-    static const mask lower  = _L;
-    static const mask alpha  = _U | _L;
-    static const mask digit  = _N;
-    static const mask punct  = _P;
-    static const mask xdigit = _X | _N;
+    static const mask cntrl  = static_cast<mask>(_C);
+    static const mask upper  = static_cast<mask>(_U);
+    static const mask lower  = static_cast<mask>(_L);
+    static const mask alpha  = static_cast<mask>(_U | _L);
+    static const mask digit  = static_cast<mask>(_N);
+    static const mask punct  = static_cast<mask>(_P);
+    static const mask xdigit = static_cast<mask>(_X | _N);
     static const mask blank  = static_cast<mask>(_B);
     // mask is already fully saturated, use a different type in regex_type_traits.
     static const unsigned short __regex_word = 0x100;
