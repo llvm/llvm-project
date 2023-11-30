@@ -745,7 +745,7 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
     Match = find_if(OpcRegInstsForBroadcast,
                     IsMatch(MemInst, /*IsBroadcast=*/true, Variant));
     if (Match != OpcRegInstsForBroadcast.end()) {
-      updateTables(FixUp(*Match), MemInst, 0, /*IsMannual=*/false,
+      updateTables(FixUp(*Match), MemInst, 0, /*IsManual=*/false,
                    /*IsBroadcast=*/true);
       OpcRegInstsForBroadcast.erase(Match);
     }
