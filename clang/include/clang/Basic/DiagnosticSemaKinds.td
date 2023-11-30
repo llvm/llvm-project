@@ -7232,6 +7232,11 @@ def warn_arith_conv_enum_float_cxx20 : Warning<
   "%plural{2:with|4:from|:and}0 "
   "%select{enumeration|floating-point}1 type %3 is deprecated">,
   InGroup<DeprecatedEnumFloatConversion>;
+def err_arith_conv_enum_float_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "%select{floating-point|enumeration}1 type %2 "
+  "%plural{2:with|4:from|:and}0 "
+  "%select{enumeration|floating-point}1 type %3">;
 def warn_arith_conv_mixed_enum_types : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">,
@@ -7240,6 +7245,10 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
+def err_conv_mixed_enum_types_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "different enumeration types%diff{ ($ and $)|}1,2">;
+
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
   InGroup<AnonEnumEnumConversion>, DefaultIgnore;

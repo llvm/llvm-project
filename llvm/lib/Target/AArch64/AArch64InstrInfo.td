@@ -289,6 +289,8 @@ def HasCHK           : Predicate<"Subtarget->hasCHK()">,
                        AssemblerPredicateWithAll<(all_of FeatureCHK), "chk">;
 def HasGCS           : Predicate<"Subtarget->hasGCS()">,
                        AssemblerPredicateWithAll<(all_of FeatureGCS), "gcs">;
+def HasCPA           : Predicate<"Subtarget->hasCPA()">,
+                       AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -9367,6 +9369,10 @@ let Predicates = [HasD128] in {
   }
 }
 
+//===----------------------------===//
+// 2023 Architecture Extensions:
+//===----------------------------===//
+
 let Predicates = [HasFP8] in {
   defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
   defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
@@ -9407,6 +9413,19 @@ let Predicates = [HasFP8DOT4] in {
  defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
  defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
 } // End let Predicates = [HasFP8DOT4]
+
+//===----------------------------------------------------------------------===//
+// Checked Pointer Arithmetic (FEAT_CPA)
+//===----------------------------------------------------------------------===//
+let Predicates = [HasCPA] in {
+  // Scalar add/subtract
+  defm ADDPT : AddSubCPA<0, "addpt">;
+  defm SUBPT : AddSubCPA<1, "subpt">;
+
+  // Scalar multiply-add/subtract
+  def MADDPT : MulAccumCPA<0, "maddpt">;
+  def MSUBPT : MulAccumCPA<1, "msubpt">;
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

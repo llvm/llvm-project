@@ -29,7 +29,7 @@ std::unique_ptr<Pass> createEnableArmStreamingPass(
     const ArmStreamingMode = ArmStreamingMode::Streaming,
     const ArmZaMode = ArmZaMode::Disabled);
 
-/// Pass that replaces 'arm_sme.get_tile_id' ops with actual tiles.
+/// Pass that allocates tile IDs to ArmSME operations.
 std::unique_ptr<Pass> createTileAllocationPass();
 
 //===----------------------------------------------------------------------===//
