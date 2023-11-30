@@ -29,7 +29,8 @@ declare x86_fp80 @copysignl(x86_fp80, x86_fp80) nounwind readnone
 define float @pr26070() {
 ; CHECK-LABEL: pr26070:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = call float @copysignf(float 1.0, float undef) readnone
   ret float %c
