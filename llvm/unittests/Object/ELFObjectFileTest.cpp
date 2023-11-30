@@ -745,7 +745,8 @@ Sections:
                   Section1BBAddrMaps);
 }
 
-// Tests for error paths of the ELFFile::decodeBBAddrMap with PGOAnalysisMap API.
+// Tests for error paths of the ELFFile::decodeBBAddrMap with PGOAnalysisMap
+// API.
 TEST(ELFObjectFileTest, InvalidDecodePGOAnalysisMap) {
   if (IsHostWindows())
     GTEST_SKIP();
@@ -820,7 +821,7 @@ Sections:
   SmallString<128> MissingBBFreq(CommonYamlString);
   MissingBBFreq += R"(
         Version: 2
-        Feature: 0x04
+        Feature: 0x02
         BBEntries:
           - ID:            1
             AddressOffset: 0x0
@@ -835,7 +836,7 @@ Sections:
   SmallString<128> MissingBrProb(CommonYamlString);
   MissingBrProb += R"(
         Version: 2
-        Feature: 0x02
+        Feature: 0x04
         BBEntries:
           - ID:            1
             AddressOffset: 0x0
@@ -849,13 +850,19 @@ Sections:
             AddressOffset: 0x2
             Size:          0x1
             Metadata:      0x2
-          - ID:            4
-            AddressOffset: 0x3
-            Size:          0x1
-            Metadata:      0x2
+    PGOAnalyses:
+      - PGOBBEntries:
+         - Successors:
+            - ID:          2
+              BrProb:      0x80000000
+            - ID:          3
+              BrProb:      0x80000000
+         - Successors:
+            - ID:          3
+              BrProb:      0xF0000000
 )";
 
-  DoCheck(MissingBrProb, "unable to decode LEB128 at offset 0x0000001b: "
+  DoCheck(MissingBrProb, "unable to decode LEB128 at offset 0x00000017: "
                          "malformed uleb128, extends past end");
 }
 

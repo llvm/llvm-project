@@ -131,4 +131,3 @@ TEST(ELFTypesTest, PGOAnalysisMapFeaturesInvalidEncodingTest) {
                       FailedWithMessage(Error));
   }
 }
-
