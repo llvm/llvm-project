@@ -130,11 +130,11 @@ int main(int argc, const char **argv) {
     BundleAlignment("bundle-align",
                     cl::desc("Alignment of bundle for binary files"),
                     cl::init(1), cl::cat(ClangOffloadBundlerCategory));
-  cl::opt<bool>
-    CheckInputArchive("check-input-archive",
-                      cl::desc("Check if input heterogeneous archive is "
-                               "valid in terms of TargetID rules.\n"),
-                      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> CheckInputArchive(
+      "check-input-archive",
+      cl::desc("Check if input heterogeneous archive is "
+               "valid in terms of TargetID rules.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool> HipOpenmpCompatible(
     "hip-openmp-compatible",
     cl::desc("Treat hip and hipv4 offload kinds as "
