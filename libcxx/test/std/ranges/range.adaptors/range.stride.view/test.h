@@ -181,6 +181,26 @@ struct InputView : std::ranges::view_base {
   constexpr sentinel_wrapper<T> end() const { return sentinel_wrapper<T>{end_}; }
 };
 
+// Don't move/hold the iterator itself, move/hold the base
+// of that iterator and reconstruct the iterator on demand.
+// May result in aliasing (if, e.g., Iterator is an iterator
+// over int *).
+template <class Iterator, class Sentinel>
+struct ViewOverNonCopyable : std::ranges::view_base {
+  constexpr explicit ViewOverNonCopyable(Iterator it, Sentinel sent)
+      : it_(base(std::move(it))), sent_(base(std::move(sent))) {}
+
+  ViewOverNonCopyable(ViewOverNonCopyable&&)            = default;
+  ViewOverNonCopyable& operator=(ViewOverNonCopyable&&) = default;
+
+  constexpr Iterator begin() const { return Iterator(it_); }
+  constexpr Sentinel end() const { return Sentinel(sent_); }
+
+private:
+  decltype(base(std::declval<Iterator>())) it_;
+  decltype(base(std::declval<Sentinel>())) sent_;
+};
+
 struct ForwardTracedMoveIter : ForwardIterBase<ForwardTracedMoveIter> {
   bool moved = false;
 
