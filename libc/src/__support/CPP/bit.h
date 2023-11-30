@@ -199,6 +199,10 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 /// Count the number of set bits in a value.
 /// Ex. popcount(0xF000F000) = 8
 /// Returns 0 if the word is zero.
+///
+/// The non-builtin version uses an algorithm that counts bit set by dividing
+/// the integer into multiple lanes and reducing the result.
+/// https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr int popcount(T value) {
   if constexpr (sizeof(T) == 8) {
@@ -222,6 +226,9 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
     static_assert(cpp::always_false<T>);
   }
 }
+
+// Rotate algorithms make use of "Safe, Efficient, and Portable Rotate in C/C++"
+// from https://blog.regehr.org/archives/1063.
 
 // Forward-declare rotr so that rotl can use it.
 template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
