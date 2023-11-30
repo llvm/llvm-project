@@ -168,3 +168,15 @@ void test_after_the_end_reference() {
 void test_after_after_the_end_reference() {
   int &ref = array[11]; // expected-warning{{Out of bound access to memory}}
 }
+
+int test_reference_that_might_be_after_the_end(int idx) {
+  // This TC produces no warning because separate analysis of (idx == 10) is
+  // only introduced _after_ the creation of the reference ref.
+  if (idx < 0 || idx > 10)
+    return -2;
+  int &ref = array[idx];
+  if (idx == 10)
+    return -1;
+  return ref;
+}
+
