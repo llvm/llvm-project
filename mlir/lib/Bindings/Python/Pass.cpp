@@ -148,6 +148,28 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           py::arg("module"), py::arg("cxx_source_file"), py::arg("py_source_file"), py::arg("use_hierarchical"),
           "Emit Kokkos C++ and Python wrappers for the given sparse module, and throw a RuntimeError on failure.")
       .def(
+          "emit_kokkos",
+          [](PyPassManager &passManager, PyModule &module, const char* cxxSourceFile, const char* pySourceFile) {
+            MlirLogicalResult status =
+                mlirPassManagerEmitKokkos(passManager.get(), module.get(), cxxSourceFile, pySourceFile);
+            if (mlirLogicalResultIsFailure(status))
+              throw SetPyError(PyExc_RuntimeError,
+                               "Failure while raising MLIR to Kokkos C++ source code.");
+          },
+          py::arg("module"), py::arg("cxx_source_file"), py::arg("py_source_file"),
+          "Emit Kokkos C++ and Python wrappers for the given module, and throw a RuntimeError on failure.")
+      .def(
+          "emit_kokkos_sparse",
+          [](PyPassManager &passManager, PyModule &module, const char* cxxSourceFile, const char* pySourceFile, bool useHierarchical, bool isLastKernel) {
+            MlirLogicalResult status =
+                mlirPassManagerEmitKokkosSparse(passManager.get(), module.get(), cxxSourceFile, pySourceFile, useHierarchical, isLastKernel);
+            if (mlirLogicalResultIsFailure(status))
+              throw SetPyError(PyExc_RuntimeError,
+                               "Failure while raising MLIR to Kokkos C++ source code.");
+          },
+          py::arg("module"), py::arg("cxx_source_file"), py::arg("py_source_file"), py::arg("use_hierarchical"), py::arg("is_final_kernel"),
+          "Emit Kokkos C++ and Python wrappers for the given sparse module, and throw a RuntimeError on failure.")
+      .def(
           "__str__",
           [](PyPassManager &self) {
             MlirPassManager passManager = self.get();

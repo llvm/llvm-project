@@ -839,6 +839,65 @@ class IndexExpr(abc.ABC):
 
             return module
 
+  def compile_kokkos(
+      self,
+      dst: "Tensor",
+      dst_indices: Tuple["IndexVar", ...],
+      options: str = "",
+      index_instance: int = 0,
+      num_instances: int = 0
+  ) -> execution_engine.ExecutionEngine:
+    """Compiles the tensor assignment dst[dst_indices] = expression.
+
+    Args:
+      dst: The destination tensor.
+      dst_indices: The tuple of IndexVar used to access the destination tensor.
+
+    Returns:
+      The Kokkos/CTypes execution engine for the tensor assignment.
+
+    Raises:
+      ValueError: If the expression is not proper or not supported.
+    """
+    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+    input_accesses = self.get_input_accesses()
+
+    # Build and compile the module to produce the execution engine.
+    with ir.Context(), ir.Location.unknown():
+      module = ir.Module.create()
+      self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                            input_accesses)
+      backend = KokkosBackend.KokkosBackendLinalgOnTensorsBackend(dump_mlir=True, before_mlir_filename = "dump_pytaco.mlir", after_mlir_filename = "lowered_dump_pytaco.mlir", index_instance=index_instance, num_instances=num_instances)
+      engine = backend.compile_sparse(module, options=options)
+    return engine
+
+  def get_module(
+      self,
+      dst: "Tensor",
+      dst_indices: Tuple["IndexVar", ...],
+  ) -> ir.Module:
+    """Get module
+
+    Args:
+      dst: The destination tensor.
+      dst_indices: The tuple of IndexVar used to access the destination tensor.
+
+    Returns:
+      The module.
+
+    Raises:
+      ValueError: If the expression is not proper or not supported.
+    """
+    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+    input_accesses = self.get_input_accesses()
+
+    # Build and compile the module to produce the execution engine.
+    with ir.Context(), ir.Location.unknown():
+      module = ir.Module.create()
+      self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                            input_accesses)
+
+      return module
 
 class _AtomicCounter:
     """An atomic counter."""
@@ -1809,7 +1868,6 @@ def _emit_operand(
       indices: A tuple of IndexVar used to access the tensor.
       name: A unique string name of the tensor.
       kind: An OperandKind for the operand.
-
     Returns:
       An OperandDef representing the operand.
     """
@@ -1817,7 +1875,6 @@ def _emit_operand(
     opnd = lang.OperandDef(kind, lang.T, dim_sym)
     op_def.add_operand(name, opnd)
     return opnd
-
 
 @dataclasses.dataclass(frozen=True)
 class _DimInfo:

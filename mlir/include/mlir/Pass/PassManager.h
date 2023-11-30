@@ -236,7 +236,7 @@ public:
   LogicalResult emitKokkos(Operation *op, const char* cxxSourceFile, const char* pySourceFile);
 
   /// Emit the given operation as Kokkos C++ source code. This version supports sparse tensors. The output is written to a new file sourceFile.
-  LogicalResult emitKokkosSparse(Operation *op, const char* cxxSourceFile, const char* pySourceFile, bool useHierarchical);
+  LogicalResult emitKokkosSparse(Operation *op, const char* cxxSourceFile, const char* pySourceFile, bool useHierarchical, bool isLastKernel);
 
   /// Return an instance of the context.
   MLIRContext *getContext() const { return context; }

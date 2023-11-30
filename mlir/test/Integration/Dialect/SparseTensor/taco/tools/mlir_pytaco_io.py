@@ -81,8 +81,8 @@ def write(filename: str, tensor: Tensor) -> None:
 
     tensor.to_file(filename)
 
-def write_kokkos(filename: str, tensor: Tensor, options: str = "") -> None:
-    """Outputs a tensor to a given file.
+def write_kokkos(filename: str, tensor: Tensor, options: str = "", index_instance: int = 0, num_instances: int = 0) -> None:
+    """Outputs a tensor to a given file. Computations are performed using the MLIR->Kokkos pipeline.
 
     The name suffix of the file specifies the format of the output. We currently
     only support .tns format.
@@ -94,11 +94,12 @@ def write_kokkos(filename: str, tensor: Tensor, options: str = "") -> None:
     Raises:
       ValueError: If filename doesn't end with .tns or tensor is not a Tensor.
     """
-    if not isinstance(filename, str) or not filename.endswith(_TNS_FILENAME_SUFFIX):
-        raise ValueError(
-            "Expected string filename ends with" f" {_TNS_FILENAME_SUFFIX}: {filename}."
-        )
+    if (not isinstance(filename, str) or
+        not filename.endswith(_TNS_FILENAME_SUFFIX)):
+      raise ValueError("Expected string filename ends with"
+                       f" {_TNS_FILENAME_SUFFIX}: {filename}.")
     if not isinstance(tensor, Tensor):
-        raise ValueError(f"Expected a Tensor object: {tensor}.")
+      raise ValueError(f"Expected a Tensor object: {tensor}.")
+  
+    tensor.to_file_kokkos(filename,options=options,index_instance=index_instance,num_instances=num_instances)
 
-    tensor.to_file_kokkos(filename, options=options)

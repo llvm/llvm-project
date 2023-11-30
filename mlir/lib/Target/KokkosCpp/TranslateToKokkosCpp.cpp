@@ -204,7 +204,7 @@ struct KokkosCppEmitter {
   /// of global Kokkos::Views.
   LogicalResult emitInitAndFinalize();
 
-  LogicalResult emitPythonBoilerplate();
+  LogicalResult emitPythonBoilerplate(bool isLastKernel);
 
   /// Emits type 'type' or returns failure.
   /// If forSparseRuntime, the emitted type is compatible with PyTACO runtime and the sparse support library.
@@ -3211,7 +3211,7 @@ LogicalResult KokkosCppEmitter::emitInitAndFinalize()
   os << "extern \"C\" void kokkos_mlir_initialize()\n";
   os << "{\n";
   os.indent();
-  os << "Kokkos::initialize();\n";
+  os << "if (!Kokkos::is_initialized()) Kokkos::initialize();\n";
   //For each global view: allocate it, and if there is initializing data, copy it
   for(auto& op : globalViews)
   {
@@ -3260,7 +3260,7 @@ LogicalResult KokkosCppEmitter::emitInitAndFinalize()
   return success();
 }
 
-LogicalResult KokkosCppEmitter::emitPythonBoilerplate()
+LogicalResult KokkosCppEmitter::emitPythonBoilerplate(bool isLastKernel)
 {
   *py_os << "import ctypes\n";
   *py_os << "import numpy\n";
@@ -3274,7 +3274,8 @@ LogicalResult KokkosCppEmitter::emitPythonBoilerplate()
   *py_os << "    print('Done initializing module.')\n";
   *py_os << "  def __del__(self):\n";
   *py_os << "    print('Finalizing module.')\n";
-  *py_os << "    self.libHandle.kokkos_mlir_finalize()\n";
+  if(isLastKernel)
+    *py_os << "    self.libHandle.kokkos_mlir_finalize()\n";
   //From here, just function wrappers are emitted as class members.
   //Indent now for all of them.
   py_os->indent();
@@ -3568,7 +3569,7 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool e
 }
 
 //Version for when we are emitting both C++ and Python wrappers
-LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool enableSparseSupport, bool useHierarchical) {
+LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool enableSparseSupport, bool useHierarchical, bool isLastKernel) {
   //Uncomment to pause so you can attach debugger
   //pauseForDebugger();
   KokkosCppEmitter emitter(os, py_os, enableSparseSupport);
@@ -3576,7 +3577,7 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_os
   emitCppBoilerplate(emitter, true, enableSparseSupport);
   KokkosParallelEnv kokkosParallelEnv(useHierarchical);
   //Emit the ctypes boilerplate to py_os first - function wrappers need to come after this.
-  if(failed(emitter.emitPythonBoilerplate()))
+  if(failed(emitter.emitPythonBoilerplate(isLastKernel)))
       return failure();
   //Global preamble.
   //Emit the actual module (global variables and functions)
