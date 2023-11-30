@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H
 
-#include "src/__support/CPP/type_traits/is_signed.h"
 #include "src/__support/CPP/type_traits/is_integral.h"
+#include "src/__support/CPP/type_traits/is_signed.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
 #include <limits.h> // CHAR_BIT
