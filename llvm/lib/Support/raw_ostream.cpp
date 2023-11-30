@@ -971,9 +971,6 @@ int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
 #else
   if (MaybeWinsocket == -1) {
 #endif // _WIN32
-    std::string Msg = "socket create error" + std::string(strerror(errno));
-    std::perror(Msg.c_str());
-    std::cout << Msg << std::endl;
     EC = std::make_error_code(std::errc::connection_aborted);
     return -1;
   }
@@ -1014,8 +1011,6 @@ int GetSocketFD(StringRef SocketPath, std::error_code &EC) {
   int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (MaybeWinsocket == -1) {
 #endif // _WIN32
-    std::string Msg = "socket create error" + std::string(strerror(errno));
-    std::perror(Msg.c_str());
     EC = std::make_error_code(std::errc::connection_aborted);
     return -1;
   }
@@ -1027,8 +1022,6 @@ int GetSocketFD(StringRef SocketPath, std::error_code &EC) {
 
   int status = connect(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr));
   if (status == -1) {
-    std::string Msg = "socket connect error" + std::string(strerror(errno));
-    std::perror(Msg.c_str());
     EC = std::make_error_code(std::errc::connection_aborted);
     return -1;
   }
