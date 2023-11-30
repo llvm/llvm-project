@@ -214,6 +214,8 @@ public:
 
   /// This is a mapping from type name to the abstract type describing it.
   /// It is used by `AbstractType::lookup` to get an `AbstractType` from a name.
+  /// As this map needs to be populated before `StringAttr` is loaded, we
+  /// cannot use `StringAttr` as the key, which would avoid string duplication.
   llvm::StringMap<AbstractType *> nameToType;
 
   /// Cached Type Instances.
@@ -243,6 +245,8 @@ public:
   /// This is a mapping from attribute name to the abstract attribute describing
   /// it. It is used by `AbstractType::lookup` to get an `AbstractType` from a
   /// name.
+  /// As this map needs to be populated before `StringAttr` is loaded, we
+  /// cannot use `StringAttr` as the key, which would avoid string duplication.
   llvm::StringMap<AbstractAttribute *> nameToAttribute;
 
   /// Cached Attribute Instances.
