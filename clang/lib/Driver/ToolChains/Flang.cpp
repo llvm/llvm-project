@@ -213,6 +213,7 @@ static void addVSDefines(const ToolChain &TC, const ArgList &Args,
         vt.getSubminor().value_or(0);
   CmdArgs.push_back(Args.MakeArgString("-D_MSC_VER=" + Twine(ver / 100000)));
   CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
+  CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
 
   llvm::Triple triple = TC.getTriple();
   if (triple.isAArch64()) {
