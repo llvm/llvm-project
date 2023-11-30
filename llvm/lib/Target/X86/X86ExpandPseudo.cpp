@@ -264,6 +264,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   const DebugLoc &DL = MBBI->getDebugLoc();
+  bool HasEGPR = STI->hasEGPR();
   switch (Opcode) {
   default:
     return false;
@@ -466,7 +467,6 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    bool HasEGPR = STI->hasEGPR();
     auto MIBLo =
         BuildMI(MBB, MBBI, DL,
                 TII->get(HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm))
