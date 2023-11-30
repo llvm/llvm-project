@@ -30,11 +30,7 @@
 #include <cstdio>
 #include <sys/stat.h>
 
-#include <iostream>
-#ifdef _WIN32
-#include <afunix.h>
-#include <winsock2.h>
-#else
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <sys/un.h>
 #endif // _WIN32
@@ -69,6 +65,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+#include <winsock2.h>
 #include <afunix.h>
 #include <io.h>
 #endif
