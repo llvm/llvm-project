@@ -35,22 +35,22 @@ private:
         << "The function must be present in the module\n";
     // Reset the VFInfo
     Info = VFInfo();
-    ScalarParametersNum = 0;
+    ScalarFuncParametersNum = 0;
   }
 
   // Data needed to load the optional IR passed to invokeParser
   LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
-  FunctionType *FTy;
+  FunctionType *FTy = nullptr;
   FunctionCallee F;
 
 protected:
   // References to the parser output field.
   ElementCount &VF = Info.Shape.VF;
   VFISAKind &ISA = Info.ISA;
-  SmallVector<VFParameter, 8> &Parameters = Info.Shape.Parameters;
-  size_t ScalarParametersNum;
+  SmallVector<VFParameter, 8> &VecFuncParameters = Info.Shape.Parameters;
+  size_t ScalarFuncParametersNum = 0;
   std::string &ScalarName = Info.ScalarName;
   std::string &VectorName = Info.VectorName;
   // Invoke the parser. We need to make sure that a function exist in
@@ -70,25 +70,17 @@ protected:
   // generic fixed-length case can use as signature `void()`.
   //
   bool invokeParser(const StringRef MangledName,
-                    const StringRef ScalarName = "",
                     const StringRef IRType = "void()") {
-    StringRef Name = MangledName;
-    if (!ScalarName.empty())
-      Name = ScalarName;
     // Reset the VFInfo and the Module to be able to invoke
     // `invokeParser` multiple times in the same test.
-    reset(Name, IRType);
+    reset(MangledName, IRType);
 
     // Fake the arguments to the CallInst.
-    SmallVector<Value *> Args;
-    for (Type *ParamTy : FTy->params())
-      Args.push_back(Constant::getNullValue(ParamTy->getScalarType()));
-    std::unique_ptr<CallInst> CI(CallInst::Create(F, Args));
-    const auto OptInfo =
-        VFABI::tryDemangleForVFABI(MangledName, CI->getFunctionType());
+    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, FTy);
     if (OptInfo) {
       Info = *OptInfo;
-      ScalarParametersNum = Info.Shape.getScalarShape(*CI).Parameters.size();
+      ScalarFuncParametersNum =
+          Info.Shape.getScalarShape(FTy).Parameters.size();
       return true;
     }
     return false;
@@ -108,8 +100,8 @@ protected:
 
   // Checks that the number of vectorized parameters matches the scalar ones.
   // Takes into account that vectorized calls may also have a Mask.
-  bool matchScalarParametersNum() {
-    return (Parameters.size() - isMasked()) == ScalarParametersNum;
+  bool matchScalarParamNum() {
+    return (VecFuncParameters.size() - isMasked()) == ScalarFuncParametersNum;
   }
 };
 } // unnamed namespace
@@ -139,224 +131,264 @@ TEST_F(VFABIParserTest, OnlyValidNames) {
   EXPECT_FALSE(invokeParser("_ZGVnN2v_"));
   // Missing _ separator.
   EXPECT_FALSE(invokeParser("_ZGVnN2vfoo"));
-  // Missing <vectorname>. Using `fakename` because the string being
-  // parsed is not a valid function name that `invokeParser` can add.
-  EXPECT_FALSE(invokeParser("_ZGVnN2v_foo()", "fakename"));
-  // Unterminated name. Using `fakename` because the string being
-  // parsed is not a valid function name that `invokeParser` can add.
-  EXPECT_FALSE(invokeParser("_ZGVnN2v_foo(bar", "fakename"));
+  // Missing <vectorname>.
+  EXPECT_FALSE(invokeParser("_ZGVnN2v_foo()"));
+  // Unterminated name.
+  EXPECT_FALSE(invokeParser("_ZGVnN2v_foo(bar"));
 }
 
 TEST_F(VFABIParserTest, ParamListParsing) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo", "",
-                           "void(double, i32, i32, ptr, i32)"));
-  EXPECT_EQ(Parameters.size(), (unsigned)5);
-  EXPECT_TRUE(matchScalarParametersNum());
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_Linear, 16}));
-  EXPECT_EQ(Parameters[2], VFParameter({2, VFParamKind::OMP_LinearValPos, 32}));
-  EXPECT_EQ(Parameters[3], VFParameter({3, VFParamKind::OMP_LinearRef, 3}));
-  EXPECT_EQ(Parameters[4], VFParameter({4, VFParamKind::OMP_Linear, 1}));
+  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo(vector_foo)",
+                           "void(i32, i32, i32, ptr, i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)5);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::OMP_Linear, 16}));
+  EXPECT_EQ(VecFuncParameters[2],
+            VFParameter({2, VFParamKind::OMP_LinearValPos, 32}));
+  EXPECT_EQ(VecFuncParameters[3],
+            VFParameter({3, VFParamKind::OMP_LinearRef, 3}));
+  EXPECT_EQ(VecFuncParameters[4], VFParameter({4, VFParamKind::OMP_Linear, 1}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ScalarNameAndVectorName_01) {
-  EXPECT_TRUE(invokeParser("_ZGVnM2v_sin"));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "_ZGVnM2v_sin");
+  EXPECT_TRUE(invokeParser("_ZGVnM2v_foo(vector_foo)"));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ScalarNameAndVectorName_02) {
-  EXPECT_TRUE(invokeParser("_ZGVnM2v_sin(UserFunc)", "UserFunc"));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "UserFunc");
+  EXPECT_TRUE(invokeParser("_ZGVnM2v_foo(vector_foo)"));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ScalarNameAndVectorName_03) {
-  EXPECT_TRUE(invokeParser("_ZGVnM2v___sin_sin_sin"));
-  EXPECT_EQ(ScalarName, "__sin_sin_sin");
-  EXPECT_EQ(VectorName, "_ZGVnM2v___sin_sin_sin");
+  EXPECT_TRUE(invokeParser("_ZGVnM2v___foo_bar_abc(fooBarAbcVec)"));
+  EXPECT_EQ(ScalarName, "__foo_bar_abc");
+  EXPECT_EQ(VectorName, "fooBarAbcVec");
 }
 
 TEST_F(VFABIParserTest, Parse) {
   EXPECT_TRUE(
-      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_sin", "sin",
-                   "void(double, i32, i32, i32, ptr, i32, i32, i32, ptr)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_foo(vector_foo)",
+                   "void(i32, i32, i32, i32, ptr, i32, i32, i32, ptr)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_EQ(Parameters.size(), (unsigned)9);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearPos, 2}));
-  EXPECT_EQ(Parameters[2], VFParameter({2, VFParamKind::OMP_LinearValPos, 27}));
-  EXPECT_EQ(Parameters[3], VFParameter({3, VFParamKind::OMP_LinearUValPos, 4}));
-  EXPECT_EQ(Parameters[4], VFParameter({4, VFParamKind::OMP_LinearRefPos, 5}));
-  EXPECT_EQ(Parameters[5], VFParameter({5, VFParamKind::OMP_Linear, 1}));
-  EXPECT_EQ(Parameters[6], VFParameter({6, VFParamKind::OMP_LinearVal, 10}));
-  EXPECT_EQ(Parameters[7], VFParameter({7, VFParamKind::OMP_LinearUVal, 100}));
-  EXPECT_EQ(Parameters[8], VFParameter({8, VFParamKind::OMP_LinearRef, 1000}));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)9);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::OMP_LinearPos, 2}));
+  EXPECT_EQ(VecFuncParameters[2],
+            VFParameter({2, VFParamKind::OMP_LinearValPos, 27}));
+  EXPECT_EQ(VecFuncParameters[3],
+            VFParameter({3, VFParamKind::OMP_LinearUValPos, 4}));
+  EXPECT_EQ(VecFuncParameters[4],
+            VFParameter({4, VFParamKind::OMP_LinearRefPos, 5}));
+  EXPECT_EQ(VecFuncParameters[5], VFParameter({5, VFParamKind::OMP_Linear, 1}));
+  EXPECT_EQ(VecFuncParameters[6],
+            VFParameter({6, VFParamKind::OMP_LinearVal, 10}));
+  EXPECT_EQ(VecFuncParameters[7],
+            VFParameter({7, VFParamKind::OMP_LinearUVal, 100}));
+  EXPECT_EQ(VecFuncParameters[8],
+            VFParameter({8, VFParamKind::OMP_LinearRef, 1000}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseVectorName) {
-  EXPECT_TRUE(
-      invokeParser("_ZGVnN2v_sin(my_v_sin)", "my_v_sin", "double(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVnN2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_EQ(Parameters.size(), (unsigned)1);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector, 0}));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "my_v_sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)1);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, LinearWithCompileTimeNegativeStep) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2ln1Ln10Un100Rn1000_sin", "",
-                           "double(i32, i32, i32, ptr)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVnN2ln1Ln10Un100Rn1000_foo(vector_foo)",
+                           "void(i32, i32, i32, ptr)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_EQ(Parameters.size(), (unsigned)4);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, -1}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, -10}));
-  EXPECT_EQ(Parameters[2], VFParameter({2, VFParamKind::OMP_LinearUVal, -100}));
-  EXPECT_EQ(Parameters[3], VFParameter({3, VFParamKind::OMP_LinearRef, -1000}));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "_ZGVnN2ln1Ln10Un100Rn1000_sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)4);
+  EXPECT_EQ(VecFuncParameters[0],
+            VFParameter({0, VFParamKind::OMP_Linear, -1}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::OMP_LinearVal, -10}));
+  EXPECT_EQ(VecFuncParameters[2],
+            VFParameter({2, VFParamKind::OMP_LinearUVal, -100}));
+  EXPECT_EQ(VecFuncParameters[3],
+            VFParameter({3, VFParamKind::OMP_LinearRef, -1000}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseScalableSVE) {
-  EXPECT_TRUE(invokeParser("_ZGVsMxv_sin(custom_vg)", "sin", "i32(i32)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getScalable(4));
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "custom_vg");
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseFixedWidthSVE) {
-  EXPECT_TRUE(invokeParser("_ZGVsM2v_sin", "", "double(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVsM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "_ZGVsM2v_sin");
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, NotAVectorFunctionABIName) {
   // Vector names should start with `_ZGV`.
-  EXPECT_FALSE(invokeParser("ZGVnN2v_sin"));
+  EXPECT_FALSE(invokeParser("ZGVnN2v_foo"));
 }
 
 TEST_F(VFABIParserTest, LinearWithRuntimeStep) {
-  EXPECT_FALSE(invokeParser("_ZGVnN2ls_sin"))
+  EXPECT_FALSE(invokeParser("_ZGVnN2ls_foo"))
       << "A number should be present after \"ls\".";
-  EXPECT_TRUE(invokeParser("_ZGVnN2ls2_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVnN2Rs_sin"))
+  EXPECT_TRUE(invokeParser("_ZGVnN2ls2_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVnN2Rs_foo"))
       << "A number should be present after \"Rs\".";
-  EXPECT_TRUE(invokeParser("_ZGVnN2Rs4_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVnN2Ls_sin"))
+  EXPECT_TRUE(invokeParser("_ZGVnN2Rs4_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVnN2Ls_foo"))
       << "A number should be present after \"Ls\".";
-  EXPECT_TRUE(invokeParser("_ZGVnN2Ls6_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVnN2Us_sin"))
+  EXPECT_TRUE(invokeParser("_ZGVnN2Ls6_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVnN2Us_foo"))
       << "A number should be present after \"Us\".";
-  EXPECT_TRUE(invokeParser("_ZGVnN2Us8_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2Us8_foo"));
 }
 
 TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
-  EXPECT_TRUE(invokeParser("_ZGVnN3lLRUlnLnRnUn_sin", "",
+  EXPECT_TRUE(invokeParser("_ZGVnN3lLRUlnLnRnUn_foo(vector_foo)",
                            "void(i32, i32, ptr, i32, i32, i32, ptr, i32)"));
-  EXPECT_TRUE(matchScalarParametersNum());
-  EXPECT_EQ(Parameters.size(), (unsigned)8);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_LinearVal, 1}));
-  EXPECT_EQ(Parameters[2], VFParameter({2, VFParamKind::OMP_LinearRef, 1}));
-  EXPECT_EQ(Parameters[3], VFParameter({3, VFParamKind::OMP_LinearUVal, 1}));
-  EXPECT_EQ(Parameters[4], VFParameter({4, VFParamKind::OMP_Linear, -1}));
-  EXPECT_EQ(Parameters[5], VFParameter({5, VFParamKind::OMP_LinearVal, -1}));
-  EXPECT_EQ(Parameters[6], VFParameter({6, VFParamKind::OMP_LinearRef, -1}));
-  EXPECT_EQ(Parameters[7], VFParameter({7, VFParamKind::OMP_LinearUVal, -1}));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)8);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::OMP_Linear, 1}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::OMP_LinearVal, 1}));
+  EXPECT_EQ(VecFuncParameters[2],
+            VFParameter({2, VFParamKind::OMP_LinearRef, 1}));
+  EXPECT_EQ(VecFuncParameters[3],
+            VFParameter({3, VFParamKind::OMP_LinearUVal, 1}));
+  EXPECT_EQ(VecFuncParameters[4],
+            VFParameter({4, VFParamKind::OMP_Linear, -1}));
+  EXPECT_EQ(VecFuncParameters[5],
+            VFParameter({5, VFParamKind::OMP_LinearVal, -1}));
+  EXPECT_EQ(VecFuncParameters[6],
+            VFParameter({6, VFParamKind::OMP_LinearRef, -1}));
+  EXPECT_EQ(VecFuncParameters[7],
+            VFParameter({7, VFParamKind::OMP_LinearUVal, -1}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ISA) {
-  EXPECT_TRUE(invokeParser("_ZGVqN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVqN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::Unknown);
 
-  EXPECT_TRUE(invokeParser("_ZGVnN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
 
-  EXPECT_TRUE(invokeParser("_ZGVsN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVsN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::SVE);
 
-  EXPECT_TRUE(invokeParser("_ZGVbN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVbN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::SSE);
 
-  EXPECT_TRUE(invokeParser("_ZGVcN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVcN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::AVX);
 
-  EXPECT_TRUE(invokeParser("_ZGVdN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVdN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::AVX2);
 
-  EXPECT_TRUE(invokeParser("_ZGVeN2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGVeN2v_foo"));
   EXPECT_EQ(ISA, VFISAKind::AVX512);
 }
 
 TEST_F(VFABIParserTest, LLVM_ISA) {
-  EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_sin"));
-  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)", "vector_name"));
+  EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_foo"));
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)1);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, InvalidMask) {
-  EXPECT_FALSE(invokeParser("_ZGVsK2v_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVsK2v_foo"));
 }
 
 TEST_F(VFABIParserTest, InvalidParameter) {
-  EXPECT_FALSE(invokeParser("_ZGVsM2vX_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVsM2vX_foo"));
 }
 
 TEST_F(VFABIParserTest, Align) {
-  EXPECT_TRUE(invokeParser("_ZGVsN2l2a2_sin", "", "void(i32)"));
-  EXPECT_TRUE(matchScalarParametersNum());
-  EXPECT_EQ(Parameters.size(), (unsigned)1);
-  EXPECT_EQ(Parameters[0].Alignment, Align(2));
+  EXPECT_TRUE(invokeParser("_ZGVsN2l2a2_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)1);
+  EXPECT_EQ(VecFuncParameters[0].Alignment, Align(2));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 
   // Missing alignment value.
-  EXPECT_FALSE(invokeParser("_ZGVsM2l2a_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVsM2l2a_foo"));
   // Invalid alignment token "x".
-  EXPECT_FALSE(invokeParser("_ZGVsM2l2ax_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVsM2l2ax_foo"));
   // Alignment MUST be associated to a paramater.
-  EXPECT_FALSE(invokeParser("_ZGVsM2a2_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVsM2a2_foo"));
   // Alignment must be a power of 2.
-  EXPECT_FALSE(invokeParser("_ZGVsN2l2a0_sin"));
-  EXPECT_TRUE(invokeParser("_ZGVsN2l2a1_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVsN2l2a3_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVsN2l2a6_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVsN2l2a0_foo"));
+  EXPECT_TRUE(invokeParser("_ZGVsN2l2a1_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVsN2l2a3_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVsN2l2a6_foo"));
 }
 
 TEST_F(VFABIParserTest, ParseUniform) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2u_sin", "", "void(i32)"));
+  EXPECT_TRUE(invokeParser("_ZGVnN2u_foo(vector_foo)", "void(i32)"));
   EXPECT_EQ(VF, ElementCount::getFixed(2));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_FALSE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_EQ(Parameters.size(), (unsigned)1);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::OMP_Uniform, 0}));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "_ZGVnN2u_sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)1);
+  EXPECT_EQ(VecFuncParameters[0],
+            VFParameter({0, VFParamKind::OMP_Uniform, 0}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 
   // Uniform doesn't expect extra data.
-  EXPECT_FALSE(invokeParser("_ZGVnN2u0_sin"));
+  EXPECT_FALSE(invokeParser("_ZGVnN2u0_foo"));
 }
 
 TEST_F(VFABIParserTest, ISAIndependentMangling) {
   // This test makes sure that the mangling of the parameters in
   // independent on the <isa> token.
+  const StringRef IRTy =
+      "void(i32, i32, i32, i32, ptr, i32, i32, i32, i32, i32)";
   const SmallVector<VFParameter, 8> ExpectedParams = {
       VFParameter({0, VFParamKind::Vector, 0}),
       VFParameter({1, VFParamKind::OMP_LinearPos, 2}),
@@ -374,72 +406,62 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
   do {                                                                         \
     EXPECT_EQ(VF, ElementCount::getFixed(2));                                  \
     EXPECT_FALSE(isMasked());                                                  \
-    EXPECT_TRUE(matchScalarParametersNum());                                   \
-    EXPECT_EQ(Parameters.size(), (unsigned)10);                                \
-    EXPECT_EQ(Parameters, ExpectedParams);                                     \
-    EXPECT_EQ(ScalarName, "sin");                                              \
+    EXPECT_TRUE(matchScalarParamNum())                                         \
+        << "Different number of Scalar parameters";                            \
+    EXPECT_EQ(VecFuncParameters.size(), (unsigned)10);                         \
+    EXPECT_EQ(VecFuncParameters, ExpectedParams);                              \
+    EXPECT_EQ(ScalarName, "foo");                                              \
+    EXPECT_EQ(VectorName, "vector_foo");                                       \
   } while (0)
 
-  const StringRef IRTy =
-      "void(double, i32, i32, i32, ptr, i32, i32, i32, i32, i32)";
-
   // Advanced SIMD: <isa> = "n"
-  EXPECT_TRUE(
-      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // SVE: <isa> = "s"
-  EXPECT_TRUE(
-      invokeParser("_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::SVE);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVsN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // SSE: <isa> = "b"
-  EXPECT_TRUE(
-      invokeParser("_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::SSE);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVbN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX: <isa> = "c"
-  EXPECT_TRUE(
-      invokeParser("_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AVX);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVcN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX2: <isa> = "d"
-  EXPECT_TRUE(
-      invokeParser("_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AVX2);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVdN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // AVX512: <isa> = "e"
-  EXPECT_TRUE(
-      invokeParser("_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::AVX512);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
   // LLVM: <isa> = "_LLVM_" internal vector function.
-  EXPECT_TRUE(
-      invokeParser("_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u_sin(vectorf)",
-                   "vectorf", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::LLVM);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "vectorf");
 
   // Unknown ISA (randomly using "q"). This test will need update if
   // some targets decide to use "q" as their ISA token.
-  EXPECT_TRUE(
-      invokeParser("_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin", "", IRTy));
+  EXPECT_TRUE(invokeParser(
+      "_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_foo(vector_foo)", IRTy));
   EXPECT_EQ(ISA, VFISAKind::Unknown);
   __COMMON_CHECKS;
-  EXPECT_EQ(VectorName, "_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u_sin");
 
 #undef __COMMON_CHECKS
 }
@@ -457,123 +479,181 @@ TEST_F(VFABIParserTest, MissingVectorNameTermination) {
 }
 
 TEST_F(VFABIParserTest, ParseMaskingNEON) {
-  EXPECT_TRUE(invokeParser("_ZGVnM2v_sin", "", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVnM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseMaskingSVE) {
-  EXPECT_TRUE(invokeParser("_ZGVsM2v_sin", "", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVsM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseMaskingSSE) {
-  EXPECT_TRUE(invokeParser("_ZGVbM2v_sin", "", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVbM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SSE);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseMaskingAVX) {
-  EXPECT_TRUE(invokeParser("_ZGVcM2v_sin", "", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVcM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AVX);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseMaskingAVX2) {
-  EXPECT_TRUE(invokeParser("_ZGVdM2v_sin", "", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVdM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AVX2);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseMaskingAVX512) {
-  EXPECT_TRUE(invokeParser("_ZGVeM2v_sin", "", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVeM2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::AVX512);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseMaskingLLVM) {
-  EXPECT_TRUE(invokeParser("_ZGV_LLVM_M2v_sin(custom_vector_sin)",
-                           "custom_vector_sin", "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_M2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::LLVM);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "custom_vector_sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseScalableMaskingLLVM) {
-  EXPECT_FALSE(
-      invokeParser("_ZGV_LLVM_Mxv_sin(custom_vector_sin)", "sin", "i32(i32)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_FALSE(invokeParser("_ZGV_LLVM_Mxv_foo(vector_foo)"));
+}
+
+TEST_F(VFABIParserTest, LLVM_InternalISA) {
+  EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_foo"));
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_foo(vector_foo)", "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)1);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(ISA, VFISAKind::LLVM);
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)",
+                           "void(float, float)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VF, ElementCount::getFixed(4));
+  EXPECT_FALSE(isMasked());
+  EXPECT_EQ(ISA, VFISAKind::LLVM);
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1], VFParameter({1, VFParamKind::Vector}));
+  EXPECT_EQ(ScalarName, "llvm.pow.f32");
+  EXPECT_EQ(VectorName, "__svml_powf4");
+}
+
+TEST_F(VFABIParserTest, ParseScalableRequiresDeclaration) {
+  const char *MangledName = "_ZGVsMxv_sin(custom_vg)";
+  // The parser succeeds only when the correct function definition of
+  // `custom_vg` is added to the module.
+  EXPECT_FALSE(invokeParser(MangledName));
+  EXPECT_TRUE(invokeParser(MangledName, "void(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "sin");
+  EXPECT_EQ(VectorName, "custom_vg");
+}
+
+TEST_F(VFABIParserTest, ZeroIsInvalidVLEN) {
+  EXPECT_FALSE(invokeParser("_ZGVeM0v_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVeN0v_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVsM0v_foo"));
+  EXPECT_FALSE(invokeParser("_ZGVsN0v_foo"));
 }
 
 TEST_F(VFABIParserTest, ParseScalableMaskingSVE) {
-  EXPECT_TRUE(
-      invokeParser("_ZGVsMxv_sin(custom_vector_sin)", "sin", "i32(i32)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "i32(i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(VF, ElementCount::getScalable(4));
   EXPECT_EQ(ISA, VFISAKind::SVE);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
-  EXPECT_EQ(ScalarName, "sin");
-  EXPECT_EQ(VectorName, "custom_vector_sin");
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
   EXPECT_TRUE(invokeParser("_ZGVsMxvl8l8_sincos(custom_vector_sincos)",
-                           "sincos", "void(double, ptr, ptr)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+                           "void(double, ptr, ptr)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getScalable(2));
   EXPECT_TRUE(isMasked());
   EXPECT_EQ(ISA, VFISAKind::SVE);
-  EXPECT_EQ(Parameters.size(), (unsigned)4);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::OMP_Linear, 8}));
-  EXPECT_EQ(Parameters[2], VFParameter({2, VFParamKind::OMP_Linear, 8}));
-  EXPECT_EQ(Parameters[3], VFParameter({3, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)4);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1], VFParameter({1, VFParamKind::OMP_Linear, 8}));
+  EXPECT_EQ(VecFuncParameters[2], VFParameter({2, VFParamKind::OMP_Linear, 8}));
+  EXPECT_EQ(VecFuncParameters[3],
+            VFParameter({3, VFParamKind::GlobalPredicate}));
   EXPECT_EQ(ScalarName, "sincos");
   EXPECT_EQ(VectorName, "custom_vector_sincos");
 }
@@ -581,27 +661,39 @@ TEST_F(VFABIParserTest, ParseScalableMaskingSVESincos) {
 // Make sure that we get the correct VF if the return type is wider than any
 // parameter type.
 TEST_F(VFABIParserTest, ParseWiderReturnTypeSVE) {
-  EXPECT_TRUE(
-      invokeParser("_ZGVsMxvv_foo(vector_foo)", "foo", "i64(i32, i32)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVsMxvv_foo(vector_foo)", "i64(i32, i32)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)3);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1], VFParameter({1, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[2],
+            VFParameter({2, VFParamKind::GlobalPredicate}));
   EXPECT_EQ(VF, ElementCount::getScalable(2));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 // Make sure we handle void return types.
 TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
-  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "void(i16)"));
-  EXPECT_TRUE(matchScalarParametersNum());
+  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "void(i16)"));
+  EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
+  EXPECT_EQ(VecFuncParameters.size(), (unsigned)2);
+  EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VecFuncParameters[1],
+            VFParameter({1, VFParamKind::GlobalPredicate}));
   EXPECT_EQ(VF, ElementCount::getScalable(8));
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
 }
 
 // Make sure we reject unsupported parameter types.
 TEST_F(VFABIParserTest, ParseUnsupportedElementTypeSVE) {
-  EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "void(i128)"));
+  EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "void(i128)"));
 }
 
 // Make sure we reject unsupported return types
 TEST_F(VFABIParserTest, ParseUnsupportedReturnTypeSVE) {
-  EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "foo", "fp128(float)"));
+  EXPECT_FALSE(invokeParser("_ZGVsMxv_foo(vector_foo)", "fp128(float)"));
 }
 class VFABIAttrTest : public testing::Test {
 protected:
@@ -635,43 +727,6 @@ TEST_F(VFABIAttrTest, Read) {
   Exp.push_back("_ZGVnN2v_g(custom_vg)");
   Exp.push_back("_ZGVnN4v_g");
   EXPECT_EQ(Mappings, Exp);
-}
-
-TEST_F(VFABIParserTest, LLVM_InternalISA) {
-  EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_sin"));
-  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)", "vector_name",
-                           "void(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
-  EXPECT_EQ(ISA, VFISAKind::LLVM);
-}
-
-TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
-  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N4vv_llvm.pow.f32(__svml_powf4)",
-                           "__svml_powf4", "void(float, float)"));
-  EXPECT_TRUE(matchScalarParametersNum());
-  EXPECT_EQ(VF, ElementCount::getFixed(4));
-  EXPECT_FALSE(isMasked());
-  EXPECT_EQ(ISA, VFISAKind::LLVM);
-  EXPECT_EQ(Parameters.size(), (unsigned)2);
-  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
-  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::Vector}));
-  EXPECT_EQ(ScalarName, "llvm.pow.f32");
-}
-
-TEST_F(VFABIParserTest, ParseScalableRequiresDeclaration) {
-  const char *MangledName = "_ZGVsMxv_sin(custom_vg)";
-  // The parser succeds only when the correct function definition of
-  // `custom_vg` is added to the module.
-  EXPECT_FALSE(invokeParser(MangledName));
-  EXPECT_TRUE(invokeParser(MangledName, "sin", "double(double)"));
-  EXPECT_TRUE(matchScalarParametersNum());
-}
-
-TEST_F(VFABIParserTest, ZeroIsInvalidVLEN) {
-  EXPECT_FALSE(invokeParser("_ZGVeM0v_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVeN0v_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVsM0v_sin"));
-  EXPECT_FALSE(invokeParser("_ZGVsN0v_sin"));
 }
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
