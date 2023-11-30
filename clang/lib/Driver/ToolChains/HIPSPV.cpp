@@ -90,9 +90,22 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   }
 
   // Emit SPIR-V binary.
+  llvm::opt::ArgStringList TrArgs;
+  if (getToolChain().getTriple().getOSName() == "chipstar") {
+    // chipStar needs 1.2 for supporting warp-level primitivies via sub-group
+    // extensions.  Strictly put we'd need 1.3 for the standard non-extension
+    // shuffle operations, but it's not supported by any backend driver of the
+    // chipStar.
+    TrArgs = {"--spirv-max-version=1.2",
+              "--spirv-ext=-all"
+              // Needed for experimental indirect call support.
+              ",+SPV_INTEL_function_pointers"
+              // Needed for shuffles below SPIR-V 1.3
+              ",+SPV_INTEL_subgroups"};
+  } else {
+    TrArgs = {"--spirv-max-version=1.1", "--spirv-ext=+all"};
+  }
 
-  llvm::opt::ArgStringList TrArgs{"--spirv-max-version=1.1",
-                                  "--spirv-ext=+all"};
   InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
   SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
 }

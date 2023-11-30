@@ -7006,7 +7006,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::spirv32:
       case llvm::Triple::spirv64:
-        if (Target.getOSName() == "hipspv") {
+        if (Target.getOSName() == "hipspv" ||
+            Target.getOSName() == "chipstar") {
           TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target,
                                                              Args);
           break;
