@@ -331,8 +331,7 @@ bool RISCVLegalizerInfo::legalizeShlAshrLshr(
 }
 
 bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
-                                         MachineIRBuilder &MIRBuilder,
-                                         GISelChangeObserver &Observer) const {
+                                         MachineIRBuilder &MIRBuilder) const {
   // Stores the address of the VarArgsFrameIndex slot into the memory location
   assert(MI.getOpcode() == TargetOpcode::G_VASTART);
   MachineFunction *MF = MI.getParent()->getParent();
@@ -341,10 +340,8 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   LLT AddrTy = MIRBuilder.getMRI()->getType(MI.getOperand(0).getReg());
   auto FINAddr = MIRBuilder.buildFrameIndex(AddrTy, FI);
   assert(MI.hasOneMemOperand());
-  MachineInstr *LoweredMI = MIRBuilder.buildStore(
-      MI.getOperand(0).getReg(), FINAddr, *MI.memoperands()[0]);
-  Observer.createdInstr(*LoweredMI);
-  Observer.erasingInstr(MI);
+  MIRBuilder.buildStore(MI.getOperand(0).getReg(), FINAddr,
+                        *MI.memoperands()[0]);
   MI.eraseFromParent();
   return true;
 }
@@ -390,7 +387,7 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return true;
   }
   case TargetOpcode::G_VASTART:
-    return legalizeVAStart(MI, MIRBuilder, Observer);
+    return legalizeVAStart(MI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");
