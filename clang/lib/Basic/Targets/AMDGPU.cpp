@@ -37,50 +37,50 @@ static const char *const DataLayoutStringAMDGCN =
     "-ni:7:8";
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
-    Generic,  // Default
-    Global,   // opencl_global
-    Local,    // opencl_local
-    Constant, // opencl_constant
-    Private,  // opencl_private
-    Generic,  // opencl_generic
-    Global,   // opencl_global_device
-    Global,   // opencl_global_host
-    Global,   // cuda_device
-    Constant, // cuda_constant
-    Local,    // cuda_shared
-    Global,   // sycl_global
-    Global,   // sycl_global_device
-    Global,   // sycl_global_host
-    Local,    // sycl_local
-    Private,  // sycl_private
-    Generic,  // ptr32_sptr
-    Generic,  // ptr32_uptr
-    Generic,  // ptr64
-    Generic,  // hlsl_groupshared
+    llvm::AMDGPU::Generic,  // Default
+    llvm::AMDGPU::Global,   // opencl_global
+    llvm::AMDGPU::Local,    // opencl_local
+    llvm::AMDGPU::Constant, // opencl_constant
+    llvm::AMDGPU::Private,  // opencl_private
+    llvm::AMDGPU::Generic,  // opencl_generic
+    llvm::AMDGPU::Global,   // opencl_global_device
+    llvm::AMDGPU::Global,   // opencl_global_host
+    llvm::AMDGPU::Global,   // cuda_device
+    llvm::AMDGPU::Constant, // cuda_constant
+    llvm::AMDGPU::Local,    // cuda_shared
+    llvm::AMDGPU::Global,   // sycl_global
+    llvm::AMDGPU::Global,   // sycl_global_device
+    llvm::AMDGPU::Global,   // sycl_global_host
+    llvm::AMDGPU::Local,    // sycl_local
+    llvm::AMDGPU::Private,  // sycl_private
+    llvm::AMDGPU::Generic,  // ptr32_sptr
+    llvm::AMDGPU::Generic,  // ptr32_uptr
+    llvm::AMDGPU::Generic,  // ptr64
+    llvm::AMDGPU::Generic,  // hlsl_groupshared
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
-    Private,  // Default
-    Global,   // opencl_global
-    Local,    // opencl_local
-    Constant, // opencl_constant
-    Private,  // opencl_private
-    Generic,  // opencl_generic
-    Global,   // opencl_global_device
-    Global,   // opencl_global_host
-    Global,   // cuda_device
-    Constant, // cuda_constant
-    Local,    // cuda_shared
+    llvm::AMDGPU::Private,  // Default
+    llvm::AMDGPU::Global,   // opencl_global
+    llvm::AMDGPU::Local,    // opencl_local
+    llvm::AMDGPU::Constant, // opencl_constant
+    llvm::AMDGPU::Private,  // opencl_private
+    llvm::AMDGPU::Generic,  // opencl_generic
+    llvm::AMDGPU::Global,   // opencl_global_device
+    llvm::AMDGPU::Global,   // opencl_global_host
+    llvm::AMDGPU::Global,   // cuda_device
+    llvm::AMDGPU::Constant, // cuda_constant
+    llvm::AMDGPU::Local,    // cuda_shared
     // SYCL address space values for this map are dummy
-    Generic, // sycl_global
-    Generic, // sycl_global_device
-    Generic, // sycl_global_host
-    Generic, // sycl_local
-    Generic, // sycl_private
-    Generic, // ptr32_sptr
-    Generic, // ptr32_uptr
-    Generic, // ptr64
-    Generic, // hlsl_groupshared
+    llvm::AMDGPU::Generic, // sycl_global
+    llvm::AMDGPU::Generic, // sycl_global_device
+    llvm::AMDGPU::Generic, // sycl_global_host
+    llvm::AMDGPU::Generic, // sycl_local
+    llvm::AMDGPU::Generic, // sycl_private
+    llvm::AMDGPU::Generic, // ptr32_sptr
+    llvm::AMDGPU::Generic, // ptr32_uptr
+    llvm::AMDGPU::Generic, // ptr64
+    llvm::AMDGPU::Generic, // hlsl_groupshared
 
 };
 } // namespace targets

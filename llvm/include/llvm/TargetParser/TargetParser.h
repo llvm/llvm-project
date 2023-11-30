@@ -31,6 +31,15 @@ class Triple;
 // back-end to TableGen to create these clean tables.
 namespace AMDGPU {
 
+/// Address space values for AMD GPUs
+enum AddrSpace {
+  Generic = 0,
+  Global = 1,
+  Local = 3,
+  Constant = 4,
+  Private = 5
+};
+
 /// GPU kinds supported by the AMDGPU target.
 enum GPUKind : uint32_t {
   // Not specified processor.

@@ -272,12 +272,6 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
   const llvm::Triple triple(targetOpts.triple);
   const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
 
-  // TODO: Share address spaces enumeration between Clang and Flang.
-  // Currently this enumeration is defined in Clang specific class
-  // defined in file: clang/lib/Basic/Targets/AMDGPU.h .
-  // and we need to move it to LLVM directory.
-  const int constantAddressSpace = 4;
-
   if (!triple.isAMDGPU()) {
     return;
   }
@@ -308,7 +302,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
     originalGVOp.setValueAttr(
         builder.getIntegerAttr(int32Type, oclcABIVERsion));
     originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-    originalGVOp.setAddrSpace(constantAddressSpace);
+    originalGVOp.setAddrSpace(llvm::AMDGPU::Constant);
     originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
     return;
   }
@@ -319,7 +313,7 @@ static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
       /* Name */ codeObjectVersionGlobalOpName,
       /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
   covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
-  covInfo.setAddrSpace(constantAddressSpace);
+  covInfo.setAddrSpace(llvm::AMDGPU::Constant);
   covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
   builder.setInsertionPointToStart(mlirModule.getBody());
   builder.insert(covInfo);

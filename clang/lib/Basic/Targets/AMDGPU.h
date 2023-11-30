@@ -29,13 +29,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  enum AddrSpace {
-    Generic = 0,
-    Global = 1,
-    Local = 3,
-    Constant = 4,
-    Private = 5
-  };
   static const LangASMap AMDGPUDefIsGenMap;
   static const LangASMap AMDGPUDefIsPrivMap;
 
@@ -106,7 +99,7 @@ public:
       return 32;
     unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (TargetAS == Private || TargetAS == Local)
+    if (TargetAS == llvm::AMDGPU::Private || TargetAS == llvm::AMDGPU::Local)
       return 32;
 
     return 64;
@@ -376,7 +369,7 @@ public:
   }
 
   std::optional<LangAS> getConstantAddressSpace() const override {
-    return getLangASFromTargetAS(Constant);
+    return getLangASFromTargetAS(llvm::AMDGPU::Constant);
   }
 
   const llvm::omp::GV &getGridValue() const override {
@@ -392,7 +385,7 @@ public:
 
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override {
-    return static_cast<unsigned>(Constant);
+    return static_cast<unsigned>(llvm::AMDGPU::Constant);
   }
 
   /// \returns If a target requires an address within a target specific address
@@ -405,9 +398,9 @@ public:
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
-    if (AddressSpace == Private) {
+    if (AddressSpace == llvm::AMDGPU::Private) {
       return DWARF_Private;
-    } else if (AddressSpace == Local) {
+    } else if (AddressSpace == llvm::AMDGPU::Local) {
       return DWARF_Local;
     } else {
       return std::nullopt;
