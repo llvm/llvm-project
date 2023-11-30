@@ -6,11 +6,11 @@
 # RUN: ld.lld a.o b.o --shared -o a
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases a | FileCheck %s
 
-## FIXME: The use of c.j is wrong here, because this is coming from a source
-## file which does not use C.
+## This needs to be a *uncompressed* jal instruction since it came from the
+## source file which does not enable C
 # CHECK-LABEL: <foo>:
-# CHECK-NEXT:    1260: c.j 0x1260 <foo>
-# CHECK-NEXT:    1262: addi zero, zero, 0
+# CHECK-NEXT:    1260: jal zero, 0x1260 <foo>
+# CHECK-NEXT:    1264: addi zero, zero, 0
 
 # w/C
 #--- a.s
