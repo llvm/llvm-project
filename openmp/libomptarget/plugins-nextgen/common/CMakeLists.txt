@@ -12,4 +12,3 @@
 
 add_subdirectory(OMPT)
 add_subdirectory(PluginInterface)
-add_subdirectory(MemoryManager)
