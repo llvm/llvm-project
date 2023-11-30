@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
+#include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
@@ -23,8 +24,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 
+using cir::CIRBaseBuilderTy;
 using namespace mlir;
-using namespace cir;
+using namespace mlir::cir;
 
 static SmallString<128> getTransformedFileName(ModuleOp theModule) {
   SmallString<128> FileName;
@@ -47,36 +49,39 @@ static SmallString<128> getTransformedFileName(ModuleOp theModule) {
 }
 
 /// Return the FuncOp called by `callOp`.
-static cir::FuncOp getCalledFunction(cir::CallOp callOp) {
+static FuncOp getCalledFunction(CallOp callOp) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
-  return dyn_cast_or_null<cir::FuncOp>(
+  return dyn_cast_or_null<FuncOp>(
       SymbolTable::lookupNearestSymbolFrom(callOp, sym));
 }
 
 namespace {
+
 struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
   LoweringPreparePass() = default;
   void runOnOperation() override;
 
   void runOnOp(Operation *op);
   void lowerGlobalOp(GlobalOp op);
+  void lowerGetBitfieldOp(GetBitfieldOp op);
+  void lowerSetBitfieldOp(SetBitfieldOp op);
 
   /// Build the function that initializes the specified global
-  cir::FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
+  FuncOp buildCXXGlobalVarDeclInitFunc(GlobalOp op);
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
 
-  cir::FuncOp
+  FuncOp
   buildRuntimeFunction(mlir::OpBuilder &builder, llvm::StringRef name,
                        mlir::Location loc, mlir::cir::FuncType type,
                        mlir::cir::GlobalLinkageKind linkage =
                            mlir::cir::GlobalLinkageKind::ExternalLinkage);
 
-  cir::GlobalOp
+  GlobalOp
   buildRuntimeVariable(mlir::OpBuilder &Builder, llvm::StringRef Name,
                        mlir::Location Loc, mlir::Type type,
                        mlir::cir::GlobalLinkageKind Linkage =
@@ -98,11 +103,11 @@ struct LoweringPreparePass : public LoweringPrepareBase<LoweringPreparePass> {
 };
 } // namespace
 
-cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
+GlobalOp LoweringPreparePass::buildRuntimeVariable(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::Type type, mlir::cir::GlobalLinkageKind linkage) {
-  cir::GlobalOp g =
-      dyn_cast_or_null<cir::GlobalOp>(SymbolTable::lookupNearestSymbolFrom(
+  GlobalOp g =
+      dyn_cast_or_null<GlobalOp>(SymbolTable::lookupNearestSymbolFrom(
           theModule, StringAttr::get(theModule->getContext(), name)));
   if (!g) {
     g = builder.create<mlir::cir::GlobalOp>(loc, name, type);
@@ -114,11 +119,11 @@ cir::GlobalOp LoweringPreparePass::buildRuntimeVariable(
   return g;
 }
 
-cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
+FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
     mlir::cir::FuncType type, mlir::cir::GlobalLinkageKind linkage) {
-  cir::FuncOp f =
-      dyn_cast_or_null<cir::FuncOp>(SymbolTable::lookupNearestSymbolFrom(
+  FuncOp f =
+      dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
           theModule, StringAttr::get(theModule->getContext(), name)));
   if (!f) {
     f = builder.create<mlir::cir::FuncOp>(loc, name, type);
@@ -133,7 +138,7 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
   return f;
 }
 
-cir::FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
+FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
   SmallString<256> fnName;
   {
     llvm::raw_svector_ostream Out(fnName);
@@ -177,7 +182,7 @@ cir::FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
       break;
     }
     assert(dtorCall && "Expected a dtor call");
-    cir::FuncOp dtorFunc = getCalledFunction(dtorCall);
+    FuncOp dtorFunc = getCalledFunction(dtorCall);
     assert(dtorFunc &&
            mlir::isa<ASTCXXDestructorDeclInterface>(*dtorFunc.getAst()) &&
            "Expected a dtor call");
@@ -297,10 +302,117 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   builder.create<ReturnOp>(f.getLoc());
 }
 
+void LoweringPreparePass::lowerGetBitfieldOp(GetBitfieldOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+
+  auto info = op.getBitfieldInfo();
+  auto size = info.getSize();
+  auto storageType = info.getStorageType();
+  auto storageSize = storageType.cast<IntType>().getWidth();
+  auto offset = info.getOffset();
+  auto resultTy = op.getType();
+  auto addr = op.getAddr();
+  auto loc = addr.getLoc();
+  mlir::Value val =
+      builder.create<mlir::cir::LoadOp>(loc, storageType, op.getAddr());
+  auto valWidth = val.getType().cast<IntType>().getWidth();
+
+  if (info.getIsSigned()) {
+    assert(static_cast<unsigned>(offset + size) <= storageSize);
+    mlir::Type typ =
+        mlir::cir::IntType::get(builder.getContext(), valWidth, true);
+
+    val = builder.createIntCast(val, typ);
+
+    unsigned highBits = storageSize - offset - size;
+    if (highBits)
+      val = builder.createShiftLeft(val, highBits);
+    if (offset + highBits)
+      val = builder.createShiftRight(val, offset + highBits);
+  } else {
+    if (offset)
+      val = builder.createShiftRight(val, offset);
+
+    if (static_cast<unsigned>(offset) + size < storageSize)
+      val = builder.createAnd(val, llvm::APInt::getLowBitsSet(valWidth, size));
+  }
+  val = builder.createIntCast(val, resultTy);
+
+  op.replaceAllUsesWith(val);  
+  op.erase();  
+}
+
+void LoweringPreparePass::lowerSetBitfieldOp(SetBitfieldOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op.getOperation());
+
+  auto srcVal = op.getSrc();
+  auto addr = op.getDst();
+  auto info = op.getBitfieldInfo();
+  auto size = info.getSize();
+  auto storageType = info.getStorageType();
+  auto storageSize = storageType.cast<IntType>().getWidth();
+  auto offset = info.getOffset();
+  auto resultTy = op.getType();
+  auto loc = addr.getLoc();
+
+  // Get the source value, truncated to the width of the bit-field.
+  srcVal = builder.createIntCast(op.getSrc(), storageType);
+  auto srcWidth = srcVal.getType().cast<IntType>().getWidth();
+
+  mlir::Value maskedVal = srcVal;
+
+  if (storageSize != size) {
+    assert(storageSize > size && "Invalid bitfield size.");
+
+    mlir::Value val =
+        builder.create<mlir::cir::LoadOp>(loc, storageType, addr);
+
+    srcVal =
+        builder.createAnd(srcVal, llvm::APInt::getLowBitsSet(srcWidth, size));
+
+    maskedVal = srcVal;
+    if (offset)
+      srcVal = builder.createShiftLeft(srcVal, offset);
+
+    // Mask out the original value.
+    val = builder.createAnd(val,
+                    ~llvm::APInt::getBitsSet(srcWidth, offset, offset + size));
+
+    // Or together the unchanged values and the source value.
+    srcVal = builder.createOr(val, srcVal);
+  }
+
+  builder.create<mlir::cir::StoreOp>(loc, srcVal, addr);
+
+  if (!op->getUses().empty()) {
+    mlir::Value resultVal = maskedVal;
+    resultVal = builder.createIntCast(resultVal, resultTy);
+
+    if (info.getIsSigned()) {
+      assert(size <= storageSize);
+      unsigned highBits = storageSize - size;
+
+      if (highBits) {
+        resultVal = builder.createShiftLeft(resultVal, highBits);
+        resultVal = builder.createShiftRight(resultVal, highBits);
+      }
+    }
+
+    op.replaceAllUsesWith(resultVal);
+  }
+
+  op.erase();
+}
+
 void LoweringPreparePass::runOnOp(Operation *op) {
-  if (GlobalOp globalOp = cast<GlobalOp>(op)) {
-    lowerGlobalOp(globalOp);
-    return;
+  if (auto getGlobal = dyn_cast<GlobalOp>(op)) {
+    lowerGlobalOp(getGlobal);
+  } else if (auto getBitfield = dyn_cast<GetBitfieldOp>(op)) {
+    lowerGetBitfieldOp(getBitfield);
+  } else if (auto setBitfield = dyn_cast<SetBitfieldOp>(op)) {
+    lowerSetBitfieldOp(setBitfield);
   }
 }
 
@@ -314,6 +426,10 @@ void LoweringPreparePass::runOnOperation() {
   SmallVector<Operation *> opsToTransform;
   op->walk([&](Operation *op) {
     if (isa<GlobalOp>(op))
+      opsToTransform.push_back(op);
+    if (isa<GetBitfieldOp>(op))
+      opsToTransform.push_back(op);
+    if (isa<SetBitfieldOp>(op))
       opsToTransform.push_back(op);
   });
 
