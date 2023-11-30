@@ -85,10 +85,6 @@ public:
     RK_WithPattern, // Remark pattern specified via '-Rgroup=regexp'.
   };
 
-  /// \brief Code object version for AMDGPU.
-  llvm::CodeObjectVersionKind CodeObjectVersion =
-      llvm::CodeObjectVersionKind::COV_4;
-
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
     RemarkKind Kind = RemarkKind::RK_Missing;
