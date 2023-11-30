@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
@@ -222,7 +221,7 @@ template <typename T> struct FPBits {
   LIBC_INLINE static constexpr FPBits<T> make_value(UIntType number, int ep) {
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
+    int lz = cpp::countl_zero(number) - FloatProp::EXPONENT_WIDTH;
     number <<= lz;
     ep -= lz;
 

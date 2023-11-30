@@ -18,7 +18,6 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -392,7 +391,7 @@ LIBC_INLINE bool is_odd_integer(float x) {
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int x_e = static_cast<int>((x_u & FloatProp::EXPONENT_MASK) >>
                              FloatProp::MANTISSA_WIDTH);
-  int lsb = unsafe_ctz(x_u | FloatProp::EXPONENT_MASK);
+  int lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
   constexpr int UNIT_EXPONENT =
       static_cast<int>(FloatProp::EXPONENT_BIAS + FloatProp::MANTISSA_WIDTH);
   return (x_e + lsb == UNIT_EXPONENT);
@@ -403,7 +402,7 @@ LIBC_INLINE bool is_integer(float x) {
   uint32_t x_u = cpp::bit_cast<uint32_t>(x);
   int x_e = static_cast<int>((x_u & FloatProp::EXPONENT_MASK) >>
                              FloatProp::MANTISSA_WIDTH);
-  int lsb = unsafe_ctz(x_u | FloatProp::EXPONENT_MASK);
+  int lsb = cpp::countr_zero(x_u | FloatProp::EXPONENT_MASK);
   constexpr int UNIT_EXPONENT =
       static_cast<int>(FloatProp::EXPONENT_BIAS + FloatProp::MANTISSA_WIDTH);
   return (x_e + lsb >= UNIT_EXPONENT);

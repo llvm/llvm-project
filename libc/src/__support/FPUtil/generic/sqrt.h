@@ -10,13 +10,12 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H
 
 #include "sqrt_80_bit_long_double.h"
-#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -37,7 +36,7 @@ template <> struct SpecialLongDouble<long double> {
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
                            typename FPBits<T>::UIntType &mantissa) {
-  const int shift = unsafe_clz(mantissa) -
+  const int shift = cpp::countl_zero(mantissa) -
                     (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
   exponent -= shift;
   mantissa <<= shift;
@@ -52,9 +51,9 @@ LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
-  const int shift = hi_bits
-                        ? (unsafe_clz(hi_bits) - 15)
-                        : (unsafe_clz(static_cast<uint64_t>(mantissa)) + 49);
+  const int shift =
+      hi_bits ? (cpp::countl_zero(hi_bits) - 15)
+              : (cpp::countl_zero(static_cast<uint64_t>(mantissa)) + 49);
   exponent -= shift;
   mantissa <<= shift;
 }
@@ -137,7 +136,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
       // We compute one more iteration in order to round correctly.
       bool lsb = static_cast<bool>(y & 1); // Least significant bit
-      bool rb = false;  // Round bit
+      bool rb = false;                     // Round bit
       r <<= 2;
       UIntType tmp = (y << 2) + 1;
       if (r >= tmp) {

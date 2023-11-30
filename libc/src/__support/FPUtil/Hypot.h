@@ -16,7 +16,6 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
@@ -28,7 +27,7 @@ template <typename T>
 LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
   shift_length = 0;
   if (mant > 0) {
-    shift_length = (sizeof(mant) * 8) - 1 - unsafe_clz(mant);
+    shift_length = (sizeof(mant) * 8) - 1 - cpp::countl_zero(mant);
   }
   return T(1) << shift_length;
 }
@@ -37,9 +36,13 @@ LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
 
 template <typename T> struct DoubleLength;
 
-template <> struct DoubleLength<uint16_t> { using Type = uint32_t; };
+template <> struct DoubleLength<uint16_t> {
+  using Type = uint32_t;
+};
 
-template <> struct DoubleLength<uint32_t> { using Type = uint64_t; };
+template <> struct DoubleLength<uint32_t> {
+  using Type = uint64_t;
+};
 
 template <> struct DoubleLength<uint64_t> {
   using Type = UInt128;

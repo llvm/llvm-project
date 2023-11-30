@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_UINT_H
 
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/bit.h" // countl_zero
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/bit.h" // unsafe_clz
 #include "src/__support/integer_utils.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -556,7 +556,7 @@ template <size_t Bits, bool Signed> struct BigInt {
       if (val[i - 1] == 0) {
         leading_zeroes += sizeof(uint64_t) * 8;
       } else {
-        leading_zeroes += unsafe_clz(val[i - 1]);
+        leading_zeroes += countl_zero(val[i - 1]);
         break;
       }
     }

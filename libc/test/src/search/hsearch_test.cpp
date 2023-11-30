@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/HashTable/table.h"
-#include "src/__support/bit.h"
 #include "src/search/hcreate.h"
 #include "src/search/hcreate_r.h"
 #include "src/search/hdestroy.h"
@@ -48,7 +48,7 @@ char search_data2[] =
 
 constexpr size_t GROUP_SIZE = sizeof(LIBC_NAMESPACE::internal::Group);
 constexpr size_t CAP =
-    LIBC_NAMESPACE::next_power_of_two((GROUP_SIZE + 1) * 8 / 7) / 8 * 7;
+    LIBC_NAMESPACE::cpp::bit_ceil((GROUP_SIZE + 1) * 8 / 7) / 8 * 7;
 static_assert(CAP < sizeof(search_data), "CAP too large");
 
 TEST(LlvmLibcHSearchTest, InsertTooMany) {

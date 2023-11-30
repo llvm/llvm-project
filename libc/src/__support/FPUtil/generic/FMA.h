@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
-#include "src/__support/bit.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -209,9 +209,9 @@ template <> LIBC_INLINE double fma<double>(double x, double y, double z) {
   // Normalize the result.
   if (prod_mant != 0) {
     uint64_t prod_hi = static_cast<uint64_t>(prod_mant >> 64);
-    int lead_zeros = prod_hi
-                         ? unsafe_clz(prod_hi)
-                         : 64 + unsafe_clz(static_cast<uint64_t>(prod_mant));
+    int lead_zeros =
+        prod_hi ? cpp::countl_zero(prod_hi)
+                : 64 + cpp::countl_zero(static_cast<uint64_t>(prod_mant));
     // Move the leading 1 to the most significant bit.
     prod_mant <<= lead_zeros;
     // The lower 64 bits are always sticky bits after moving the leading 1 to

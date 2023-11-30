@@ -10,10 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_table_H
 
 #include "include/llvm-libc-types/ENTRY.h"
+#include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/HashTable/bitmask.h"
-#include "src/__support/bit.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h"
@@ -70,7 +70,7 @@ LIBC_INLINE size_t capacity_to_entries(size_t cap) {
   if (cap < sizeof(Group))
     cap = sizeof(Group);
   // overflow is always checked in allocate()
-  return next_power_of_two(cap * 8 / 7);
+  return cpp::bit_ceil(cap * 8 / 7);
 }
 
 // The heap memory layout for N buckets HashTable is as follows:
@@ -98,7 +98,8 @@ private:
 
   LIBC_INLINE size_t offset_from_entries() const {
     size_t entries_size = num_of_entries() * sizeof(ENTRY);
-    return entries_size + offset_to(entries_size, table_alignment());
+    return entries_size +
+           SafeMemSize::offset_to(entries_size, table_alignment());
   }
 
   LIBC_INLINE constexpr static size_t table_alignment() {

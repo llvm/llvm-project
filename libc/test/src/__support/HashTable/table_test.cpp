@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/HashTable/randomness.h"
 #include "src/__support/HashTable/table.h"
 #include "test/UnitTest/Test.h"
@@ -37,7 +38,7 @@ TEST(LlvmLibcTableTest, Insertion) {
   for (size_t k = 0; k < 256; ++k) {
     keys[k].value = LIBC_NAMESPACE::Endian::to_little_endian(k);
   }
-  constexpr size_t CAP = next_power_of_two((sizeof(Group) + 1) * 8 / 7) / 8 * 7;
+  constexpr size_t CAP = cpp::bit_ceil((sizeof(Group) + 1) * 8 / 7) / 8 * 7;
   static_assert(CAP + 1 < 256, "CAP is too large for this test.");
   HashTable *table =
       HashTable::allocate(sizeof(Group) + 1, randomness::next_random_seed());
