@@ -23,6 +23,7 @@ using namespace llvm;
 // are currently emitted in X86GenInstrInfo.inc in alphabetical order. Which
 // makes sorting these tables a simple matter of alphabetizing the table.
 #include "X86GenFoldTables.inc"
+
 // Table to map instructions safe to broadcast using a different width from the
 // element width.
 static const X86FoldTableEntry BroadcastSizeTable2[] = {
@@ -186,6 +187,10 @@ struct X86MemUnfoldTable {
       // Index 3, folded broadcast
       addTableEntry(Entry, TB_INDEX_3 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
 
+    for (const X86FoldTableEntry &Entry : BroadcastTable4)
+      // Index 4, folded broadcast
+      addTableEntry(Entry, TB_INDEX_4 | TB_FOLDED_LOAD | TB_FOLDED_BCAST);
+
     // Sort the memory->reg unfold table.
     array_pod_sort(Table.begin(), Table.end());
 
@@ -261,6 +266,17 @@ struct X86BroadcastFoldTable {
       if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 3)) {
         unsigned MemOp = Reg2Mem->DstOp;
         uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_3 |
+                         TB_FOLDED_LOAD | TB_FOLDED_BCAST;
+        Table.push_back({MemOp, BcstOp, Flags});
+      }
+    }
+
+    for (const X86FoldTableEntry &Reg2Bcst : BroadcastTable4) {
+      unsigned RegOp = Reg2Bcst.KeyOp;
+      unsigned BcstOp = Reg2Bcst.DstOp;
+      if (const X86FoldTableEntry *Reg2Mem = lookupFoldTable(RegOp, 4)) {
+        unsigned MemOp = Reg2Mem->DstOp;
+        uint16_t Flags = Reg2Mem->Flags | Reg2Bcst.Flags | TB_INDEX_4 |
                          TB_FOLDED_LOAD | TB_FOLDED_BCAST;
         Table.push_back({MemOp, BcstOp, Flags});
       }
