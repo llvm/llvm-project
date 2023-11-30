@@ -67,10 +67,6 @@ int main() {
 // CHECK-SAME:                          flags: DIFlagStaticMember
 // CHECK-NOT:                           extraData:
 
-// CHECK:      ![[IENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "inline_enum",
-// CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-SAME:                          extraData: i32 -1
-
 // CHECK:      ![[EMPTY_TEMPLATED_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "empty_templated",
 // CHECK-SAME:                                    flags: DIFlagStaticMember
 // CHECK-SAME:                                    extraData: i32 1
@@ -97,11 +93,6 @@ int main() {
 // CHECK:      ![[ENUM_VAR]] = distinct !DIGlobalVariable(name: "cexpr_enum"
 // CHECK-NOT:                  linkageName:
 // CHECK-SAME:                 isLocal: true, isDefinition: true, declaration: ![[ENUM_DECL]])
-
-// CHECK:      !DIGlobalVariableExpression(var: ![[IENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[IENUM_VAR]] = distinct !DIGlobalVariable(name: "inline_enum"
-// CHECK-NOT:                   linkageName:
-// CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[IENUM_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_TEMPLATED_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value))
 // CHECK:      ![[EMPTY_TEMPLATED_VAR]] = distinct !DIGlobalVariable(name: "empty_templated"

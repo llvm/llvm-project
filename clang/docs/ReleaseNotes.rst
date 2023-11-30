@@ -182,6 +182,8 @@ C++2c Feature Support
   This is applied to both C++ standard attributes, and other attributes supported by Clang.
   This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>`_
 
+- Implemented `P2864R2 Remove Deprecated Arithmetic Conversion on Enumerations From C++26 <https://wg21.link/P2864R2>`_.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -643,6 +645,9 @@ Bug Fixes in This Version
 - Fix crash when the object used as a ``static_assert`` message has ``size`` or ``data`` members
   which are not member functions.
 - Support UDLs in ``static_assert`` message.
+- Fixed false positive error emitted by clang when performing qualified name
+  lookup and the current class instantiation has dependent bases.
+  Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -787,6 +792,14 @@ Bug Fixes to C++ Support
 - Clang now defers the instantiation of explicit specifier until constraint checking
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
+
+- Fix crash when parsing nested requirement. Fixes:
+  (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
+
+- Clang now immediately instantiates function template specializations
+  at the end of the definition of the corresponding function template
+  when the definition appears after the first point of instantiation.
+  (`#73232 <https://github.com/llvm/llvm-project/issues/73232>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

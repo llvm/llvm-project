@@ -15,6 +15,12 @@ set(LLVM_TARGET_DEFINITIONS ArmSMEOps.td)
 mlir_tablegen(ArmSMEOpsConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRArmSMEConversionsIncGen)
 
+# Generate op interface declarations and definitions
+set(LLVM_TARGET_DEFINITIONS ArmSMEOps.td)
+mlir_tablegen(ArmSMEOpInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(ArmSMEOpInterfaces.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRArmSMEOpInterfaces)
+
 # Generate declarations and definitions of ArmSME intrinsic Ops
 set(LLVM_TARGET_DEFINITIONS ArmSMEIntrinsicOps.td)
 mlir_tablegen(ArmSMEIntrinsicOps.h.inc -gen-op-decls)
