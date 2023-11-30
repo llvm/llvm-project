@@ -3933,9 +3933,10 @@ public:
                                               APValue &Value, CCEKind CCE,
                                               NamedDecl *Dest = nullptr);
 
-  ExprResult EvaluateConvertedConstantExpression(Expr *E, QualType T,
-                                                 APValue &Value, CCEKind CCE,
-                                                 bool RequireInt);
+  ExprResult
+  EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
+                                      CCEKind CCE, bool RequireInt,
+                                      const APValue &PreNarrowingValue);
 
   /// Abstract base class used to perform a contextual implicit
   /// conversion from an expression to any type passing a filter.

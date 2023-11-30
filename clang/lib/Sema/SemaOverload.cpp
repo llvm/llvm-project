@@ -6123,61 +6123,6 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   return Result;
 }
 
-/// EvaluateConvertedConstantExpression - Evaluate an Expression
-/// That is a converted constant expression
-/// (which was built with BuildConvertedConstantExpression)
-static ExprResult EvaluateConvertedConstantExpression(
-    Sema &S, Expr *E, QualType T, APValue &Value, Sema::CCEKind CCE,
-    bool RequireInt, const APValue &PreNarrowingValue) {
-  ExprResult Result = E;
-  // Check the expression is a constant expression.
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  Expr::EvalResult Eval;
-  Eval.Diag = &Notes;
-
-  ConstantExprKind Kind;
-  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
-    Kind = ConstantExprKind::ClassTemplateArgument;
-  else if (CCE == Sema::CCEK_TemplateArg)
-    Kind = ConstantExprKind::NonClassTemplateArgument;
-  else
-    Kind = ConstantExprKind::Normal;
-
-  if (!E->EvaluateAsConstantExpr(Eval, S.Context, Kind) ||
-      (RequireInt && !Eval.Val.isInt())) {
-    // The expression can't be folded, so we can't keep it at this position in
-    // the AST.
-    Result = ExprError();
-  } else {
-    Value = Eval.Val;
-
-    if (Notes.empty()) {
-      // It's a constant expression.
-      Expr *E = ConstantExpr::Create(S.Context, Result.get(), Value);
-      if (!PreNarrowingValue.isAbsent())
-        Value = std::move(PreNarrowingValue);
-      return E;
-    }
-  }
-
-  // It's not a constant expression. Produce an appropriate diagnostic.
-  if (Notes.size() == 1 &&
-      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
-    S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
-  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
-                                   diag::note_constexpr_invalid_template_arg) {
-    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
-    for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
-  } else {
-    S.Diag(E->getBeginLoc(), diag::err_expr_not_cce)
-        << CCE << E->getSourceRange();
-    for (unsigned I = 0; I < Notes.size(); ++I)
-      S.Diag(Notes[I].first, Notes[I].second);
-  }
-  return ExprError();
-}
-
 /// CheckConvertedConstantExpression - Check that the expression From is a
 /// converted constant expression of type T, perform the conversion and produce
 /// the converted expression, per C++11 [expr.const]p3.
@@ -6194,8 +6139,8 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     Value = APValue();
     return Result;
   }
-  return EvaluateConvertedConstantExpression(S, Result.get(), T, Value, CCE,
-                                             RequireInt, PreNarrowingValue);
+  return S.EvaluateConvertedConstantExpression(Result.get(), T, Value, CCE,
+                                               RequireInt, PreNarrowingValue);
 }
 
 ExprResult Sema::BuildConvertedConstantExpression(Expr *From, QualType T,
@@ -6226,14 +6171,61 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
   return R;
 }
 
-ExprResult Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T,
-                                                     APValue &Value,
-                                                     Sema::CCEKind CCE,
-                                                     bool RequireInt) {
+/// EvaluateConvertedConstantExpression - Evaluate an Expression
+/// That is a converted constant expression
+/// (which was built with BuildConvertedConstantExpression)
+ExprResult
+Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
+                                          Sema::CCEKind CCE, bool RequireInt,
+                                          const APValue &PreNarrowingValue) {
 
-  APValue PreNarrowingValue;
-  return ::EvaluateConvertedConstantExpression(*this, E, T, Value, CCE,
-                                               RequireInt, PreNarrowingValue);
+  ExprResult Result = E;
+  // Check the expression is a constant expression.
+  SmallVector<PartialDiagnosticAt, 8> Notes;
+  Expr::EvalResult Eval;
+  Eval.Diag = &Notes;
+
+  ConstantExprKind Kind;
+  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+    Kind = ConstantExprKind::ClassTemplateArgument;
+  else if (CCE == Sema::CCEK_TemplateArg)
+    Kind = ConstantExprKind::NonClassTemplateArgument;
+  else
+    Kind = ConstantExprKind::Normal;
+
+  if (!E->EvaluateAsConstantExpr(Eval, Context, Kind) ||
+      (RequireInt && !Eval.Val.isInt())) {
+    // The expression can't be folded, so we can't keep it at this position in
+    // the AST.
+    Result = ExprError();
+  } else {
+    Value = Eval.Val;
+
+    if (Notes.empty()) {
+      // It's a constant expression.
+      Expr *E = ConstantExpr::Create(Context, Result.get(), Value);
+      if (!PreNarrowingValue.isAbsent())
+        Value = std::move(PreNarrowingValue);
+      return E;
+    }
+  }
+
+  // It's not a constant expression. Produce an appropriate diagnostic.
+  if (Notes.size() == 1 &&
+      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
+    Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
+  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
+                                   diag::note_constexpr_invalid_template_arg) {
+    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      Diag(Notes[I].first, Notes[I].second);
+  } else {
+    Diag(E->getBeginLoc(), diag::err_expr_not_cce)
+        << CCE << E->getSourceRange();
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      Diag(Notes[I].first, Notes[I].second);
+  }
+  return ExprError();
 }
 
 /// dropPointerConversions - If the given standard conversion sequence

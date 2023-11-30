@@ -7391,9 +7391,10 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       return ArgResult;
     }
 
+    APValue PreNarrowingValue;
     ArgResult = EvaluateConvertedConstantExpression(
         ArgResult.get(), ParamType, Value, CCEK_TemplateArg, /*RequireInt=*/
-        false);
+        false, PreNarrowingValue);
     if (ArgResult.isInvalid())
       return ExprError();
 
