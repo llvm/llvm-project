@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include "OpenMP/omp.h"
+#include "Shared/Profile.h"
 
 #include "llvm/ADT/SmallVector.h"
 

@@ -11,6 +11,7 @@
 // XFAIL: tsan
 // XFAIL: target={{x86_64-.*}} && msan
 // ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !has-64-bit-atomics
 
 //  T exchange(T, memory_order = memory_order::seq_cst) volatile noexcept;
 //  T exchange(T, memory_order = memory_order::seq_cst) noexcept;

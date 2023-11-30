@@ -227,6 +227,11 @@ steps:
     <<: *arm_agent_armv8l
     <<: *common
 
+  - label: Armv7-M picolibc
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
+    <<: *arm_agent_aarch64
+    <<: *common
+
 - group: AIX
   steps:
   - label: AIX (32-bit)
