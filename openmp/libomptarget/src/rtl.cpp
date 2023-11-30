@@ -14,11 +14,11 @@
 
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
-#include "Shared/Debug.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "Shared/Utils.h"
 
