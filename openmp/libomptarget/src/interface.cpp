@@ -19,6 +19,7 @@
 #include "rtl.h"
 
 #include <stdarg.h>
+#include "Shared/Profile.h"
 #include "Shared/Utils.h"
 
 #include <cassert>
