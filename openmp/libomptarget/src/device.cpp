@@ -542,8 +542,8 @@ void DeviceTy::init() {
         "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
 
     uint64_t ReqPtrArgOffset;
-    RTL->activate_record_replay(RTLDeviceID, 0, nullptr, true,
-                                OMPX_ReplaySaveOutput, ReqPtrArgOffset);
+    RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
+                                  OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
   IsInit = true;
@@ -565,7 +565,7 @@ int32_t DeviceTy::initOnce() {
 }
 
 // Load binary to device.
-__tgt_target_table *DeviceTy::loadBinary(void *Img) {
+__tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
   std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);
   return RTL->load_binary(RTLDeviceID, Img);
 }
@@ -702,8 +702,7 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                               ptrdiff_t *TgtOffsets,
-                               const KernelArgsTy &KernelArgs,
+                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                             &KernelArgs, AsyncInfo);
