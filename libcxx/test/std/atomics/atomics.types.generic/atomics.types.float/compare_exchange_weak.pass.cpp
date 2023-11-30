@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 // bool compare_exchange_weak(T& expected, T desired,
 //                            memory_order success, memory_order failure) volatile noexcept;

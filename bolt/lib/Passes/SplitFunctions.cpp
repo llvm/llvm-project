@@ -160,16 +160,15 @@ struct SplitCacheDirected final : public SplitStrategy {
     // Assign fragments based on the computed best split index.
     // All basic blocks with index up to the best split index become hot.
     // All remaining blocks are warm / cold depending on if count is
-    // greater than 0 or not.
-    FragmentNum Main(0);
-    FragmentNum Cold(1);
-    FragmentNum Warm(2);
+    // greater than zero or not.
     for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
       BinaryBasicBlock *BB = BlockOrder[Index];
       if (Index <= BestSplitIndex)
-        BB->setFragmentNum(Main);
+        BB->setFragmentNum(FragmentNum::main());
       else
-        BB->setFragmentNum(BB->getKnownExecutionCount() > 0 ? Warm : Cold);
+        BB->setFragmentNum(BB->getKnownExecutionCount() > 0
+                               ? FragmentNum::warm()
+                               : FragmentNum::cold());
     }
   }
 
@@ -313,6 +312,7 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
     else
       Strategy = std::make_unique<SplitProfile2>();
     opts::AggressiveSplitting = true;
+    BC.HasWarmSection = true;
     break;
   case SplitFunctionsStrategy::Profile2:
     Strategy = std::make_unique<SplitProfile2>();

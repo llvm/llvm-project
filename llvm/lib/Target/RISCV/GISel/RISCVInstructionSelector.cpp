@@ -62,6 +62,8 @@ private:
 
   // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
+  bool selectImplicitDef(MachineInstr &MI, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI) const;
   bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectAddr(MachineInstr &MI, MachineIRBuilder &MIB,
                   MachineRegisterInfo &MRI, bool IsLocal = true,
@@ -623,6 +625,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return selectImplicitDef(MI, MIB, MRI);
   default:
     return false;
   }
@@ -733,6 +737,25 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
   }
 
   MI.setDesc(TII.get(RISCV::COPY));
+  return true;
+}
+
+bool RISCVInstructionSelector::selectImplicitDef(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
+
+  const Register DstReg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
+
+  assert(DstRC &&
+         "Register class not available for LLT, register bank combination");
+
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
+                      << " operand\n");
+  }
+  MI.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
   return true;
 }
 
