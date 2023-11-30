@@ -28,7 +28,7 @@ func.func @memref_cast(%a: index, %b: index) -> memref<?x?xf32> {
 }
 
 func.func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tensor<0xf32> {
-  // memref<0x32> is expected to be dce'ed
+  // memref<0xf32> is expected to be dce'ed
   memref.copy %arg0, %arg0 : memref<0xf32> to memref<0xf32>
 
   // tensor<0xf32> cannot be dce'ed
@@ -44,6 +44,33 @@ func.func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tenso
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<0xf32>
 //   CHECK-NOT:   memref.copy
 //  CHECK-NEXT:   return %[[ARG1]]
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>
+]
+
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+func.func @no_dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tensor<0xf32> {
+  // memref<0xf32> cannot be dce'ed
+  %2 = linalg.generic #trait ins(%arg0: memref<0xf32>) outs(%arg1 : tensor<0xf32>) {
+  ^bb(%0: f32, %1: f32) :
+    linalg.yield %1 : f32
+  } -> tensor<0xf32>
+
+  return %2: tensor<0xf32>
+}
+
+// CHECK-LABEL: @no_dce_zero_memref
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<0xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<0xf32>
+//  CHECK-NEXT:   linalg.generic
 
 // -----
 

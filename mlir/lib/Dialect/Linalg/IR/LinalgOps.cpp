@@ -2101,7 +2101,7 @@ struct EraseDeadLinalgOp : public OpInterfaceRewritePattern<LinalgOp> {
       auto mt = llvm::dyn_cast<MemRefType>(opOperand.get().getType());
       if (!mt)
         continue;
-      if (llvm::is_contained(op.getShape(&opOperand), 0)) {
+      if (llvm::is_contained(op.getShape(&opOperand), 0) && op->use_empty()) {
         rewriter.eraseOp(op);
         return success();
       }
