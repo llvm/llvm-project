@@ -58,6 +58,13 @@ responsible for emitting the ``.llvm.lto`` section. Afterwards, the
 Limitations
 ===========
 
+Sample-Based PGO
+----------------
+
+If FatLTO is used together with SamplePGO (as opposed to normal
+instrumentation-based PGO), some profile-based optimizations will only be
+applied when linking with LTO.
+
 Linkers
 -------
 
