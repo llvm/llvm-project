@@ -36,10 +36,10 @@ struct HWAsanInterceptorContext {
   const char *interceptor_name;
 };
 
-#  define ACCESS_MEMORY_RANGE(ctx, offset, size, access)                    \
-    do {                                                                    \
-      __hwasan::CheckAddressSized<ErrorAction::Abort, access>((uptr)offset, \
-                                                              size);        \
+#  define ACCESS_MEMORY_RANGE(ctx, offset, size, access)                      \
+    do {                                                                      \
+      __hwasan::CheckAddressSized<ErrorAction::Recover, access>((uptr)offset, \
+                                                                size);        \
     } while (0)
 
 #  define HWASAN_READ_RANGE(ctx, offset, size) \
