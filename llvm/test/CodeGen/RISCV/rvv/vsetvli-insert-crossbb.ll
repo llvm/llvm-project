@@ -896,7 +896,7 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x(<vscale x 2 x i32>* %x, <vsca
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:  .LBB20_3: # %if.end
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    ret
 entry:
@@ -928,7 +928,7 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x2(<vscale x 2 x i32>* %x, <vsc
 ; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vwcvt.x.x.v v8, v9
 ; CHECK-NEXT:  .LBB21_3: # %if.end
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    ret
 entry:
