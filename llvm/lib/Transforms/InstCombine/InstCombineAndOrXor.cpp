@@ -4130,7 +4130,7 @@ static bool canFreelyInvert(InstCombiner &IC, Value *Op,
 static Value *freelyInvert(InstCombinerImpl &IC, Value *Op,
                            Instruction *IgnoredUser) {
   auto *I = cast<Instruction>(Op);
-  IC.Builder.SetInsertPoint(&*I->getInsertionPointAfterDef());
+  IC.Builder.SetInsertPoint(*I->getInsertionPointAfterDef());
   Value *NotOp = IC.Builder.CreateNot(Op, Op->getName() + ".not");
   Op->replaceUsesWithIf(NotOp,
                         [NotOp](Use &U) { return U.getUser() != NotOp; });
@@ -4168,7 +4168,7 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   Op0 = freelyInvert(*this, Op0, &I);
   Op1 = freelyInvert(*this, Op1, &I);
 
-  Builder.SetInsertPoint(I.getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewLogicOp;
   if (IsBinaryOp)
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
@@ -4216,7 +4216,7 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
 
   *OpToInvert = freelyInvert(*this, *OpToInvert, &I);
 
-  Builder.SetInsertPoint(&*I.getInsertionPointAfterDef());
+  Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
   Value *NewBinOp;
   if (IsBinaryOp)
     NewBinOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");
