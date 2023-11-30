@@ -546,7 +546,8 @@ locale::__imp::use_facet(long id) const
 // expensive in parallel applications. The classic locale is used by default
 // in all streams. Note: if a new global locale is installed, then we lose
 // the benefit of no reference counting.
-__no_destroy<locale::__imp> locale::__imp::classic_locale_imp_(__uninitialized_tag{}); // initialized below in classic()
+constinit __no_destroy<locale::__imp>
+    locale::__imp::classic_locale_imp_(__uninitialized_tag{}); // initialized below in classic()
 
 const locale& locale::classic() {
   static const __no_destroy<locale> classic_locale(__private_tag{}, [] {

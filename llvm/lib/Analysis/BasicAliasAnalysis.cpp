@@ -395,8 +395,8 @@ static LinearExpression GetLinearExpression(
       case Instruction::Or:
         // X|C == X+C if all the bits in C are unset in X.  Otherwise we can't
         // analyze it.
-        if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(), DL, 0, AC,
-                               BOp, DT))
+        if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(),
+                               SimplifyQuery(DL, DT, AC, BOp)))
           return Val;
 
         [[fallthrough]];
