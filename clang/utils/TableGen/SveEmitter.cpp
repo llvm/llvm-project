@@ -379,6 +379,9 @@ public:
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createSMECodeGenMap(raw_ostream &o);
 
+  /// Create a table for a builtin's requirement for PSTATE.SM.
+  void createStreamingAttrs(raw_ostream &o, ACLEKind Kind);
+
   /// Emit all the range checks for the immediates.
   void createSMERangeChecks(raw_ostream &o);
 
@@ -1383,6 +1386,12 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "#define __aio static __inline__ __attribute__((__always_inline__, "
         "__nodebug__, __overloadable__))\n\n";
 
+  OS << "#ifdef __ARM_FEATURE_SME\n";
+  OS << "#define __asc __attribute__((arm_streaming_compatible))\n";
+  OS << "#else\n";
+  OS << "#define __asc\n";
+  OS << "#endif\n\n";
+
   // Add reinterpret functions.
   for (auto [N, Suffix] :
        std::initializer_list<std::pair<unsigned, const char *>>{
@@ -1702,6 +1711,61 @@ void SVEEmitter::createSMERangeChecks(raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
+void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  // The mappings must be sorted based on BuiltinID.
+  llvm::sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                      const std::unique_ptr<Intrinsic> &B) {
+    return A->getMangledName() < B->getMangledName();
+  });
+
+  switch (Kind) {
+  case ACLEKind::SME:
+    OS << "#ifdef GET_SME_STREAMING_ATTRS\n";
+    break;
+  case ACLEKind::SVE:
+    OS << "#ifdef GET_SVE_STREAMING_ATTRS\n";
+    break;
+  }
+
+  // Ensure these are only emitted once.
+  std::set<std::string> Emitted;
+
+  uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
+  uint64_t IsStreamingCompatibleFlag =
+      getEnumValueForFlag("IsStreamingCompatible");
+  for (auto &Def : Defs) {
+    if (Emitted.find(Def->getMangledName()) != Emitted.end())
+      continue;
+
+    switch (Kind) {
+    case ACLEKind::SME:
+      OS << "case SME::BI__builtin_sme_";
+      break;
+    case ACLEKind::SVE:
+      OS << "case SVE::BI__builtin_sve_";
+      break;
+    }
+    OS << Def->getMangledName() << ":\n";
+
+    if (Def->isFlagSet(IsStreamingFlag))
+      OS << "  BuiltinType = ArmStreaming;\n";
+    else if (Def->isFlagSet(IsStreamingCompatibleFlag))
+      OS << "  BuiltinType = ArmStreamingCompatible;\n";
+    else
+      OS << "  BuiltinType = ArmNonStreaming;\n";
+    OS << "  break;\n";
+
+    Emitted.insert(Def->getMangledName());
+  }
+
+  OS << "#endif\n\n";
+}
+
 namespace clang {
 void EmitSveHeader(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createHeader(OS);
@@ -1739,4 +1803,7 @@ void EmitSmeRangeChecks(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMERangeChecks(OS);
 }
 
+void EmitSmeStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SME);
+}
 } // End namespace clang

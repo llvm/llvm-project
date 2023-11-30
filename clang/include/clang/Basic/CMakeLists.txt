@@ -97,6 +97,12 @@ clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
 clang_tablegen(arm_sme_sema_rangechecks.inc -gen-arm-sme-sema-rangechecks
   SOURCE arm_sme.td
   TARGET ClangARMSmeSemaRangeChecks)
+clang_tablegen(arm_sme_streaming_attrs.inc -gen-arm-sme-streaming-attrs
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeStreamingAttrs)
+clang_tablegen(arm_sme_builtins_za_state.inc -gen-arm-sme-builtin-za-state
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltinsZAState)
 clang_tablegen(arm_cde_builtins.inc -gen-arm-cde-builtin-def
   SOURCE arm_cde.td
   TARGET ClangARMCdeBuiltinsDef)

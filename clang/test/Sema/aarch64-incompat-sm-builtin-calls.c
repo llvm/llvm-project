@@ -5,6 +5,7 @@
 // REQUIRES: aarch64-registered-target
 
 #include "arm_neon.h"
+#include "arm_sme_draft_spec_subject_to_change.h"
 
 int16x8_t incompat_neon_sm(int16x8_t splat) __arm_streaming {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
@@ -19,4 +20,24 @@ __arm_locally_streaming int16x8_t incompat_neon_ls(int16x8_t splat) {
 int16x8_t incompat_neon_smc(int16x8_t splat) __arm_streaming_compatible {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming compatible function}}
   return (int16x8_t)__builtin_neon_vqaddq_v((int8x16_t)splat, (int8x16_t)splat, 33);
+}
+
+void incompat_sme_norm(svbool_t pg, void const *ptr) __arm_shared_za {
+  // expected-warning@+1 {{builtin call has undefined behaviour when called from a non-streaming function}}
+  return __builtin_sme_svld1_hor_za128(0, 0, pg, ptr);
+}
+
+void incompat_sme_smc(svbool_t pg, void const *ptr) __arm_streaming_compatible __arm_shared_za {
+  // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming compatible function}}
+  return __builtin_sme_svld1_hor_za128(0, 0, pg, ptr);
+}
+
+void incompat_sme_sm(svbool_t pn, svbool_t pm, svfloat32_t zn, svfloat32_t zm) __arm_shared_za {
+  // expected-warning@+1 {{builtin call has undefined behaviour when called from a non-streaming function}}
+  svmops_za32_f32_m(0, pn, pm, zn, zm);
+}
+
+svbool_t streaming_caller_ptrue(void) __arm_streaming {
+  // expected-no-warning
+  return svand_z(svptrue_b16(), svptrue_pat_b16(SV_ALL), svptrue_pat_b16(SV_VL4));
 }
