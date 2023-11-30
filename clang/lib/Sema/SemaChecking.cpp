@@ -2993,11 +2993,7 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
 
-enum ArmStreamingType {
-  ArmNonStreaming,
-  ArmStreaming,
-  ArmStreamingCompatible
-};
+enum ArmStreamingType { ArmNonStreaming, ArmStreaming, ArmStreamingCompatible };
 
 static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
   if (FD->hasAttr<ArmLocallyStreamingAttr>())
@@ -3016,8 +3012,7 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      ArmStreamingType BuiltinType) {
   ArmStreamingType FnType = getArmStreamingFnType(FD);
 
-  if (FnType == ArmStreaming &&
-      BuiltinType == ArmNonStreaming) {
+  if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
   }
