@@ -227,8 +227,6 @@ bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAd
       DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
   *((void **)&RTL.destroy_event) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
-  *((void **)&RTL.release_async_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
   *((void **)&RTL.init_async_info) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_init_async_info");
   *((void **)&RTL.init_device_info) =
@@ -245,7 +243,7 @@ bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAd
       DynLibrary->getAddressOfSymbol("__tgt_rtl_set_device_offset");
 
   // Record Replay RTL
-  *((void **)&RTL.activate_record_replay) =
+  *((void **)&RTL.initialize_record_replay) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_initialize_record_replay");
 
   RTL.LibraryHandler = std::move(DynLibrary);
