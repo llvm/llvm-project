@@ -801,6 +801,7 @@ void FuncExit(ThreadState *thr) {
 #if !SANITIZER_GO
   DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
 #endif
+  CHECK_GT(thr->shadow_stack_pos, thr->shadow_stack);
   thr->shadow_stack_pos--;
 }
 
