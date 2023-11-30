@@ -8,14 +8,6 @@
 # CHECK:      HINT 36
 # CHECK:    }
 
-# Generated from C, then simplified:
-# void _setjmp();
-# void a(int b) {
-#   _setjmp();
-#   for (; b;)
-#     ;
-# }
-
 --- |
   define void @a() {
     ret void
@@ -25,21 +17,7 @@
 ...
 ---
 name: a
-stack:
-  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x19' }
 body: |
   bb.0:
-    successors: %bb.2, %bb.1
-    liveins: $w0, $lr, $x19
-
-    $w19 = ORRWrr $wzr, $w0
     BLR_BTI @_setjmp, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
-    CBZW killed renamable $w19, %bb.2
-
-  bb.1:
-    B %bb.1
-
-  bb.2:
-    $x19 = frame-destroy LDRXui $sp, 2 :: (load (s64) from %stack.0)
-    RET_ReallyLR
 ...
