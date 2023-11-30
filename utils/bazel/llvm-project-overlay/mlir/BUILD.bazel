@@ -551,14 +551,20 @@ mlir_c_api_cc_library(
 
 mlir_c_api_cc_library(
     name = "CAPIMemRef",
-    srcs = ["lib/CAPI/Dialect/MemRef.cpp"],
+    srcs = [
+        "lib/CAPI/Dialect/MemRef.cpp",
+        "lib/CAPI/Dialect/MemRefPasses.cpp",
+    ],
     hdrs = ["include/mlir-c/Dialect/MemRef.h"],
     capi_deps = [
         ":CAPIIR",
     ],
+    header_deps = [":MemRefPassIncGen"],
     includes = ["include"],
     deps = [
         ":MemRefDialect",
+        ":MemRefTransforms",
+        ":Pass",
     ],
 )
 
@@ -12381,6 +12387,20 @@ gentbl_cc_library(
                 "-name=MemRef",
             ],
             "include/mlir/Dialect/MemRef/Transforms/Passes.h.inc",
+        ),
+        (
+            [
+                "-gen-pass-capi-header",
+                "--prefix=MemRef",
+            ],
+            "include/mlir/Dialect/MemRef/Transforms/Passes.capi.h.inc",
+        ),
+        (
+            [
+                "-gen-pass-capi-impl",
+                "--prefix=MemRef",
+            ],
+            "include/mlir/Dialect/MemRef/Transforms/Passes.capi.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",

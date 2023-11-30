@@ -51,6 +51,7 @@ add_mlir_upstream_c_api_library(MLIRCAPIMath
 
 add_mlir_upstream_c_api_library(MLIRCAPIMemRef
   MemRef.cpp
+  MemRefPasses.cpp
 
   PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
