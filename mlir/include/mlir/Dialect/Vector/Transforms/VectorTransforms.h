@@ -59,6 +59,8 @@ struct VectorTransformsOptions {
     vectorTransferSplit = opt;
     return *this;
   }
+
+  bool useShapeCast = true;
 };
 
 //===----------------------------------------------------------------------===//
