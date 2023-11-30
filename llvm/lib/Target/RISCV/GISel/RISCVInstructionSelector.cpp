@@ -701,6 +701,13 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     MRI.setType(DstReg, sXLen);
     break;
   }
+  case TargetOpcode::G_PTRMASK: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT sXLen = LLT::scalar(STI.getXLen());
+    replacePtrWithInt(MI.getOperand(1), MIB, MRI);
+    MI.setDesc(TII.get(TargetOpcode::G_AND));
+    MRI.setType(DstReg, sXLen);
+  }
   }
 }
 
