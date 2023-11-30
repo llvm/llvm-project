@@ -16,7 +16,7 @@
 !ALL:  %[[BOUNDS1:.*]] = omp.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
 !ALL:  %[[MAP1:.*]] = omp.map_info var_ptr(%[[WRITE]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
 !ALL:  %[[MAP2:.*]] = omp.map_info var_ptr(%[[ITER]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-!ALL: omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> %{{.*}}, %[[MAP2]] -> %{{.*}}, %{{.*}} -> %{{.*}}, %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, !fir.ref<i32>, index, index) {
+!ALL: omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, !fir.ref<i32>) {
 
 subroutine read_write_section()
     integer :: sp_read(10) = (/1,2,3,4,5,6,7,8,9,10/)
@@ -64,7 +64,7 @@ contains
 !ALL: %[[BOUNDS:.*]]  = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C2]] : index) stride(%[[C0]] : index) start_idx(%[[C0]] : index)
 !ALL: %[[MAP:.*]] = omp.map_info var_ptr(%[[ARG0]] : !fir.ref<!fir.array<?xi32>>, !fir.array<?xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "arr_read_write(2:5)"}
 !ALL: %[[MAP2:.*]] = omp.map_info var_ptr(%[[ALLOCA]] : !fir.ref<i32>, i32)   map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
-!ALL: omp.target map_entries(%[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}}, %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>, index) {
+!ALL: omp.target map_entries(%[[MAP]] -> %{{.*}}, %[[MAP2]] -> %{{.*}} : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
 
         subroutine assumed_size_array(arr_read_write)
             integer, intent(inout) :: arr_read_write(*)

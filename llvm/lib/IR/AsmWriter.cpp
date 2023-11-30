@@ -1355,6 +1355,10 @@ static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
                dyn_cast<PossiblyExactOperator>(U)) {
     if (Div->isExact())
       Out << " exact";
+  } else if (const PossiblyDisjointInst *PDI =
+                 dyn_cast<PossiblyDisjointInst>(U)) {
+    if (PDI->isDisjoint())
+      Out << " disjoint";
   } else if (const GEPOperator *GEP = dyn_cast<GEPOperator>(U)) {
     if (GEP->isInBounds())
       Out << " inbounds";

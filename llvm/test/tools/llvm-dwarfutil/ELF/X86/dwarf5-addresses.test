@@ -39,7 +39,7 @@
 #DWARF-CHECK:   DW_AT_name [DW_FORM_strx]  {{.*}}     "CU1"
 #DWARF-CHECK:   DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000000001130)
 #DWARF-CHECK:   DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000060)
-#DWARF-CHECK:   DW_AT_str_offsets_base [DW_FORM_sec_offset]       (0x00000008)
+#DWARF-CHECK:   DW_AT_str_offsets_base [DW_FORM_sec_offset]
 #DWARF-CHECK:   DW_TAG_subprogram
 #DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo1"
 #DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000001130)

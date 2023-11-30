@@ -1,7 +1,7 @@
 #ifndef FILESYSTEM_TEST_HELPER_H
 #define FILESYSTEM_TEST_HELPER_H
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <sys/stat.h> // for stat, mkdir, mkfifo
 #ifndef _WIN32
@@ -33,6 +33,7 @@
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
+namespace fs = std::filesystem;
 
 namespace utils {
 #ifdef _WIN32

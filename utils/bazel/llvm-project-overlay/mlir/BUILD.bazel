@@ -589,6 +589,24 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPITarget",
+    srcs = ["lib/CAPI/Target/LLVMIR.cpp"],
+    hdrs = ["include/mlir-c/Target/LLVMIR.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":LLVMToLLVMIRTranslation",
+        ":Support",
+        ":ToLLVMIRTranslation",
+        ":ToLLVMIRTranslationRegistration",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIGPU",
     srcs = [
         "lib/CAPI/Dialect/GPU.cpp",
@@ -5213,6 +5231,7 @@ cc_library(
         ":MemRefDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -5698,6 +5717,7 @@ cc_library(
         ":AsyncToLLVM",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
         ":FuncToLLVM",
         ":GPUDialect",
         ":GPUTransforms",

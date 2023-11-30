@@ -25,7 +25,9 @@ namespace llvm {
 class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
+
 namespace RISCVISD {
+// clang-format off
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET_GLUE,
@@ -421,6 +423,7 @@ enum NodeType : unsigned {
   TH_SWD,
   TH_SDD,
 };
+// clang-format on
 } // namespace RISCVISD
 
 class RISCVTargetLowering : public TargetLowering {
@@ -962,6 +965,8 @@ private:
 
   bool shouldFoldSelectWithSingleBitTest(EVT VT,
                                          const APInt &AndMask) const override;
+
+  unsigned getMinimumJumpTableEntries() const override;
 };
 
 namespace RISCV {

@@ -43,7 +43,7 @@ constexpr void test_swap(MDS a, MDS b) {
   }
   // This check uses a side effect of layout_wrapping_integral::swap to make sure
   // mdspan calls the underlying components' swap via ADL
-  if !consteval {
+  if (!std::is_constant_evaluated()) {
     if constexpr (std::is_same_v<typename MDS::layout_type, layout_wrapping_integral<4>>) {
       assert(MDS::mapping_type::swap_counter() > 0);
     }

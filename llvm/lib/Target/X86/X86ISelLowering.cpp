@@ -1596,8 +1596,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STORE,              VT, Custom);
     }
     setF16Action(MVT::v16f16, Expand);
-    if (Subtarget.hasAVX2())
-      setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -1970,19 +1969,23 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasVBMI2()) {
-      for (auto VT : { MVT::v8i16, MVT::v4i32, MVT::v2i64,
-                       MVT::v16i16, MVT::v8i32, MVT::v4i64,
-                       MVT::v32i16, MVT::v16i32, MVT::v8i64 }) {
+      for (auto VT : {MVT::v32i16, MVT::v16i32, MVT::v8i64}) {
         setOperationAction(ISD::FSHL, VT, Custom);
         setOperationAction(ISD::FSHR, VT, Custom);
       }
 
       setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
-      setOperationAction(ISD::ROTR, MVT::v8i16,  Custom);
-      setOperationAction(ISD::ROTR, MVT::v16i16, Custom);
       setOperationAction(ISD::ROTR, MVT::v32i16, Custom);
     }
   }// useAVX512Regs
+
+  if (!Subtarget.useSoftFloat() && Subtarget.hasVBMI2()) {
+    for (auto VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v16i16, MVT::v8i32,
+                    MVT::v4i64}) {
+      setOperationAction(ISD::FSHL, VT, Custom);
+      setOperationAction(ISD::FSHR, VT, Custom);
+    }
+  }
 
   // This block controls legalization for operations that don't have
   // pre-AVX512 equivalents. Without VLX we use 512-bit operations for
@@ -2050,6 +2053,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+    setOperationAction(ISD::FABS, MVT::v32f16, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with
@@ -2332,7 +2336,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasAMXTILE()) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasAMXTILE()) {
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
@@ -4552,15 +4556,17 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
+  return dyn_cast<ConstantPoolSDNode>(Ptr);
+}
 
-  auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
-
   return CNode->getConstVal();
 }
 
@@ -56935,13 +56941,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8RegClass);
+          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16RegClass);
+          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32RegClass);
+          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64RegClass);
+          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -56960,14 +56966,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, &X86::GR8RegClass);
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, &X86::GR16RegClass);
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, &X86::GR32RegClass);
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, &X86::GR64RegClass);
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
@@ -57236,7 +57242,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(X86::DF, &X86::DFCCRRegClass);
 
     // fpsr -> FPSW
-    if (StringRef("{fpsr}").equals_insensitive(Constraint))
+    // Only allow for clobber.
+    if (StringRef("{fpsr}").equals_insensitive(Constraint) && VT == MVT::Other)
       return std::make_pair(X86::FPSW, &X86::FPCCRRegClass);
 
     return Res;

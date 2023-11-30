@@ -50,6 +50,10 @@ Implemented Papers
 - P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
 - P2467R1 - Support exclusive mode for fstreams
 - P0020R6 - Floating Point Atomic
+- P2918R2 - Runtime format strings II
+- P2871R3 - Remove Deprecated Unicode Conversion Facets from C++26
+- P2870R3 - Remove basic_string::reserve()
+- P2909R4 - Fix formatting of code units as integers (Dude, where’s my ``char``?)
 
 
 Improvements and New Features
@@ -69,6 +73,13 @@ Improvements and New Features
   the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control which hardening mode is enabled
   on a per translation unit basis using the ``_LIBCPP_HARDENING_MODE`` macro. See :ref:`the hardening documentation
   <using-hardening-modes>` for more details.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT`` macro has been added to make
+  the declarations in ``<codecvt>`` available.
+
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE`` macro has been added to make
+  the function ``std::basic_string<...>::reserve()`` available.
+
 
 Deprecations and Removals
 -------------------------
@@ -91,17 +102,14 @@ Deprecations and Removals
   Please see the updated documentation about the hardening modes in libc++ and in particular the
   ``_LIBCPP_VERBOSE_ABORT`` macro for details.
 
-Upcoming Deprecations and Removals
-----------------------------------
-
-LLVM 18
-~~~~~~~
-
 - The headers ``<experimental/deque>``, ``<experimental/forward_list>``, ``<experimental/list>``,
   ``<experimental/map>``, ``<experimental/memory_resource>``, ``<experimental/regex>``, ``<experimental/set>``,
   ``<experimental/string>``, ``<experimental/unordered_map>``, ``<experimental/unordered_set>``,
-  and ``<experimental/vector>`` will be removed in LLVM 18, as all their contents will have been implemented in
-  namespace ``std`` for at least two releases.
+  and ``<experimental/vector>`` have been removed in LLVM 18, as all their contents will have been
+  implemented in namespace ``std`` for at least two releases.
+
+Upcoming Deprecations and Removals
+----------------------------------
 
 LLVM 19
 ~~~~~~~
@@ -134,7 +142,7 @@ ABI Affecting Changes
 ---------------------
 
 - The symbol of a non-visible function part of ``std::system_error`` was removed.
-  This is not a breaking change as the private function ``__init`` was never referenced internally outside of the dylib
+  This is not a breaking change as the private function ``__init`` was never referenced internally outside of the dylib.
 
 - This release of libc++ added missing visibility annotations on some types in the library. Users compiling with
   ``-fvisbility=hidden`` may notice that additional type infos from libc++ are being exported from their ABI. This is
@@ -149,7 +157,7 @@ ABI Affecting Changes
   extremely rare. Any error resulting from this change should result in a link-time error.
 
 - Under the unstable ABI, the internal alignment requirements for heap allocations
-  inside ``std::string`` has decreased from 16 to 8 This save memory since string requests fewer additional
+  inside ``std::string`` has decreased from 16 to 8. This saves memory since string requests fewer additional
   bytes than it did previously. However, this also changes the return value of ``std::string::max_size``
   and can cause code compiled against older libc++ versions but linked at runtime to a new version
   to throw a different exception when attempting allocations that are too large

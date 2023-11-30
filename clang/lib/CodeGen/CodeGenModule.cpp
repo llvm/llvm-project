@@ -699,6 +699,7 @@ void CodeGenModule::checkAliases() {
 void CodeGenModule::clear() {
   DeferredDeclsToEmit.clear();
   EmittedDeferredDecls.clear();
+  DeferredAnnotations.clear();
   if (OpenMPRuntime)
     OpenMPRuntime->clear();
 }
@@ -847,7 +848,7 @@ void CodeGenModule::Release() {
     // Emit amdgpu_code_object_version module flag, which is code object version
     // times 100.
     if (getTarget().getTargetOpts().CodeObjectVersion !=
-        TargetOptions::COV_None) {
+        llvm::CodeObjectVersionKind::COV_None) {
       getModule().addModuleFlag(llvm::Module::Error,
                                 "amdgpu_code_object_version",
                                 getTarget().getTargetOpts().CodeObjectVersion);
@@ -984,6 +985,41 @@ void CodeGenModule::Release() {
   uint64_t WCharWidth =
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
+
+  if (getTriple().isOSzOS()) {
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "zos_product_major_version",
+                              uint32_t(CLANG_VERSION_MAJOR));
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "zos_product_minor_version",
+                              uint32_t(CLANG_VERSION_MINOR));
+    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
+                              uint32_t(CLANG_VERSION_PATCHLEVEL));
+    std::string ProductId;
+#ifdef CLANG_VENDOR
+    ProductId = #CLANG_VENDOR;
+#else
+    ProductId = "clang";
+#endif
+    getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
+                              llvm::MDString::get(VMContext, ProductId));
+
+    // Record the language because we need it for the PPA2.
+    StringRef lang_str = languageToString(
+        LangStandard::getLangStandardForKind(LangOpts.LangStd).Language);
+    getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
+                              llvm::MDString::get(VMContext, lang_str));
+
+    time_t TT = PreprocessorOpts.SourceDateEpoch
+                    ? *PreprocessorOpts.SourceDateEpoch
+                    : std::time(nullptr);
+    getModule().addModuleFlag(llvm::Module::Max, "zos_translation_time",
+                              static_cast<uint64_t>(TT));
+
+    // Multiple modes will be supported here.
+    getModule().addModuleFlag(llvm::Module::Error, "zos_le_char_mode",
+                              llvm::MDString::get(VMContext, "ascii"));
+  }
 
   llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
   if (   Arch == llvm::Triple::arm
@@ -3130,6 +3166,13 @@ void CodeGenModule::EmitVTablesOpportunistically() {
 }
 
 void CodeGenModule::EmitGlobalAnnotations() {
+  for (const auto& [MangledName, VD] : DeferredAnnotations) {
+    llvm::GlobalValue *GV = GetGlobalValue(MangledName);
+    if (GV)
+      AddGlobalAnnotations(VD, GV);
+  }
+  DeferredAnnotations.clear();
+
   if (Annotations.empty())
     return;
 
@@ -3643,6 +3686,14 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+    // Update deferred annotations with the latest declaration if the function
+    // function was already used or defined.
+    if (FD->hasAttr<AnnotateAttr>()) {
+      StringRef MangledName = getMangledName(GD);
+      if (GetGlobalValue(MangledName))
+        DeferredAnnotations[MangledName] = FD;
+    }
+
     // Forward declarations are emitted lazily on first use.
     if (!FD->doesThisDeclarationHaveABody()) {
       if (!FD->doesDeclarationForceExternallyVisibleDefinition())
@@ -4426,6 +4477,11 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   llvm::Function *F =
       llvm::Function::Create(FTy, llvm::Function::ExternalLinkage,
                              Entry ? StringRef() : MangledName, &getModule());
+
+  // Store the declaration associated with this function so it is potentially
+  // updated by further declarations or definitions and emitted at the end.
+  if (D && D->hasAttr<AnnotateAttr>())
+    DeferredAnnotations[MangledName] = cast<ValueDecl>(D);
 
   // If we already created a function with the same mangled name (but different
   // type) before, take its name and add it to the list of functions to be
@@ -5713,8 +5769,6 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
     AddGlobalCtor(Fn, CA->getPriority());
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
     AddGlobalDtor(Fn, DA->getPriority(), true);
-  if (D->hasAttr<AnnotateAttr>())
-    AddGlobalAnnotations(D, Fn);
   if (getLangOpts().OpenMP && D->hasAttr<OMPDeclareTargetDeclAttr>())
     getOpenMPRuntime().emitDeclareTargetFunction(D, GV);
 }

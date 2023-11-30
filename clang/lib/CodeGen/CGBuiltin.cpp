@@ -5745,12 +5745,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address DestAddr = EmitMSVAListRef(E->getArg(0));
     Address SrcAddr = EmitMSVAListRef(E->getArg(1));
 
-    llvm::Type *BPP = Int8PtrPtrTy;
-
-    DestAddr = Address(Builder.CreateBitCast(DestAddr.getPointer(), BPP, "cp"),
-                       Int8PtrTy, DestAddr.getAlignment());
-    SrcAddr = Address(Builder.CreateBitCast(SrcAddr.getPointer(), BPP, "ap"),
-                      Int8PtrTy, SrcAddr.getAlignment());
+    DestAddr = DestAddr.withElementType(Int8PtrTy);
+    SrcAddr = SrcAddr.withElementType(Int8PtrTy);
 
     Value *ArgPtr = Builder.CreateLoad(SrcAddr, "ap.val");
     return RValue::get(Builder.CreateStore(ArgPtr, DestAddr));
@@ -8424,8 +8420,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     }
 
     Value *LdPtr = EmitScalarExpr(E->getArg(0));
-    Value *Val = Builder.CreateCall(F, Builder.CreateBitCast(LdPtr, Int8PtrTy),
-                                    "ldrexd");
+    Value *Val = Builder.CreateCall(F, LdPtr, "ldrexd");
 
     Value *Val0 = Builder.CreateExtractValue(Val, 1);
     Value *Val1 = Builder.CreateExtractValue(Val, 0);
@@ -8483,7 +8478,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
 
     Value *Arg0 = Builder.CreateExtractValue(Val, 0);
     Value *Arg1 = Builder.CreateExtractValue(Val, 1);
-    Value *StPtr = Builder.CreateBitCast(EmitScalarExpr(E->getArg(1)), Int8PtrTy);
+    Value *StPtr = EmitScalarExpr(E->getArg(1));
     return Builder.CreateCall(F, {Arg0, Arg1, StPtr}, "strexd");
   }
 
@@ -17593,7 +17588,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
-  if (Cov == clang::TargetOptions::COV_None) {
+  if (Cov == CodeObjectVersionKind::COV_None) {
     StringRef Name = "__oclc_ABI_version";
     auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
     if (!ABIVersionC)
@@ -17611,7 +17606,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
 
     Value *IsCOV5 = CGF.Builder.CreateICmpSGE(
         ABIVersion,
-        llvm::ConstantInt::get(CGF.Int32Ty, clang::TargetOptions::COV_5));
+        llvm::ConstantInt::get(CGF.Int32Ty, CodeObjectVersionKind::COV_5));
 
     // Indexing the implicit kernarg segment.
     Value *ImplicitGEP = CGF.Builder.CreateConstGEP1_32(
@@ -17626,7 +17621,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         Address(Result, CGF.Int16Ty, CharUnits::fromQuantity(2)));
   } else {
     Value *GEP = nullptr;
-    if (Cov == clang::TargetOptions::COV_5) {
+    if (Cov == CodeObjectVersionKind::COV_5) {
       // Indexing the implicit kernarg segment.
       GEP = CGF.Builder.CreateConstGEP1_32(
           CGF.Int8Ty, EmitAMDGPUImplicitArgPtr(CGF), 12 + Index * 2);

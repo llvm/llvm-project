@@ -486,10 +486,8 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
 static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
                                         Function *&NewFn) {
   // Only handle intrinsics that start with "x86.".
-  if (!Name.starts_with("x86."))
+  if (!Name.consume_front("x86."))
     return false;
-  // Remove "x86." prefix.
-  Name = Name.substr(4);
 
   if (ShouldUpgradeX86Intrinsic(F, Name)) {
     NewFn = nullptr;
@@ -507,113 +505,112 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return true;
   }
 
+  Intrinsic::ID ID;
+
   // SSE4.1 ptest functions may have an old signature.
-  if (Name.starts_with("sse41.ptest")) { // Added in 3.2
-    if (Name.substr(11) == "c")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestc, NewFn);
-    if (Name.substr(11) == "z")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestz, NewFn);
-    if (Name.substr(11) == "nzc")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestnzc, NewFn);
+  if (Name.consume_front("sse41.ptest")) { // Added in 3.2
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("c", Intrinsic::x86_sse41_ptestc)
+             .Case("z", Intrinsic::x86_sse41_ptestz)
+             .Case("nzc", Intrinsic::x86_sse41_ptestnzc)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradePTESTIntrinsic(F, ID, NewFn);
+
+    return false;
   }
+
   // Several blend and other instructions with masks used the wrong number of
   // bits.
-  if (Name == "sse41.insertps") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_insertps,
-                                            NewFn);
-  if (Name == "sse41.dppd") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_dppd,
-                                            NewFn);
-  if (Name == "sse41.dpps") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_dpps,
-                                            NewFn);
-  if (Name == "sse41.mpsadbw") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_mpsadbw,
-                                            NewFn);
-  if (Name == "avx.dp.ps.256") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx_dp_ps_256,
-                                            NewFn);
-  if (Name == "avx2.mpsadbw") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx2_mpsadbw,
-                                            NewFn);
-  if (Name == "avx512.mask.cmp.pd.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_512,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_512,
-                                     NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.128") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128, NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.256") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256, NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.512") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512, NewFn);
-  if (Name == "avx512bf16.mask.cvtneps2bf16.128") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128, NewFn);
-  if (Name == "avx512bf16.cvtneps2bf16.256") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_256, NewFn);
-  if (Name == "avx512bf16.cvtneps2bf16.512") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_512, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.128") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_128, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.256") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_256, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.512") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_512, NewFn);
 
-  // frcz.ss/sd may need to have an argument dropped. Added in 3.2
-  if (Name.starts_with("xop.vfrcz.ss") && F->arg_size() == 2) {
-    rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_xop_vfrcz_ss);
-    return true;
+  // Added in 3.6
+  ID = StringSwitch<Intrinsic::ID>(Name)
+           .Case("sse41.insertps", Intrinsic::x86_sse41_insertps)
+           .Case("sse41.dppd", Intrinsic::x86_sse41_dppd)
+           .Case("sse41.dpps", Intrinsic::x86_sse41_dpps)
+           .Case("sse41.mpsadbw", Intrinsic::x86_sse41_mpsadbw)
+           .Case("avx.dp.ps.256", Intrinsic::x86_avx_dp_ps_256)
+           .Case("avx2.mpsadbw", Intrinsic::x86_avx2_mpsadbw)
+           .Default(Intrinsic::not_intrinsic);
+  if (ID != Intrinsic::not_intrinsic)
+    return UpgradeX86IntrinsicsWith8BitMask(F, ID, NewFn);
+
+  if (Name.consume_front("avx512.mask.cmp.")) {
+    // Added in 7.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("pd.128", Intrinsic::x86_avx512_mask_cmp_pd_128)
+             .Case("pd.256", Intrinsic::x86_avx512_mask_cmp_pd_256)
+             .Case("pd.512", Intrinsic::x86_avx512_mask_cmp_pd_512)
+             .Case("ps.128", Intrinsic::x86_avx512_mask_cmp_ps_128)
+             .Case("ps.256", Intrinsic::x86_avx512_mask_cmp_ps_256)
+             .Case("ps.512", Intrinsic::x86_avx512_mask_cmp_ps_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86MaskedFPCompare(F, ID, NewFn);
+    return false; // No other 'x86.avx523.mask.cmp.*'.
   }
-  if (Name.starts_with("xop.vfrcz.sd") && F->arg_size() == 2) {
-    rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_xop_vfrcz_sd);
-    return true;
+
+  if (Name.consume_front("avx512bf16.")) {
+    // Added in 9.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("cvtne2ps2bf16.128",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128)
+             .Case("cvtne2ps2bf16.256",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256)
+             .Case("cvtne2ps2bf16.512",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512)
+             .Case("mask.cvtneps2bf16.128",
+                   Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128)
+             .Case("cvtneps2bf16.256",
+                   Intrinsic::x86_avx512bf16_cvtneps2bf16_256)
+             .Case("cvtneps2bf16.512",
+                   Intrinsic::x86_avx512bf16_cvtneps2bf16_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86BF16Intrinsic(F, ID, NewFn);
+
+    // Added in 9.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("dpbf16ps.128", Intrinsic::x86_avx512bf16_dpbf16ps_128)
+             .Case("dpbf16ps.256", Intrinsic::x86_avx512bf16_dpbf16ps_256)
+             .Case("dpbf16ps.512", Intrinsic::x86_avx512bf16_dpbf16ps_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86BF16DPIntrinsic(F, ID, NewFn);
+    return false; // No other 'x86.avx512bf16.*'.
   }
-  // Upgrade any XOP PERMIL2 index operand still using a float/double vector.
-  if (Name.starts_with("xop.vpermil2")) { // Added in 3.9
-    auto Idx = F->getFunctionType()->getParamType(2);
-    if (Idx->isFPOrFPVectorTy()) {
+
+  if (Name.consume_front("xop.")) {
+    Intrinsic::ID ID = Intrinsic::not_intrinsic;
+    if (Name.startswith("vpermil2")) { // Added in 3.9
+      // Upgrade any XOP PERMIL2 index operand still using a float/double
+      // vector.
+      auto Idx = F->getFunctionType()->getParamType(2);
+      if (Idx->isFPOrFPVectorTy()) {
+        unsigned IdxSize = Idx->getPrimitiveSizeInBits();
+        unsigned EltSize = Idx->getScalarSizeInBits();
+        if (EltSize == 64 && IdxSize == 128)
+          ID = Intrinsic::x86_xop_vpermil2pd;
+        else if (EltSize == 32 && IdxSize == 128)
+          ID = Intrinsic::x86_xop_vpermil2ps;
+        else if (EltSize == 64 && IdxSize == 256)
+          ID = Intrinsic::x86_xop_vpermil2pd_256;
+        else
+          ID = Intrinsic::x86_xop_vpermil2ps_256;
+      }
+    } else if (F->arg_size() == 2)
+      // frcz.ss/sd may need to have an argument dropped. Added in 3.2
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("vfrcz.ss", Intrinsic::x86_xop_vfrcz_ss)
+               .Case("vfrcz.sd", Intrinsic::x86_xop_vfrcz_sd)
+               .Default(Intrinsic::not_intrinsic);
+
+    if (ID != Intrinsic::not_intrinsic) {
       rename(F);
-      unsigned IdxSize = Idx->getPrimitiveSizeInBits();
-      unsigned EltSize = Idx->getScalarSizeInBits();
-      Intrinsic::ID Permil2ID;
-      if (EltSize == 64 && IdxSize == 128)
-        Permil2ID = Intrinsic::x86_xop_vpermil2pd;
-      else if (EltSize == 32 && IdxSize == 128)
-        Permil2ID = Intrinsic::x86_xop_vpermil2ps;
-      else if (EltSize == 64 && IdxSize == 256)
-        Permil2ID = Intrinsic::x86_xop_vpermil2pd_256;
-      else
-        Permil2ID = Intrinsic::x86_xop_vpermil2ps_256;
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Permil2ID);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
       return true;
     }
+    return false; // No other 'x86.xop.*'
   }
 
   if (Name == "seh.recoverfp") {
@@ -971,19 +968,20 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'c': {
-    if (Name.starts_with("ctlz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                        F->arg_begin()->getType());
-      return true;
+    if (F->arg_size() == 1) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("ctlz.", Intrinsic::ctlz)
+                             .StartsWith("cttz.", Intrinsic::cttz)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
     }
-    if (Name.starts_with("cttz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.equals("coro.end") && F->arg_size() == 2) {
+
+    if (F->arg_size() == 2 && Name.equals("coro.end")) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;

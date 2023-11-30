@@ -17,7 +17,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -86,6 +86,6 @@ inline perms& operator^=(perms& __lhs, perms __rhs) { return __lhs = __lhs ^ __r
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_PERMS_H

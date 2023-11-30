@@ -7061,6 +7061,26 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
   }];
 }
 
+def HLSLParamQualifierDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "HLSL Parameter Modifiers";
+  let Content = [{
+HLSL function parameters are passed by value. Parameter declarations support
+three qualifiers to denote parameter passing behavior. The three qualifiers are
+`in`, `out` and `inout`.
+
+Parameters annotated with `in` or with no annotation are passed by value from
+the caller to the callee.
+
+Parameters annotated with `out` are written to the argument after the callee
+returns (Note: arguments values passed into `out` parameters *are not* copied
+into the callee).
+
+Parameters annotated with `inout` are copied into the callee via a temporary,
+and copied back to the argument after the callee returns.
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -7295,7 +7315,7 @@ this usage is debugger-dependent.
 }
 
 def CleanupDocs : Documentation {
-  let Category = DocCatType;
+  let Category = DocCatVariable;
   let Content = [{
 This attribute allows a function to be run when a local variable goes out of
 scope. The attribute takes the identifier of a function with a parameter type
@@ -7585,11 +7605,11 @@ def CoroLifetimeBoundDoc : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``[[clang::coro_lifetimebound]]`` is a class attribute which can be applied
-to a `coroutine return type (CRT) <https://clang.llvm.org/docs/AttributeReference.html#coro-return-type>` _ (i.e.
+to a coroutine return type (`CRT`_) (i.e.
 it should also be annotated with ``[[clang::coro_return_type]]``).
 
-All parameters of a function are considered to be lifetime bound. See documentation
-of ``[[clang::lifetimebound]]`` for more `details <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound> _`.
+All parameters of a function are considered to be lifetime bound. See `documentation`_
+of ``[[clang::lifetimebound]]`` for more details.
 if the function returns a coroutine return type (CRT) annotated with ``[[clang::coro_lifetimebound]]``.
 
 Reference parameters of a coroutine are susceptible to capturing references to temporaries or local variables.
@@ -7606,9 +7626,8 @@ For example,
     return coro(a);
   }
 
-`Lifetime bound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound> _` static analysis
-can be used to detect such instances when coroutines capture references which may die earlier than the
-coroutine frame itself. In the above example, if the CRT `task` is annotated with
+Lifetime bound static analysis can be used to detect such instances when coroutines capture references
+which may die earlier than the coroutine frame itself. In the above example, if the CRT `task` is annotated with
 ``[[clang::coro_lifetimebound]]``, then lifetime bound analysis would detect capturing reference to
 temporaries or return address of a local variable.
 
@@ -7635,5 +7654,8 @@ Both coroutines and coroutine wrappers are part of this analysis.
   [[clang::coro_wrapper]] Task<int> stack_reference(int a) {
     return coro(a); // warning: returning address of stack variable `a`.
   }
+
+.. _`documentation`: https://clang.llvm.org/docs/AttributeReference.html#lifetimebound
+.. _`CRT`: https://clang.llvm.org/docs/AttributeReference.html#coro-return-type
 }];
 }
