@@ -85,8 +85,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    getActionDefinitionsBuilder(Op)
-        .widenScalarToNextPow2(LitTyIdx, XLen)
+    auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
+    if (XLen == 32 && ST.hasStdExtD()) {
+      LLT IdxZeroTy = G_MERGE_VALUES ? s64 : s32;
+      LLT IdxOneTy = G_MERGE_VALUES ? s32 : s64;
+      MergeUnmergeActions.legalFor({IdxZeroTy, IdxOneTy});
+    }
+    MergeUnmergeActions.widenScalarToNextPow2(LitTyIdx, XLen)
         .widenScalarToNextPow2(BigTyIdx, XLen)
         .clampScalar(LitTyIdx, sXLen, sXLen)
         .clampScalar(BigTyIdx, sXLen, sXLen);
