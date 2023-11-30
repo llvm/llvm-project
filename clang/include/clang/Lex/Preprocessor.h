@@ -1164,9 +1164,6 @@ private:
 
   void updateOutOfDateIdentifier(IdentifierInfo &II) const;
 
-  /// Buffers for used #embed directives
-  std::vector<std::string> EmbedBuffers;
-
 public:
   Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, const LangOptions &LangOpts,
