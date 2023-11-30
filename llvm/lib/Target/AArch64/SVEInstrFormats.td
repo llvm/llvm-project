@@ -10433,3 +10433,34 @@ multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
     let Inst{23-22} = idx;
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Checked Pointer Arithmetic (FEAT_CPA)
+//===----------------------------------------------------------------------===//
+class sve_int_mad_cpa<string asm>
+    : I<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, ZPR64:$Zm, ZPR64:$Za),
+        asm, "\t$Zdn, $Zm, $Za", "", []>, Sched<[]> {
+  bits<5> Zdn;
+  bits<5> Zm;
+  bits<5> Za;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = 0b11; // sz
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = 0b1;
+  let Inst{14-10} = 0b10110; // opc
+  let Inst{9-5}   = Za;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = ZPR64.ElementSize;
+  let hasSideEffects = 0;
+}
+
+class sve_int_mla_cpa<string asm>
+    : sve2_int_mla<0b11, 0b10100, asm, ZPR64, ZPR64> {
+  let Inst{15} = 0b1;
+
+  let ElementSize = ZPR64.ElementSize;
+}
