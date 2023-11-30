@@ -7351,6 +7351,32 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       V2 = getAllOnesValue(
           *R.DL,
           FixedVectorType::get(E2->Scalars.front()->getType(), CommonVF));
+    } else if (!V1 && V2) {
+      // Shuffle vector and tree node.
+      unsigned VF = cast<FixedVectorType>(V2->getType())->getNumElements();
+      const TreeEntry *E1 = P1.get<const TreeEntry *>();
+      CommonVF = std::max(VF, E1->getVectorFactor());
+      assert(all_of(Mask,
+                    [=](int Idx) {
+                      return Idx < 2 * static_cast<int>(CommonVF);
+                    }) &&
+             "All elements in mask must be less than 2 * CommonVF.");
+      if (E1->Scalars.size() == VF && VF != CommonVF) {
+        SmallVector<int> E1Mask = E1->getCommonMask();
+        assert(!E1Mask.empty() && "Expected non-empty common mask.");
+        for (int &Idx : CommonMask) {
+          if (Idx == PoisonMaskElem)
+            continue;
+          if (Idx >= static_cast<int>(CommonVF))
+            Idx = E1Mask[Idx - CommonVF] + VF;
+        }
+        CommonVF = VF;
+      }
+      V1 = Constant::getNullValue(
+          FixedVectorType::get(E1->Scalars.front()->getType(), CommonVF));
+      V2 = getAllOnesValue(
+          *R.DL,
+          FixedVectorType::get(E1->Scalars.front()->getType(), CommonVF));
     } else {
       assert(V1 && V2 && "Expected both vectors.");
       unsigned VF = cast<FixedVectorType>(V1->getType())->getNumElements();
@@ -7387,7 +7413,8 @@ public:
         R(R), CheckedExtracts(CheckedExtracts) {}
   Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
                         ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
-                        unsigned NumParts) {
+                        unsigned NumParts, bool &UseVecBaseAsInput) {
+    UseVecBaseAsInput = false;
     if (Mask.empty())
       return nullptr;
     Value *VecBase = nullptr;
@@ -7410,6 +7437,7 @@ public:
                            Data.value() == VL[Data.index()]);
                  });
         });
+    SmallPtrSet<Value *, 4> UniqueBases;
     unsigned SliceSize = VL.size() / NumParts;
     for (unsigned Part = 0; Part < NumParts; ++Part) {
       ArrayRef<int> SubMask = Mask.slice(Part * SliceSize, SliceSize);
@@ -7424,13 +7452,14 @@ public:
         // vectorized tree.
         // Also, avoid adjusting the cost for extractelements with multiple uses
         // in different graph entries.
+        auto *EE = cast<ExtractElementInst>(V);
+        VecBase = EE->getVectorOperand();
+        UniqueBases.insert(VecBase);
         const TreeEntry *VE = R.getTreeEntry(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
             (VE && VE != E))
           continue;
-        auto *EE = cast<ExtractElementInst>(V);
-        VecBase = EE->getVectorOperand();
         std::optional<unsigned> EEIdx = getExtractIndex(EE);
         if (!EEIdx)
           continue;
@@ -7469,6 +7498,11 @@ public:
     CommonMask.assign(Mask.begin(), Mask.end());
     transformMaskAfterShuffle(CommonMask, CommonMask);
     SameNodesEstimated = false;
+    if (NumParts != 1 && UniqueBases.size() != 1) {
+      UseVecBaseAsInput = true;
+      VecBase = Constant::getNullValue(
+          FixedVectorType::get(VL.front()->getType(), CommonMask.size()));
+    }
     return VecBase;
   }
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
@@ -7518,19 +7552,70 @@ public:
     if (!SameNodesEstimated && InVectors.size() == 1)
       InVectors.emplace_back(&E1);
   }
+  /// Adds 2 input vectors and the mask for their shuffling.
+  void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
+    // May come only for shuffling of 2 vectors with extractelements, already
+    // handled in adjustExtracts.
+    assert(InVectors.size() == 1 &&
+           all_of(enumerate(CommonMask),
+                  [&](auto P) {
+                    if (P.value() == PoisonMaskElem)
+                      return Mask[P.index()] == PoisonMaskElem;
+                    auto *EI =
+                        cast<ExtractElementInst>(InVectors.front()
+                                                     .get<const TreeEntry *>()
+                                                     ->Scalars[P.index()]);
+                    return EI->getVectorOperand() == V1 ||
+                           EI->getVectorOperand() == V2;
+                  }) &&
+           "Expected extractelement vectors.");
+  }
   /// Adds another one input vector and the mask for the shuffling.
-  void add(Value *V1, ArrayRef<int> Mask) {
+  void add(Value *V1, ArrayRef<int> Mask, bool ForExtracts = false) {
     if (InVectors.empty()) {
-      assert(CommonMask.empty() && "Expected empty input mask/vectors.");
+      assert(CommonMask.empty() && !ForExtracts &&
+             "Expected empty input mask/vectors.");
       CommonMask.assign(Mask.begin(), Mask.end());
       InVectors.assign(1, V1);
       return;
     }
-    assert(InVectors.size() == 1 && InVectors.front().is<const TreeEntry *>() &&
-           !CommonMask.empty() && "Expected only single entry from extracts.");
+    if (ForExtracts) {
+      // No need to add vectors here, already handled them in adjustExtracts.
+      assert(InVectors.size() == 1 &&
+             InVectors.front().is<const TreeEntry *>() && !CommonMask.empty() &&
+             all_of(enumerate(CommonMask),
+                    [&](auto P) {
+                      Value *Scalar = InVectors.front()
+                                          .get<const TreeEntry *>()
+                                          ->Scalars[P.index()];
+                      if (P.value() == PoisonMaskElem)
+                        return P.value() == Mask[P.index()] ||
+                               isa<UndefValue>(Scalar);
+                      if (isa<Constant>(V1))
+                        return true;
+                      auto *EI = cast<ExtractElementInst>(Scalar);
+                      return EI->getVectorOperand() == V1;
+                    }) &&
+             "Expected only tree entry for extractelement vectors.");
+      return;
+    }
+    assert(!InVectors.empty() && !CommonMask.empty() &&
+           "Expected only tree entries from extracts/reused buildvectors.");
+    unsigned VF = cast<FixedVectorType>(V1->getType())->getNumElements();
+    if (InVectors.size() == 2) {
+      Cost += createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+      transformMaskAfterShuffle(CommonMask, CommonMask);
+      VF = std::max<unsigned>(VF, CommonMask.size());
+    } else if (const auto *InTE =
+                   InVectors.front().dyn_cast<const TreeEntry *>()) {
+      VF = std::max(VF, InTE->getVectorFactor());
+    } else {
+      VF = std::max(
+          VF, cast<FixedVectorType>(InVectors.front().get<Value *>()->getType())
+                  ->getNumElements());
+    }
     InVectors.push_back(V1);
-    unsigned VF = CommonMask.size();
-    for (unsigned Idx = 0; Idx < VF; ++Idx)
+    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
         CommonMask[Idx] = Mask[Idx] + VF;
   }
@@ -7666,6 +7751,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       reorderScalars(GatheredScalars, ReorderMask);
     SmallVector<int> Mask;
     SmallVector<int> ExtractMask;
+    Value *ExtractVecBase = nullptr;
+    bool UseVecBaseAsInput = false;
     SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles;
     SmallVector<SmallVector<const TreeEntry *>> Entries;
     SmallVector<std::optional<TTI::ShuffleKind>> ExtractShuffles;
@@ -7679,7 +7766,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
       if (!ExtractShuffles.empty()) {
         if (Value *VecBase = Estimator.adjustExtracts(
-                E, ExtractMask, ExtractShuffles, NumParts)) {
+                E, ExtractMask, ExtractShuffles, NumParts, UseVecBaseAsInput)) {
           if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
             if (VF == VecBaseTy->getNumElements() &&
                 GatheredScalars.size() != VF) {
@@ -7773,6 +7860,48 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                    Constant::getNullValue(FixedVectorType::get(
                                        ScalarTy, GatheredScalars.size())));
           });
+    }
+    if (!ExtractShuffles.empty()) {
+      Value *Vec1 = nullptr;
+      // Gather of extractelements can be represented as just a shuffle of
+      // a single/two vectors the scalars are extracted from.
+      // Find input vectors.
+      Value *Vec2 = nullptr;
+      for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
+        if (!Mask.empty() && Mask[I] != PoisonMaskElem)
+          ExtractMask[I] = PoisonMaskElem;
+      }
+      if (UseVecBaseAsInput) {
+        Vec1 = ExtractVecBase;
+      } else {
+        for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
+          if (ExtractMask[I] == PoisonMaskElem)
+            continue;
+          if (isa<UndefValue>(E->Scalars[I]))
+            continue;
+          auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+          Value *VecOp = EI->getVectorOperand();
+          if (const auto *TE = getTreeEntry(VecOp))
+            if (TE->VectorizedValue)
+              VecOp = TE->VectorizedValue;
+          if (!Vec1) {
+            Vec1 = VecOp;
+          } else if (Vec1 != EI->getVectorOperand()) {
+            assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
+                   "Expected only 1 or 2 vectors shuffle.");
+            Vec2 = VecOp;
+          }
+        }
+      }
+      if (Vec2) {
+        Estimator.add(Vec1, Vec2, ExtractMask);
+      } else if (Vec1) {
+        Estimator.add(Vec1, ExtractMask, /*ForExtracts=*/true);
+      } else {
+        Estimator.add(PoisonValue::get(FixedVectorType::get(
+                          ScalarTy, GatheredScalars.size())),
+                      ExtractMask, /*ForExtracts=*/true);
+      }
     }
     if (!all_of(GatheredScalars, PoisonValue::classof)) {
       auto Gathers = ArrayRef(GatheredScalars).take_front(VL.size());
@@ -10367,7 +10496,7 @@ public:
       InVectors.push_back(V1);
   }
   /// Adds another one input vector and the mask for the shuffling.
-  void add(Value *V1, ArrayRef<int> Mask) {
+  void add(Value *V1, ArrayRef<int> Mask, bool = false) {
     if (InVectors.empty()) {
       if (!isa<FixedVectorType>(V1->getType())) {
         V1 = createShuffle(V1, nullptr, CommonMask);
@@ -10906,13 +11035,13 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
         IsUsedInExpr &= FindReusedSplat(
             ExtractMask,
             cast<FixedVectorType>(Vec1->getType())->getNumElements());
-        ShuffleBuilder.add(Vec1, ExtractMask);
+        ShuffleBuilder.add(Vec1, ExtractMask, /*ForExtracts=*/true);
         IsNonPoisoned &= isGuaranteedNotToBePoison(Vec1);
       } else {
         IsUsedInExpr = false;
         ShuffleBuilder.add(PoisonValue::get(FixedVectorType::get(
                                ScalarTy, GatheredScalars.size())),
-                           ExtractMask);
+                           ExtractMask, /*ForExtracts=*/true);
       }
     }
     if (!GatherShuffles.empty()) {
