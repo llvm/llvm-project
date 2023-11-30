@@ -30,7 +30,7 @@
 #ifdef _WIN32
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
 #else
-#define MLIR_CUDA_WRAPPERS_EXPORT
+#define MLIR_CUDA_WRAPPERS_EXPORT __attribute__((visibility("default")))
 #endif // _WIN32
 
 #define CUDA_REPORT_IF_ERROR(expr)                                             \
@@ -226,17 +226,17 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventDestroy(CUevent event) {
   CUDA_REPORT_IF_ERROR(cuEventDestroy(event));
 }
 
-extern MLIR_CUDA_WRAPPERS_EXPORT "C" void mgpuEventSynchronize(CUevent event) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventSynchronize(CUevent event) {
   CUDA_REPORT_IF_ERROR(cuEventSynchronize(event));
 }
 
-extern MLIR_CUDA_WRAPPERS_EXPORT "C" void mgpuEventRecord(CUevent event,
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,
                                                           CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuEventRecord(event, stream));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/,
-                              bool /*isHostShared*/) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/, bool /*isHostShared*/) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
   if (sizeBytes != 0)
@@ -244,25 +244,26 @@ extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/,
   return reinterpret_cast<void *>(ptr);
 }
 
-extern "C" void mgpuMemFree(void *ptr, CUstream /*stream*/) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuMemFree(void *ptr,
+                                                      CUstream /*stream*/) {
   CUDA_REPORT_IF_ERROR(cuMemFree(reinterpret_cast<CUdeviceptr>(ptr)));
 }
 
-extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
-                           CUstream stream) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuMemcpy(void *dst, void *src, size_t sizeBytes, CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuMemcpyAsync(reinterpret_cast<CUdeviceptr>(dst),
                                      reinterpret_cast<CUdeviceptr>(src),
                                      sizeBytes, stream));
 }
 
-extern "C" void mgpuMemset32(void *dst, unsigned int value, size_t count,
-                             CUstream stream) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuMemset32(void *dst, unsigned int value, size_t count, CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuMemsetD32Async(reinterpret_cast<CUdeviceptr>(dst),
                                         value, count, stream));
 }
 
-extern "C" void mgpuMemset16(void *dst, unsigned short value, size_t count,
-                             CUstream stream) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuMemset16(void *dst, unsigned short value, size_t count, CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuMemsetD16Async(reinterpret_cast<CUdeviceptr>(dst),
                                         value, count, stream));
 }
