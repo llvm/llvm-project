@@ -127,7 +127,7 @@ int TerminationCheck(int status, const Descriptor *command,
       CopyToDescriptor(*cmdmsg, "Invalid command line", 20);
     }
   }
-#if defined(_WIFSIGNALED) && defined(_WTERMSIG)
+#if defined(WIFSIGNALED) && defined(WTERMSIG)
   if (WIFSIGNALED(status)) {
     if (!cmdstat) {
       terminator.Crash("killed by signal: %d", WTERMSIG(status));
@@ -137,7 +137,7 @@ int TerminationCheck(int status, const Descriptor *command,
     }
   }
 #endif
-#if defined(_WIFSTOPPED) && defined(_WSTOPSIG)
+#if defined(WIFSTOPPED) && defined(WSTOPSIG)
   if (WIFSTOPPED(status)) {
     if (!cmdstat) {
       terminator.Crash("stopped by signal: %d", WSTOPSIG(status));
@@ -220,7 +220,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
         StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
-        CopyToDescriptor(*cmdmsg, "CreateProcess failed.", 21);
+        CheckAndCopyToDescriptor(*cmdmsg, "CreateProcess failed.", 21);
       }
     }
     delete[] wcmd;
