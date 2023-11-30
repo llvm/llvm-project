@@ -74,27 +74,34 @@ public:
 
   ~GOFFOstream() { finalize(); }
 
-  void makeNewRecord(GOFF::RecordType Type, size_t Size);
+  void makeNewRecord(GOFF::RecordType Type, size_t Size) {
+    fillRecord();
+    CurrentType = Type;
+    RemainingSize = Size;
+    if (size_t Gap = (RemainingSize % GOFF::PayloadLength))
+      RemainingSize += GOFF::PayloadLength - Gap;
+    NewLogicalRecord = true;
+    ++LogicalRecords;
+  }
 
   void finalize() { fillRecord(); }
 
   uint32_t logicalRecords() { return LogicalRecords; }
 
 private:
-  /// The underlying raw_ostream.
+  // The underlying raw_ostream.
   raw_ostream &OS;
 
-  /// The number of logical records emitted so far.
+  // The number of logical records emitted so far.
   uint32_t LogicalRecords;
 
-  /// The remaining size of this logical record, including fill
-  /// bytes.
+  // The remaining size of this logical record, including fill bytes.
   size_t RemainingSize;
 
-  /// The type of the current (logical) record.
+  // The type of the current (logical) record.
   GOFF::RecordType CurrentType;
 
-  /// Signals start of new record.
+  // Signals start of new record.
   bool NewLogicalRecord;
 
   // Return the number of bytes left to write until next physical record.
@@ -105,82 +112,64 @@ private:
     return Bytes ? Bytes : GOFF::PayloadLength;
   }
 
-  /// Write the record prefix of a physical record, using the current record
-  /// type.
+  // Write the record prefix of a physical record, using the current record
+  // type.
   static void writeRecordPrefix(raw_ostream &OS, GOFF::RecordType Type,
                                 size_t RemainingSize,
-                                uint8_t Flags = Rec_Continuation);
-
-  /// Fill the last physical record of a logical record with zero bytes.
-  void fillRecord();
-
-  /// See raw_ostream::write_impl.
-  void write_impl(const char *Ptr, size_t Size) override;
-
-  /// Return the current position within the stream, not counting the bytes
-  /// currently in the buffer.
-  uint64_t current_pos() const override { return OS.tell(); }
-};
-
-void GOFFOstream::writeRecordPrefix(raw_ostream &OS, GOFF::RecordType Type,
-                                    size_t RemainingSize, uint8_t Flags) {
-  uint8_t TypeAndFlags = Flags | (Type << 4);
-  if (RemainingSize > GOFF::RecordLength)
-    TypeAndFlags |= Rec_Continued;
-  OS << binaryBe(static_cast<unsigned char>(GOFF::PTVPrefix))
-     << binaryBe(static_cast<unsigned char>(TypeAndFlags))
-     << binaryBe(static_cast<unsigned char>(0));
-}
-
-void GOFFOstream::makeNewRecord(GOFF::RecordType Type, size_t Size) {
-  fillRecord();
-  CurrentType = Type;
-  RemainingSize = Size;
-  if (size_t Gap = (RemainingSize % GOFF::PayloadLength))
-    RemainingSize += GOFF::PayloadLength - Gap;
-  NewLogicalRecord = true;
-  ++LogicalRecords;
-}
-
-void GOFFOstream::fillRecord() {
-  assert((GetNumBytesInBuffer() <= RemainingSize) &&
-         "More bytes in buffer than expected");
-  size_t Remains = RemainingSize - GetNumBytesInBuffer();
-  if (Remains) {
-    assert((Remains < GOFF::RecordLength) &&
-           "Attempting to fill more than one physical record");
-    raw_ostream::write_zeros(Remains);
+                                uint8_t Flags = Rec_Continuation) {
+    uint8_t TypeAndFlags = Flags | (Type << 4);
+    if (RemainingSize > GOFF::RecordLength)
+      TypeAndFlags |= Rec_Continued;
+    OS << binaryBe(static_cast<unsigned char>(GOFF::PTVPrefix))
+       << binaryBe(static_cast<unsigned char>(TypeAndFlags))
+       << binaryBe(static_cast<unsigned char>(0));
   }
-  flush();
-  assert(RemainingSize == 0 && "Not fully flushed");
-  assert(GetNumBytesInBuffer() == 0 && "Buffer not fully empty");
-}
-
-void GOFFOstream::write_impl(const char *Ptr, size_t Size) {
-  assert((RemainingSize >= Size) && "Attempt to write too much data");
-  assert(RemainingSize && "Logical record overflow");
-  if (!(RemainingSize % GOFF::PayloadLength)) {
-    writeRecordPrefix(OS, CurrentType, RemainingSize,
-                      NewLogicalRecord ? 0 : Rec_Continuation);
-    NewLogicalRecord = false;
+  // Fill the last physical record of a logical record with zero bytes.
+  void fillRecord() {
+    assert((GetNumBytesInBuffer() <= RemainingSize) &&
+           "More bytes in buffer than expected");
+    size_t Remains = RemainingSize - GetNumBytesInBuffer();
+    if (Remains) {
+      assert((Remains < GOFF::RecordLength) &&
+             "Attempting to fill more than one physical record");
+      raw_ostream::write_zeros(Remains);
+    }
+    flush();
+    assert(RemainingSize == 0 && "Not fully flushed");
+    assert(GetNumBytesInBuffer() == 0 && "Buffer not fully empty");
   }
-  assert(!NewLogicalRecord &&
-         "New logical record not on physical record boundary");
 
-  size_t Idx = 0;
-  while (Size > 0) {
-    size_t BytesToWrite = bytesToNextPhysicalRecord();
-    if (BytesToWrite > Size)
-      BytesToWrite = Size;
-    OS.write(Ptr + Idx, BytesToWrite);
-    Idx += BytesToWrite;
-    Size -= BytesToWrite;
-    RemainingSize -= BytesToWrite;
-    if (Size) {
-      writeRecordPrefix(OS, CurrentType, RemainingSize);
+  // See raw_ostream::write_impl.
+  void write_impl(const char *Ptr, size_t Size) override {
+    assert((RemainingSize >= Size) && "Attempt to write too much data");
+    assert(RemainingSize && "Logical record overflow");
+    if (!(RemainingSize % GOFF::PayloadLength)) {
+      writeRecordPrefix(OS, CurrentType, RemainingSize,
+                        NewLogicalRecord ? 0 : Rec_Continuation);
+      NewLogicalRecord = false;
+    }
+    assert(!NewLogicalRecord &&
+           "New logical record not on physical record boundary");
+
+    size_t Idx = 0;
+    while (Size > 0) {
+      size_t BytesToWrite = bytesToNextPhysicalRecord();
+      if (BytesToWrite > Size)
+        BytesToWrite = Size;
+      OS.write(Ptr + Idx, BytesToWrite);
+      Idx += BytesToWrite;
+      Size -= BytesToWrite;
+      RemainingSize -= BytesToWrite;
+      if (Size) {
+        writeRecordPrefix(OS, CurrentType, RemainingSize);
+      }
     }
   }
-}
+
+  // Return the current position within the stream, not counting the bytes
+  // currently in the buffer.
+  uint64_t current_pos() const override { return OS.tell(); }
+};
 
 class GOFFState {
   void writeHeader(GOFFYAML::FileHeader &FileHdr);
