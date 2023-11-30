@@ -530,25 +530,18 @@ static bool rewriteSingleStoreAlloca(
 
   // Record debuginfo for the store and remove the declaration's
   // debuginfo.
-  for (DbgVariableIntrinsic *DII : Info.DbgUsers) {
-    if (DII->isAddressOfVariable()) {
-      ConvertDebugDeclareToDebugValue(DII, Info.OnlyStore, DIB);
-      DII->eraseFromParent();
-    } else if (DII->getExpression()->startsWithDeref()) {
-      DII->eraseFromParent();
+  auto ConvertDebugInfoForStore = [&](auto &Container) {
+    for (auto *DbgItem : Container) {
+      if (DbgItem->isAddressOfVariable()) {
+        ConvertDebugDeclareToDebugValue(DbgItem, Info.OnlyStore, DIB);
+        DbgItem->eraseFromParent();
+      } else if (DbgItem->getExpression()->startsWithDeref()) {
+        DbgItem->eraseFromParent();
+      }
     }
-  }
-
-  // Duplicate implementation for non-instr storage of debug-info in
-  // DPValue objects.
-  for (DPValue *DPV : Info.DPUsers) {
-    if (DPV->isAddressOfVariable()) {
-      ConvertDebugDeclareToDebugValue(DPV, Info.OnlyStore, DIB);
-      DPV->eraseFromParent();
-    } else if (DPV->getExpression()->startsWithDeref()) {
-      DPV->eraseFromParent();
-    }
-  }
+  };
+  ConvertDebugInfoForStore(Info.DbgUsers);
+  ConvertDebugInfoForStore(Info.DPUsers);
 
   // Remove dbg.assigns linked to the alloca as these are now redundant.
   at::deleteAssignmentMarkers(AI);
@@ -645,17 +638,18 @@ static bool promoteSingleBlockAlloca(
     StoreInst *SI = cast<StoreInst>(AI->user_back());
     // Update assignment tracking info for the store we're going to delete.
     Info.AssignmentTracking.updateForDeletedStore(SI, DIB, DbgAssignsToDelete);
+
     // Record debuginfo for the store before removing it.
-    for (DbgVariableIntrinsic *DII : Info.DbgUsers) {
-      if (DII->isAddressOfVariable()) {
-        ConvertDebugDeclareToDebugValue(DII, SI, DIB);
+    auto DbgUpdateForStore = [&](auto &Container) {
+      for (auto *DbgItem : Container) {
+        if (DbgItem->isAddressOfVariable()) {
+          ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
+        }
       }
-    }
-    for (DPValue *DPV : Info.DPUsers) {
-      if (DPV->isAddressOfVariable()) {
-        ConvertDebugDeclareToDebugValue(DPV, SI, DIB);
-      }
-    }
+    };
+    DbgUpdateForStore(Info.DbgUsers);
+    DbgUpdateForStore(Info.DPUsers);
+
     SI->eraseFromParent();
     LBI.deleteValue(SI);
   }
@@ -665,13 +659,13 @@ static bool promoteSingleBlockAlloca(
   AI->eraseFromParent();
 
   // The alloca's debuginfo can be removed as well.
-  for (DbgVariableIntrinsic *DII : Info.DbgUsers)
-    if (DII->isAddressOfVariable() || DII->getExpression()->startsWithDeref())
-      DII->eraseFromParent();
-  for (DPValue *DPV : Info.DPUsers) {
-    if (DPV->isAddressOfVariable() || DPV->getExpression()->startsWithDeref())
-      DPV->eraseFromParent();
-  }
+  auto DbgUpdateForAlloca = [&](auto &Container) {
+    for (auto *DbgItem : Container)
+      if (DbgItem->isAddressOfVariable() || DbgItem->getExpression()->startsWithDeref())
+        DbgItem->eraseFromParent();
+  };
+  DbgUpdateForAlloca(Info.DbgUsers);
+  DbgUpdateForAlloca(Info.DPUsers);
 
   ++NumLocalPromoted;
   return true;
@@ -823,16 +817,15 @@ void PromoteMem2Reg::run() {
   }
 
   // Remove alloca's dbg.declare intrinsics from the function.
-  for (auto &DbgUsers : AllocaDbgUsers) {
-    for (auto *DII : DbgUsers)
-      if (DII->isAddressOfVariable() || DII->getExpression()->startsWithDeref())
-        DII->eraseFromParent();
-  }
-  for (auto &DPUsers : AllocaDPUsers) {
-    for (auto *DPV : DPUsers)
-      if (DPV->isAddressOfVariable() || DPV->getExpression()->startsWithDeref())
-        DPV->eraseFromParent();
-  }
+  auto RemoveDbgDeclares = [&](auto &Container) {
+    for (auto &DbgUsers : Container) {
+      for (auto *DbgItem : DbgUsers)
+        if (DbgItem->isAddressOfVariable() || DbgItem->getExpression()->startsWithDeref())
+          DbgItem->eraseFromParent();
+    }
+  };
+  RemoveDbgDeclares(AllocaDbgUsers);
+  RemoveDbgDeclares(AllocaDPUsers);
 
   // Loop over all of the PHI nodes and see if there are any that we can get
   // rid of because they merge all of the same incoming values.  This can
@@ -1074,12 +1067,13 @@ NextIteration:
         // The currently active variable for this block is now the PHI.
         IncomingVals[AllocaNo] = APN;
         AllocaATInfo[AllocaNo].updateForNewPhi(APN, DIB);
-        for (DbgVariableIntrinsic *DII : AllocaDbgUsers[AllocaNo])
-          if (DII->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DII, APN, DIB);
-        for (DPValue *DPV : AllocaDPUsers[AllocaNo])
-          if (DPV->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DPV, APN, DIB);
+        auto ConvertDbgDeclares = [&](auto &Container) {
+          for (auto *DbgItem : Container)
+            if (DbgItem->isAddressOfVariable())
+              ConvertDebugDeclareToDebugValue(DbgItem, APN, DIB);
+        };
+        ConvertDbgDeclares(AllocaDbgUsers[AllocaNo]);
+        ConvertDbgDeclares(AllocaDPUsers[AllocaNo]);
 
         // Get the next phi node.
         ++PNI;
@@ -1134,12 +1128,13 @@ NextIteration:
       IncomingLocs[AllocaNo] = SI->getDebugLoc();
       AllocaATInfo[AllocaNo].updateForDeletedStore(SI, DIB,
                                                    &DbgAssignsToDelete);
-      for (DbgVariableIntrinsic *DII : AllocaDbgUsers[ai->second])
-        if (DII->isAddressOfVariable())
-          ConvertDebugDeclareToDebugValue(DII, SI, DIB);
-      for (DPValue *DPV : AllocaDPUsers[ai->second])
-        if (DPV->isAddressOfVariable())
-          ConvertDebugDeclareToDebugValue(DPV, SI, DIB);
+      auto ConvertDbgDeclares = [&](auto &Container) {
+        for (auto *DbgItem : Container)
+          if (DbgItem->isAddressOfVariable())
+            ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
+      };
+      ConvertDbgDeclares(AllocaDbgUsers[ai->second]);
+      ConvertDbgDeclares(AllocaDPUsers[ai->second]);
       SI->eraseFromParent();
     }
   }
