@@ -980,8 +980,9 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
   return clang::CC_C;
 }
 
-TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
-                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP
+DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
+                                     const ParsedDWARFTypeAttributes &attrs) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1200,14 +1201,15 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   // Neither GCC 4.2 nor clang++ currently set a valid
                   // accessibility in the DWARF for C++ methods...
                   // Default to public for now...
-                  if (attrs.accessibility == eAccessNone)
-                    attrs.accessibility = eAccessPublic;
+                  const auto accessibility = attrs.accessibility == eAccessNone
+                                                 ? eAccessPublic
+                                                 : attrs.accessibility;
 
                   clang::CXXMethodDecl *cxx_method_decl =
                       m_ast.AddMethodToCXXRecordType(
                           class_opaque_type.GetOpaqueQualType(),
                           attrs.name.GetCString(), attrs.mangled_name,
-                          clang_type, attrs.accessibility, attrs.is_virtual,
+                          clang_type, accessibility, attrs.is_virtual,
                           is_static, attrs.is_inline, attrs.is_explicit,
                           is_attr_used, attrs.is_artificial);
 
