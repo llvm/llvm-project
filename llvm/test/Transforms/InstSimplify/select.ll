@@ -174,11 +174,12 @@ define i32 @test4(i32 %X) {
   ret i32 %cond
 }
 
-; FIXME: This is a miscompile.
 define i32 @test4_disjoint(i32 %X) {
 ; CHECK-LABEL: @test4_disjoint(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X:%.*]], -2147483648
-; CHECK-NEXT:    ret i32 [[OR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X]], -2147483648
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[OR]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp slt i32 %X, 0
   %or = or disjoint i32 %X, -2147483648
@@ -270,11 +271,12 @@ define i32 @test9(i32 %X) {
   ret i32 %cond
 }
 
-; FIXME: This is a miscompile.
 define i32 @test9_disjoint(i32 %X) {
 ; CHECK-LABEL: @test9_disjoint(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X:%.*]], -2147483648
-; CHECK-NEXT:    ret i32 [[OR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X]], -2147483648
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp sgt i32 %X, -1
   %or = or disjoint i32 %X, -2147483648
