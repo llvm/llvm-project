@@ -29,11 +29,11 @@ define i1 @or(i1 noundef %x, i1 noundef %x2) {
   ret i1 %z
 }
 
-; FIXME: This is a miscompile.
 define i1 @or_disjoint(i1 noundef %x, i1 noundef %x2) {
 ; CHECK-LABEL: @or_disjoint(
 ; CHECK-NEXT:    [[Y:%.*]] = or disjoint i1 [[X:%.*]], [[X2:%.*]]
-; CHECK-NEXT:    ret i1 [[Y]]
+; CHECK-NEXT:    [[Z:%.*]] = freeze i1 [[Y]]
+; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = or disjoint i1 %x, %x2
   %z = freeze i1 %y
