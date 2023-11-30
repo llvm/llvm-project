@@ -720,13 +720,13 @@ bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
     if (!isSingletonLvl(l))
       return false;
   // If isUnique is true, then make sure that the last level is unique,
-  // that is, lvlRank == 1 (unique the only compressed) and lvlRank > 1
-  // (unique on the last singleton).
+  // that is, when lvlRank == 1, the only compressed level is unique,
+  // and when lvlRank > 1, the last singleton is unique.
   return !isUnique || isUniqueLvl(lvlRank - 1);
 }
 
 Level mlir::sparse_tensor::SparseTensorType::getCOOStart() const {
-  if (lvlRank > 1)
+  if (hasEncoding() && lvlRank > 1)
     for (Level l = 0; l < lvlRank - 1; l++)
       if (isCOOType(l, /*isUnique=*/false))
         return l;
