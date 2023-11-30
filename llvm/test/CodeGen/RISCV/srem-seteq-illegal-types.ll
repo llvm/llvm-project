@@ -324,10 +324,10 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32-NEXT:    srai s3, a0, 31
 ; RV32-NEXT:    srli a1, a1, 1
 ; RV32-NEXT:    slli a1, a1, 31
-; RV32-NEXT:    lw a0, 0(s0)
 ; RV32-NEXT:    srai s4, a1, 31
 ; RV32-NEXT:    slli a1, a3, 31
 ; RV32-NEXT:    srai a1, a1, 31
+; RV32-NEXT:    lw a0, 0(s0)
 ; RV32-NEXT:    li a2, 6
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __moddi3@plt
@@ -476,10 +476,10 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    srai s3, a0, 31
 ; RV32M-NEXT:    srli a1, a1, 1
 ; RV32M-NEXT:    slli a1, a1, 31
-; RV32M-NEXT:    lw a0, 0(s0)
 ; RV32M-NEXT:    srai s4, a1, 31
 ; RV32M-NEXT:    slli a1, a3, 31
 ; RV32M-NEXT:    srai a1, a1, 31
+; RV32M-NEXT:    lw a0, 0(s0)
 ; RV32M-NEXT:    li a2, 6
 ; RV32M-NEXT:    li a3, 0
 ; RV32M-NEXT:    call __moddi3@plt
@@ -626,10 +626,10 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    srai s3, a0, 31
 ; RV32MV-NEXT:    srli a1, a1, 1
 ; RV32MV-NEXT:    slli a1, a1, 31
-; RV32MV-NEXT:    lw a0, 0(s0)
 ; RV32MV-NEXT:    srai s4, a1, 31
 ; RV32MV-NEXT:    slli a1, a3, 31
 ; RV32MV-NEXT:    srai a1, a1, 31
+; RV32MV-NEXT:    lw a0, 0(s0)
 ; RV32MV-NEXT:    li a2, 6
 ; RV32MV-NEXT:    li a3, 0
 ; RV32MV-NEXT:    call __moddi3@plt

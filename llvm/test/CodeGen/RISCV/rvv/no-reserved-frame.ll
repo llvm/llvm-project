@@ -20,24 +20,23 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -16
 ; CHECK-NEXT:    mv s1, sp
-; CHECK-NEXT:    lw t0, 44(s1)
+; CHECK-NEXT:    lw a1, 16(s1)
+; CHECK-NEXT:    lw a2, 12(s1)
+; CHECK-NEXT:    lw a3, 8(s1)
+; CHECK-NEXT:    sw a0, 52(s1)
+; CHECK-NEXT:    sw a0, 48(s1)
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    sd a3, 16(sp)
+; CHECK-NEXT:    sd a2, 8(sp)
+; CHECK-NEXT:    sd a1, 0(sp)
+; CHECK-NEXT:    lw a0, 44(s1)
 ; CHECK-NEXT:    lw a2, 40(s1)
 ; CHECK-NEXT:    lw a3, 36(s1)
 ; CHECK-NEXT:    lw a4, 32(s1)
 ; CHECK-NEXT:    lw a5, 28(s1)
 ; CHECK-NEXT:    lw a6, 24(s1)
 ; CHECK-NEXT:    lw a7, 20(s1)
-; CHECK-NEXT:    lw t1, 16(s1)
-; CHECK-NEXT:    lw a1, 12(s1)
-; CHECK-NEXT:    lw t2, 8(s1)
-; CHECK-NEXT:    sw a0, 52(s1)
-; CHECK-NEXT:    sw a0, 48(s1)
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd t2, 16(sp)
-; CHECK-NEXT:    sd a1, 8(sp)
 ; CHECK-NEXT:    addi a1, s1, 48
-; CHECK-NEXT:    sd t1, 0(sp)
-; CHECK-NEXT:    mv a0, t0
 ; CHECK-NEXT:    call gfunc@plt
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    li a0, 0
