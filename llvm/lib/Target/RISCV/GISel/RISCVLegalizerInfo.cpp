@@ -57,11 +57,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .customIf([=, &ST](const LegalityQuery &Query) {
-        return ST.is64Bit() && typeIs(0, s32)(Query) && typeIs(1, s32)(Query);
-      })
-      .legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
+  auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
+  if (ST.is64Bit())
+    ShiftActions.customFor({{s32, s32}});
+  ShiftActions.legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
