@@ -136,17 +136,15 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-64-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e+00
 // CHECK-64-NEXT:    store double [[ADD]], ptr [[E1]], align 8
-// CHECK-64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// CHECK-64-NEXT:    store ptr [[E1]], ptr [[TMP4]], align 8
-// CHECK-64-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
-// CHECK-64-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 1
-// CHECK-64-NEXT:    br i1 [[TMP6]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-64-NEXT:    store ptr [[E1]], ptr [[TMP2]], align 8
+// CHECK-64-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
+// CHECK-64-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
+// CHECK-64-NEXT:    br i1 [[TMP4]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-64:       .omp.reduction.then:
-// CHECK-64-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP0]], align 8
-// CHECK-64-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
-// CHECK-64-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
+// CHECK-64-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
+// CHECK-64-NEXT:    [[TMP6:%.*]] = load double, ptr [[E1]], align 8
+// CHECK-64-NEXT:    [[ADD2:%.*]] = fadd double [[TMP5]], [[TMP6]]
 // CHECK-64-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
@@ -331,26 +329,24 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP3:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-64-NEXT:    [[MUL:%.*]] = fmul float [[TMP3]], 3.300000e+01
 // CHECK-64-NEXT:    store float [[MUL]], ptr [[D2]], align 4
-// CHECK-64-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// CHECK-64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// CHECK-64-NEXT:    store ptr [[C1]], ptr [[TMP6]], align 8
-// CHECK-64-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 1
-// CHECK-64-NEXT:    store ptr [[D2]], ptr [[TMP7]], align 8
-// CHECK-64-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP5]], i32 2, i64 16, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2)
-// CHECK-64-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 1
-// CHECK-64-NEXT:    br i1 [[TMP9]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-64-NEXT:    store ptr [[C1]], ptr [[TMP4]], align 8
+// CHECK-64-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 1
+// CHECK-64-NEXT:    store ptr [[D2]], ptr [[TMP5]], align 8
+// CHECK-64-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2)
+// CHECK-64-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
+// CHECK-64-NEXT:    br i1 [[TMP7]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-64:       .omp.reduction.then:
-// CHECK-64-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK-64-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP10]] to i32
-// CHECK-64-NEXT:    [[TMP11:%.*]] = load i8, ptr [[C1]], align 1
-// CHECK-64-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP11]] to i32
+// CHECK-64-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP0]], align 1
+// CHECK-64-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP8]] to i32
+// CHECK-64-NEXT:    [[TMP9:%.*]] = load i8, ptr [[C1]], align 1
+// CHECK-64-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP9]] to i32
 // CHECK-64-NEXT:    [[XOR6:%.*]] = xor i32 [[CONV4]], [[CONV5]]
 // CHECK-64-NEXT:    [[CONV7:%.*]] = trunc i32 [[XOR6]] to i8
 // CHECK-64-NEXT:    store i8 [[CONV7]], ptr [[TMP0]], align 1
-// CHECK-64-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP1]], align 4
-// CHECK-64-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
-// CHECK-64-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
+// CHECK-64-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP1]], align 4
+// CHECK-64-NEXT:    [[TMP11:%.*]] = load float, ptr [[D2]], align 4
+// CHECK-64-NEXT:    [[MUL8:%.*]] = fmul float [[TMP10]], [[TMP11]]
 // CHECK-64-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
@@ -578,34 +574,32 @@ int bar(int n){
 // CHECK-64-NEXT:    [[COND:%.*]] = phi i32 [ 99, [[COND_TRUE]] ], [ [[CONV3]], [[COND_FALSE]] ]
 // CHECK-64-NEXT:    [[CONV4:%.*]] = trunc i32 [[COND]] to i16
 // CHECK-64-NEXT:    store i16 [[CONV4]], ptr [[B2]], align 2
-// CHECK-64-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-// CHECK-64-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
-// CHECK-64-NEXT:    store ptr [[A1]], ptr [[TMP7]], align 8
-// CHECK-64-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 1
-// CHECK-64-NEXT:    store ptr [[B2]], ptr [[TMP8]], align 8
-// CHECK-64-NEXT:    [[TMP9:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP6]], i32 2, i64 16, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func3, ptr @_omp_reduction_inter_warp_copy_func4)
-// CHECK-64-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 1
-// CHECK-64-NEXT:    br i1 [[TMP10]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-64-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
+// CHECK-64-NEXT:    store ptr [[A1]], ptr [[TMP5]], align 8
+// CHECK-64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 1
+// CHECK-64-NEXT:    store ptr [[B2]], ptr [[TMP6]], align 8
+// CHECK-64-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func3, ptr @_omp_reduction_inter_warp_copy_func4)
+// CHECK-64-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 1
+// CHECK-64-NEXT:    br i1 [[TMP8]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-64:       .omp.reduction.then:
-// CHECK-64-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-64-NEXT:    [[TMP12:%.*]] = load i32, ptr [[A1]], align 4
-// CHECK-64-NEXT:    [[OR5:%.*]] = or i32 [[TMP11]], [[TMP12]]
+// CHECK-64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK-64-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A1]], align 4
+// CHECK-64-NEXT:    [[OR5:%.*]] = or i32 [[TMP9]], [[TMP10]]
 // CHECK-64-NEXT:    store i32 [[OR5]], ptr [[TMP0]], align 4
-// CHECK-64-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP1]], align 2
-// CHECK-64-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP13]] to i32
-// CHECK-64-NEXT:    [[TMP14:%.*]] = load i16, ptr [[B2]], align 2
-// CHECK-64-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP14]] to i32
+// CHECK-64-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP1]], align 2
+// CHECK-64-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP11]] to i32
+// CHECK-64-NEXT:    [[TMP12:%.*]] = load i16, ptr [[B2]], align 2
+// CHECK-64-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP12]] to i32
 // CHECK-64-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[CONV6]], [[CONV7]]
 // CHECK-64-NEXT:    br i1 [[CMP8]], label [[COND_TRUE9:%.*]], label [[COND_FALSE10:%.*]]
 // CHECK-64:       cond.true9:
-// CHECK-64-NEXT:    [[TMP15:%.*]] = load i16, ptr [[TMP1]], align 2
+// CHECK-64-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP1]], align 2
 // CHECK-64-NEXT:    br label [[COND_END11:%.*]]
 // CHECK-64:       cond.false10:
-// CHECK-64-NEXT:    [[TMP16:%.*]] = load i16, ptr [[B2]], align 2
+// CHECK-64-NEXT:    [[TMP14:%.*]] = load i16, ptr [[B2]], align 2
 // CHECK-64-NEXT:    br label [[COND_END11]]
 // CHECK-64:       cond.end11:
-// CHECK-64-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
+// CHECK-64-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP13]], [[COND_TRUE9]] ], [ [[TMP14]], [[COND_FALSE10]] ]
 // CHECK-64-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
@@ -809,17 +803,15 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP1:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e+00
 // CHECK-32-NEXT:    store double [[ADD]], ptr [[E1]], align 8
-// CHECK-32-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
-// CHECK-32-NEXT:    store ptr [[E1]], ptr [[TMP4]], align 4
-// CHECK-32-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
-// CHECK-32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 1
-// CHECK-32-NEXT:    br i1 [[TMP6]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
+// CHECK-32-NEXT:    store ptr [[E1]], ptr [[TMP2]], align 4
+// CHECK-32-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
+// CHECK-32-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
+// CHECK-32-NEXT:    br i1 [[TMP4]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32:       .omp.reduction.then:
-// CHECK-32-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP0]], align 8
-// CHECK-32-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
-// CHECK-32-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
+// CHECK-32-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
+// CHECK-32-NEXT:    [[TMP6:%.*]] = load double, ptr [[E1]], align 8
+// CHECK-32-NEXT:    [[ADD2:%.*]] = fadd double [[TMP5]], [[TMP6]]
 // CHECK-32-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
@@ -1004,26 +996,24 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP3:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-32-NEXT:    [[MUL:%.*]] = fmul float [[TMP3]], 3.300000e+01
 // CHECK-32-NEXT:    store float [[MUL]], ptr [[D2]], align 4
-// CHECK-32-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// CHECK-32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
-// CHECK-32-NEXT:    store ptr [[C1]], ptr [[TMP6]], align 4
-// CHECK-32-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
-// CHECK-32-NEXT:    store ptr [[D2]], ptr [[TMP7]], align 4
-// CHECK-32-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP5]], i32 2, i32 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2)
-// CHECK-32-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 1
-// CHECK-32-NEXT:    br i1 [[TMP9]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-32-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
+// CHECK-32-NEXT:    store ptr [[C1]], ptr [[TMP4]], align 4
+// CHECK-32-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
+// CHECK-32-NEXT:    store ptr [[D2]], ptr [[TMP5]], align 4
+// CHECK-32-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2)
+// CHECK-32-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
+// CHECK-32-NEXT:    br i1 [[TMP7]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32:       .omp.reduction.then:
-// CHECK-32-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK-32-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP10]] to i32
-// CHECK-32-NEXT:    [[TMP11:%.*]] = load i8, ptr [[C1]], align 1
-// CHECK-32-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP11]] to i32
+// CHECK-32-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP0]], align 1
+// CHECK-32-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP8]] to i32
+// CHECK-32-NEXT:    [[TMP9:%.*]] = load i8, ptr [[C1]], align 1
+// CHECK-32-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP9]] to i32
 // CHECK-32-NEXT:    [[XOR6:%.*]] = xor i32 [[CONV4]], [[CONV5]]
 // CHECK-32-NEXT:    [[CONV7:%.*]] = trunc i32 [[XOR6]] to i8
 // CHECK-32-NEXT:    store i8 [[CONV7]], ptr [[TMP0]], align 1
-// CHECK-32-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP1]], align 4
-// CHECK-32-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
-// CHECK-32-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
+// CHECK-32-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP1]], align 4
+// CHECK-32-NEXT:    [[TMP11:%.*]] = load float, ptr [[D2]], align 4
+// CHECK-32-NEXT:    [[MUL8:%.*]] = fmul float [[TMP10]], [[TMP11]]
 // CHECK-32-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
@@ -1251,34 +1241,32 @@ int bar(int n){
 // CHECK-32-NEXT:    [[COND:%.*]] = phi i32 [ 99, [[COND_TRUE]] ], [ [[CONV3]], [[COND_FALSE]] ]
 // CHECK-32-NEXT:    [[CONV4:%.*]] = trunc i32 [[COND]] to i16
 // CHECK-32-NEXT:    store i16 [[CONV4]], ptr [[B2]], align 2
-// CHECK-32-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-// CHECK-32-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
-// CHECK-32-NEXT:    store ptr [[A1]], ptr [[TMP7]], align 4
-// CHECK-32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
-// CHECK-32-NEXT:    store ptr [[B2]], ptr [[TMP8]], align 4
-// CHECK-32-NEXT:    [[TMP9:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP6]], i32 2, i32 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func3, ptr @_omp_reduction_inter_warp_copy_func4)
-// CHECK-32-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 1
-// CHECK-32-NEXT:    br i1 [[TMP10]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-32-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
+// CHECK-32-NEXT:    store ptr [[A1]], ptr [[TMP5]], align 4
+// CHECK-32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
+// CHECK-32-NEXT:    store ptr [[B2]], ptr [[TMP6]], align 4
+// CHECK-32-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func3, ptr @_omp_reduction_inter_warp_copy_func4)
+// CHECK-32-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 1
+// CHECK-32-NEXT:    br i1 [[TMP8]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32:       .omp.reduction.then:
-// CHECK-32-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-32-NEXT:    [[TMP12:%.*]] = load i32, ptr [[A1]], align 4
-// CHECK-32-NEXT:    [[OR5:%.*]] = or i32 [[TMP11]], [[TMP12]]
+// CHECK-32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK-32-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A1]], align 4
+// CHECK-32-NEXT:    [[OR5:%.*]] = or i32 [[TMP9]], [[TMP10]]
 // CHECK-32-NEXT:    store i32 [[OR5]], ptr [[TMP0]], align 4
-// CHECK-32-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP1]], align 2
-// CHECK-32-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP13]] to i32
-// CHECK-32-NEXT:    [[TMP14:%.*]] = load i16, ptr [[B2]], align 2
-// CHECK-32-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP14]] to i32
+// CHECK-32-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP1]], align 2
+// CHECK-32-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP11]] to i32
+// CHECK-32-NEXT:    [[TMP12:%.*]] = load i16, ptr [[B2]], align 2
+// CHECK-32-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP12]] to i32
 // CHECK-32-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[CONV6]], [[CONV7]]
 // CHECK-32-NEXT:    br i1 [[CMP8]], label [[COND_TRUE9:%.*]], label [[COND_FALSE10:%.*]]
 // CHECK-32:       cond.true9:
-// CHECK-32-NEXT:    [[TMP15:%.*]] = load i16, ptr [[TMP1]], align 2
+// CHECK-32-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP1]], align 2
 // CHECK-32-NEXT:    br label [[COND_END11:%.*]]
 // CHECK-32:       cond.false10:
-// CHECK-32-NEXT:    [[TMP16:%.*]] = load i16, ptr [[B2]], align 2
+// CHECK-32-NEXT:    [[TMP14:%.*]] = load i16, ptr [[B2]], align 2
 // CHECK-32-NEXT:    br label [[COND_END11]]
 // CHECK-32:       cond.end11:
-// CHECK-32-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
+// CHECK-32-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP13]], [[COND_TRUE9]] ], [ [[TMP14]], [[COND_FALSE10]] ]
 // CHECK-32-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
@@ -1482,17 +1470,15 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-EX-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e+00
 // CHECK-32-EX-NEXT:    store double [[ADD]], ptr [[E1]], align 8
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK-32-EX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    store ptr [[E1]], ptr [[TMP4]], align 4
-// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 4, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
-// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 1
-// CHECK-32-EX-NEXT:    br i1 [[TMP6]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    store ptr [[E1]], ptr [[TMP2]], align 4
+// CHECK-32-EX-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func, ptr @_omp_reduction_inter_warp_copy_func)
+// CHECK-32-EX-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 1
+// CHECK-32-EX-NEXT:    br i1 [[TMP4]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32-EX:       .omp.reduction.then:
-// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP0]], align 8
-// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
-// CHECK-32-EX-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
+// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
+// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = load double, ptr [[E1]], align 8
+// CHECK-32-EX-NEXT:    [[ADD2:%.*]] = fadd double [[TMP5]], [[TMP6]]
 // CHECK-32-EX-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
@@ -1677,26 +1663,24 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-32-EX-NEXT:    [[MUL:%.*]] = fmul float [[TMP3]], 3.300000e+01
 // CHECK-32-EX-NEXT:    store float [[MUL]], ptr [[D2]], align 4
-// CHECK-32-EX-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    store ptr [[C1]], ptr [[TMP6]], align 4
-// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
-// CHECK-32-EX-NEXT:    store ptr [[D2]], ptr [[TMP7]], align 4
-// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP5]], i32 2, i32 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2)
-// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 1
-// CHECK-32-EX-NEXT:    br i1 [[TMP9]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-32-EX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    store ptr [[C1]], ptr [[TMP4]], align 4
+// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
+// CHECK-32-EX-NEXT:    store ptr [[D2]], ptr [[TMP5]], align 4
+// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func1, ptr @_omp_reduction_inter_warp_copy_func2)
+// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 1
+// CHECK-32-EX-NEXT:    br i1 [[TMP7]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32-EX:       .omp.reduction.then:
-// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP0]], align 1
-// CHECK-32-EX-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP10]] to i32
-// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = load i8, ptr [[C1]], align 1
-// CHECK-32-EX-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP11]] to i32
+// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP0]], align 1
+// CHECK-32-EX-NEXT:    [[CONV4:%.*]] = sext i8 [[TMP8]] to i32
+// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = load i8, ptr [[C1]], align 1
+// CHECK-32-EX-NEXT:    [[CONV5:%.*]] = sext i8 [[TMP9]] to i32
 // CHECK-32-EX-NEXT:    [[XOR6:%.*]] = xor i32 [[CONV4]], [[CONV5]]
 // CHECK-32-EX-NEXT:    [[CONV7:%.*]] = trunc i32 [[XOR6]] to i8
 // CHECK-32-EX-NEXT:    store i8 [[CONV7]], ptr [[TMP0]], align 1
-// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP1]], align 4
-// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
-// CHECK-32-EX-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
+// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP1]], align 4
+// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = load float, ptr [[D2]], align 4
+// CHECK-32-EX-NEXT:    [[MUL8:%.*]] = fmul float [[TMP10]], [[TMP11]]
 // CHECK-32-EX-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
@@ -1924,34 +1908,32 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[COND:%.*]] = phi i32 [ 99, [[COND_TRUE]] ], [ [[CONV3]], [[COND_FALSE]] ]
 // CHECK-32-EX-NEXT:    [[CONV4:%.*]] = trunc i32 [[COND]] to i16
 // CHECK-32-EX-NEXT:    store i16 [[CONV4]], ptr [[B2]], align 2
-// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
-// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    store ptr [[A1]], ptr [[TMP7]], align 4
-// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
-// CHECK-32-EX-NEXT:    store ptr [[B2]], ptr [[TMP8]], align 4
-// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i32 [[TMP6]], i32 2, i32 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func3, ptr @_omp_reduction_inter_warp_copy_func4)
-// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 1
-// CHECK-32-EX-NEXT:    br i1 [[TMP10]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    store ptr [[A1]], ptr [[TMP5]], align 4
+// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i32 0, i32 1
+// CHECK-32-EX-NEXT:    store ptr [[B2]], ptr [[TMP6]], align 4
+// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(ptr @[[GLOB1]], i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_omp_reduction_shuffle_and_reduce_func3, ptr @_omp_reduction_inter_warp_copy_func4)
+// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 1
+// CHECK-32-EX-NEXT:    br i1 [[TMP8]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32-EX:       .omp.reduction.then:
-// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = load i32, ptr [[A1]], align 4
-// CHECK-32-EX-NEXT:    [[OR5:%.*]] = or i32 [[TMP11]], [[TMP12]]
+// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A1]], align 4
+// CHECK-32-EX-NEXT:    [[OR5:%.*]] = or i32 [[TMP9]], [[TMP10]]
 // CHECK-32-EX-NEXT:    store i32 [[OR5]], ptr [[TMP0]], align 4
-// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP1]], align 2
-// CHECK-32-EX-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP13]] to i32
-// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load i16, ptr [[B2]], align 2
-// CHECK-32-EX-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP14]] to i32
+// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP1]], align 2
+// CHECK-32-EX-NEXT:    [[CONV6:%.*]] = sext i16 [[TMP11]] to i32
+// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = load i16, ptr [[B2]], align 2
+// CHECK-32-EX-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP12]] to i32
 // CHECK-32-EX-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[CONV6]], [[CONV7]]
 // CHECK-32-EX-NEXT:    br i1 [[CMP8]], label [[COND_TRUE9:%.*]], label [[COND_FALSE10:%.*]]
 // CHECK-32-EX:       cond.true9:
-// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = load i16, ptr [[TMP1]], align 2
+// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP1]], align 2
 // CHECK-32-EX-NEXT:    br label [[COND_END11:%.*]]
 // CHECK-32-EX:       cond.false10:
-// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = load i16, ptr [[B2]], align 2
+// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load i16, ptr [[B2]], align 2
 // CHECK-32-EX-NEXT:    br label [[COND_END11]]
 // CHECK-32-EX:       cond.end11:
-// CHECK-32-EX-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
+// CHECK-32-EX-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP13]], [[COND_TRUE9]] ], [ [[TMP14]], [[COND_FALSE10]] ]
 // CHECK-32-EX-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:

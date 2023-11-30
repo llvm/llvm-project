@@ -382,33 +382,3 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
 #endif
-
-namespace {
-
-struct CallGraphPrinterLegacyPass : public ModulePass {
-  static char ID; // Pass ID, replacement for typeid
-
-  CallGraphPrinterLegacyPass() : ModulePass(ID) {
-    initializeCallGraphPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequiredTransitive<CallGraphWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    getAnalysis<CallGraphWrapperPass>().print(errs(), &M);
-    return false;
-  }
-};
-
-} // end anonymous namespace
-
-char CallGraphPrinterLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(CallGraphPrinterLegacyPass, "print-callgraph",
-                      "Print a call graph", true, true)
-INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(CallGraphPrinterLegacyPass, "print-callgraph",
-                    "Print a call graph", true, true)

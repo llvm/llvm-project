@@ -77,23 +77,45 @@ const Function *Instruction::getFunction() const {
 }
 
 void Instruction::removeFromParent() {
+  // Perform any debug-info maintenence required.
+  handleMarkerRemoval();
+
   getParent()->getInstList().remove(getIterator());
 }
 
+void Instruction::handleMarkerRemoval() {
+  if (!Parent->IsNewDbgInfoFormat || !DbgMarker)
+    return;
+
+  DbgMarker->removeMarker();
+}
+
 BasicBlock::iterator Instruction::eraseFromParent() {
+  handleMarkerRemoval();
   return getParent()->getInstList().erase(getIterator());
+}
+
+void Instruction::insertBefore(Instruction *InsertPos) {
+  insertBefore(InsertPos->getIterator());
 }
 
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
-void Instruction::insertBefore(Instruction *InsertPos) {
-  insertInto(InsertPos->getParent(), InsertPos->getIterator());
+void Instruction::insertBefore(BasicBlock::iterator InsertPos) {
+  insertBefore(*InsertPos->getParent(), InsertPos);
 }
 
 /// Insert an unlinked instruction into a basic block immediately after the
 /// specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
-  insertInto(InsertPos->getParent(), std::next(InsertPos->getIterator()));
+  BasicBlock *DestParent = InsertPos->getParent();
+
+  DestParent->getInstList().insertAfter(InsertPos->getIterator(), this);
+
+  // No need to manually update DPValues: if we insert after an instruction
+  // position, then we can never have any DPValues on "this".
+  if (DestParent->IsNewDbgInfoFormat)
+    DestParent->createMarker(this);
 }
 
 BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
@@ -101,22 +123,146 @@ BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
   assert(getParent() == nullptr && "Expected detached instruction");
   assert((It == ParentBB->end() || It->getParent() == ParentBB) &&
          "It not in ParentBB");
-  return ParentBB->getInstList().insert(It, this);
+  insertBefore(*ParentBB, It);
+  return getIterator();
+}
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
+void Instruction::insertBefore(BasicBlock &BB,
+                               InstListType::iterator InsertPos) {
+  assert(!DbgMarker);
+
+  BB.getInstList().insert(InsertPos, this);
+
+  if (!BB.IsNewDbgInfoFormat)
+    return;
+
+  BB.createMarker(this);
+
+  // We've inserted "this": if InsertAtHead is set then it comes before any
+  // DPValues attached to InsertPos. But if it's not set, then any DPValues
+  // should now come before "this".
+  bool InsertAtHead = InsertPos.getHeadBit();
+  if (!InsertAtHead) {
+    DPMarker *SrcMarker = BB.getMarker(InsertPos);
+    if (!SrcMarker)
+      SrcMarker = BB.createMarker(InsertPos);
+    DbgMarker->absorbDebugValues(*SrcMarker, false);
+  }
+
+  // If we're inserting a terminator, check if we need to flush out
+  // TrailingDPValues.
+  if (isTerminator())
+    getParent()->flushTerminatorDbgValues();
 }
 
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
 void Instruction::moveBefore(Instruction *MovePos) {
-  moveBefore(*MovePos->getParent(), MovePos->getIterator());
+  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
+}
+
+void Instruction::moveBeforePreserving(Instruction *MovePos) {
+  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
 }
 
 void Instruction::moveAfter(Instruction *MovePos) {
-  moveBefore(*MovePos->getParent(), ++MovePos->getIterator());
+  auto NextIt = std::next(MovePos->getIterator());
+  // We want this instruction to be moved to before NextIt in the instruction
+  // list, but before NextIt's debug value range.
+  NextIt.setHeadBit(true);
+  moveBeforeImpl(*MovePos->getParent(), NextIt, false);
+}
+
+void Instruction::moveAfterPreserving(Instruction *MovePos) {
+  auto NextIt = std::next(MovePos->getIterator());
+  // We want this instruction and its debug range to be moved to before NextIt
+  // in the instruction list, but before NextIt's debug value range.
+  NextIt.setHeadBit(true);
+  moveBeforeImpl(*MovePos->getParent(), NextIt, true);
 }
 
 void Instruction::moveBefore(BasicBlock &BB, InstListType::iterator I) {
+  moveBeforeImpl(BB, I, false);
+}
+
+void Instruction::moveBeforePreserving(BasicBlock &BB,
+                                       InstListType::iterator I) {
+  moveBeforeImpl(BB, I, true);
+}
+
+void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
+                              bool Preserve) {
   assert(I == BB.end() || I->getParent() == &BB);
-  BB.splice(I, getParent(), getIterator());
+  bool InsertAtHead = I.getHeadBit();
+
+  // If we've been given the "Preserve" flag, then just move the DPValues with
+  // the instruction, no more special handling needed.
+  if (BB.IsNewDbgInfoFormat && DbgMarker && !Preserve) {
+    if (I != this->getIterator()) {
+      // "this" is definitely moving; detach any existing DPValues.
+      handleMarkerRemoval();
+    }
+  }
+
+  // Move this single instruction. Use the list splice method directly, not
+  // the block splicer, which will do more debug-info things.
+  BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
+
+  if (BB.IsNewDbgInfoFormat && !Preserve) {
+    if (!DbgMarker)
+      BB.createMarker(this);
+    DPMarker *NextMarker = getParent()->getNextMarker(this);
+
+    // If we're inserting at point I, and not in front of the DPValues attached
+    // there, then we should absorb the DPValues attached to I.
+    if (!InsertAtHead)
+      DbgMarker->absorbDebugValues(*NextMarker, false);
+  }
+
+  if (isTerminator())
+    getParent()->flushTerminatorDbgValues();
+}
+
+iterator_range<DPValue::self_iterator>
+Instruction::cloneDebugInfoFrom(const Instruction *From,
+                                std::optional<DPValue::self_iterator> FromHere,
+                                bool InsertAtHead) {
+  if (!From->DbgMarker)
+    return DPMarker::getEmptyDPValueRange();
+
+  assert(getParent()->IsNewDbgInfoFormat);
+  assert(getParent()->IsNewDbgInfoFormat ==
+         From->getParent()->IsNewDbgInfoFormat);
+
+  if (!DbgMarker)
+    getParent()->createMarker(this);
+
+  return DbgMarker->cloneDebugInfoFrom(From->DbgMarker, FromHere, InsertAtHead);
+}
+
+iterator_range<DPValue::self_iterator>
+Instruction::getDbgValueRange() const {
+  BasicBlock *Parent = const_cast<BasicBlock *>(getParent());
+  assert(Parent && "Instruction must be inserted to have DPValues");
+  (void)Parent;
+
+  if (!DbgMarker)
+    return DPMarker::getEmptyDPValueRange();
+
+  return DbgMarker->getDbgValueRange();
+}
+
+bool Instruction::hasDbgValues() const { return !getDbgValueRange().empty(); }
+
+void Instruction::dropDbgValues() {
+  if (DbgMarker)
+    DbgMarker->dropDPValues();
+}
+
+void Instruction::dropOneDbgValue(DPValue *DPV) {
+  DbgMarker->dropOneDPValue(DPV);
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
@@ -209,6 +355,10 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::AShr:
   case Instruction::LShr:
     cast<PossiblyExactOperator>(this)->setIsExact(false);
+    break;
+
+  case Instruction::Or:
+    cast<PossiblyDisjointInst>(this)->setIsDisjoint(false);
     break;
 
   case Instruction::GetElementPtr:
@@ -386,6 +536,10 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (isa<PossiblyExactOperator>(this))
       setIsExact(PE->isExact());
 
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(SrcPD->isDisjoint());
+
   // Copy the fast-math flags.
   if (auto *FP = dyn_cast<FPMathOperator>(V))
     if (isa<FPMathOperator>(this))
@@ -411,6 +565,10 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
       setIsExact(isExact() && PE->isExact());
+
+  if (auto *SrcPD = dyn_cast<PossiblyDisjointInst>(V))
+    if (auto *DestPD = dyn_cast<PossiblyDisjointInst>(this))
+      DestPD->setIsDisjoint(DestPD->isDisjoint() && SrcPD->isDisjoint());
 
   if (auto *FP = dyn_cast<FPMathOperator>(V)) {
     if (isa<FPMathOperator>(this)) {

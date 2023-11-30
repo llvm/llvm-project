@@ -1674,43 +1674,6 @@ static Value *simplifyAndOrOfICmpsWithConstants(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return nullptr;
 }
 
-static Value *simplifyAndOrOfICmpsWithZero(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                           bool IsAnd) {
-  ICmpInst::Predicate P0 = Cmp0->getPredicate(), P1 = Cmp1->getPredicate();
-  if (!match(Cmp0->getOperand(1), m_Zero()) ||
-      !match(Cmp1->getOperand(1), m_Zero()) || P0 != P1)
-    return nullptr;
-
-  if ((IsAnd && P0 != ICmpInst::ICMP_NE) || (!IsAnd && P1 != ICmpInst::ICMP_EQ))
-    return nullptr;
-
-  // We have either "(X == 0 || Y == 0)" or "(X != 0 && Y != 0)".
-  Value *X = Cmp0->getOperand(0);
-  Value *Y = Cmp1->getOperand(0);
-
-  // If one of the compares is a masked version of a (not) null check, then
-  // that compare implies the other, so we eliminate the other. Optionally, look
-  // through a pointer-to-int cast to match a null check of a pointer type.
-
-  // (X == 0) || (([ptrtoint] X & ?) == 0) --> ([ptrtoint] X & ?) == 0
-  // (X == 0) || ((? & [ptrtoint] X) == 0) --> (? & [ptrtoint] X) == 0
-  // (X != 0) && (([ptrtoint] X & ?) != 0) --> ([ptrtoint] X & ?) != 0
-  // (X != 0) && ((? & [ptrtoint] X) != 0) --> (? & [ptrtoint] X) != 0
-  if (match(Y, m_c_And(m_Specific(X), m_Value())) ||
-      match(Y, m_c_And(m_PtrToInt(m_Specific(X)), m_Value())))
-    return Cmp1;
-
-  // (([ptrtoint] Y & ?) == 0) || (Y == 0) --> ([ptrtoint] Y & ?) == 0
-  // ((? & [ptrtoint] Y) == 0) || (Y == 0) --> (? & [ptrtoint] Y) == 0
-  // (([ptrtoint] Y & ?) != 0) && (Y != 0) --> ([ptrtoint] Y & ?) != 0
-  // ((? & [ptrtoint] Y) != 0) && (Y != 0) --> (? & [ptrtoint] Y) != 0
-  if (match(X, m_c_And(m_Specific(Y), m_Value())) ||
-      match(X, m_c_And(m_PtrToInt(m_Specific(Y)), m_Value())))
-    return Cmp0;
-
-  return nullptr;
-}
-
 static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
                                         const InstrInfoQuery &IIQ) {
   // (icmp (add V, C0), C1) & (icmp V, C0)
@@ -1758,66 +1721,6 @@ static Value *simplifyAndOfICmpsWithAdd(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
-/// Try to eliminate compares with signed or unsigned min/max constants.
-static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
-                                                 bool IsAnd) {
-  // Canonicalize an equality compare as Cmp0.
-  if (Cmp1->isEquality())
-    std::swap(Cmp0, Cmp1);
-  if (!Cmp0->isEquality())
-    return nullptr;
-
-  // The non-equality compare must include a common operand (X). Canonicalize
-  // the common operand as operand 0 (the predicate is swapped if the common
-  // operand was operand 1).
-  ICmpInst::Predicate Pred0 = Cmp0->getPredicate();
-  Value *X = Cmp0->getOperand(0);
-  ICmpInst::Predicate Pred1;
-  bool HasNotOp = match(Cmp1, m_c_ICmp(Pred1, m_Not(m_Specific(X)), m_Value()));
-  if (!HasNotOp && !match(Cmp1, m_c_ICmp(Pred1, m_Specific(X), m_Value())))
-    return nullptr;
-  if (ICmpInst::isEquality(Pred1))
-    return nullptr;
-
-  // The equality compare must be against a constant. Flip bits if we matched
-  // a bitwise not. Convert a null pointer constant to an integer zero value.
-  APInt MinMaxC;
-  const APInt *C;
-  if (match(Cmp0->getOperand(1), m_APInt(C)))
-    MinMaxC = HasNotOp ? ~*C : *C;
-  else if (isa<ConstantPointerNull>(Cmp0->getOperand(1)))
-    MinMaxC = APInt::getZero(8);
-  else
-    return nullptr;
-
-  // DeMorganize if this is 'or': P0 || P1 --> !P0 && !P1.
-  if (!IsAnd) {
-    Pred0 = ICmpInst::getInversePredicate(Pred0);
-    Pred1 = ICmpInst::getInversePredicate(Pred1);
-  }
-
-  // Normalize to unsigned compare and unsigned min/max value.
-  // Example for 8-bit: -128 + 128 -> 0; 127 + 128 -> 255
-  if (ICmpInst::isSigned(Pred1)) {
-    Pred1 = ICmpInst::getUnsignedPredicate(Pred1);
-    MinMaxC += APInt::getSignedMinValue(MinMaxC.getBitWidth());
-  }
-
-  // (X != MAX) && (X < Y) --> X < Y
-  // (X == MAX) || (X >= Y) --> X >= Y
-  if (MinMaxC.isMaxValue())
-    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_ULT)
-      return Cmp1;
-
-  // (X != MIN) && (X > Y) -->  X > Y
-  // (X == MIN) || (X <= Y) --> X <= Y
-  if (MinMaxC.isMinValue())
-    if (Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_UGT)
-      return Cmp1;
-
-  return nullptr;
-}
-
 /// Try to simplify and/or of icmp with ctpop intrinsic.
 static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
                                             bool IsAnd) {
@@ -1847,12 +1750,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, true))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op0, Op1, true))
@@ -1923,12 +1820,6 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithLimitConst(Op0, Op1, false))
-    return X;
-
-  if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op0, Op1, false))
@@ -2102,6 +1993,58 @@ static Value *simplifyLogicOfAddSub(Value *Op0, Value *Op1,
   return nullptr;
 }
 
+// Commutative patterns for and that will be tried with both operand orders.
+static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
+                                     const SimplifyQuery &Q,
+                                     unsigned MaxRecurse) {
+  // ~A & A =  0
+  if (match(Op0, m_Not(m_Specific(Op1))))
+    return Constant::getNullValue(Op0->getType());
+
+  // (A | ?) & A = A
+  if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
+    return Op1;
+
+  // (X | ~Y) & (X | Y) --> X
+  Value *X, *Y;
+  if (match(Op0, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
+      match(Op1, m_c_Or(m_Deferred(X), m_Deferred(Y))))
+    return X;
+
+  // If we have a multiplication overflow check that is being 'and'ed with a
+  // check that one of the multipliers is not zero, we can omit the 'and', and
+  // only keep the overflow check.
+  if (isCheckForZeroAndMulWithOverflow(Op0, Op1, true))
+    return Op1;
+
+  // -A & A = A if A is a power of two or zero.
+  if (match(Op0, m_Neg(m_Specific(Op1))) &&
+      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
+    return Op1;
+
+  // This is a similar pattern used for checking if a value is a power-of-2:
+  // (A - 1) & A --> 0 (if A is a power-of-2 or 0)
+  if (match(Op0, m_Add(m_Specific(Op1), m_AllOnes())) &&
+      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
+    return Constant::getNullValue(Op1->getType());
+
+  // (x << N) & ((x << M) - 1) --> 0, where x is known to be a power of 2 and
+  // M <= N.
+  const APInt *Shift1, *Shift2;
+  if (match(Op0, m_Shl(m_Value(X), m_APInt(Shift1))) &&
+      match(Op1, m_Add(m_Shl(m_Specific(X), m_APInt(Shift2)), m_AllOnes())) &&
+      isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, /*Depth*/ 0, Q.AC,
+                             Q.CxtI) &&
+      Shift1->uge(*Shift2))
+    return Constant::getNullValue(Op0->getType());
+
+  if (Value *V =
+          simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
+    return V;
+
+  return nullptr;
+}
+
 /// Given operands for an And, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -2129,26 +2072,10 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_AllOnes()))
     return Op0;
 
-  // A & ~A  =  ~A & A  =  0
-  if (match(Op0, m_Not(m_Specific(Op1))) || match(Op1, m_Not(m_Specific(Op0))))
-    return Constant::getNullValue(Op0->getType());
-
-  // (A | ?) & A = A
-  if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
-    return Op1;
-
-  // A & (A | ?) = A
-  if (match(Op1, m_c_Or(m_Specific(Op0), m_Value())))
-    return Op0;
-
-  // (X | Y) & (X | ~Y) --> X (commuted 8 ways)
-  Value *X, *Y;
-  if (match(Op0, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
-      match(Op1, m_c_Or(m_Deferred(X), m_Deferred(Y))))
-    return X;
-  if (match(Op1, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
-      match(Op0, m_c_Or(m_Deferred(X), m_Deferred(Y))))
-    return X;
+  if (Value *Res = simplifyAndCommutative(Op0, Op1, Q, MaxRecurse))
+    return Res;
+  if (Value *Res = simplifyAndCommutative(Op1, Op0, Q, MaxRecurse))
+    return Res;
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::And))
     return V;
@@ -2156,6 +2083,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // A mask that only clears known zeros of a shifted value is a no-op.
   const APInt *Mask;
   const APInt *ShAmt;
+  Value *X, *Y;
   if (match(Op1, m_APInt(Mask))) {
     // If all bits in the inverted and shifted mask are clear:
     // and (shl X, ShAmt), Mask --> shl X, ShAmt
@@ -2182,42 +2110,6 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     if (PowerC->getActiveBits() >= Known.getMaxValue().getActiveBits())
       return ConstantInt::getNullValue(Op1->getType());
   }
-
-  // If we have a multiplication overflow check that is being 'and'ed with a
-  // check that one of the multipliers is not zero, we can omit the 'and', and
-  // only keep the overflow check.
-  if (isCheckForZeroAndMulWithOverflow(Op0, Op1, true))
-    return Op1;
-  if (isCheckForZeroAndMulWithOverflow(Op1, Op0, true))
-    return Op0;
-
-  // A & (-A) = A if A is a power of two or zero.
-  if (match(Op0, m_Neg(m_Specific(Op1))) ||
-      match(Op1, m_Neg(m_Specific(Op0)))) {
-    if (isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI,
-                               Q.DT))
-      return Op0;
-    if (isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI,
-                               Q.DT))
-      return Op1;
-  }
-
-  // This is a similar pattern used for checking if a value is a power-of-2:
-  // (A - 1) & A --> 0 (if A is a power-of-2 or 0)
-  // A & (A - 1) --> 0 (if A is a power-of-2 or 0)
-  if (match(Op0, m_Add(m_Specific(Op1), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
-    return Constant::getNullValue(Op1->getType());
-  if (match(Op1, m_Add(m_Specific(Op0), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
-    return Constant::getNullValue(Op0->getType());
-
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
-    return V;
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::And, Op1, Op0, Q, MaxRecurse))
-    return V;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, true))
     return V;
@@ -2553,13 +2445,13 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (C2->isMask() && // C2 == 0+1+
           match(A, m_c_Add(m_Specific(B), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C2, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C2, Q))
           return A;
       }
       // Or commutes, try both ways.
       if (C1->isMask() && match(B, m_c_Add(m_Specific(A), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C1, Q))
           return B;
       }
     }
@@ -5029,10 +4921,8 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 
   // Compute the (pointer) type returned by the GEP instruction.
   Type *LastType = GetElementPtrInst::getIndexedType(SrcTy, Indices);
-  Type *GEPTy = PointerType::get(LastType, AS);
-  if (VectorType *VT = dyn_cast<VectorType>(Ptr->getType()))
-    GEPTy = VectorType::get(GEPTy, VT->getElementCount());
-  else {
+  Type *GEPTy = Ptr->getType();
+  if (!GEPTy->isVectorTy()) {
     for (Value *Op : Indices) {
       // If one of the operands is a vector, the result type is a vector of
       // pointers. All vector operands must have the same number of elements.
@@ -5064,10 +4954,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       });
 
   if (Indices.size() == 1) {
-    // getelementptr P, 0 -> P.
-    if (match(Indices[0], m_Zero()) && Ptr->getType() == GEPTy)
-      return Ptr;
-
     Type *Ty = SrcTy;
     if (!IsScalableVec && Ty->isSized()) {
       Value *P;
@@ -6270,7 +6156,8 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 }
 
 static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
-                                     const SimplifyQuery &Q) {
+                                     const SimplifyQuery &Q,
+                                     const CallBase *Call) {
   // Idempotent functions return the same result when called repeatedly.
   Intrinsic::ID IID = F->getIntrinsicID();
   if (isIdempotent(IID))
@@ -6315,37 +6202,37 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // ctpop(and X, 1) --> and X, 1
     unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
     if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
-                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+                          Q))
       return Op0;
     break;
   }
   case Intrinsic::exp:
     // exp(log(x)) -> x
-    if (Q.CxtI->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp2:
     // exp2(log2(x)) -> x
-    if (Q.CxtI->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp10:
     // exp10(log10(x)) -> x
-    if (Q.CxtI->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log:
     // log(exp(x)) -> x
-    if (Q.CxtI->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
-    if (Q.CxtI->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0), m_Value(X)))))
@@ -6354,7 +6241,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
     // log10(exp10(x)) -> x
-    if (Q.CxtI->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
@@ -6455,7 +6342,8 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
 }
 
 static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
-                                      const SimplifyQuery &Q) {
+                                      const SimplifyQuery &Q,
+                                      const CallBase *Call) {
   Intrinsic::ID IID = F->getIntrinsicID();
   Type *ReturnType = F->getReturnType();
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
@@ -6715,19 +6603,19 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // float, if the ninf flag is set.
     const APFloat *C;
     if (match(Op1, m_APFloat(C)) &&
-        (C->isInfinity() || (Q.CxtI->hasNoInfs() && C->isLargest()))) {
+        (C->isInfinity() || (Call->hasNoInfs() && C->isLargest()))) {
       // minnum(X, -inf) -> -inf
       // maxnum(X, +inf) -> +inf
       // minimum(X, -inf) -> -inf if nnan
       // maximum(X, +inf) -> +inf if nnan
-      if (C->isNegative() == IsMin && (!PropagateNaN || Q.CxtI->hasNoNaNs()))
+      if (C->isNegative() == IsMin && (!PropagateNaN || Call->hasNoNaNs()))
         return ConstantFP::get(ReturnType, *C);
 
       // minnum(X, +inf) -> X if nnan
       // maxnum(X, -inf) -> X if nnan
       // minimum(X, +inf) -> X
       // maximum(X, -inf) -> X
-      if (C->isNegative() != IsMin && (PropagateNaN || Q.CxtI->hasNoNaNs()))
+      if (C->isNegative() != IsMin && (PropagateNaN || Call->hasNoNaNs()))
         return Op0;
     }
 
@@ -6786,10 +6674,10 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
 
   if (NumOperands == 1)
-    return simplifyUnaryIntrinsic(F, Args[0], Q);
+    return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(F, Args[0], Args[1], Q);
+    return simplifyBinaryIntrinsic(F, Args[0], Args[1], Q, Call);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {

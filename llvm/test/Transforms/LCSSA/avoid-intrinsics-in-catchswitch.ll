@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes='debugify,function(loop-mssa(licm))'  -S -o /dev/null
+; RUN: opt < %s -passes='debugify,function(loop-mssa(licm))'  -S -o /dev/null --try-experimental-debuginfo-iterators
 ;
 ; The following test is from https://bugs.llvm.org/show_bug.cgi?id=36238
 ; This test should pass (not assert or fault). The error that originally

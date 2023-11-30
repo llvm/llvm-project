@@ -1081,7 +1081,8 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
 
     if (const auto *IPD = dyn_cast<ImplicitParamDecl>(D))
-      VarDeclBits.addBits(IPD->getParameterKind(), /*Width=*/3);
+      VarDeclBits.addBits(llvm::to_underlying(IPD->getParameterKind()),
+                          /*Width=*/3);
     else
       VarDeclBits.addBits(0, /*Width=*/3);
 
@@ -2442,7 +2443,7 @@ static bool isRequiredDecl(const Decl *D, ASTContext &Context,
   // Named modules have different semantics than header modules. Every named
   // module units owns a translation unit. So the importer of named modules
   // doesn't need to deserilize everything ahead of time.
-  if (WritingModule && WritingModule->isModulePurview()) {
+  if (WritingModule && WritingModule->isNamedModule()) {
     // The PragmaCommentDecl and PragmaDetectMismatchDecl are MSVC's extension.
     // And the behavior of MSVC for such cases will leak this to the module
     // users. Given pragma is not a standard thing, the compiler has the space

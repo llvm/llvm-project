@@ -241,9 +241,9 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
   rewriter.setListener(&newOpsListener);
 
   linalg::BufferizeToAllocationOptions options;
-  if (getMemcpyOp() == "memref.tensor_store") {
-    options.memcpyOp =
-        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore;
+  if (getMemcpyOp() == "bufferization.materialize_in_destination") {
+    options.memcpyOp = linalg::BufferizeToAllocationOptions::MemcpyOp::
+        MaterializeInDestination;
   } else if (getMemcpyOp() == "memref.copy") {
     options.memcpyOp =
         linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy;
@@ -289,14 +289,20 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
 
 void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  if (getBufferizeDestinationOnly()) {
+    // The destination is replaced with a newly allocated buffer, but the op
+    // itself remains in place.
+    onlyReadsHandle(getTarget(), effects);
+  } else {
+    consumesHandle(getTarget(), effects);
+  }
   producesHandle(getAllocatedBuffer(), effects);
   producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
 }
 
 LogicalResult transform::BufferizeToAllocationOp::verify() {
-  if (getMemcpyOp() != "memref.tensor_store" &&
+  if (getMemcpyOp() != "bufferization.materialize_in_destination" &&
       getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
     return emitOpError() << "unsupported memcpy op";
   if (getAllocOp() != "memref.alloc" && getAllocOp() != "memref.alloca")
@@ -3164,32 +3170,30 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
-// HoistRedundantTensorSubsetsOp
+// TransposeConv2DOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure
-transform::HoistRedundantTensorSubsetsOp::applyToOne(
-    transform::TransformRewriter &rewriter, Operation *target,
+DiagnosedSilenceableFailure transform::TransposeConv2DOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  auto forOp = dyn_cast<scf::ForOp>(target);
-  if (forOp) {
-    linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
-    return DiagnosedSilenceableFailure::success();
-  }
-
-  // TODO: walking in some reverse / inside-out order would be more efficient
-  // and would capture more cases.
-  target->walk([&](scf::ForOp forOp) {
-    hoistRedundantSubsetExtractInsert(rewriter, forOp);
-  });
+  rewriter.setInsertionPoint(target);
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+          .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+            return transposeConv2D(rewriter, op);
+          })
+          .Case([&](linalg::Conv2DNhwcFhwcQOp op) {
+            return transposeConv2D(rewriter, op);
+          })
+          .Default([&](Operation *op) {
+            return rewriter.notifyMatchFailure(op, "not supported");
+          });
+  if (failed(maybeTransformed))
+    return emitDefaultSilenceableFailure(target);
+  // Handle to the new Conv2D operation with transposed filters
+  results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
-}
-
-void transform::HoistRedundantTensorSubsetsOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
-  transform::modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//

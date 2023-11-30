@@ -370,10 +370,6 @@ private:
   uint64_t Offset;
 };
 
-inline void PCHValidator::Error(const char *Msg) {
-  Reader.Error(Msg);
-}
-
 } // namespace clang
 
 #endif

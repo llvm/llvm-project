@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -pedantic
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.5.2 Serial

@@ -1,7 +1,7 @@
 ! Test different ways of passing the parent component of an extended
 ! derived-type to a subroutine or the runtime.
 
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 program parent_comp
   type p

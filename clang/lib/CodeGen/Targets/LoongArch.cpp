@@ -170,10 +170,11 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    if (isEmptyRecord(getContext(), Ty, true, true))
-      return true;
     const RecordDecl *RD = RTy->getDecl();
-    // Unions aren't eligible unless they're empty (which is caught above).
+    if (isEmptyRecord(getContext(), Ty, true, true) &&
+        (!RD->isUnion() || !isa<CXXRecordDecl>(RD)))
+      return true;
+    // Unions aren't eligible unless they're empty in C (which is caught above).
     if (RD->isUnion())
       return false;
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);

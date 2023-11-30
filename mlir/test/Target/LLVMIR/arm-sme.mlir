@@ -214,18 +214,7 @@ llvm.func @arm_sme_store(%nxv1i1  : vector<[1]xi1>,
   "arm_sme.intr.st1b.vert"(%nxv16i1, %ptr, %c0, %c0) :
               (vector<[16]xi1>, !llvm.ptr, i32, i32) -> ()
   // CHECK: call void @llvm.aarch64.sme.str
-  "arm_sme.intr.str"(%c0, %ptr) : (i32, !llvm.ptr) -> ()
-  llvm.return
-}
-
-// -----
-
-// CHECK-LABEL: @arm_sme_toggle_za
-llvm.func @arm_sme_toggle_za() {
-  // CHECK: call void @llvm.aarch64.sme.za.enable()
-  "arm_sme.intr.za.enable"() : () -> ()
-  // CHECK: call void @llvm.aarch64.sme.za.disable()
-  "arm_sme.intr.za.disable"() : () -> ()
+  "arm_sme.intr.str"(%c0, %ptr, %c0) : (i32, !llvm.ptr, i32) -> ()
   llvm.return
 }
 

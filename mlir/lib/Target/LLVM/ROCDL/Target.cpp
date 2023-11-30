@@ -178,7 +178,7 @@ LogicalResult SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module) {
 }
 
 void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
-  std::optional<llvm::TargetMachine *> targetMachine =
+  [[maybe_unused]] std::optional<llvm::TargetMachine *> targetMachine =
       getOrCreateTargetMachine();
   assert(targetMachine && "expect a TargetMachine");
   addControlVariables(module, target.hasWave64(), target.hasDaz(),

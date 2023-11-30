@@ -699,8 +699,14 @@ VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(vp_merge, VP_MERGE)
 
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
-VP_PROPERTY_FUNCTIONAL_INTRINSIC(experimental_vector_splice)
+VP_PROPERTY_NO_FUNCTIONAL
 END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
+
+// llvm.experimental.vp.reverse(x,mask,vlen)
+BEGIN_REGISTER_VP(experimental_vp_reverse, 1, 2,
+                  EXPERIMENTAL_VP_REVERSE, -1)
+VP_PROPERTY_NO_FUNCTIONAL
+END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
 

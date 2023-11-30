@@ -15,7 +15,6 @@
 #define LLVM_TRANSFORMS_UTILS_CODELAYOUT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 
 #include <utility>
 #include <vector>

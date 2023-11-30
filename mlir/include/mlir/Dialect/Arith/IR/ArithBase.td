@@ -19,7 +19,12 @@ def Arith_Dialect : Dialect {
     The arith dialect is intended to hold basic integer and floating point
     mathematical operations. This includes unary, binary, and ternary arithmetic
     ops, bitwise and shift ops, cast ops, and compare ops. Operations in this
-    dialect also accept vectors and tensors of integers or floats.
+    dialect also accept vectors and tensors of integers or floats. The dialect
+    assumes integers are represented by bitvectors with a two's complement 
+    representation. Unless otherwise stated, the operations within this dialect 
+    propagate poison values, i.e., if any of its inputs are poison, then the 
+    output is poison. Unless otherwise stated, operations applied to `vector` 
+    and `tensor` values propagates poison elementwise.
   }];
 
   let hasConstantMaterializer = 1;

@@ -87,8 +87,8 @@ class Foo {
       },
       "location": {
         "position": {
-          "character": 7,
-          "line": 1
+          "character": 6,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -142,8 +142,8 @@ class Foo {
       },
       "location": {
         "position": {
-          "character": 3,
-          "line": 2
+          "character": 2,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -198,8 +198,8 @@ class Foo {
       },
       "location": {
         "position": {
-          "character": 3,
-          "line": 3
+          "character": 2,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

@@ -1560,10 +1560,10 @@ convertToCaptureClauseKind(
   switch (captureClasue) {
   case mlir::omp::DeclareTargetCaptureClause::to:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
-    break;
   case mlir::omp::DeclareTargetCaptureClause::link:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
-    break;
+  case mlir::omp::DeclareTargetCaptureClause::enter:
+    return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
   }
   llvm_unreachable("unhandled capture clause");
 }
@@ -1737,8 +1737,9 @@ void collectMapDataFromMapOperands(MapInfoData &mapData,
           moduleTranslation.lookupValue(mapOp.getVarPtr()));
       mapData.Pointers.push_back(mapData.OriginalValue.back());
 
-      if (llvm::Value *refPtr = getRefPtrIfDeclareTarget(
-              mapOp.getVarPtr(), moduleTranslation)) { // declare target
+      if (llvm::Value *refPtr =
+              getRefPtrIfDeclareTarget(mapOp.getVarPtr(),
+                                       moduleTranslation)) { // declare target
         mapData.IsDeclareTarget.push_back(true);
         mapData.BasePointers.push_back(refPtr);
       } else { // regular mapped variable
@@ -1795,6 +1796,12 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
     else if (isTargetParams)
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
+
+    if (auto mapInfoOp = dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[i]))
+      if (mapInfoOp.getMapCaptureType().value() ==
+              mlir::omp::VariableCaptureKind::ByCopy &&
+          !mapInfoOp.getVarType().isa<LLVM::LLVMPointerType>())
+        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
 
     combinedInfo.BasePointers.emplace_back(mapData.BasePointers[i]);
     combinedInfo.Pointers.emplace_back(mapData.Pointers[i]);
@@ -2170,7 +2177,6 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 
   mlir::omp::VariableCaptureKind capture =
       mlir::omp::VariableCaptureKind::ByRef;
-  llvm::Type *inputType = input->getType();
 
   // Find the associated MapInfoData entry for the current input
   for (size_t i = 0; i < mapData.MapClause.size(); ++i)
@@ -2181,7 +2187,6 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
             mlir::omp::VariableCaptureKind::ByRef);
       }
 
-      inputType = mapData.BaseType[i];
       break;
     }
 
@@ -2190,16 +2195,11 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
       ompBuilder.M.getDataLayout().getProgramAddressSpace();
 
   // Create the alloca for the argument the current point.
-  llvm::Value *v =
-      builder.CreateAlloca(arg.getType()->isPointerTy()
-                               ? arg.getType()
-                               : llvm::Type::getInt64Ty(builder.getContext()),
-                           ompBuilder.M.getDataLayout().getAllocaAddrSpace());
+  llvm::Value *v = builder.CreateAlloca(arg.getType(), allocaAS);
 
-  if (allocaAS != defaultAS && arg.getType()->isPointerTy()) {
+  if (allocaAS != defaultAS && arg.getType()->isPointerTy())
     v = builder.CreatePointerBitCastOrAddrSpaceCast(
         v, arg.getType()->getPointerTo(defaultAS));
-  }
 
   builder.CreateStore(&arg, v);
 
@@ -2207,15 +2207,7 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 
   switch (capture) {
   case mlir::omp::VariableCaptureKind::ByCopy: {
-    // RHS of || aims to ignore conversions like int -> uint, but further
-    // extension of this path must be implemented for the moment it'll fall
-    // through to the assert.
-    if (inputType->isPointerTy() || v->getType() == inputType->getPointerTo()) {
-      retVal = v;
-      return builder.saveIP();
-    }
-
-    assert(false && "Currently unsupported OMPTargetVarCaptureByCopy Type");
+    retVal = v;
     break;
   }
   case mlir::omp::VariableCaptureKind::ByRef: {
@@ -2284,17 +2276,21 @@ createAlteredByCaptureMap(MapInfoData &mapData,
       } break;
       case mlir::omp::VariableCaptureKind::ByCopy: {
         llvm::Type *type = mapData.BaseType[i];
-        llvm::Value *newV = builder.CreateLoad(type, mapData.Pointers[i]);
+        llvm::Value *newV;
+        if (mapData.Pointers[i]->getType()->isPointerTy())
+          newV = builder.CreateLoad(type, mapData.Pointers[i]);
+        else
+          newV = mapData.Pointers[i];
 
         if (!type->isPointerTy()) {
           auto curInsert = builder.saveIP();
           builder.restoreIP(findAllocaInsertPoint(builder, moduleTranslation));
           auto *memTempAlloc =
-              builder.CreateAlloca(builder.getInt8PtrTy(), nullptr, ".casted");
+              builder.CreateAlloca(builder.getPtrTy(), nullptr, ".casted");
           builder.restoreIP(curInsert);
 
           builder.CreateStore(newV, memTempAlloc);
-          newV = builder.CreateLoad(builder.getInt8PtrTy(), memTempAlloc);
+          newV = builder.CreateLoad(builder.getPtrTy(), memTempAlloc);
         }
 
         mapData.Pointers[i] = newV;
@@ -2318,13 +2314,24 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   auto targetOp = cast<omp::TargetOp>(opInst);
   auto &targetRegion = targetOp.getRegion();
+  DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
+  SmallVector<Value> mapOperands = targetOp.getMapOperands();
 
   LogicalResult bodyGenStatus = success();
-
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   auto bodyCB = [&](InsertPointTy allocaIP,
                     InsertPointTy codeGenIP) -> InsertPointTy {
     builder.restoreIP(codeGenIP);
+    unsigned argIndex = 0;
+    for (auto &mapOp : mapOperands) {
+      auto mapInfoOp =
+          mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp());
+      llvm::Value *mapOpValue =
+          moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
+      const auto &arg = targetRegion.front().getArgument(argIndex);
+      moduleTranslation.mapValue(arg, mapOpValue);
+      argIndex++;
+    }
     llvm::BasicBlock *exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation, bodyGenStatus);
     builder.SetInsertPoint(exitBlock);
@@ -2352,8 +2359,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
-  DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
-  llvm::SmallVector<Value> mapOperands = targetOp.getMapOperands();
   MapInfoData mapData;
   collectMapDataFromMapOperands(mapData, mapOperands, moduleTranslation, dl,
                                 builder);
@@ -2406,23 +2411,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     // declare target arguments are not passed to kernels as arguments
     if (!mapData.IsDeclareTarget[i])
       kernelInput.push_back(mapData.OriginalValue[i]);
-  }
-
-  // Do some very basic handling of implicit captures that are caught
-  // by use in the target region.
-  // TODO/FIXME: Remove on addition of IsolatedFromAbove patch series
-  // as this will become redundant and perhaps erroneous in cases
-  // where more complex implicit capture semantics are required.
-  llvm::SetVector<Value> uses;
-  getUsedValuesDefinedAbove(targetRegion, uses);
-
-  for (mlir::Value use : uses) {
-    llvm::Value *useValue = moduleTranslation.lookupValue(use);
-    if (useValue &&
-        !std::any_of(
-            mapData.OriginalValue.begin(), mapData.OriginalValue.end(),
-            [&](llvm::Value *mapValue) { return mapValue == useValue; }))
-      kernelInput.push_back(useValue);
   }
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(

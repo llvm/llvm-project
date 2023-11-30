@@ -76,16 +76,6 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                         : std::nullopt;
   });
 
-  // LLVM container types may (recursively) contain other types that must be
-  // converted even when the outer type is compatible.
-  addConversion([&](LLVM::LLVMPointerType type) -> std::optional<Type> {
-    if (type.isOpaque())
-      return type;
-    if (auto pointee = convertType(type.getElementType()))
-      return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
-    return std::nullopt;
-  });
-
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results)
                     -> std::optional<LogicalResult> {
     // Fastpath for types that won't be converted by this callback anyway.
@@ -96,15 +86,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
 
     if (type.isIdentified()) {
       auto convertedType = LLVM::LLVMStructType::getIdentified(
-          type.getContext(), ("_Converted_" + type.getName()).str());
-      unsigned counter = 1;
-      while (convertedType.isInitialized()) {
-        assert(counter != UINT_MAX &&
-               "about to overflow struct renaming counter in conversion");
-        convertedType = LLVM::LLVMStructType::getIdentified(
-            type.getContext(),
-            ("_Converted_" + std::to_string(counter) + type.getName()).str());
-      }
+          type.getContext(), ("_Converted." + type.getName()).str());
 
       SmallVectorImpl<Type> &recursiveStack = getCurrentThreadRecursiveStack();
       if (llvm::count(recursiveStack, type)) {
@@ -120,10 +102,27 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       if (failed(convertTypes(type.getBody(), convertedElemTypes)))
         return std::nullopt;
 
-      if (failed(convertedType.setBody(convertedElemTypes, type.isPacked())))
-        return failure();
-      results.push_back(convertedType);
-      return success();
+      // If the converted type has not been initialized yet, just set its body
+      // to be the converted arguments and return.
+      if (!convertedType.isInitialized()) {
+        if (failed(
+                convertedType.setBody(convertedElemTypes, type.isPacked()))) {
+          return failure();
+        }
+        results.push_back(convertedType);
+        return success();
+      }
+
+      // If it has been initialized, has the same body and packed bit, just use
+      // it. This ensures that recursive structs keep being recursive rather
+      // than including a non-updated name.
+      if (TypeRange(convertedType.getBody()) == TypeRange(convertedElemTypes) &&
+          convertedType.isPacked() == type.isPacked()) {
+        results.push_back(convertedType);
+        return success();
+      }
+
+      return failure();
     }
 
     SmallVector<Type> convertedSubtypes;

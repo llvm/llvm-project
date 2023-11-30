@@ -481,9 +481,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::f32, MVT::f64}, Legal);
 
   if (Subtarget->haveRoundOpsF64())
-    setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FRINT}, MVT::f64, Legal);
+    setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FROUNDEVEN}, MVT::f64,
+                       Legal);
   else
-    setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FRINT, ISD::FFLOOR},
+    setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                        MVT::f64, Custom);
 
   setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
@@ -1792,7 +1793,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
     MRI.getLiveInVirtReg(InputPtrReg->getRegister()), PtrVT);
 
-  return DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::Fixed(Offset));
+  return DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::getFixed(Offset));
 }
 
 SDValue SITargetLowering::getImplicitArgPtr(SelectionDAG &DAG,
@@ -2665,6 +2666,11 @@ SDValue SITargetLowering::LowerFormalArguments(
 
   if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
+    if (!IsGraphics && !Subtarget->enableFlatScratch()) {
+      CCInfo.AllocateRegBlock(ArrayRef<MCPhysReg>{AMDGPU::SGPR0, AMDGPU::SGPR1,
+                                                  AMDGPU::SGPR2, AMDGPU::SGPR3},
+                              4);
+    }
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
   }
 
@@ -3278,6 +3284,9 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+  if (AMDGPU::isChainCC(CalleeCC))
+    return true;
+
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
@@ -3362,7 +3371,36 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 // The wave scratch offset register is used as the global base pointer.
 SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     SmallVectorImpl<SDValue> &InVals) const {
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsChainCallConv = AMDGPU::isChainCC(CallConv);
+
   SelectionDAG &DAG = CLI.DAG;
+
+  TargetLowering::ArgListEntry RequestedExec;
+  if (IsChainCallConv) {
+    // The last argument should be the value that we need to put in EXEC.
+    // Pop it out of CLI.Outs and CLI.OutVals before we do any processing so we
+    // don't treat it like the rest of the arguments.
+    RequestedExec = CLI.Args.back();
+    assert(RequestedExec.Node && "No node for EXEC");
+
+    if (!RequestedExec.Ty->isIntegerTy(Subtarget->getWavefrontSize()))
+      return lowerUnhandledCall(CLI, InVals, "Invalid value for EXEC");
+
+    assert(CLI.Outs.back().OrigArgIndex == 2 && "Unexpected last arg");
+    CLI.Outs.pop_back();
+    CLI.OutVals.pop_back();
+
+    if (RequestedExec.Ty->isIntegerTy(64)) {
+      assert(CLI.Outs.back().OrigArgIndex == 2 && "Exec wasn't split up");
+      CLI.Outs.pop_back();
+      CLI.OutVals.pop_back();
+    }
+
+    assert(CLI.Outs.back().OrigArgIndex != 2 &&
+           "Haven't popped all the pieces of the EXEC mask");
+  }
+
   const SDLoc &DL = CLI.DL;
   SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
   SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
@@ -3370,7 +3408,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   bool &IsTailCall = CLI.IsTailCall;
-  CallingConv::ID CallConv = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
   bool IsSibCall = false;
   bool IsThisReturn = false;
@@ -3401,9 +3438,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
       Callee, CallConv, IsVarArg, Outs, OutVals, Ins, DAG);
-    if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
+    if (!IsTailCall &&
+        ((CLI.CB && CLI.CB->isMustTailCall()) || IsChainCallConv)) {
       report_fatal_error("failed to perform tail call elimination on a call "
-                         "site marked musttail");
+                         "site marked musttail or on llvm.amdgcn.cs.chain");
     }
 
     bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
@@ -3426,7 +3464,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
   CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, IsVarArg);
 
-  if (CallConv != CallingConv::AMDGPU_Gfx) {
+  if (CallConv != CallingConv::AMDGPU_Gfx && !AMDGPU::isChainCC(CallConv)) {
     // With a fixed ABI, allocate fixed registers before user arguments.
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
@@ -3452,16 +3490,20 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Adjust the stack pointer for the new arguments...
   // These operations are automatically eliminated by the prolog/epilog pass
-  if (!IsSibCall) {
+  if (!IsSibCall)
     Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
 
+  if (!IsSibCall || IsChainCallConv) {
     if (!Subtarget->enableFlatScratch()) {
       SmallVector<SDValue, 4> CopyFromChains;
 
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg
         = DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
+      RegsToPass.emplace_back(IsChainCallConv
+                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
+                              ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
     }
@@ -3606,6 +3648,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
   }
 
+  if (IsChainCallConv)
+    Ops.push_back(RequestedExec.Node);
+
   // Add argument registers to the end of the list so that they are known live
   // into the call.
   for (auto &RegToPass : RegsToPass) {
@@ -3614,8 +3659,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Add a register mask operand representing the call-preserved registers.
-
-  auto *TRI = static_cast<const SIRegisterInfo*>(Subtarget->getRegisterInfo());
+  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
@@ -3629,8 +3673,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // actual call instruction.
   if (IsTailCall) {
     MFI.setHasTailCall();
-    unsigned OPC = CallConv == CallingConv::AMDGPU_Gfx ?
-                   AMDGPUISD::TC_RETURN_GFX : AMDGPUISD::TC_RETURN;
+    unsigned OPC = AMDGPUISD::TC_RETURN;
+    switch (CallConv) {
+    case CallingConv::AMDGPU_Gfx:
+      OPC = AMDGPUISD::TC_RETURN_GFX;
+      break;
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
+      OPC = AMDGPUISD::TC_RETURN_CHAIN;
+      break;
+    }
+
     return DAG.getNode(OPC, DL, NodeTys, Ops);
   }
 
@@ -6032,11 +6085,6 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return lowerTrapEndpgm(Op, DAG);
 
-  const Module *M = DAG.getMachineFunction().getFunction().getParent();
-  unsigned CodeObjectVersion = AMDGPU::getCodeObjectVersion(*M);
-  if (CodeObjectVersion <= AMDGPU::AMDHSA_COV3)
-    return lowerTrapHsaQueuePtr(Op, DAG);
-
   return Subtarget->supportsGetDoorbellID() ? lowerTrapHsa(Op, DAG) :
          lowerTrapHsaQueuePtr(Op, DAG);
 }
@@ -6194,7 +6242,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
 
   SDValue Ptr =
-      DAG.getObjectPtrOffset(DL, QueuePtr, TypeSize::Fixed(StructOffset));
+      DAG.getObjectPtrOffset(DL, QueuePtr, TypeSize::getFixed(StructOffset));
 
   // TODO: Use custom target PseudoSourceValue.
   // TODO: We should use the value from the IR intrinsic call, but it might not
@@ -10581,9 +10629,7 @@ SDValue SITargetLowering::splitBinaryBitConstantOp(
   return SDValue();
 }
 
-// Returns true if argument is a boolean value which is not serialized into
-// memory or argument and does not require v_cndmask_b32 to be deserialized.
-static bool isBoolSGPR(SDValue V) {
+bool llvm::isBoolSGPR(SDValue V) {
   if (V.getValueType() != MVT::i1)
     return false;
   switch (V.getOpcode()) {

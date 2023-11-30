@@ -57,6 +57,7 @@ class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
 struct DiagnosticHandler;
+class DPMarker;
 class ElementCount;
 class Function;
 class GlobalObject;
@@ -1307,16 +1308,47 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
   }
 };
 
-template <> struct MDNodeKeyImpl<DIArgList> {
+// DIArgLists are not MDNodes, but we still want to unique them in a DenseSet
+// based on a hash of their arguments.
+struct DIArgListKeyInfo {
   ArrayRef<ValueAsMetadata *> Args;
 
-  MDNodeKeyImpl(ArrayRef<ValueAsMetadata *> Args) : Args(Args) {}
-  MDNodeKeyImpl(const DIArgList *N) : Args(N->getArgs()) {}
+  DIArgListKeyInfo(ArrayRef<ValueAsMetadata *> Args) : Args(Args) {}
+  DIArgListKeyInfo(const DIArgList *N) : Args(N->getArgs()) {}
 
   bool isKeyOf(const DIArgList *RHS) const { return Args == RHS->getArgs(); }
 
   unsigned getHashValue() const {
     return hash_combine_range(Args.begin(), Args.end());
+  }
+};
+
+/// DenseMapInfo for DIArgList.
+struct DIArgListInfo {
+  using KeyTy = DIArgListKeyInfo;
+
+  static inline DIArgList *getEmptyKey() {
+    return DenseMapInfo<DIArgList *>::getEmptyKey();
+  }
+
+  static inline DIArgList *getTombstoneKey() {
+    return DenseMapInfo<DIArgList *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const KeyTy &Key) { return Key.getHashValue(); }
+
+  static unsigned getHashValue(const DIArgList *N) {
+    return KeyTy(N).getHashValue();
+  }
+
+  static bool isEqual(const KeyTy &LHS, const DIArgList *RHS) {
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return LHS.isKeyOf(RHS);
+  }
+
+  static bool isEqual(const DIArgList *LHS, const DIArgList *RHS) {
+    return LHS == RHS;
   }
 };
 
@@ -1470,6 +1502,7 @@ public:
   StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
+  DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
@@ -1633,6 +1666,36 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate &);
+
+  /// Mapping of blocks to collections of "trailing" DPValues. As part of the
+  /// "RemoveDIs" project, debug-info variable location records are going to
+  /// cease being instructions... which raises the problem of where should they
+  /// be recorded when we remove the terminator of a blocks, such as:
+  ///
+  ///    %foo = add i32 0, 0
+  ///    br label %bar
+  ///
+  /// If the branch is removed, a legitimate transient state while editing a
+  /// block, any debug-records between those two instructions will not have a
+  /// location. Each block thus records any DPValue records that "trail" in
+  /// such a way. These are stored in LLVMContext because typically LLVM only
+  /// edits a small number of blocks at a time, so there's no need to bloat
+  /// BasicBlock with such a data structure.
+  SmallDenseMap<BasicBlock *, DPMarker *> TrailingDPValues;
+
+  // Set, get and delete operations for TrailingDPValues.
+  void setTrailingDPValues(BasicBlock *B, DPMarker *M) {
+    assert(!TrailingDPValues.count(B));
+    TrailingDPValues[B] = M;
+  }
+
+  DPMarker *getTrailingDPValues(BasicBlock *B) {
+    return TrailingDPValues.lookup(B);
+  }
+
+  void deleteTrailingDPValues(BasicBlock *B) {
+    TrailingDPValues.erase(B);
+  }
 };
 
 } // end namespace llvm

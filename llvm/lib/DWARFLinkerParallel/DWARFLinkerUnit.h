@@ -10,8 +10,8 @@
 #define LLVM_LIB_DWARFLINKERPARALLEL_DWARFLINKERUNIT_H
 
 #include "DWARFLinkerGlobalData.h"
+#include "IndexedValuesMap.h"
 #include "OutputSections.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWARFLinkerParallel/DWARFLinker.h"
 #include "llvm/DWARFLinkerParallel/StringPool.h"
@@ -31,15 +31,10 @@ public:
   DwarfUnit(LinkingGlobalData &GlobalData, unsigned ID,
             StringRef ClangModuleName)
       : OutputSections(GlobalData), ID(ID), ClangModuleName(ClangModuleName),
-        OutUnitDIE(nullptr) {
-    AcceleratorRecords.setAllocator(&GlobalData.getAllocator());
-  }
+        OutUnitDIE(nullptr) {}
 
   /// Unique id of the unit.
   unsigned getUniqueID() const { return ID; }
-
-  /// Return language of this unit.
-  uint16_t getLanguage() const { return Language; }
 
   /// Returns size of this(newly generated) compile unit.
   uint64_t getUnitSize() const { return UnitSize; }
@@ -92,11 +87,14 @@ public:
   Error emitAbbreviations();
 
   /// Emit .debug_info section for unit DIEs.
-  Error emitDebugInfo(Triple &TargetTriple);
+  Error emitDebugInfo(const Triple &TargetTriple);
 
   /// Emit .debug_line section.
-  Error emitDebugLine(Triple &TargetTriple,
+  Error emitDebugLine(const Triple &TargetTriple,
                       const DWARFDebugLine::LineTable &OutLineTable);
+
+  /// Emit the .debug_str_offsets section for current unit.
+  Error emitDebugStringOffsetSection();
   /// @}
 
   /// \defgroup Methods used for reporting warnings and errors:
@@ -125,7 +123,7 @@ public:
     StringEntry *String = nullptr;
 
     /// Output offset of the DIE this entry describes.
-    uint64_t OutOffset = 0;
+    uint64_t OutOffset;
 
     /// Hash of the fully qualified name.
     uint32_t QualifiedNameHash = 0;
@@ -136,70 +134,26 @@ public:
     /// Type of this accelerator record.
     AccelType Type = AccelType::None;
 
-    /// Avoid using this entry for pub sections.
+    /// Avoid emitting this entry for pub sections.
     bool AvoidForPubSections : 1;
 
     /// Is this an ObjC class implementation?
     bool ObjcClassImplementation : 1;
   };
 
-  void rememberNameForAccelerators(StringEntry *Name, uint64_t OutOffset,
-                                   dwarf::Tag Tag, bool AvoidForPubSections) {
-    AccelInfo Info;
-
-    Info.Type = AccelType::Name;
-    Info.String = Name;
-    Info.OutOffset = OutOffset;
-    Info.Tag = Tag;
-    Info.AvoidForPubSections = AvoidForPubSections;
-
-    AcceleratorRecords.add(Info);
-  }
-  void rememberNamespaceForAccelerators(StringEntry *Name, uint64_t OutOffset,
-                                        dwarf::Tag Tag) {
-    AccelInfo Info;
-
-    Info.Type = AccelType::Namespace;
-    Info.String = Name;
-    Info.OutOffset = OutOffset;
-    Info.Tag = Tag;
-
-    AcceleratorRecords.add(Info);
-  }
-  void rememberObjCNameForAccelerators(StringEntry *Name, uint64_t OutOffset,
-                                       dwarf::Tag Tag) {
-    AccelInfo Info;
-
-    Info.Type = AccelType::ObjC;
-    Info.String = Name;
-    Info.OutOffset = OutOffset;
-    Info.Tag = Tag;
-    Info.AvoidForPubSections = true;
-
-    AcceleratorRecords.add(Info);
-  }
-  void rememberTypeForAccelerators(StringEntry *Name, uint64_t OutOffset,
-                                   dwarf::Tag Tag, uint32_t QualifiedNameHash,
-                                   bool ObjcClassImplementation) {
-    AccelInfo Info;
-
-    Info.Type = AccelType::Type;
-    Info.String = Name;
-    Info.OutOffset = OutOffset;
-    Info.Tag = Tag;
-    Info.QualifiedNameHash = QualifiedNameHash;
-    Info.ObjcClassImplementation = ObjcClassImplementation;
-
-    AcceleratorRecords.add(Info);
-  }
-
   /// Emit .debug_pubnames and .debug_pubtypes for \p Unit.
   void emitPubAccelerators();
 
-  /// Accelerator tables data.
-  ArrayList<AccelInfo> AcceleratorRecords;
+  /// Enumerates accelerator data.
+  virtual void
+  forEachAcceleratorRecord(function_ref<void(AccelInfo &)> Handler) = 0;
 
   /// @}
+
+  /// Returns index(inside .debug_str_offsets) of specified string.
+  virtual uint64_t getDebugStrIndex(const StringEntry *String) {
+    return DebugStringIndexMap.getValueIndex(String);
+  }
 
 protected:
   /// Emit single abbreviation entry.
@@ -208,15 +162,11 @@ protected:
 
   /// Emit single pubnames/pubtypes accelerator entry.
   std::optional<uint64_t>
-  emitPubAcceleratorEntry(SectionDescriptor &OutSection,
-                          DwarfUnit::AccelInfo &Info,
+  emitPubAcceleratorEntry(SectionDescriptor &OutSection, const AccelInfo &Info,
                           std::optional<uint64_t> LengthOffset);
 
   /// Unique ID for the unit.
   unsigned ID = 0;
-
-  /// The DW_AT_language of this unit.
-  uint16_t Language = 0;
 
   /// The name of this unit.
   std::string UnitName;
@@ -240,7 +190,30 @@ protected:
 
   /// Output unit DIE.
   DIE *OutUnitDIE = nullptr;
+
+  /// Cache for file names for this unit.
+  using FileNamesCache =
+      DenseMap<uint64_t, std::pair<std::string, std::string>>;
+  FileNamesCache FileNames;
+
+  /// Maps a string into the index inside .debug_str_offsets section.
+  IndexedValuesMap<const StringEntry *> DebugStringIndexMap;
 };
+
+inline bool isODRLanguage(uint16_t Language) {
+  switch (Language) {
+  case dwarf::DW_LANG_C_plus_plus:
+  case dwarf::DW_LANG_C_plus_plus_03:
+  case dwarf::DW_LANG_C_plus_plus_11:
+  case dwarf::DW_LANG_C_plus_plus_14:
+  case dwarf::DW_LANG_ObjC_plus_plus:
+    return true;
+  default:
+    return false;
+  };
+
+  return false;
+}
 
 } // end of namespace dwarflinker_parallel
 } // end namespace llvm

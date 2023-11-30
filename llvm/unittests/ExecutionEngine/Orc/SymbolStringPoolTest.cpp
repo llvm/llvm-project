@@ -142,4 +142,42 @@ TEST_F(SymbolStringPoolTest, NonOwningPointerRefCounts) {
         << "Copy-assignment of NonOwningSymbolStringPtr changed ref-count";
   }
 }
+
+TEST_F(SymbolStringPoolTest, SymbolStringPoolEntryUnsafe) {
+
+  auto A = SP.intern("a");
+  EXPECT_EQ(getRefCount(A), 1U);
+
+  {
+    // Try creating an unsafe pool entry ref from the given SymbolStringPtr.
+    // This should not affect the ref-count.
+    auto AUnsafe = SymbolStringPoolEntryUnsafe::from(A);
+    EXPECT_EQ(getRefCount(A), 1U);
+
+    // Create a new SymbolStringPtr from the unsafe ref. This should increment
+    // the ref-count.
+    auto ACopy = AUnsafe.copyToSymbolStringPtr();
+    EXPECT_EQ(getRefCount(A), 2U);
+  }
+
+  {
+    // Create a copy of the original string. Move it into an unsafe ref, and
+    // then move it back. None of these operations should affect the ref-count.
+    auto ACopy = A;
+    EXPECT_EQ(getRefCount(A), 2U);
+    auto AUnsafe = SymbolStringPoolEntryUnsafe::take(std::move(ACopy));
+    EXPECT_EQ(getRefCount(A), 2U);
+    ACopy = AUnsafe.moveToSymbolStringPtr();
+    EXPECT_EQ(getRefCount(A), 2U);
+  }
+
+  // Test manual retain / release.
+  auto AUnsafe = SymbolStringPoolEntryUnsafe::from(A);
+  EXPECT_EQ(getRefCount(A), 1U);
+  AUnsafe.retain();
+  EXPECT_EQ(getRefCount(A), 2U);
+  AUnsafe.release();
+  EXPECT_EQ(getRefCount(A), 1U);
+}
+
 } // namespace

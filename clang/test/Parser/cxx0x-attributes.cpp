@@ -451,3 +451,5 @@ namespace P2361 {
                                  // expected-warning {{use of the 'deprecated' attribute is a C++14 extension}}
 [[nodiscard("\123")]] int b(); // expected-error{{invalid escape sequence '\123' in an unevaluated string literal}}
 }
+
+alignas(int) struct AlignAsAttribute {}; // expected-error {{misplaced attributes; expected attributes here}}

@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
+#include "mlir/Dialect/ArmSME/Transforms/PassesEnums.cpp.inc"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
@@ -48,46 +49,38 @@ namespace arm_sme {
 
 using namespace mlir;
 using namespace mlir::arm_sme;
-
-static constexpr char kArmStreamingAttr[] = "arm_streaming";
-static constexpr char kArmLocallyStreamingAttr[] = "arm_locally_streaming";
-static constexpr char kArmZAAttr[] = "arm_za";
-static constexpr char kEnableArmStreamingIgnoreAttr[] =
-    "enable_arm_streaming_ignore";
-
 namespace {
+
+constexpr StringLiteral
+    kEnableArmStreamingIgnoreAttr("enable_arm_streaming_ignore");
+
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
-  EnableArmStreamingPass(ArmStreaming mode, bool enableZA) {
-    this->mode = mode;
-    this->enableZA = enableZA;
+  EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode) {
+    this->streamingMode = streamingMode;
+    this->zaMode = zaMode;
   }
   void runOnOperation() override {
-    if (getOperation()->getAttr(kEnableArmStreamingIgnoreAttr))
+    auto op = getOperation();
+    if (op->getAttr(kEnableArmStreamingIgnoreAttr) ||
+        streamingMode == ArmStreamingMode::Disabled)
       return;
-    StringRef attr;
-    switch (mode) {
-    case ArmStreaming::Default:
-      attr = kArmStreamingAttr;
-      break;
-    case ArmStreaming::Locally:
-      attr = kArmLocallyStreamingAttr;
-      break;
-    }
-    getOperation()->setAttr(attr, UnitAttr::get(&getContext()));
+
+    auto unitAttr = UnitAttr::get(&getContext());
+
+    op->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
 
     // The pass currently only supports enabling ZA when in streaming-mode, but
     // ZA can be accessed by the SME LDR, STR and ZERO instructions when not in
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
-    if (enableZA)
-      getOperation()->setAttr(kArmZAAttr, UnitAttr::get(&getContext()));
+    if (zaMode != ArmZaMode::Disabled)
+      op->setAttr(stringifyArmZaMode(zaMode), unitAttr);
   }
 };
 } // namespace
 
-std::unique_ptr<Pass>
-mlir::arm_sme::createEnableArmStreamingPass(const ArmStreaming mode,
-                                            const bool enableZA) {
-  return std::make_unique<EnableArmStreamingPass>(mode, enableZA);
+std::unique_ptr<Pass> mlir::arm_sme::createEnableArmStreamingPass(
+    const ArmStreamingMode streamingMode, const ArmZaMode zaMode) {
+  return std::make_unique<EnableArmStreamingPass>(streamingMode, zaMode);
 }

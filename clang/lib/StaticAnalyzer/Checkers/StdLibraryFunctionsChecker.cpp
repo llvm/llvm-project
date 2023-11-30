@@ -533,13 +533,11 @@ class StdLibraryFunctionsChecker
     virtual ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                                   const Summary &Summary,
                                   CheckerContext &C) const = 0;
-    /// Get a NoteTag about the changes made to 'errno' and the possible bug.
-    /// It may return \c nullptr (if no bug report from \c ErrnoChecker is
-    /// expected).
-    virtual const NoteTag *describe(CheckerContext &C,
-                                    StringRef FunctionName) const {
-      return nullptr;
-    }
+    /// Get a description about what happens with 'errno' here and how it causes
+    /// a later bug report created by ErrnoChecker.
+    /// Empty return value means that 'errno' related bug may not happen from
+    /// the current analyzed function.
+    virtual const std::string describe(CheckerContext &C) const { return ""; }
 
     virtual ~ErrnoConstraintBase() {}
 
@@ -596,7 +594,8 @@ class StdLibraryFunctionsChecker
   };
 
   /// Set errno constraint at success cases of standard functions.
-  /// Success case: 'errno' is not allowed to be used.
+  /// Success case: 'errno' is not allowed to be used because the value is
+  /// undefined after successful call.
   /// \c ErrnoChecker can emit bug report after such a function call if errno
   /// is used.
   class SuccessErrnoConstraint : public ErrnoConstraintBase {
@@ -607,12 +606,15 @@ class StdLibraryFunctionsChecker
       return errno_modeling::setErrnoForStdSuccess(State, C);
     }
 
-    const NoteTag *describe(CheckerContext &C,
-                            StringRef FunctionName) const override {
-      return errno_modeling::getNoteTagForStdSuccess(C, FunctionName);
+    const std::string describe(CheckerContext &C) const override {
+      return "'errno' becomes undefined after the call";
     }
   };
 
+  /// Set errno constraint at functions that indicate failure only with 'errno'.
+  /// In this case 'errno' is required to be observed.
+  /// \c ErrnoChecker can emit bug report after such a function call if errno
+  /// is overwritten without a read before.
   class ErrnoMustBeCheckedConstraint : public ErrnoConstraintBase {
   public:
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
@@ -622,9 +624,8 @@ class StdLibraryFunctionsChecker
                                                       Call.getOriginExpr());
     }
 
-    const NoteTag *describe(CheckerContext &C,
-                            StringRef FunctionName) const override {
-      return errno_modeling::getNoteTagForStdMustBeChecked(C, FunctionName);
+    const std::string describe(CheckerContext &C) const override {
+      return "reading 'errno' is required to find out if the call has failed";
     }
   };
 
@@ -1392,17 +1393,28 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
     // Still add these note tags, the other checker should add only its
     // specialized note tags. These general note tags are handled always by
     // StdLibraryFunctionsChecker.
+
     ExplodedNode *Pred = Node;
-    if (!Case.getNote().empty()) {
-      const SVal RV = Call.getReturnValue();
-      // If there is a description for this execution branch (summary case),
-      // use it as a note tag.
-      std::string Note =
-          llvm::formatv(Case.getNote().str().c_str(),
-                        cast<NamedDecl>(Call.getDecl())->getDeclName());
-      if (Summary.getInvalidationKd() == EvalCallAsPure) {
+    DeclarationName FunctionName =
+        cast<NamedDecl>(Call.getDecl())->getDeclName();
+
+    std::string ErrnoNote = Case.getErrnoConstraint().describe(C);
+    std::string CaseNote;
+    if (Case.getNote().empty()) {
+      if (!ErrnoNote.empty())
+        ErrnoNote =
+            llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
+    } else {
+      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
+    }
+    const SVal RV = Call.getReturnValue();
+
+    if (Summary.getInvalidationKd() == EvalCallAsPure) {
+      // Do not expect that errno is interesting (the "pure" functions do not
+      // affect it).
+      if (!CaseNote.empty()) {
         const NoteTag *Tag = C.getNoteTag(
-            [Node, Note, RV](PathSensitiveBugReport &BR) -> std::string {
+            [Node, CaseNote, RV](PathSensitiveBugReport &BR) -> std::string {
               // Try to omit the note if we know in advance which branch is
               // taken (this means, only one branch exists).
               // This check is performed inside the lambda, after other
@@ -1414,37 +1426,42 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
               // the successors). This is why this check is only used in the
               // EvalCallAsPure case.
               if (BR.isInteresting(RV) && Node->succ_size() > 1)
-                return Note;
-              return "";
-            });
-        Pred = C.addTransition(NewState, Pred, Tag);
-      } else {
-        const NoteTag *Tag =
-            C.getNoteTag([Note, RV](PathSensitiveBugReport &BR) -> std::string {
-              if (BR.isInteresting(RV))
-                return Note;
+                return CaseNote;
               return "";
             });
         Pred = C.addTransition(NewState, Pred, Tag);
       }
-
-      // Pred may be:
-      //  - a nullpointer, if we reach an already existing node (theoretically);
-      //  - a sink, when NewState is posteriorly overconstrained.
-      // In these situations we cannot add the errno note tag.
-      if (!Pred || Pred->isSink())
-        continue;
+    } else {
+      if (!CaseNote.empty() || !ErrnoNote.empty()) {
+        const NoteTag *Tag =
+            C.getNoteTag([CaseNote, ErrnoNote,
+                          RV](PathSensitiveBugReport &BR) -> std::string {
+              // If 'errno' is interesting, show the user a note about the case
+              // (what happened at the function call) and about how 'errno'
+              // causes the problem. ErrnoChecker sets the errno (but not RV) to
+              // interesting.
+              // If only the return value is interesting, show only the case
+              // note.
+              std::optional<Loc> ErrnoLoc =
+                  errno_modeling::getErrnoLoc(BR.getErrorNode()->getState());
+              bool ErrnoImportant = !ErrnoNote.empty() && ErrnoLoc &&
+                                    BR.isInteresting(ErrnoLoc->getAsRegion());
+              if (ErrnoImportant) {
+                BR.markNotInteresting(ErrnoLoc->getAsRegion());
+                if (CaseNote.empty())
+                  return ErrnoNote;
+                return llvm::formatv("{0}; {1}", CaseNote, ErrnoNote);
+              } else {
+                if (BR.isInteresting(RV))
+                  return CaseNote;
+              }
+              return "";
+            });
+        Pred = C.addTransition(NewState, Pred, Tag);
+      }
     }
 
-    // If we can get a note tag for the errno change, add this additionally to
-    // the previous. This note is only about value of 'errno' and is displayed
-    // if 'errno' is interesting.
-    if (const auto *D = dyn_cast<FunctionDecl>(Call.getDecl()))
-      if (const NoteTag *NT =
-              Case.getErrnoConstraint().describe(C, D->getNameAsString()))
-        Pred = C.addTransition(NewState, Pred, NT);
-
-    // Add the transition if no note tag could be added.
+    // Add the transition if no note tag was added.
     if (Pred == Node && NewState != State)
       C.addTransition(NewState);
   }
@@ -2038,7 +2055,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 ErrnoMustNotBeChecked, GenericSuccessMsg)
           .Case({ArgumentCondition(1U, WithinRange, SingleValue(0)),
                  ReturnValueCondition(WithinRange, SingleValue(0))},
-                ErrnoMustNotBeChecked, GenericSuccessMsg)
+                ErrnoMustNotBeChecked,
+                "Assuming that argument 'size' to '{0}' is 0")
           .ArgConstraint(NotNullBuffer(ArgNo(0), ArgNo(1), ArgNo(2)))
           .ArgConstraint(NotNull(ArgNo(3)))
           .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
@@ -2865,9 +2883,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+            .Case({ArgumentCondition(2, WithinRange, Range(1, IntMax)),
+                   ReturnValueCondition(LessThanOrEq, ArgNo(2)),
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(2, WithinRange, SingleValue(0)),
+                   ReturnValueCondition(WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked,
+                  "Assuming that argument 'bufsize' is 0")
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
@@ -2884,9 +2907,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             ArgTypes{IntTy, ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
             RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(LessThanOrEq, ArgNo(3)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+            .Case({ArgumentCondition(3, WithinRange, Range(1, IntMax)),
+                   ReturnValueCondition(LessThanOrEq, ArgNo(3)),
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ArgumentCondition(3, WithinRange, SingleValue(0)),
+                   ReturnValueCondition(WithinRange, SingleValue(0))},
+                  ErrnoMustNotBeChecked,
+                  "Assuming that argument 'bufsize' is 0")
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))

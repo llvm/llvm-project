@@ -15,7 +15,6 @@
 #define LLVM_TEXTAPI_INTERFACEFILE_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
@@ -248,6 +247,14 @@ public:
   /// Check if the library uses two-level namespace.
   bool isTwoLevelNamespace() const { return IsTwoLevelNamespace; }
 
+  /// Specify if the library is an OS library but not shared cache eligible.
+  void setOSLibNotForSharedCache(bool V = true) {
+    IsOSLibNotForSharedCache = V;
+  }
+
+  /// Check if the library is an OS library that is not shared cache eligible.
+  bool isOSLibNotForSharedCache() const { return IsOSLibNotForSharedCache; }
+
   /// Specify if the library is application extension safe (or not).
   void setApplicationExtensionSafe(bool V = true) { IsAppExtensionSafe = V; }
 
@@ -455,6 +462,7 @@ private:
   PackedVersion CompatibilityVersion;
   uint8_t SwiftABIVersion{0};
   bool IsTwoLevelNamespace{false};
+  bool IsOSLibNotForSharedCache{false};
   bool IsAppExtensionSafe{false};
   bool HasSimSupport{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;

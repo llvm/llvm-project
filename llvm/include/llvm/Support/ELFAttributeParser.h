@@ -12,7 +12,6 @@
 #include "ELFAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include <optional>

@@ -44,6 +44,8 @@ enum ClassKind {
   ClassG,     // Overloaded name without type suffix
 };
 
+enum class ACLEKind { SVE, SME };
+
 using TypeSpec = std::string;
 
 namespace {
@@ -249,7 +251,7 @@ public:
   }
 
   /// Emits the intrinsic declaration to the ostream.
-  void emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter) const;
+  void emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter, ACLEKind Kind) const;
 
 private:
   std::string getMergeSuffix() const { return MergeSuffix; }
@@ -350,6 +352,10 @@ public:
 
   /// Emit arm_sve.h.
   void createHeader(raw_ostream &o);
+
+  // Emits core intrinsics in both arm_sme.h and arm_sve.h
+  void createCoreHeaderIntrinsics(raw_ostream &o, SVEEmitter &Emitter,
+                                  ACLEKind Kind);
 
   /// Emit all the __builtin prototypes and code needed by Sema.
   void createBuiltins(raw_ostream &o);
@@ -1035,7 +1041,8 @@ std::string Intrinsic::mangleName(ClassKind LocalCK) const {
          getMergeSuffix();
 }
 
-void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter) const {
+void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter,
+                              ACLEKind Kind) const {
   bool IsOverloaded = getClassKind() == ClassG && getProto().size() > 1;
 
   std::string FullName = mangleName(ClassS);
@@ -1052,9 +1059,17 @@ void Intrinsic::emitIntrinsic(raw_ostream &OS, SVEEmitter &Emitter) const {
     SMEAttrs += ", arm_preserves_za";
 
   OS << (IsOverloaded ? "__aio " : "__ai ")
-     << "__attribute__((__clang_arm_builtin_alias("
-     << (SMEAttrs.empty() ? "__builtin_sve_" : "__builtin_sme_")
-     << FullName << ")";
+     << "__attribute__((__clang_arm_builtin_alias(";
+
+  switch (Kind) {
+  case ACLEKind::SME:
+    OS << "__builtin_sme_" << FullName << ")";
+    break;
+  case ACLEKind::SVE:
+    OS << "__builtin_sve_" << FullName << ")";
+    break;
+  }
+
   if (!SMEAttrs.empty())
     OS << SMEAttrs;
   OS << "))\n";
@@ -1190,6 +1205,34 @@ void SVEEmitter::createIntrinsic(
           Name, Proto, Merge, MergeSuffix, MemEltType, LLVMName, Flags,
           ImmChecks, TS, ClassG, *this, Guard));
   }
+}
+
+void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
+                                            SVEEmitter &Emitter,
+                                            ACLEKind Kind) {
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  // Sort intrinsics in header file by following order/priority:
+  // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
+  // - Class (is intrinsic overloaded or not)
+  // - Intrinsic name
+  std::stable_sort(Defs.begin(), Defs.end(),
+                   [](const std::unique_ptr<Intrinsic> &A,
+                      const std::unique_ptr<Intrinsic> &B) {
+                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+                       return std::make_tuple(I->getGuard(),
+                                              (unsigned)I->getClassKind(),
+                                              I->getName());
+                     };
+                     return ToTuple(A) < ToTuple(B);
+                   });
+
+  // Actually emit the intrinsic declarations.
+  for (auto &I : Defs)
+    I->emitIntrinsic(OS, Emitter, Kind);
 }
 
 void SVEEmitter::createHeader(raw_ostream &OS) {
@@ -1350,27 +1393,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
       }
   }
 
-  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
-    createIntrinsic(R, Defs);
-
-  // Sort intrinsics in header file by following order/priority:
-  // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
-  // - Class (is intrinsic overloaded or not)
-  // - Intrinsic name
-  std::stable_sort(
-      Defs.begin(), Defs.end(), [](const std::unique_ptr<Intrinsic> &A,
-                                   const std::unique_ptr<Intrinsic> &B) {
-        auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-          return std::make_tuple(I->getGuard(), (unsigned)I->getClassKind(), I->getName());
-        };
-        return ToTuple(A) < ToTuple(B);
-      });
-
-  // Actually emit the intrinsic declarations.
-  for (auto &I : Defs)
-    I->emitIntrinsic(OS, *this);
+  createCoreHeaderIntrinsics(OS, *this, ACLEKind::SVE);
 
   OS << "#define svcvtnt_bf16_x      svcvtnt_bf16_m\n";
   OS << "#define svcvtnt_bf16_f32_x  svcvtnt_bf16_f32_m\n";
@@ -1548,7 +1571,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "#error \"Big endian is currently not supported for arm_sme_draft_spec_subject_to_change.h\"\n";
   OS << "#endif\n";
 
-  OS << "#include <arm_sve.h> \n\n";
+  OS << "#include <arm_sve.h>\n\n";
 
   OS << "/* Function attributes */\n";
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
@@ -1560,30 +1583,7 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "extern \"C\" {\n";
   OS << "#endif\n\n";
 
-  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
-  std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
-  for (auto *R : RV)
-    createIntrinsic(R, Defs);
-
-  // Sort intrinsics in header file by following order/priority similar to SVE:
-  // - Architectural guard
-  // - Class (is intrinsic overloaded or not)
-  // - Intrinsic name
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-                       return std::make_tuple(I->getGuard(),
-                                              (unsigned)I->getClassKind(),
-                                              I->getName());
-                     };
-                     return ToTuple(A) < ToTuple(B);
-                   });
-
-  // Actually emit the intrinsic declaration.
-  for (auto &I : Defs) {
-    I->emitIntrinsic(OS, *this);
-  }
+  createCoreHeaderIntrinsics(OS, *this, ACLEKind::SME);
 
   OS << "#ifdef __cplusplus\n";
   OS << "} // extern \"C\"\n";

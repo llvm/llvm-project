@@ -123,8 +123,8 @@ public:
 
   void clearPromise() {
     Value *Arg = getArgOperand(PromiseArg);
-    setArgOperand(PromiseArg,
-                  ConstantPointerNull::get(Type::getInt8PtrTy(getContext())));
+    setArgOperand(PromiseArg, ConstantPointerNull::get(
+                                  PointerType::getUnqual(getContext())));
     if (isa<AllocaInst>(Arg))
       return;
     assert((isa<BitCastInst>(Arg) || isa<GetElementPtrInst>(Arg)) &&
@@ -185,9 +185,7 @@ public:
   void setCoroutineSelf() {
     assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
            "Coroutine argument is already assigned");
-    auto *const Int8PtrTy = Type::getInt8PtrTy(getContext());
-    setArgOperand(CoroutineArg,
-                  ConstantExpr::getBitCast(getFunction(), Int8PtrTy));
+    setArgOperand(CoroutineArg, getFunction());
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:

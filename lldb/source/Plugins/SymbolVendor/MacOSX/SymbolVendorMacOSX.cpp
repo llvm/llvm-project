@@ -17,7 +17,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/XML.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
@@ -130,7 +129,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
       module_spec.GetUUID() = module_sp->GetUUID();
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
       dsym_fspec =
-          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);
@@ -149,7 +148,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                  FileSystem::Instance().GetByteSize(dsym_fspec),
                                  dsym_file_data_sp, dsym_file_data_offset);
       // Important to save the dSYM FileSpec so we don't call
-      // Symbols::LocateExecutableSymbolFile a second time while trying to
+      // PluginManager::LocateExecutableSymbolFile a second time while trying to
       // add the symbol ObjectFile to this Module.
       if (dsym_objfile_sp && !module_sp->GetSymbolFileFileSpec()) {
         module_sp->SetSymbolFileFileSpec(dsym_fspec);
