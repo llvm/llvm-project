@@ -661,7 +661,8 @@ static bool promoteSingleBlockAlloca(
   // The alloca's debuginfo can be removed as well.
   auto DbgUpdateForAlloca = [&](auto &Container) {
     for (auto *DbgItem : Container)
-      if (DbgItem->isAddressOfVariable() || DbgItem->getExpression()->startsWithDeref())
+      if (DbgItem->isAddressOfVariable() ||
+          DbgItem->getExpression()->startsWithDeref())
         DbgItem->eraseFromParent();
   };
   DbgUpdateForAlloca(Info.DbgUsers);
@@ -820,7 +821,8 @@ void PromoteMem2Reg::run() {
   auto RemoveDbgDeclares = [&](auto &Container) {
     for (auto &DbgUsers : Container) {
       for (auto *DbgItem : DbgUsers)
-        if (DbgItem->isAddressOfVariable() || DbgItem->getExpression()->startsWithDeref())
+        if (DbgItem->isAddressOfVariable() ||
+            DbgItem->getExpression()->startsWithDeref())
           DbgItem->eraseFromParent();
     }
   };
