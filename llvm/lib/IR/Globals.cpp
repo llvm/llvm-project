@@ -158,9 +158,9 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     // that it will stay the same, e.g., if the files are checked out from
     // version control in different locations.
     if (FileName.empty())
-      NewName = NewName.insert(0, "<unknown>:");
+      NewName = NewName.insert(0, "<unknown>;");
     else
-      NewName = NewName.insert(0, FileName.str() + ":");
+      NewName = NewName.insert(0, FileName.str() + ";");
   }
   return NewName;
 }
