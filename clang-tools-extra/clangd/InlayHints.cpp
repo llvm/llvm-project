@@ -589,21 +589,28 @@ public:
     return true;
   }
 
+  // Carefully recurse into PseudoObjectExprs, which typically incorporate
+  // a syntactic expression and several semantic expressions.
   bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
-    // Do not show inlay hints for the __builtin_dump_struct, which would
-    // expand to a PseudoObjectExpr that includes a couple of calls to a
-    // printf function. Printing parameter names for that anyway would end up
-    // with duplicate parameter names (which, however, got de-duplicated after
-    // visiting) for the printf function.
-    if (auto *CE = dyn_cast<CallExpr>(E->getSyntacticForm());
-        CE && CE->getBuiltinCallee() == Builtin::BI__builtin_dump_struct)
-      // Only traverse the syntactic forms. This leaves the door open in case
-      // the arguments in the syntactic form for __builtin_dump_struct could
-      // possibly get parameter names.
-      return RecursiveASTVisitor<InlayHintVisitor>::TraverseStmt(
-          E->getSyntacticForm());
-    // FIXME: Shall we ignore semantic forms for other pseudo object
-    // expressions?
+    Expr *SyntacticExpr = E->getSyntacticForm();
+    if (isa<CallExpr>(SyntacticExpr))
+      // Since the counterpart semantics usually get the identical source
+      // locations as the syntactic one, visiting those would end up presenting
+      // confusing hints e.g., __builtin_dump_struct.
+      // Thus, only traverse the syntactic forms if this is written as a
+      // CallExpr. This leaves the door open in case the arguments in the
+      // syntactic form could possibly get parameter names.
+      return RecursiveASTVisitor<InlayHintVisitor>::TraverseStmt(SyntacticExpr);
+    // We don't want the hints for some of the MS property extensions.
+    // e.g.
+    // struct S {
+    //   __declspec(property(get=GetX, put=PutX)) int x[];
+    //   void PutX(int y);
+    //   void Work(int y) { x = y; } // Bad: `x = y: y`.
+    // };
+    if (isa<BinaryOperator>(SyntacticExpr))
+      return true;
+    // FIXME: Handle other forms of a pseudo object expression.
     return RecursiveASTVisitor<InlayHintVisitor>::TraversePseudoObjectExpr(E);
   }
 

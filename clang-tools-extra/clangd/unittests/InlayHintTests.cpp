@@ -1709,7 +1709,8 @@ TEST(DesignatorHints, NoCrash) {
     void test() {
       Foo f{A(), $b[[1]]};
     }
-  )cpp", ExpectedHint{".b=", "b"});
+  )cpp",
+                        ExpectedHint{".b=", "b"});
 }
 
 TEST(InlayHints, RestrictRange) {
@@ -1729,8 +1730,11 @@ TEST(ParameterHints, PseudoObjectExpr) {
     struct S {
       __declspec(property(get=GetX, put=PutX)) int x[];
       int GetX(int y, int z) { return 42 + y; }
-      // FIXME: Undesired hint `x = y: y`. This builds a PseudoObjectExpr too.
-      void PutX(int y) { x = $one[[y]]; }
+      void PutX(int) { }
+
+      // This is a PseudoObjectExpression whose syntactic form is a binary
+      // operator.
+      void Work(int y) { x = y; } // Not `x = y: y`.
     };
 
     int printf(const char *Format, ...);
@@ -1741,17 +1745,16 @@ TEST(ParameterHints, PseudoObjectExpr) {
       printf($Param[["Hello, %d"]], 42); // Normal calls are not affected.
       // This builds a PseudoObjectExpr, but here it's useful for showing the
       // arguments from the semantic form.
-      return s.x[ $two[[1]] ][ $three[[2]] ]; // `x[y: 1][z: 2]`
+      return s.x[ $one[[1]] ][ $two[[2]] ]; // `x[y: 1][z: 2]`
     }
   )cpp");
   auto TU = TestTU::withCode(Code.code());
   TU.ExtraArgs.push_back("-fms-extensions");
   auto AST = TU.build();
   EXPECT_THAT(inlayHints(AST, std::nullopt),
-              ElementsAre(HintMatcher(ExpectedHint{"y: ", "one"}, Code),
-                          HintMatcher(ExpectedHint{"Format: ", "Param"}, Code),
-                          HintMatcher(ExpectedHint{"y: ", "two"}, Code),
-                          HintMatcher(ExpectedHint{"z: ", "three"}, Code)));
+              ElementsAre(HintMatcher(ExpectedHint{"Format: ", "Param"}, Code),
+                          HintMatcher(ExpectedHint{"y: ", "one"}, Code),
+                          HintMatcher(ExpectedHint{"z: ", "two"}, Code)));
 }
 
 TEST(ParameterHints, ArgPacksAndConstructors) {
