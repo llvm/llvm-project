@@ -471,7 +471,7 @@ void HLSLExternalSemaSource::forwardDeclareHLSLTypes() {
   CXXRecordDecl *Decl;
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWBuffer")
              .addTemplateArgumentList()
-             .addTypeParameter("element_type", SemaPtr->getASTContext().FloatTy)
+             .addTypeParameter("element_type")
              .finalizeTemplateArgs()
              .Record;
   if (!Decl->isCompleteDefinition())

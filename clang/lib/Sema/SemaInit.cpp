@@ -10573,7 +10573,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
          diag::err_deduced_non_class_template_specialization_type)
       << (int)getTemplateNameKindForDiagnostics(TemplateName) << TemplateName;
     if (auto *TD = TemplateName.getAsTemplateDecl())
-      Diag(TD->getLocation(), diag::note_template_decl_here);
+      NoteTemplateLocation(*TD);
     return QualType();
   }
 

@@ -11462,7 +11462,7 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
           GuidedTemplateDecl->getDeclContext()->getRedeclContext())) {
     Diag(D.getIdentifierLoc(), diag::err_deduction_guide_wrong_scope)
       << GuidedTemplateDecl;
-    Diag(GuidedTemplateDecl->getLocation(), diag::note_template_decl_here);
+    NoteTemplateLocation(*GuidedTemplateDecl);
   }
 
   auto &DS = D.getMutableDeclSpec();
