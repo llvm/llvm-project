@@ -136,14 +136,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.scanf
     libc.src.stdio.fscanf
 
-    # search.h entrypoints
-    libc.src.search.hcreate
-    libc.src.search.hcreate_r
-    libc.src.search.hsearch
-    libc.src.search.hsearch_r
-    libc.src.search.hdestroy
-    libc.src.search.hdestroy_r
-
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mmap
@@ -491,6 +483,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.spawn.posix_spawn_file_actions_addopen
     libc.src.spawn.posix_spawn_file_actions_destroy
     libc.src.spawn.posix_spawn_file_actions_init
+
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
 
     # threads.h entrypoints
     libc.src.threads.call_once
