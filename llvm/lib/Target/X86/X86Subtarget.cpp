@@ -83,32 +83,18 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
   if (is64Bit()) {
     // 64-bit ELF PIC local references may use GOTOFF relocations.
     if (isTargetELF()) {
-      switch (TM.getCodeModel()) {
-      // 64-bit small code model is simple: All rip-relative.
-      case CodeModel::Tiny:
-        llvm_unreachable("Tiny codesize model not supported on X86");
-      case CodeModel::Small:
-      case CodeModel::Kernel:
-        return X86II::MO_NO_FLAG;
+      CodeModel::Model CM = TM.getCodeModel();
+      assert(CM != CodeModel::Tiny &&
+             "Tiny codesize model not supported on X86");
+      // Large objects use GOTOFF, otherwise use RIP-rel access.
+      if (auto *GO = dyn_cast_or_null<GlobalObject>(GV))
+        return TM.isLargeGlobalObject(GO) ? X86II::MO_GOTOFF
+                                          : X86II::MO_NO_FLAG;
 
-      // The large PIC code model uses GOTOFF.
-      case CodeModel::Large:
-        return X86II::MO_GOTOFF;
-
-      // Medium is a hybrid: RIP-rel for code and non-large data, GOTOFF for
-      // remaining DSO local data.
-      case CodeModel::Medium:
-        // Constant pool and jump table handling pass a nullptr to this
-        // function so we need to use isa_and_nonnull.
-        if (isa_and_nonnull<Function>(GV))
-          return X86II::MO_NO_FLAG; // All code is RIP-relative
-        if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV)) {
-          if (TM.isLargeData(GVar))
-            return X86II::MO_GOTOFF;
-        }
-        return X86II::MO_NO_FLAG;    // Local symbols use GOTOFF.
-      }
-      llvm_unreachable("invalid code model");
+      // For non-GlobalObjects, the small and medium code models treat them as
+      // accessible with a RIP-rel access. The large code model uses GOTOFF to
+      // access everything that's not explicitly small.
+      return CM == CodeModel::Large ? X86II::MO_GOTOFF : X86II::MO_NO_FLAG;
     }
 
     // Otherwise, this is either a RIP-relative reference or a 64-bit movabsq,
