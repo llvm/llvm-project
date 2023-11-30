@@ -1575,36 +1575,25 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 
 bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
     const MachineInstr &MI) const {
+
   if (TargetInstrInfo::isReallyTriviallyReMaterializable(MI))
     return true;
 
-  const MachineFunction &MF = *MI.getMF();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (MI.mayLoad() && AggressiveLoadRemat) {
+    const MachineFunction &MF = *MI.getMF();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  const MachineOperand &Dest = MI.getOperand(0);
-  if (!MRI.hasOneUse(Dest.getReg()))
-    return false;
+    const MachineOperand &Dest = MI.getOperand(0);
+    if (!MRI.hasOneUse(Dest.getReg()))
+      return false;
 
-  MachineInstr *UseMI = &*MRI.use_instr_begin(Dest.getReg());
-  MachineBasicBlock::const_iterator DefItr(MI);
-  MachineBasicBlock::const_iterator UseItr(UseMI);
+    MachineInstr *UseMI = &*MRI.use_instr_begin(Dest.getReg());
+    MachineBasicBlock::const_iterator DefItr(MI);
+    MachineBasicBlock::const_iterator UseItr(UseMI);
+    const MachineBasicBlock *MBB = nullptr;
+    if ((MBB = MI.getParent()) != UseMI->getParent())
+      return false;
 
-  const MachineBasicBlock *MBB = nullptr;
-  if ((MBB = MI.getParent()) != UseMI->getParent())
-    return false;
-
-  // When loading from stack and the stack slot is not modified before its use,
-  // then materialize this load.
-  int FrameIdx = 0;
-  if (isLoadFromStackSlot(MI, FrameIdx) && AggressiveLoadRemat) {
-    for (; DefItr != UseItr && DefItr != MBB->end(); DefItr++) {
-      int StoreFrameIdx = 0;
-      if ((*DefItr).isCall() || (isStoreToStackSlot(*DefItr, StoreFrameIdx) &&
-                                 StoreFrameIdx == FrameIdx))
-        return false;
-    }
-    return true;
-  } else if (MI.mayLoad() && AggressiveLoadRemat) {
     for (; DefItr != UseItr && DefItr != MBB->end(); DefItr++) {
       if ((*DefItr).isCall() || (*DefItr).mayStore())
         return false;

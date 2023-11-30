@@ -26,10 +26,10 @@ define <2 x double> @v2f64(<2 x double> %x, <2 x double> %y) nounwind {
 ; CHECK-NEXT:    fadd.d a0, a0, a4
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    sw a1, 12(sp)
+; CHECK-NEXT:    lw a0, 8(sp)
 ; CHECK-NEXT:    lw a1, 12(sp)
 ; CHECK-NEXT:    sw a2, 8(sp)
 ; CHECK-NEXT:    sw a3, 12(sp)
-; CHECK-NEXT:    lw a0, 8(sp)
 ; CHECK-NEXT:    lw a2, 8(sp)
 ; CHECK-NEXT:    lw a3, 12(sp)
 ; CHECK-NEXT:    addi sp, sp, 16
