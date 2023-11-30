@@ -265,6 +265,10 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
     if (auto UJ = dyn_cast<User>(J))
       for (auto &U : UJ->uses()) {
         if (U->getType()->isPointerTy()) {
+          if (StoreInst *SI = dyn_cast<StoreInst>(U.getUser())) {
+            if (SI->getPointerOperandIndex() != U.getOperandNo())
+              continue;
+          }
           if (AA->alias(U, AAPtr)) {
             Instruction *K = cast<Instruction>(U.getUser());
             if (!Visited.count(K))

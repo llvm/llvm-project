@@ -75,4 +75,20 @@ bb:
   ret void
 }
 
+define amdgpu_kernel void @test_store_ptr(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) {
+bb:
+; CHECK-LABEL: @test_store_ptr
+; GEPs are supported so the alignment is changed from 2 to 4
+; CHECK: load i32, ptr addrspace(1) %tmp2, align 4
+; This store uses a pointer not as adress but as a value to store!
+; CHECK: store ptr addrspace(1) %tmp2, ptr addrspace(3) %tmp4, align 2 
+  %tmp2 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 1
+  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) %arg, i64 4) ]
+  %tmp3 = load i32, ptr addrspace(1) %tmp2, align 2
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(3) %arg1, i32 1
+  store i32 %tmp3, ptr addrspace(3) %tmp4, align 4
+  store ptr addrspace(1) %tmp2, ptr addrspace(3) %tmp4, align 2
+  ret void
+}
+
 declare void @llvm.assume(i1 noundef)
