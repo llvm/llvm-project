@@ -38,48 +38,12 @@ struct PluginAdaptorTy {
   std::string RTLName;
 #endif
 
-#define DEFINE_PLUGIN_API_HANDLE(NAME)                                         \
+#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
   using NAME##_ty = decltype(__tgt_rtl_##NAME);                                \
   NAME##_ty *NAME = nullptr;
 
-  // Functions implemented in the RTL.
-  DEFINE_PLUGIN_API_HANDLE(init_plugin);
-  DEFINE_PLUGIN_API_HANDLE(is_valid_binary);
-  DEFINE_PLUGIN_API_HANDLE(is_valid_binary_info);
-  DEFINE_PLUGIN_API_HANDLE(is_data_exchangable);
-  DEFINE_PLUGIN_API_HANDLE(number_of_devices);
-  DEFINE_PLUGIN_API_HANDLE(init_device);
-  DEFINE_PLUGIN_API_HANDLE(load_binary);
-  DEFINE_PLUGIN_API_HANDLE(data_alloc);
-  DEFINE_PLUGIN_API_HANDLE(data_submit);
-  DEFINE_PLUGIN_API_HANDLE(data_submit_async);
-  DEFINE_PLUGIN_API_HANDLE(data_retrieve);
-  DEFINE_PLUGIN_API_HANDLE(data_retrieve_async);
-  DEFINE_PLUGIN_API_HANDLE(data_exchange);
-  DEFINE_PLUGIN_API_HANDLE(data_exchange_async);
-  DEFINE_PLUGIN_API_HANDLE(data_delete);
-  DEFINE_PLUGIN_API_HANDLE(launch_kernel);
-  DEFINE_PLUGIN_API_HANDLE(init_requires);
-  DEFINE_PLUGIN_API_HANDLE(synchronize);
-  DEFINE_PLUGIN_API_HANDLE(query_async);
-  DEFINE_PLUGIN_API_HANDLE(supports_empty_images);
-  DEFINE_PLUGIN_API_HANDLE(set_info_flag);
-  DEFINE_PLUGIN_API_HANDLE(print_device_info);
-  DEFINE_PLUGIN_API_HANDLE(create_event);
-  DEFINE_PLUGIN_API_HANDLE(record_event);
-  DEFINE_PLUGIN_API_HANDLE(wait_event);
-  DEFINE_PLUGIN_API_HANDLE(sync_event);
-  DEFINE_PLUGIN_API_HANDLE(destroy_event);
-  DEFINE_PLUGIN_API_HANDLE(init_async_info);
-  DEFINE_PLUGIN_API_HANDLE(init_device_info);
-  DEFINE_PLUGIN_API_HANDLE(data_lock);
-  DEFINE_PLUGIN_API_HANDLE(data_unlock);
-  DEFINE_PLUGIN_API_HANDLE(data_notify_mapped);
-  DEFINE_PLUGIN_API_HANDLE(data_notify_unmapped);
-  DEFINE_PLUGIN_API_HANDLE(set_device_offset);
-  DEFINE_PLUGIN_API_HANDLE(initialize_record_replay);
-
-#undef DEFINE_PLUGIN_API_HANDLE
+#include "Shared/PluginAPI.inc"
+#undef PLUGIN_API_HANDLE
 
   // Are there images associated with this RTL.
   bool IsUsed = false;
