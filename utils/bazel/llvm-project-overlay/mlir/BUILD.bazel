@@ -601,8 +601,8 @@ mlir_c_api_cc_library(
         ":Support",
         ":ToLLVMIRTranslation",
         ":ToLLVMIRTranslationRegistration",
-        "//third_party/llvm/llvm-project/llvm:Core",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Core",
+        "//llvm:Support",
     ],
 )
 
