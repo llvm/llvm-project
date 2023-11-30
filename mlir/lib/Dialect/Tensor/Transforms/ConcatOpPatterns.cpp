@@ -5,7 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -32,7 +33,6 @@ struct DecomposeTensorConcatOp : public OpRewritePattern<ConcatOp> {
 
   LogicalResult matchAndRewrite(ConcatOp concatOp,
                                 PatternRewriter &rewriter) const override {
-
     Location loc = concatOp.getLoc();
     FailureOr<Value> dest =
         tensor::getOrCreateDestination(rewriter, loc, concatOp->getResult(0));
@@ -50,21 +50,28 @@ struct DecomposeTensorConcatOp : public OpRewritePattern<ConcatOp> {
     int64_t rank = concatOp.getResultType().getRank();
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
-    SmallVector<OpFoldResult> dimOffsets;
-    dimOffsets.push_back(rewriter.getIndexAttr(0));
 
-    for (auto input : concatOp.getInputs().drop_front()) {
-      Value size = rewriter.createOrFold<tensor::DimOp>(loc, input, dimValue);
-      Value currentOffset =
-          getValueOrCreateConstantIndexOp(rewriter, loc, dimOffsets.back());
-      Value total =
-          rewriter.createOrFold<arith::AddIOp>(loc, currentOffset, size);
-      dimOffsets.push_back(getAsOpFoldResult(total));
+    // Compute the partial sums for the slice offsets.
+    AffineExpr sum = rewriter.getAffineDimExpr(0);
+    SmallVector<AffineExpr> partialSums{sum};
+    SmallVector<OpFoldResult> offsetStrides{rewriter.getIndexAttr(0)};
+    for (auto [idx, input] :
+         llvm::enumerate(concatOp.getInputs().drop_back())) {
+      sum = sum + rewriter.getAffineDimExpr(idx + 1);
+      partialSums.push_back(sum);
+      offsetStrides.push_back(
+          rewriter.createOrFold<tensor::DimOp>(loc, input, dimValue));
     }
+    auto partialSumMap = AffineMap::get(concatOp.getInputs().size(), 0,
+                                        partialSums, rewriter.getContext());
+    SmallVector<OpFoldResult> dimOffsets =
+        affine::makeComposedFoldedMultiResultAffineApply(
+            rewriter, loc, partialSumMap, offsetStrides);
 
+    // Construct the chain of insert_slice ops into the destination.
     Value result = *dest;
-
-    for (auto [input, offset] : llvm::zip(concatOp.getInputs(), dimOffsets)) {
+    for (auto [input, offset] :
+         llvm::zip_equal(concatOp.getInputs(), dimOffsets)) {
       SmallVector<OpFoldResult> sizes =
           tensor::getMixedSizes(rewriter, loc, input);
       offsets[dim] = offset;

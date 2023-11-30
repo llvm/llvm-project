@@ -476,53 +476,32 @@ void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ConcatOp
 //===----------------------------------------------------------------------===//
 
-FailureOr<RankedTensorType> ConcatOp::inferResultType(int64_t dim,
-                                                      TypeRange inputTypes) {
-  if (dim < 0)
-    return failure();
+RankedTensorType ConcatOp::inferResultType(int64_t dim, TypeRange inputTypes) {
+  assert(!inputTypes.empty() && "cannot concatenate 0 tensors");
+  auto tensorTypes =
+      llvm::to_vector<4>(llvm::map_range(inputTypes, [](Type type) {
+        return llvm::cast<RankedTensorType>(type);
+      }));
+  int64_t concatRank = tensorTypes[0].getRank();
 
-  if (inputTypes.empty())
-    return failure();
+  // The concatenation dim must be in the range [0, rank).
+  assert(dim >= 0 && dim < concatRank && "Invalid concatenation dim");
 
-  RankedTensorType init = dyn_cast<RankedTensorType>(inputTypes[0]);
-  if (!init)
-    return failure();
-
-  // The tensor rank must be greater than the concatenation dim.
-  int64_t concatRank = init.getRank();
-  if (concatRank <= dim)
-    return failure();
-
-  SmallVector<int64_t> sizes(init.getShape());
-  Type elementType = init.getElementType();
-  for (Type type : inputTypes.drop_front()) {
-    RankedTensorType tensorType = dyn_cast<RankedTensorType>(type);
-    if (!tensorType || tensorType.getRank() != concatRank ||
-        tensorType.getElementType() != elementType)
-      return failure();
-
-    for (auto [index, currSize] : llvm::enumerate(tensorType.getShape())) {
-      int64_t size = sizes[index];
-      bool hasDynamic =
-          ShapedType::isDynamic(size) || ShapedType::isDynamic(currSize);
-      if (static_cast<int64_t>(index) == dim) {
-        sizes[index] = hasDynamic ? ShapedType::kDynamic : currSize + size;
-        continue;
-      }
-
-      // If the sizes are statically different for a dimension other than the
-      // concated dimension, the concatenation is invalid. Both dynamic or
-      // mixed dynamic and static is fine.
-      if (currSize != size && !hasDynamic)
-        return failure();
-
-      // If the new size is not dynamic, use the additional static information.
-      if (!ShapedType::isDynamic(currSize))
-        sizes[index] = currSize;
-    }
+  SmallVector<int64_t> sizes((concatRank));
+  for (int64_t i = 0, e = concatRank; i < e; ++i) {
+    if (i == dim)
+      continue;
+    SaturatedInteger size;
+    for (auto tensorType : tensorTypes)
+      size = *size.desaturate(SaturatedInteger::wrap(tensorType.getDimSize(i)));
+    sizes[i] = size.asInteger();
   }
-
-  return RankedTensorType::get(sizes, elementType);
+  auto concatSize = SaturatedInteger::wrap(0);
+  for (auto tensorType : tensorTypes)
+    concatSize =
+        concatSize + SaturatedInteger::wrap(tensorType.getDimSize(dim));
+  sizes[dim] = concatSize.asInteger();
+  return RankedTensorType::get(sizes, tensorTypes[0].getElementType());
 }
 
 void ConcatOp::build(OpBuilder &builder, OperationState &result, int64_t dim,
@@ -542,8 +521,7 @@ LogicalResult ConcatOp::verify() {
     inputTypes.push_back(cast<RankedTensorType>(input.getType()));
 
   RankedTensorType resultType = getResultType();
-
-  int64_t resultRank = resultType.getRank();
+  int64_t resultRank = getRank();
   if (llvm::any_of(inputTypes, [resultRank](RankedTensorType type) {
         return type.getRank() != resultRank;
       }))
@@ -555,22 +533,41 @@ LogicalResult ConcatOp::verify() {
       }))
     return emitOpError("inputs and result element type must match");
 
-  if (static_cast<int64_t>(getDim()) >= resultRank)
+  int64_t dim = getDim();
+  if (dim >= resultRank)
     return emitOpError("concatenation dim must be less than the tensor rank");
 
-  FailureOr<RankedTensorType> inferredResultType =
-      inferResultType(getDim(), getInputs().getTypes());
-  if (failed(inferredResultType))
-    return emitOpError("failed to infer concatenation result type from inputs");
+  SmallVector<int64_t> sizes((resultRank));
+  for (int64_t i = 0, e = resultRank; i < e; ++i) {
+    if (i == dim)
+      continue;
+    SaturatedInteger size;
+    for (auto tensorType : inputTypes) {
+      FailureOr<SaturatedInteger> maybeSize =
+          size.desaturate(SaturatedInteger::wrap(tensorType.getDimSize(i)));
+      if (failed(maybeSize))
+        return emitOpError("static concatenation size mismatch along ")
+               << "non-concatenated dimension " << i;
+      size = *maybeSize;
+    }
+    sizes[i] = size.asInteger();
+  }
+  auto concatSize = SaturatedInteger::wrap(0);
+  for (auto tensorType : inputTypes)
+    concatSize =
+        concatSize + SaturatedInteger::wrap(tensorType.getDimSize(dim));
+  sizes[dim] = concatSize.asInteger();
+  auto inferredResultType =
+      RankedTensorType::get(sizes, inputTypes[0].getElementType());
 
   for (auto [inferredSize, actualSize] :
-       llvm::zip_equal(inferredResultType->getShape(), resultType.getShape())) {
+       llvm::zip_equal(inferredResultType.getShape(), resultType.getShape())) {
     bool hasDynamic = ShapedType::isDynamic(inferredSize) ||
                       ShapedType::isDynamic(actualSize);
     if (!hasDynamic && inferredSize != actualSize)
       return emitOpError("result type ")
              << resultType << "does not match inferred shape "
-             << *inferredResultType << " static sizes";
+             << inferredResultType << " static sizes";
   }
 
   return success();
@@ -581,11 +578,7 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   ValueRange inputs = getInputs();
   int64_t dim = getDim();
-  FailureOr<RankedTensorType> maybeInferredResultType =
-      inferResultType(dim, inputs.getTypes());
-  if (failed(maybeInferredResultType))
-    return failure();
-  RankedTensorType inferredResultType = *maybeInferredResultType;
+  RankedTensorType inferredResultType = inferResultType(dim, inputs.getTypes());
 
   Value init = inputs[0];
   int64_t rank = getType().getRank();
@@ -595,43 +588,40 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
   // Pre-populate the result sizes with as much static information as possible
   // from the given result type, as well as the inferred result type, otherwise
   // use the dim sizes from the first input.
-  bool hasStaticConcatDim = false;
   for (int64_t i = 0; i < rank; ++i) {
+    if (i == dim)
+      continue;
     if (!getType().isDynamicDim(i)) {
       reifiedReturnShapes[0][i] = builder.getIndexAttr(getType().getDimSize(i));
-      if (i == dim)
-        hasStaticConcatDim = true;
     } else if (!inferredResultType.isDynamicDim(i)) {
-      // ReifyRankedShapedTypeOpInterface requires that reifyResultShapes
-      // returns a Value for dynamic dimensions.
       reifiedReturnShapes[0][i] =
-          builder
-              .create<arith::ConstantIndexOp>(getLoc(),
-                                              inferredResultType.getDimSize(i))
-              .getResult();
-      if (i == dim)
-        hasStaticConcatDim = true;
+          builder.getIndexAttr(inferredResultType.getDimSize(i));
     } else {
       reifiedReturnShapes[0][i] =
           builder.create<tensor::DimOp>(init.getLoc(), init, i).getResult();
     }
   }
 
-  // Check if we already know the size of the concatenation dim statically.
-  if (hasStaticConcatDim)
-    return success();
-
   // Take the sum of the input sizes along the concatenated dim.
-  Value concatValue = getValueOrCreateConstantIndexOp(
-      builder, getLoc(), reifiedReturnShapes[0][dim]);
-
-  for (Value input : inputs.drop_front()) {
-    Value newSize =
-        builder.createOrFold<tensor::DimOp>(input.getLoc(), input, dim);
-    concatValue = builder.createOrFold<arith::AddIOp>(input.getLoc(),
-                                                      concatValue, newSize);
+  AffineExpr sum = builder.getAffineDimExpr(0);
+  SmallVector<OpFoldResult> sizes{
+      builder.create<tensor::DimOp>(init.getLoc(), init, 0).getResult()};
+  for (auto [idx, input] : llvm::enumerate(inputs.drop_front())) {
+    sum = sum + builder.getAffineDimExpr(idx + 1);
+    sizes.push_back(
+        builder.createOrFold<tensor::DimOp>(input.getLoc(), input, dim));
   }
-  reifiedReturnShapes[0][dim] = concatValue;
+  reifiedReturnShapes[0][dim] =
+      affine::makeComposedFoldedAffineApply(builder, getLoc(), sum, sizes);
+
+  // ReifyRankedShapedTypeOpInterface requires that reifyResultShapes
+  // returns a Value for dynamic dimensions.
+  for (int64_t i = 0; i < rank; ++i) {
+    if (getType().isDynamicDim(i)) {
+      reifiedReturnShapes[0][i] = getValueOrCreateConstantIndexOp(
+          builder, getLoc(), reifiedReturnShapes[0][i]);
+    }
+  }
   return success();
 }
 

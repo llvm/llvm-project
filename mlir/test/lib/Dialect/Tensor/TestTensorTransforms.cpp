@@ -77,10 +77,6 @@ struct TestTensorTransforms
       llvm::cl::desc("Test folding ops into tensor.pack and tensor.unpack"),
       llvm::cl::init(false)};
 
-  Option<bool> testDecomposeConcat{
-      *this, "test-decompose-concat",
-      llvm::cl::desc("Test decomposing tensor.concat"), llvm::cl::init(false)};
-
   Option<bool> useForeach{
       *this, "use-foreach",
       llvm::cl::desc(
@@ -109,12 +105,6 @@ static void applyReassociativeReshapeFoldingPatterns(Operation *rootOp) {
 static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
-}
-
-static void applyDecomposeConcatPatterns(Operation *rootOp) {
-  RewritePatternSet patterns(rootOp->getContext());
-  tensor::populateDecomposeTensorConcatPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
@@ -398,8 +388,6 @@ void TestTensorTransforms::runOnOperation() {
     applyReassociativeReshapeFoldingPatterns(rootOp);
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);
-  if (testDecomposeConcat)
-    applyDecomposeConcatPatterns(rootOp);
   if (testRewriteExtractSliceWithTiledCollapseShape) {
     if (failed(
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))

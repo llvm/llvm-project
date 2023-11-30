@@ -132,8 +132,8 @@ def Tensor_ConcatOp : Tensor_Op<"concat",
   let summary = "tensor concatenation operation";
   let description = [{
     The "concat" operation constructs a tensor out of a variadic list of input
-    tensors, concatenated along a static dimension. All inputs and the result
-    type must share the same rank.
+    tensors, concatenated along a static dimension number. All inputs and the
+    result type must share the same rank.
 
     `dim` specifies the dimension along which to concatenate. The size of the
     concatenated dimension in the result must be equal to the sum of the sizes
@@ -169,10 +169,14 @@ def Tensor_ConcatOp : Tensor_Op<"concat",
     // types, being concatenated along `dim`. Because concatenation can specify
     // more static information than can automatically be inferred,
     // InferTypeOpInterface is not used.
-    static FailureOr<RankedTensorType> inferResultType(int64_t dim, TypeRange inputTypes);
+    static RankedTensorType inferResultType(int64_t dim, TypeRange inputTypes);
 
     RankedTensorType getResultType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
+    }
+
+    int64_t getRank() {
+      return ::llvm::cast<RankedTensorType>(getResult().getType()).getRank();
     }
   }];
 

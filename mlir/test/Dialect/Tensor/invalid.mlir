@@ -49,7 +49,7 @@ func.func @concat_element_type_mismatch(%arg0: tensor<3xf32>, %arg1: tensor<3xi3
 // -----
 
 func.func @concat_incompatible_input_types(%arg0: tensor<3x4xf32>, %arg1: tensor<4x5xf32>) {
-  // expected-error@+1 {{failed to infer concatenation result type from inputs}}
+  // expected-error@+1 {{static concatenation size mismatch along non-concatenated dimension 1}}
   %0 = tensor.concat dim(0) %arg0, %arg1 : (tensor<3x4xf32>, tensor<4x5xf32>) -> tensor<7x5xf32>
   return
 }
