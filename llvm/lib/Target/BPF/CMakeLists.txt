@@ -26,7 +26,6 @@ add_llvm_target(BPFCodeGen
   BPFISelLowering.cpp
   BPFMCInstLower.cpp
   BPFPreserveDIType.cpp
-  BPFPreserveStaticOffset.cpp
   BPFRegisterInfo.cpp
   BPFSelectionDAGInfo.cpp
   BPFSubtarget.cpp
