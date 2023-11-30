@@ -412,8 +412,7 @@ void LoopEmitter::initializeLoopEmit(
     auto stt = getSparseTensorType(tensor);
     const Level lvlRank = stt.getLvlRank();
     const auto shape = rtp.getShape();
-    const auto enc = getSparseTensorEncoding(rtp);
-    const Level cooStart = enc ? getCOOStart(enc) : lvlRank;
+    const Level cooStart = stt.getCOOStart();
 
     SmallVector<Value> lvlSzs;
     for (Level l = 0; l < stt.getLvlRank(); l++) {
@@ -457,8 +456,8 @@ void LoopEmitter::initializeLoopEmit(
     // values.
     // Delegates extra output initialization to clients.
     bool isOutput = isOutputTensor(t);
-    Type elementType = rtp.getElementType();
-    if (!enc) {
+    Type elementType = stt.getElementType();
+    if (!stt.hasEncoding()) {
       // Non-annotated dense tensors.
       BaseMemRefType denseTp = MemRefType::get(shape, elementType);
 
