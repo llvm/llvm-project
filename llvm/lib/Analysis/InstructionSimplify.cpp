@@ -4447,14 +4447,22 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
     // (X & Y) == 0 ? X | Y : X  --> X | Y
     // (X & Y) != 0 ? X | Y : X  --> X
     if (FalseVal == X && match(TrueVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (TrueWhenUnset && cast<PossiblyDisjointInst>(TrueVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
 
     // (X & Y) == 0 ? X : X | Y  --> X
     // (X & Y) != 0 ? X : X | Y  --> X | Y
     if (TrueVal == X && match(FalseVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (!TrueWhenUnset && cast<PossiblyDisjointInst>(FalseVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
   }
 
   return nullptr;
