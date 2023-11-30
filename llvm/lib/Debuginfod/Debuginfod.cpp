@@ -52,7 +52,7 @@ namespace {
 std::optional<SmallVector<StringRef>> DebuginfodUrls;
 // Many Readers/Single Writer lock protecting the global debuginfod URL list.
 std::shared_mutex UrlsMutex;
-}
+} // namespace
 
 static std::string uniqueKey(llvm::StringRef S) {
   return utostr(xxh3_64bits(S));
@@ -77,7 +77,8 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
     std::unique_lock<std::shared_mutex> WriteGuard(UrlsMutex);
     DebuginfodUrls = SmallVector<StringRef>();
     if (const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS")) {
-      StringRef(DebuginfodUrlsEnv).split(DebuginfodUrls.value(), " ", -1, false);
+      StringRef(DebuginfodUrlsEnv)
+          .split(DebuginfodUrls.value(), " ", -1, false);
     }
     WriteGuard.unlock();
     ReadGuard.lock();

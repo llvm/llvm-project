@@ -58,8 +58,9 @@ private:
   void ServerURLsChangedCallback() {
     m_server_urls = GetDebugInfoDURLs();
     llvm::SmallVector<llvm::StringRef> dbginfod_urls;
-    llvm::for_each(
-        m_server_urls, [&](const auto &obj) { dbginfod_urls.push_back(obj.ref()); });
+    llvm::for_each(m_server_urls, [&](const auto &obj) {
+      dbginfod_urls.push_back(obj.ref());
+    });
     llvm::setDefaultDebuginfodUrls(dbginfod_urls);
   }
   // Storage for the StringRef's used within the Debuginfod library.
@@ -111,9 +112,10 @@ SymbolLocator *SymbolLocatorDebuginfod::CreateInstance() {
   return new SymbolLocatorDebuginfod();
 }
 
-static std::optional<FileSpec>
-GetFileForModule(const ModuleSpec &module_spec,
-                 std::function<llvm::Expected<std::string>(llvm::object::BuildIDRef)> PullFromServer) {
+static std::optional<FileSpec> GetFileForModule(
+    const ModuleSpec &module_spec,
+    std::function<llvm::Expected<std::string>(llvm::object::BuildIDRef)>
+        PullFromServer) {
   const UUID &module_uuid = module_spec.GetUUID();
   if (module_uuid.IsValid() && llvm::canUseDebuginfod()) {
     llvm::object::BuildID build_id(module_uuid.GetBytes());
