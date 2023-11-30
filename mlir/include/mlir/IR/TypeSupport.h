@@ -149,7 +149,8 @@ private:
   /// The unique identifier of the derived Type class.
   const TypeID typeID;
 
-  /// The unique name of this type.
+  /// The unique name of this type. The string is not owned by the context, so
+  /// The lifetime of this string should outlive the MLIR context.
   const StringRef name;
 };
 
