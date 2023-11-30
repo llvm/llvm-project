@@ -578,28 +578,37 @@ static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
     foldInlineAsmMemOperand(MI, TiedTo, FI, TII);
   }
 
-  // Change the operand from a register to a frame index.
-  MO.ChangeToFrameIndex(FI, MO.getTargetFlags());
-
-  SmallVector<MachineOperand, 4> NewOps;
-  TII.getFrameIndexOperands(NewOps);
+  SmallVector<MachineOperand, 5> NewOps;
+  TII.getFrameIndexOperands(NewOps, FI);
   assert(!NewOps.empty() && "getFrameIndexOperands didn't create any operands");
-  MI->insert(MI->operands_begin() + OpNo + 1, NewOps);
+  MI->removeOperand(OpNo);
+  MI->insert(MI->operands_begin() + OpNo, NewOps);
 
   // Change the previous operand to a MemKind InlineAsm::Flag. The second param
   // is the per-target number of operands that represent the memory operand
   // excluding this one (MD). This includes MO.
-  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size() + 1);
+  InlineAsm::Flag F(InlineAsm::Kind::Mem, NewOps.size());
   F.setMemConstraint(InlineAsm::ConstraintCode::m);
   MachineOperand &MD = MI->getOperand(OpNo - 1);
   MD.setImm(F);
 
-  // Update mayload/maystore metadata.
+  // Update mayload/maystore metadata, and memoperands.
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
   MachineOperand &ExtraMO = MI->getOperand(InlineAsm::MIOp_ExtraInfo);
-  if (RI.Reads)
+  if (RI.Reads) {
     ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
-  if (RI.Writes)
+    Flags |= MachineMemOperand::MOLoad;
+  }
+  if (RI.Writes) {
     ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
+    Flags |= MachineMemOperand::MOStore;
+  }
+  MachineFunction *MF = MI->getMF();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
+      MFI.getObjectAlign(FI));
+  MI->addMemOperand(*MF, MMO);
 }
 
 // Returns nullptr if not possible to fold.
@@ -671,7 +680,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     if (NewMI)
       MBB->insert(MI, NewMI);
   } else if (MI.isInlineAsm()) {
-    NewMI = foldInlineAsmMemOperand(MI, Ops, FI, *this);
+    return foldInlineAsmMemOperand(MI, Ops, FI, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, FI, LIS, VRM);
@@ -744,7 +753,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     if (NewMI)
       NewMI = &*MBB.insert(MI, NewMI);
   } else if (MI.isInlineAsm() && isLoadFromStackSlot(LoadMI, FrameIndex)) {
-    NewMI = foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
+    return foldInlineAsmMemOperand(MI, Ops, FrameIndex, *this);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);

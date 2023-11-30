@@ -1235,7 +1235,7 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
 static void checkPrecisionLoss(llvm::StringRef name,
                                mlir::FunctionType funcType,
                                const FunctionDistance &distance,
-                               mlir::Location loc) {
+                               fir::FirOpBuilder &builder, mlir::Location loc) {
   if (!distance.isLosingPrecision())
     return;
 
@@ -1249,13 +1249,20 @@ static void checkPrecisionLoss(llvm::StringRef name,
   llvm::raw_string_ostream sstream(message);
   if (name == "pow") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
-    sstream << funcType.getInput(0) << " ** " << funcType.getInput(1);
+    std::string displayName{" ** "};
+    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
+                                        displayName)
+            << displayName
+            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
+                                        displayName);
   } else {
-    sstream << name << "(";
+    sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << funcType.getInput(0);
-    for (mlir::Type argType : funcType.getInputs().drop_front())
-      sstream << ", " << argType;
+      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
+                                          name);
+    for (mlir::Type argType : funcType.getInputs().drop_front()) {
+      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
+    }
     sstream << ")";
   }
   sstream << "'";
@@ -1373,7 +1380,7 @@ void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name) {
   else if (isCoarrayIntrinsic(name))
     TODO(loc, "coarray: intrinsic " + llvm::Twine(name));
   else
-    TODO(loc, "intrinsic: " + llvm::Twine(name));
+    TODO(loc, "intrinsic: " + llvm::Twine(name.upper()));
 }
 
 template <typename GeneratorType>
@@ -1756,7 +1763,7 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, builder, loc);
     mathOp = bestNearMatch;
   }
 
@@ -4373,7 +4380,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
   // Real case
   if (resultType == mlir::FloatType::getF128(builder.getContext()))
 
-    TODO(loc, "intrinsic: modulo for floating point of KIND=16");
+    TODO(loc, "REAL(KIND=16): in MODULO intrinsic");
   auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
   mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
   auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(

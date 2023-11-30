@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRArmSMETransforms
 
   LINK_LIBS PUBLIC
   MLIRArmSMEDialect
-  MLIRArmSMEUtils
   MLIRFuncDialect
   MLIRLLVMCommonConversion
   MLIRVectorDialect
