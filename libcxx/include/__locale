@@ -452,8 +452,10 @@ public:
 #elif defined(_NEWLIB_VERSION)
     // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
     typedef char mask;
+    // In case char is signed, static_cast is needed to avoid warning on
+    // positive value becomming negative.
     static const mask space  = _S;
-    static const mask print  = _P | _U | _L | _N | _B;
+    static const mask print  = static_cast<mask>(_P | _U | _L | _N | _B);
     static const mask cntrl  = _C;
     static const mask upper  = _U;
     static const mask lower  = _L;
@@ -461,7 +463,7 @@ public:
     static const mask digit  = _N;
     static const mask punct  = _P;
     static const mask xdigit = _X | _N;
-    static const mask blank  = _B;
+    static const mask blank  = static_cast<mask>(_B);
     // mask is already fully saturated, use a different type in regex_type_traits.
     static const unsigned short __regex_word = 0x100;
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
