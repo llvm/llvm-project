@@ -403,7 +403,7 @@ public:
 
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;
-  
+
   /// List of global variables explicitly specified by the user as toc-data.
   std::vector<std::string> TocDataVarsUserSpecified;
 
