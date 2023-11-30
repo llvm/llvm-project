@@ -9135,12 +9135,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto F = LoadMMO->getFlags() &
              ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
-                                      Size, LoadMMO->getBaseAlign());
+    LoadMMO =
+        MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad, Size,
+                                LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
-                                sizeof(int32_t), LoadMMO->getBaseAlign());
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t),
+        LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
     auto Load = DAG.getMachineNode(Opc, DL, M->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
@@ -9211,11 +9212,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
     auto F = LoadMMO->getFlags() &
              ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
-                                      Size, LoadMMO->getBaseAlign());
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
-                                sizeof(int32_t), Align(4));
+    LoadMMO =
+        MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad, Size,
+                                LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t), Align(4),
+        LoadMMO->getAAInfo());
 
     auto Load = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
