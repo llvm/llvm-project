@@ -137,7 +137,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
   }
 
   // Otherwise, must be a conditional branch.
-  if (Opc != AArch64::Bcc)
+  if (Opc != AArch64::Bcc && Opc != AArch64::BCcc)
     return false;
 
   // Must be an equality check (i.e., == or !=).

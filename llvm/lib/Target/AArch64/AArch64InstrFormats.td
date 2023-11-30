@@ -2122,10 +2122,10 @@ def am_brcond : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
-class BranchCond<bit bit4, string mnemonic>
+class BranchCond<bit bit4, string mnemonic, SDNode node>
    : I<(outs), (ins ccode:$cond, am_brcond:$target),
        mnemonic, ".$cond\t$target", "",
-       [(AArch64brcond bb:$target, imm:$cond, NZCV)]>, Sched<[WriteBr]> {
+       [(node bb:$target, imm:$cond, NZCV)]>, Sched<[WriteBr]> {
   let isBranch = 1;
   let isTerminator = 1;
   let Uses = [NZCV];

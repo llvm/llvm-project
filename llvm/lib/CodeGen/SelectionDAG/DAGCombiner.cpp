@@ -17818,6 +17818,9 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitBRCOND(SDNode *N) {
+  unsigned BrOpcode = N->getOpcode();
+  SDNodeFlags Flags;
+  Flags.setConsistent(N->getFlags().hasConsistent());
   SDValue Chain = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
@@ -17825,8 +17828,8 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   // BRCOND(FREEZE(cond)) is equivalent to BRCOND(cond) (both are
   // nondeterministic jumps).
   if (N1->getOpcode() == ISD::FREEZE && N1.hasOneUse()) {
-    return DAG.getNode(ISD::BRCOND, SDLoc(N), MVT::Other, Chain,
-                       N1->getOperand(0), N2);
+    return DAG.getNode(BrOpcode, SDLoc(N), MVT::Other, Chain, N1->getOperand(0),
+                       N2, Flags);
   }
 
   // Variant of the previous fold where there is a SETCC in between:
@@ -17874,8 +17877,9 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
 
     if (Updated)
       return DAG.getNode(
-          ISD::BRCOND, SDLoc(N), MVT::Other, Chain,
-          DAG.getSetCC(SDLoc(N1), N1->getValueType(0), S0, S1, Cond), N2);
+          BrOpcode, SDLoc(N), MVT::Other, Chain,
+          DAG.getSetCC(SDLoc(N1), N1->getValueType(0), S0, S1, Cond), N2,
+          Flags);
   }
 
   // If N is a constant we could fold this into a fallthrough or unconditional
@@ -17889,9 +17893,9 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   if (N1.getOpcode() == ISD::SETCC &&
       TLI.isOperationLegalOrCustom(ISD::BR_CC,
                                    N1.getOperand(0).getValueType())) {
-    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other,
-                       Chain, N1.getOperand(2),
-                       N1.getOperand(0), N1.getOperand(1), N2);
+    SDValue Ops[] = {Chain, N1.getOperand(2), N1.getOperand(0),
+                     N1.getOperand(1), N2};
+    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other, Ops, Flags);
   }
 
   if (N1.hasOneUse()) {
@@ -17899,8 +17903,8 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
     // STRICT_FSETCC/STRICT_FSETCCS involved. Use a handle to track changes.
     HandleSDNode ChainHandle(Chain);
     if (SDValue NewN1 = rebuildSetCC(N1))
-      return DAG.getNode(ISD::BRCOND, SDLoc(N), MVT::Other,
-                         ChainHandle.getValue(), NewN1, N2);
+      return DAG.getNode(BrOpcode, SDLoc(N), MVT::Other, ChainHandle.getValue(),
+                         NewN1, N2, Flags);
   }
 
   return SDValue();
@@ -18022,11 +18026,13 @@ SDValue DAGCombiner::visitBR_CC(SDNode *N) {
   if (Simp.getNode()) AddToWorklist(Simp.getNode());
 
   // fold to a simpler setcc
-  if (Simp.getNode() && Simp.getOpcode() == ISD::SETCC)
-    return DAG.getNode(ISD::BR_CC, SDLoc(N), MVT::Other,
-                       N->getOperand(0), Simp.getOperand(2),
-                       Simp.getOperand(0), Simp.getOperand(1),
-                       N->getOperand(4));
+  if (Simp.getNode() && Simp.getOpcode() == ISD::SETCC) {
+    SDNodeFlags Flags;
+    Flags.setConsistent(N->getFlags().hasConsistent());
+    SDValue Ops[] = {N->getOperand(0), Simp.getOperand(2), Simp.getOperand(0),
+                     Simp.getOperand(1), N->getOperand(4)};
+    return DAG.getNode(N->getOpcode(), SDLoc(N), MVT::Other, Ops, Flags);
+  }
 
   return SDValue();
 }

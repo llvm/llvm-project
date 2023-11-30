@@ -1908,16 +1908,21 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
 
   llvm::MDNode *Weights = nullptr;
   llvm::MDNode *Unpredictable = nullptr;
+  llvm::MDNode *Consistent = nullptr;
 
-  // If the branch has a condition wrapped by __builtin_unpredictable,
-  // create metadata that specifies that the branch is unpredictable.
-  // Don't bother if not optimizing because that metadata would not be used.
+  // If the branch has a condition wrapped by __builtin_unpredictable or
+  // __builtin_consistent, create metadata that specifies that the branch is
+  // unpredictable or consistent correspondingly. Don't bother if not optimizing
+  // because that metadata would not be used.
   auto *Call = dyn_cast<CallExpr>(Cond->IgnoreImpCasts());
   if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
-    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
+    if (FD) {
       llvm::MDBuilder MDHelper(getLLVMContext());
-      Unpredictable = MDHelper.createUnpredictable();
+      if (FD->getBuiltinID() == Builtin::BI__builtin_unpredictable)
+        Unpredictable = MDHelper.createUnpredictable();
+      if (FD->getBuiltinID() == Builtin::BI__builtin_consistent)
+        Consistent = MDHelper.createConsistent();
     }
   }
 
@@ -1932,7 +1937,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
+  Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable,
+                       Consistent);
 }
 
 /// ErrorUnsupported - Print out an error that codegen doesn't support the

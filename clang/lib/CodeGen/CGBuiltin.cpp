@@ -3160,10 +3160,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                      "cast");
     return RValue::get(Result);
   }
-  case Builtin::BI__builtin_unpredictable: {
-    // Always return the argument of __builtin_unpredictable. LLVM does not
-    // handle this builtin. Metadata for this builtin should be added directly
-    // to instructions such as branches or switches that use it.
+  case Builtin::BI__builtin_unpredictable:
+  case Builtin::BI__builtin_consistent: {
+    // Always return the argument of __builtin_unpredictable and
+    // __builtin_consistent. LLVM does not handle these builtins. Metadata for
+    // these builtins should be added directly to instructions such as branches
+    // or switches that use it.
     return RValue::get(EmitScalarExpr(E->getArg(0)));
   }
   case Builtin::BI__builtin_expect: {

@@ -2449,15 +2449,29 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
 
       // Emit the extra branch for FCMP_UEQ and FCMP_ONE.
       if (ExtraCC != AArch64CC::AL) {
+        if (BI->getMetadata(LLVMContext::MD_consistent) && Subtarget->hasHBC())
+          // For branches with consistent metadata emit conditional branches
+          // with a hint that it will behave very consistently if target
+          // supports HBC
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                  TII.get(AArch64::BCcc))
+              .addImm(ExtraCC)
+              .addMBB(TBB);
+        else
+          BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::Bcc))
+              .addImm(ExtraCC)
+              .addMBB(TBB);
+      }
+      // Emit the branch.
+      if (BI->getMetadata(LLVMContext::MD_consistent) && Subtarget->hasHBC()) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::BCcc))
+            .addImm(CC)
+            .addMBB(TBB);
+      } else {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::Bcc))
-            .addImm(ExtraCC)
+            .addImm(CC)
             .addMBB(TBB);
       }
-
-      // Emit the branch.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::Bcc))
-          .addImm(CC)
-          .addMBB(TBB);
 
       finishCondBranch(BI->getParent(), TBB, FBB);
       return true;
@@ -2485,10 +2499,17 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
       if (!CondReg)
         return false;
 
-      // Emit the branch.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::Bcc))
-        .addImm(CC)
-        .addMBB(TBB);
+      if (BI->getMetadata(LLVMContext::MD_consistent) && Subtarget->hasHBC()) {
+        // Emit conditional branch with a consistent behaviour hint
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::BCcc))
+            .addImm(CC)
+            .addMBB(TBB);
+      } else {
+        // Emit the branch.
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AArch64::Bcc))
+            .addImm(CC)
+            .addMBB(TBB);
+      }
 
       finishCondBranch(BI->getParent(), TBB, FBB);
       return true;

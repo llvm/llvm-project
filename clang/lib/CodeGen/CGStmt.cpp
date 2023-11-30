@@ -2058,16 +2058,21 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   EmitBlock(SwitchExit.getBlock(), true);
   incrementProfileCounter(&S);
 
-  // If the switch has a condition wrapped by __builtin_unpredictable,
-  // create metadata that specifies that the switch is unpredictable.
-  // Don't bother if not optimizing because that metadata would not be used.
+  // If the switch has a condition wrapped by __builtin_unpredictable or
+  // __builtin_consistent, create metadata that specifies that the switch is
+  // unpredictable or consistent correspondingly. Don't bother if not optimizing
+  // because that metadata would not be used.
   auto *Call = dyn_cast<CallExpr>(S.getCond());
   if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
-    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
+    if (FD) {
       llvm::MDBuilder MDHelper(getLLVMContext());
-      SwitchInsn->setMetadata(llvm::LLVMContext::MD_unpredictable,
-                              MDHelper.createUnpredictable());
+      if (FD->getBuiltinID() == Builtin::BI__builtin_unpredictable)
+        SwitchInsn->setMetadata(llvm::LLVMContext::MD_unpredictable,
+                                MDHelper.createUnpredictable());
+      if (FD->getBuiltinID() == Builtin::BI__builtin_consistent)
+        SwitchInsn->setMetadata(llvm::LLVMContext::MD_consistent,
+                                MDHelper.createConsistent());
     }
   }
 

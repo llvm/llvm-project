@@ -360,12 +360,12 @@ public:
                               TargetInstrInfo::MachineBranchPredicate &MBP,
                               bool AllowModify = false) const override;
 
-  unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemoved = nullptr) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB, int *BytesRemoved = nullptr,
+                        bool *IsConsistent = nullptr) const override;
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &DL,
-                        int *BytesAdded = nullptr) const override;
+                        const DebugLoc &DL, int *BytesAdded = nullptr,
+                        bool IsConsistent = false) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        Register, Register, Register, int &, int &,
                        int &) const override;

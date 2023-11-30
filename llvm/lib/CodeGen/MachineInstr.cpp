@@ -582,6 +582,9 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   if (I.getMetadata(LLVMContext::MD_unpredictable))
     MIFlags |= MachineInstr::MIFlag::Unpredictable;
 
+  if (I.getMetadata(LLVMContext::MD_consistent))
+    MIFlags |= MachineInstr::MIFlag::Consistent;
+
   return MIFlags;
 }
 
@@ -1689,6 +1692,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::Consistent))
+    OS << "consistent ";
 
   // Print the opcode name.
   if (TII)

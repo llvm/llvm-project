@@ -114,6 +114,7 @@ public:
                              // this instruction.
     Unpredictable = 1 << 16, // Instruction with unpredictable condition.
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
+    Consistent = 1 << 18,    // Instruction condition behaves consistently.
   };
 
 private:

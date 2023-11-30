@@ -1019,8 +1019,8 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      bool *IsConsistent) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -1053,9 +1053,12 @@ unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB,
 
 // Inserts a branch into the end of the specific MachineBasicBlock, returning
 // the number of instructions inserted.
-unsigned RISCVInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned RISCVInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      bool IsConsistent) const {
   if (BytesAdded)
     *BytesAdded = 0;
 

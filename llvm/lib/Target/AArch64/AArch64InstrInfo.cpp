@@ -180,6 +180,7 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   default:
     llvm_unreachable("Unknown branch instruction?");
   case AArch64::Bcc:
+  case AArch64::BCcc:
     Target = LastInst->getOperand(1).getMBB();
     Cond.push_back(LastInst->getOperand(0));
     break;
@@ -221,6 +222,7 @@ static unsigned getBranchDisplacementBits(unsigned Opc) {
   case AArch64::CBZX:
     return CBZDisplacementBits;
   case AArch64::Bcc:
+  case AArch64::BCcc:
     return BCCDisplacementBits;
   }
 }
@@ -250,6 +252,7 @@ AArch64InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case AArch64::CBZX:
   case AArch64::CBNZX:
   case AArch64::Bcc:
+  case AArch64::BCcc:
     return MI.getOperand(1).getMBB();
   }
 }
@@ -535,7 +538,10 @@ bool AArch64InstrInfo::reverseBranchCondition(
 }
 
 unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        bool *IsConsistent) const {
+  if (IsConsistent)
+    *IsConsistent = false;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return 0;
@@ -543,6 +549,10 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
   if (!isUncondBranchOpcode(I->getOpcode()) &&
       !isCondBranchOpcode(I->getOpcode()))
     return 0;
+
+  if (I->getOpcode() == AArch64::BCcc)
+    if (IsConsistent)
+      *IsConsistent = true;
 
   // Remove the branch.
   I->eraseFromParent();
@@ -561,6 +571,10 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 1;
   }
 
+  if (I->getOpcode() == AArch64::BCcc)
+    if (IsConsistent)
+      *IsConsistent = true;
+
   // Remove the branch.
   I->eraseFromParent();
   if (BytesRemoved)
@@ -569,12 +583,16 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-void AArch64InstrInfo::instantiateCondBranch(
-    MachineBasicBlock &MBB, const DebugLoc &DL, MachineBasicBlock *TBB,
-    ArrayRef<MachineOperand> Cond) const {
+void AArch64InstrInfo::instantiateCondBranch(MachineBasicBlock &MBB,
+                                             const DebugLoc &DL,
+                                             MachineBasicBlock *TBB,
+                                             ArrayRef<MachineOperand> Cond,
+                                             bool IsConsistent) const {
   if (Cond[0].getImm() != -1) {
     // Regular Bcc
-    BuildMI(&MBB, DL, get(AArch64::Bcc)).addImm(Cond[0].getImm()).addMBB(TBB);
+    BuildMI(&MBB, DL, get(IsConsistent ? AArch64::BCcc : AArch64::Bcc))
+        .addImm(Cond[0].getImm())
+        .addMBB(TBB);
   } else {
     // Folded compare-and-branch
     // Note that we use addOperand instead of addReg to keep the flags.
@@ -586,9 +604,12 @@ void AArch64InstrInfo::instantiateCondBranch(
   }
 }
 
-unsigned AArch64InstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned AArch64InstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                        MachineBasicBlock *TBB,
+                                        MachineBasicBlock *FBB,
+                                        ArrayRef<MachineOperand> Cond,
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        bool IsConsistent) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
 
@@ -596,7 +617,7 @@ unsigned AArch64InstrInfo::insertBranch(
     if (Cond.empty()) // Unconditional branch?
       BuildMI(&MBB, DL, get(AArch64::B)).addMBB(TBB);
     else
-      instantiateCondBranch(MBB, DL, TBB, Cond);
+      instantiateCondBranch(MBB, DL, TBB, Cond, IsConsistent);
 
     if (BytesAdded)
       *BytesAdded = 4;
@@ -605,7 +626,7 @@ unsigned AArch64InstrInfo::insertBranch(
   }
 
   // Two-way conditional branch.
-  instantiateCondBranch(MBB, DL, TBB, Cond);
+  instantiateCondBranch(MBB, DL, TBB, Cond, IsConsistent);
   BuildMI(&MBB, DL, get(AArch64::B)).addMBB(FBB);
 
   if (BytesAdded)
@@ -1618,7 +1639,8 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
   default:
     return -1;
 
-  case AArch64::Bcc: {
+  case AArch64::Bcc:
+  case AArch64::BCcc: {
     int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
     assert(Idx >= 2);
     return Idx - 2;
@@ -7873,6 +7895,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   default:
     llvm_unreachable("Unknown branch instruction?");
   case AArch64::Bcc:
+  case AArch64::BCcc:
     return false;
   case AArch64::CBZW:
   case AArch64::CBZX:

@@ -641,6 +641,8 @@ def AArch64call_rvmarker: SDNode<"AArch64ISD::CALL_RVMARKER",
 
 def AArch64brcond        : SDNode<"AArch64ISD::BRCOND", SDT_AArch64Brcond,
                                 [SDNPHasChain]>;
+def AArch64brccond       : SDNode<"AArch64ISD::BRCCOND", SDT_AArch64Brcond,
+                                [SDNPHasChain]>;
 def AArch64cbz           : SDNode<"AArch64ISD::CBZ", SDT_AArch64cbz,
                                 [SDNPHasChain]>;
 def AArch64cbnz           : SDNode<"AArch64ISD::CBNZ", SDT_AArch64cbz,
@@ -2786,12 +2788,12 @@ def : Pat<(AArch64tlsdesc_callseq texternalsym:$sym),
 //===----------------------------------------------------------------------===//
 // Conditional branch (immediate) instruction.
 //===----------------------------------------------------------------------===//
-def Bcc : BranchCond<0, "b">;
+def Bcc : BranchCond<0, "b", AArch64brcond>;
 
 // Armv8.8-A variant form which hints to the branch predictor that
 // this branch is very likely to go the same way nearly all the time
 // (even though it is not known at compile time _which_ way that is).
-def BCcc : BranchCond<1, "bc">, Requires<[HasHBC]>;
+def BCcc : BranchCond<1, "bc", AArch64brccond>, Requires<[HasHBC]>;
 
 //===----------------------------------------------------------------------===//
 // Compare-and-branch instructions.

@@ -3102,6 +3102,35 @@ flow conditions such as in ``if`` and ``switch`` statements.
 
 Query for this feature with ``__has_builtin(__builtin_unpredictable)``.
 
+``__builtin_consistent``
+------------------------
+
+``__builtin_consistent`` is used to indicate that the value of an expression is
+very likely to be consistent, e.g. branch having expression as condition will
+behave very consistently and is very unlikely to change direction.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_consistent(long long)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_consistent(x > 0)) {
+    foo();
+  }
+
+**Description**:
+
+The ``__builtin_consistent()`` builtin used with control flow conditions will
+provide information about branch consistently behavior which can be used to
+generate more efficient conditional branch instructions if target supports them
+(like AArch64 FEAT_HBC ``BC.cond``).
+
+Query for this feature with ``__has_builtin(__builtin_consistent)``.
 
 ``__builtin_expect``
 --------------------

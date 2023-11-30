@@ -21,7 +21,8 @@ using namespace llvm;
 /// CMN, CMP, TST followed by Bcc
 static bool isArithmeticBccPair(const MachineInstr *FirstMI,
                                 const MachineInstr &SecondMI, bool CmpOnly) {
-  if (SecondMI.getOpcode() != AArch64::Bcc)
+  if (SecondMI.getOpcode() != AArch64::Bcc &&
+      SecondMI.getOpcode() != AArch64::BCcc)
     return false;
 
   // Assume the 1st instr to be a wildcard if it is unspecified.

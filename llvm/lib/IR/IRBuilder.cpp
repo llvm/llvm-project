@@ -1114,7 +1114,8 @@ Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
   if (MDFrom) {
     MDNode *Prof = MDFrom->getMetadata(LLVMContext::MD_prof);
     MDNode *Unpred = MDFrom->getMetadata(LLVMContext::MD_unpredictable);
-    Sel = addBranchMetadata(Sel, Prof, Unpred);
+    MDNode *Consist = MDFrom->getMetadata(LLVMContext::MD_consistent);
+    Sel = addBranchMetadata(Sel, Prof, Unpred, Consist);
   }
   if (isa<FPMathOperator>(Sel))
     setFPAttrs(Sel, nullptr /* MDNode* */, FMF);

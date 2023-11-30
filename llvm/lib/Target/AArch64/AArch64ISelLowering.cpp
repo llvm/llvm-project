@@ -2347,6 +2347,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::LOADgot)
     MAKE_CASE(AArch64ISD::RET_GLUE)
     MAKE_CASE(AArch64ISD::BRCOND)
+    MAKE_CASE(AArch64ISD::BRCCOND)
     MAKE_CASE(AArch64ISD::CSEL)
     MAKE_CASE(AArch64ISD::CSINV)
     MAKE_CASE(AArch64ISD::CSNEG)
@@ -8700,6 +8701,11 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
   SDLoc dl(Op);
+  SDNodeFlags Flags;
+  bool IsConsistent = Op.getNode()->getFlags().hasConsistent();
+  Flags.setConsistent(IsConsistent);
+  unsigned BRCondOpc = IsConsistent && Subtarget->hasHBC() ? AArch64ISD::BRCCOND
+                                                           : AArch64ISD::BRCOND;
 
   MachineFunction &MF = DAG.getMachineFunction();
   // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z instructions
@@ -8739,8 +8745,8 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       OFCC = getInvertedCondCode(OFCC);
     SDValue CCVal = DAG.getConstant(OFCC, dl, MVT::i32);
 
-    return DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                       Overflow);
+    SDValue Ops[] = {Chain, Dest, CCVal, Overflow};
+    return DAG.getNode(BRCondOpc, dl, MVT::Other, Ops, Flags);
   }
 
   if (LHS.getValueType().isInteger()) {
@@ -8761,12 +8767,13 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
             isPowerOf2_64(LHS.getConstantOperandVal(1))) {
           SDValue Test = LHS.getOperand(0);
           uint64_t Mask = LHS.getConstantOperandVal(1);
-          return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Chain, Test,
-                             DAG.getConstant(Log2_64(Mask), dl, MVT::i64),
-                             Dest);
+          SDValue Ops[] = {Chain, Test,
+                           DAG.getConstant(Log2_64(Mask), dl, MVT::i64), Dest};
+          return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Ops, Flags);
         }
 
-        return DAG.getNode(AArch64ISD::CBZ, dl, MVT::Other, Chain, LHS, Dest);
+        return DAG.getNode(AArch64ISD::CBZ, dl, MVT::Other, Chain, LHS, Dest,
+                           Flags);
       } else if (CC == ISD::SETNE) {
         // See if we can use a TBZ to fold in an AND as well.
         // TBZ has a smaller branch displacement than CBZ.  If the offset is
@@ -8777,20 +8784,22 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
             isPowerOf2_64(LHS.getConstantOperandVal(1))) {
           SDValue Test = LHS.getOperand(0);
           uint64_t Mask = LHS.getConstantOperandVal(1);
-          return DAG.getNode(AArch64ISD::TBNZ, dl, MVT::Other, Chain, Test,
-                             DAG.getConstant(Log2_64(Mask), dl, MVT::i64),
-                             Dest);
+          SDValue Ops[] = {Chain, Test,
+                           DAG.getConstant(Log2_64(Mask), dl, MVT::i64), Dest};
+          return DAG.getNode(AArch64ISD::TBNZ, dl, MVT::Other, Ops, Flags);
         }
 
-        return DAG.getNode(AArch64ISD::CBNZ, dl, MVT::Other, Chain, LHS, Dest);
+        return DAG.getNode(AArch64ISD::CBNZ, dl, MVT::Other, Chain, LHS, Dest,
+                           Flags);
       } else if (CC == ISD::SETLT && LHS.getOpcode() != ISD::AND) {
         // Don't combine AND since emitComparison converts the AND to an ANDS
         // (a.k.a. TST) and the test in the test bit and branch instruction
         // becomes redundant.  This would also increase register pressure.
         uint64_t SignBitPos;
         std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
-        return DAG.getNode(AArch64ISD::TBNZ, dl, MVT::Other, Chain, LHS,
-                           DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
+        SDValue Ops[] = {Chain, LHS, DAG.getConstant(SignBitPos, dl, MVT::i64),
+                         Dest};
+        return DAG.getNode(AArch64ISD::TBNZ, dl, MVT::Other, Ops, Flags);
       }
     }
     if (RHSC && RHSC->getSExtValue() == -1 && CC == ISD::SETGT &&
@@ -8800,14 +8809,15 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       // becomes redundant.  This would also increase register pressure.
       uint64_t SignBitPos;
       std::tie(LHS, SignBitPos) = lookThroughSignExtension(LHS);
-      return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Chain, LHS,
-                         DAG.getConstant(SignBitPos, dl, MVT::i64), Dest);
+      SDValue Ops[] = {Chain, LHS, DAG.getConstant(SignBitPos, dl, MVT::i64),
+                       Dest};
+      return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Ops, Flags);
     }
 
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, dl);
-    return DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                       Cmp);
+    SDValue Ops[] = {Chain, Dest, CCVal, Cmp};
+    return DAG.getNode(BRCondOpc, dl, MVT::Other, Ops, Flags);
   }
 
   assert(LHS.getValueType() == MVT::f16 || LHS.getValueType() == MVT::bf16 ||
@@ -8819,12 +8829,12 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
   SDValue CC1Val = DAG.getConstant(CC1, dl, MVT::i32);
-  SDValue BR1 =
-      DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, Chain, Dest, CC1Val, Cmp);
+  SDValue BR1Ops[] = {Chain, Dest, CC1Val, Cmp};
+  SDValue BR1 = DAG.getNode(BRCondOpc, dl, MVT::Other, BR1Ops, Flags);
   if (CC2 != AArch64CC::AL) {
     SDValue CC2Val = DAG.getConstant(CC2, dl, MVT::i32);
-    return DAG.getNode(AArch64ISD::BRCOND, dl, MVT::Other, BR1, Dest, CC2Val,
-                       Cmp);
+    SDValue Ops[] = {BR1, Dest, CC2Val, Cmp};
+    return DAG.getNode(BRCondOpc, dl, MVT::Other, Ops, Flags);
   }
 
   return BR1;

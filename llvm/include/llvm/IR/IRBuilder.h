@@ -1072,15 +1072,18 @@ private:
   //===--------------------------------------------------------------------===//
 
 private:
-  /// Helper to add branch weight and unpredictable metadata onto an
-  /// instruction.
+  /// Helper to add branch weight, unpredictable and consistent metadata onto
+  /// an instruction.
   /// \returns The annotated instruction.
   template <typename InstTy>
-  InstTy *addBranchMetadata(InstTy *I, MDNode *Weights, MDNode *Unpredictable) {
+  InstTy *addBranchMetadata(InstTy *I, MDNode *Weights, MDNode *Unpred,
+                            MDNode *Consist) {
     if (Weights)
       I->setMetadata(LLVMContext::MD_prof, Weights);
-    if (Unpredictable)
-      I->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
+    if (Unpred)
+      I->setMetadata(LLVMContext::MD_unpredictable, Unpred);
+    if (Consist)
+      I->setMetadata(LLVMContext::MD_consistent, Consist);
     return I;
   }
 
@@ -1118,9 +1121,10 @@ public:
   /// instruction.
   BranchInst *CreateCondBr(Value *Cond, BasicBlock *True, BasicBlock *False,
                            MDNode *BranchWeights = nullptr,
-                           MDNode *Unpredictable = nullptr) {
+                           MDNode *Unpredictable = nullptr,
+                           MDNode *Consistent = nullptr) {
     return Insert(addBranchMetadata(BranchInst::Create(True, False, Cond),
-                                    BranchWeights, Unpredictable));
+                                    BranchWeights, Unpredictable, Consistent));
   }
 
   /// Create a conditional 'br Cond, TrueDest, FalseDest'
@@ -1129,7 +1133,8 @@ public:
                            Instruction *MDSrc) {
     BranchInst *Br = BranchInst::Create(True, False, Cond);
     if (MDSrc) {
-      unsigned WL[4] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+      unsigned WL[5] = {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_consistent,
                         LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
       Br->copyMetadata(*MDSrc, WL);
     }
@@ -1141,9 +1146,10 @@ public:
   /// allocation).
   SwitchInst *CreateSwitch(Value *V, BasicBlock *Dest, unsigned NumCases = 10,
                            MDNode *BranchWeights = nullptr,
-                           MDNode *Unpredictable = nullptr) {
+                           MDNode *Unpredictable = nullptr,
+                           MDNode *Consistent = nullptr) {
     return Insert(addBranchMetadata(SwitchInst::Create(V, Dest, NumCases),
-                                    BranchWeights, Unpredictable));
+                                    BranchWeights, Unpredictable, Consistent));
   }
 
   /// Create an indirect branch instruction with the specified address

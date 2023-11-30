@@ -111,8 +111,8 @@ public:
   /// Remove the branching code at the end of the specific MBB.
   /// This is only invoked in cases where analyzeBranch returns success. It
   /// returns the number of instructions that were removed.
-  unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemoved = nullptr) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB, int *BytesRemoved = nullptr,
+                        bool *IsConsistent = nullptr) const override;
 
   /// Insert branch code into the end of the specified MachineBasicBlock.
   /// The operands to this method are the same as those
@@ -126,8 +126,8 @@ public:
   /// merging needs to be disabled.
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &DL,
-                        int *BytesAdded = nullptr) const override;
+                        const DebugLoc &DL, int *BytesAdded = nullptr,
+                        bool IsConsistent = false) const override;
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.

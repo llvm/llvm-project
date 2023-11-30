@@ -2577,7 +2577,8 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
         }
 
         // Emit the branch for this block.
-        visitSwitchCase(SL->SwitchCases[0], BrMBB);
+        visitSwitchCase(SL->SwitchCases[0], BrMBB,
+                        I.hasMetadata(LLVMContext::MD_consistent));
         SL->SwitchCases.erase(SL->SwitchCases.begin());
         return;
       }
@@ -2597,13 +2598,14 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
 
   // Use visitSwitchCase to actually insert the fast branch sequence for this
   // cond branch.
-  visitSwitchCase(CB, BrMBB);
+  visitSwitchCase(CB, BrMBB, I.hasMetadata(LLVMContext::MD_consistent));
 }
 
 /// visitSwitchCase - Emits the necessary code to represent a single node in
 /// the binary search tree resulting from lowering a switch instruction.
 void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
-                                          MachineBasicBlock *SwitchBB) {
+                                          MachineBasicBlock *SwitchBB,
+                                          bool IsConsistent) {
   SDValue Cond;
   SDValue CondLHS = getValue(CB.CmpLHS);
   SDLoc dl = CB.DL;
@@ -2681,9 +2683,10 @@ void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
     Cond = DAG.getNode(ISD::XOR, dl, Cond.getValueType(), Cond, True);
   }
 
-  SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
-                               MVT::Other, getControlRoot(), Cond,
-                               DAG.getBasicBlock(CB.TrueBB));
+  SDNodeFlags Flags;
+  Flags.setConsistent(IsConsistent);
+  SDValue BrCond = DAG.getNode(ISD::BRCOND, dl, MVT::Other, getControlRoot(),
+                               Cond, DAG.getBasicBlock(CB.TrueBB), Flags);
 
   setValue(CurInst, BrCond);
 
@@ -2916,7 +2919,8 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
 /// visitBitTestHeader - This function emits necessary code to produce value
 /// suitable for "bit tests"
 void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
-                                             MachineBasicBlock *SwitchBB) {
+                                             MachineBasicBlock *SwitchBB,
+                                             bool IsConsistent) {
   SDLoc dl = getCurSDLoc();
 
   // Subtract the minimum value.
@@ -2964,9 +2968,10 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
                                RangeSub.getValueType()),
         RangeSub, DAG.getConstant(B.Range, dl, RangeSub.getValueType()),
         ISD::SETUGT);
-
+    SDNodeFlags Flags;
+    Flags.setConsistent(IsConsistent);
     Root = DAG.getNode(ISD::BRCOND, dl, MVT::Other, Root, RangeCmp,
-                       DAG.getBasicBlock(B.Default));
+                       DAG.getBasicBlock(B.Default), Flags);
   }
 
   // Avoid emitting unnecessary branches to the next block.
@@ -3432,6 +3437,9 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
 
   Flags.setUnpredictable(
       cast<SelectInst>(I).getMetadata(LLVMContext::MD_unpredictable));
+
+  Flags.setConsistent(
+      cast<SelectInst>(I).getMetadata(LLVMContext::MD_consistent));
 
   // Min/max matching is only viable if all output VTs are the same.
   if (all_equal(ValueVTs)) {
@@ -11389,9 +11397,12 @@ void SelectionDAGBuilder::updateDAGForMaybeTailCall(SDValue MaybeTC) {
     HasTailCall = true;
 }
 
-void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
+void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W,
+                                        const SwitchInst &SI,
                                         MachineBasicBlock *SwitchMBB,
                                         MachineBasicBlock *DefaultMBB) {
+  const Value *Cond = SI.getCondition();
+  bool IsConsistent = SI.getMetadata(LLVMContext::MD_consistent);
   MachineFunction *CurMF = FuncInfo.MF;
   MachineBasicBlock *NextMBB = nullptr;
   MachineFunction::iterator BBI(W.MBB);
@@ -11444,9 +11455,11 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
           addSuccessorWithProb(SwitchMBB, DefaultMBB);
 
         // Insert the true branch.
+        SDNodeFlags Flags;
+        Flags.setConsistent(IsConsistent);
         SDValue BrCond =
             DAG.getNode(ISD::BRCOND, DL, MVT::Other, getControlRoot(), Cond,
-                        DAG.getBasicBlock(Small.MBB));
+                        DAG.getBasicBlock(Small.MBB), Flags);
         // Insert the false branch.
         BrCond = DAG.getNode(ISD::BR, DL, MVT::Other, BrCond,
                              DAG.getBasicBlock(DefaultMBB));
@@ -11603,7 +11616,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
 
         // If we're in the right place, emit the bit test header right now.
         if (CurMBB == SwitchMBB) {
-          visitBitTestHeader(*BTB, SwitchMBB);
+          visitBitTestHeader(*BTB, SwitchMBB, IsConsistent);
           BTB->Emitted = true;
         }
         break;
@@ -11634,7 +11647,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
                      getCurSDLoc(), I->Prob, UnhandledProbs);
 
         if (CurMBB == SwitchMBB)
-          visitSwitchCase(CB, SwitchMBB);
+          visitSwitchCase(CB, SwitchMBB, IsConsistent);
         else
           SL->SwitchCases.push_back(CB);
 
@@ -11659,7 +11672,7 @@ unsigned SelectionDAGBuilder::caseClusterRank(const CaseCluster &CC,
 
 void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
                                         const SwitchWorkListItem &W,
-                                        Value *Cond,
+                                        const SwitchInst &SI,
                                         MachineBasicBlock *SwitchMBB) {
   assert(W.FirstCluster->Low->getValue().slt(W.LastCluster->Low->getValue()) &&
          "Clusters not sorted?");
@@ -11761,7 +11774,7 @@ void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
     WorkList.push_back(
         {LeftMBB, FirstLeft, LastLeft, W.GE, Pivot, W.DefaultProb / 2});
     // Put Cond in a virtual register to make it available from the new blocks.
-    ExportFromCurrentBlock(Cond);
+    ExportFromCurrentBlock(SI.getCondition());
   }
 
   // Similarly, we will branch to the RHS if Value >= Pivot. If RHS is a
@@ -11777,15 +11790,15 @@ void SelectionDAGBuilder::splitWorkItem(SwitchWorkList &WorkList,
     WorkList.push_back(
         {RightMBB, FirstRight, LastRight, Pivot, W.LT, W.DefaultProb / 2});
     // Put Cond in a virtual register to make it available from the new blocks.
-    ExportFromCurrentBlock(Cond);
+    ExportFromCurrentBlock(SI.getCondition());
   }
 
   // Create the CaseBlock record that will be used to lower the branch.
-  CaseBlock CB(ISD::SETLT, Cond, Pivot, nullptr, LeftMBB, RightMBB, W.MBB,
-               getCurSDLoc(), LeftProb, RightProb);
+  CaseBlock CB(ISD::SETLT, SI.getCondition(), Pivot, nullptr, LeftMBB, RightMBB,
+               W.MBB, getCurSDLoc(), LeftProb, RightProb);
 
   if (W.MBB == SwitchMBB)
-    visitSwitchCase(CB, SwitchMBB);
+    visitSwitchCase(CB, SwitchMBB, SI.getMetadata(LLVMContext::MD_consistent));
   else
     SL->SwitchCases.push_back(CB);
 }
@@ -11847,7 +11860,7 @@ MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
   auto PeeledCaseIt = Clusters.begin() + PeeledCaseIndex;
   SwitchWorkListItem W = {SwitchMBB, PeeledCaseIt, PeeledCaseIt,
                           nullptr,   nullptr,      TopCaseProb.getCompl()};
-  lowerWorkItem(W, SI.getCondition(), SwitchMBB, PeeledSwitchMBB);
+  lowerWorkItem(W, SI, SwitchMBB, PeeledSwitchMBB);
 
   Clusters.erase(PeeledCaseIt);
   for (CaseCluster &CC : Clusters) {
@@ -11941,11 +11954,11 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     if (NumClusters > 3 && TM.getOptLevel() != CodeGenOptLevel::None &&
         !DefaultMBB->getParent()->getFunction().hasMinSize()) {
       // For optimized builds, lower large range as a balanced binary tree.
-      splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB);
+      splitWorkItem(WorkList, W, SI, SwitchMBB);
       continue;
     }
 
-    lowerWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB);
+    lowerWorkItem(W, SI, SwitchMBB, DefaultMBB);
   }
 }
 

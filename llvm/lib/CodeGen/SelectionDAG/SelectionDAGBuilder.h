@@ -208,11 +208,11 @@ private:
 
   /// Emit comparison and split W into two subtrees.
   void splitWorkItem(SwitchCG::SwitchWorkList &WorkList,
-                     const SwitchCG::SwitchWorkListItem &W, Value *Cond,
-                     MachineBasicBlock *SwitchMBB);
+                     const SwitchCG::SwitchWorkListItem &W,
+                     const SwitchInst &SI, MachineBasicBlock *SwitchMBB);
 
   /// Lower W.
-  void lowerWorkItem(SwitchCG::SwitchWorkListItem W, Value *Cond,
+  void lowerWorkItem(SwitchCG::SwitchWorkListItem W, const SwitchInst &SI,
                      MachineBasicBlock *SwitchMBB,
                      MachineBasicBlock *DefaultMBB);
 
@@ -513,12 +513,14 @@ private:
       BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
-  void visitSwitchCase(SwitchCG::CaseBlock &CB, MachineBasicBlock *SwitchBB);
+  void visitSwitchCase(SwitchCG::CaseBlock &CB, MachineBasicBlock *SwitchBB,
+                       bool IsConsistent = false);
   void visitSPDescriptorParent(StackProtectorDescriptor &SPD,
                                MachineBasicBlock *ParentBB);
   void visitSPDescriptorFailure(StackProtectorDescriptor &SPD);
   void visitBitTestHeader(SwitchCG::BitTestBlock &B,
-                          MachineBasicBlock *SwitchBB);
+                          MachineBasicBlock *SwitchBB,
+                          bool IsConsistent = false);
   void visitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
                         BranchProbability BranchProbToNext, unsigned Reg,
                         SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);

@@ -3381,8 +3381,8 @@ bool X86InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -3408,8 +3408,8 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL,
-                                    int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    bool IsConsistent) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&

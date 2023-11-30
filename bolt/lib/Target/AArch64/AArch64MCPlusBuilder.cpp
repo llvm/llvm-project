@@ -962,7 +962,8 @@ public:
     if (isTB(Inst) || isCB(Inst)) {
       Inst.setOpcode(getInvertedBranchOpcode(Inst.getOpcode()));
       assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
-    } else if (Inst.getOpcode() == AArch64::Bcc) {
+    } else if (Inst.getOpcode() == AArch64::Bcc ||
+               Inst.getOpcode() == AArch64::BCcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));
       assert(Inst.getOperand(0).getImm() != AArch64CC::AL &&
@@ -991,6 +992,8 @@ public:
     case AArch64::B:        return 28;
     case AArch64::BL:       return 28;
     case AArch64::Bcc:      return 21;
+    case AArch64::BCcc:
+      return 21;
     }
   }
 

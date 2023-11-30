@@ -132,7 +132,11 @@ MachineInstr *AArch64CondBrTuning::convertToCondBr(MachineInstr &MI) {
     CC = AArch64CC::MI;
     break;
   }
-  return BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AArch64::Bcc))
+  return BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                 MI.getFlag(MachineInstr::MIFlag::Consistent) &&
+                         TII->getSubtarget().hasHBC()
+                     ? TII->get(AArch64::BCcc)
+                     : TII->get(AArch64::Bcc))
       .addImm(CC)
       .addMBB(TargetMBB);
 }
