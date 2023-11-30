@@ -356,7 +356,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     LLT PtrTy = MRI.getType(DstLst);
 
     // Load the source va_list
-    Align Alignment = Align(DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx)));
+    Align Alignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
     MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
         MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, Alignment);
     auto Tmp = MIRBuilder.buildLoad(PtrTy, MI.getOperand(2), *LoadMMO);
