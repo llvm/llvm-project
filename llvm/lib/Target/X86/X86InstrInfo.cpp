@@ -782,7 +782,9 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(
     // flag set.
     llvm_unreachable("Unknown rematerializable operation!");
     break;
-
+  case X86::IMPLICIT_DEF:
+    // Defer to generic logic.
+    break;
   case X86::LOAD_STACK_GUARD:
   case X86::AVX1_SETALLONES:
   case X86::AVX2_SETALLONES:
