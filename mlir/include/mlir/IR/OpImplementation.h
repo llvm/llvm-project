@@ -1768,13 +1768,14 @@ public:
 };
 
 template <typename Range>
-void printShape(raw_ostream& stream, Range&& shape) {
+void printShape(raw_ostream &stream, Range &&shape) {
   for (auto [idx, dimSize] : llvm::enumerate(shape)) {
     if (ShapedType::isDynamic(dimSize))
       stream << "?";
     else
       stream << dimSize;
-    if (static_cast<std::decay_t<decltype(range_size(shape))>>(idx) != range_size(shape) - 1)
+    if (static_cast<std::decay_t<decltype(range_size(shape))>>(idx) !=
+        range_size(shape) - 1)
       stream << "x";
   }
 }
