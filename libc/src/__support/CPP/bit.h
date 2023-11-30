@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // This is inspired by LLVM ADT/bit.h header.
+// Some functions are missing, we can add them as needed (popcount, byteswap).
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
