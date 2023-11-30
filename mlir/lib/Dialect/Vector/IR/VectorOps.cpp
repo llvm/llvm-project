@@ -5567,8 +5567,8 @@ class FoldTransposeShapeCast : public OpRewritePattern<TransposeOp> {
       return llvm::make_filter_range(
           llvm::zip_equal(type.getShape(), type.getScalableDims()),
           [&](auto dim) {
-            auto [size, isScalble] = dim;
-            return size != 1 || isScalble;
+            auto [size, isScalable] = dim;
+            return size != 1 || isScalable;
           });
     };
 
