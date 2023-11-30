@@ -143,10 +143,11 @@ class X86FoldTablesEmitter {
   typedef std::map<const CodeGenInstruction *, X86FoldTableEntry,
                    CompareInstrsByEnum>
       FoldTable;
-  // std::vector for each folding table.
-  // Table2Addr - Holds instructions which their memory form performs load+store
-  // Table#i - Holds instructions which the their memory form perform a load OR
-  //           a store,  and their #i'th operand is folded.
+  // Table2Addr - Holds instructions which their memory form performs
+  //              load+store.
+  //
+  // Table#i - Holds instructions which the their memory form
+  //           performs a load OR a store, and their #i'th operand is folded.
   FoldTable Table2Addr;
   FoldTable Table0;
   FoldTable Table1;
@@ -168,7 +169,7 @@ private:
                     bool IsManual = false);
 
   // Generates X86FoldTableEntry with the given instructions and fill it with
-  // the appropriate flags - then adds it to Table.
+  // the appropriate flags, then adds it to a memory fold table.
   void addEntryWithFlags(FoldTable &Table, const CodeGenInstruction *RegInst,
                          const CodeGenInstruction *MemInst, uint16_t S,
                          unsigned FoldedIdx, bool IsManual);
@@ -300,6 +301,8 @@ public:
     const Record *MemRec = MemInst->TheDef;
 
     // EVEX_B means different things for memory and register forms.
+    // register form: rounding control or SAE
+    // memory form: broadcast
     if (RegRI.HasEVEX_B || MemRI.HasEVEX_B)
       return false;
 
@@ -582,6 +585,13 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
 
   Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
+  auto FixUp = [&](const CodeGenInstruction *RegInst) {
+    StringRef RegInstName = RegInst->TheDef->getName();
+    if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt"))
+      if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4)))
+        RegInst = &Target.getInstruction(RegAltRec);
+    return RegInst;
+  };
   // For each memory form instruction, try to find its register form
   // instruction.
   for (const CodeGenInstruction *MemInst : MemInsts) {
@@ -598,13 +608,7 @@ void X86FoldTablesEmitter::run(raw_ostream &O) {
 
     auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Variant));
     if (Match != OpcRegInsts.end()) {
-      const CodeGenInstruction *RegInst = *Match;
-      StringRef RegInstName = RegInst->TheDef->getName();
-      if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt"))
-        if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4)))
-          RegInst = &Target.getInstruction(RegAltRec);
-
-      updateTables(RegInst, MemInst);
+      updateTables(FixUp(*Match), MemInst);
       OpcRegInsts.erase(Match);
     }
   }
