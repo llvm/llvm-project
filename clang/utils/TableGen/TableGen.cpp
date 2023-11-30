@@ -231,7 +231,7 @@ cl::opt<ActionType> Action(
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
         clEnumValN(GenArmVectorType, "gen-arm-vector-type",
-                   "Generate arm_vector_type.h for clang"),
+                   "Generate arm_vector_types.h for clang"),
         clEnumValN(GenArmNeonSema, "gen-arm-neon-sema",
                    "Generate ARM NEON sema support for clang"),
         clEnumValN(GenArmNeonTest, "gen-arm-neon-test",

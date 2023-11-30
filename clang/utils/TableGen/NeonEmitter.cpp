@@ -2231,6 +2231,12 @@ void NeonEmitter::runHeader(raw_ostream &OS) {
 static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
   std::string TypedefTypes(types);
   std::vector<TypeSpec> TDTypeVec = TypeSpec::fromTypeSpecs(TypedefTypes);
+  // arm_sve.h followed by arm_neon.h does not emmit these types
+  // because only arm_sve.h defines __ARM_NEON_TYPES_H
+  // arm_neon.h followed by arm_sve.h emmit these types
+  // because __ARM_NEON_TYPES_H is not defined
+  // Avoids to redeclare the types in arm_neon.h
+  OS << "#ifndef __ARM_NEON_TYPES_H\n";
 
   // Emit vector typedefs.
   bool InIfdef = false;
@@ -2262,6 +2268,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
   if (InIfdef)
     OS << "#endif\n";
   OS << "\n";
+  OS << "#endif // __ARM_NEON_TYPES_H\n";
 
   // Emit struct typedefs.
   InIfdef = false;
@@ -2548,7 +2555,7 @@ void NeonEmitter::runFP16(raw_ostream &OS) {
 }
 
 void NeonEmitter::runVectorType(raw_ostream &OS) {
-  OS << "/*===---- arm_vector_type - ARM vector type "
+  OS << "/*===---- arm_vector_types - ARM vector type "
         "------===\n"
         " *\n"
         " *\n"
@@ -2560,29 +2567,38 @@ void NeonEmitter::runVectorType(raw_ostream &OS) {
         " *===-----------------------------------------------------------------"
         "------===\n"
         " */\n\n";
+  OS << "#ifndef __ARM_NEON_H\n\n";
   OS << "#ifndef __ARM_NEON_TYPES_H\n";
   OS << "#define __ARM_NEON_TYPES_H\n";
-  OS << "#ifdef __cplusplus\n";
-  OS << "extern \"C\" {\n";
+  OS << "#ifdef __aarch64__\n";
+  OS << "typedef uint8_t poly8_t;\n";
+  OS << "typedef uint16_t poly16_t;\n";
+  OS << "typedef uint64_t poly64_t;\n";
+  OS << "typedef __uint128_t poly128_t;\n";
+  OS << "#else\n";
+  OS << "typedef int8_t poly8_t;\n";
+  OS << "typedef int16_t poly16_t;\n";
   OS << "#endif\n";
-  OS << "#ifndef __ARM_NEON_H\n";
 
-  std::string TypedefTypes("QcQsQiQlQUcQUsQUiQUlQhQfQdQb");
+  // Needs to declare all the types in case there is arm_sve.h followed by
+  // arm_neon.h.
+  // arm_sve defines __ARM_NEON_TYPES_H so it avoids to declare again the
+  // types in arm_neon.h
+  std::string TypedefTypes(
+      "cQcsQsiQilQlUcQUcUsQUsUiQUiUlQUlhQhfQfdQdPcQPcPsQPsPlQPlbQb");
   std::vector<TypeSpec> TDTypeVec = TypeSpec::fromTypeSpecs(TypedefTypes);
   for (auto &TS : TDTypeVec) {
     Type T(TS, ".");
-    OS << "typedef __attribute__((vector_size(16))) ";
+    OS << "typedef __attribute__((vector_size(";
 
+    OS << T.getSizeInBits() / 8 << ")))";
     Type T2 = T;
     T2.makeScalar();
     OS << T2.str();
     OS << " " << T.str() << ";\n";
   }
-  OS << "#endif\n";
-  OS << "#ifdef __cplusplus\n";
-  OS << "} // extern \"C\"\n";
-  OS << "#endif\n";
-  OS << "#endif //__ARM_NEON_TYPES_H\n";
+  OS << "#endif // __ARM_NEON_TYPES_H\n";
+  OS << "#endif // __ARM_NEON_H\n";
 }
 
 void NeonEmitter::runBF16(raw_ostream &OS) {
