@@ -755,13 +755,40 @@ exe_scope = exe_ctx.GetBestExecutionContextScope();
   m_options.SetGenerateDebugInfo(generate_debug_info);
 
   using ParseResult = SwiftExpressionParser::ParseResult;
-  
-  while (true) {
-    SwiftExpressionParser::ParseResult parse_result =
-        GetTextAndSetExpressionParser(diagnostic_manager, source_code, exe_ctx,
-                                      exe_scope);
+  // Use a separate diagnostic manager instead of the main one, the reason we do
+  // this is that on retries we would like to ignore diagnostics produced by
+  // either the first or second try.
+  DiagnosticManager first_try_diagnostic_manager;
+  DiagnosticManager second_try_diagnostic_manager;
 
-    if (parse_result == ParseResult::success)
+  bool retry = false;
+  while (true) {
+    SwiftExpressionParser::ParseResult parse_result;
+    if (!retry) {
+      parse_result = GetTextAndSetExpressionParser(
+          first_try_diagnostic_manager, source_code, exe_ctx, exe_scope);
+      if (parse_result != SwiftExpressionParser::ParseResult::
+                              retry_no_bind_generic_params ||
+          m_options.GetBindGenericTypes() != lldb::eBindAuto)
+        // If we're not retrying, just copy the diagnostics over.
+        diagnostic_manager.Consume(std::move(first_try_diagnostic_manager));
+    } else {
+      parse_result = GetTextAndSetExpressionParser(
+          second_try_diagnostic_manager, source_code, exe_ctx, exe_scope);
+      if (parse_result == SwiftExpressionParser::ParseResult::success)
+        // If we succeeded the second time around, copy any diagnostics we
+        // produced in the success case over, and ignore the first attempt's
+        // failures.
+        diagnostic_manager.Consume(std::move(second_try_diagnostic_manager));
+      else
+        // If we failed though, copy the diagnostics of the first attempt, and
+        // silently ignore any errors produced by the retry, as the retry was
+        // not what the user asked, and any diagnostics produced by it will
+        // most likely confuse the user.
+        diagnostic_manager.Consume(std::move(first_try_diagnostic_manager));
+    }
+
+    if (parse_result == SwiftExpressionParser::ParseResult::success)
       break;
 
     switch (parse_result) {
@@ -770,13 +797,10 @@ exe_scope = exe_ctx.GetBestExecutionContextScope();
       // BindGenericTypes was in the auto setting, give up otherwise.
       if (m_options.GetBindGenericTypes() != lldb::eBindAuto) 
         return false;
-      diagnostic_manager.Clear();
-      diagnostic_manager.PutString(eDiagnosticSeverityRemark,
-                                   "Expression evaluation failed. Retrying "
-                                   "without binding generic parameters");
       // Retry without binding generic parameters, this is the only
       // case that will loop.
       m_options.SetBindGenericTypes(lldb::eDontBind);
+      retry = true;
       break;
     
     case ParseResult::retry_fresh_context:
