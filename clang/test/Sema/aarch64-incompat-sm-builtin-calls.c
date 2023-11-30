@@ -7,12 +7,12 @@
 #include "arm_neon.h"
 
 int16x8_t incompat_neon_sm(int16x8_t splat) __arm_streaming {
-  // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming or locally streaming function}}
+  // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
   return (int16x8_t)__builtin_neon_vqaddq_v((int8x16_t)splat, (int8x16_t)splat, 33);
 }
 
 __arm_locally_streaming int16x8_t incompat_neon_ls(int16x8_t splat) {
-  // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming or locally streaming function}}
+  // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
   return (int16x8_t)__builtin_neon_vqaddq_v((int8x16_t)splat, (int8x16_t)splat, 33);
 }
 

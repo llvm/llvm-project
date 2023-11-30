@@ -2996,13 +2996,12 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
 enum ArmStreamingType {
   ArmNonStreaming,
   ArmStreaming,
-  ArmStreamingCompatible,
-  ArmLocallyStreaming
+  ArmStreamingCompatible
 };
 
 static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
   if (FD->hasAttr<ArmLocallyStreamingAttr>())
-    return ArmLocallyStreaming;
+    return ArmStreaming;
   if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
     if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
       return ArmStreaming;
@@ -3015,18 +3014,15 @@ static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
 static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
                                      ArmStreamingType BuiltinType) {
-  assert(BuiltinType != ArmLocallyStreaming &&
-         "Unexpected locally_streaming attribute for builtin!");
-
   ArmStreamingType FnType = getArmStreamingFnType(FD);
 
-  if ((FnType == ArmStreaming || FnType == ArmLocallyStreaming) &&
+  if (FnType == ArmStreaming &&
       BuiltinType == ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming or locally streaming";
+        << TheCall->getSourceRange() << "streaming";
   }
 
-  if ((FnType == ArmStreamingCompatible) &&
+  if (FnType == ArmStreamingCompatible &&
       BuiltinType != ArmStreamingCompatible) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming compatible";
