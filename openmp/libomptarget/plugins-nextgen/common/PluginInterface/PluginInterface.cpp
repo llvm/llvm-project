@@ -11,8 +11,8 @@
 #include "PluginInterface.h"
 
 #include "Shared/Debug.h"
+#include "Shared/Environment.h"
 
-#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "Utils/ELF.h"
