@@ -4,6 +4,7 @@
 ; RUN:   -force-vector-width=4 -debug-only=loop-accesses,loop-vectorize,loop-utils 2> %t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=DEBUG
 
+target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; Equivalent example in C:
 ; void diff_checks(int32_t *dst, int32_t *src, int m, int n) {
