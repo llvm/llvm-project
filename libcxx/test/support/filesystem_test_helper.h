@@ -231,7 +231,7 @@ struct scoped_test_env
 
         if (size >
             static_cast<typename std::make_unsigned<utils::off64_t>::type>(
-                std::numeric_limits<utils::off64_t>::max())) {
+                (std::numeric_limits<utils::off64_t>::max)())) {
             fprintf(stderr, "create_file(%s, %ju) too large\n",
                     filename.c_str(), size);
             abort();
