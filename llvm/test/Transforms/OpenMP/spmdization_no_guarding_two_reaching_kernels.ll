@@ -88,7 +88,6 @@ define weak void @__omp_offloading_2b_10393b5_spmd_l12(ptr %dyn) #0 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast ptr [[WORKER_WORK_FN]] to ptr
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.finished:
@@ -166,7 +165,6 @@ define weak void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #0 {
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
 ; CHECK-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; CHECK-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast ptr [[WORKER_WORK_FN]] to ptr
 ; CHECK-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK:       worker_state_machine.finished:
@@ -174,7 +172,7 @@ define weak void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #0 {
 ; CHECK:       worker_state_machine.is_active.check:
 ; CHECK-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; CHECK:       worker_state_machine.parallel_region.fallback.execute:
-; CHECK-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; CHECK-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
 ; CHECK-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
 ; CHECK:       worker_state_machine.parallel_region.end:
 ; CHECK-NEXT:    call void @__kmpc_kernel_end_parallel()
@@ -209,7 +207,6 @@ define weak void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #0 {
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_ACTIVE:%.*]] = call i1 @__kmpc_kernel_parallel(ptr [[WORKER_WORK_FN_ADDR]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN:%.*]] = load ptr, ptr [[WORKER_WORK_FN_ADDR]], align 8
-; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_WORK_FN_ADDR_CAST:%.*]] = bitcast ptr [[WORKER_WORK_FN]] to ptr
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    [[WORKER_IS_DONE:%.*]] = icmp eq ptr [[WORKER_WORK_FN]], null
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[WORKER_IS_DONE]], label [[WORKER_STATE_MACHINE_FINISHED]], label [[WORKER_STATE_MACHINE_IS_ACTIVE_CHECK:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.finished:
@@ -217,7 +214,7 @@ define weak void @__omp_offloading_2b_10393b5_generic_l20(ptr %dyn) #0 {
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.is_active.check:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br i1 [[WORKER_IS_ACTIVE]], label [[WORKER_STATE_MACHINE_PARALLEL_REGION_FALLBACK_EXECUTE:%.*]], label [[WORKER_STATE_MACHINE_DONE_BARRIER:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.parallel_region.fallback.execute:
-; CHECK-DISABLE-SPMDIZATION-NEXT:    call void [[WORKER_WORK_FN_ADDR_CAST]](i16 0, i32 [[TMP0]])
+; CHECK-DISABLE-SPMDIZATION-NEXT:    call void [[WORKER_WORK_FN]](i16 0, i32 [[TMP0]])
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    br label [[WORKER_STATE_MACHINE_PARALLEL_REGION_END:%.*]]
 ; CHECK-DISABLE-SPMDIZATION:       worker_state_machine.parallel_region.end:
 ; CHECK-DISABLE-SPMDIZATION-NEXT:    call void @__kmpc_kernel_end_parallel()
