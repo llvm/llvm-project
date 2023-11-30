@@ -21,17 +21,13 @@ int main(int, char**) {
     std::unique_ptr<int> uPtr;
 
     auto outUPtr1 = std::out_ptr(uPtr);
-    (void)outUPtr1;
     auto outUPtr2 = std::out_ptr<int*>(uPtr);
-    (void)outUPtr2;
   }
   {
     std::shared_ptr<int> sPtr;
 
     auto outSPtr1 = std::out_ptr(sPtr, [](auto* p) { delete p; });
-    (void)outSPtr1;
     auto outSPtr2 = std::out_ptr<int*>(sPtr, [](auto* p) { delete p; });
-    (void)outSPtr2;
   }
 
   return 0;

@@ -17,18 +17,30 @@
 // operator Pointer*() const noexcept;
 // operator void**() const noexcept;
 
+#include <cassert>
+#include <concepts>
 #include <memory>
 
 int main(int, char**) {
   {
-    std::unique_ptr<int> uPtr;
+    std::unique_ptr<int> uPtr = std::make_unique<int>(84);
 
-    std::inout_ptr_t<std::unique_ptr<int>, int*>{uPtr};
+    const std::inout_ptr_t<std::unique_ptr<int>, int*> ioPtr{uPtr};
+
+    static_assert(noexcept(ioPtr.operator int**()));
+    std::same_as<int**> decltype(auto) pPtr = ioPtr.operator int**();
+
+    assert(**pPtr == 84);
   }
   {
-    std::unique_ptr<int> uPtr;
+    std::unique_ptr<int> uPtr = std::make_unique<int>(84);
 
-    std::inout_ptr_t<std::unique_ptr<int>, int*>{uPtr};
+    const std::inout_ptr_t<std::unique_ptr<int>, void*> ioPtr{uPtr};
+
+    static_assert(noexcept(ioPtr.operator void**()));
+    std::same_as<void**> decltype(auto) pPtr = ioPtr.operator void**();
+
+    assert(**reinterpret_cast<int**>(pPtr) == 84);
   }
 
   return 0;

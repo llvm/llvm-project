@@ -17,18 +17,41 @@
 // operator Pointer*() const noexcept;
 // operator void**() const noexcept;
 
+#include <cassert>
+#include <concepts>
 #include <memory>
+#include <iostream>
 
 int main(int, char**) {
   {
     std::unique_ptr<int> uPtr;
 
-    std::out_ptr_t<std::unique_ptr<int>, int*>{uPtr};
+    const std::out_ptr_t<std::unique_ptr<int>, int*> oPtr{uPtr};
+
+    static_assert(noexcept(oPtr.operator int**()));
+    std::same_as<int**> decltype(auto) pPtr = oPtr.operator int**();
+
+    assert(*pPtr == nullptr);
   }
   {
     std::unique_ptr<int, std::default_delete<int>> uPtr;
 
-    std::out_ptr_t<decltype(uPtr), int*, std::default_delete<int>>{uPtr, std::default_delete<int>{}};
+    const std::out_ptr_t<decltype(uPtr), int*, std::default_delete<int>> oPtr{uPtr, std::default_delete<int>{}};
+
+    static_assert(noexcept(oPtr.operator int**()));
+    std::same_as<int**> decltype(auto) pPtr = oPtr.operator int**();
+
+    assert(*pPtr == nullptr);
+  }
+  {
+    std::unique_ptr<int> uPtr;
+
+    const std::out_ptr_t<std::unique_ptr<int>, void*> oPtr{uPtr};
+
+    static_assert(noexcept(oPtr.operator void**()));
+    std::same_as<void**> decltype(auto) pPtr = oPtr.operator void**();
+
+    assert(*pPtr == nullptr);
   }
 
   return 0;
