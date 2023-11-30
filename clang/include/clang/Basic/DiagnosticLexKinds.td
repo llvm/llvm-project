@@ -497,8 +497,6 @@ def warn_pp_invalid_directive : Warning<
 def warn_pp_unknown_parameter_ignored : Warning<
   "unknown%select{ | embed}0 preprocessor parameter '%1' ignored">,
   InGroup<DiagGroup<"unknown-directive-parameters">>;
-def err_pp_unsupported_directive : Error<
-  "unsupported%select{ | embed}0 directive: %1">;
 def err_pp_directive_required : Error<
   "%0 must be used within a preprocessing directive">;
 def err_pp_file_not_found : Error<"'%0' file not found">, DefaultFatal;

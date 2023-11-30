@@ -3967,29 +3967,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     const size_t &OffsetParam = Params.MaybeOffsetParam->Offset;
     BinaryContents = BinaryContents.substr(OffsetParam);
   }
-  const size_t TargetCharWidth = getTargetInfo().getCharWidth();
-  if (TargetCharWidth > 64) {
-    // Too wide for us to handle
-    Diag(EmbedTok, diag::err_pp_unsupported_directive)
-        << 1
-        << "CHAR_BIT is too wide for the target architecture to handle "
-           "properly";
-    return;
-  }
-  if (TargetCharWidth != 8) {
-    Diag(EmbedTok, diag::err_pp_unsupported_directive)
-        << 1
-        << "At the moment, we do not have the machinery to support non 8-bit "
-           "CHAR_BIT targets!";
-    return;
-  }
-  if (CHAR_BIT % TargetCharWidth != 0) {
-    Diag(EmbedTok, diag::err_pp_unsupported_directive)
-        << 1
-        << "CHAR_BIT is not evenly divisible by host architecture's byte "
-           "definition";
-    return;
-  }
+
   if (Callbacks)
     Callbacks->EmbedDirective(HashLoc, Filename, isAngled, MaybeFileRef,
                               Params);
