@@ -886,12 +886,12 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   return true;
 }
 
-class ExpandMemCmpPass : public FunctionPass {
+class ExpandMemCmpLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  ExpandMemCmpPass() : FunctionPass(ID) {
-    initializeExpandMemCmpPassPass(*PassRegistry::getPassRegistry());
+  ExpandMemCmpLegacyPass() : FunctionPass(ID) {
+    initializeExpandMemCmpLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override {
@@ -940,7 +940,7 @@ private:
                   BlockFrequencyInfo *BFI, DomTreeUpdater *DTU);
 };
 
-bool ExpandMemCmpPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
+bool ExpandMemCmpLegacyPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
                                   const TargetTransformInfo *TTI,
                                   const TargetLowering *TL,
                                   const DataLayout &DL, ProfileSummaryInfo *PSI,
@@ -962,7 +962,7 @@ bool ExpandMemCmpPass::runOnBlock(BasicBlock &BB, const TargetLibraryInfo *TLI,
 }
 
 PreservedAnalyses
-ExpandMemCmpPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
+ExpandMemCmpLegacyPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
                           const TargetTransformInfo *TTI,
                           const TargetLowering *TL, ProfileSummaryInfo *PSI,
                           BlockFrequencyInfo *BFI, DominatorTree *DT) {
@@ -994,17 +994,18 @@ ExpandMemCmpPass::runImpl(Function &F, const TargetLibraryInfo *TLI,
 
 } // namespace
 
-char ExpandMemCmpPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ExpandMemCmpPass, "expandmemcmp",
+
+char ExpandMemCmpLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ExpandMemCmpLegacyPass, "expandmemcmp",
                       "Expand memcmp() to load/stores", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(ExpandMemCmpPass, "expandmemcmp",
+INITIALIZE_PASS_END(ExpandMemCmpLegacyPass, "expandmemcmp",
                     "Expand memcmp() to load/stores", false, false)
 
-FunctionPass *llvm::createExpandMemCmpPass() {
-  return new ExpandMemCmpPass();
+FunctionPass *llvm::createExpandMemCmpLegacyPass() {
+  return new ExpandMemCmpLegacyPass();
 }
