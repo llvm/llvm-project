@@ -48,6 +48,9 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  bool isRegInGprb(Register Reg, MachineRegisterInfo &MRI) const;
+  bool isRegInFprb(Register Reg, MachineRegisterInfo &MRI) const;
+
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
@@ -62,6 +65,8 @@ private:
 
   // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
+  bool selectImplicitDef(MachineInstr &MI, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI) const;
   bool materializeImm(Register Reg, int64_t Imm, MachineIRBuilder &MIB) const;
   bool selectAddr(MachineInstr &MI, MachineIRBuilder &MIB,
                   MachineRegisterInfo &MRI, bool IsLocal = true,
@@ -75,6 +80,10 @@ private:
                                       MachineRegisterInfo &MRI) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
+  bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI) const;
+  bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
+                           MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -623,9 +632,47 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return selectImplicitDef(MI, MIB, MRI);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(MI, MIB, MRI);
+  case TargetOpcode::G_UNMERGE_VALUES:
+    return selectUnmergeValues(MI, MIB, MRI);
   default:
     return false;
   }
+}
+
+bool RISCVInstructionSelector::selectMergeValues(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
+
+  // Build a F64 Pair from operands
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Lo = MI.getOperand(1).getReg();
+  Register Hi = MI.getOperand(2).getReg();
+  if (!isRegInFprb(Dst, MRI) || !isRegInGprb(Lo, MRI) || !isRegInGprb(Hi, MRI))
+    return false;
+  MI.setDesc(TII.get(RISCV::BuildPairF64Pseudo));
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+}
+
+bool RISCVInstructionSelector::selectUnmergeValues(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+
+  // Split F64 Src into two s32 parts
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Src = MI.getOperand(2).getReg();
+  Register Lo = MI.getOperand(0).getReg();
+  Register Hi = MI.getOperand(1).getReg();
+  if (!isRegInFprb(Src, MRI) || !isRegInGprb(Lo, MRI) || !isRegInGprb(Hi, MRI))
+    return false;
+  MI.setDesc(TII.get(RISCV::SplitF64Pseudo));
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
@@ -653,6 +700,13 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
     MRI.setType(DstReg, sXLen);
     break;
+  }
+  case TargetOpcode::G_PTRMASK: {
+    Register DstReg = MI.getOperand(0).getReg();
+    const LLT sXLen = LLT::scalar(STI.getXLen());
+    replacePtrWithInt(MI.getOperand(1), MIB, MRI);
+    MI.setDesc(TII.get(TargetOpcode::G_AND));
+    MRI.setType(DstReg, sXLen);
   }
   }
 }
@@ -711,6 +765,16 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
   return nullptr;
 }
 
+bool RISCVInstructionSelector::isRegInGprb(Register Reg,
+                                           MachineRegisterInfo &MRI) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == RISCV::GPRBRegBankID;
+}
+
+bool RISCVInstructionSelector::isRegInFprb(Register Reg,
+                                           MachineRegisterInfo &MRI) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == RISCV::FPRBRegBankID;
+}
+
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
                                           MachineRegisterInfo &MRI) const {
   Register DstReg = MI.getOperand(0).getReg();
@@ -733,6 +797,25 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
   }
 
   MI.setDesc(TII.get(RISCV::COPY));
+  return true;
+}
+
+bool RISCVInstructionSelector::selectImplicitDef(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
+
+  const Register DstReg = MI.getOperand(0).getReg();
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
+      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
+
+  assert(DstRC &&
+         "Register class not available for LLT, register bank combination");
+
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
+                      << " operand\n");
+  }
+  MI.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
   return true;
 }
 
