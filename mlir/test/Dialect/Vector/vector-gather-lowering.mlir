@@ -159,7 +159,6 @@ func.func @gather_tensor_1d_none_set(%base: tensor<?xf32>, %v: vector<2xindex>, 
   //  2. "flatten gather"
 // However, the main goal is to the test Pattern 1 above.
 #map = affine_map<()[s0] -> (s0 * 4096)>
-#map1 = affine_map<()[s0] -> (s0 * -4096 + 518400, 4096)>
 func.func @strided_gather(%base : memref<100x3xf32>,
                           %idxs : vector<4xindex>,
                           %x : index, %y : index) -> vector<4xf32> {

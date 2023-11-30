@@ -121,8 +121,6 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
     Value base = op.getBase();
-    if (!base.getDefiningOp())
-      return failure();
 
     // TODO: Strided accesses might be coming from other ops as well
     auto subview = base.getDefiningOp<memref::SubViewOp>();
@@ -201,7 +199,6 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
     // vector.load requires the most minor memref dim to have unit stride
     if (auto memType = dyn_cast<MemRefType>(base.getType())) {
-      memType.getLayout();
       if (auto stridesAttr =
               dyn_cast_if_present<StridedLayoutAttr>(memType.getLayout())) {
         if (stridesAttr.getStrides().back() != 1)
