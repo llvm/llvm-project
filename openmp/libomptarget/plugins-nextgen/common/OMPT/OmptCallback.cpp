@@ -13,7 +13,6 @@
 #ifdef OMPT_SUPPORT
 
 #include "OmptCallback.h"
-#include "Debug.h"
 #include "OmptConnector.h"
 
 #include "llvm/Support/DynamicLibrary.h"
@@ -22,6 +21,11 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+
+#include "Shared/Debug.h"
+
+#include "OmptCallback.h"
+#include "OmptConnector.h"
 
 using namespace llvm::omp::target::ompt;
 

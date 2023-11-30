@@ -63,7 +63,6 @@ endif()
 target_link_libraries(PluginInterface
   PUBLIC
     ${llvm_libs}
-    MemoryManager
     OMPT
 )
 

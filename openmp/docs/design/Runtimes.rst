@@ -1015,9 +1015,9 @@ default. The solution is to add an explicit map clause in the target region.
 LIBOMPTARGET_STACK_SIZE
 """""""""""""""""""""""
 
-This environment variable sets the stack size in bytes for the CUDA plugin. This
-can be used to increase or decrease the standard amount of memory reserved for
-each thread's stack.
+This environment variable sets the stack size in bytes for the AMDGPU and CUDA
+plugins. This can be used to increase or decrease the standard amount of memory
+reserved for each thread's stack.
 
 LIBOMPTARGET_HEAP_SIZE
 """""""""""""""""""""""

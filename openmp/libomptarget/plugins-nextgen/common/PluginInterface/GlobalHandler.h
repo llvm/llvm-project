@@ -18,8 +18,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/ELFObjectFile.h"
 
-#include "Debug.h"
-#include "Utilities.h"
+#include "Shared/Debug.h"
+#include "Shared/Utils.h"
+
 #include "omptarget.h"
 
 namespace llvm {

@@ -13,10 +13,11 @@
 #ifndef _OMPTARGET_PRIVATE_H
 #define _OMPTARGET_PRIVATE_H
 
+#include "Shared/Debug.h"
+
+#include "SourceInfo.h"
 #include "device.h"
-#include <Debug.h>
-#include <SourceInfo.h>
-#include <omptarget.h>
+#include "omptarget.h"
 
 #include <cstdint>
 

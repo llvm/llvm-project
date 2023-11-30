@@ -16,7 +16,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+
 #include "Environment.h"
 #include "GlobalHandler.h"
 #include "OmptCallback.h"

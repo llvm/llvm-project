@@ -96,7 +96,6 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
 
   LINK_LIBS
   PRIVATE
-  MemoryManager
   OMPT
   PluginInterface
   ${LIBOMPTARGET_DEP_LIBRARIES}

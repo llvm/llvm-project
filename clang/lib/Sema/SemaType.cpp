@@ -8657,6 +8657,17 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
+static void HandleHLSLParamModifierAttr(QualType &CurType,
+                                        const ParsedAttr &Attr, Sema &S) {
+  // Don't apply this attribute to template dependent types. It is applied on
+  // substitution during template instantiation.
+  if (CurType->isDependentType())
+    return;
+  if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
+      Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out)
+    CurType = S.getASTContext().getLValueReferenceType(CurType);
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
@@ -8830,6 +8841,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_WebAssemblyFuncref: {
       if (!HandleWebAssemblyFuncrefAttr(state, type, attr))
         attr.setUsedAsTypeAttr();
+      break;
+    }
+
+    case ParsedAttr::AT_HLSLParamModifier: {
+      HandleHLSLParamModifierAttr(type, attr, state.getSema());
+      attr.setUsedAsTypeAttr();
       break;
     }
 

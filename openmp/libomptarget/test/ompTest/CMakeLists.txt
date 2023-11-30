@@ -44,7 +44,6 @@ add_llvm_library(omptest
 
   LINK_LIBS
   PRIVATE
-  MemoryManager
   ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
 

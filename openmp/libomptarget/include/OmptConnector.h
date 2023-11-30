@@ -17,7 +17,7 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "Debug.h"
+#include "Shared/Debug.h"
 #include "omp-tools.h"
 #include "omptarget.h"
 
@@ -25,6 +25,11 @@
 
 #include <memory>
 #include <string>
+
+#include "omp-tools.h"
+#include "omptarget.h"
+
+#include "Shared/Debug.h"
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX

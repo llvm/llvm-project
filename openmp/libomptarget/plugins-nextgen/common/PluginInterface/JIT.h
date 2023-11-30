@@ -11,7 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_JIT_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_JIT_H
 
-#include "Utilities.h"
+#include "Shared/Utils.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"

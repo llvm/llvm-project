@@ -13,7 +13,7 @@
 #ifdef OMPT_SUPPORT
 
 #include "OmptTracing.h"
-#include "Debug.h"
+#include "Shared/Debug.h"
 #include "OmptInterface.h"
 #include "OmptTracingBuffer.h"
 #include "omp-tools.h"

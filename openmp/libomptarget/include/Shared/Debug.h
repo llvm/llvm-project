@@ -1,4 +1,4 @@
-//===------- Debug.h - Target independent OpenMP target RTL -- C++ --------===//
+//===-- Shared/Debug.h - Target independent OpenMP target RTL -- C++ ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,8 +34,9 @@
 //   (uintptr_t) ptr);
 //
 //===----------------------------------------------------------------------===//
-#ifndef _OMPTARGET_DEBUG_H
-#define _OMPTARGET_DEBUG_H
+
+#ifndef OMPTARGET_SHARED_DEBUG_H
+#define OMPTARGET_SHARED_DEBUG_H
 
 #include <atomic>
 #include <mutex>
@@ -211,4 +212,4 @@ inline uint32_t getDebugLevel() {
     }                                                                          \
   } while (false)
 
-#endif // _OMPTARGET_DEBUG_H
+#endif // OMPTARGET_SHARED_DEBUG_H

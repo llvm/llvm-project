@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RPC.h"
-#include "Debug.h"
+
+#include "Shared/Debug.h"
+
 #include "PluginInterface.h"
 
 // This header file may be present in-tree or from an LLVM installation. The

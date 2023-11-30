@@ -13,7 +13,7 @@
 #ifdef OMPT_SUPPORT
 
 #include "OmptCallback.h"
-#include "Debug.h"
+#include "Shared/Debug.h"
 #include "OmptConnector.h"
 #include "OmptInterface.h"
 #include "omp-tools.h"
@@ -30,6 +30,12 @@
 #include <thread>
 
 #pragma push_macro("DEBUG_PREFIX")
+#include "Shared/Debug.h"
+
+#include "OmptCallback.h"
+#include "OmptConnector.h"
+#include "OmptInterface.h"
+
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Debug.h"
+#include "Shared/Debug.h"
 #include "OmptCallback.h"
 #include "OmptTracing.h"
 #include "OmptTracingBuffer.h"
