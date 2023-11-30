@@ -218,6 +218,7 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   const auto &beginBlockDir{std::get<parser::AccBeginCombinedDirective>(x.t)};
   const auto &combinedDir{
       std::get<parser::AccCombinedDirective>(beginBlockDir.t)};
+  auto &doCons{std::get<std::optional<parser::DoConstruct>>(x.t)};
   switch (combinedDir.v) {
   case llvm::acc::Directive::ACCD_kernels_loop:
   case llvm::acc::Directive::ACCD_parallel_loop:
@@ -225,6 +226,10 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
     // Restriction - line 1004-1005
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         computeConstructOnlyAllowedAfterDeviceTypeClauses);
+    if (doCons) {
+      const parser::Block &block{std::get<parser::Block>(doCons->t)};
+      CheckNoBranching(block, GetContext().directive, beginBlockDir.source);
+    }
     break;
   default:
     break;
