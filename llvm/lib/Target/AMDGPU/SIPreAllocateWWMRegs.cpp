@@ -28,10 +28,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-allocate-wwm-regs"
 
-static cl::opt<bool>
-    EnablePreallocateSGPRSpillVGPRs("amdgpu-prealloc-sgpr-spill-vgprs",
-                                    cl::init(false), cl::Hidden);
-
 namespace {
 
 class SIPreAllocateWWMRegs : public MachineFunctionPass {
@@ -199,10 +195,6 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
 
   RegClassInfo.runOnMachineFunction(MF);
 
-  bool PreallocateSGPRSpillVGPRs =
-      EnablePreallocateSGPRSpillVGPRs ||
-      MF.getFunction().hasFnAttribute("amdgpu-prealloc-sgpr-spill-vgprs");
-
   bool RegsAssigned = false;
 
   // We use a reverse post-order traversal of the control-flow graph to
@@ -219,11 +211,8 @@ bool SIPreAllocateWWMRegs::runOnMachineFunction(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_SET_INACTIVE_B64)
         RegsAssigned |= processDef(MI.getOperand(0));
 
-      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR) {
-        if (!PreallocateSGPRSpillVGPRs)
-          continue;
-        RegsAssigned |= processDef(MI.getOperand(0));
-      }
+      if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_TO_VGPR)
+        continue;
 
       if (MI.getOpcode() == AMDGPU::ENTER_STRICT_WWM ||
           MI.getOpcode() == AMDGPU::ENTER_STRICT_WQM) {
