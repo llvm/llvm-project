@@ -3823,19 +3823,27 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // *all* uses if the operand is an invoke/callbr and the use is in a phi on
   // the normal/default destination. This is why the domination check in the
   // replacement below is still necessary.
-  Instruction *MoveBefore;
+  BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
     MoveBefore =
-        &*FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
   } else {
-    MoveBefore = cast<Instruction>(Op)->getInsertionPointAfterDef();
-    if (!MoveBefore)
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
       return false;
+    MoveBefore = *MoveBeforeOpt;
   }
 
+  // Don't move to the position of a debug intrinsic.
+  if (isa<DbgInfoIntrinsic>(MoveBefore))
+    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
+  // Re-point iterator to come after any debug-info records, if we're
+  // running in "RemoveDIs" mode
+  MoveBefore.setHeadBit(false);
+
   bool Changed = false;
-  if (&FI != MoveBefore) {
-    FI.moveBefore(*MoveBefore->getParent(), MoveBefore->getIterator());
+  if (&FI != &*MoveBefore) {
+    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
     Changed = true;
   }
 
