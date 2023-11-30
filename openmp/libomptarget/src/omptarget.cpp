@@ -20,6 +20,7 @@
 
 #include "Shared/Profile.h"
 
+#include "OpenMP/Mapping.h"
 #include "OpenMP/omp.h"
 
 #include "llvm/ADT/StringExtras.h"
