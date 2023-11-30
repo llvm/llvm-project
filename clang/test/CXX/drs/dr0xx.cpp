@@ -714,6 +714,8 @@ namespace dr51 { // dr51: 2.8
 }
 
 namespace dr52 { // dr52: 2.8
+  struct A { int n; }; // expected-note {{here}}
+  struct B : private A {} b; // expected-note 2{{private}}
   // FIXME: This first diagnostic is very strangely worded, and seems to be bogus.
   int k = b.A::n; // expected-error {{'A' is a private member of 'dr52::A'}}
   // expected-error@-1 {{cannot cast 'struct B' to its private base}}
