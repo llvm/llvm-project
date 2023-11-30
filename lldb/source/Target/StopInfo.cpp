@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/Watchpoint.h"
-#include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/UserExpression.h"
@@ -110,9 +109,9 @@ public:
       BreakpointSiteSP bp_site_sp(
           thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
       if (bp_site_sp) {
-        uint32_t num_constituents = bp_site_sp->GetNumberOfConstituents();
-        if (num_constituents == 1) {
-          BreakpointLocationSP bp_loc_sp = bp_site_sp->GetConstituentAtIndex(0);
+        uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
+        if (num_owners == 1) {
+          BreakpointLocationSP bp_loc_sp = bp_site_sp->GetOwnerAtIndex(0);
           if (bp_loc_sp) {
             Breakpoint & bkpt = bp_loc_sp->GetBreakpoint();
             m_break_id = bkpt.GetID();
@@ -121,10 +120,8 @@ public:
           }
         } else {
           m_was_all_internal = true;
-          for (uint32_t i = 0; i < num_constituents; i++) {
-            if (!bp_site_sp->GetConstituentAtIndex(i)
-                     ->GetBreakpoint()
-                     .IsInternal()) {
+          for (uint32_t i = 0; i < num_owners; i++) {
+            if (!bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint().IsInternal()) {
               m_was_all_internal = false;
               break;
             }
@@ -192,9 +189,9 @@ public:
           // If we have just hit an internal breakpoint, and it has a kind
           // description, print that instead of the full breakpoint printing:
           if (bp_site_sp->IsInternal()) {
-            size_t num_constituents = bp_site_sp->GetNumberOfConstituents();
-            for (size_t idx = 0; idx < num_constituents; idx++) {
-              const char *kind = bp_site_sp->GetConstituentAtIndex(idx)
+            size_t num_owners = bp_site_sp->GetNumberOfOwners();
+            for (size_t idx = 0; idx < num_owners; idx++) {
+              const char *kind = bp_site_sp->GetOwnerAtIndex(idx)
                                      ->GetBreakpoint()
                                      .GetBreakpointKind();
               if (kind != nullptr) {
@@ -287,14 +284,13 @@ protected:
       // Use this variable to tell us if that is true.
       bool actually_hit_any_locations = false;
       if (bp_site_sp) {
-        // Let's copy the constituents list out of the site and store them in a
-        // local list.  That way if one of the breakpoint actions changes the
-        // site, then we won't be operating on a bad list.
+        // Let's copy the owners list out of the site and store them in a local
+        // list.  That way if one of the breakpoint actions changes the site,
+        // then we won't be operating on a bad list.
         BreakpointLocationCollection site_locations;
-        size_t num_constituents =
-            bp_site_sp->CopyConstituentsList(site_locations);
+        size_t num_owners = bp_site_sp->CopyOwnersList(site_locations);
 
-        if (num_constituents == 0) {
+        if (num_owners == 0) {
           m_should_stop = true;
           actually_hit_any_locations = true;  // We're going to stop, don't 
                                               // change the stop info.
@@ -386,21 +382,20 @@ protected:
           StoppointCallbackContext context(event_ptr, exe_ctx, false);
 
           // For safety's sake let's also grab an extra reference to the
-          // breakpoint constituents of the locations we're going to examine,
-          // since the locations are going to have to get back to their
-          // breakpoints, and the locations don't keep their constituents alive.
-          // I'm just sticking the BreakpointSP's in a vector since I'm only
-          // using it to locally increment their retain counts.
+          // breakpoint owners of the locations we're going to examine, since
+          // the locations are going to have to get back to their breakpoints,
+          // and the locations don't keep their owners alive.  I'm just
+          // sticking the BreakpointSP's in a vector since I'm only using it to
+          // locally increment their retain counts.
 
-          std::vector<lldb::BreakpointSP> location_constituents;
+          std::vector<lldb::BreakpointSP> location_owners;
 
-          for (size_t j = 0; j < num_constituents; j++) {
+          for (size_t j = 0; j < num_owners; j++) {
             BreakpointLocationSP loc(site_locations.GetByIndex(j));
-            location_constituents.push_back(
-                loc->GetBreakpoint().shared_from_this());
+            location_owners.push_back(loc->GetBreakpoint().shared_from_this());
           }
 
-          for (size_t j = 0; j < num_constituents; j++) {
+          for (size_t j = 0; j < num_owners; j++) {
             lldb::BreakpointLocationSP bp_loc_sp = site_locations.GetByIndex(j);
             StreamString loc_desc;
             if (log) {
@@ -636,7 +631,7 @@ public:
       if (process_sp && watchpoint_sp) {
         const bool notify = false;
         watchpoint_sp->TurnOnEphemeralMode();
-        process_sp->DisableWatchpoint(watchpoint_sp, notify);
+        process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
         process_sp->AddPreResumeAction(SentryPreResumeAction, this);
       }
     }
@@ -647,9 +642,9 @@ public:
         watchpoint_sp->TurnOffEphemeralMode();
         const bool notify = false;
         if (was_disabled) {
-          process_sp->DisableWatchpoint(watchpoint_sp, notify);
+          process_sp->DisableWatchpoint(watchpoint_sp.get(), notify);
         } else {
-          process_sp->EnableWatchpoint(watchpoint_sp, notify);
+          process_sp->EnableWatchpoint(watchpoint_sp.get(), notify);
         }
       }
     }
@@ -712,7 +707,7 @@ protected:
         return true;
 
       if (!m_did_disable_wp) {
-        GetThread().GetProcess()->DisableWatchpoint(m_watch_sp, false);
+        GetThread().GetProcess()->DisableWatchpoint(m_watch_sp.get(), false);
         m_did_disable_wp = true;
       }
       return true;
@@ -756,7 +751,7 @@ protected:
       if (!m_did_disable_wp)
         return;
       m_did_disable_wp = true;
-      GetThread().GetProcess()->EnableWatchpoint(m_watch_sp, true);
+      GetThread().GetProcess()->EnableWatchpoint(m_watch_sp.get(), true);
     }
 
   private:
@@ -996,10 +991,9 @@ protected:
 
           Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
           StreamSP output_sp = debugger.GetAsyncOutputStream();
-          if (wp_sp->DumpSnapshots(output_sp.get())) {
-            output_sp->EOL();
-            output_sp->Flush();
-          }
+          wp_sp->DumpSnapshots(output_sp.get());
+          output_sp->EOL();
+          output_sp->Flush();
         }
 
       } else {
@@ -1378,8 +1372,6 @@ StopInfoSP StopInfo::CreateStopReasonWithBreakpointSiteID(Thread &thread,
   return StopInfoSP(new StopInfoBreakpoint(thread, break_id, should_stop));
 }
 
-// LWP_TODO: We'll need a CreateStopReasonWithWatchpointResourceID akin
-// to CreateStopReasonWithBreakpointSiteID
 StopInfoSP StopInfo::CreateStopReasonWithWatchpointID(Thread &thread,
                                                       break_id_t watch_id,
                                                       bool silently_continue) {
