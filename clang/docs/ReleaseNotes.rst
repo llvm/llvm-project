@@ -250,7 +250,7 @@ New Compiler Flags
 * ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
   multiplication and enables application of Smith's algorithm for complex
   division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
-  (1962). The default is ``-fno-cx-fortran-rules``, but is enabled by
+  (1962). The default is ``-fno-cx-fortran-rules``, but this option is enabled by
   ``-ffast-math``.
 
 

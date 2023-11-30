@@ -918,11 +918,7 @@ void Parser::HandlePragmaCXLimitedRange() {
     // According to ISO C99 standard chapter 7.3.4, the default value
     // for the pragma is ``off'. -fcx-limited-range and -fcx-fortran-rules
     // control the default value of these pragmas.
-    Range = (getLangOpts().getComplexRange() == LangOptions::CX_Limited)
-                ? LangOptions::CX_Limited
-            : (getLangOpts().getComplexRange() == LangOptions::CX_Fortran)
-                ? LangOptions::CX_Fortran
-                : LangOptions::CX_Full;
+    Range = getLangOpts().getComplexRange();
     break;
   }
 
