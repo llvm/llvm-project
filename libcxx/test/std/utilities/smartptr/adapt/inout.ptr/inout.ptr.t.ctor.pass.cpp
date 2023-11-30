@@ -14,18 +14,29 @@
 // template<class Smart, class Pointer, class... Args>
 //   class inout_ptr_t;                                        // since c++23
 
+// explicit inout_ptr_t(Smart&, Args...);
+
 #include <memory>
+
+#include "test_convertible.h"
 
 int main(int, char**) {
   {
     std::unique_ptr<int> uPtr;
 
     std::inout_ptr_t<std::unique_ptr<int>, int*>{uPtr};
+
+    static_assert(
+        !test_convertible<std::inout_ptr_t<std::unique_ptr<int>, int*>>(), "This constructor must be explicit");
   }
   {
-    std::unique_ptr<int> uPtr;
+    auto deleter = [](auto* p) { delete p; };
+    std::unique_ptr<int, decltype(deleter)> uPtr;
 
-    std::inout_ptr_t<std::unique_ptr<int>, int*>{uPtr};
+    std::inout_ptr_t<std::unique_ptr<int, decltype(deleter)>, int*>{uPtr};
+
+    static_assert(!test_convertible<std::inout_ptr_t<std::unique_ptr<int, decltype(deleter)>, int*>>(),
+                  "This constructor must be explicit");
   }
 
   return 0;

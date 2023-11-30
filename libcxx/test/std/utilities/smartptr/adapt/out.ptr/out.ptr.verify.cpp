@@ -23,6 +23,7 @@ int main(int, char**) {
 
     // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, std::shared_ptr> || sizeof...(_Args) > 0'{{.*}}Specialization of std::shared_ptr<> requires a deleter.}}
     auto outSPtr1 = std::out_ptr(sPtr);
+    // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::out_ptr_t<shared_ptr<int>, _Ptr>' (aka 'out_ptr_t<std::shared_ptr<int>, int *>')}}
     auto outSPtr2 = std::out_ptr<int*>(sPtr);
   }
 

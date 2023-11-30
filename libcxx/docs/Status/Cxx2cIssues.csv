@@ -24,7 +24,7 @@
 "`3749 <https://wg21.link/LWG3749>`__","``common_iterator`` should handle integer-class difference types","Kona November 2023","","",""
 "`3809 <https://wg21.link/LWG3809>`__","Is ``std::subtract_with_carry_engine<uint16_t>`` supposed to work","Kona November 2023","","",""
 "`3892 <https://wg21.link/LWG3892>`__","Incorrect formatting of nested ranges and tuples","Kona November 2023","|Complete|","17.0","|format|"
-"`3897 <https://wg21.link/LWG3897>`__","``inout_ptr`` will not update raw pointer to 0","Kona November 2023","","",""
+"`3897 <https://wg21.link/LWG3897>`__","``inout_ptr`` will not update raw pointer to 0","Kona November 2023","|Complete|","18.0",""
 "`3946 <https://wg21.link/LWG3946>`__","The definition of ``const_iterator_t`` should be reworked","Kona November 2023","","",""
 "`3947 <https://wg21.link/LWG3947>`__","Unexpected constraints on ``adjacent_transform_view::base()``","Kona November 2023","","","|ranges|"
 "`3948 <https://wg21.link/LWG3948>`__","``possibly-const-range and as-const-pointer`` should be ``noexcept``","Kona November 2023","","","|ranges|"

@@ -10,9 +10,9 @@
 
 // <memory>
 
-// [out.ptr], function template out_ptr
+// [inout.ptr], function template inout_ptr
 // template<class Pointer = void, class Smart, class... Args>
-//   auto out_ptr(Smart& s, Args&&... args);                   // since c++23
+//   auto inout_ptr(Smart& s, Args&&... args);                 // since c++23
 
 #include <memory>
 
@@ -20,14 +20,19 @@ int main(int, char**) {
   {
     std::unique_ptr<int> uPtr;
 
-    auto outUPtr1 = std::out_ptr(uPtr);
-    auto outUPtr2 = std::out_ptr<int*>(uPtr);
+    auto inoutUPtr1 = std::inout_ptr(uPtr);
+    (void)inoutUPtr1;
+    auto inoutUPtr2 = std::inout_ptr<int*>(uPtr);
+    (void)inoutUPtr2;
   }
   {
-    std::shared_ptr<int> sPtr;
+    auto deleter = [](auto* p) { delete p; };
+    std::unique_ptr<int, decltype(deleter)> uPtr;
 
-    auto outSPtr1 = std::out_ptr(sPtr, [](auto* p) { delete p; });
-    auto outSPtr2 = std::out_ptr<int*>(sPtr, [](auto* p) { delete p; });
+    auto inoutUPtr1 = std::inout_ptr(uPtr, deleter);
+    (void)inoutUPtr1;
+    auto inoutUPtr2 = std::inout_ptr<int*>(uPtr, deleter);
+    (void)inoutUPtr2;
   }
 
   return 0;

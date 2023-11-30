@@ -10,10 +10,6 @@
 
 // <memory>
 
-// [out.ptr.t], class template out_ptr_t
-// template<class Smart, class Pointer, class... Args>
-//   class out_ptr_t;                                          // since c++23
-
 // [out.ptr], function template out_ptr
 // template<class Pointer = void, class Smart, class... Args>
 //   auto out_ptr(Smart& s, Args&&... args);                   // since c++23

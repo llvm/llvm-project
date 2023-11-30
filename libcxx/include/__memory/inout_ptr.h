@@ -51,8 +51,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI inout_ptr_t(const inout_ptr_t&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI ~inout_ptr_t() {
-    if (!__p_) {
-      return;
+    if constexpr (!is_pointer_v<_Smart>) {
+      if (!__p_) {
+        return;
+      }
     }
 
     using _SP = __pointer_of_or_t<_Smart, _Pointer>;
@@ -90,7 +92,7 @@ private:
 template <class _Pointer = void, class _Smart, class... _Args>
 _LIBCPP_HIDE_FROM_ABI auto inout_ptr(_Smart& __s, _Args&&... __args) {
   using _Ptr = conditional_t<is_void_v<_Pointer>, __pointer_of_t<_Smart>, _Pointer>;
-  return std::inout_ptr_t<_Smart, _Ptr, _Args&&...>{__s, std::forward<_Args>(__args)...};
+  return std::inout_ptr_t<_Smart, _Ptr, _Args&&...>(__s, std::forward<_Args>(__args)...);
 }
 
 #endif // _LIBCPP_STD_VER >= 23

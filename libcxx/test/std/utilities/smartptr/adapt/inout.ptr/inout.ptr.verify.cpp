@@ -23,6 +23,7 @@ int main(int, char**) {
 
     // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, std::shared_ptr>'{{.*}}std::shared_ptr<> is not supported}}
     auto inoutUPtr1 = std::inout_ptr(sPtr);
+    // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::inout_ptr_t<shared_ptr<int>, _Ptr>' (aka 'inout_ptr_t<std::shared_ptr<int>, int *>'}}
     auto inoutUPtr2 = std::inout_ptr<int*>(sPtr);
   }
 
