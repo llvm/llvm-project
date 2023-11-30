@@ -2753,12 +2753,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTSpillFill(MachineInstr &MI,
                                                           bool IsSpill) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB;
-  if (IsSpill) {
-    MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STR_TX));
-    MIB.addReg(MI.getOperand(0).getReg());
-  } else
-    MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::LDR_TX),
-                  MI.getOperand(0).getReg());
+  unsigned Opc = IsSpill ? AArch64::STR_TX : AArch64::LDR_TX;
+  auto Rs = IsSpill ? RegState::Kill : RegState::Define;
+  MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
+  MIB.addReg(MI.getOperand(0).getReg(), Rs);
   MIB.add(MI.getOperand(1)); // Base
   MI.eraseFromParent();      // The pseudo is gone now.
   return BB;
