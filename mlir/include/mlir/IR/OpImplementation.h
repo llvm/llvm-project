@@ -13,12 +13,16 @@
 #ifndef MLIR_IR_OPIMPLEMENTATION_H
 #define MLIR_IR_OPIMPLEMENTATION_H
 
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <type_traits>
 
 namespace mlir {
 class AsmParsedResourceEntry;
@@ -1762,6 +1766,19 @@ public:
                  const SetVector<AsmDialectResourceHandle> &referencedResources,
                  AsmResourceBuilder &builder) const {}
 };
+
+template <typename Range>
+void printShape(raw_ostream& stream, Range&& shape) {
+  for (auto [idx, dimSize] : llvm::enumerate(shape)) {
+    if (ShapedType::isDynamic(dimSize))
+      stream << "?";
+    else
+      stream << dimSize;
+    if (static_cast<std::decay_t<decltype(range_size(shape))>>(idx) != range_size(shape) - 1)
+      stream << "x";
+  }
+}
+
 } // namespace mlir
 
 //===--------------------------------------------------------------------===//

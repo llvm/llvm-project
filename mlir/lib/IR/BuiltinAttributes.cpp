@@ -1828,17 +1828,7 @@ void mlir::printShape(OpAsmPrinter &printer, Operation *op,
                       ArrayRef<int64_t> shape) {
   if (!shape.empty())
     printer << "[";
-
-  for (size_t i = 0; i < shape.size(); ++i) {
-    if (ShapedType::isDynamic(shape[i]))
-      printer << '?';
-    else
-      printer << shape[i];
-    if (i != shape.size() - 1) {
-      printer << 'x';
-    }
-  }
-
+  printShape(printer.getStream(), shape);
   if (!shape.empty())
     printer << "]";
 }

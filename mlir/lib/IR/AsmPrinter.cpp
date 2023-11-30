@@ -2576,13 +2576,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
         os << "tensor<";
-        for (int64_t dim : tensorTy.getShape()) {
-          if (ShapedType::isDynamic(dim))
-            os << '?';
-          else
-            os << dim;
+        printShape(os, tensorTy.getShape());
+        if (!tensorTy.getShape().empty())
           os << 'x';
-        }
         printType(tensorTy.getElementType());
         // Only print the encoding attribute value if set.
         if (tensorTy.getEncoding()) {
@@ -2598,13 +2594,9 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<MemRefType>([&](MemRefType memrefTy) {
         os << "memref<";
-        for (int64_t dim : memrefTy.getShape()) {
-          if (ShapedType::isDynamic(dim))
-            os << '?';
-          else
-            os << dim;
+        printShape(os, memrefTy.getShape());
+        if (!memrefTy.getShape().empty())
           os << 'x';
-        }
         printType(memrefTy.getElementType());
         MemRefLayoutAttrInterface layout = memrefTy.getLayout();
         if (!llvm::isa<AffineMapAttr>(layout) || !layout.isIdentity()) {
