@@ -2345,16 +2345,15 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   llvm_unreachable("unhandled case");
 }
 
-PPEmbedExpr::PPEmbedExpr(const ASTContext &Ctx, QualType ResultTy,
-                         StringLiteral *Filename, StringLiteral *BinaryData,
-                         SourceLocation BLoc, SourceLocation RParenLoc,
-                         DeclContext *ParentContext)
-    : Expr(PPEmbedExprClass, ResultTy, VK_PRValue, OK_Ordinary),
+PPEmbedExpr::PPEmbedExpr(const ASTContext &Ctx, StringLiteral *Filename,
+                         StringLiteral *BinaryData, SourceLocation BLoc,
+                         SourceLocation RParenLoc, DeclContext *ParentContext)
+    : Expr(PPEmbedExprClass, Ctx.UnsignedCharTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext),
       Filename(Filename), BinaryData(BinaryData), Ctx(&Ctx) {
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
-      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(ResultTy)), ResultTy, BLoc);
+      Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), BLoc);
 }
 
 size_t PPEmbedExpr::getDataElementCount(ASTContext &Context) const {

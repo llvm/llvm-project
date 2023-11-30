@@ -6105,9 +6105,9 @@ public:
 
   // #embed
   ExprResult ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
-                              SourceLocation Base64DataLocation,
+                              SourceLocation BinaryDataLoc,
                               SourceLocation RPLoc, StringLiteral *Filename,
-                              QualType DataTy, std::vector<char> BinaryData);
+                              StringLiteral *BinaryData);
 
   IntegerLiteral *ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,
                                           bool FirstElement = true);

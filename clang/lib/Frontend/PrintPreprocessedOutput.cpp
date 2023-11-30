@@ -24,7 +24,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Base64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
@@ -477,7 +476,7 @@ void PrintPPOutputPPCallbacks::EmbedDirective(
   // Preprocessor::HandleEmbedDirectiveImpl(); if we start emitting more tokens
   // while preprocessing, we will need to update this logic as well.
   if (SkipAnnotToks)
-    NumToksToSkip += 7;
+    NumToksToSkip += 5;
 
   *OS << " /* clang -E -dE */";
   setEmittedDirectiveOnThisLine();
@@ -988,13 +987,8 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       PP.Lex(Tok);
       assert(Tok.is(tok::string_literal) && "expected string literal token");
 
-      std::vector<char> BinaryContents;
-      llvm::Error Err = llvm::decodeBase64(
-          StringRef(Tok.getLiteralData() + 1, Tok.getLength() - 2),
-          BinaryContents); // +1 and -2 are to skip quotation marks.
-      // We expect no errors because we're the one to generate the original
-      // contents.
-      assert(!Err && "expected no base64 decoding errors");
+      // +1 and -2 are to skip quotation marks.
+      StringRef BinaryContents(Tok.getLiteralData() + 1, Tok.getLength() - 2);
 
       // Loop over the contents and print them as a comma-delimited list of
       // values.

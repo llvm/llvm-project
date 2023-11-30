@@ -17606,21 +17606,11 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
 }
 
 ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
-                                  SourceLocation Base64DataLocation,
+                                  SourceLocation BinaryDataLoc,
                                   SourceLocation RPLoc, StringLiteral *Filename,
-                                  QualType ElementTy,
-                                  std::vector<char> BinaryData) {
-  uint64_t ArraySizeRawVal[] = {BinaryData.size()};
-  llvm::APSInt ArraySize(llvm::APInt(Context.getTypeSize(Context.getSizeType()),
-                                     1, ArraySizeRawVal));
-  QualType ArrayTy = Context.getConstantArrayType(ElementTy, ArraySize, nullptr,
-                                                  ArraySizeModifier::Normal, 0);
-  StringLiteral *BinaryDataLiteral = StringLiteral::Create(
-      Context, StringRef(BinaryData.data(), BinaryData.size()),
-      StringLiteralKind::Ordinary, false, ArrayTy, Base64DataLocation);
+                                  StringLiteral *BinaryData) {
   return new (Context)
-      PPEmbedExpr(Context, ElementTy, Filename, BinaryDataLiteral, BuiltinLoc,
-                  RPLoc, CurContext);
+      PPEmbedExpr(Context, Filename, BinaryData, BuiltinLoc, RPLoc, CurContext);
 }
 
 IntegerLiteral *Sema::ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,

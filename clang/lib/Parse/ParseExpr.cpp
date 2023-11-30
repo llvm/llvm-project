@@ -32,7 +32,6 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Base64.h"
 #include <optional>
 using namespace clang;
 
@@ -1057,69 +1056,46 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     // The preprocessor has already validated the syntax of the #embed
     // directive and has produced this series of tokens, so we do not need to
     // check for syntactic correctness. The form will be:
-    //    type-name string-literal , string-literal
+    //    string-literal , string-literal
     //
-    // where the type-name is the type of the elements to embed, the first
-    // string-literal is the file name the user passed to the directive, and
-    // the second string-literal is base64 encoded data from that file.
+    // where the first string-literal is the file name the user passed to the
+    // directive, and the second string-literal is the binary data from that
+    // file.
     SourceLocation StartLoc = ConsumeAnnotationToken();
     SourceRange DataTyExprSourceRange;
-    TypeResult DataTyExpr(ParseTypeName(&DataTyExprSourceRange));
-    ExprResult FilenameArgExpr(ParseUnevaluatedStringLiteralExpression());
+    ExprResult FilenameArgExpr = ParseUnevaluatedStringLiteralExpression();
     // There is a comma separating the string literals to prevent them from
     // combining into a single string literal.
     ExpectAndConsume(tok::comma);
-    ExprResult Base64ArgExpr(ParseUnevaluatedStringLiteralExpression());
-
-    const ASTContext &Context = Actions.getASTContext();
-    QualType DataTy = DataTyExpr.get().get().getCanonicalType();
-    size_t TargetWidth = Context.getTypeSize(DataTy);
-    if (DataTy.getUnqualifiedType() != Context.UnsignedCharTy &&
-        DataTy.getUnqualifiedType() != Context.CharTy) {
-      // TODO: check if is exactly the same as unsigned char
-      Diag(DataTyExprSourceRange.getBegin(),
-           diag::err_builtin_pp_embed_invalid_argument)
-          << "only 'char' and 'unsigned char' are supported";
-      Res = ExprError();
-    }
-    if ((TargetWidth % CHAR_BIT) != 0) {
-      Diag(DataTyExprSourceRange.getBegin(),
-           diag::err_builtin_pp_embed_invalid_argument)
-          << "width of element type is not a multiple of host platform's "
-             "CHAR_BIT!";
-      Res = ExprError();
-    }
-
-    StringLiteral *FilenameLiteral = FilenameArgExpr.getAs<StringLiteral>();
-    std::vector<char> BinaryData;
-    StringLiteral *Base64Str = Base64ArgExpr.getAs<StringLiteral>();
-    if (Base64Str->getKind() != StringLiteralKind::Unevaluated) {
-      Diag(Base64Str->getExprLoc(), diag::err_expected_string_literal)
-          << 0
-          << "'__builtin_pp_embed' with valid base64 encoding that is an "
-             "ordinary \"...\" string";
-    }
-    const auto OnDecodeError = [&](const llvm::ErrorInfoBase &) {
-      Diag(Base64Str->getExprLoc(), diag::err_builtin_pp_embed_invalid_argument)
-          << "expected a valid base64 encoded string";
-    };
-    llvm::Error Err = llvm::decodeBase64(Base64Str->getBytes(), BinaryData);
-    llvm::handleAllErrors(std::move(Err), OnDecodeError);
-    if (((BinaryData.size() * CHAR_BIT) % TargetWidth) != 0) {
-      Diag(DataTyExprSourceRange.getBegin(),
-           diag::err_builtin_pp_embed_invalid_argument)
-          << "size of data does not split evently into the number of bytes "
-             "requested";
-      Res = ExprError();
-    }
+    // We need a real string literal expression and not an unevaluated one
+    // because this string literal may be used by list initialization, which
+    // asserts that it's not given an unevaluated string literal. So we will
+    // parse the unevaluated string literal and cook it into a real literal
+    // that we can use. We cannot parse an actual string literal expression
+    // because that leaves us with two problems with the string's type: 1) the
+    // element type will be char and not unsigned char, 2) the array type will
+    // account for the null terminator but the source data is not null
+    // terminated because it's not a real string literal.
+    ExprResult BinaryData = ParseUnevaluatedStringLiteralExpression();
+    StringLiteral *UnevalBinData = BinaryData.getAs<StringLiteral>();
+    ASTContext &Context = Actions.getASTContext();
+    uint64_t ArraySizeRawVal[] = {UnevalBinData->getByteLength()};
+    llvm::APSInt ArraySize(llvm::APInt(
+        Context.getTypeSize(Context.getSizeType()), 1, ArraySizeRawVal));
+    QualType ArrayTy =
+        Context.getConstantArrayType(Context.UnsignedCharTy, ArraySize, nullptr,
+                                     ArraySizeModifier::Normal, 0);
+    StringLiteral *BinaryDataLiteral = StringLiteral::Create(
+        Context, UnevalBinData->getBytes(), StringLiteralKind::Ordinary, false,
+        ArrayTy, UnevalBinData->getExprLoc());
 
     // Now we expect the end annotation token.
     assert(Tok.is(tok::annot_embed_end));
     SourceLocation EndLoc = ConsumeAnnotationToken();
     if (!Res.isInvalid()) {
       Res = Actions.ActOnPPEmbedExpr(
-          StartLoc, Base64ArgExpr.get()->getExprLoc(), EndLoc, FilenameLiteral,
-          DataTy, std::move(BinaryData));
+          StartLoc, BinaryData.get()->getExprLoc(), EndLoc,
+          FilenameArgExpr.getAs<StringLiteral>(), BinaryDataLiteral);
     }
   } break;
 

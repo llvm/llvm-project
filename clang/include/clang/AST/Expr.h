@@ -4826,7 +4826,7 @@ public:
     Expanded,
   };
 
-  PPEmbedExpr(const ASTContext &Ctx, QualType ResultTy, StringLiteral *Filename,
+  PPEmbedExpr(const ASTContext &Ctx, StringLiteral *Filename,
               StringLiteral *BinaryData, SourceLocation BLoc,
               SourceLocation RParenLoc, DeclContext *Context);
 

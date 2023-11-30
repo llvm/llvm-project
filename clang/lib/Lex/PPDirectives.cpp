@@ -44,7 +44,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AlignOf.h"
-#include "llvm/Support/Base64.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -3817,14 +3816,13 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   //   if_empty-tokens or
   //     prefix-tokens (if any)
   //     embed-annotation-start
-  //       type-name string-literal , string-literal
+  //       string-literal , string-literal
   //     embed-annotation-stop
   //     suffix-tokens (if any)
-  // where the type-name is the type used for each element to embed, the first
-  // string-literal is the resolved file name of the file we loaded contents
-  // from, and the second string-literal is the base64 encoded data we loaded
-  // from the file. The comma separation between string-literals prevents the
-  // literals from combining into a single string literal.
+  // where the first string-literal is the resolved file name of the file we
+  // loaded contents from, and the second string-literal is the binary data we
+  // loaded from the file. The comma separation between string-literals
+  // prevents the literals from combining into a single string literal.
   //
   // NOTE: if you change the token sequence, you will need to update
   // Parser::ParseCastExpression() (the case for tok::annot_embed_start) as
@@ -3860,7 +3858,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 
   size_t NumPrefixToks = Params.PrefixTokenCount(),
          NumSuffixToks = Params.SuffixTokenCount();
-  size_t TotalNumToks = 7 + NumPrefixToks + NumSuffixToks;
+  size_t TotalNumToks = 5 + NumPrefixToks + NumSuffixToks;
   size_t CurIdx = 0;
   auto Toks = std::make_unique<Token[]>(TotalNumToks);
 
@@ -3873,21 +3871,13 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   // Now annotate the embed itself.
   SetAnnotTok(Toks[CurIdx++], tok::annot_embed_start, HashLoc);
 
-  Toks[CurIdx].startToken();
-  Toks[CurIdx].setLocation(HashLoc);
-  Toks[CurIdx++].setKind(tok::kw_unsigned);
-
-  Toks[CurIdx].startToken();
-  Toks[CurIdx].setLocation(HashLoc);
-  Toks[CurIdx++].setKind(tok::kw_char);
-
   SetStrTok(Toks[CurIdx++], ResolvedFilename, HashLoc);
 
   Toks[CurIdx].startToken();
   Toks[CurIdx].setLocation(HashLoc);
   Toks[CurIdx++].setKind(tok::comma);
 
-  SetStrTok(Toks[CurIdx++], llvm::encodeBase64(BinaryContents), HashLoc);
+  SetStrTok(Toks[CurIdx++], BinaryContents, HashLoc);
 
   SetAnnotTok(Toks[CurIdx++], tok::annot_embed_end, HashLoc);
 

@@ -59,9 +59,6 @@ def err_expected_string_literal : Error<"expected string literal "
           "'external_source_symbol' attribute|"
           "as argument of '%1' attribute}0">;
 
-def err_builtin_pp_embed_invalid_argument : Error<
-  "invalid argument to '__builtin_pp_embed': %0">;
-
 def err_invalid_string_udl : Error<
   "string literal with user-defined suffix cannot be used here">;
 def err_invalid_character_udl : Error<
