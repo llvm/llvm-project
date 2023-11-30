@@ -9,7 +9,6 @@
 #include "src/search/hsearch.h"
 #include "src/__support/HashTable/randomness.h"
 #include "src/__support/HashTable/table.h"
-#include "src/__support/libc_assert.h"
 #include "src/errno/libc_errno.h"
 #include "src/search/hsearch/global.h"
 
