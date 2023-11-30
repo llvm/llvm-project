@@ -10,45 +10,43 @@
 
 // std::views::stride_view::iterator
 
-#include "../test.h"
-#include "__concepts/constructible.h"
-#include "__iterator/concepts.h"
-#include "__ranges/access.h"
-#include "__ranges/concepts.h"
-#include "test_iterators.h"
 #include <ranges>
-#include <type_traits>
-#include <vector>
+
+#include "../test.h"
+#include "test_iterators.h"
 
 template <class T>
-concept is_plus_equalable = requires(T& __t) { __t += 1; };
+concept is_plus_equalable = requires(T& t) { t += 1; };
 template <class T>
-concept is_minus_equalable = requires(T& __t) { __t -= 1; };
+concept is_minus_equalable = requires(T& t) { t -= 1; };
 
 template <class T>
-concept is_plusable = requires(T& __t) { __t + 1; };
+concept is_plusable = requires(T& t) { t + 1; };
 template <class T>
-concept is_minusable = requires(T& __t) { __t - 1; };
+concept is_minusable = requires(T& t) { t - 1; };
 
 template <class T>
-concept is_relationally_comparable = requires(T& __t) {
-  __t < __t;
-  __t > __t;
-  __t <= __t;
-  __t >= __t;
+concept is_relationally_comparable = requires(T& t) {
+  t < t;
+  t > t;
+  t <= t;
+  t >= t;
 };
 
 template <class T>
-concept is_plus_plusable_post = requires(T& __t) { __t++; };
-template <class T>
-concept is_plus_plusable_pre = requires(T& __t) { ++__t; };
-template <class T>
-concept is_minus_minusable_post = requires(T& __t) { __t--; };
-template <class T>
-concept is_minus_minusable_pre = requires(T& __t) { --__t; };
+concept is_relationally_equalable = requires(T& t) { t == t; };
 
 template <class T>
-concept can_calculate_distance_between_non_sentinel = requires(T& __t) { __t - __t; };
+concept is_plus_plusable_post = requires(T& t) { t++; };
+template <class T>
+concept is_plus_plusable_pre = requires(T& t) { ++t; };
+template <class T>
+concept is_minus_minusable_post = requires(T& t) { t--; };
+template <class T>
+concept is_minus_minusable_pre = requires(T& t) { --t; };
+
+template <class T>
+concept can_calculate_distance_between_non_sentinel = requires(T& t) { t - t; };
 
 constexpr bool operator_tests() {
   {
@@ -59,7 +57,7 @@ constexpr bool operator_tests() {
     auto rav   = View(cpp17_input_iterator(arr), cpp17_input_iterator(arr + 3));
     auto str   = std::ranges::stride_view<View>(rav, 1);
 
-    auto strb = str.begin();
+    [[maybe_unused]] auto strb = str.begin();
 
     static_assert(is_plus_plusable_post<decltype(strb)>);
     static_assert(is_plus_plusable_pre<decltype(strb)>);
@@ -79,7 +77,7 @@ constexpr bool operator_tests() {
     auto rav   = View(forward_iterator(arr), forward_iterator(arr + 3));
     auto str   = std::ranges::stride_view<View>(rav, 1);
 
-    auto strb = str.begin();
+    [[maybe_unused]] auto strb = str.begin();
 
     static_assert(is_plus_plusable_post<decltype(strb)>);
     static_assert(is_plus_plusable_pre<decltype(strb)>);
@@ -99,7 +97,7 @@ constexpr bool operator_tests() {
     auto rav   = View(bidirectional_iterator(arr), bidirectional_iterator(arr + 3));
     auto str   = std::ranges::stride_view<View>(rav, 1);
 
-    auto strb = str.begin();
+    [[maybe_unused]] auto strb = str.begin();
 
     static_assert(is_plus_plusable_post<decltype(strb)>);
     static_assert(is_plus_plusable_pre<decltype(strb)>);
@@ -119,7 +117,7 @@ constexpr bool operator_tests() {
     auto rav   = View(random_access_iterator(arr), random_access_iterator(arr + 3));
     auto str   = std::ranges::stride_view<View>(rav, 1);
 
-    auto strb = str.begin();
+    [[maybe_unused]] auto strb = str.begin();
 
     static_assert(is_plus_plusable_post<decltype(strb)>);
     static_assert(is_plus_plusable_pre<decltype(strb)>);
@@ -177,6 +175,26 @@ constexpr bool operator_tests() {
     assert(stride_zoff_one - stride_ooff_two == -1);
     assert(stride_zoff_one - stride_ooff_five == -2);
   }
+
+  {
+    using EqualableView = InputView<cpp17_input_iterator<int*>>;
+    using Stride        = std::ranges::stride_view<EqualableView>;
+    using StrideIter    = std::ranges::iterator_t<Stride>;
+
+    static_assert(is_relationally_equalable<std::ranges::iterator_t<EqualableView>>);
+    static_assert(is_relationally_equalable<StrideIter>);
+  }
+
+  {
+    using UnEqualableView =
+        ViewOverNonCopyable<cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>;
+    using Stride     = std::ranges::stride_view<UnEqualableView>;
+    using StrideIter = std::ranges::iterator_t<Stride>;
+
+    static_assert(!is_relationally_equalable<std::ranges::iterator_t<UnEqualableView>>);
+    static_assert(!is_relationally_equalable<StrideIter>);
+  }
+
   return true;
 }
 
