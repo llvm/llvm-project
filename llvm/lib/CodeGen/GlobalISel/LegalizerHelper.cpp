@@ -7886,8 +7886,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineMemOperand *PtrLoadMMO =
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
-  auto HeadOfList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
-  Register VAList = HeadOfList;
+  auto VAList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
 
   const Align A(MI.getOperand(2).getImm());
   LLT PtrTyAsScalarTy = LLT::scalar(PtrTy.getSizeInBits());
@@ -7923,7 +7922,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
                               MachineMemOperand::MOLoad, Ty, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
 
-  Observer.changedInstr(MI);
   Observer.erasingInstr(MI);
   MI.eraseFromParent();
   return Legalized;
