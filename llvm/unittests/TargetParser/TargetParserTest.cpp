@@ -1807,7 +1807,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSVE_FP8DOT2, AArch64::AEK_FP8DOT4,
       AArch64::AEK_SSVE_FP8DOT4, AArch64::AEK_LUT,
       AArch64::AEK_SME_LUTv2,    AArch64::AEK_SMEF8F16,
-      AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64};
+      AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64,
+      AArch64::AEK_CPA};
 
   std::vector<StringRef> Features;
 
@@ -1893,6 +1894,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f32"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-fa64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+cpa"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the

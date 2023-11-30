@@ -3508,7 +3508,7 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
     return;
 
   if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ() &&
-      !EffectiveTriple.isPPC64())
+      !EffectiveTriple.isPPC64() && !EffectiveTriple.isAArch64())
     return;
 
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_clash_protection,
@@ -5757,6 +5757,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (CM == "large" && RelocationModel != llvm::Reloc::Static)
         D.Diag(diag::err_drv_argument_only_allowed_with)
             << A->getAsString(Args) << "-fno-pic";
+    } else if (Triple.isLoongArch()) {
+      if (CM == "extreme" &&
+          Args.hasFlagNoClaim(options::OPT_fplt, options::OPT_fno_plt, false))
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "-fplt";
+      Ok = CM == "normal" || CM == "medium" || CM == "extreme";
+      // Convert to LLVM recognizable names.
+      if (Ok)
+        CM = llvm::StringSwitch<StringRef>(CM)
+                 .Case("normal", "small")
+                 .Case("extreme", "large")
+                 .Default(CM);
     } else if (Triple.isPPC64() || Triple.isOSAIX()) {
       Ok = CM == "small" || CM == "medium" || CM == "large";
     } else if (Triple.isRISCV()) {

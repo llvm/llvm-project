@@ -3148,6 +3148,9 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def warn_attribute_arm_sm_incompat_builtin : Warning<
+  "builtin call has undefined behaviour when called from a %0 function">,
+  InGroup<DiagGroup<"undefined-arm-streaming">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -7220,6 +7223,11 @@ def warn_arith_conv_enum_float_cxx20 : Warning<
   "%plural{2:with|4:from|:and}0 "
   "%select{enumeration|floating-point}1 type %3 is deprecated">,
   InGroup<DeprecatedEnumFloatConversion>;
+def err_arith_conv_enum_float_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "%select{floating-point|enumeration}1 type %2 "
+  "%plural{2:with|4:from|:and}0 "
+  "%select{enumeration|floating-point}1 type %3">;
 def warn_arith_conv_mixed_enum_types : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">,
@@ -7228,6 +7236,10 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
+def err_conv_mixed_enum_types_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "different enumeration types%diff{ ($ and $)|}1,2">;
+
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
   InGroup<AnonEnumEnumConversion>, DefaultIgnore;

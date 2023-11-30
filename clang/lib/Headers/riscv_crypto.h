@@ -57,7 +57,7 @@ __riscv_aes64esm(uint64_t __x, uint64_t __y) {
   return __builtin_riscv_aes64esm(__x, __y);
 }
 #endif
-#endif // defined(__riscv_zknd)
+#endif // defined(__riscv_zkne)
 
 #if defined(__riscv_zknd) || defined(__riscv_zkne)
 #if __riscv_xlen == 64
@@ -113,18 +113,8 @@ __riscv_sha512sig1l(uint32_t __x, uint32_t __y) {
 }
 
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
-__riscv_sha512sum0l(uint32_t __x, uint32_t __y) {
-  return __builtin_riscv_sha512sum0l(__x, __y);
-}
-
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_sha512sum0r(uint32_t __x, uint32_t __y) {
   return __builtin_riscv_sha512sum0r(__x, __y);
-}
-
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
-__riscv_sha512sum1l(uint32_t __x, uint32_t __y) {
-  return __builtin_riscv_sha512sum1l(__x, __y);
 }
 
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
@@ -171,7 +161,7 @@ __riscv_sm3p1(uint32_t __x) {
 #if defined(__riscv_zksed)
 #define __riscv_sm4ed(x, y, bs) __builtin_riscv_sm4ed(x, y, bs);
 #define __riscv_sm4ks(x, y, bs) __builtin_riscv_sm4ks(x, y, bs);
-#endif // defined(__riscv_zksh)
+#endif // defined(__riscv_zksed)
 
 #if defined(__cplusplus)
 }
