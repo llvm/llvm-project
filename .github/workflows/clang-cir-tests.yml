@@ -1,0 +1,37 @@
+name: Clang CIR Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'clang/**'
+      - '.github/workflows/clang-cir-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+      - '!llvm/**'
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'clang/**'
+      - '.github/workflows/clang-cir-tests.yml'
+      - '.github/workflows/llvm-project-tests.yml'
+      - '!llvm/**'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_clang_cir:
+    name: Test clang-cir
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-clang-cir
+      projects: clang;mlir;cir
