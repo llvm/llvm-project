@@ -890,6 +890,17 @@ struct CallCleanupFunction final : EHScopeStack::Cleanup {
 };
 } // end anonymous namespace
 
+/// Push the standard destructor for the given type as
+/// at least a normal cleanup.
+void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
+                                  Address addr, QualType type) {
+  assert(dtorKind && "cannot push destructor for trivial type");
+
+  CleanupKind cleanupKind = getCleanupKind(dtorKind);
+  pushDestroy(cleanupKind, addr, type, getDestroyer(dtorKind),
+              cleanupKind & EHCleanup);
+}
+
 void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                  QualType type, Destroyer *destroyer,
                                  bool useEHCleanupForArray) {

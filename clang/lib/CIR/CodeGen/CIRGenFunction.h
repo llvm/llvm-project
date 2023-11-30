@@ -1197,6 +1197,10 @@ public:
     llvm_unreachable("bad destruction kind");
   }
 
+  CleanupKind getCleanupKind(QualType::DestructionKind kind) {
+    return (needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup);
+  }
+
   void pushEHDestroy(QualType::DestructionKind dtorKind, Address addr,
                      QualType type);
 
@@ -1509,6 +1513,9 @@ public:
   typedef void Destroyer(CIRGenFunction &CGF, Address addr, QualType ty);
 
   static Destroyer destroyCXXObject;
+
+  void pushDestroy(QualType::DestructionKind dtorKind,
+                   Address addr, QualType type);
 
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer, bool useEHCleanupForArray);
