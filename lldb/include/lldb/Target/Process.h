@@ -3037,9 +3037,8 @@ protected:
                                      /// threads we knew existed, but haven't
                                      /// determined that they have died yet.
   std::vector<ThreadPlanStack> m_async_thread_plans;
-  ThreadList
-      m_extended_thread_list; ///< Constituent for extended threads that may be
-                              /// generated, cleared on natural stops
+  ThreadList m_extended_thread_list; ///< Owner for extended threads that may be
+                                     ///generated, cleared on natural stops
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
   QueueList
