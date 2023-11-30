@@ -97,7 +97,7 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   LINK_LIBS
   PRIVATE
   OMPT
-  PluginInterface
+  PluginCommon
   ${LIBOMPTARGET_DEP_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
   -Wl,--whole-archive amdgcn_hostexec_services -Wl,--no-whole-archive

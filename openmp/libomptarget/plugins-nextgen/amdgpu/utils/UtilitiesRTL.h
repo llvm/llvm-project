@@ -28,7 +28,7 @@
 
 using namespace llvm::ELF;
 
-#include "Utils/ELF.h"
+#include "ELF.h"
 
 namespace llvm {
 namespace omp {

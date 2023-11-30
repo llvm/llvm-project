@@ -15,7 +15,7 @@
 
 #include "GlobalHandler.h"
 #include "JIT.h"
-#include "Utils/ELF.h"
+#include "ELF.h"
 #include "omptarget.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"

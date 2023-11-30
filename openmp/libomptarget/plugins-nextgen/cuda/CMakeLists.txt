@@ -35,7 +35,7 @@ add_llvm_library(omptarget.rtl.cuda SHARED
 
   LINK_LIBS PRIVATE
   OMPT
-  PluginInterface
+  PluginCommon
   ${OPENMP_PTHREAD_LIB}
 
   NO_INSTALL_RPATH
