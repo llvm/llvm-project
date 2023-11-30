@@ -1056,7 +1056,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   case Instruction::And: {
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = LHSKnown & RHSKnown;
+    Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
+                                         Depth, SQ.getWithInstruction(CxtI));
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
@@ -1076,7 +1077,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   case Instruction::Or: {
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = LHSKnown | RHSKnown;
+    Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
+                                         Depth, SQ.getWithInstruction(CxtI));
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
@@ -1098,7 +1100,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   case Instruction::Xor: {
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = LHSKnown ^ RHSKnown;
+    Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
+                                         Depth, SQ.getWithInstruction(CxtI));
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
