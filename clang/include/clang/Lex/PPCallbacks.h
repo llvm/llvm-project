@@ -367,7 +367,7 @@ public:
   /// read.
   virtual void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                           OptionalFileEntryRef File,
-                          SrcMgr::CharacteristicKind FileType) {}
+                          SrcMgr::CharacteristicKind FileType);
 
   /// Hook called when a source range is skipped.
   /// \param Range The SourceRange that was skipped. The range begins at the
@@ -617,10 +617,7 @@ public:
 
   void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
                   OptionalFileEntryRef File,
-                  SrcMgr::CharacteristicKind FileType) override {
-    First->HasInclude(Loc, FileName, IsAngled, File, FileType);
-    Second->HasInclude(Loc, FileName, IsAngled, File, FileType);
-  }
+                  SrcMgr::CharacteristicKind FileType) override;
 
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *Name,
                              SourceLocation StateLoc, unsigned State) override {
