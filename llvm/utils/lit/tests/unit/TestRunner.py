@@ -117,6 +117,8 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
                 "tortie",
                 "tuxedo",
                 "void",
+                "multiple",
+                "spaces",
                 "cute,",
                 "fluffy,",
                 "kittens",
