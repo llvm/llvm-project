@@ -309,6 +309,10 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
         RTL->prepopulate_page_table(DeviceID, HstPtrBegin, Size);
       }
 
+      uintptr_t TgtAllocBegin =
+        (uintptr_t)allocData(TgtPadding + Size, HstPtrBegin);
+      uintptr_t TgtPtrBegin = TgtAllocBegin + TgtPadding;
+
       if (!RTL->is_no_maps_check()) {
         // even under unified_shared_memory need to check for correctness of
         // use of map clauses. Device pointer is same as host ptr in this case

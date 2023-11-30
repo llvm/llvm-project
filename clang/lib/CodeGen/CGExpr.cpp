@@ -2158,6 +2158,14 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   llvm::Value *Vec = Builder.CreateLoad(LV.getExtVectorAddress(),
                                         LV.isVolatileQualified());
 
+  // HLSL allows treating scalars as one-element vectors. Converting the scalar
+  // IR value to a vector here allows the rest of codegen to behave as normal.
+  if (getLangOpts().HLSL && !Vec->getType()->isVectorTy()) {
+    llvm::Type *DstTy = llvm::FixedVectorType::get(Vec->getType(), 1);
+    llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
+    Vec = Builder.CreateInsertElement(DstTy, Vec, Zero, "cast.splat");
+  }
+
   const llvm::Constant *Elts = LV.getExtVectorElts();
 
   // If the result of the expression is a non-vector type, we must be extracting
@@ -2427,10 +2435,20 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
 void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
+  // HLSL allows storing to scalar values through ExtVector component LValues.
+  // To support this we need to handle the case where the destination address is
+  // a scalar.
+  Address DstAddr = Dst.getExtVectorAddress();
+  if (!DstAddr.getElementType()->isVectorTy()) {
+    assert(!Dst.getType()->isVectorType() &&
+           "this should only occur for non-vector l-values");
+    Builder.CreateStore(Src.getScalarVal(), DstAddr, Dst.isVolatileQualified());
+    return;
+  }
+
   // This access turns into a read/modify/write of the vector.  Load the input
   // value now.
-  llvm::Value *Vec = Builder.CreateLoad(Dst.getExtVectorAddress(),
-                                        Dst.isVolatileQualified());
+  llvm::Value *Vec = Builder.CreateLoad(DstAddr, Dst.isVolatileQualified());
   const llvm::Constant *Elts = Dst.getExtVectorElts();
 
   llvm::Value *SrcVal = Src.getScalarVal();
@@ -2478,7 +2496,8 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       llvm_unreachable("unexpected shorten vector length");
     }
   } else {
-    // If the Src is a scalar (not a vector) it must be updating one element.
+    // If the Src is a scalar (not a vector), and the target is a vector it must
+    // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
@@ -4879,7 +4898,6 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToPointer:
   case CK_PointerToIntegral:
   case CK_PointerToBoolean:
-  case CK_VectorSplat:
   case CK_IntegralCast:
   case CK_BooleanToSignedIntegral:
   case CK_IntegralToBoolean:
@@ -5044,6 +5062,13 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   }
   case CK_ZeroToOCLOpaqueType:
     llvm_unreachable("NULL to OpenCL opaque type lvalue cast is not valid");
+
+  case CK_VectorSplat: {
+    // LValue results of vector splats are only supported in HLSL.
+    if (!getLangOpts().HLSL)
+      return EmitUnsupportedLValue(E, "unexpected cast lvalue");
+    return EmitLValue(E->getSubExpr());
+  }
   }
 
   llvm_unreachable("Unhandled lvalue cast kind?");
