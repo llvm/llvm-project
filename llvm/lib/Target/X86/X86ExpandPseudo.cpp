@@ -505,8 +505,10 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Register Reg0 = TRI->getSubReg(Reg, X86::sub_mask_0);
     Register Reg1 = TRI->getSubReg(Reg, X86::sub_mask_1);
 
-    auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWmk));
-    auto MIBHi = BuildMI(MBB, MBBI, DL, TII->get(X86::KMOVWmk));
+    auto MIBLo = BuildMI(MBB, MBBI, DL,
+                         TII->get(HasEGPR ? X86::KMOVWmk_EVEX : X86::KMOVWmk));
+    auto MIBHi = BuildMI(MBB, MBBI, DL,
+                         TII->get(HasEGPR ? X86::KMOVWmk_EVEX : X86::KMOVWmk));
 
     for (int i = 0; i < X86::AddrNumOperands; ++i) {
       MIBLo.add(MBBI->getOperand(i));
