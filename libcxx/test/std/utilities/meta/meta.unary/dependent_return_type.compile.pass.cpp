@@ -12,6 +12,8 @@
 
 // ignore deprecated volatile return types
 // ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-deprecated-volatile
+// MSVC warning C5216: 'volatile int' a volatile qualified return type is deprecated in C++20
+// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd5216
 
 #include <type_traits>
 #include <utility>

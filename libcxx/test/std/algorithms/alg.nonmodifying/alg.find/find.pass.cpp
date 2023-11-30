@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-sign-compare
+// MSVC warning C4389: '==': signed/unsigned mismatch
+// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4389
 
 // <algorithm>
 

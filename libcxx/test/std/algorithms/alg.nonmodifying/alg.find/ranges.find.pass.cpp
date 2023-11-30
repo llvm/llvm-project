@@ -11,6 +11,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-sign-compare
+// MSVC warning C4242: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'const _Ty' to 'ElementT', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4242 /wd4244
 
 // template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
 //   requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>

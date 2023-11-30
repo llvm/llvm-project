@@ -20,6 +20,11 @@
 
 // We test the cartesian product, so we sometimes compare differently signed types
 // ADDITIONAL_COMPILE_FLAGS(any-clang-or-gcc): -Wno-sign-compare
+// MSVC warning C4242: 'argument': conversion from 'int' to 'const _Ty', possible loss of data
+// MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
+// MSVC warning C4310: cast truncates constant value
+// MSVC warning C4389: '==': signed/unsigned mismatch
+// ADDITIONAL_COMPILE_FLAGS(msvc-cl-exe): /wd4242 /wd4244 /wd4310 /wd4389
 
 #include <algorithm>
 #include <cassert>
