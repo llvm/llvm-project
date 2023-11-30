@@ -971,7 +971,9 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
           }
           if (interface.HasExplicitInterface()) {
             std::string whyNot;
-            if (!interface.IsCompatibleWith(argInterface, &whyNot)) {
+            std::optional<std::string> warning;
+            if (!interface.IsCompatibleWith(argInterface, &whyNot,
+                    /*specificIntrinsic=*/nullptr, &warning)) {
               // 15.5.2.9(1): Explicit interfaces must match
               if (argInterface.HasExplicitInterface()) {
                 messages.Say(
@@ -988,6 +990,11 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
                     "Actual procedure argument has an implicit interface which is not known to be compatible with %s which has an explicit interface"_warn_en_US,
                     dummyName);
               }
+            } else if (warning &&
+                context.ShouldWarn(common::UsageWarning::ProcDummyArgShapes)) {
+              messages.Say(
+                  "Actual procedure argument has possible interface incompatibility with %s: %s"_warn_en_US,
+                  dummyName, std::move(*warning));
             }
           } else { // 15.5.2.9(2,3)
             if (interface.IsSubroutine() && argInterface.IsFunction()) {
@@ -1351,6 +1358,7 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                         *targetExpr, foldingContext)}) {
                   bool isCall{!!UnwrapProcedureRef(*targetExpr)};
                   std::string whyNot;
+                  std::optional<std::string> warning;
                   const auto *targetProcDesignator{
                       evaluate::UnwrapExpr<evaluate::ProcedureDesignator>(
                           *targetExpr)};
@@ -1358,9 +1366,17 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                       targetProcDesignator
                           ? targetProcDesignator->GetSpecificIntrinsic()
                           : nullptr};
-                  if (std::optional<parser::MessageFixedText> msg{
-                          CheckProcCompatibility(isCall, pointerProc,
-                              &*targetProc, specificIntrinsic, whyNot)}) {
+                  std::optional<parser::MessageFixedText> msg{
+                      CheckProcCompatibility(isCall, pointerProc, &*targetProc,
+                          specificIntrinsic, whyNot, warning)};
+                  if (!msg && warning &&
+                      semanticsContext.ShouldWarn(
+                          common::UsageWarning::ProcDummyArgShapes)) {
+                    msg =
+                        "Procedures '%s' and '%s' may not be completely compatible: %s"_warn_en_US;
+                    whyNot = std::move(*warning);
+                  }
+                  if (msg) {
                     msg->set_severity(parser::Severity::Warning);
                     messages.Say(std::move(*msg),
                         "pointer '" + pointerExpr->AsFortran() + "'",
