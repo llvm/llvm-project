@@ -62,20 +62,24 @@ public:
     if (const auto &cycleName{cycleStmt.v}) {
       CheckConstructNameBranching("CYCLE", cycleName.value());
     } else {
-      switch ((llvm::omp::Directive)currentDirective_) {
-      // exclude directives which do not need a check for unlabelled CYCLES
-      case llvm::omp::Directive::OMPD_do:
-      case llvm::omp::Directive::OMPD_simd:
-      case llvm::omp::Directive::OMPD_parallel_do:
-      case llvm::omp::Directive::OMPD_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for:
-      case llvm::omp::Directive::OMPD_distribute_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
-        return;
-      default:
-        break;
+      if constexpr (std::is_same_v<D, llvm::omp::Directive>) {
+        switch ((llvm::omp::Directive)currentDirective_) {
+        // exclude directives which do not need a check for unlabelled CYCLES
+        case llvm::omp::Directive::OMPD_do:
+        case llvm::omp::Directive::OMPD_simd:
+        case llvm::omp::Directive::OMPD_parallel_do:
+        case llvm::omp::Directive::OMPD_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for:
+        case llvm::omp::Directive::OMPD_distribute_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
+          return;
+        default:
+          break;
+        }
+      } else if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
+        return; // OpenACC construct do not need check for unlabelled CYCLES
       }
       CheckConstructNameBranching("CYCLE");
     }
