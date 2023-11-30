@@ -242,8 +242,10 @@ static Error addAllTypesFromDWP(
                                                     "Types", OverflowOptValue,
                                                     AnySectionOverflow))
         return Err;
-      if (AnySectionOverflow)
+      if (AnySectionOverflow) {
+        TypesOffset = OldOffset;
         return Error::success();
+      }
     }
   }
   return Error::success();
@@ -286,8 +288,10 @@ static Error addAllTypesFromTypesSection(
                                                       "Types", OverflowOptValue,
                                                       AnySectionOverflow))
           return Err;
-        if (AnySectionOverflow)
+        if (AnySectionOverflow) {
+          TypesOffset = OldOffset;
           return Error::success();
+        }
       }
     }
   }
