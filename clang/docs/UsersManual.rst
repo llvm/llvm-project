@@ -4260,7 +4260,7 @@ When multiple toc-data options are used, the last option used has the affect.
 For example: -mno-tocdata=g5,g1 -mtocdata=g1,g2 -mno-tocdata=g2 -mtocdata=g3,g4
 results in -mtocdata=g1,g3,g4
 
-Name of variables not having external linkage will be ignored.
+Names of variables not having external linkage will be ignored.
 
 **Options:**
 
