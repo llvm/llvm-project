@@ -136,14 +136,23 @@ namespace utils {
         // Assume that path lengths are not greater than this.
         // This should be fine for testing purposes.
         char buf[4096];
+#ifdef _WIN32
+        char* ret = ::_getcwd(buf, sizeof(buf));
+#else
         char* ret = ::getcwd(buf, sizeof(buf));
+#endif
         assert(ret && "getcwd failed");
         return std::string(ret);
     }
 
     inline bool exists(std::string const& path) {
+#ifdef _WIN32
+        struct ::_stat tmp;
+        return ::_stat(path.c_str(), &tmp) == 0;
+#else
         struct ::stat tmp;
         return ::stat(path.c_str(), &tmp) == 0;
+#endif
     }
 } // end namespace utils
 
@@ -249,8 +258,13 @@ struct scoped_test_env
             abort();
         }
 
-        if (utils::ftruncate64(
-                fileno(file), static_cast<utils::off64_t>(size)) == -1) {
+#ifdef _WIN32
+        const int fd = _fileno(file);
+#else
+        const int fd = fileno(file);
+#endif
+
+        if (utils::ftruncate64(fd, static_cast<utils::off64_t>(size)) == -1) {
             fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
                     size, strerror(errno));
             fclose(file);
@@ -468,7 +482,11 @@ struct CWDGuard {
   std::string oldCwd_;
   CWDGuard() : oldCwd_(utils::getcwd()) { }
   ~CWDGuard() {
+#ifdef _WIN32
+    int ret = ::_chdir(oldCwd_.c_str());
+#else
     int ret = ::chdir(oldCwd_.c_str());
+#endif
     assert(ret == 0 && "chdir failed");
   }
 
