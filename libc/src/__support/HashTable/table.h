@@ -184,7 +184,7 @@ private:
   // Nor does the routine check if the table is full.
   // This is only to be used in grow() where we insert all existing entries
   // into a new table. Hence, the requirements are naturally satisfied.
-  LIBC_INLINE void unsafe_insert(ENTRY item) {
+  LIBC_INLINE ENTRY *unsafe_insert(ENTRY item) {
     uint64_t primary = oneshot_hash(item.key);
     uint8_t secondary = secondary_hash(primary);
     ProbeSequence sequence{static_cast<size_t>(primary), 0, entries_mask};
@@ -199,7 +199,7 @@ private:
         entry(index).key = item.key;
         entry(index).data = item.data;
         available_slots--;
-        return;
+        return &entry(index);
       }
     }
   }
@@ -238,10 +238,8 @@ private:
       // resized sccuessfully: clean up the old table and use the new one
       deallocate(table);
       table = new_table;
-      // hash also need to be recomputed since the hash state is updated
-      primary = table->oneshot_hash(item.key);
-      index = table->find(item.key, primary);
-      slot = &table->entry(index);
+      // it is still valid to use the fastpath insertion.
+      return table->unsafe_insert(item);
     }
 
     table->set_ctrl(index, secondary_hash(primary));

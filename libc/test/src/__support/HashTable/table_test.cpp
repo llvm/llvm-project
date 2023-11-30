@@ -100,9 +100,11 @@ TEST(LlvmLibcTableTest, Insertion) {
               static_cast<ENTRY *>(nullptr));
   }
 
-  // one more insert should grow successfully.
-  ASSERT_NE(HashTable::insert(table, {keys[CAP].bytes, keys[CAP].bytes}),
-            static_cast<ENTRY *>(nullptr));
+  // One more insert should grow the table successfully. We test the value
+  // here because the grow finishes with a fastpath insertion that is different
+  // from the normal insertion.
+  ASSERT_EQ(HashTable::insert(table, {keys[CAP].bytes, keys[CAP].bytes})->data,
+            static_cast<void *>(keys[CAP].bytes));
 
   for (size_t i = 0; i <= CAP; ++i) {
     ASSERT_EQ(strcmp(table->find(keys[i].bytes)->key, keys[i].bytes), 0);
