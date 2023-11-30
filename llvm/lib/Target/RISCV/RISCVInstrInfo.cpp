@@ -21,6 +21,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -45,6 +46,11 @@ using namespace llvm;
 static cl::opt<bool> PreferWholeRegisterMove(
     "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
     cl::desc("Prefer whole register move for vector registers."));
+
+static cl::opt<bool>
+    AggressiveLoadRemat("riscv-enable-load-remat-aggressive", cl::init(true),
+                        cl::Hidden,
+                        cl::desc("Rematerialize load aggressively"));
 
 static cl::opt<MachineTraceStrategy> ForceMachineCombinerStrategy(
     "riscv-force-machine-combiner-strategy", cl::Hidden,
@@ -1565,6 +1571,48 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
            (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0);
   }
   return MI.isAsCheapAsAMove();
+}
+
+bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  if (TargetInstrInfo::isReallyTriviallyReMaterializable(MI))
+    return true;
+
+  const MachineFunction &MF = *MI.getMF();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  const MachineOperand &Dest = MI.getOperand(0);
+  if (!MRI.hasOneUse(Dest.getReg()))
+    return false;
+
+  MachineInstr *UseMI = &*MRI.use_instr_begin(Dest.getReg());
+  MachineBasicBlock::const_iterator DefItr(MI);
+  MachineBasicBlock::const_iterator UseItr(UseMI);
+
+  const MachineBasicBlock *MBB = nullptr;
+  if ((MBB = MI.getParent()) != UseMI->getParent())
+    return false;
+
+  // When loading from stack and the stack slot is not modified before its use,
+  // then materialize this load.
+  int FrameIdx = 0;
+  if (isLoadFromStackSlot(MI, FrameIdx) && AggressiveLoadRemat) {
+    for (; DefItr != UseItr && DefItr != MBB->end(); DefItr++) {
+      int StoreFrameIdx = 0;
+      if ((*DefItr).isCall() || (isStoreToStackSlot(*DefItr, StoreFrameIdx) &&
+                                 StoreFrameIdx == FrameIdx))
+        return false;
+    }
+    return true;
+  } else if (MI.mayLoad() && AggressiveLoadRemat) {
+    for (; DefItr != UseItr && DefItr != MBB->end(); DefItr++) {
+      if ((*DefItr).isCall() || (*DefItr).mayStore())
+        return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 std::optional<DestSourcePair>

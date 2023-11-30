@@ -97,36 +97,36 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    sw a0, -104(s0)
 ; CHECK-NEXT:    sw a0, -108(s0)
 ; CHECK-NEXT:    sw a0, -112(s0)
+; CHECK-NEXT:    vl8re32.v v8, (s1)
+; CHECK-NEXT:    lw a0, -108(s0)
+; CHECK-NEXT:    lw a1, -112(s0)
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd a1, 8(sp)
+; CHECK-NEXT:    sd a0, 0(sp)
 ; CHECK-NEXT:    lw a0, -76(s0)
 ; CHECK-NEXT:    lw a1, -80(s0)
-; CHECK-NEXT:    vl8re32.v v8, (s1)
 ; CHECK-NEXT:    lw a2, -84(s0)
 ; CHECK-NEXT:    lw a3, -88(s0)
 ; CHECK-NEXT:    lw a4, -92(s0)
 ; CHECK-NEXT:    lw a5, -96(s0)
 ; CHECK-NEXT:    lw a6, -100(s0)
 ; CHECK-NEXT:    lw a7, -104(s0)
-; CHECK-NEXT:    lw t0, -108(s0)
-; CHECK-NEXT:    lw t1, -112(s0)
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd t1, 8(sp)
-; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vl8re32.v v8, (s1)
+; CHECK-NEXT:    lw a0, -108(s0)
+; CHECK-NEXT:    lw a1, -112(s0)
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd a1, 8(sp)
+; CHECK-NEXT:    sd a0, 0(sp)
 ; CHECK-NEXT:    lw a0, -76(s0)
 ; CHECK-NEXT:    lw a1, -80(s0)
-; CHECK-NEXT:    vl8re32.v v8, (s1)
 ; CHECK-NEXT:    lw a2, -84(s0)
 ; CHECK-NEXT:    lw a3, -88(s0)
 ; CHECK-NEXT:    lw a4, -92(s0)
 ; CHECK-NEXT:    lw a5, -96(s0)
 ; CHECK-NEXT:    lw a6, -100(s0)
 ; CHECK-NEXT:    lw a7, -104(s0)
-; CHECK-NEXT:    lw t0, -108(s0)
-; CHECK-NEXT:    lw t1, -112(s0)
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd t1, 8(sp)
-; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    li a0, 0
