@@ -9,10 +9,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "JIT.h"
-#include "Debug.h"
+
+#include "Shared/Debug.h"
+#include "Shared/Utils.h"
 
 #include "PluginInterface.h"
-#include "Utilities.h"
 #include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"

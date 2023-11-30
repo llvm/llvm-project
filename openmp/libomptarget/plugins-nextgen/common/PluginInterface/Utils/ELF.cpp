@@ -11,7 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ELF.h"
-#include "Debug.h"
+
+#include "Shared/Debug.h"
 
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"

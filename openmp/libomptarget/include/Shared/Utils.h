@@ -1,4 +1,4 @@
-//===------- Utilities.h - Target independent OpenMP target RTL -- C++ ----===//
+//===-- Shared/Utils.h - Target independent OpenMP target RTL -- C++ ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
-#define OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
+#ifndef OMPTARGET_SHARED_UTILS_H
+#define OMPTARGET_SHARED_UTILS_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -262,4 +262,4 @@ template <typename Ty> inline Ty roundUp(Ty V, Ty Boundary) {
 } // namespace omp
 } // namespace llvm
 
-#endif // OPENMP_LIBOMPTARGET_INCLUDE_UTILITIES_H
+#endif // OMPTARGET_SHARED_UTILS_H
