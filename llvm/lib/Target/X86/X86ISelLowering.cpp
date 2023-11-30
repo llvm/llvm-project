@@ -1137,6 +1137,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
     setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
     setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1598,6 +1599,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setF16Action(MVT::v16f16, Expand);
     setOperationAction(ISD::FNEG, MVT::v16f16, Custom);
     setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -2056,6 +2058,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
     setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
     setOperationAction(ISD::FABS, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with
