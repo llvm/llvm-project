@@ -267,19 +267,6 @@ void DPMarker::dropOneDPValue(DPValue *DPV) {
   DPV->deleteInstr();
 }
 
-std::optional<DPValue::self_iterator> DPMarker::getReinsertionPosition() {
-  // Is there a marker on the next instruction?
-  DPMarker *NextMarker = getParent()->getNextMarker(MarkedInstr);
-  if (!NextMarker)
-    return std::nullopt;
-
-  // Are there any DPValues in the next marker?
-  if (NextMarker->StoredDPValues.empty())
-    return std::nullopt;
-
-  return NextMarker->StoredDPValues.begin();
-}
-
 const BasicBlock *DPMarker::getParent() const {
   return MarkedInstr->getParent();
 }

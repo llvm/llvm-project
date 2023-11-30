@@ -1167,7 +1167,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   // The Supported (TM) code sequence for removing then reinserting insts
   // after another instruction:
   std::optional<DPValue::self_iterator> Pos =
-      AddInst->DbgMarker->getReinsertionPosition();
+      AddInst->getDbgReinsertionPosition();
   AddInst->removeFromParent();
 
   // We should have a re-insertion position.
@@ -1242,7 +1242,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
 
   // The Supported (TM) code sequence for removing then reinserting insts:
   std::optional<DPValue::self_iterator> Pos =
-      AddInst->DbgMarker->getReinsertionPosition();
+      AddInst->getDbgReinsertionPosition();
   AddInst->removeFromParent();
 
   // No re-insertion position as there were no DPValues on the ret.

@@ -333,11 +333,6 @@ public:
   /// erasing a dbg.value from a block.
   void dropOneDPValue(DPValue *DPV);
 
-  /// Return an iterator to the position of the "Next" DPValue after this
-  /// marker, or std::nullopt. This is the position to pass to
-  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
-  std::optional<DPValue::self_iterator> getReinsertionPosition();
-
   /// We generally act like all llvm Instructions have a range of DPValues
   /// attached to them, but in reality sometimes we don't allocate the DPMarker
   /// to save time and memory, but still have to return ranges of DPValues. When
