@@ -41,8 +41,6 @@ static const char *RTLNames[] = {
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
 };
 
-static char *ProfileTraceFile = nullptr;
-
 #ifdef OMPT_SUPPORT
 extern void ompt::connectLibrary();
 #endif
@@ -64,16 +62,12 @@ __attribute__((constructor(101))) void init() {
 
   PM = new PluginManager(UseEventsForAtomicTransfers);
 
-  ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
-  // TODO: add a configuration option for time granularity
-  if (ProfileTraceFile)
-    timeTraceProfilerInitialize(500 /* us */, "libomptarget");
-
 #ifdef OMPT_SUPPORT
   // Initialize OMPT first
   ompt::connectLibrary();
 #endif
 
+  Profiler::get();
   PM->RTLs.loadRTLs();
   PM->registerDelayedLibraries();
 }
@@ -81,14 +75,6 @@ __attribute__((constructor(101))) void init() {
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
   delete PM;
-
-  if (ProfileTraceFile) {
-    // TODO: add env var for file output
-    if (auto E = timeTraceProfilerWrite(ProfileTraceFile, "-"))
-      fprintf(stderr, "Error writing out the time trace\n");
-
-    timeTraceProfilerCleanup();
-  }
 }
 
 void PluginAdaptorManagerTy::loadRTLs() {
