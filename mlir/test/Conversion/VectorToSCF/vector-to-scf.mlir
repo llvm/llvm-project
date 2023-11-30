@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf))" -split-input-file -allow-unregistered-dialect | FileCheck %s
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true}))" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
+// RUN: mlir-opt %s "-convert-vector-to-scf=full-unroll target-rank=0" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=TARGET-RANK-ZERO
 
 // CHECK-LABEL: func @vector_transfer_ops_0d(
 func.func @vector_transfer_ops_0d(%M: memref<f32>) {
@@ -748,3 +749,20 @@ func.func @cannot_fully_unroll_transfer_write_of_nd_scalable_vector(%vec: vector
   vector.transfer_write %vec, %memref[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
   return
 }
+
+//  -----
+
+// TARGET-RANK-ZERO-LABEL: func @unroll_transfer_write_target_rank_zero
+func.func @unroll_transfer_write_target_rank_zero(%vec : vector<2xi32>) {
+  %alloc = memref.alloc() : memref<4xi32>
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %alloc[%c0] : vector<2xi32>, memref<4xi32>
+  return
+}
+// TARGET-RANK-ZERO: %[[ALLOC:.*]] = memref.alloc() : memref<4xi32>
+// TARGET-RANK-ZERO: %[[EXTRACTED1:.*]] = vector.extract {{.*}} : i32 from vector<2xi32>
+// TARGET-RANK-ZERO: %[[BROADCASTED1:.*]] = vector.broadcast %[[EXTRACTED1]] : i32 to vector<i32>
+// TARGET-RANK-ZERO: vector.transfer_write %[[BROADCASTED1]], %[[ALLOC]]{{.*}} : vector<i32>, memref<4xi32>
+// TARGET-RANK-ZERO: %[[EXTRACTED2:.*]] = vector.extract {{.*}} : i32 from vector<2xi32>
+// TARGET-RANK-ZERO: %[[BROADCASTED2:.*]] = vector.broadcast %[[EXTRACTED2]] : i32 to vector<i32>
+// TARGET-RANK-ZERO: vector.transfer_write %[[BROADCASTED2]], %[[ALLOC]]{{.*}} : vector<i32>, memref<4xi32>

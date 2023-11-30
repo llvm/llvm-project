@@ -1234,18 +1234,28 @@ static Instruction *foldAddToAshr(BinaryOperator &Add) {
     return nullptr;
 
   // Rounding is done by adding -1 if the dividend (X) is negative and has any
-  // low bits set. The canonical pattern for that is an "ugt" compare with SMIN:
-  // sext (icmp ugt (X & (DivC - 1)), SMIN)
-  const APInt *MaskC;
+  // low bits set. It recognizes two canonical patterns:
+  // 1. For an 'ugt' cmp with the signed minimum value (SMIN), the
+  //    pattern is: sext (icmp ugt (X & (DivC - 1)), SMIN).
+  // 2. For an 'eq' cmp, the pattern's: sext (icmp eq X & (SMIN + 1), SMIN + 1).
+  // Note that, by the time we end up here, if possible, ugt has been
+  // canonicalized into eq.
+  const APInt *MaskC, *MaskCCmp;
   ICmpInst::Predicate Pred;
   if (!match(Add.getOperand(1),
              m_SExt(m_ICmp(Pred, m_And(m_Specific(X), m_APInt(MaskC)),
-                           m_SignMask()))) ||
-      Pred != ICmpInst::ICMP_UGT)
+                           m_APInt(MaskCCmp)))))
+    return nullptr;
+
+  if ((Pred != ICmpInst::ICMP_UGT || !MaskCCmp->isSignMask()) &&
+      (Pred != ICmpInst::ICMP_EQ || *MaskCCmp != *MaskC))
     return nullptr;
 
   APInt SMin = APInt::getSignedMinValue(Add.getType()->getScalarSizeInBits());
-  if (*MaskC != (SMin | (*DivC - 1)))
+  bool IsMaskValid = Pred == ICmpInst::ICMP_UGT
+                         ? (*MaskC == (SMin | (*DivC - 1)))
+                         : (*DivC == 2 && *MaskC == SMin + 1);
+  if (!IsMaskValid)
     return nullptr;
 
   // (X / DivC) + sext ((X & (SMin | (DivC - 1)) >u SMin) --> X >>s log2(DivC)
