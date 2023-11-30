@@ -407,8 +407,8 @@ public:
 
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerVerifyEachFailurePass
-    : public PassInfoMixin<TriggerVerifyEachFailurePass> {
+class TriggerVerifierErrorPass
+    : public PassInfoMixin<TriggerVerifierErrorPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
     // Intentionally break the Module by creating an alias without setting the
@@ -428,7 +428,7 @@ public:
     return PreservedAnalyses::none();
   }
 
-  static StringRef name() { return "TriggerVerifierFailurePass"; }
+  static StringRef name() { return "TriggerVerifierErrorPass"; }
 };
 
 } // namespace
