@@ -321,7 +321,7 @@ add_entrypoint_object(
   SRCS
     getchar_unlocked.cpp
   HDRS
-    ../getc_unlocked.h
+    ../getchar_unlocked.h
   DEPENDS
     libc.src.errno.errno
     libc.include.stdio
