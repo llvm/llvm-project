@@ -18,7 +18,7 @@
 #include "private.h"
 #include "rtl.h"
 
-#include "Shared/Utils.h"
+#include "Shared/EnvironmentVar.h"
 
 #include <cassert>
 #include <climits>
@@ -535,11 +535,10 @@ void DeviceTy::init() {
     return;
 
   // Enables recording kernels if set.
-  llvm::omp::target::BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
+  BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
     // Enables saving the device memory kernel output post execution if set.
-    llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
-        "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
+    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
 
     uint64_t ReqPtrArgOffset;
     RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
