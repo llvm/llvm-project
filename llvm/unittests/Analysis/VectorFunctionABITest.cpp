@@ -27,9 +27,9 @@ private:
                                 << Err.getMessage() << "\n";
     Type *Ty = parseType(SFunTy, Err, *(M.get()));
     ScalarFTy = dyn_cast<FunctionType>(Ty);
-    EXPECT_NE(ScalarFTy, nullptr) << "Invalid function type string: " << SFunTy
-                            << "\n"
-                            << Err.getMessage() << "\n";
+    EXPECT_NE(ScalarFTy, nullptr)
+        << "Invalid function type string: " << SFunTy << "\n"
+        << Err.getMessage() << "\n";
     // Reset the VFInfo
     Info = VFInfo();
     ScalarFuncParametersNum = 0;
@@ -135,8 +135,8 @@ TEST_F(VFABIParserTest, OnlyValidNames) {
 }
 
 TEST_F(VFABIParserTest, ParamListParsing) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo",
-                           "void(i32, i32, i32, ptr, i32)"));
+  EXPECT_TRUE(
+      invokeParser("_ZGVnN2vl16Ls32R3l_foo", "void(i32, i32, i32, ptr, i32)"));
   EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VecFuncParameters.size(), (unsigned)5);
   EXPECT_EQ(VecFuncParameters[0], VFParameter({0, VFParamKind::Vector}));
