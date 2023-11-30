@@ -209,6 +209,7 @@ protected:
   }
 
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,

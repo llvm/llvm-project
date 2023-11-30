@@ -59,13 +59,13 @@ std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
 
 /// Creates an operation pass to resolve `memref.dim` operations with values
 /// that are defined by operations that implement the
-/// `ReifyRankedShapeTypeShapeOpInterface`, in terms of shapes of its input
+/// `ReifyRankedShapedTypeOpInterface`, in terms of shapes of its input
 /// operands.
 std::unique_ptr<Pass> createResolveRankedShapeTypeResultDimsPass();
 
 /// Creates an operation pass to resolve `memref.dim` operations with values
 /// that are defined by operations that implement the
-/// `InferShapedTypeOpInterface` or the `ReifyRankedShapeTypeShapeOpInterface`,
+/// `InferShapedTypeOpInterface` or the `ReifyRankedShapedTypeOpInterface`,
 /// in terms of shapes of its input operands.
 std::unique_ptr<Pass> createResolveShapedTypeResultDimsPass();
 

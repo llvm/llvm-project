@@ -1,5 +1,5 @@
-// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -debug-info-kind=standalone %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
-// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -debug-info-kind=limited %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -gdwarf-4 -debug-info-kind=standalone %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
+// RUN: %clangxx -target arm64-apple-macosx11.0.0 -g -gdwarf-4 -debug-info-kind=limited %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK %s
 
 enum class Enum : int {
   VAL = -1
@@ -49,19 +49,19 @@ int main() {
 
 // CHECK:      ![[INT_DECL]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int_with_addr",
 // CHECK-SAME:                 flags: DIFlagStaticMember
-// CHECK-NOT:                  extraData:
+// CHECK-SAME:                 extraData: i32 25
 
 // CHECK:      ![[INT_DECL2:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int2",
 // CHECK-SAME:                         flags: DIFlagStaticMember
-// CHECK-NOT:                          extraData:
+// CHECK-SAME:                         extraData: i32 26
 
 // CHECK:      ![[FLOAT_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_float",
 // CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-NOT:                           extraData:
+// CHECK-SAME:                          extraData: float
 
 // CHECK:      ![[ENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_enum",
 // CHECK-SAME:                         flags: DIFlagStaticMember
-// CHECK-NOT:                          extraData:
+// CHECK-SAME:                         extraData: i32 -1
 
 // CHECK:      ![[EMPTY_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_struct_with_addr",
 // CHECK-SAME:                          flags: DIFlagStaticMember
@@ -69,15 +69,15 @@ int main() {
 
 // CHECK:      ![[IENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "inline_enum",
 // CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-NOT:                           extraData:
+// CHECK-SAME:                          extraData: i32 -1
 
 // CHECK:      ![[EMPTY_TEMPLATED_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "empty_templated",
 // CHECK-SAME:                                    flags: DIFlagStaticMember
-// CHECK-NOT:                                     extraData:
+// CHECK-SAME:                                    extraData: i32 1
 
 // CHECK:      ![[TEMPLATE_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_template",
 // CHECK-SAME:                             flags: DIFlagStaticMember
-// CHECK-NOT:                              extraData:
+// CHECK-SAME:                             extraData: i32 1
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_VAR:[0-9]+]], expr: !DIExpression())
 // CHECK:      ![[EMPTY_VAR]] = distinct !DIGlobalVariable(name: "cexpr_struct_with_addr", linkageName:

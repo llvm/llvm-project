@@ -64,7 +64,7 @@ namespace dr4 { // dr4: yes
   }
 }
 
-namespace dr5 { // dr5: yes
+namespace dr5 { // dr5: 3.1
   struct A {} a;
   struct B {
     B(const A&);
@@ -78,7 +78,7 @@ namespace dr5 { // dr5: yes
   const C c = e;
 }
 
-namespace dr7 { // dr7: yes
+namespace dr7 { // dr7: 3.4
   class A { public: ~A(); };
   class B : virtual private A {}; // expected-note 2 {{declared private here}}
   class C : public B {} c; // expected-error 2 {{inherited virtual base class 'A' has private destructor}} \
@@ -114,7 +114,7 @@ namespace dr8 { // dr8: dup 45
   A::T<A::U, A::k, &A::f> *A::g() { return 0; }
 }
 
-namespace dr9 { // dr9: yes
+namespace dr9 { // dr9: 2.8
   struct B {
   protected:
     int m; // expected-note {{here}}
@@ -175,7 +175,7 @@ namespace dr13 { // dr13: no
   int a4 = h(g);
 }
 
-namespace dr14 { // dr14: yes
+namespace dr14 { // dr14: 3.4
   namespace X { extern "C" int dr14_f(); }
   namespace Y { extern "C" int dr14_f(); }
   using namespace X;
@@ -201,7 +201,7 @@ namespace dr15 { // dr15: yes
   template<typename T> void f(int = 0); // expected-error {{default arguments cannot be added}}
 }
 
-namespace dr16 { // dr16: yes
+namespace dr16 { // dr16: 2.8
   class A { // expected-note {{here}}
     void f(); // expected-note {{here}}
     friend class C;
@@ -230,7 +230,7 @@ namespace dr17 { // dr17: yes
 
 // dr18: sup 577
 
-namespace dr19 { // dr19: yes
+namespace dr19 { // dr19: 3.1
   struct A {
     int n; // expected-note {{here}}
   };
@@ -243,7 +243,7 @@ namespace dr19 { // dr19: yes
   };
 }
 
-namespace dr20 { // dr20: yes
+namespace dr20 { // dr20: 2.8
   class X {
   public:
     X();
@@ -254,7 +254,7 @@ namespace dr20 { // dr20: yes
   X x = f(); // expected-error {{private}}
 }
 
-namespace dr21 { // dr21: yes
+namespace dr21 { // dr21: 3.4
   template<typename T> struct A;
   struct X {
     template<typename T = int> friend struct A; // expected-error {{default template argument not permitted on a friend template}}
@@ -398,7 +398,7 @@ namespace dr30 { // dr30: sup 468 c++11
 #endif
 }
 
-namespace dr31 { // dr31: yes
+namespace dr31 { // dr31: 2.8
   class X {
   private:
     void operator delete(void*); // expected-note {{here}}
@@ -410,7 +410,7 @@ namespace dr31 { // dr31: yes
 
 // dr32: na
 
-namespace dr33 { // dr33: yes
+namespace dr33 { // dr33: 9
   namespace X { struct S; void f(void (*)(S)); } // expected-note {{candidate}}
   namespace Y { struct T; void f(void (*)(T)); } // expected-note {{candidate}}
   void g(X::S);
@@ -667,7 +667,7 @@ namespace dr48 { // dr48: yes
   const int &c = S::o;
 }
 
-namespace dr49 { // dr49: yes
+namespace dr49 { // dr49: 2.8
   template<int*> struct A {}; // expected-note 0-2{{here}}
   int k;
 #if __has_feature(cxx_constexpr)
@@ -703,7 +703,7 @@ namespace dr50 { // dr50: yes
   X *u = dynamic_cast<X*>(p); // expected-error {{incomplete}}
 }
 
-namespace dr51 { // dr51: yes
+namespace dr51 { // dr51: 2.8
   struct A {};
   struct B : A {};
   struct S {
@@ -713,9 +713,7 @@ namespace dr51 { // dr51: yes
   A &a = s;
 }
 
-namespace dr52 { // dr52: yes
-  struct A { int n; }; // expected-note {{here}}
-  struct B : private A {} b; // expected-note 2{{private}}
+namespace dr52 { // dr52: 2.8
   // FIXME: This first diagnostic is very strangely worded, and seems to be bogus.
   int k = b.A::n; // expected-error {{'A' is a private member of 'dr52::A'}}
   // expected-error@-1 {{cannot cast 'struct B' to its private base}}
@@ -726,7 +724,7 @@ namespace dr53 { // dr53: yes
   enum E { e } x = static_cast<E>(n);
 }
 
-namespace dr54 { // dr54: yes
+namespace dr54 { // dr54: 2.8
   struct A { int a; } a;
   struct V { int v; } v;
   struct B : private A, virtual V { int b; } b; // expected-note 6{{private here}}
@@ -777,7 +775,7 @@ namespace dr56 { // dr56: yes
   };
 }
 
-namespace dr58 { // dr58: yes
+namespace dr58 { // dr58: 3.1
   // FIXME: Ideally, we should have a CodeGen test for this.
 #if __cplusplus >= 201103L
   enum E1 { E1_0 = 0, E1_1 = 1 };
@@ -834,7 +832,7 @@ namespace dr60 { // dr60: yes
   int &n = f(k);
 }
 
-namespace dr61 { // dr61: yes
+namespace dr61 { // dr61: 3.4
   struct X {
     static void f();
   } x;
@@ -849,7 +847,7 @@ namespace dr61 { // dr61: yes
   void (*r)() = y.f; // expected-error {{cannot create a non-constant pointer to member function}}
 }
 
-namespace dr62 { // dr62: yes
+namespace dr62 { // dr62: 2.9
   struct A {
     struct { int n; } b;
   };
@@ -937,7 +935,7 @@ namespace dr66 { // dr66: no
 
 // dr67: na
 
-namespace dr68 { // dr68: yes
+namespace dr68 { // dr68: 2.8
   template<typename T> struct X {};
   struct ::dr68::X<int> x1;
   struct ::dr68::template X<int> x2;
@@ -962,7 +960,7 @@ namespace dr68 { // dr68: yes
   };
 }
 
-namespace dr69 { // dr69: yes
+namespace dr69 { // dr69: 9
   template<typename T> static void f() {} // #dr69-f
   // FIXME: Should we warn here?
   inline void g() { f<int>(); }
@@ -1026,7 +1024,7 @@ namespace dr78 { // dr78: sup ????
 
 // dr79: na
 
-namespace dr80 { // dr80: yes
+namespace dr80 { // dr80: 2.9
   struct A {
     int A;
   };
@@ -1070,7 +1068,7 @@ namespace dr84 { // dr84: yes
 #endif
 }
 
-namespace dr85 { // dr85: yes
+namespace dr85 { // dr85: 3.4
   struct A {
     struct B;
     struct B {}; // expected-note{{previous declaration is here}}
@@ -1109,7 +1107,7 @@ namespace dr87 { // dr87: no
   X<void(void() throw())> y;
 }
 
-namespace dr88 { // dr88: yes
+namespace dr88 { // dr88: 2.8
   template<typename T> struct S {
     static const int a = 1; // expected-note {{previous}}
     static const int b;
@@ -1197,7 +1195,7 @@ namespace dr94 { // dr94: yes
   int arr[A::n];
 }
 
-namespace dr95 { // dr95: yes
+namespace dr95 { // dr95: 3.3
   struct A;
   struct B;
   namespace N {

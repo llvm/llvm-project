@@ -495,12 +495,12 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
     LargestVectorWidth = CurFnInfo->getMaxVectorWidth();
 
-  // Add the required-vector-width attribute. This contains the max width from:
+  // Add the min-legal-vector-width attribute. This contains the max width from:
   // 1. min-vector-width attribute used in the source program.
   // 2. Any builtins used that have a vector width specified.
   // 3. Values passed in and out of inline assembly.
   // 4. Width of vector arguments and return types for this function.
-  // 5. Width of vector aguments and return types for functions called by this
+  // 5. Width of vector arguments and return types for functions called by this
   //    function.
   if (getContext().getTargetInfo().getTriple().isX86())
     CurFn->addFnAttr("min-legal-vector-width",
@@ -2486,10 +2486,8 @@ llvm::Value *CodeGenFunction::EmitAnnotationCall(llvm::Function *AnnotationFn,
                                                  const AnnotateAttr *Attr) {
   SmallVector<llvm::Value *, 5> Args = {
       AnnotatedVal,
-      Builder.CreateBitCast(CGM.EmitAnnotationString(AnnotationStr),
-                            ConstGlobalsPtrTy),
-      Builder.CreateBitCast(CGM.EmitAnnotationUnit(Location),
-                            ConstGlobalsPtrTy),
+      CGM.EmitAnnotationString(AnnotationStr),
+      CGM.EmitAnnotationUnit(Location),
       CGM.EmitAnnotationLineNo(Location),
   };
   if (Attr)
@@ -2499,15 +2497,10 @@ llvm::Value *CodeGenFunction::EmitAnnotationCall(llvm::Function *AnnotationFn,
 
 void CodeGenFunction::EmitVarAnnotations(const VarDecl *D, llvm::Value *V) {
   assert(D->hasAttr<AnnotateAttr>() && "no annotate attribute");
-  // FIXME We create a new bitcast for every annotation because that's what
-  // llvm-gcc was doing.
-  unsigned AS = V->getType()->getPointerAddressSpace();
-  llvm::Type *I8PtrTy = Builder.getPtrTy(AS);
   for (const auto *I : D->specific_attrs<AnnotateAttr>())
     EmitAnnotationCall(CGM.getIntrinsic(llvm::Intrinsic::var_annotation,
-                                        {I8PtrTy, CGM.ConstGlobalsPtrTy}),
-                       Builder.CreateBitCast(V, I8PtrTy, V->getName()),
-                       I->getAnnotation(), D->getLocation(), I);
+                                        {V->getType(), CGM.ConstGlobalsPtrTy}),
+                       V, I->getAnnotation(), D->getLocation(), I);
 }
 
 Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,

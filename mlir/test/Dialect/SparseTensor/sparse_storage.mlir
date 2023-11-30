@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification= | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification= | FileCheck %s
 
 #SparseVector64 = #sparse_tensor.encoding<{
   map = (d0) -> (d0 : compressed),

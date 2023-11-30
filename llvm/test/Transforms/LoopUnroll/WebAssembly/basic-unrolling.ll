@@ -76,19 +76,19 @@ define hidden void @compile_time_partial(ptr nocapture %a, ptr nocapture readonl
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[I]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i32 [[I_07]]
 ; CHECK-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX2]], align 2
-; CHECK-NEXT:    [[INC:%.*]] = or i32 [[I_07]], 1
+; CHECK-NEXT:    [[INC:%.*]] = or disjoint i32 [[I_07]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INC]]
 ; CHECK-NEXT:    [[I_1:%.*]] = load i16, ptr [[ARRAYIDX_1]], align 2
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[I_1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i16 [[ADD_1]], ptr [[ARRAYIDX2_1]], align 2
-; CHECK-NEXT:    [[INC_1:%.*]] = or i32 [[I_07]], 2
+; CHECK-NEXT:    [[INC_1:%.*]] = or disjoint i32 [[I_07]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INC_1]]
 ; CHECK-NEXT:    [[I_2:%.*]] = load i16, ptr [[ARRAYIDX_2]], align 2
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[I_2]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INC_1]]
 ; CHECK-NEXT:    store i16 [[ADD_2]], ptr [[ARRAYIDX2_2]], align 2
-; CHECK-NEXT:    [[INC_2:%.*]] = or i32 [[I_07]], 3
+; CHECK-NEXT:    [[INC_2:%.*]] = or disjoint i32 [[I_07]], 3
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INC_2]]
 ; CHECK-NEXT:    [[I_3:%.*]] = load i16, ptr [[ARRAYIDX_3]], align 2
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[I_3]], 1
@@ -153,7 +153,7 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I1]], [[I]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I_09]]
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[INC:%.*]] = or i32 [[I_09]], 1
+; CHECK-NEXT:    [[INC:%.*]] = or disjoint i32 [[I_09]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INC]]
 ; CHECK-NEXT:    [[I_1:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1_1:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[INC]]

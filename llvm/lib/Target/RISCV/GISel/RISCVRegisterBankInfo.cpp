@@ -100,6 +100,20 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::FPR64CRegClassID:
   case RISCV::FPR32CRegClassID:
     return getRegBank(RISCV::FPRBRegBankID);
+  case RISCV::VMRegClassID:
+  case RISCV::VRRegClassID:
+  case RISCV::VRNoV0RegClassID:
+  case RISCV::VRM2RegClassID:
+  case RISCV::VRM2NoV0RegClassID:
+  case RISCV::VRM4RegClassID:
+  case RISCV::VRM4NoV0RegClassID:
+  case RISCV::VMV0RegClassID:
+  case RISCV::VRM2_with_sub_vrm1_0_in_VMV0RegClassID:
+  case RISCV::VRM4_with_sub_vrm1_0_in_VMV0RegClassID:
+  case RISCV::VRM8RegClassID:
+  case RISCV::VRM8NoV0RegClassID:
+  case RISCV::VRM8_with_sub_vrm1_0_in_VMV0RegClassID:
+    return getRegBank(RISCV::VRBRegBankID);
   }
 }
 
@@ -109,54 +123,88 @@ static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   return &RISCV::ValueMappings[Idx];
 }
 
-// TODO: Make this more like AArch64?
-static bool onlyUsesFP(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
+/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
+/// having only floating-point operands.
+/// FIXME: this is copied from target AArch64. Needs some code refactor here to
+/// put this function in GlobalISel/Utils.cpp.
+static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
+  switch (Opc) {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FMA:
   case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FCMP:
-  case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FCOPYSIGN:
+  case TargetOpcode::G_FCOS:
+  case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FLOG10:
+  case TargetOpcode::G_FLOG:
+  case TargetOpcode::G_FLOG2:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FEXP:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUM:
     return true;
-  default:
-    break;
   }
-
   return false;
 }
 
 // TODO: Make this more like AArch64?
-static bool onlyDefinesFP(const MachineInstr &MI) {
+bool RISCVRegisterBankInfo::hasFPConstraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI) const {
+  if (isPreISelGenericFloatingPointOpcode(MI.getOpcode()))
+    return true;
+
+  // If we have a copy instruction, we could be feeding floating point
+  // instructions.
+  if (MI.getOpcode() != TargetOpcode::COPY)
+    return false;
+
+  return getRegBank(MI.getOperand(0).getReg(), MRI, TRI) == &RISCV::FPRBRegBank;
+}
+
+bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
+                                       const MachineRegisterInfo &MRI,
+                                       const TargetRegisterInfo &TRI) const {
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_UITOFP:
-  case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FCMP:
     return true;
   default:
     break;
   }
 
-  return false;
+  return hasFPConstraints(MI, MRI, TRI);
+}
+
+bool RISCVRegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
+                                          const MachineRegisterInfo &MRI,
+                                          const TargetRegisterInfo &TRI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP:
+    return true;
+  default:
+    break;
+  }
+
+  return hasFPConstraints(MI, MRI, TRI);
 }
 
 const RegisterBankInfo::InstructionMapping &
@@ -173,6 +221,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
 
   unsigned GPRSize = getMaximumSize(RISCV::GPRBRegBankID);
   assert((GPRSize == 32 || GPRSize == 64) && "Unexpected GPR size");
@@ -181,12 +231,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const ValueMapping *GPRValueMapping =
       &RISCV::ValueMappings[GPRSize == 64 ? RISCV::GPRB64Idx
                                           : RISCV::GPRB32Idx];
-  const ValueMapping *OperandsMapping = GPRValueMapping;
 
   switch (Opc) {
-  case TargetOpcode::G_INVOKE_REGION_START:
-    OperandsMapping = getOperandsMapping({});
-    break;
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_SHL:
@@ -215,14 +261,35 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
-    break;
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1, GPRValueMapping,
+                                 NumOperands);
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
+                                 getFPValueMapping(Ty.getSizeInBits()),
+                                 NumOperands);
+  }
+  }
+
+  SmallVector<const ValueMapping *, 4> OpdsMapping(NumOperands);
+
+  switch (Opc) {
   case TargetOpcode::G_LOAD: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OpdsMapping[0] = GPRValueMapping;
+    OpdsMapping[1] = GPRValueMapping;
     // Use FPR64 for s64 loads on rv32.
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OperandsMapping =
-          getOperandsMapping({getFPValueMapping(64), GPRValueMapping});
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
     }
 
@@ -235,106 +302,97 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
-                 return onlyUsesFP(UseMI);
-               })) {
-      OperandsMapping = getOperandsMapping(
-          {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
-    }
+                 return onlyUsesFP(UseMI, MRI, TRI);
+               }))
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
 
     break;
   }
   case TargetOpcode::G_STORE: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OpdsMapping[0] = GPRValueMapping;
+    OpdsMapping[1] = GPRValueMapping;
     // Use FPR64 for s64 stores on rv32.
     if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OperandsMapping =
-          getOperandsMapping({getFPValueMapping(64), GPRValueMapping});
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
       break;
     }
 
     MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(0).getReg());
-    if (onlyDefinesFP(*DefMI)) {
-      OperandsMapping = getOperandsMapping(
-          {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
+    if (onlyDefinesFP(*DefMI, MRI, TRI))
+      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+    break;
+  }
+  case TargetOpcode::G_SELECT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+    // Try to minimize the number of copies. If we have more floating point
+    // constrained values than not, then we'll put everything on FPR. Otherwise,
+    // everything has to be on GPR.
+    unsigned NumFP = 0;
+
+    // Use FPR64 for s64 select on rv32.
+    if (GPRSize == 32 && Ty.getSizeInBits() == 64) {
+      NumFP = 3;
+    } else {
+      // Check if the uses of the result always produce floating point values.
+      //
+      // For example:
+      //
+      // %z = G_SELECT %cond %x %y
+      // fpr = G_FOO %z ...
+      if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                 [&](const MachineInstr &UseMI) {
+                   return onlyUsesFP(UseMI, MRI, TRI);
+                 }))
+        ++NumFP;
+
+      // Check if the defs of the source values always produce floating point
+      // values.
+      //
+      // For example:
+      //
+      // %x = G_SOMETHING_ALWAYS_FLOAT %a ...
+      // %z = G_SELECT %cond %x %y
+      //
+      // Also check whether or not the sources have already been decided to be
+      // FPR. Keep track of this.
+      //
+      // This doesn't check the condition, since the condition is always an
+      // integer.
+      for (unsigned Idx = 2; Idx < 4; ++Idx) {
+        Register VReg = MI.getOperand(Idx).getReg();
+        MachineInstr *DefMI = MRI.getVRegDef(VReg);
+        if (getRegBank(VReg, MRI, TRI) == &RISCV::FPRBRegBank ||
+            onlyDefinesFP(*DefMI, MRI, TRI))
+          ++NumFP;
+      }
     }
-    break;
-  }
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_FRAME_INDEX:
-  case TargetOpcode::G_GLOBAL_VALUE:
-  case TargetOpcode::G_JUMP_TABLE:
-  case TargetOpcode::G_BRCOND:
-    OperandsMapping = getOperandsMapping({GPRValueMapping, nullptr});
-    break;
-  case TargetOpcode::G_BR:
-    OperandsMapping = getOperandsMapping({nullptr});
-    break;
-  case TargetOpcode::G_BRJT:
-    OperandsMapping =
-        getOperandsMapping({GPRValueMapping, nullptr, GPRValueMapping});
-    break;
-  case TargetOpcode::G_ICMP:
-    OperandsMapping = getOperandsMapping(
-        {GPRValueMapping, nullptr, GPRValueMapping, GPRValueMapping});
-    break;
-  case TargetOpcode::G_SEXT_INREG:
-    OperandsMapping =
-        getOperandsMapping({GPRValueMapping, GPRValueMapping, nullptr});
-    break;
-  case TargetOpcode::G_SELECT:
-    OperandsMapping = getOperandsMapping(
-        {GPRValueMapping, GPRValueMapping, GPRValueMapping, GPRValueMapping});
-    break;
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping = getFPValueMapping(Ty.getSizeInBits());
-    break;
-  }
-  case TargetOpcode::G_FMA: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    const RegisterBankInfo::ValueMapping *FPValueMapping =
-        getFPValueMapping(Ty.getSizeInBits());
-    OperandsMapping = getOperandsMapping(
-        {FPValueMapping, FPValueMapping, FPValueMapping, FPValueMapping});
-    break;
-  }
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC: {
-    LLT ToTy = MRI.getType(MI.getOperand(0).getReg());
-    LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
-    OperandsMapping =
-        getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
-                            getFPValueMapping(FromTy.getSizeInBits())});
+
+    // Condition operand is always GPR.
+    OpdsMapping[1] = GPRValueMapping;
+
+    const ValueMapping *Mapping = GPRValueMapping;
+    if (NumFP >= 2)
+      Mapping = getFPValueMapping(Ty.getSizeInBits());
+
+    OpdsMapping[0] = OpdsMapping[2] = OpdsMapping[3] = Mapping;
     break;
   }
   case TargetOpcode::G_FPTOSI:
-  case TargetOpcode::G_FPTOUI: {
+  case TargetOpcode::G_FPTOUI:
+  case RISCV::G_FCLASS: {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
-    OperandsMapping =
-        getOperandsMapping({GPRValueMapping,
-                            getFPValueMapping(Ty.getSizeInBits())});
+    OpdsMapping[0] = GPRValueMapping;
+    OpdsMapping[1] = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping = getOperandsMapping(
-        {getFPValueMapping(Ty.getSizeInBits()), GPRValueMapping});
-    break;
-  }
-  case TargetOpcode::G_FCONSTANT: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping =
-        getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
+    OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+    OpdsMapping[1] = GPRValueMapping;
     break;
   }
   case TargetOpcode::G_FCMP: {
@@ -343,15 +401,28 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = Ty.getSizeInBits();
     assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
-    auto *FPRValueMapping = getFPValueMapping(Size);
-    OperandsMapping = getOperandsMapping(
-        {GPRValueMapping, nullptr, FPRValueMapping, FPRValueMapping});
+    OpdsMapping[0] = GPRValueMapping;
+    OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);
     break;
   }
   default:
-    return getInvalidInstructionMapping();
+    // By default map all scalars to GPR.
+    for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+       auto &MO = MI.getOperand(Idx);
+       if (!MO.isReg() || !MO.getReg())
+         continue;
+       LLT Ty = MRI.getType(MO.getReg());
+       if (!Ty.isValid())
+         continue;
+
+       if (isPreISelGenericFloatingPointOpcode(Opc))
+         OpdsMapping[Idx] = getFPValueMapping(Ty.getSizeInBits());
+       else
+         OpdsMapping[Idx] = GPRValueMapping;
+    }
+    break;
   }
 
-  return getInstructionMapping(DefaultMappingID, /*Cost=*/1, OperandsMapping,
-                               NumOperands);
+  return getInstructionMapping(DefaultMappingID, /*Cost=*/1,
+                               getOperandsMapping(OpdsMapping), NumOperands);
 }

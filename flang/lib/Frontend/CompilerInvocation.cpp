@@ -266,6 +266,17 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.PrepareForThinLTO = true;
   }
 
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mcode_object_version_EQ)) {
+    llvm::StringRef s = a->getValue();
+    if (s == "5")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_5;
+    if (s == "4")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_4;
+    if (s == "none")
+      opts.CodeObjectVersion = llvm::CodeObjectVersionKind::COV_None;
+  }
+
   // -f[no-]save-optimization-record[=<format>]
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_opt_record_file))
@@ -1054,6 +1065,27 @@ static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
   return true;
 }
 
+static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
+                                   llvm::opt::ArgList &args,
+                                   clang::DiagnosticsEngine &diags) {
+  llvm::Triple triple = llvm::Triple(invoc.getTargetOpts().triple);
+
+  // TODO: support --dependent-lib on other platforms when MLIR supports
+  //       !llvm.dependent.lib
+  if (args.hasArg(clang::driver::options::OPT_dependent_lib) &&
+      !triple.isOSWindows()) {
+    const unsigned diagID =
+        diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                              "--dependent-lib is only supported on Windows");
+    diags.Report(diagID);
+    return false;
+  }
+
+  invoc.getCodeGenOpts().DependentLibs =
+      args.getAllArgValues(clang::driver::options::OPT_dependent_lib);
+  return true;
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &res, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
@@ -1162,6 +1194,8 @@ bool CompilerInvocation::createFromArgs(
   success &= parseFloatingPointArgs(res, args, diags);
 
   success &= parseVScaleArgs(res, args, diags);
+
+  success &= parseLinkerOptionsArgs(res, args, diags);
 
   // Set the string to be used as the return value of the COMPILER_OPTIONS
   // intrinsic of iso_fortran_env. This is either passed in from the parent
@@ -1310,11 +1344,12 @@ void CompilerInvocation::setFortranOpts() {
     fortranOptions.features.WarnOnAllUsage();
 }
 
-void CompilerInvocation::setSemanticsOpts(
+std::unique_ptr<Fortran::semantics::SemanticsContext>
+CompilerInvocation::getSemanticsCtx(
     Fortran::parser::AllCookedSources &allCookedSources) {
   auto &fortranOptions = getFortranOpts();
 
-  semanticsContext = std::make_unique<semantics::SemanticsContext>(
+  auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
@@ -1338,6 +1373,8 @@ void CompilerInvocation::setSemanticsOpts(
 
   if (targetTriple.isPPC())
     semanticsContext->targetCharacteristics().set_isPPC(true);
+
+  return semanticsContext;
 }
 
 /// Set \p loweringOptions controlling lowering behavior based

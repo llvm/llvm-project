@@ -313,10 +313,10 @@ public:
   uint32_t auxIdx;
   uint32_t dynsymIndex;
 
-  // For a Defined symbol, this represents the Verdef index (VER_NDX_LOCAL,
-  // VER_NDX_GLOBAL, or a named version). For a SharedSymbol, this represents
-  // the Verdef index within the input DSO, which will be converted to a Verneed
-  // index in the output.
+  // If `file` is SharedFile (for SharedSymbol or copy-relocated Defined), this
+  // represents the Verdef index within the input DSO, which will be converted
+  // to a Verneed index in the output. Otherwise, this represents the Verdef
+  // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
   uint16_t versionId;
   uint8_t versionScriptAssigned : 1;
 
@@ -356,13 +356,7 @@ public:
         size(size), section(section) {
     exportDynamic = config->exportDynamic;
   }
-  void overwrite(Symbol &sym) const {
-    Symbol::overwrite(sym, DefinedKind);
-    auto &s = static_cast<Defined &>(sym);
-    s.value = value;
-    s.size = size;
-    s.section = section;
-  }
+  void overwrite(Symbol &sym) const;
 
   static bool classof(const Symbol *s) { return s->isDefined(); }
 

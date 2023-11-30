@@ -185,6 +185,11 @@ const interpose_substitution substitution_##func_name[]             \
 #  else
 #   define __ASM_WEAK_WRAPPER(func) ".weak " #func "\n"
 #  endif  // SANITIZER_FREEBSD || SANITIZER_NETBSD
+#  if defined(__arm__) || defined(__aarch64__)
+#   define ASM_TYPE_FUNCTION_STR "%function"
+#  else
+#   define ASM_TYPE_FUNCTION_STR "@function"
+#  endif
 // Keep trampoline implementation in sync with sanitizer_common/sanitizer_asm.h
 #  define DECLARE_WRAPPER(ret_type, func, ...)                                 \
      extern "C" ret_type func(__VA_ARGS__);                                    \
@@ -196,7 +201,8 @@ const interpose_substitution substitution_##func_name[]             \
        __ASM_WEAK_WRAPPER(func)                                                \
        ".set " #func ", " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"           \
        ".globl " SANITIZER_STRINGIFY(TRAMPOLINE(func)) "\n"                    \
-       ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", %function\n"         \
+       ".type  " SANITIZER_STRINGIFY(TRAMPOLINE(func)) ", "                    \
+         ASM_TYPE_FUNCTION_STR "\n"                                            \
        SANITIZER_STRINGIFY(TRAMPOLINE(func)) ":\n"                             \
        SANITIZER_STRINGIFY(CFI_STARTPROC) "\n"                                 \
        SANITIZER_STRINGIFY(ASM_TAIL_CALL) " __interceptor_"                    \

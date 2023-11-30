@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -analyzer-checker=alpha.unix.Stream \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
@@ -9,7 +9,7 @@
 // enable only StdCLibraryFunctions checker
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.unix.Errno \
+// RUN:   -analyzer-checker=unix.Errno \
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.ExprInspection

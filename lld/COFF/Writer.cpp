@@ -221,6 +221,7 @@ private:
                                       uint16_t type, int margin);
   bool createThunks(OutputSection *os, int margin);
   bool verifyRanges(const std::vector<Chunk *> chunks);
+  void createECCodeMap();
   void finalizeAddresses();
   void removeEmptySections();
   void assignOutputSectionIndices();
@@ -229,6 +230,7 @@ private:
   template <typename PEHeaderTy> void writeHeader();
   void createSEHTable();
   void createRuntimePseudoRelocs();
+  void createECChunks();
   void insertCtorDtorSymbols();
   void markSymbolsWithRelocations(ObjFile *file, SymbolRVASet &usedSymbols);
   void createGuardCFTables();
@@ -245,7 +247,8 @@ private:
   void writeBuildId();
   void writePEChecksum();
   void sortSections();
-  void sortExceptionTable();
+  template <typename T> void sortExceptionTable(Chunk *first, Chunk *last);
+  void sortExceptionTables();
   void sortCRTSectionChunks(std::vector<Chunk *> &chunks);
   void addSyntheticIdata();
   void sortBySectionOrder(std::vector<Chunk *> &chunks);
@@ -272,6 +275,7 @@ private:
   std::map<PartialSectionKey, PartialSection *> partialSections;
   std::vector<char> strtab;
   std::vector<llvm::object::coff_symbol16> outputSymtab;
+  std::vector<ECCodeMapEntry> codeMap;
   IdataContents idata;
   Chunk *importTableStart = nullptr;
   uint64_t importTableSize = 0;
@@ -347,6 +351,14 @@ void OutputSection::merge(OutputSection *other) {
   contribSections.insert(contribSections.end(), other->contribSections.begin(),
                          other->contribSections.end());
   other->contribSections.clear();
+
+  // MS link.exe compatibility: when merging a code section into a data section,
+  // mark the target section as a code section.
+  if (other->header.Characteristics & IMAGE_SCN_CNT_CODE) {
+    header.Characteristics |= IMAGE_SCN_CNT_CODE;
+    header.Characteristics &=
+        ~(IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_CNT_UNINITIALIZED_DATA);
+  }
 }
 
 // Write the section header to a given buffer.
@@ -529,6 +541,48 @@ bool Writer::createThunks(OutputSection *os, int margin) {
   return addressesChanged;
 }
 
+// Create a code map for CHPE metadata.
+void Writer::createECCodeMap() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  // Clear the map in case we were're recomputing the map after adding
+  // a range extension thunk.
+  codeMap.clear();
+
+  std::optional<chpe_range_type> lastType;
+  Chunk *first, *last;
+
+  auto closeRange = [&]() {
+    if (lastType) {
+      codeMap.push_back({first, last, *lastType});
+      lastType.reset();
+    }
+  };
+
+  for (OutputSection *sec : ctx.outputSections) {
+    for (Chunk *c : sec->chunks) {
+      // Skip empty section chunks. MS link.exe does not seem to do that and
+      // generates empty code ranges in some cases.
+      if (isa<SectionChunk>(c) && !c->getSize())
+        continue;
+
+      std::optional<chpe_range_type> chunkType = c->getArm64ECRangeType();
+      if (chunkType != lastType) {
+        closeRange();
+        first = c;
+        lastType = chunkType;
+      }
+      last = c;
+    }
+  }
+
+  closeRange();
+
+  Symbol *tableCountSym = ctx.symtab.findUnderscore("__hybrid_code_map_count");
+  cast<DefinedAbsolute>(tableCountSym)->setVA(codeMap.size());
+}
+
 // Verify that all relocations are in range, with no extra margin requirements.
 bool Writer::verifyRanges(const std::vector<Chunk *> chunks) {
   for (Chunk *c : chunks) {
@@ -698,7 +752,7 @@ void Writer::run() {
     }
     writeSections();
     prepareLoadConfig();
-    sortExceptionTable();
+    sortExceptionTables();
 
     // Fix up the alignment in the TLS Directory's characteristic field,
     // if a specific alignment value is needed
@@ -1078,6 +1132,9 @@ void Writer::createMiscChunks() {
   if (config->guardCF != GuardCFLevel::Off)
     createGuardCFTables();
 
+  if (isArm64EC(config->machine))
+    createECChunks();
+
   if (config->autoImport)
     createRuntimePseudoRelocs();
 
@@ -1402,6 +1459,10 @@ void Writer::sortECChunks() {
 void Writer::assignAddresses() {
   llvm::TimeTraceScope timeScope("Assign addresses");
   Configuration *config = &ctx.config;
+
+  // We need to create EC code map so that ECCodeMapChunk knows its size.
+  // We do it here to make sure that we account for range extension chunks.
+  createECCodeMap();
 
   sizeOfHeaders = dosStubSize + sizeof(PEMagic) + sizeof(coff_file_header) +
                   sizeof(data_directory) * numberOfDataDirectory +
@@ -1938,6 +1999,15 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
   cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
 }
 
+// Create CHPE metadata chunks.
+void Writer::createECChunks() {
+  auto codeMapChunk = make<ECCodeMapChunk>(codeMap);
+  rdataSec->addChunk(codeMapChunk);
+  Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
+  replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
+                                  codeMapChunk);
+}
+
 // MinGW specific. Gather all relocations that are imported from a DLL even
 // though the code didn't expect it to, produce the table that the runtime
 // uses for fixing them up, and provide the synthetic symbols that the
@@ -2095,41 +2165,52 @@ void Writer::writeBuildId() {
 }
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.
-void Writer::sortExceptionTable() {
-  if (!firstPdata)
-    return;
-  llvm::TimeTraceScope timeScope("Sort exception table");
+template <typename T>
+void Writer::sortExceptionTable(Chunk *first, Chunk *last) {
   // We assume .pdata contains function table entries only.
   auto bufAddr = [&](Chunk *c) {
     OutputSection *os = ctx.getOutputSection(c);
     return buffer->getBufferStart() + os->getFileOff() + c->getRVA() -
            os->getRVA();
   };
-  uint8_t *begin = bufAddr(firstPdata);
-  uint8_t *end = bufAddr(lastPdata) + lastPdata->getSize();
-  if (ctx.config.machine == AMD64) {
-    struct Entry { ulittle32_t begin, end, unwind; };
-    if ((end - begin) % sizeof(Entry) != 0) {
-      fatal("unexpected .pdata size: " + Twine(end - begin) +
-            " is not a multiple of " + Twine(sizeof(Entry)));
-    }
-    parallelSort(
-        MutableArrayRef<Entry>((Entry *)begin, (Entry *)end),
-        [](const Entry &a, const Entry &b) { return a.begin < b.begin; });
-    return;
+  uint8_t *begin = bufAddr(first);
+  uint8_t *end = bufAddr(last) + last->getSize();
+  if ((end - begin) % sizeof(T) != 0) {
+    fatal("unexpected .pdata size: " + Twine(end - begin) +
+          " is not a multiple of " + Twine(sizeof(T)));
   }
-  if (ctx.config.machine == ARMNT || ctx.config.machine == ARM64) {
-    struct Entry { ulittle32_t begin, unwind; };
-    if ((end - begin) % sizeof(Entry) != 0) {
-      fatal("unexpected .pdata size: " + Twine(end - begin) +
-            " is not a multiple of " + Twine(sizeof(Entry)));
-    }
-    parallelSort(
-        MutableArrayRef<Entry>((Entry *)begin, (Entry *)end),
-        [](const Entry &a, const Entry &b) { return a.begin < b.begin; });
-    return;
+
+  parallelSort(MutableArrayRef<T>(reinterpret_cast<T *>(begin),
+                                  reinterpret_cast<T *>(end)),
+               [](const T &a, const T &b) { return a.begin < b.begin; });
+}
+
+// Sort .pdata section contents according to PE/COFF spec 5.5.
+void Writer::sortExceptionTables() {
+  llvm::TimeTraceScope timeScope("Sort exception table");
+
+  struct EntryX64 {
+    ulittle32_t begin, end, unwind;
+  };
+  struct EntryArm {
+    ulittle32_t begin, unwind;
+  };
+
+  switch (ctx.config.machine) {
+  case AMD64:
+    if (firstPdata)
+      sortExceptionTable<EntryX64>(firstPdata, lastPdata);
+    break;
+  case ARMNT:
+  case ARM64:
+    if (firstPdata)
+      sortExceptionTable<EntryArm>(firstPdata, lastPdata);
+    break;
+  default:
+    if (firstPdata)
+      lld::errs() << "warning: don't know how to handle .pdata.\n";
+    break;
   }
-  lld::errs() << "warning: don't know how to handle .pdata.\n";
 }
 
 // The CRT section contains, among other things, the array of function

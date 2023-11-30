@@ -1657,8 +1657,10 @@ void CGDebugInfo::CollectRecordLambdaFields(
       FieldDecl *f = *Field;
       llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
       QualType type = f->getType();
+      StringRef ThisName =
+          CGM.getCodeGenOpts().EmitCodeView ? "__this" : "this";
       llvm::DIType *fieldType = createFieldType(
-          "this", type, f->getLocation(), f->getAccess(),
+          ThisName, type, f->getLocation(), f->getAccess(),
           layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
 
       elements.push_back(fieldType);
@@ -1678,10 +1680,26 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   unsigned LineNumber = getLineNumber(Var->getLocation());
   StringRef VName = Var->getName();
 
+  // FIXME: to avoid complications with type merging we should
+  // emit the constant on the definition instead of the declaration.
+  llvm::Constant *C = nullptr;
+  if (Var->getInit()) {
+    const APValue *Value = Var->evaluateValue();
+    if (Value) {
+      if (Value->isInt())
+        C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
+      if (Value->isFloat())
+        C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
+    }
+  }
+
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
+  auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
+                 ? llvm::dwarf::DW_TAG_variable
+                 : llvm::dwarf::DW_TAG_member;
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
-      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr, Align);
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Tag, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
   StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;
@@ -3376,9 +3394,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   unsigned Line = getLineNumber(ED->getLocation());
   llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
-  return DBuilder.createEnumerationType(EnumContext, ED->getName(), DefUnit,
-                                        Line, Size, Align, EltArray, ClassTy,
-                                        Identifier, ED->isScoped());
+  return DBuilder.createEnumerationType(
+      EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
+      /*RunTimeLang=*/0, Identifier, ED->isScoped());
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -5829,8 +5847,13 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
 }
 
 void CGDebugInfo::finalize() {
-  for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
-    assert(VD->isStaticDataMember());
+  // We can't use a for-each here because `EmitGlobalVariable`
+  // may push new decls into `StaticDataMemberDefinitionsToEmit`,
+  // which would invalidate any iterator.
+  for (size_t i = 0; i < StaticDataMemberDefinitionsToEmit.size(); ++i) {
+    auto const *VD = StaticDataMemberDefinitionsToEmit[i];
+
+    assert(VD && VD->isStaticDataMember());
 
     if (DeclCache.contains(VD))
       continue;

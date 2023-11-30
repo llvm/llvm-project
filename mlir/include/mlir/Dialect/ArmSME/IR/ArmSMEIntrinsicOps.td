@@ -133,7 +133,8 @@ def LLVM_aarch64_sme_st1q_vert : ArmSME_IntrStoreOp<"st1q.vert">;
 def LLVM_aarch64_sme_str
     : ArmSME_IntrOp<"str">,
       Arguments<(ins Arg<I32, "Index">:$index,
-                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address)>;
+                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address,
+                 Arg<I32, "Offset">:$offset)>;
 
 // Vector to tile slice
 class LLVM_aarch64_sme_write<string direction>

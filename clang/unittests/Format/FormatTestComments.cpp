@@ -1069,6 +1069,17 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                        "  // clang-format on\n"
                        "}");
   verifyNoChange(Code);
+
+  auto Style = getLLVMStyle();
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyFormat("#ifdef FOO\n"
+               "  // Foo\n"
+               "  #define Foo foo\n"
+               "#else\n"
+               "  // Bar\n"
+               "  #define Bar bar\n"
+               "#endif",
+               Style);
 }
 
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {

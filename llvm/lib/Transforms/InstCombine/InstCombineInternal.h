@@ -647,6 +647,8 @@ public:
                                       ConstantInt *C);
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, TruncInst *Trunc,
                                      const APInt &C);
+  Instruction *foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
+                                           const SimplifyQuery &Q);
   Instruction *foldICmpAndConstant(ICmpInst &Cmp, BinaryOperator *And,
                                    const APInt &C);
   Instruction *foldICmpXorConstant(ICmpInst &Cmp, BinaryOperator *Xor,

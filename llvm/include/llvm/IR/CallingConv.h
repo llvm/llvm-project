@@ -248,6 +248,9 @@ namespace CallingConv {
     /// Used for M68k rtd-based CC (similar to X86's stdcall).
     M68k_RTD = 106,
 
+    /// Used by GraalVM. Two additional registers are reserved.
+    GRAAL = 107,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

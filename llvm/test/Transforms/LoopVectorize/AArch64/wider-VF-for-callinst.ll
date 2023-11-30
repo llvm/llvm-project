@@ -111,5 +111,5 @@ for.cond.cleanup:
 declare float @foo(float)
 declare <vscale x 4 x float> @foo_vector(<vscale x 4 x float>, <vscale x 4 x i1>)
 
-attributes #0 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_Mxv_foo(foo_vector)" }
+attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(foo_vector)" }
 attributes #1 = { "target-features"="+sve" vscale_range(1,16) "no-trapping-math"="false" }

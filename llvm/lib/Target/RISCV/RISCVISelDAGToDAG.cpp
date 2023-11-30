@@ -92,7 +92,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
 
       // Create temporary stack for each expanding node.
       SDValue StackSlot =
-          CurDAG->CreateStackTemporary(TypeSize::Fixed(8), Align(8));
+          CurDAG->CreateStackTemporary(TypeSize::getFixed(8), Align(8));
       int FI = cast<FrameIndexSDNode>(StackSlot.getNode())->getIndex();
       MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
 
@@ -100,7 +100,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       Lo = CurDAG->getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
 
       SDValue OffsetSlot =
-          CurDAG->getMemBasePlusOffset(StackSlot, TypeSize::Fixed(4), DL);
+          CurDAG->getMemBasePlusOffset(StackSlot, TypeSize::getFixed(4), DL);
       Hi = CurDAG->getStore(Chain, DL, Hi, OffsetSlot, MPI.getWithOffset(4),
                             Align(8));
 
@@ -151,6 +151,10 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
       continue;
 
     MadeChange |= doPeepholeSExtW(N);
+
+    // FIXME: This is here only because the VMerge transform doesn't
+    // know how to handle masked true inputs.  Once that has been moved
+    // to post-ISEL, this can be deleted as well.
     MadeChange |= doPeepholeMaskedRVV(cast<MachineSDNode>(N));
   }
 
@@ -3711,8 +3715,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   for (unsigned Idx = 1; Idx < True->getNumValues(); ++Idx)
     ReplaceUses(True.getValue(Idx), SDValue(Result, Idx));
 
-  // Try to transform Result to unmasked intrinsic.
-  doPeepholeMaskedRVV(Result);
   return true;
 }
 
