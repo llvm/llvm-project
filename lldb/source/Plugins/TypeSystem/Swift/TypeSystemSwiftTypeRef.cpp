@@ -282,6 +282,28 @@ GetPointerTo(swift::Demangle::Demangler &dem,
   return bgs;
 }
 
+NodePointer TypeSystemSwiftTypeRef::CreateBoundGenericStruct(
+    llvm::StringRef name, llvm::StringRef module_name,
+    llvm::ArrayRef<NodePointer> type_list_elements,
+    swift::Demangle::Demangler &dem) {
+  NodePointer type_list = dem.createNode(Node::Kind::TypeList);
+  for (auto *type_list_element : type_list_elements)
+    type_list->addChild(type_list_element, dem);
+  NodePointer identifier = dem.createNode(Node::Kind::Identifier, name);
+  NodePointer module = dem.createNode(Node::Kind::Module, module_name);
+  NodePointer structure = dem.createNode(Node::Kind::Structure);
+  structure->addChild(module, dem);
+  structure->addChild(identifier, dem);
+  NodePointer type = dem.createNode(Node::Kind::Type);
+  type->addChild(structure, dem);
+  NodePointer signature = dem.createNode(Node::Kind::BoundGenericStructure);
+  signature->addChild(type, dem);
+  signature->addChild(type_list, dem);
+  NodePointer outer_type = dem.createNode(Node::Kind::Type);
+  outer_type->addChild(signature, dem);
+  return outer_type;
+}
+
 /// Return a demangle tree leaf node representing \p clang_type.
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
@@ -377,6 +399,28 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
     kind = Node::Kind::TypeAlias;
     pointee = {};
     break;
+  case eTypeClassVector: {
+    CompilerType element_type;
+    uint64_t size;
+    bool is_vector = clang_type.IsVectorType(&element_type, &size);
+    if (!is_vector)
+      break;
+
+    auto qual_type = ClangUtil::GetQualType(clang_type); 
+    const auto *ptr = qual_type.getTypePtrOrNull();
+    if (!ptr)
+      break;
+
+    // Check if this is an extended vector type.
+    if (!llvm::isa<clang::DependentSizedExtVectorType>(ptr) &&
+        !llvm::isa<clang::ExtVectorType>(ptr))
+      break;
+
+    NodePointer element_type_node = GetClangTypeNode(element_type, dem);
+    llvm::SmallVector<NodePointer, 1> elements({element_type_node});
+    return CreateBoundGenericStruct("SIMD" + std::to_string(size),
+                                    swift::STDLIB_NAME, elements, dem);
+  }
   default:
     break;
   }
