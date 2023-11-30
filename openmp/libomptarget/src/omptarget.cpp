@@ -14,6 +14,7 @@
 #include "omptarget.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "PluginManager.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -1732,9 +1733,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        bool IsRecord, bool SaveOutput,
                        uint64_t &ReqPtrArgOffset) {
-  return Device.RTL->activate_record_replay(Device.DeviceID, MemorySize, VAddr,
-                                            IsRecord, SaveOutput,
-                                            ReqPtrArgOffset);
+  return Device.RTL->initialize_record_replay(Device.DeviceID, MemorySize,
+                                              VAddr, IsRecord, SaveOutput,
+                                              ReqPtrArgOffset);
 }
 
 /// Executes a kernel using pre-recorded information for loading to
