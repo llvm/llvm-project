@@ -15,13 +15,13 @@ add_llvm_library(omptarget
   api.cpp
   device.cpp
   interface.cpp
-  interop.cpp
   omptarget.cpp
   OmptCallback.cpp
   OmptTracing.cpp
   OmptTracingBuffer.cpp
   rtl.cpp
   LegacyAPI.cpp
+  OpenMP/InteropAPI.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}
@@ -66,6 +66,13 @@ target_link_libraries(
   ${CMAKE_DL_LIBS}
   ${LLVM_OFFLOAD_ARCH}
   "-Wl,--no-allow-shlib-undefined")
+#=======
+# Define the TARGET_NAME and DEBUG_PREFIX.
+target_compile_definitions(omptarget PRIVATE
+  TARGET_NAME=omptarget
+  DEBUG_PREFIX="omptarget"
+)
+#>>>>>>> d4d88b8499b6
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.

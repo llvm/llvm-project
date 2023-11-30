@@ -15,6 +15,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "OpenMP/omp.h"
+
 #include "llvm/ADT/SmallVector.h"
 
 #include <climits>

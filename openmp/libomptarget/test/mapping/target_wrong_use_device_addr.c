@@ -13,7 +13,7 @@ int main() {
 
 #pragma omp target data map(to : x [0:10])
   {
-// CHECK: Libomptarget device 0 info: variable x does not have a valid device
+// CHECK: omptarget device 0 info: variable x does not have a valid device
 // counterpart
 #pragma omp target data use_device_addr(x)
     {

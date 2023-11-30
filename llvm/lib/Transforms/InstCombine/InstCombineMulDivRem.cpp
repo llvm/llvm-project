@@ -1518,7 +1518,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   if (KnownDividend.isNonNegative()) {
     // If both operands are unsigned, turn this into a udiv.
-    if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
+    if (isKnownNonNegative(Op1, SQ.getWithInstruction(&I))) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
       BO->setIsExact(I.isExact());
       return BO;

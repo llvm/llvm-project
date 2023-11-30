@@ -14,8 +14,10 @@
 #define _OMPTARGET_PRIVATE_H
 
 #include "Shared/Debug.h"
+#include "Shared/SourceInfo.h"
 
-#include "SourceInfo.h"
+#include "OpenMP/InternalTypes.h"
+
 #include "device.h"
 #include "omptarget.h"
 
@@ -117,7 +119,6 @@ extern "C" {
  */
 typedef int kmp_int32;
 typedef int64_t kmp_int64;
-typedef intptr_t kmp_intptr_t;
 
 typedef void *omp_depend_t;
 struct kmp_task;
@@ -161,24 +162,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned reserved31 : 7; /* reserved for library use */
 } kmp_tasking_flags_t;
 
-// Compiler sends us this info:
-typedef struct kmp_depend_info {
-  kmp_intptr_t base_addr;
-  size_t len;
-  struct {
-    bool in : 1;
-    bool out : 1;
-    bool mtx : 1;
-  } flags;
-} kmp_depend_info_t;
-// functions that extract info from libomp; keep in sync
-int omp_get_default_device(void) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
-void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
-                          kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
-                          kmp_depend_info_t *noalias_dep_list)
-    __attribute__((weak));
 void **__kmpc_omp_get_target_async_handle_ptr(kmp_int32 gtid)
     __attribute__((weak));
 bool __kmpc_omp_has_task_team(kmp_int32 gtid) __attribute__((weak));
@@ -277,11 +262,6 @@ struct TargetMemsetArgsTy {
 #define KMP_GTID_DNE (-2)
 #ifdef __cplusplus
 }
-#endif
-
-#define TARGET_NAME Libomptarget
-#ifndef DEBUG_PREFIX
-#define DEBUG_PREFIX GETNAME(TARGET_NAME)
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

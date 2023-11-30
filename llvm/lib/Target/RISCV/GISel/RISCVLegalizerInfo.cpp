@@ -139,10 +139,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(1, sXLen, sXLen)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{sXLen, sXLen}, {s32, sXLen}, {p0, sXLen}})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen)
+  auto &SelectActions = getActionDefinitionsBuilder(G_SELECT).legalFor(
+      {{s32, sXLen}, {p0, sXLen}});
+  if (XLen == 64 || ST.hasStdExtD())
+    SelectActions.legalFor({{s64, sXLen}});
+  SelectActions.widenScalarToNextPow2(0)
+      .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
   auto &LoadStoreActions =
@@ -253,6 +255,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FMA, G_FNEG,
                                G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
       .legalIf(typeIsScalarFPArith(0, ST));
+
+  getActionDefinitionsBuilder(G_FCOPYSIGN)
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
 
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
