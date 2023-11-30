@@ -32,6 +32,12 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
+protected:
+  // This is virtual so that derived classes can implement additional behavior.
+  virtual void makeDiagnostic(DiagnosticBuilder Diagnostic, const VarDecl &Var,
+                              const Stmt &BlockStmt, const DeclStmt &Stmt,
+                              ASTContext &Context, bool IssueFix);
+
 private:
   void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
                                   const DeclStmt &Stmt, bool IssueFix,
@@ -40,6 +46,7 @@ private:
   void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
                               const Stmt &BlockStmt, const DeclStmt &Stmt,
                               bool IssueFix, ASTContext &Context);
+
   const std::vector<StringRef> AllowedTypes;
   const std::vector<StringRef> ExcludedContainerTypes;
 };

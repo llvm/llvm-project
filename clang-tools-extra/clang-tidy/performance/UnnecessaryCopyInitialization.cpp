@@ -15,6 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include <optional>
+#include <utility>
 
 namespace clang::tidy::performance {
 namespace {
@@ -302,6 +303,19 @@ void UnnecessaryCopyInitialization::check(
   }
 }
 
+void UnnecessaryCopyInitialization::makeDiagnostic(
+    DiagnosticBuilder Diagnostic, const VarDecl &Var, const Stmt &BlockStmt,
+    const DeclStmt &Stmt, ASTContext &Context, bool IssueFix) {
+  const bool IsVarUnused = isVariableUnused(Var, BlockStmt, Context);
+  Diagnostic << &Var << IsVarUnused;
+  if (!IssueFix)
+    return;
+  if (IsVarUnused)
+    recordRemoval(Stmt, Context, Diagnostic);
+  else
+    recordFixes(Var, Context, Diagnostic);
+}
+
 void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
     const VarDecl &Var, const Stmt &BlockStmt, const DeclStmt &Stmt,
     bool IssueFix, const VarDecl *ObjectArg, ASTContext &Context) {
@@ -312,52 +326,33 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
       !isInitializingVariableImmutable(*ObjectArg, BlockStmt, Context,
                                        ExcludedContainerTypes))
     return;
-  if (isVariableUnused(Var, BlockStmt, Context)) {
-    auto Diagnostic =
-        diag(Var.getLocation(),
-             "the %select{|const qualified }0variable %1 is copy-constructed "
-             "from a const reference but is never used; consider "
-             "removing the statement")
-        << IsConstQualified << &Var;
-    if (IssueFix)
-      recordRemoval(Stmt, Context, Diagnostic);
-  } else {
-    auto Diagnostic =
-        diag(Var.getLocation(),
-             "the %select{|const qualified }0variable %1 is copy-constructed "
-             "from a const reference%select{ but is only used as const "
-             "reference|}0; consider making it a const reference")
-        << IsConstQualified << &Var;
-    if (IssueFix)
-      recordFixes(Var, Context, Diagnostic);
-  }
+
+  auto Diagnostic =
+      diag(Var.getLocation(),
+           "the %select{|const qualified }0variable %1 is copy-constructed "
+           "from a const reference%select{"
+           "%select{ but is only used as const reference|}0"
+           "| but is never used}2; consider "
+           "%select{making it a const reference|removing the statement}2")
+      << IsConstQualified;
+  makeDiagnostic(std::move(Diagnostic), Var, BlockStmt, Stmt, Context,
+                 IssueFix);
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
-    const VarDecl &NewVar, const VarDecl &OldVar, const Stmt &BlockStmt,
+    const VarDecl &Var, const VarDecl &OldVar, const Stmt &BlockStmt,
     const DeclStmt &Stmt, bool IssueFix, ASTContext &Context) {
-  if (!isOnlyUsedAsConst(NewVar, BlockStmt, Context) ||
+  if (!isOnlyUsedAsConst(Var, BlockStmt, Context) ||
       !isInitializingVariableImmutable(OldVar, BlockStmt, Context,
                                        ExcludedContainerTypes))
     return;
-
-  if (isVariableUnused(NewVar, BlockStmt, Context)) {
-    auto Diagnostic = diag(NewVar.getLocation(),
-                           "local copy %0 of the variable %1 is never modified "
-                           "and never used; "
-                           "consider removing the statement")
-                      << &NewVar << &OldVar;
-    if (IssueFix)
-      recordRemoval(Stmt, Context, Diagnostic);
-  } else {
-    auto Diagnostic =
-        diag(NewVar.getLocation(),
-             "local copy %0 of the variable %1 is never modified; "
-             "consider avoiding the copy")
-        << &NewVar << &OldVar;
-    if (IssueFix)
-      recordFixes(NewVar, Context, Diagnostic);
-  }
+  auto Diagnostic = diag(Var.getLocation(),
+                         "local copy %1 of the variable %0 is never modified"
+                         "%select{| and never used}2; consider "
+                         "%select{avoiding the copy|removing the statement}2")
+                    << &OldVar;
+  makeDiagnostic(std::move(Diagnostic), Var, BlockStmt, Stmt, Context,
+                 IssueFix);
 }
 
 void UnnecessaryCopyInitialization::storeOptions(
