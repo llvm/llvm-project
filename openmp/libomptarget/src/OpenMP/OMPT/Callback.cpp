@@ -1,4 +1,4 @@
-//===-- OmptCallback.cpp - Target independent OpenMP target RTL --- C++ -*-===//
+//===-- OpenMP/OMPT/Callback.cpp - OpenMP Tooling Callback implementation -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,16 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef OMPT_SUPPORT
+#ifndef OMPT_SUPPORT
 
-#include "OmptCallback.h"
 #include "Shared/Debug.h"
-#include "OmptConnector.h"
-#include "OmptInterface.h"
 #include "omp-tools.h"
 #include "private.h"
 
 #include "llvm/Support/DynamicLibrary.h"
+extern "C" {
+/// Dummy definition when OMPT is disabled
+void ompt_libomptarget_connect() {}
+}
+
+#else // OMPT_SUPPORT is set
 
 #include <atomic>
 #include <cassert>
@@ -32,9 +35,11 @@
 #pragma push_macro("DEBUG_PREFIX")
 #include "Shared/Debug.h"
 
-#include "OmptCallback.h"
-#include "OmptConnector.h"
-#include "OmptInterface.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Connector.h"
+#include "OpenMP/OMPT/Interface.h"
+
+#include "llvm/Support/DynamicLibrary.h"
 
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
@@ -516,10 +521,4 @@ void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
 }
 
 #pragma pop_macro("DEBUG_PREFIX")
-
-#else
-extern "C" {
-/// Dummy definition when OMPT is disabled
-void ompt_libomptarget_connect() {}
-}
 #endif // OMPT_SUPPORT

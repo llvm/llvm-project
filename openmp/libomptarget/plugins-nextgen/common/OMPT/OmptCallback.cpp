@@ -12,9 +12,6 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptCallback.h"
-#include "OmptConnector.h"
-
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -24,8 +21,8 @@
 
 #include "Shared/Debug.h"
 
-#include "OmptCallback.h"
-#include "OmptConnector.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Connector.h"
 
 using namespace llvm::omp::target::ompt;
 

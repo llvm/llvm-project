@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Shared/Debug.h"
-#include "OmptCallback.h"
 #include "OmptTracing.h"
 #include "OmptTracingBuffer.h"
 #include "private.h"

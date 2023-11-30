@@ -22,7 +22,7 @@
 #include "trace.h"
 
 #ifdef OMPT_SUPPORT
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "OmptDeviceTracing.h"
 #include "omp-tools.h"
 #endif

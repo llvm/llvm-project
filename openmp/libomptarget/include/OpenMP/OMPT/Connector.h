@@ -1,4 +1,4 @@
-//===- OmptConnector.h - Target independent OpenMP target RTL -- C++ ------===//
+//===-- OpenMP/OMPT/Connector.h - OpenMP Tooling lib connector -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTCONNECTOR_H
-#define _OMPTCONNECTOR_H
+#ifndef OMPTARGET_OPENMP_OMPT_CONNECTOR_H
+#define OMPTARGET_OPENMP_OMPT_CONNECTOR_H
 
 #ifdef OMPT_SUPPORT
 
@@ -110,4 +110,4 @@ private:
 
 #pragma pop_macro("DEBUG_PREFIX")
 
-#endif // _OMPTCONNECTOR_H
+#endif // OMPTARGET_OPENMP_OMPT_CONNECTOR_H

@@ -16,12 +16,12 @@ add_llvm_library(omptarget
   device.cpp
   interface.cpp
   omptarget.cpp
-  OmptCallback.cpp
   OmptTracing.cpp
   OmptTracingBuffer.cpp
   rtl.cpp
   LegacyAPI.cpp
   OpenMP/InteropAPI.cpp
+  OpenMP/OMPT/Callback.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}

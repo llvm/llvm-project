@@ -30,7 +30,6 @@
 #include "omptarget.h"
 
 #ifdef OMPT_SUPPORT
-#include "OmptCallback.h"
 #include "OmptDeviceTracing.h"
 #include "omp-tools.h"
 #endif

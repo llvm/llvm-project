@@ -112,78 +112,25 @@ typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*!
- * The ident structure that describes a source location.
- * The struct is identical to the one in the kmp.h file.
- * We maintain the same data structure for compatibility.
- */
-typedef int kmp_int32;
-typedef int64_t kmp_int64;
 
-typedef void *omp_depend_t;
-struct kmp_task;
-typedef kmp_int32 (*kmp_routine_entry_t)(kmp_int32, struct kmp_task *);
-typedef struct kmp_task {
-  void *shareds;
-  kmp_routine_entry_t routine;
-  kmp_int32 part_id;
-} kmp_task_t;
-
-typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
-  /* Compiler flags */             /* Total compiler flags must be 16 bits */
-  unsigned tiedness : 1;           /* task is either tied (1) or untied (0) */
-  unsigned final : 1;              /* task is final(1) so execute immediately */
-  unsigned merged_if0 : 1; /* no __kmpc_task_{begin/complete}_if0 calls in if0
-                              code path */
-  unsigned destructors_thunk : 1; /* set if the compiler creates a thunk to
-                                     invoke destructors from the runtime */
-  unsigned proxy : 1; /* task is a proxy task (it will be executed outside the
-                         context of the RTL) */
-  unsigned priority_specified : 1; /* set if the compiler provides priority
-                                      setting for the task */
-  unsigned detachable : 1;         /* 1 == can detach */
-  unsigned hidden_helper : 1;      /* 1 == hidden helper task */
-  unsigned reserved : 8;           /* reserved for compiler use */
-
-  /* Library flags */       /* Total library flags must be 16 bits */
-  unsigned tasktype : 1;    /* task is either explicit(1) or implicit (0) */
-  unsigned task_serial : 1; // task is executed immediately (1) or deferred (0)
-  unsigned tasking_ser : 1; // all tasks in team are either executed immediately
-  // (1) or may be deferred (0)
-  unsigned team_serial : 1; // entire team is serial (1) [1 thread] or parallel
-  // (0) [>= 2 threads]
-  /* If either team_serial or tasking_ser is set, task team may be NULL */
-  /* Task State Flags: */
-  unsigned started : 1;    /* 1==started, 0==not started     */
-  unsigned executing : 1;  /* 1==executing, 0==not executing */
-  unsigned complete : 1;   /* 1==complete, 0==not complete   */
-  unsigned freed : 1;      /* 1==freed, 0==allocated        */
-  unsigned native : 1;     /* 1==gcc-compiled task, 0==intel */
-  unsigned reserved31 : 7; /* reserved for library use */
-} kmp_tasking_flags_t;
-
-int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
-void **__kmpc_omp_get_target_async_handle_ptr(kmp_int32 gtid)
-    __attribute__((weak));
-bool __kmpc_omp_has_task_team(kmp_int32 gtid) __attribute__((weak));
-kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
-                                  kmp_int32 flags, size_t sizeof_kmp_task_t,
+kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
+                                  size_t sizeof_kmp_task_t,
                                   size_t sizeof_shareds,
                                   kmp_routine_entry_t task_entry)
     __attribute__((weak));
 
 kmp_task_t *
-__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 flags,
+__kmpc_omp_target_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
                              size_t sizeof_kmp_task_t, size_t sizeof_shareds,
-                             kmp_routine_entry_t task_entry,
-                             kmp_int64 device_id) __attribute__((weak));
+                             kmp_routine_entry_t task_entry, int64_t device_id)
+    __attribute__((weak));
 
-kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
-                                    kmp_task_t *new_task, kmp_int32 ndeps,
-                                    kmp_depend_info_t *dep_list,
-                                    kmp_int32 ndeps_noalias,
-                                    kmp_depend_info_t *noalias_dep_list)
+int32_t __kmpc_omp_task_with_deps(ident_t *loc_ref, int32_t gtid,
+                                  kmp_task_t *new_task, int32_t ndeps,
+                                  kmp_depend_info_t *dep_list,
+                                  int32_t ndeps_noalias,
+                                  kmp_depend_info_t *noalias_dep_list)
     __attribute__((weak));
 
 /**
@@ -258,8 +205,6 @@ struct TargetMemsetArgsTy {
   // no constructors defined, because this is a PoD
 };
 
-// Invalid GTID as defined by libomp; keep in sync
-#define KMP_GTID_DNE (-2)
 #ifdef __cplusplus
 }
 #endif
@@ -328,97 +273,5 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
          getNameFromMapping(VarName).c_str(), ArgSizes[I], Implicit);
   }
 }
-
-// Wrapper for task stored async info objects.
-class TaskAsyncInfoWrapperTy {
-  const int ExecThreadID = KMP_GTID_DNE;
-  AsyncInfoTy LocalAsyncInfo;
-  AsyncInfoTy *AsyncInfo = &LocalAsyncInfo;
-  void **TaskAsyncInfoPtr = nullptr;
-
-public:
-  TaskAsyncInfoWrapperTy(DeviceTy &Device)
-      : ExecThreadID(__kmpc_global_thread_num(NULL)), LocalAsyncInfo(Device) {
-    // If we failed to acquired the current global thread id, we cannot
-    // re-enqueue the current task. Thus we should use the local blocking async
-    // info.
-    if (ExecThreadID == KMP_GTID_DNE)
-      return;
-
-    // Only tasks with an assigned task team can be re-enqueue and thus can
-    // use the non-blocking synchronization scheme. Thus we should use the local
-    // blocking async info, if we don´t have one.
-    if (!__kmpc_omp_has_task_team(ExecThreadID))
-      return;
-
-    // Acquire a pointer to the AsyncInfo stored inside the current task being
-    // executed.
-    TaskAsyncInfoPtr = __kmpc_omp_get_target_async_handle_ptr(ExecThreadID);
-
-    // If we cannot acquire such pointer, fallback to using the local blocking
-    // async info.
-    if (!TaskAsyncInfoPtr)
-      return;
-
-    // When creating a new task async info, the task handle must always be
-    // invalid. We must never overwrite any task async handle and there should
-    // never be any valid handle store inside the task at this point.
-    assert((*TaskAsyncInfoPtr) == nullptr &&
-           "Task async handle is not empty when dispatching new device "
-           "operations. The handle was not cleared properly or "
-           "__tgt_target_nowait_query should have been called!");
-
-    // If no valid async handle is present, a new AsyncInfo will be allocated
-    // and stored in the current task.
-    AsyncInfo = new AsyncInfoTy(Device, AsyncInfoTy::SyncTy::NON_BLOCKING);
-    *TaskAsyncInfoPtr = (void *)AsyncInfo;
-  }
-
-  ~TaskAsyncInfoWrapperTy() {
-    // Local async info destruction is automatically handled by ~AsyncInfoTy.
-    if (AsyncInfo == &LocalAsyncInfo)
-      return;
-
-    // If the are device operations still pending, return immediately without
-    // deallocating the handle.
-    if (!AsyncInfo->isDone())
-      return;
-
-    // Delete the handle and unset it from the OpenMP task data.
-    delete AsyncInfo;
-    *TaskAsyncInfoPtr = nullptr;
-  }
-
-  operator AsyncInfoTy &() { return *AsyncInfo; }
-};
-
-// Implement exponential backoff counting.
-// Linearly increments until given maximum, exponentially decrements based on
-// given backoff factor.
-class ExponentialBackoff {
-  int64_t Count = 0;
-  const int64_t MaxCount = 0;
-  const int64_t CountThreshold = 0;
-  const float BackoffFactor = 0.0f;
-
-public:
-  ExponentialBackoff(int64_t MaxCount, int64_t CountThreshold,
-                     float BackoffFactor)
-      : MaxCount(MaxCount), CountThreshold(CountThreshold),
-        BackoffFactor(BackoffFactor) {
-    assert(MaxCount >= 0 &&
-           "ExponentialBackoff: maximum count value should be non-negative");
-    assert(CountThreshold >= 0 &&
-           "ExponentialBackoff: count threshold value should be non-negative");
-    assert(BackoffFactor >= 0 && BackoffFactor < 1 &&
-           "ExponentialBackoff: backoff factor should be in [0, 1) interval");
-  }
-
-  void increment() { Count = std::min(Count + 1, MaxCount); }
-
-  void decrement() { Count *= BackoffFactor; }
-
-  bool isAboveThreshold() const { return Count > CountThreshold; }
-};
 
 #endif

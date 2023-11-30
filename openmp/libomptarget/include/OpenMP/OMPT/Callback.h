@@ -1,4 +1,4 @@
-//===---- OmptCallback.h - Target independent OMPT callbacks --*- C++ -*---===//
+//===-- OpenMP/OMPT/Callback.h - OpenMP Tooling callbacks -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_INCLUDE_OMPTCALLBACK_H
-#define OPENMP_LIBOMPTARGET_INCLUDE_OMPTCALLBACK_H
+#ifndef OMPTARGET_OPENMP_OMPT_CALLBACK_H
+#define OMPTARGET_OPENMP_OMPT_CALLBACK_H
 
 #ifdef OMPT_SUPPORT
 
@@ -78,4 +78,4 @@ extern bool CallbacksInitialized;
 
 #endif // OMPT_SUPPORT
 
-#endif // OPENMP_LIBOMPTARGET_INCLUDE_OMPTCALLBACK_H
+#endif // OMPTARGET_OPENMP_OMPT_CALLBACK_H
