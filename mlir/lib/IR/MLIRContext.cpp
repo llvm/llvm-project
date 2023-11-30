@@ -213,6 +213,7 @@ public:
   StorageUniquer typeUniquer;
 
   /// This is a mapping from type name to the abstract type describing it.
+  /// It is used by `AbstractType::lookup` to get an `AbstractType` from a name.
   llvm::StringMap<AbstractType *> nameToType;
 
   /// Cached Type Instances.
@@ -240,7 +241,8 @@ public:
   StorageUniquer attributeUniquer;
 
   /// This is a mapping from attribute name to the abstract attribute describing
-  /// it.
+  /// it. It is used by `AbstractType::lookup` to get an `AbstractType` from a
+  /// name.
   llvm::StringMap<AbstractAttribute *> nameToAttribute;
 
   /// Cached Attribute Instances.
