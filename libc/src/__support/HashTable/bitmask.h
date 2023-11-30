@@ -85,7 +85,7 @@ template <class BitMask> struct IteratableBitMaskAdaptor : public BitMask {
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
-#if defined(LIBC_TARGET_CPU_HAS_SSE2)
+#if defined(LIBC_TARGET_CPU_HAS_SSE2) && !defined(__LIBC_PREFER_GENERIC)
 #include "sse2/bitmask_impl.inc"
 #else
 #include "generic/bitmask_impl.inc"
