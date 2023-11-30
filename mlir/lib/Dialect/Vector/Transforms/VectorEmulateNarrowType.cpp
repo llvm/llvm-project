@@ -33,7 +33,7 @@ using namespace mlir;
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Returns a compressed mask. The mask value is set only if any mask is present
-/// in the the scale range. E.g., if `scale` equals to 2, the following mask:
+/// in the scale range. E.g., if `scale` equals to 2, the following mask:
 ///
 ///   %mask = [1, 1, 1, 0, 0, 0]
 ///
@@ -45,7 +45,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                                                   int origElements, int scale) {
   auto numElements = (origElements + scale - 1) / scale;
 
-  auto maskOp = mask.getDefiningOp();
+  Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
   // Finding the mask creation operation.
   while (maskOp && !isa<vector::CreateMaskOp, vector::ConstantMaskOp>(maskOp)) {
@@ -62,13 +62,13 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   // Computing the "compressed" mask. All the emulation logic (i.e. computing
   // new mask index) only happens on the last dimension of the vectors.
   Operation *newMask = nullptr;
-  auto shape = llvm::to_vector(
-      maskOp->getResultTypes()[0].cast<VectorType>().getShape().drop_back());
-  shape.push_back(numElements);
+  SmallVector<int64_t> shape(
+      maskOp->getResultTypes()[0].cast<VectorType>().getShape());
+  shape.back() = numElements;
   auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
   if (createMaskOp) {
-    auto maskOperands = createMaskOp.getOperands();
-    auto numMaskOperands = maskOperands.size();
+    OperandRange maskOperands = createMaskOp.getOperands();
+    size_t numMaskOperands = maskOperands.size();
     AffineExpr s0;
     bindSymbols(rewriter.getContext(), s0);
     s0 = s0 + scale - 1;
@@ -77,20 +77,21 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
         getAsOpFoldResult(maskOperands[numMaskOperands - 1]);
     OpFoldResult maskIndex =
         affine::makeComposedFoldedAffineApply(rewriter, loc, s0, origIndex);
-    auto newMaskOperands = llvm::to_vector(maskOperands.drop_back());
+    SmallVector<Value> newMaskOperands(maskOperands.drop_back());
     newMaskOperands.push_back(
         getValueOrCreateConstantIndexOp(rewriter, loc, maskIndex));
     newMask = rewriter.create<vector::CreateMaskOp>(loc, newMaskType,
                                                     newMaskOperands);
   } else if (constantMaskOp) {
-    auto maskDimSizes = constantMaskOp.getMaskDimSizes().getValue();
-    auto numMaskOperands = maskDimSizes.size();
+    ArrayRef<Attribute> maskDimSizes =
+        constantMaskOp.getMaskDimSizes().getValue();
+    size_t numMaskOperands = maskDimSizes.size();
     auto origIndex =
         cast<IntegerAttr>(maskDimSizes[numMaskOperands - 1]).getInt();
-    auto maskIndex =
+    IntegerAttr maskIndexAttr =
         rewriter.getI64IntegerAttr((origIndex + scale - 1) / scale);
-    auto newMaskDimSizes = llvm::to_vector(maskDimSizes.drop_back());
-    newMaskDimSizes.push_back(maskIndex);
+    SmallVector<Attribute> newMaskDimSizes(maskDimSizes.drop_back());
+    newMaskDimSizes.push_back(maskIndexAttr);
     newMask = rewriter.create<vector::ConstantMaskOp>(
         loc, newMaskType, rewriter.getArrayAttr(newMaskDimSizes));
   }
@@ -196,7 +197,7 @@ struct ConvertVectorMaskedStore final
     }
 
     int scale = dstBits / srcBits;
-    auto origElements = op.getValueToStore().getType().getNumElements();
+    int origElements = op.getValueToStore().getType().getNumElements();
     if (origElements % scale != 0)
       return failure();
 
