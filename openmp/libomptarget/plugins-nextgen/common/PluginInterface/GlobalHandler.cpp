@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalHandler.h"
-#include "ELFSymbols.h"
 #include "PluginInterface.h"
 #include "Utilities.h"
+#include "Utils/ELF.h"
 
 #include <cstring>
 
@@ -115,7 +115,7 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
                          Image.getStart());
 
   // Search the ELF symbol using the symbol name.
-  auto SymOrErr = getELFSymbol(*ELFObj, ImageGlobal.getName());
+  auto SymOrErr = utils::elf::getSymbol(*ELFObj, ImageGlobal.getName());
   if (!SymOrErr)
     return Plugin::error("Failed ELF lookup of global '%s': %s",
                          ImageGlobal.getName().data(),
