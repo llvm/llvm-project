@@ -339,9 +339,7 @@ public:
   iterator end() const { return {0, 0, {0}, *this}; }
 
   LIBC_INLINE ENTRY *find(const char *key) {
-    LIBC_NAMESPACE::internal::HashState hasher = state;
-    hasher.update(key, strlen(key));
-    uint64_t primary = hasher.finish();
+    uint64_t primary = oneshot_hash(key);
     ENTRY &entry = this->entry(find(key, primary));
     if (entry.key == nullptr)
       return nullptr;
@@ -349,9 +347,7 @@ public:
   }
 
   LIBC_INLINE static ENTRY *insert(HashTable *&table, ENTRY item) {
-    LIBC_NAMESPACE::internal::HashState hasher = table->state;
-    hasher.update(item.key, strlen(item.key));
-    uint64_t primary = hasher.finish();
+    uint64_t primary = table->oneshot_hash(item.key);
     return insert(table, item, primary);
   }
 };
