@@ -10,7 +10,7 @@ mesh.cluster @mesh0(rank = 2, dim_sizes = 2x3x4)
 
 // -----
 
-// expected-error@+1 {{unexpected error: custom op 'mesh.cluster' Failed parsing shape}}
+// expected-error@+1 {{custom op 'mesh.cluster' Failed parsing shape}}
 mesh.cluster @mesh0(rank = 2, dim_sizes = -1)
 
 // -----
