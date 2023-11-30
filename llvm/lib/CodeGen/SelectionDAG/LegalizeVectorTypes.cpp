@@ -3085,6 +3085,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMIN:
     Res = SplitVecOp_VP_REDUCE(N, OpNo);
     break;
+  case ISD::EXPERIMENTAL_VP_POPCOUNT:
+    Res = SplitVecOp_VP_POPCOUNT(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -4029,6 +4032,31 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_TO_XINT_SAT(SDNode *N) {
   Hi = DAG.getNode(N->getOpcode(), dl, NewResVT, Hi, N->getOperand(1));
 
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VP_POPCOUNT(SDNode *N, unsigned OpNo) {
+  assert(N->isVPOpcode() && "Expected VP opcode");
+  assert(OpNo == 0 && "Can only split first operand");
+
+  unsigned Opc = N->getOpcode();
+  EVT ResVT = N->getValueType(0);
+  SDValue Lo, Hi;
+  SDLoc dl(N);
+
+  SDValue VecOp = N->getOperand(OpNo);
+  EVT VecVT = VecOp.getValueType();
+  assert(VecVT.isVector() && "Can only split reduce vector operand");
+  GetSplitVector(VecOp, Lo, Hi);
+
+  SDValue MaskLo, MaskHi;
+  std::tie(MaskLo, MaskHi) = SplitMask(N->getOperand(1));
+
+  SDValue EVLLo, EVLHi;
+  std::tie(EVLLo, EVLHi) = DAG.SplitEVL(N->getOperand(2), VecVT, dl);
+
+  SDValue ResLo = DAG.getNode(Opc, dl, ResVT, {Lo, MaskLo, EVLLo});
+  SDValue ResHi = DAG.getNode(Opc, dl, ResVT, {Hi, MaskHi, EVLHi});
+  return DAG.getNode(ISD::ADD, dl, ResVT, ResLo, ResHi);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6120,6 +6148,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMIN:
     Res = WidenVecOp_VP_REDUCE(N);
     break;
+  case ISD::EXPERIMENTAL_VP_POPCOUNT:
+    Res = WidenVecOp_VP_POPCOUNT(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -6883,6 +6914,13 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
                      DAG.getVectorIdxConstant(0, DL));
 }
 
+SDValue DAGTypeLegalizer::WidenVecOp_VP_POPCOUNT(SDNode *N) {
+  EVT ResVT = N->getValueType(0);
+  SDValue Op = GetWidenedVector(N->getOperand(0));
+  SDValue Mask = GetWidenedVector(N->getOperand(1));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, Op, Mask,
+                     N->getOperand(2));
+}
 //===----------------------------------------------------------------------===//
 // Vector Widening Utilities
 //===----------------------------------------------------------------------===//

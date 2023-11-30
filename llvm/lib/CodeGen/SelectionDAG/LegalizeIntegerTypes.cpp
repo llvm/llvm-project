@@ -305,6 +305,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::LLRINT:
     Res = PromoteIntRes_XRINT(N);
     break;
+
+  case ISD::EXPERIMENTAL_VP_POPCOUNT:
+    Res = PromoteIntRes_VP_POPCOUNT(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -5880,6 +5884,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   // element types. If this is the case then we need to expand the outgoing
   // value and not truncate it.
   return DAG.getAnyExtOrTrunc(Ext, dl, N->getValueType(0));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VP_POPCOUNT(SDNode *N) {
+  SDLoc dl(N);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  return DAG.getNode(N->getOpcode(), dl, NVT, N->ops());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_SUBVECTOR(SDNode *N) {

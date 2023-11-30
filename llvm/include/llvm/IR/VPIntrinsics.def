@@ -710,6 +710,12 @@ END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
 
+// llvm.experimental.vp.popcount(x,mask,vlen)
+BEGIN_REGISTER_VP(experimental_vp_popcount, 1, 2,
+                  EXPERIMENTAL_VP_POPCOUNT, 0)
+VP_PROPERTY_FUNCTIONAL_INTRINSIC(experimental_vp_popcount)
+END_REGISTER_VP(experimental_vp_popcount, EXPERIMENTAL_VP_POPCOUNT)
+
 #undef BEGIN_REGISTER_VP
 #undef BEGIN_REGISTER_VP_INTRINSIC
 #undef BEGIN_REGISTER_VP_SDNODE

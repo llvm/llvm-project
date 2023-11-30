@@ -21761,6 +21761,40 @@ This intrinsic reverses the order of the first ``evl`` elements in a vector.
 The lanes in the result vector disabled by ``mask`` are ``poison``. The
 elements past ``evl`` are poison.
 
+
+.. _int_experimental_vp_popcount:
+
+
+'``llvm.experimental.vp.popcount``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare i32 @llvm.experimental.vp.popcount.v2i1(<2 x i1> %vec, <2 x i1> %mask, i32 %evl)
+      declare i32 @llvm.experimental.vp.popcount.nxv2i1(<vscale x 4 x i1> %vec, <vscale x 4 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+Predicated population count of a vector mask.
+
+Arguments:
+""""""""""
+
+The first and second argument are vector masks and have same number of elements.
+The third argument is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+This intrinsic population counts first ``evl`` elements in a vector.
+The lanes in the result vector disabled by ``mask`` are ``poison``. The
+elements past ``evl`` are poison.
+
 .. _int_vp_load:
 
 '``llvm.vp.load``' Intrinsic
