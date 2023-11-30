@@ -5959,7 +5959,8 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
       Diag(Name.StartLocation,
            diag::err_deduction_guide_name_not_class_template)
         << (int)getTemplateNameKindForDiagnostics(TN) << TN;
-      NoteTemplateLocation(*Template);
+      if (Template)
+        NoteTemplateLocation(Template);
       return DeclarationNameInfo();
     }
 

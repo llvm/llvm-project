@@ -22,6 +22,9 @@ on:
       - 'runtimes/**'
       - 'cmake/**'
       - '.github/workflows/libcxx-build-and-test.yaml'
+  schedule:
+    # Run nightly at 8 AM UTC (or roughly 3 AM eastern)
+    - cron: '0 3 * * *'
 
 permissions:
   contents: read # Default everything to read-only
@@ -160,7 +163,11 @@ jobs:
           'generic-no-unicode',
           'generic-no-wide-characters',
           'generic-static',
-          'generic-with_llvm_unwinder'
+          'generic-with_llvm_unwinder',
+          # TODO Find a better place for the benchmark and bootstrapping builds to live. They're either very expensive
+          # or don't provide much value since the benchmark run results are too noise on the bots.
+          'benchmarks',
+          'bootstrapping-build'
         ]
         machine: [ 'libcxx-runners-8' ]
         std_modules: [ 'OFF' ]
