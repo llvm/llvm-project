@@ -66,7 +66,7 @@ void StorageLayout::foreachField(
         callback) const {
   const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
-  const Level cooStart = getCOOStart(enc);
+  const Level cooStart = SparseTensorType(enc).getCOOStart();
   const Level end = cooStart == lvlRank ? cooStart : cooStart + 1;
   FieldIndex fieldIdx = kDataFieldStartingIdx;
   // Per-level storage.
@@ -158,7 +158,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   unsigned stride = 1;
   if (kind == SparseTensorFieldKind::CrdMemRef) {
     assert(lvl.has_value());
-    const Level cooStart = getCOOStart(enc);
+    const Level cooStart = SparseTensorType(enc).getCOOStart();
     const Level lvlRank = enc.getLvlRank();
     if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
       lvl = cooStart;
@@ -710,6 +710,28 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
 // SparseTensorType Methods.
 //===----------------------------------------------------------------------===//
 
+bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl, bool isUnique) const {
+  if (!hasEncoding())
+    return false;
+  if (!isCompressedLvl(startLvl) && !isLooseCompressedLvl(startLvl))
+    return false;
+  for (Level l = startLvl + 1; l < lvlRank; ++l)
+    if (!isSingletonLvl(l))
+      return false;
+  // If isUnique is true, then make sure that the last level is unique,
+  // that is, lvlRank == 1 (unique the only compressed) and lvlRank > 1
+  // (unique on the last singleton).
+  return !isUnique || isUniqueLvl(lvlRank - 1);
+}
+
+Level mlir::sparse_tensor::SparseTensorType::getCOOStart() const {
+  if (lvlRank > 1)
+    for (Level l = 0; l < lvlRank - 1; l++)
+      if (isCOOType(l, /*isUnique=*/false))
+        return l;
+  return lvlRank;
+}
+
 RankedTensorType
 mlir::sparse_tensor::SparseTensorType::getCOOType(bool ordered) const {
   SmallVector<LevelType> lvlTypes;
@@ -859,25 +881,6 @@ bool mlir::sparse_tensor::isBlockSparsity(AffineMap dimToLvl) {
   return !coeffientMap.empty();
 }
 
-bool mlir::sparse_tensor::isCOOType(SparseTensorEncodingAttr enc,
-                                    Level startLvl, bool isUnique) {
-  if (!enc ||
-      !(enc.isCompressedLvl(startLvl) || enc.isLooseCompressedLvl(startLvl)))
-    return false;
-  const Level lvlRank = enc.getLvlRank();
-  for (Level l = startLvl + 1; l < lvlRank; ++l)
-    if (!enc.isSingletonLvl(l))
-      return false;
-  // If isUnique is true, then make sure that the last level is unique,
-  // that is, lvlRank == 1 (unique the only compressed) and lvlRank > 1
-  // (unique on the last singleton).
-  return !isUnique || enc.isUniqueLvl(lvlRank - 1);
-}
-
-bool mlir::sparse_tensor::isUniqueCOOType(Type tp) {
-  return isCOOType(getSparseTensorEncoding(tp), 0, /*isUnique=*/true);
-}
-
 bool mlir::sparse_tensor::hasAnyNonIdentityOperandsOrResults(Operation *op) {
   auto hasNonIdentityMap = [](Value v) {
     auto stt = tryGetSparseTensorType(v);
@@ -886,17 +889,6 @@ bool mlir::sparse_tensor::hasAnyNonIdentityOperandsOrResults(Operation *op) {
 
   return llvm::any_of(op->getOperands(), hasNonIdentityMap) ||
          llvm::any_of(op->getResults(), hasNonIdentityMap);
-}
-
-Level mlir::sparse_tensor::getCOOStart(SparseTensorEncodingAttr enc) {
-  // We only consider COO region with at least two levels for the purpose
-  // of AOS storage optimization.
-  const Level lvlRank = enc.getLvlRank();
-  if (lvlRank > 1)
-    for (Level l = 0; l < lvlRank - 1; l++)
-      if (isCOOType(enc, l, /*isUnique=*/false))
-        return l;
-  return lvlRank;
 }
 
 Dimension mlir::sparse_tensor::toDim(SparseTensorEncodingAttr enc, Level l) {
@@ -1013,7 +1005,7 @@ static LogicalResult verifyPackUnPack(Operation *op, bool requiresStaticShape,
     return op->emitError("the sparse-tensor must have the identity mapping");
 
   // Verifies the trailing COO.
-  Level cooStartLvl = getCOOStart(stt.getEncoding());
+  Level cooStartLvl = stt.getCOOStart();
   if (cooStartLvl < stt.getLvlRank()) {
     // We only supports trailing COO for now, must be the last input.
     auto cooTp = llvm::cast<ShapedType>(lvlTps.back());
@@ -1309,34 +1301,34 @@ OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult ToPositionsOp::verify() {
-  auto e = getSparseTensorEncoding(getTensor().getType());
+  auto stt = getSparseTensorType(getTensor());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
     return emitError("requested level is out of bounds");
-  if (failed(isMatchingWidth(getResult(), e.getPosWidth())))
+  if (failed(isMatchingWidth(getResult(), stt.getPosWidth())))
     return emitError("unexpected type for positions");
   return success();
 }
 
 LogicalResult ToCoordinatesOp::verify() {
-  auto e = getSparseTensorEncoding(getTensor().getType());
+  auto stt = getSparseTensorType(getTensor());
   if (failed(lvlIsInBounds(getLevel(), getTensor())))
     return emitError("requested level is out of bounds");
-  if (failed(isMatchingWidth(getResult(), e.getCrdWidth())))
+  if (failed(isMatchingWidth(getResult(), stt.getCrdWidth())))
     return emitError("unexpected type for coordinates");
   return success();
 }
 
 LogicalResult ToCoordinatesBufferOp::verify() {
-  auto e = getSparseTensorEncoding(getTensor().getType());
-  if (getCOOStart(e) >= e.getLvlRank())
+  auto stt = getSparseTensorType(getTensor());
+  if (stt.getCOOStart() >= stt.getLvlRank())
     return emitError("expected sparse tensor with a COO region");
   return success();
 }
 
 LogicalResult ToValuesOp::verify() {
-  auto ttp = getRankedTensorType(getTensor());
+  auto stt = getSparseTensorType(getTensor());
   auto mtp = getMemRefType(getResult());
-  if (ttp.getElementType() != mtp.getElementType())
+  if (stt.getElementType() != mtp.getElementType())
     return emitError("unexpected mismatch in element types");
   return success();
 }
@@ -1660,9 +1652,8 @@ LogicalResult ReorderCOOOp::verify() {
   SparseTensorType srcStt = getSparseTensorType(getInputCoo());
   SparseTensorType dstStt = getSparseTensorType(getResultCoo());
 
-  if (!isCOOType(srcStt.getEncoding(), 0, /*isUnique=*/true) ||
-      !isCOOType(dstStt.getEncoding(), 0, /*isUnique=*/true))
-    emitError("Unexpected non-COO sparse tensors");
+  if (!srcStt.isCOOType() || !dstStt.isCOOType())
+    emitError("Expected COO sparse tensors only");
 
   if (!srcStt.hasSameDimToLvl(dstStt))
     emitError("Unmatched dim2lvl map between input and result COO");
