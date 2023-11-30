@@ -10,14 +10,15 @@
 
 #include "PluginInterface.h"
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Shared/PluginAPI.h"
 
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "Utils/ELF.h"
 #include "omptarget.h"
-#include "omptargetplugin.h"
 
 #ifdef OMPT_SUPPORT
 #include "OpenMP/OMPT/Callback.h"
