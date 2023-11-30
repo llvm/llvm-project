@@ -1906,6 +1906,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
     break;
+
+  // Nothing to print for this attribute.
+  case attr::HLSLParamModifier:
+    break;
   }
   OS << "))";
 }
