@@ -637,6 +637,9 @@ Bug Fixes in This Version
 - Fix crash during code generation of C++ coroutine initial suspend when the return
   type of await_resume is not trivially destructible.
   Fixes (`#63803 <https://github.com/llvm/llvm-project/issues/63803>`_)
+- ``__is_trivially_relocatable`` no longer returns true for non-object types
+  such as references and functions.
+  Fixes (`#67498 <https://github.com/llvm/llvm-project/issues/67498>`_)
 - Fix crash when the object used as a ``static_assert`` message has ``size`` or ``data`` members
   which are not member functions.
 - Support UDLs in ``static_assert`` message.
