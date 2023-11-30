@@ -4207,7 +4207,7 @@ define i16 @and_zext_zext(i8 %x, i4 %y) {
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = zext i8 [[TMP2]] to i16
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %zx = zext i8 %x to i16

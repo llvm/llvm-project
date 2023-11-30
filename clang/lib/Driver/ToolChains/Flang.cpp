@@ -143,6 +143,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fversion-loops-for-stride");
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+                            options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order,
@@ -203,6 +204,67 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
+         "can only add VS runtime library on Windows!");
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+  }
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("--dependent-lib=libcmt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("--dependent-lib=libcmtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
+    break;
+  }
+}
+
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+  }
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -226,10 +288,51 @@ void Flang::addTargetOptions(const ArgList &Args,
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAMDGPUTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     break;
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef Name = A->getValue();
+    if (Name == "SVML") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "LIBMVEC-X86") {
+      if (Triple.getArch() != llvm::Triple::x86 &&
+          Triple.getArch() != llvm::Triple::x86_64)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    } else if (Name == "SLEEF" || Name == "ArmPL") {
+      if (Triple.getArch() != llvm::Triple::aarch64 &&
+          Triple.getArch() != llvm::Triple::aarch64_be)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << Name << Triple.getArchName();
+    }
+
+    if (Triple.isOSDarwin()) {
+      // flang doesn't currently suport nostdlib, nodefaultlibs. Adding these
+      // here incase they are added someday
+      if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+        if (A->getValue() == StringRef{"Accelerate"}) {
+          CmdArgs.push_back("-framework");
+          CmdArgs.push_back("Accelerate");
+          A->render(Args, CmdArgs);
+        }
+      }
+    } else {
+      A->render(Args, CmdArgs);
+    }
+  }
+
+  if (Triple.isKnownWindowsMSVCEnvironment()) {
+    processVSRuntimeLibrary(TC, Args, CmdArgs);
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.

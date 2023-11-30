@@ -28,6 +28,12 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
+  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+    return llvm::SmallVector<llvm::StringLiteral>(
+        {"list_processes", "attach_to_process", "launch_process",
+         "kill_process"});
+  }
+
   StructuredData::DictionarySP ListProcesses() override;
 
   StructuredData::DictionarySP GetProcessInfo(lldb::pid_t) override;

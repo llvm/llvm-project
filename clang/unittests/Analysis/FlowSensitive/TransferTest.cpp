@@ -2213,6 +2213,43 @@ TEST(TransferTest, AssignmentOperator) {
       });
 }
 
+// It's legal for the assignment operator to take its source parameter by value.
+// Check that we handle this correctly. (This is a repro -- we used to
+// assert-fail on this.)
+TEST(TransferTest, AssignmentOperator_ArgByValue) {
+  std::string Code = R"(
+    struct A {
+      int Baz;
+      A &operator=(A);
+    };
+
+    void target() {
+      A Foo = { 1 };
+      A Bar = { 2 };
+      Foo = Bar;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+
+        const auto &FooLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Foo");
+        const auto &BarLoc =
+            getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "Bar");
+
+        const auto *FooBazVal =
+            cast<IntegerValue>(getFieldValue(&FooLoc, *BazDecl, Env));
+        const auto *BarBazVal =
+            cast<IntegerValue>(getFieldValue(&BarLoc, *BazDecl, Env));
+        EXPECT_EQ(FooBazVal, BarBazVal);
+      });
+}
+
 TEST(TransferTest, AssignmentOperatorFromBase) {
   // This is a crash repro. We don't model the copy this case, so no
   // expectations on the copied field of the base class are checked.
@@ -3158,6 +3195,26 @@ TEST(TransferTest, AggregateInitialization_NotExplicitlyInitializedField) {
             *cast<IntegerValue>(getFieldValue(&SLoc, *I2FieldDecl, Env));
         EXPECT_NE(&I2Value, &IValue);
       });
+}
+
+TEST(TransferTest, AggregateInitializationFunctionPointer) {
+  // This is a repro for an assertion failure.
+  // nullptr takes on the type of a const function pointer, but its type was
+  // asserted to be equal to the *unqualified* type of Field, which no longer
+  // included the const.
+  std::string Code = R"(
+    struct S {
+      void (*const Field)();
+    };
+    
+    void target() {
+      S s{nullptr};
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
 }
 
 TEST(TransferTest, AssignToUnionMember) {
@@ -4108,6 +4165,34 @@ TEST(TransferTest, LoopWithShortCircuitedConditionConverges) {
     }
   )cc";
   ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
+}
+
+TEST(TransferTest, LoopCanProveInvariantForBoolean) {
+  // Check that we can prove `b` is always false in the loop.
+  // This test exercises the logic in `widenDistinctValues()` that preserves
+  // information if the boolean can be proved to be either true or false in both
+  // the previous and current iteration.
+  std::string Code = R"cc(
+    int return_int();
+    void target() {
+      bool b = return_int() == 0;
+      if (b) return;
+      while (true) {
+        b;
+        // [[p]]
+        b = return_int() == 0;
+        if (b) return;
+      }
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &BVal = getValueForDecl<BoolValue>(ASTCtx, Env, "b");
+        EXPECT_TRUE(Env.proves(Env.arena().makeNot(BVal.formula())));
+      });
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {

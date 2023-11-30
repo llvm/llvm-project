@@ -128,8 +128,6 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     return std::nullopt;
 
   switch (AmdhsaCodeObjectVersion) {
-  case 3:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   case 4:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   case 5:
@@ -138,12 +136,6 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
                        Twine(AmdhsaCodeObjectVersion));
   }
-}
-
-bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
-    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
-  return false;
 }
 
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
@@ -174,7 +166,6 @@ unsigned getCodeObjectVersion(const Module &M) {
 
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 48;
   case AMDHSA_COV5:
@@ -188,7 +179,6 @@ unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
 // central TD file.
 unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 24;
   case AMDHSA_COV5:
@@ -199,7 +189,6 @@ unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 32;
   case AMDHSA_COV5:
@@ -210,7 +199,6 @@ unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 40;
   case AMDHSA_COV5:
@@ -774,15 +762,6 @@ std::string AMDGPUTargetID::toString() const {
   std::string Features;
   if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV3:
-      // xnack.
-      if (isXnackOnOrAny())
-        Features += "+xnack";
-      // In code object v2 and v3, "sramecc" feature was spelled with a
-      // hyphen ("sram-ecc").
-      if (isSramEccOnOrAny())
-        Features += "+sram-ecc";
-      break;
     case AMDGPU::AMDHSA_COV4:
     case AMDGPU::AMDHSA_COV5:
       // sramecc.
@@ -1931,7 +1910,7 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   case CallingConv::AMDGPU_Gfx:
     return true;
   default:
-    return isEntryFunctionCC(CC);
+    return isEntryFunctionCC(CC) || isChainCC(CC);
   }
 }
 
@@ -2009,6 +1988,10 @@ bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10(STI);
 }
 
+bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI) {
   return isVI(STI) || isGFX9(STI) || isGFX10(STI);
 }
@@ -2025,6 +2008,10 @@ bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
 
+bool isGFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX10Plus(const MCSubtargetInfo &STI) {
   return isGFX10(STI) || isGFX11Plus(STI);
 }
@@ -2034,8 +2021,16 @@ bool isGFX11(const MCSubtargetInfo &STI) {
 }
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
-  return isGFX11(STI);
+  return isGFX11(STI) || isGFX12Plus(STI);
 }
+
+bool isGFX12(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
+}
+
+bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+
+bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
   return !isGFX11Plus(STI);
@@ -2063,6 +2058,10 @@ bool isGFX10_BEncoding(const MCSubtargetInfo &STI) {
 
 bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10_3Insts);
+}
+
+bool isGFX10_3_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX10_BEncoding(STI) && !isGFX12Plus(STI);
 }
 
 bool isGFX90A(const MCSubtargetInfo &STI) {
@@ -2260,8 +2259,10 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   assert(OpNo < Desc.NumOperands);
   unsigned OpType = Desc.operands()[OpNo].OperandType;
-  return OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
-         OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST;
+  return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||
+         (OpType >= AMDGPU::OPERAND_REG_INLINE_AC_FIRST &&
+          OpType <= AMDGPU::OPERAND_REG_INLINE_AC_LAST);
 }
 
 // Avoid using MCRegisterClass::getSize, since that function will go away
@@ -2506,6 +2507,16 @@ bool isInlinableIntLiteralV216(int32_t Literal) {
   return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
 }
 
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType) {
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    return isInlinableLiteralV216(Literal, HasInv2Pi);
+  default:
+    return isInlinableIntLiteralV216(Literal);
+  }
+}
+
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {
   assert(HasInv2Pi);
 
@@ -2550,8 +2561,8 @@ bool isArgPassedInSGPR(const Argument *A) {
     return A->hasAttribute(Attribute::InReg) ||
            A->hasAttribute(Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
+    // TODO: treat i1 as divergent?
+    return A->hasAttribute(Attribute::InReg);
   }
 }
 
@@ -2577,8 +2588,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
            CB->paramHasAttr(ArgNo, Attribute::ByVal);
   default:
-    // TODO: Should calls support inreg for SGPR inputs?
-    return false;
+    return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
 }
 

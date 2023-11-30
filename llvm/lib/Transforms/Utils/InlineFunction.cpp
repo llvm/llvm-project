@@ -1608,8 +1608,8 @@ static bool isUsedByLifetimeMarker(Value *V) {
 // lifetime.start or lifetime.end intrinsics.
 static bool hasLifetimeMarkers(AllocaInst *AI) {
   Type *Ty = AI->getType();
-  Type *Int8PtrTy = Type::getInt8PtrTy(Ty->getContext(),
-                                       Ty->getPointerAddressSpace());
+  Type *Int8PtrTy =
+      PointerType::get(Ty->getContext(), Ty->getPointerAddressSpace());
   if (Ty == Int8PtrTy)
     return isUsedByLifetimeMarker(AI);
 
@@ -1666,48 +1666,71 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   // the call site location instead.
   bool NoInlineLineTables = Fn->hasFnAttribute("no-inline-line-tables");
 
+  // Helper-util for updating the metadata attached to an instruction.
+  auto UpdateInst = [&](Instruction &I) {
+    // Loop metadata needs to be updated so that the start and end locs
+    // reference inlined-at locations.
+    auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
+                              &IANodes](Metadata *MD) -> Metadata * {
+      if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+        return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
+      return MD;
+    };
+    updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
+
+    if (!NoInlineLineTables)
+      if (DebugLoc DL = I.getDebugLoc()) {
+        DebugLoc IDL =
+            inlineDebugLoc(DL, InlinedAtNode, I.getContext(), IANodes);
+        I.setDebugLoc(IDL);
+        return;
+      }
+
+    if (CalleeHasDebugInfo && !NoInlineLineTables)
+      return;
+
+    // If the inlined instruction has no line number, or if inline info
+    // is not being generated, make it look as if it originates from the call
+    // location. This is important for ((__always_inline, __nodebug__))
+    // functions which must use caller location for all instructions in their
+    // function body.
+
+    // Don't update static allocas, as they may get moved later.
+    if (auto *AI = dyn_cast<AllocaInst>(&I))
+      if (allocaWouldBeStaticInEntry(AI))
+        return;
+
+    // Do not force a debug loc for pseudo probes, since they do not need to
+    // be debuggable, and also they are expected to have a zero/null dwarf
+    // discriminator at this point which could be violated otherwise.
+    if (isa<PseudoProbeInst>(I))
+      return;
+
+    I.setDebugLoc(TheCallDL);
+  };
+
+  // Helper-util for updating debug-info records attached to instructions.
+  auto UpdateDPV = [&](DPValue *DPV) {
+    assert(DPV->getDebugLoc() && "Debug Value must have debug loc");
+    if (NoInlineLineTables) {
+      DPV->setDebugLoc(TheCallDL);
+      return;
+    }
+    DebugLoc DL = DPV->getDebugLoc();
+    DebugLoc IDL =
+        inlineDebugLoc(DL, InlinedAtNode,
+                       DPV->getMarker()->getParent()->getContext(), IANodes);
+    DPV->setDebugLoc(IDL);
+  };
+
+  // Iterate over all instructions, updating metadata and debug-info records.
   for (; FI != Fn->end(); ++FI) {
-    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end();
-         BI != BE; ++BI) {
-      // Loop metadata needs to be updated so that the start and end locs
-      // reference inlined-at locations.
-      auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
-                                &IANodes](Metadata *MD) -> Metadata * {
-        if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
-          return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
-        return MD;
-      };
-      updateLoopMetadataDebugLocations(*BI, updateLoopInfoLoc);
-
-      if (!NoInlineLineTables)
-        if (DebugLoc DL = BI->getDebugLoc()) {
-          DebugLoc IDL =
-              inlineDebugLoc(DL, InlinedAtNode, BI->getContext(), IANodes);
-          BI->setDebugLoc(IDL);
-          continue;
-        }
-
-      if (CalleeHasDebugInfo && !NoInlineLineTables)
-        continue;
-
-      // If the inlined instruction has no line number, or if inline info
-      // is not being generated, make it look as if it originates from the call
-      // location. This is important for ((__always_inline, __nodebug__))
-      // functions which must use caller location for all instructions in their
-      // function body.
-
-      // Don't update static allocas, as they may get moved later.
-      if (auto *AI = dyn_cast<AllocaInst>(BI))
-        if (allocaWouldBeStaticInEntry(AI))
-          continue;
-
-      // Do not force a debug loc for pseudo probes, since they do not need to
-      // be debuggable, and also they are expected to have a zero/null dwarf
-      // discriminator at this point which could be violated otherwise.
-      if (isa<PseudoProbeInst>(BI))
-        continue;
-
-      BI->setDebugLoc(TheCallDL);
+    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
+         ++BI) {
+      UpdateInst(*BI);
+      for (DPValue &DPV : BI->getDbgValueRange()) {
+        UpdateDPV(&DPV);
+      }
     }
 
     // Remove debug info intrinsics if we're not keeping inline info.
@@ -1717,11 +1740,12 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
         if (isa<DbgInfoIntrinsic>(BI)) {
           BI = BI->eraseFromParent();
           continue;
+        } else {
+          BI->dropDbgValues();
         }
         ++BI;
       }
     }
-
   }
 }
 
@@ -1951,8 +1975,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
           Builder.SetInsertPoint(II);
           Function *IFn =
               Intrinsic::getDeclaration(Mod, Intrinsic::objc_release);
-          Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-          Builder.CreateCall(IFn, BC, "");
+          Builder.CreateCall(IFn, RetOpnd, "");
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -1987,8 +2010,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // to objc_retain.
       Builder.SetInsertPoint(RI);
       Function *IFn = Intrinsic::getDeclaration(Mod, Intrinsic::objc_retain);
-      Value *BC = Builder.CreateBitCast(RetOpnd, IFn->getArg(0)->getType());
-      Builder.CreateCall(IFn, BC, "");
+      Builder.CreateCall(IFn, RetOpnd, "");
     }
   }
 }
@@ -2404,6 +2426,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
       // Transfer all of the allocas over in a block.  Using splice means
       // that the instructions aren't removed from the symbol table, then
       // reinserted.
+      I.setTailBit(true);
       Caller->getEntryBlock().splice(InsertPoint, &*FirstNewBlock,
                                      AI->getIterator(), I);
     }

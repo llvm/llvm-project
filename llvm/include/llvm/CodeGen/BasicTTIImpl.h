@@ -382,6 +382,11 @@ public:
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
+  bool shouldFoldTerminatingConditionAfterLSR() const {
+    return TargetTransformInfoImplBase::
+        shouldFoldTerminatingConditionAfterLSR();
+  }
+
   bool isProfitableLSRChainElement(Instruction *I) {
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }
@@ -714,7 +719,7 @@ public:
   /// @{
 
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    return TypeSize::Fixed(32);
+    return TypeSize::getFixed(32);
   }
 
   std::optional<unsigned> getMaxVScale() const { return std::nullopt; }

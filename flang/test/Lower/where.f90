@@ -1,4 +1,4 @@
-  ! RUN: bbc -emit-fir %s -o - | FileCheck %s
+  ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
   ! CHECK-LABEL: func @_QQmain() {
   ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xf32>>

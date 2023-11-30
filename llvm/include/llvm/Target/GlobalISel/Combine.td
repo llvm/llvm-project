@@ -165,6 +165,25 @@ def GIReplaceReg : GIBuiltinInst;
 def GIEraseRoot : GIBuiltinInst;
 
 //===----------------------------------------------------------------------===//
+// Pattern MIFlags
+//===----------------------------------------------------------------------===//
+
+class MIFlagEnum<string enumName> {
+  string EnumName = "MachineInstr::" # enumName;
+}
+
+def FmNoNans    : MIFlagEnum<"FmNoNans">;
+def FmNoInfs    : MIFlagEnum<"FmNoInfs">;
+def FmNsz       : MIFlagEnum<"FmNsz">;
+def FmArcp      : MIFlagEnum<"FmArcp">;
+def FmContract  : MIFlagEnum<"FmContract">;
+def FmAfn       : MIFlagEnum<"FmAfn">;
+def FmReassoc   : MIFlagEnum<"FmReassoc">;
+
+def MIFlags;
+// def not; -> Already defined as a SDNode
+
+//===----------------------------------------------------------------------===//
 
 def extending_load_matchdata : GIDefMatchData<"PreferredTuple">;
 def indexed_load_store_matchdata : GIDefMatchData<"IndexedLoadStoreMatchInfo">;
@@ -452,6 +471,13 @@ def right_identity_zero: GICombineRule<
   (defs root:$dst),
   (match (right_identity_zero_frags $dst, $lhs)),
   (apply (GIReplaceReg $dst, $lhs))
+>;
+
+def right_identity_neg_zero_fp: GICombineRule<
+  (defs root:$dst),
+  (match (G_FADD $dst, $x, $y):$root,
+    [{ return Helper.matchConstantFPOp(${y}, -0.0); }]),
+  (apply (GIReplaceReg $dst, $x))
 >;
 
 // Fold x op 1 -> x
@@ -796,7 +822,7 @@ def trunc_shift: GICombineRule <
 def mul_by_neg_one: GICombineRule <
   (defs root:$dst),
   (match (G_MUL $dst, $x, -1)),
-  (apply (G_SUB $dst, (GITypeOf<"$x"> 0), $x))
+  (apply (G_SUB $dst, 0, $x))
 >;
 
 // Fold (xor (and x, y), y) -> (and (not x), y)
@@ -1231,7 +1257,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold, fptrunc_fpext_fold]>;
+                                        bitcast_bitcast_fold, fptrunc_fpext_fold,
+                                        right_identity_neg_zero_fp]>;
 
 def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,

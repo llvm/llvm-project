@@ -251,7 +251,7 @@ GCNIterativeScheduler::getRegionPressure(MachineBasicBlock::iterator Begin,
   assert(UPTracker.isValid() ||
          (dbgs() << "Tracked region ",
           printRegion(dbgs(), Begin, End, LIS), false));
-  return UPTracker.moveMaxPressure();
+  return UPTracker.getMaxPressureAndReset();
 }
 
 // returns max pressure for a tentative schedule
@@ -272,7 +272,7 @@ GCNIterativeScheduler::getSchedulePressure(const Region &R,
   for (auto I = Schedule.end(), B = Schedule.begin(); I != B;) {
     RPTracker.recede(*getMachineInstr(*--I));
   }
-  return RPTracker.moveMaxPressure();
+  return RPTracker.getMaxPressureAndReset();
 }
 
 void GCNIterativeScheduler::enterRegion(MachineBasicBlock *BB, // overridden

@@ -34,6 +34,15 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
       },
       py::arg("context"), py::arg("load") = true);
 
+  m.def(
+      "register_dialect",
+      [](MlirDialectRegistry registry) {
+        MlirDialectHandle pythonTestDialect =
+            mlirGetDialectHandle__python_test__();
+        mlirDialectHandleInsertDialect(pythonTestDialect, registry);
+      },
+      py::arg("registry"));
+
   mlir_attribute_subclass(m, "TestAttr",
                           mlirAttributeIsAPythonTestTestAttribute)
       .def_classmethod(
@@ -42,6 +51,7 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
             return cls(mlirPythonTestTestAttributeGet(ctx));
           },
           py::arg("cls"), py::arg("context") = py::none());
+
   mlir_type_subclass(m, "TestType", mlirTypeIsAPythonTestTestType,
                      mlirPythonTestTestTypeGetTypeID)
       .def_classmethod(
@@ -50,7 +60,8 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
             return cls(mlirPythonTestTestTypeGet(ctx));
           },
           py::arg("cls"), py::arg("context") = py::none());
-  auto cls =
+
+  auto typeCls =
       mlir_type_subclass(m, "TestIntegerRankedTensorType",
                          mlirTypeIsARankedIntegerTensor,
                          py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
@@ -65,16 +76,40 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
                     encoding));
               },
               "cls"_a, "shape"_a, "width"_a, "context"_a = py::none());
-  assert(py::hasattr(cls.get_class(), "static_typeid") &&
+
+  assert(py::hasattr(typeCls.get_class(), "static_typeid") &&
          "TestIntegerRankedTensorType has no static_typeid");
-  MlirTypeID mlirTypeID = mlirRankedTensorTypeGetTypeID();
+
+  MlirTypeID mlirRankedTensorTypeID = mlirRankedTensorTypeGetTypeID();
+
   py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
-      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(
-          mlirTypeID, pybind11::cpp_function([cls](const py::object &mlirType) {
-            return cls.get_class()(mlirType);
-          }),
-          /*replace=*/true);
-  mlir_value_subclass(m, "TestTensorValue",
-                      mlirTypeIsAPythonTestTestTensorValue)
-      .def("is_null", [](MlirValue &self) { return mlirValueIsNull(self); });
+      .attr(MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR)(mlirRankedTensorTypeID,
+                                                        "replace"_a = true)(
+          pybind11::cpp_function([typeCls](const py::object &mlirType) {
+            return typeCls.get_class()(mlirType);
+          }));
+
+  auto valueCls = mlir_value_subclass(m, "TestTensorValue",
+                                      mlirTypeIsAPythonTestTestTensorValue)
+                      .def("is_null", [](MlirValue &self) {
+                        return mlirValueIsNull(self);
+                      });
+
+  py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+      .attr(MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR)(
+          mlirRankedTensorTypeID)(
+          pybind11::cpp_function([valueCls](const py::object &valueObj) {
+            py::object capsule = mlirApiObjectToCapsule(valueObj);
+            MlirValue v = mlirPythonCapsuleToValue(capsule.ptr());
+            MlirType t = mlirValueGetType(v);
+            // This is hyper-specific in order to exercise/test registering a
+            // value caster from cpp (but only for a single test case; see
+            // testTensorValue python_test.py).
+            if (mlirShapedTypeHasStaticShape(t) &&
+                mlirShapedTypeGetDimSize(t, 0) == 1 &&
+                mlirShapedTypeGetDimSize(t, 1) == 2 &&
+                mlirShapedTypeGetDimSize(t, 2) == 3)
+              return valueCls.get_class()(valueObj);
+            return valueObj;
+          }));
 }

@@ -92,6 +92,37 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
       Subtarget(STI), RI(STI.getTargetTriple()) {
 }
 
+const TargetRegisterClass *
+X86InstrInfo::getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
+                          const TargetRegisterInfo *TRI,
+                          const MachineFunction &MF) const {
+  auto *RC = TargetInstrInfo::getRegClass(MCID, OpNum, TRI, MF);
+  // If the target does not have egpr, then r16-r31 will be resereved for all
+  // instructions.
+  if (!RC || !Subtarget.hasEGPR())
+    return RC;
+
+  if (X86II::canUseApxExtendedReg(MCID))
+    return RC;
+
+  switch (RC->getID()) {
+  default:
+    return RC;
+  case X86::GR8RegClassID:
+    return &X86::GR8_NOREX2RegClass;
+  case X86::GR16RegClassID:
+    return &X86::GR16_NOREX2RegClass;
+  case X86::GR32RegClassID:
+    return &X86::GR32_NOREX2RegClass;
+  case X86::GR64RegClassID:
+    return &X86::GR64_NOREX2RegClass;
+  case X86::GR32_NOSPRegClassID:
+    return &X86::GR32_NOREX2_NOSPRegClass;
+  case X86::GR64_NOSPRegClassID:
+    return &X86::GR64_NOREX2_NOSPRegClass;
+  }
+}
+
 bool
 X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
                                     Register &SrcReg, Register &DstReg,
@@ -6565,7 +6596,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
           MF, MI, OpNum, MOs, InsertPt, Size, Alignment))
     return CustomMI;
 
-  const X86MemoryFoldTableEntry *I = nullptr;
+  const X86FoldTableEntry *I = nullptr;
 
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
@@ -7273,7 +7304,7 @@ extractStoreMMOs(ArrayRef<MachineMemOperand *> MMOs, MachineFunction &MF) {
   return StoreMMOs;
 }
 
-static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
+static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
                                    const TargetRegisterClass *RC,
                                    const X86Subtarget &STI) {
   assert(STI.hasAVX512() && "Expected at least AVX512!");
@@ -7321,7 +7352,7 @@ static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
 bool X86InstrInfo::unfoldMemoryOperand(
     MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
+  const X86FoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
   if (I == nullptr)
     return false;
   unsigned Opc = I->DstOp;
@@ -7463,7 +7494,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   if (!N->isMachineOpcode())
     return false;
 
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(N->getMachineOpcode());
+  const X86FoldTableEntry *I = lookupUnfoldTable(N->getMachineOpcode());
   if (I == nullptr)
     return false;
   unsigned Opc = I->DstOp;
@@ -7586,7 +7617,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
 unsigned X86InstrInfo::getOpcodeAfterMemoryUnfold(unsigned Opc,
                                       bool UnfoldLoad, bool UnfoldStore,
                                       unsigned *LoadRegIndex) const {
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(Opc);
+  const X86FoldTableEntry *I = lookupUnfoldTable(Opc);
   if (I == nullptr)
     return 0;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
@@ -7605,174 +7636,97 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
                                      int64_t &Offset1, int64_t &Offset2) const {
   if (!Load1->isMachineOpcode() || !Load2->isMachineOpcode())
     return false;
-  unsigned Opc1 = Load1->getMachineOpcode();
-  unsigned Opc2 = Load2->getMachineOpcode();
-  switch (Opc1) {
-  default: return false;
-  case X86::MOV8rm:
-  case X86::MOV16rm:
-  case X86::MOV32rm:
-  case X86::MOV64rm:
-  case X86::LD_Fp32m:
-  case X86::LD_Fp64m:
-  case X86::LD_Fp80m:
-  case X86::MOVSSrm:
-  case X86::MOVSSrm_alt:
-  case X86::MOVSDrm:
-  case X86::MOVSDrm_alt:
-  case X86::MMX_MOVD64rm:
-  case X86::MMX_MOVQ64rm:
-  case X86::MOVAPSrm:
-  case X86::MOVUPSrm:
-  case X86::MOVAPDrm:
-  case X86::MOVUPDrm:
-  case X86::MOVDQArm:
-  case X86::MOVDQUrm:
-  // AVX load instructions
-  case X86::VMOVSSrm:
-  case X86::VMOVSSrm_alt:
-  case X86::VMOVSDrm:
-  case X86::VMOVSDrm_alt:
-  case X86::VMOVAPSrm:
-  case X86::VMOVUPSrm:
-  case X86::VMOVAPDrm:
-  case X86::VMOVUPDrm:
-  case X86::VMOVDQArm:
-  case X86::VMOVDQUrm:
-  case X86::VMOVAPSYrm:
-  case X86::VMOVUPSYrm:
-  case X86::VMOVAPDYrm:
-  case X86::VMOVUPDYrm:
-  case X86::VMOVDQAYrm:
-  case X86::VMOVDQUYrm:
-  // AVX512 load instructions
-  case X86::VMOVSSZrm:
-  case X86::VMOVSSZrm_alt:
-  case X86::VMOVSDZrm:
-  case X86::VMOVSDZrm_alt:
-  case X86::VMOVAPSZ128rm:
-  case X86::VMOVUPSZ128rm:
-  case X86::VMOVAPSZ128rm_NOVLX:
-  case X86::VMOVUPSZ128rm_NOVLX:
-  case X86::VMOVAPDZ128rm:
-  case X86::VMOVUPDZ128rm:
-  case X86::VMOVDQU8Z128rm:
-  case X86::VMOVDQU16Z128rm:
-  case X86::VMOVDQA32Z128rm:
-  case X86::VMOVDQU32Z128rm:
-  case X86::VMOVDQA64Z128rm:
-  case X86::VMOVDQU64Z128rm:
-  case X86::VMOVAPSZ256rm:
-  case X86::VMOVUPSZ256rm:
-  case X86::VMOVAPSZ256rm_NOVLX:
-  case X86::VMOVUPSZ256rm_NOVLX:
-  case X86::VMOVAPDZ256rm:
-  case X86::VMOVUPDZ256rm:
-  case X86::VMOVDQU8Z256rm:
-  case X86::VMOVDQU16Z256rm:
-  case X86::VMOVDQA32Z256rm:
-  case X86::VMOVDQU32Z256rm:
-  case X86::VMOVDQA64Z256rm:
-  case X86::VMOVDQU64Z256rm:
-  case X86::VMOVAPSZrm:
-  case X86::VMOVUPSZrm:
-  case X86::VMOVAPDZrm:
-  case X86::VMOVUPDZrm:
-  case X86::VMOVDQU8Zrm:
-  case X86::VMOVDQU16Zrm:
-  case X86::VMOVDQA32Zrm:
-  case X86::VMOVDQU32Zrm:
-  case X86::VMOVDQA64Zrm:
-  case X86::VMOVDQU64Zrm:
-  case X86::KMOVBkm:
-  case X86::KMOVWkm:
-  case X86::KMOVDkm:
-  case X86::KMOVQkm:
-    break;
-  }
-  switch (Opc2) {
-  default: return false;
-  case X86::MOV8rm:
-  case X86::MOV16rm:
-  case X86::MOV32rm:
-  case X86::MOV64rm:
-  case X86::LD_Fp32m:
-  case X86::LD_Fp64m:
-  case X86::LD_Fp80m:
-  case X86::MOVSSrm:
-  case X86::MOVSSrm_alt:
-  case X86::MOVSDrm:
-  case X86::MOVSDrm_alt:
-  case X86::MMX_MOVD64rm:
-  case X86::MMX_MOVQ64rm:
-  case X86::MOVAPSrm:
-  case X86::MOVUPSrm:
-  case X86::MOVAPDrm:
-  case X86::MOVUPDrm:
-  case X86::MOVDQArm:
-  case X86::MOVDQUrm:
-  // AVX load instructions
-  case X86::VMOVSSrm:
-  case X86::VMOVSSrm_alt:
-  case X86::VMOVSDrm:
-  case X86::VMOVSDrm_alt:
-  case X86::VMOVAPSrm:
-  case X86::VMOVUPSrm:
-  case X86::VMOVAPDrm:
-  case X86::VMOVUPDrm:
-  case X86::VMOVDQArm:
-  case X86::VMOVDQUrm:
-  case X86::VMOVAPSYrm:
-  case X86::VMOVUPSYrm:
-  case X86::VMOVAPDYrm:
-  case X86::VMOVUPDYrm:
-  case X86::VMOVDQAYrm:
-  case X86::VMOVDQUYrm:
-  // AVX512 load instructions
-  case X86::VMOVSSZrm:
-  case X86::VMOVSSZrm_alt:
-  case X86::VMOVSDZrm:
-  case X86::VMOVSDZrm_alt:
-  case X86::VMOVAPSZ128rm:
-  case X86::VMOVUPSZ128rm:
-  case X86::VMOVAPSZ128rm_NOVLX:
-  case X86::VMOVUPSZ128rm_NOVLX:
-  case X86::VMOVAPDZ128rm:
-  case X86::VMOVUPDZ128rm:
-  case X86::VMOVDQU8Z128rm:
-  case X86::VMOVDQU16Z128rm:
-  case X86::VMOVDQA32Z128rm:
-  case X86::VMOVDQU32Z128rm:
-  case X86::VMOVDQA64Z128rm:
-  case X86::VMOVDQU64Z128rm:
-  case X86::VMOVAPSZ256rm:
-  case X86::VMOVUPSZ256rm:
-  case X86::VMOVAPSZ256rm_NOVLX:
-  case X86::VMOVUPSZ256rm_NOVLX:
-  case X86::VMOVAPDZ256rm:
-  case X86::VMOVUPDZ256rm:
-  case X86::VMOVDQU8Z256rm:
-  case X86::VMOVDQU16Z256rm:
-  case X86::VMOVDQA32Z256rm:
-  case X86::VMOVDQU32Z256rm:
-  case X86::VMOVDQA64Z256rm:
-  case X86::VMOVDQU64Z256rm:
-  case X86::VMOVAPSZrm:
-  case X86::VMOVUPSZrm:
-  case X86::VMOVAPDZrm:
-  case X86::VMOVUPDZrm:
-  case X86::VMOVDQU8Zrm:
-  case X86::VMOVDQU16Zrm:
-  case X86::VMOVDQA32Zrm:
-  case X86::VMOVDQU32Zrm:
-  case X86::VMOVDQA64Zrm:
-  case X86::VMOVDQU64Zrm:
-  case X86::KMOVBkm:
-  case X86::KMOVWkm:
-  case X86::KMOVDkm:
-  case X86::KMOVQkm:
-    break;
-  }
+
+  auto IsLoadOpcode = [&](unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return false;
+    case X86::MOV8rm:
+    case X86::MOV16rm:
+    case X86::MOV32rm:
+    case X86::MOV64rm:
+    case X86::LD_Fp32m:
+    case X86::LD_Fp64m:
+    case X86::LD_Fp80m:
+    case X86::MOVSSrm:
+    case X86::MOVSSrm_alt:
+    case X86::MOVSDrm:
+    case X86::MOVSDrm_alt:
+    case X86::MMX_MOVD64rm:
+    case X86::MMX_MOVQ64rm:
+    case X86::MOVAPSrm:
+    case X86::MOVUPSrm:
+    case X86::MOVAPDrm:
+    case X86::MOVUPDrm:
+    case X86::MOVDQArm:
+    case X86::MOVDQUrm:
+    // AVX load instructions
+    case X86::VMOVSSrm:
+    case X86::VMOVSSrm_alt:
+    case X86::VMOVSDrm:
+    case X86::VMOVSDrm_alt:
+    case X86::VMOVAPSrm:
+    case X86::VMOVUPSrm:
+    case X86::VMOVAPDrm:
+    case X86::VMOVUPDrm:
+    case X86::VMOVDQArm:
+    case X86::VMOVDQUrm:
+    case X86::VMOVAPSYrm:
+    case X86::VMOVUPSYrm:
+    case X86::VMOVAPDYrm:
+    case X86::VMOVUPDYrm:
+    case X86::VMOVDQAYrm:
+    case X86::VMOVDQUYrm:
+    // AVX512 load instructions
+    case X86::VMOVSSZrm:
+    case X86::VMOVSSZrm_alt:
+    case X86::VMOVSDZrm:
+    case X86::VMOVSDZrm_alt:
+    case X86::VMOVAPSZ128rm:
+    case X86::VMOVUPSZ128rm:
+    case X86::VMOVAPSZ128rm_NOVLX:
+    case X86::VMOVUPSZ128rm_NOVLX:
+    case X86::VMOVAPDZ128rm:
+    case X86::VMOVUPDZ128rm:
+    case X86::VMOVDQU8Z128rm:
+    case X86::VMOVDQU16Z128rm:
+    case X86::VMOVDQA32Z128rm:
+    case X86::VMOVDQU32Z128rm:
+    case X86::VMOVDQA64Z128rm:
+    case X86::VMOVDQU64Z128rm:
+    case X86::VMOVAPSZ256rm:
+    case X86::VMOVUPSZ256rm:
+    case X86::VMOVAPSZ256rm_NOVLX:
+    case X86::VMOVUPSZ256rm_NOVLX:
+    case X86::VMOVAPDZ256rm:
+    case X86::VMOVUPDZ256rm:
+    case X86::VMOVDQU8Z256rm:
+    case X86::VMOVDQU16Z256rm:
+    case X86::VMOVDQA32Z256rm:
+    case X86::VMOVDQU32Z256rm:
+    case X86::VMOVDQA64Z256rm:
+    case X86::VMOVDQU64Z256rm:
+    case X86::VMOVAPSZrm:
+    case X86::VMOVUPSZrm:
+    case X86::VMOVAPDZrm:
+    case X86::VMOVUPDZrm:
+    case X86::VMOVDQU8Zrm:
+    case X86::VMOVDQU16Zrm:
+    case X86::VMOVDQA32Zrm:
+    case X86::VMOVDQU32Zrm:
+    case X86::VMOVDQA64Zrm:
+    case X86::VMOVDQU64Zrm:
+    case X86::KMOVBkm:
+    case X86::KMOVWkm:
+    case X86::KMOVDkm:
+    case X86::KMOVQkm:
+      return true;
+    }
+  };
+
+  if (!IsLoadOpcode(Load1->getMachineOpcode()) ||
+      !IsLoadOpcode(Load2->getMachineOpcode()))
+    return false;
 
   // Lambda to check if both the loads have the same value for an operand index.
   auto HasSameOp = [&](int I) {
@@ -9643,20 +9597,6 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &OldMI2,
                                          MachineInstr &NewMI1,
                                          MachineInstr &NewMI2) const {
-  // Propagate FP flags from the original instructions.
-  // But clear poison-generating flags because those may not be valid now.
-  // TODO: There should be a helper function for copying only fast-math-flags.
-  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
-  NewMI1.setFlags(IntersectedFlags);
-  NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  NewMI1.clearFlag(MachineInstr::MIFlag::IsExact);
-
-  NewMI2.setFlags(IntersectedFlags);
-  NewMI2.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  NewMI2.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  NewMI2.clearFlag(MachineInstr::MIFlag::IsExact);
-
   // Integer instructions may define an implicit EFLAGS dest register operand.
   MachineOperand *OldFlagDef1 = OldMI1.findRegisterDefOperand(X86::EFLAGS);
   MachineOperand *OldFlagDef2 = OldMI2.findRegisterDefOperand(X86::EFLAGS);
@@ -10331,6 +10271,15 @@ void X86InstrInfo::genAlternativeCodeSequence(
                                  InstrIdxForVirtReg);
     return;
   }
+}
+
+// See also: X86DAGToDAGISel::SelectInlineAsmMemoryOperand().
+void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
+                                         int FI) const {
+  X86AddressMode M;
+  M.BaseType = X86AddressMode::FrameIndexBase;
+  M.Base.FrameIndex = FI;
+  M.getFullAddress(Ops);
 }
 
 #define GET_INSTRINFO_HELPERS

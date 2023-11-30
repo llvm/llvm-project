@@ -167,6 +167,9 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
+/// Utility function to convert SBValue \v into a string.
+std::string ValueToString(lldb::SBValue v);
+
 /// Emplace the string value from an SBValue into the supplied object
 /// using \a key as the key that will contain the value.
 ///

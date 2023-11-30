@@ -7,18 +7,21 @@ include(AddMLIRPython)
 declare_mlir_python_sources(MLIRPythonSources)
 declare_mlir_python_sources(MLIRPythonSources.Dialects
   ADD_TO_PARENT MLIRPythonSources)
+declare_mlir_python_sources(MLIRPythonSources.Core
+  ADD_TO_PARENT MLIRPythonSources)
 
 ################################################################################
 # Pure python sources and generated code
 ################################################################################
 
-declare_mlir_python_sources(MLIRPythonSources.Core
+declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  ADD_TO_PARENT MLIRPythonSources
+  ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
     ir.py
     passmanager.py
+    extras/types.py
     dialects/_ods_common.py
 
     # The main _mlir module has submodules: include stubs from each.

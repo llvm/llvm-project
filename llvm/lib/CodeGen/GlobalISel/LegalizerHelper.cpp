@@ -1445,7 +1445,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     // So long as the new type has more bits than the bits we're extending we
     // don't need to break it apart.
-    if (NarrowTy.getScalarSizeInBits() >= SizeInBits) {
+    if (NarrowTy.getScalarSizeInBits() > SizeInBits) {
       Observer.changingInstr(MI);
       // We don't lose any non-extension bits by truncating the src and
       // sign-extending the dst.
@@ -1488,14 +1488,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     Register AshrCstReg =
         MIRBuilder.buildConstant(NarrowTy, NarrowTy.getScalarSizeInBits() - 1)
             .getReg(0);
-    Register FullExtensionReg = 0;
-    Register PartialExtensionReg = 0;
+    Register FullExtensionReg;
+    Register PartialExtensionReg;
 
     // Do the operation on each small part.
     for (int i = 0; i < NumParts; ++i) {
-      if ((i + 1) * NarrowTy.getScalarSizeInBits() < SizeInBits)
+      if ((i + 1) * NarrowTy.getScalarSizeInBits() <= SizeInBits) {
         DstRegs.push_back(SrcRegs[i]);
-      else if (i * NarrowTy.getScalarSizeInBits() > SizeInBits) {
+        PartialExtensionReg = DstRegs.back();
+      } else if (i * NarrowTy.getScalarSizeInBits() >= SizeInBits) {
         assert(PartialExtensionReg &&
                "Expected to visit partial extension before full");
         if (FullExtensionReg) {
@@ -2483,6 +2484,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_IS_FPCLASS:
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
@@ -2818,6 +2820,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_FADD:
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
@@ -3570,10 +3573,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFFloor(MI);
   case TargetOpcode::G_INTRINSIC_ROUND:
     return lowerIntrinsicRound(MI);
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN: {
+  case TargetOpcode::G_FRINT: {
     // Since round even is the assumed rounding mode for unconstrained FP
     // operations, rint and roundeven are the same operation.
-    changeOpcode(MI, TargetOpcode::G_FRINT);
+    changeOpcode(MI, TargetOpcode::G_INTRINSIC_ROUNDEVEN);
     return Legalized;
   }
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
@@ -5124,7 +5127,11 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   }
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FPEXT: {
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
@@ -5938,8 +5945,10 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
       MI.eraseFromParent();
       return Legalized;
     }
+    Observer.changingInstr(MI);
     MI.setDesc(TII.get(TargetOpcode::G_CTPOP));
     MI.getOperand(1).setReg(MIBTmp.getReg(0));
+    Observer.changedInstr(MI);
     return Legalized;
   }
   case TargetOpcode::G_CTPOP: {
@@ -6962,8 +6971,8 @@ LegalizerHelper::lowerExtractInsertVectorElt(MachineInstr &MI) {
   Align EltAlign;
 
   MachinePointerInfo PtrInfo;
-  auto StackTemp = createStackTemporary(TypeSize::Fixed(VecTy.getSizeInBytes()),
-                                        VecAlign, PtrInfo);
+  auto StackTemp = createStackTemporary(
+      TypeSize::getFixed(VecTy.getSizeInBytes()), VecAlign, PtrInfo);
   MIRBuilder.buildStore(SrcVec, StackTemp, PtrInfo, VecAlign);
 
   // Get the pointer to the element, and be sure not to hit undefined behavior

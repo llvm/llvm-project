@@ -24,12 +24,12 @@ namespace __asan {
 void InitializeAsanInterceptors();
 void InitializePlatformInterceptors();
 
-#define ENSURE_ASAN_INITED()      \
-  do {                            \
-    CHECK(!asan_init_is_running); \
-    if (UNLIKELY(!asan_inited)) { \
-      AsanInitFromRtl();          \
-    }                             \
+#define ENSURE_ASAN_INITED()       \
+  do {                             \
+    CHECK(!AsanInitIsRunning());   \
+    if (UNLIKELY(!AsanInited())) { \
+      AsanInitFromRtl();           \
+    }                              \
   } while (0)
 
 }  // namespace __asan

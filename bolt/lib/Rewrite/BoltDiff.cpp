@@ -672,7 +672,7 @@ public:
 
 };
 
-} // end nampespace bolt
+} // end namespace bolt
 } // end namespace llvm
 
 void RewriteInstance::compare(RewriteInstance &RI2) {

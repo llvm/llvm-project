@@ -90,30 +90,23 @@ func.func @alloca_non_integer_alignment() {
 
 // -----
 
-func.func @alloca_opaque_ptr_no_type(%sz : i64) {
-  // expected-error@below {{expected 'elem_type' attribute if opaque pointer type is used}}
-  "llvm.alloca"(%sz) : (i64) -> !llvm.ptr
-}
-
-// -----
-
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{2 operands present, but expected 0}}
-  llvm.getelementptr %base[%pos] : () -> ()
+  llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{2 operands present, but expected 0}}
-  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr)
+  llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 
 // -----
 
 func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
   // expected-error@+1 {{op requires one result}}
-  llvm.getelementptr %base[%pos] : (!llvm.ptr, i64) -> ()
+  llvm.getelementptr %base[%pos] : (!llvm.ptr, i64) -> (), i64
 }
 
 // -----
@@ -133,15 +126,8 @@ func.func @gep_too_few_dynamic(%base : !llvm.ptr) {
 // -----
 
 func.func @load_non_llvm_type(%foo : memref<f32>) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.load %foo : memref<f32>
-}
-
-// -----
-
-func.func @load_non_ptr_type(%foo : f32) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.load %foo : f32
+  // expected-error@+1 {{op operand #0 must be LLVM pointer type}}
+  llvm.load %foo : memref<f32> -> f32
 }
 
 // -----
@@ -177,27 +163,6 @@ func.func @load_unsupported_type(%ptr : !llvm.ptr) {
 func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
   // expected-error@below {{expected alignment for atomic access}}
   %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
-}
-
-// -----
-
-func.func @store_non_llvm_type(%foo : memref<f32>, %bar : f32) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.store %bar, %foo : memref<f32>
-}
-
-// -----
-
-func.func @store_non_ptr_type(%foo : f32, %bar : f32) {
-  // expected-error@+1 {{expected LLVM pointer type}}
-  llvm.store %bar, %foo : f32
-}
-
-// -----
-
-func.func @store_malformed_elem_type(%foo: !llvm.ptr, %bar: f32) {
-  // expected-error@+1 {{expected non-function type}}
-  llvm.store %bar, %foo : !llvm.ptr, "f32"
 }
 
 // -----
@@ -632,14 +597,6 @@ func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
 
 // -----
 
-func.func @atomicrmw_expected_ptr(%f32 : f32) {
-  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM pointer type or integer}}
-  %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (f32, f32) -> f32
-  llvm.return
-}
-
-// -----
-
 func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{op failed to verify that result #0 and operand #1 have the same type}}
   %0 = "llvm.atomicrmw"(%f32_ptr, %f32) {bin_op=11, ordering=1} : (!llvm.ptr, f32) -> i32
@@ -667,14 +624,6 @@ func.func @atomicrmw_unexpected_xchg_type(%i1_ptr : !llvm.ptr, %i1 : i1) {
 func.func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr, %f32 : f32) {
   // expected-error@+1 {{expected LLVM IR integer type}}
   %0 = llvm.atomicrmw max %f32_ptr, %f32 unordered : !llvm.ptr, f32
-  llvm.return
-}
-
-// -----
-
-func.func @cmpxchg_expected_ptr(%f32 : f32) {
-  // expected-error@+1 {{op operand #0 must be LLVM pointer to integer or LLVM pointer type}}
-  %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (f32, f32, f32) -> !llvm.struct<(f32, i1)>
   llvm.return
 }
 
@@ -1438,4 +1387,36 @@ llvm.func @foo(%arg: !llvm.ptr) {
   // expected-error@+1 {{type '!llvm.ptr' cannot be indexed (index #1)}}
   %0 = llvm.getelementptr %arg[0, 4] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
   llvm.return
+}
+
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{to use im2col mode, the tensor has to be at least 3-dimensional}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  return
+}
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{im2col offsets must be 2 less than number of coordinates}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint : !llvm.ptr<3>, !llvm.ptr  
+  return
+}
+
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[]: !llvm.ptr<3>, !llvm.ptr  
+  return
+}
+
+
+// -----
+
+func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
+  // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr  
+  return
 }

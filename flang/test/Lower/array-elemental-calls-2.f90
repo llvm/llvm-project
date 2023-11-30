@@ -1,4 +1,4 @@
-! RUN: bbc -o - -emit-fir %s | FileCheck %s
+! RUN: bbc -o - -emit-fir -hlfir=false %s | FileCheck %s
 
 ! Test lowering of operations sub-expression inside elemental call arguments.
 ! This tests array contexts where an address is needed for each element (for

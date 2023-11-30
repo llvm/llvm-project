@@ -78,8 +78,9 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
 
-  // Reconfigure variable sized registers for AArch64 SVE and SME.
-  void AArch64Reconfigure();
+  bool RegisterWriteCausesReconfigure(const llvm::StringRef name) override;
+
+  bool ReconfigureRegisterInfo() override;
 
 protected:
   friend class ThreadGDBRemote;

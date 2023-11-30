@@ -268,12 +268,12 @@ void DynamicTypePropagation::checkPreCall(const CallEvent &Call,
     //   a more-derived class.
 
     switch (Ctor->getOriginExpr()->getConstructionKind()) {
-    case CXXConstructExpr::CK_Complete:
-    case CXXConstructExpr::CK_Delegating:
+    case CXXConstructionKind::Complete:
+    case CXXConstructionKind::Delegating:
       // No additional type info necessary.
       return;
-    case CXXConstructExpr::CK_NonVirtualBase:
-    case CXXConstructExpr::CK_VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+    case CXXConstructionKind::VirtualBase:
       if (const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion())
         recordFixedType(Target, Ctor->getDecl(), C);
       return;
@@ -360,16 +360,16 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
   if (const CXXConstructorCall *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
     // We may need to undo the effects of our pre-call check.
     switch (Ctor->getOriginExpr()->getConstructionKind()) {
-    case CXXConstructExpr::CK_Complete:
-    case CXXConstructExpr::CK_Delegating:
+    case CXXConstructionKind::Complete:
+    case CXXConstructionKind::Delegating:
       // No additional work necessary.
       // Note: This will leave behind the actual type of the object for
       // complete constructors, but arguably that's a good thing, since it
       // means the dynamic type info will be correct even for objects
       // constructed with operator new.
       return;
-    case CXXConstructExpr::CK_NonVirtualBase:
-    case CXXConstructExpr::CK_VirtualBase:
+    case CXXConstructionKind::NonVirtualBase:
+    case CXXConstructionKind::VirtualBase:
       if (const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion()) {
         // We just finished a base constructor. Now we can use the subclass's
         // type when resolving virtual calls.

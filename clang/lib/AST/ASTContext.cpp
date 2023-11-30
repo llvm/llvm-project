@@ -1096,7 +1096,7 @@ ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
 }
 
 void ASTContext::setCurrentNamedModule(Module *M) {
-  assert(M->isModulePurview());
+  assert(M->isNamedModule());
   assert(!CurrentCXXNamedModule &&
          "We should set named module for ASTContext for only once");
   CurrentCXXNamedModule = M;
@@ -1680,13 +1680,15 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
       Align = std::max(Align, getPreferredTypeAlign(T.getTypePtr()));
       if (BaseT.getQualifiers().hasUnaligned())
         Align = Target->getCharWidth();
-      if (const auto *VD = dyn_cast<VarDecl>(D)) {
-        if (VD->hasGlobalStorage() && !ForAlignof) {
-          uint64_t TypeSize = getTypeSize(T.getTypePtr());
-          Align = std::max(Align, getTargetInfo().getMinGlobalAlign(TypeSize));
-        }
-      }
     }
+
+    // Ensure miminum alignment for global variables.
+    if (const auto *VD = dyn_cast<VarDecl>(D))
+      if (VD->hasGlobalStorage() && !ForAlignof) {
+        uint64_t TypeSize =
+            !BaseT->isIncompleteType() ? getTypeSize(T.getTypePtr()) : 0;
+        Align = std::max(Align, getTargetInfo().getMinGlobalAlign(TypeSize));
+      }
 
     // Fields can be subject to extra alignment constraints, like if
     // the field is packed, the struct is packed, or the struct has a
@@ -2177,7 +2179,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
 #include "clang/Basic/PPCTypes.def"
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   case BuiltinType::Id:                                                        \
     Width = 0;                                                                 \
     Align = ElBits;                                                            \
@@ -3939,6 +3941,9 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
   case BuiltinType::Id:                                                        \
     return {ElBits == 16 ? Float16Ty : (ElBits == 32 ? FloatTy : DoubleTy),    \
             llvm::ElementCount::getScalable(NumEls), NF};
+#define RVV_VECTOR_TYPE_BFLOAT(Name, Id, SingletonId, NumEls, ElBits, NF)      \
+  case BuiltinType::Id:                                                        \
+    return {BFloat16Ty, llvm::ElementCount::getScalable(NumEls), NF};
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), 1};
@@ -3986,11 +3991,14 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   if (!EltTy->isBooleanType() &&                                               \
       ((EltTy->hasIntegerRepresentation() &&                                   \
         EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
-       (EltTy->hasFloatingRepresentation() && IsFP)) &&                        \
+       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
+        IsFP && !IsBF) ||                                                      \
+       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
+        IsBF && !IsFP)) &&                                                     \
       EltTySize == ElBits && NumElts == NumEls && NumFields == NF)             \
     return SingletonId;
 #define RVV_PREDICATE_TYPE(Name, Id, SingletonId, NumEls)                      \
@@ -4008,8 +4016,8 @@ QualType ASTContext::getVectorType(QualType vecType, unsigned NumElts,
   assert(vecType->isBuiltinType() ||
          (vecType->isBitIntType() &&
           // Only support _BitInt elements with byte-sized power of 2 NumBits.
-          llvm::isPowerOf2_32(vecType->getAs<BitIntType>()->getNumBits()) &&
-          vecType->getAs<BitIntType>()->getNumBits() >= 8));
+          llvm::isPowerOf2_32(vecType->castAs<BitIntType>()->getNumBits()) &&
+          vecType->castAs<BitIntType>()->getNumBits() >= 8));
 
   // Check if we've already instantiated a vector of this type.
   llvm::FoldingSetNodeID ID;
@@ -8535,14 +8543,12 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
     }
   }
 
-  unsigned i = 0;
   for (FieldDecl *Field : RDecl->fields()) {
     if (!Field->isZeroLengthBitField(*this) && Field->isZeroSize(*this))
       continue;
-    uint64_t offs = layout.getFieldOffset(i);
+    uint64_t offs = layout.getFieldOffset(Field->getFieldIndex());
     FieldOrBaseOffsets.insert(FieldOrBaseOffsets.upper_bound(offs),
                               std::make_pair(offs, Field));
-    ++i;
   }
 
   if (CXXRec && includeVBases) {
@@ -12221,7 +12227,7 @@ ASTContext::getPredefinedStringLiteralFromCache(StringRef Key) const {
   StringLiteral *&Result = StringLiteralCache[Key];
   if (!Result)
     Result = StringLiteral::Create(
-        *this, Key, StringLiteral::Ordinary,
+        *this, Key, StringLiteralKind::Ordinary,
         /*Pascal*/ false, getStringLiteralArrayType(CharTy, Key.size()),
         SourceLocation());
   return Result;

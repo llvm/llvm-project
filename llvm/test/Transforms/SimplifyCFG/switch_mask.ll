@@ -146,9 +146,9 @@ define i1 @switch_lookup_with_small_i1_default_nonconst(i64 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 15
 ; CHECK-NEXT:    switch i64 [[AND]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 10, label [[LOR_END:%.*]]
-; CHECK-NEXT:    i64 1, label [[LOR_END]]
-; CHECK-NEXT:    i64 2, label [[LOR_END]]
+; CHECK-NEXT:      i64 10, label [[LOR_END:%.*]]
+; CHECK-NEXT:      i64 1, label [[LOR_END]]
+; CHECK-NEXT:      i64 2, label [[LOR_END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i1 @foo()
@@ -172,4 +172,45 @@ default:                                          ; preds = %entry
 lor.end:                                          ; preds = %entry, %entry, %entry, %default
   %0 = phi i1 [ true, %entry ], [ %call, %default ], [ true, %entry ], [ true, %entry ]
   ret i1 %0
+}
+
+; Negative test: The upper bound index of switch is swapped.
+define void @switch_lookup_with_nonconst_range(i32 %x, i1 %cond) {
+; CHECK-LABEL: @switch_lookup_with_nonconst_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_PREHEADER:%.*]]
+; CHECK:       for.preheader:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[FOR_PREHEADER]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[ADD]], 6
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[LOR_END:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.switch_lookup_with_nonconst_range, i32 0, i32 [[ADD]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ 1, [[FOR_END]] ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.preheader
+
+for.preheader:                                    ; preds = %for.preheader, %entry
+  %add = add nuw i32 %x, 1                        ; the UpperBound is unconfirmed
+  br i1 %cond, label %for.preheader, label %for.end
+
+for.end:                                          ; preds = %for.preheader
+  switch i32 %add, label %default [
+  i32 0, label %lor.end
+  i32 1, label %lor.end
+  i32 5, label %lor.end
+  ]
+
+default:                                          ; preds = %for.end
+  br label %lor.end
+
+lor.end:                                          ; preds = %default, %for.end, %for.end, %for.end
+  %retval.0.i.i = phi i32 [ 1, %default ], [ 0, %for.end ], [ 0, %for.end ], [ 0, %for.end ]
+  ret void
 }

@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -use-alloc-runtime %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -use-alloc-runtime %s -o - | FileCheck %s
 
 ! Test lowering of allocatables using runtime for allocate/deallocate statements.
 ! CHECK-LABEL: _QPpointer_runtime(

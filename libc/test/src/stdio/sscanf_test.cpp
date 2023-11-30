@@ -8,7 +8,6 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PlatformDefs.h"
 
 #include "src/stdio/sscanf.h"
 
@@ -231,7 +230,7 @@ TEST(LlvmLibcSScanfTest, FloatConvSimple) {
   int ret_val;
   float result = 0;
 
-  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
+  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf();
   float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(1);
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%f", &result);
@@ -295,7 +294,7 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   double d_result = 0;
   long double ld_result = 0;
 
-  double d_inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
+  double d_inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf();
   long double ld_nan =
       LIBC_NAMESPACE::fputil::FPBits<long double>::build_nan(1);
 
@@ -392,7 +391,7 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
   int ret_val;
   float result = 0;
 
-  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
+  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf();
   float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(1);
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1.0e3", "%f", &result);
@@ -464,7 +463,7 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
   int ret_val;
   float result = 0;
 
-  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
+  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%3f", &result);
   EXPECT_EQ(ret_val, 1);

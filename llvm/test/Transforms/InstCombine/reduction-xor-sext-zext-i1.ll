@@ -32,7 +32,7 @@ define i64 @reduce_xor_zext(<8 x i1> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
-; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP3]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i8 [[TMP3]] to i64
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %zext = zext <8 x i1> %x to <8 x i64>
@@ -93,7 +93,7 @@ define i64 @reduce_xor_zext_external_use(<8 x i1> %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[X:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
-; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP3]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = zext nneg i8 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[TMP4]] to i64
 ; CHECK-NEXT:    store i64 [[EXT]], ptr @glob1, align 8

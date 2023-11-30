@@ -39,7 +39,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
       fir.store %18 to %19 : !fir.ref<i32>
     }
     fir.store %2 to %0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
-    %8 = fir.address_of(@_QQcl.2F746D702F73696D706C652E66393000) : !fir.ref<!fir.char<1,16>>
+    %8 = fir.address_of(@_QQclX2F746D702F73696D706C652E66393000) : !fir.ref<!fir.char<1,16>>
     %9 = fir.convert %0 : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<none>>
     %10 = fir.convert %7 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
     %11 = fir.convert %8 : (!fir.ref<!fir.char<1,16>>) -> !fir.ref<i8>
@@ -54,7 +54,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
     return
   }
   func.func private @_FortranAAssign(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
-  fir.global linkonce @_QQcl.2F746D702F73696D706C652E66393000 constant : !fir.char<1,16> {
+  fir.global linkonce @_QQclX2F746D702F73696D706C652E66393000 constant : !fir.char<1,16> {
     %0 = fir.string_lit "/tmp/simple.f90\00"(16) : !fir.char<1,16>
     fir.has_value %0 : !fir.char<1,16>
   }

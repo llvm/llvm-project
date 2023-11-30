@@ -300,11 +300,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         __enable_if_t<!__has_construct<allocator_type, _Tp*, _Args...>::value> >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static void construct(allocator_type&, _Tp* __p, _Args&&... __args) {
-#if _LIBCPP_STD_VER >= 20
-        _VSTD::construct_at(__p, _VSTD::forward<_Args>(__args)...);
-#else
-        ::new ((void*)__p) _Tp(_VSTD::forward<_Args>(__args)...);
-#endif
+        std::__construct_at(__p, std::forward<_Args>(__args)...);
     }
 
     template <class _Tp, class =
@@ -319,11 +315,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         __enable_if_t<!__has_destroy<allocator_type, _Tp*>::value> >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static void destroy(allocator_type&, _Tp* __p) {
-#if _LIBCPP_STD_VER >= 20
-        _VSTD::destroy_at(__p);
-#else
-        __p->~_Tp();
-#endif
+        std::__destroy_at(__p);
     }
 
     template <class _Ap = _Alloc, class =
@@ -408,14 +400,7 @@ struct __is_cpp17_copy_insertable<_Alloc, __enable_if_t<
 
 #ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
 template <class _Alloc>
-struct __asan_annotate_container_with_allocator
-#   if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1600
-      : true_type {};
-#   else
-      // TODO(LLVM-18): Remove the special-casing
-      : false_type {};
-#   endif
-
+struct __asan_annotate_container_with_allocator : true_type {};
 template <class _Tp>
 struct __asan_annotate_container_with_allocator<allocator<_Tp> > : true_type {};
 #endif

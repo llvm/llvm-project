@@ -82,27 +82,15 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
-    gpuDataTransfer = options.gpuDataTransferStrategy;
-    enableIndexReduction = options.enableIndexReduction;
-    enableGPULibgen = options.enableGPULibgen;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, gpuDataTransfer,
-                                  enableIndexReduction, enableGPULibgen,
-                                  enableRuntimeLibrary);
-    // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
+    SparsificationOptions options(parallelization, enableRuntimeLibrary);
+    // Apply sparsification and cleanup rewriting.
     RewritePatternSet patterns(ctx);
-    if (enableGPULibgen) {
-      // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
-      assert(gpuDataTransfer != GPUDataTransferStrategy::kZeroCopy &&
-             "zero-copy transfer not supported with GPU libgen");
-      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary,
-                                      gpuDataTransfer);
-    }
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
@@ -205,7 +193,8 @@ struct SparseTensorConversionPass
     // The following operations and dialects may be introduced by the
     // rewriting rules, and are therefore marked as legal.
     target.addLegalOp<complex::ConstantOp, complex::NotEqualOp, linalg::FillOp,
-                      linalg::YieldOp, tensor::ExtractOp>();
+                      linalg::YieldOp, tensor::ExtractOp,
+                      tensor::FromElementsOp>();
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
@@ -330,12 +319,18 @@ struct SparseGPUCodegenPass
     : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
   SparseGPUCodegenPass() = default;
   SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
-  SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
+  SparseGPUCodegenPass(unsigned nT, bool enableRT) {
+    numThreads = nT;
+    enableRuntimeLibrary = enableRT;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseGPUCodegenPatterns(patterns, numThreads);
+    if (numThreads == 0)
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
+    else
+      populateSparseGPUCodegenPatterns(patterns, numThreads);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -464,8 +459,9 @@ std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass() {
   return std::make_unique<SparseGPUCodegenPass>();
 }
 
-std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads) {
-  return std::make_unique<SparseGPUCodegenPass>(numThreads);
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads,
+                                                       bool enableRT) {
+  return std::make_unique<SparseGPUCodegenPass>(numThreads, enableRT);
 }
 
 std::unique_ptr<Pass> mlir::createStorageSpecifierToLLVMPass() {

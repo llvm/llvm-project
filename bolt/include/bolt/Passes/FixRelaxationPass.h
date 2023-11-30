@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares the FixRelaxations class, which locates instructions with
-// wrong targets and fixes them. Such problems usually occures when linker
+// wrong targets and fixes them. Such problems usually occurs when linker
 // relaxes (changes) instructions, but doesn't fix relocations types properly
 // for them.
 //
