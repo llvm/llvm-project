@@ -496,7 +496,7 @@ class TransferWriteDropUnitDimsPattern
 ///
 /// Note that there might be some restriction on the leading dim of
 /// `VectorType`:
-///   1. if all the trialing dims of `vectorType` match the trailing dims
+///   1. if all the trailing dims of `vectorType` match the trailing dims
 ///     of `memrefType` then the leading dim of `vectorType` can be arbitrary:
 ///
 ///       1.1 contiguous slice, perfect match
@@ -521,7 +521,7 @@ class TransferWriteDropUnitDimsPattern
 /// at strides).
 static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
 
-  // Get the shape of `vectorType`. The leading dim is treated seperately.
+  // Get the shape of `vectorType`. The leading dim is treated separately.
   ArrayRef<int64_t> targetShape = vectorType.getShape();
   auto targetShapeTrailingDims = targetShape.drop_front(1);
 
@@ -531,13 +531,12 @@ static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   if (!succeeded(getStridesAndOffset(memrefType, strides, offset)))
     return false;
 
-  // Non-unit stride in the trailing dimension means that this is memref is
+  // Non-unit stride in the trailing dimension means this memref is
   // not contiguous.
   if (strides.back() != 1)
     return false;
 
-  // Do all but the leading dim of `vectorType` and the trailing dims of
-  // `memrefType` match?
+  // Do all but the leading dim of `vectorType` and `memrefType` match?
   bool allTrailingDimsMatch = true;
 
   // The trailing dimension of `memrefType` after collapsing/flattening the
@@ -545,11 +544,12 @@ static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
   // to 1.
   int64_t flatDim = 1;
 
-  // Iterate overall all dim of `vectorType` excluding the leading dim and
-  // compare them against the trailing dims of `memrefType`.
+  // Iterate over all dim of `vectorType` (in reverse) excluding the leading dim
+  // and compare them against the trailing dims of `memrefType`.
   strides.pop_back();
-  for (auto [targetDim, memrefDim, memrefStride] : llvm::reverse(llvm::zip(
-           targetShapeTrailingDims, memrefType.getShape(), strides))) {
+  for (auto [targetDim, memrefDim, memrefStride] :
+       llvm::reverse(llvm::zip(targetShapeTrailingDims,
+                               memrefType.getShape().drop_front(1), strides))) {
     flatDim *= memrefDim;
     // If the memref stride does not match the flattened dim, then this is
     // memref is not contiguous.
@@ -564,10 +564,10 @@ static bool isContiguousSlice(MemRefType memrefType, VectorType vectorType) {
     allTrailingDimsMatch = (targetDim == memrefDim);
   }
 
-  // If all dims of `vectorType` (excluding the leading dim) match the trailing
-  // dims `memrefType`, then this is a contiguous load. If there was a
-  // mismatch, then the internal dims have already been verified to be unit
-  // dims, but the leading dim still has to be checked.
+  // If the trailing dims of `vectorType` and `memrefType` match, then this is a
+  // contiguous load. If there was a mismatch, then the internal dims have
+  // already been verified to be unit dims, but the leading dim still has to be
+  // checked.
   return allTrailingDimsMatch ? true : (targetShape[0] == 1);
 }
 
