@@ -216,9 +216,9 @@ attributes #0 = { noinline optnone}
 ; DUMP: 	ContextIds: 1 3 4
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[C0:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[C1:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C0]] AllocTypes: Cold ContextIds: 1
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C1]] AllocTypes: Cold ContextIds: 3
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2]] AllocTypes: Cold ContextIds: 4
 ; DUMP:         Clone of [[D]]
 
 ; REMARKS: created clone _Z1Dv.memprof.1
