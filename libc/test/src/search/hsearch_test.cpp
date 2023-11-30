@@ -60,6 +60,11 @@ TEST(LlvmLibcHSearchTest, GrowFromZero) {
     ASSERT_NE(inserted, static_cast<ENTRY *>(nullptr));
     ASSERT_EQ(inserted->key, &search_data[i]);
   }
+  for (size_t i = sizeof(search_data) - 1; i != 0; --i) {
+    ASSERT_EQ(
+        LIBC_NAMESPACE::hsearch({&search_data[i - 1], nullptr}, FIND)->data,
+        reinterpret_cast<void *>(i - 1));
+  }
 
   LIBC_NAMESPACE::hdestroy();
 }

@@ -23,7 +23,7 @@ struct Group {
     return {_mm_loadu_si128(static_cast<const __m128i *>(addr))};
   }
 
-  // Load a group of control words from an arbitary address.
+  // Load a group of control words from an aligned address.
   LIBC_INLINE static Group load_aligned(const void *__restrict addr) {
     return {_mm_load_si128(static_cast<const __m128i *>(addr))};
   }

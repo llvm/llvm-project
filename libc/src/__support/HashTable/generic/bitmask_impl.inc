@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/HashTable/bitmask.h"
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
 
@@ -52,7 +51,7 @@ struct Group {
     return {data.value};
   }
 
-  // Load a group of control words from an arbitary address.
+  // Load a group of control words from an aligned address.
   LIBC_INLINE static Group load_aligned(const void *__restrict addr) {
     return *static_cast<const Group *>(addr);
   }
