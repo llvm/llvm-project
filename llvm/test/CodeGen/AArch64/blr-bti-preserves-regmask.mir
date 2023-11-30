@@ -1,0 +1,63 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=aarch64-expand-pseudo -o - %s | FileCheck %s
+
+# When expanding a BLR_BTI, we should keep the regmask that was attached to it.
+# Otherwise we could end up using a register after the BL which was clobbered by
+# the function that was called.
+# CHECK:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit $sp {
+# CHECK:      BL @_setjmp, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp
+# CHECK:      HINT 36
+# CHECK:    }
+
+# Generated from C, then simplified:
+# void _setjmp();
+# void a(int b) {
+#   _setjmp();
+#   for (; b;)
+#     ;
+# }
+
+--- |
+  define void @a() {
+    ret void
+  }
+
+  declare void @_setjmp(...)
+...
+---
+name: a
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$x19' }
+  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, callee-saved-register: '$lr' }
+  - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 8, callee-saved-register: '$fp' }
+body: |
+  bb.0:
+    successors: %bb.2, %bb.1
+    liveins: $w0, $lr, $x19
+
+    frame-setup PAUTH_PROLOGUE implicit-def $lr, implicit $lr, implicit $sp
+    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -4 :: (store (s64) into %stack.2), (store (s64) into %stack.1)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 32
+    frame-setup STRXui killed $x19, $sp, 2 :: (store (s64) into %stack.0)
+    $fp = frame-setup ADDXri $sp, 0, 0
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 32
+    frame-setup CFI_INSTRUCTION offset $w19, -16
+    frame-setup CFI_INSTRUCTION offset $w30, -24
+    frame-setup CFI_INSTRUCTION offset $w29, -32
+    $w19 = ORRWrr $wzr, $w0
+    BLR_BTI @_setjmp, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    CBZW killed renamable $w19, %bb.2
+
+  bb.1:
+    B %bb.1
+
+  bb.2:
+    frame-destroy CFI_INSTRUCTION def_cfa $wsp, 32
+    $x19 = frame-destroy LDRXui $sp, 2 :: (load (s64) from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4 :: (load (s64) from %stack.2), (load (s64) from %stack.1)
+    frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+    frame-destroy PAUTH_EPILOGUE implicit-def $lr, implicit $lr, implicit $sp
+    frame-destroy CFI_INSTRUCTION restore $w19
+    frame-destroy CFI_INSTRUCTION restore $w30
+    frame-destroy CFI_INSTRUCTION restore $w29
+    RET_ReallyLR
+...
