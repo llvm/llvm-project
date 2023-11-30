@@ -79,7 +79,17 @@ public:
           break;
         }
       } else if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
-        return; // OpenACC construct do not need check for unlabelled CYCLES
+        switch ((llvm::acc::Directive)currentDirective_) {
+        // exclude loop directives which do not need a check for unlabelled
+        // CYCLES
+        case llvm::acc::Directive::ACCD_loop:
+        case llvm::acc::Directive::ACCD_kernels_loop:
+        case llvm::acc::Directive::ACCD_parallel_loop:
+        case llvm::acc::Directive::ACCD_serial_loop:
+          return;
+        default:
+          break;
+        }
       }
       CheckConstructNameBranching("CYCLE");
     }
@@ -339,6 +349,10 @@ protected:
 
   void CheckAllowed(C clause, bool warnInsteadOfError = false);
 
+  // Check that the clause appears only once. The counter is reset when the
+  // separator clause appears.
+  void CheckAllowedOncePerGroup(C clause, C separator);
+
   void CheckAtLeastOneClause();
 
   void CheckNotAllowedIfClause(
@@ -532,6 +546,27 @@ void DirectiveStructureChecker<D, C, PC,
           parser::ToUpperCaseLetters(getClauseName(clause).str()),
           ContextDirectiveAsFortran());
     }
+  }
+}
+
+template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
+void DirectiveStructureChecker<D, C, PC,
+    ClauseEnumSize>::CheckAllowedOncePerGroup(C clause, C separator) {
+  bool clauseIsPresent = false;
+  for (auto cl : GetContext().actualClauses) {
+    if (cl == clause) {
+      if (clauseIsPresent) {
+        context_.Say(GetContext().clauseSource,
+            "At most one %s clause can appear on the %s directive or in group separated by the %s clause"_err_en_US,
+            parser::ToUpperCaseLetters(getClauseName(clause).str()),
+            parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
+            parser::ToUpperCaseLetters(getClauseName(separator).str()));
+      } else {
+        clauseIsPresent = true;
+      }
+    }
+    if (cl == separator)
+      clauseIsPresent = false;
   }
 }
 

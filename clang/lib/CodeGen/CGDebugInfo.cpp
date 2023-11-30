@@ -69,6 +69,29 @@ static uint32_t getDeclAlignIfRequired(const Decl *D, const ASTContext &Ctx) {
   return D->hasAttr<AlignedAttr>() ? D->getMaxAlignment() : 0;
 }
 
+/// Given a VarDecl corresponding to either the definition or
+/// declaration of a C++ static data member, if it has a constant
+/// initializer and is evaluatable, return the evaluated value.
+/// Returns std::nullopt otherwise.
+static std::optional<APValue>
+evaluateConstantInitializer(const clang::VarDecl *VD,
+                            const clang::ASTContext &Ctx) {
+  assert(VD != nullptr);
+
+  if (!VD->isStaticDataMember())
+    return std::nullopt;
+
+  if (!VD->isUsableInConstantExpressions(Ctx))
+    return std::nullopt;
+
+  auto const *InitExpr = VD->getAnyInitializer();
+  Expr::EvalResult Result;
+  if (!InitExpr->EvaluateAsConstantExpr(Result, Ctx))
+    return std::nullopt;
+
+  return Result.Val;
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -5610,14 +5633,11 @@ void CGDebugInfo::EmitGlobalVariable(const VarDecl *VD) {
   if (VD->hasAttr<NoDebugAttr>())
     return;
 
-  if (!VD->hasInit())
-    return;
-
   const auto CacheIt = DeclCache.find(VD);
   if (CacheIt != DeclCache.end())
     return;
 
-  auto const *InitVal = VD->evaluateValue();
+  const auto InitVal = evaluateConstantInitializer(VD, CGM.getContext());
   if (!InitVal)
     return;
 
