@@ -179,7 +179,7 @@ class X86FoldTablesEmitter {
   //           performs a load OR a store, and their #i'th operand is folded.
   //
   // BroadcastTable#i - Holds instructions which the their memory form performs
-  //                    a broadcat load and their #i'th operand is folded.
+  //                    a broadcast load and their #i'th operand is folded.
   FoldTable Table2Addr;
   FoldTable Table0;
   FoldTable Table1;
