@@ -215,6 +215,21 @@ Specifically, it’s capable of evaluating the wide pointers that already exist 
 the source code. All other expressions are evaluated according to C/C++
 semantics.
 
+C++ support
+===========
+
+C++ has multiple options to write code in a bounds-safe manner, such as
+following the bounds-safety core guidelines and/or using hardened libc++ along
+with the `C++ Safe Buffer model
+<https://discourse.llvm.org/t/rfc-c-buffer-hardening/65734>`_. However, these
+techniques may require ABI changes and may not be applicable to code
+interoperating with C. When the ABI of an existing program needs to be preserved
+and for headers shared between C and C++, ``-fbounds-safety`` offers a potential
+solution.
+
+``-fbounds-safety`` is not currently supported in C++, but we believe the
+general approach would be applicable for future efforts.
+
 Upstreaming plan
 ================
 

@@ -47,16 +47,19 @@ adopt, offering these properties that make it widely adoptable in practice:
 * It interoperates well with plain C code.
 * It can be adopted partially and incrementally while still providing safety
   benefits.
-* It is syntactically and semantically compatible with C.
+* It is a conforming extension to C.
 * Consequently, source code that adopts the extension can continue to be
-  compiled by toolchains that do not support the extension.
+  compiled by toolchains that do not support the extension (CAVEAT: this still
+  requires inclusion of a header file micro-defining bounds annotations to
+  empty).
 * It has a relatively low adoption cost.
-* It can be implemented on top of Clang.
 
 This document discusses the key designs of ``-fbounds-safety``. The document is
 subject to be actively updated with a more detailed specification. The
-implementation plan can be found in `Implementation plans for -fbounds-safety
-<BoundsSafetyImplPlans.rst>`_.
+implementation plan can be found in Implementation plans for -fbounds-safety.
+
+.. Cross reference doesn't currently work
+   `Implementation plans for -fbounds-safety <BoundsSafetyImplPlans.rst>`_.
 
 Programming Model
 =================
@@ -91,16 +94,23 @@ within the specified bounds.
 A bounds annotation defines an invariant for the pointer type, and the model
 ensures that this invariant remains true. In the example below, pointer ``p``
 annotated with ``__counted_by(count)`` must always point to a memory buffer
-containing at least ``count`` elements of the pointee type. Increasing the value
-of ``count``, like in the example below, would violate this invariant and permit
-out-of-bounds access to the pointer. To avoid this, the compiler emits either a
-compile-time error or a run-time trap. Section `Maintaining correctness of
-bounds annotations`_ provides more details about the programming model.
+containing at least ``count`` elements of the pointee type. Changing the value
+of ``count``, like in the example below, may violate this invariant and permit
+out-of-bounds access to the pointer. To avoid this, the compiler employs
+compile-time restrictions and emits run-time checks as necessary to ensure the
+new count value doesn't exceed the actual length of the buffer. Section
+`Maintaining correctness of bounds annotations`_ provides more details about
+this programming model.
 
 .. code-block:: c
 
+   int g;
+
    void foo(int *__counted_by(count) p, size_t count) {
-      count++; // violates the invariant of __counted_by
+      count++; // may violate the invariant of __counted_by
+      count--; // may violate the invariant of __counted_by if count was 0.
+      count = g; // may violate the invariant of __counted_by
+                 // depending on the value of `g`.
    }
 
 The requirement to annotate all pointers with explicit bounds information could
@@ -216,7 +226,7 @@ Accessing a pointer outside the specified bounds causes a run-time trap or a
 compile-time error. Also, the model maintains correctness of bounds annotations
 when the pointer and/or the related value containing the bounds information are
 updated or passed as arguments. This is done by compile-time restrictions or
-run-time checks (see Section `Maintaining correctness of bounds annotations`_
+run-time checks (see `Maintaining correctness of bounds annotations`_
 for more detail). For instance, initializing ``buf`` with ``null`` while
 assigning non-zero value to ``count``, as shown in the following example, would
 violate the ``__counted_by`` annotation because a null pointer does not point to
@@ -284,6 +294,7 @@ in ABI surfaces.
   two’s complement integer computation, and at the LLVM IR level this means
   ``getelementptr`` won’t get ``inbounds`` keyword. Accessing memory using the
   OOB pointer is prevented via a run-time bounds check.
+
 * ``__indexable`` : A pointer with this annotation becomes a wide pointer
   carrying the upper bound (but no explicit lower bound), the layout of which is
   equivalent to ``struct { T *ptr; T *upper_bound; };``. Since ``__indexable``
@@ -299,6 +310,7 @@ in ABI surfaces.
   ``__indexable`` pointer is allowed to have a pointer value above the upper
   bound and creating such a pointer is well-defined behavior. Dereferencing such
   a pointer, however, will cause a run-time trap.
+
 * ``__bidi_indexable`` offers the best flexibility out of all the pointer
   annotations in this model, as ``__bidi_indexable`` pointers can be used for
   any pointer operation. However, this comes with the largest code size and
@@ -351,6 +363,7 @@ converted to ``__indexable`` pointers using the intrinsic function
 * ``__null_terminated`` : The pointer or array is terminated by NULL or 0.
   Modifying the terminator or incrementing the pointer beyond it is prevented at
   run time.
+
 * ``__terminated_by(T)`` : The pointer or array is terminated by ``T`` which is
   a constant expression. Accessing or incrementing the pointer beyond the
   terminator is not allowed. This is a generalization of ``__null_terminated``
@@ -362,6 +375,7 @@ Annotation for interoperating with bounds-unsafe code
 * ``__unsafe_indexable`` : A pointer with this annotation behaves the same as a
   plain C pointer. That is, the pointer does not have any bounds information and
   pointer operations are not checked.
+
 * ``__unsafe_indexable`` can be used to mark pointers from system headers or
   pointers from code that has not adopted -fbounds safety. This enables
   interoperation between code using ``-fbounds-safety`` and code that does not.
@@ -465,7 +479,7 @@ bounds annotations.
 Default pointer types in typedef
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pointer types in ``typedef``s do not have implicit default bounds annotations.
+Pointer types in ``typedef``\s do not have implicit default bounds annotations.
 Instead, the bounds annotation is determined when the ``typedef`` is used. The
 following example shows that no pointer annotation is specified in the ``typedef
 pint_t`` while each instance of ``typedef``'ed pointer gets its bounds
@@ -485,20 +499,83 @@ Pointer types in a ``typedef`` can still have explicit annotations, e.g.,
 ``typedef int *__single``, in which case the bounds annotation ``__single`` will
 apply to every use of the ``typedef``.
 
-Array to pointer promotion
---------------------------
+Array to pointer promotion to secure arrays (including VLAs)
+------------------------------------------------------------
 
-In C, when an array is referenced, it is automatically promoted (or “decayed”)
-to a pointer to its first element (e.g., ``&arr[0]``). Similarly, in
-``-fbounds-safety``, arrays are also promoted to pointers, but with the addition
-of an implicit bounds annotation. Arrays on function parameters are promoted to
-corresponding ``__counted_by`` pointers. Consequently, incomplete arrays (or
-arrays without size) will cause a compiler error unless it has ``__counted_by``
-annotation in its bracket. All other arrays are promoted to ``__bidi_indexable``
-pointers, with the equivalent of ``&arr[0]`` serving as the lower bound and
-``&arr[array_size]`` (or one past the last element) serving as the upper bound.
-This way, all array accesses are subject to bounds checking, just as their
-corresponding pointers are.
+Arrays on function prototypes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In C, arrays on function prototypes are promoted (or "decayed") to a pointer to
+its first element (e.g., ``&arr[0]``). In ``-fbounds-safety``, arrays are also
+decayed to pointers, but with the addition of an implicit bounds annotation,
+which includes variable-length arrays (VLAs). As shown in the following example,
+arrays on function prototypes are decalyed to corresponding ``__counted_by``
+pointers.
+
+.. code-block:: c
+
+   // Function prototype: void foo(int n, int *__counted_by(n) arr);
+   void foo(int n, int arr[n]);
+
+   // Function prototype: void bar(int *__counted_by(10) arr);
+   void bar(int arr[10]);
+
+This means the array parameters are treated as `__counted_by` pointers within
+the function and callers of the function also see them as the corresponding
+`__counted_by` pointers.
+
+Incomplete arrays on function prototypes will cause a compiler error unless it
+has ``__counted_by`` annotation in its bracket.
+
+.. code-block:: c
+
+   void f1(int n, int arr[]); // error
+
+   void f3(int n, int arr[__counted_by(n)]); // ok
+
+   void f2(int n, int arr[n]); // ok, decays to int *__counted_by(n)
+
+   void f4(int n, int *__counted_by(n) arr); // ok
+
+   void f5(int n, int *arr); // ok, but decays to int *__single,
+                             // and cannot be used for pointer arithmetic
+
+Array references
+^^^^^^^^^^^^^^^^
+
+In C, similar to arrays on the function prototypes, a reference to array is
+automatically promoted (or “decayed”) to a pointer to its first element (e.g.,
+``&arr[0]``).
+
+In `-fbounds-safety`, array references are promoted to ``__bidi_indexable``
+pointers which contain the upper and lower bounds of the array, with the
+equivalent of ``&arr[0]`` serving as the lower bound and ``&arr[array_size]``
+(or one past the last element) serving as the upper bound. This applies to all
+types of arrays including constant-length arrays, variable-length arrays (VLAs),
+and flexible array members annotated with `__counted_by`.
+
+In the following example, reference to ``vla`` promotes to ``int
+*__bidi_indexable``, with ``&vla[n]`` as the upper bound and ``&vla[0]`` as the
+lower bound. Then, it's copied to ``int *p``, which is implicitly ``int
+*__bidi_indexable p``. Please note that value of ``n`` used to create the upper
+bound is ``10``, not ``100``, in this case because ``10`` is the actual length
+of ``vla``, the value of ``n`` at the time when the array is being allocated.
+
+.. code-block:: c
+
+   void foo(void) {
+      int n = 10;
+      int vla[n];
+      n = 100;
+      int *p = vla; // { .ptr: &vla[0], .upper: &vla[10], .lower: &vla[0] }
+                    // it's `&vla[10]` because the value of `n` was 10 at the
+                    // time when the array is actually allocated.
+      // ...
+   }
+
+By promoting array references to ``__bidi_indexable``, all array accesses are
+bounds checked in ``-fbounds-safety``, just as ``__bidi_indexable`` pointers
+are.
 
 Maintaining correctness of bounds annotations
 ---------------------------------------------
@@ -524,16 +601,19 @@ Additionally, an explicit bounds annotation such as ``int *__counted_by(count)
 buf`` defines a relationship between two variables, ``buf`` and ``count``:
 namely, that ``buf`` has ``count`` number of elements available. This
 relationship must hold even after any of these related variables are updated. To
-this end, the compiler inserts additional checks to ensure the new bufhas at
-least as many elements as the new count indicates. Furthermore, the model
-requires that assignments to buf and count must be side by side, with no side
-effects between them. This prevents buf and count from temporarily falling out
-of sync due to updates happening at a distance.
+this end, the model requires that assignments to ``buf`` and ``count`` must be
+side by side, with no side effects between them. This prevents ``buf`` and
+``count`` from temporarily falling out of sync due to updates happening at a
+distance.
 
 The example below shows a function ``alloc_buf`` that initializes a struct that
 members that use the ``__counted_by`` annotation. The compiler allows these
 assignments because ``sbuf->buf`` and ``sbuf->count`` are updated side by side
 without any side effects in between the assignments.
+
+Furthermore, the compiler inserts additional run-time checks to ensure the new
+``buf`` has at least as many elements as the new ``count`` indicates as shown in
+the transformed pseudo code of function ``alloc_buf()`` in the example below.
 
 .. code-block:: c
 
@@ -546,6 +626,40 @@ without any side effects in between the assignments.
       sbuf->buf = (int *)malloc(sizeof(int) * nelems);
       sbuf->count = nelems;
    }
+
+   // Transformed pseudo code:
+   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {
+      // Materialize RHS values:
+      int *tmp_ptr = (int *)malloc(sizeof(int) * nelems);
+      int tmp_count = nelems;
+      // Inserted check:
+      //   - checks to ensure that `lower <= tmp_ptr <= upper`
+      //   - if (upper(tmp_ptr) - tmp_ptr < tmp_count) trap();
+      sbuf->buf = tmp_ptr;
+      sbuf->count = tmp_count;
+   }
+
+Whether the compiler can optimize such run-time checks depends on how the upper
+bound of the pointer is derived. If the source pointer has ``__sized_by``,
+``__counted_by``, or a variant of such, the compiler assumes that the upper
+bound calculation doesn't overflow, e.g., ``ptr + size`` (where the type of
+``ptr`` is ``void *__sized_by(size)``), because when the ``__sized_by`` pointer
+is initialized, ``-fbounds-safety`` inserts run-time checks to ensure that ``ptr
++ size`` doesn't overflow and that ``size >= 0``.
+
+Assuming the upper bound calculation doesn't overflow, the compiler can simplify
+the trap condition ``upper(tmp_ptr) - tmp_ptr < tmp_count`` to ``size <
+tmp_count`` so if both ``size`` and ``tmp_count`` values are known at compile
+time such that ``0 <= tmp_count <= size``, the optimizer can remove the check.
+
+``ptr + size`` may still overflow if the ``__sized_by`` pointer is created from
+code that doesn't enable ``-fbounds-safety``, which is undefined behavior.
+
+In the previous code example with the transformed ``alloc_buf()``, the upper
+bound of ``tmp_ptr`` is derived from ``void *__sized_by_or_null(size)``, which
+is the return type of ``malloc()``. Hence, the pointer arithmetic doesn't
+overflow or ``tmp_ptr`` is null. Therefore, if ``nelems`` was given as a
+compile-time constant, the compiler could remove the checks.
 
 Cast rules
 ----------
@@ -567,14 +681,15 @@ only apply to the top pointer types. ``__unsafe_indexable`` cannot be converted
 to any other safe pointer types (``__single``, ``__bidi_indexable``,
 ``__counted_by``, etc) using a cast. The extension provides builtins to force
 this conversion, ``__unsafe_forge_bidi_indexable(type, pointer, char_count)`` to
-convert pointer to a __bidi_indexable pointer of type with ``char_count`` bytes
-available and ``__unsafe_forge_single(type, pointer)`` to convert pointer to a
-single pointer of type type. The following examples show the usage of these
-functions. Function example_forge_bidi gets an external buffer from an unsafe
-library by calling ``get_buf()`` which returns ``void *__unsafe_indexable.``
-Under the type rules, this cannot be directly assigned to ``void *buf``
-(implicitly ``void *__bidi_indexable``). Thus, ``__unsafe_forge_bidi_indexable``
-is used to manually create a ``__bidi_indexable`` from the unsafe buffer.
+convert pointer to a ``__bidi_indexable`` pointer of type with ``char_count``
+bytes available and ``__unsafe_forge_single(type, pointer)`` to convert pointer
+to a single pointer of type type. The following examples show the usage of these
+functions. Function ``example_forge_bidi()`` gets an external buffer from an
+unsafe library by calling ``get_buf()`` which returns ``void
+*__unsafe_indexable.`` Under the type rules, this cannot be directly assigned to
+``void *buf`` (implicitly ``void *__bidi_indexable``). Thus,
+``__unsafe_forge_bidi_indexable`` is used to manually create a
+``__bidi_indexable`` from the unsafe buffer.
 
 .. code-block:: c
 
@@ -597,15 +712,16 @@ is used to manually create a ``__bidi_indexable`` from the unsafe buffer.
       // ...
    }
 
-* Function example_forge_single takes a file handle by calling fopen defined in
-  system header stdio.h. Assuming stdio.h did not adopt ``-fbounds-safety``, the
-  return type of fopen would implicitly be ``FILE *__unsafe_indexable`` and thus
-  it cannot be directly assigned to ``FILE *fp`` in the bounds-safe source. To
-  allow this operation, ``__unsafe_forge_single`` is used to create a
-  ``__single`` from the return value of fopen.
+* Function ``example_forge_single`` takes a file handle by calling fopen defined
+  in system header ``stdio.h``. Assuming ``stdio.h`` did not adopt
+  ``-fbounds-safety``, the return type of ``fopen`` would implicitly be ``FILE
+  *__unsafe_indexable`` and thus it cannot be directly assigned to ``FILE *fp``
+  in the bounds-safe source. To allow this operation, ``__unsafe_forge_single``
+  is used to create a ``__single`` from the return value of ``fopen``.
 
-* Similar to ``__unsafe_indexable``, any non-pointer type (e.g., ``int``) cannot
-  be converted to any safe pointer type. ``__unsafe_forge_single`` or
+* Similar to ``__unsafe_indexable``, any non-pointer type (including ``int``,
+  ``intptr_t``, ``uintptr_t``, etc.) cannot be converted to any safe pointer
+  type because these don't have bounds information. ``__unsafe_forge_single`` or
   ``__unsafe_forge_bidi_indexable`` must be used to force the conversion.
 
 * Any safe pointer types can cast to ``__unsafe_indexable`` because it doesn’t
@@ -673,13 +789,12 @@ Portability with toolchains that do not support the extension
 
 The language model is designed so that it doesn’t alter the semantics of the
 original C program, other than introducing deterministic traps where otherwise
-the behavior is undefined and/or unsafe. The model has this property that when
-the extension is disabled, annotations compile to empty macros, thus the same
-source code compiles as a normal C program without any bounds annotations. The
-annotations used in this document are macro-defined as type attributes. This
-simplifies adoption both in Clang and other toolchains by not introducing any
-new keywords or altering the grammar. Toolchains not supporting this extension
-can simply macro-define the annotations to empty. For example, the toolchain not
+the behavior is undefined and/or unsafe. We will provide a toolchain header
+(``ptrcheck.h``) that macro-defines the annotations as type attributes when
+``-fbounds-safety`` is enabled and defines them to empty when the extension is
+disabled. Thus, the code adopting ``-fbounds-safety`` can compile with
+toolchains that do not support this extension, by including the header or adding
+macros to define the annotations to empty. For example, the toolchain not
 supporting this extension may not have a header defining ``__counted_by``, so
 the code using ``__counted_by`` must define it as nothing or include a header
 that has the define.
@@ -696,19 +811,6 @@ that has the define.
    // expands to `void foo(int * ptr, size_t count);`
    // when extension is not enabled or not available
    void foo(int *__counted_by(count) ptr, size_t count);
-
-C++ support
-===========
-
-C++ has multiple options to write code in a bounds-safe manner, such as
-following the bounds-safety core guidelines and/or using hardened libc++ along
-with the `C++ Safe Buffer model
-<https://discourse.llvm.org/t/rfc-c-buffer-hardening/65734>`_. However, these
-techniques may require ABI changes. When the ABI of an existing program needs to
-be preserved, ``-fbounds-safety`` offers a potential solution. While our initial
-effort for the language specification and upstreaming will focus on the model
-for the C language, we believe the general approach would be applicable for C++
-and would benefit it.
 
 Other potential applications of bounds annotations
 ==================================================
@@ -730,9 +832,9 @@ and it does not guarantee other types of memory safety properties. Consequently,
 it may not prevent some of the secondary bounds safety violations caused by
 other types of safety violations such as type confusion. For instance,
 ``-fbounds-safety`` does not perform type-safety checks on conversions between
-__single pointers of different pointee types (e.g., ``char *__single`` → ``void
-*__single`` → ``int *__single``) beyond what the foundation languages (C/C++)
-already offer.
+`__single`` pointers of different pointee types (e.g., ``char *__single`` →
+``void *__single`` → ``int *__single``) beyond what the foundation languages
+(C/C++) already offer.
 
 ``-fbounds-safety`` heavily relies on run-time checks to keep the bounds safety
 and the soundness of the type system. This may incur significant code size
