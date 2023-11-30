@@ -174,10 +174,10 @@ private:
                          unsigned FoldedIdx, bool isManual);
 
   // Print the given table as a static const C++ array of type
-  // X86MemoryFoldTableEntry.
+  // X86FoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
                   formatted_raw_ostream &OS) {
-    OS << "static const X86MemoryFoldTableEntry " << TableName << "[] = {\n";
+    OS << "static const X86FoldTableEntry " << TableName << "[] = {\n";
 
     for (auto &E : Table)
       E.second.print(OS);
