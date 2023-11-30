@@ -56,12 +56,14 @@ public:
 
 private:
   void ServerURLsChangedCallback() {
-    Args urls = GetDebugInfoDURLs();
+    m_server_urls = GetDebugInfoDURLs();
     llvm::SmallVector<llvm::StringRef> dbginfod_urls;
-    llvm::transform(urls, dbginfod_urls.end(),
-                    [](const auto &obj) { return obj.ref(); });
+    llvm::for_each(
+        m_server_urls, [&](const auto &obj) { dbginfod_urls.push_back(obj.ref()); });
     llvm::setDefaultDebuginfodUrls(dbginfod_urls);
   }
+  // Storage for the StringRef's used within the Debuginfod library.
+  Args m_server_urls;
 };
 
 } // namespace
@@ -109,13 +111,13 @@ SymbolLocator *SymbolLocatorDebuginfod::CreateInstance() {
   return new SymbolLocatorDebuginfod();
 }
 
-std::optional<ModuleSpec> SymbolLocatorDebuginfod::LocateExecutableObjectFile(
-    const ModuleSpec &module_spec) {
+static std::optional<FileSpec>
+GetFileForModule(const ModuleSpec &module_spec,
+                 std::function<llvm::Expected<std::string>(llvm::object::BuildIDRef)> PullFromServer) {
   const UUID &module_uuid = module_spec.GetUUID();
   if (module_uuid.IsValid() && llvm::canUseDebuginfod()) {
     llvm::object::BuildID build_id(module_uuid.GetBytes());
-    llvm::Expected<std::string> result =
-        llvm::getCachedOrDownloadExecutable(build_id);
+    llvm::Expected<std::string> result = PullFromServer(build_id);
     if (result)
       return FileSpec(*result);
     // An error here should be logged as a failure in the Debuginfod library,
@@ -125,18 +127,12 @@ std::optional<ModuleSpec> SymbolLocatorDebuginfod::LocateExecutableObjectFile(
   return {};
 }
 
+std::optional<ModuleSpec> SymbolLocatorDebuginfod::LocateExecutableObjectFile(
+    const ModuleSpec &module_spec) {
+  return GetFileForModule(module_spec, llvm::getCachedOrDownloadExecutable);
+}
+
 std::optional<FileSpec> SymbolLocatorDebuginfod::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
-  const UUID &module_uuid = module_spec.GetUUID();
-  if (module_uuid.IsValid() && llvm::canUseDebuginfod()) {
-    llvm::object::BuildID build_id(module_uuid.GetBytes());
-    llvm::Expected<std::string> result =
-        llvm::getCachedOrDownloadDebuginfo(build_id);
-    if (result)
-      return FileSpec(*result);
-    // An error here should be logged as a failure in the Debuginfod library,
-    // so just consume it here
-    consumeError(result.takeError());
-  }
-  return {};
+  return GetFileForModule(module_spec, llvm::getCachedOrDownloadDebuginfo);
 }

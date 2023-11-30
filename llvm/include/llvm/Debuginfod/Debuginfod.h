@@ -48,7 +48,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls();
 
 /// Sets the list of debuginfod server URLs to query. This overrides the
 /// environment variable DEBUGINFOD_URLS.
-void setDefaultDebuginfodUrls(SmallVector<StringRef> URLs);
+void setDefaultDebuginfodUrls(const SmallVector<StringRef> &URLs);
 
 /// Finds a default local file caching directory for the debuginfod client,
 /// first checking DEBUGINFOD_CACHE_PATH.
