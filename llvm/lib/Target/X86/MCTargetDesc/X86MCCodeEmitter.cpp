@@ -1013,6 +1013,9 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
   case X86II::XOPA:
     Prefix.set5M(0xA);
     break;
+  case X86II::T_MAP4:
+    Prefix.set5M(0x4);
+    break;
   case X86II::T_MAP5:
     Prefix.set5M(0x5);
     break;
@@ -1305,6 +1308,8 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
       }
     }
   }
+  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitREX2Prefix)
+    Prefix.setLowerBound(REX2);
   switch (TSFlags & X86II::FormMask) {
   default:
     assert(!HasRegOp && "Unexpected form in emitREXPrefix!");

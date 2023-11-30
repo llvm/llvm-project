@@ -163,7 +163,8 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+      mlir::ValueRange(entryOp.getAccPtr()));
 
   modBuilder.setInsertionPointAfter(registerFuncOp);
   builder.restoreInsertionPoint(crtInsPt);
@@ -195,7 +196,7 @@ static void createDeclareDeallocFuncWithArg(
           /*structured=*/false, /*implicit=*/false, clause,
           boxAddrOp.getType());
   builder.create<mlir::acc::DeclareExitOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::Value{}, mlir::ValueRange(entryOp.getAccPtr()));
 
   mlir::Value varPtr;
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
@@ -2762,7 +2763,13 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   EntryOp entryOp = createDataEntryOp<EntryOp>(
       builder, loc, addrOp.getResTy(), asFortran, bounds,
       /*structured=*/false, implicit, clause, addrOp.getResTy().getType());
-  builder.create<DeclareOp>(loc, mlir::ValueRange(entryOp.getAccPtr()));
+  if constexpr (std::is_same_v<DeclareOp, mlir::acc::DeclareEnterOp>)
+    builder.create<DeclareOp>(
+        loc, mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+        mlir::ValueRange(entryOp.getAccPtr()));
+  else
+    builder.create<DeclareOp>(loc, mlir::Value{},
+                              mlir::ValueRange(entryOp.getAccPtr()));
   mlir::Value varPtr;
   if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
     builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
@@ -2812,7 +2819,8 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+      mlir::ValueRange(entryOp.getAccPtr()));
 
   modBuilder.setInsertionPointAfter(registerFuncOp);
 }
@@ -2850,7 +2858,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
           boxAddrOp.getType());
 
   builder.create<mlir::acc::DeclareExitOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::Value{}, mlir::ValueRange(entryOp.getAccPtr()));
 
   mlir::Value varPtr;
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
@@ -2994,21 +3002,13 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
 static void
 genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      Fortran::semantics::SemanticsContext &semanticsContext,
-                     Fortran::lower::StatementContext &fctCtx,
+                     Fortran::lower::StatementContext &openAccCtx,
                      mlir::Location loc,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
       createEntryOperands, copyoutEntryOperands, deviceResidentEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-
-  mlir::acc::DeclareOp declareOp;
-  auto parentOp = builder.getBlock()->getParentOp();
-  if (mlir::isa<mlir::acc::DeclareOp>(parentOp)) {
-    declareOp = mlir::dyn_cast<mlir::acc::DeclareOp>(
-        *builder.getBlock()->getParentOp());
-    builder.setInsertionPoint(declareOp.getOperation());
-  }
 
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *copyClause =
@@ -3098,23 +3098,41 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  if (declareOp) {
-    declareOp.getDataClauseOperandsMutable().append(dataClauseOperands);
-    builder.setInsertionPointToEnd(&declareOp.getRegion().back());
+  mlir::func::FuncOp funcOp = builder.getFunction();
+  auto ops = funcOp.getOps<mlir::acc::DeclareEnterOp>();
+  mlir::Value declareToken;
+  if (ops.empty()) {
+    declareToken = builder.create<mlir::acc::DeclareEnterOp>(
+        loc, mlir::acc::DeclareTokenType::get(builder.getContext()),
+        dataClauseOperands);
   } else {
-    declareOp = builder.create<mlir::acc::DeclareOp>(loc, dataClauseOperands);
-    builder.createBlock(&declareOp.getRegion(), declareOp.getRegion().end(), {},
-                        {});
-    builder.setInsertionPointToEnd(&declareOp.getRegion().back());
+    auto declareOp = *ops.begin();
+    auto newDeclareOp = builder.create<mlir::acc::DeclareEnterOp>(
+        loc, mlir::acc::DeclareTokenType::get(builder.getContext()),
+        declareOp.getDataClauseOperands());
+    newDeclareOp.getDataClauseOperandsMutable().append(dataClauseOperands);
+    declareToken = newDeclareOp.getToken();
+    declareOp.erase();
   }
-  fctCtx.attachCleanup([&builder, declareOp, loc, createEntryOperands,
-                        copyEntryOperands, copyoutEntryOperands,
-                        deviceResidentEntryOperands]() {
-    auto parentOp = builder.getBlock()->getParentOp();
-    if (mlir::isa<mlir::acc::DeclareOp>(parentOp)) {
-      builder.create<mlir::acc::TerminatorOp>(loc);
-      builder.setInsertionPointAfter(declareOp);
+
+  openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
+                            copyEntryOperands, copyoutEntryOperands,
+                            deviceResidentEntryOperands, declareToken]() {
+    llvm::SmallVector<mlir::Value> operands;
+    operands.append(createEntryOperands);
+    operands.append(deviceResidentEntryOperands);
+    operands.append(copyEntryOperands);
+    operands.append(copyoutEntryOperands);
+
+    mlir::func::FuncOp funcOp = builder.getFunction();
+    auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
+    if (ops.empty()) {
+      builder.create<mlir::acc::DeclareExitOp>(loc, declareToken, operands);
+    } else {
+      auto declareOp = *ops.begin();
+      declareOp.getDataClauseOperandsMutable().append(operands);
     }
+
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
         builder, createEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,
@@ -3169,7 +3187,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
 
 static void genACC(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semanticsContext,
-                   Fortran::lower::StatementContext &fctCtx,
+                   Fortran::lower::StatementContext &openAccCtx,
                    const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                        &declareConstruct) {
 
@@ -3187,7 +3205,7 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     auto funcOp =
         builder.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
     if (funcOp)
-      genDeclareInFunction(converter, semanticsContext, fctCtx,
+      genDeclareInFunction(converter, semanticsContext, openAccCtx,
                            directiveLocation, accClauseList);
     else if (moduleOp)
       genDeclareInModule(converter, moduleOp, accClauseList);
@@ -3454,7 +3472,7 @@ void Fortran::lower::genOpenACCConstruct(
 void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
-    Fortran::lower::StatementContext &fctCtx,
+    Fortran::lower::StatementContext &openAccCtx,
     const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct,
     Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
 
@@ -3462,7 +3480,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
       common::visitors{
           [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                   &standaloneDeclarativeConstruct) {
-            genACC(converter, semanticsContext, fctCtx,
+            genACC(converter, semanticsContext, openAccCtx,
                    standaloneDeclarativeConstruct);
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct

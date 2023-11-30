@@ -1033,6 +1033,7 @@ cc_library(
     ],
     deps = [
         ":analysis",
+        ":apinotes",
         ":ast",
         ":basic",
         ":basic_arm_cde_aliases_gen",
@@ -2412,6 +2413,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IRReader",
         "//llvm:LTO",
         "//llvm:MC",

@@ -165,7 +165,6 @@ uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
     result -= 0x10000'0000;
   else if (!negativeA && negativeB)
     result += 0x10000'0000;
-
   return result;
 }
 
@@ -444,10 +443,12 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_LE64_LO20:
   case R_LARCH_TLS_LE64_HI12:
     return R_TPREL;
+  case R_LARCH_ADD6:
   case R_LARCH_ADD8:
   case R_LARCH_ADD16:
   case R_LARCH_ADD32:
   case R_LARCH_ADD64:
+  case R_LARCH_SUB6:
   case R_LARCH_SUB8:
   case R_LARCH_SUB16:
   case R_LARCH_SUB32:
@@ -650,6 +651,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     write32le(loc, setK12(read32le(loc), extractBits(val, 63, 52)));
     return;
 
+  case R_LARCH_ADD6:
+    *loc = (*loc & 0xc0) | ((*loc + val) & 0x3f);
+    return;
   case R_LARCH_ADD8:
     *loc += val;
     return;
@@ -661,6 +665,9 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
     return;
   case R_LARCH_ADD64:
     write64le(loc, read64le(loc) + val);
+    return;
+  case R_LARCH_SUB6:
+    *loc = (*loc & 0xc0) | ((*loc - val) & 0x3f);
     return;
   case R_LARCH_SUB8:
     *loc -= val;

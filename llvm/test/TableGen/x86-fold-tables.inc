@@ -1,4 +1,4 @@
-static const X86MemoryFoldTableEntry MemoryFoldTable2Addr[] = {
+static const X86FoldTableEntry Table2Addr[] = {
   {X86::ADD16ri_DB, X86::ADD16mi, TB_NO_REVERSE},
   {X86::ADD16rr_DB, X86::ADD16mr, TB_NO_REVERSE},
   {X86::ADD32ri_DB, X86::ADD32mi, TB_NO_REVERSE},
@@ -214,7 +214,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable2Addr[] = {
   {X86::XOR8rr, X86::XOR8mr, TB_NO_REVERSE},
 };
 
-static const X86MemoryFoldTableEntry MemoryFoldTable0[] = {
+static const X86FoldTableEntry Table0[] = {
   {X86::BT16ri8, X86::BT16mi8, TB_FOLDED_LOAD},
   {X86::BT32ri8, X86::BT32mi8, TB_FOLDED_LOAD},
   {X86::BT64ri8, X86::BT64mi8, TB_FOLDED_LOAD},
@@ -407,7 +407,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable0[] = {
   {X86::VPMOVWBZrr, X86::VPMOVWBZmr, TB_FOLDED_STORE},
 };
 
-static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
+static const X86FoldTableEntry Table1[] = {
   {X86::AESIMCrr, X86::AESIMCrm, TB_ALIGN_16},
   {X86::AESKEYGENASSIST128rr, X86::AESKEYGENASSIST128rm, TB_ALIGN_16},
   {X86::BEXTR32rr, X86::BEXTR32rm, 0},
@@ -487,9 +487,13 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   {X86::IMUL64rri32, X86::IMUL64rmi32, 0},
   {X86::IMUL64rri8, X86::IMUL64rmi8, 0},
   {X86::KMOVBkk, X86::KMOVBkm, TB_NO_REVERSE},
+  {X86::KMOVBkk_EVEX, X86::KMOVBkm_EVEX, TB_NO_REVERSE},
   {X86::KMOVDkk, X86::KMOVDkm, 0},
+  {X86::KMOVDkk_EVEX, X86::KMOVDkm_EVEX, 0},
   {X86::KMOVQkk, X86::KMOVQkm, 0},
+  {X86::KMOVQkk_EVEX, X86::KMOVQkm_EVEX, 0},
   {X86::KMOVWkk, X86::KMOVWkm, 0},
+  {X86::KMOVWkk_EVEX, X86::KMOVWkm_EVEX, 0},
   {X86::LWPINS32rri, X86::LWPINS32rmi, 0},
   {X86::LWPINS64rri, X86::LWPINS64rmi, 0},
   {X86::LWPVAL32rri, X86::LWPVAL32rmi, 0},
@@ -1294,7 +1298,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable1[] = {
   {X86::VUCOMISSrr_Int, X86::VUCOMISSrm_Int, TB_NO_REVERSE},
 };
 
-static const X86MemoryFoldTableEntry MemoryFoldTable2[] = {
+static const X86FoldTableEntry Table2[] = {
   {X86::ADD16rr_DB, X86::ADD16rm, TB_NO_REVERSE},
   {X86::ADD32rr_DB, X86::ADD32rm, TB_NO_REVERSE},
   {X86::ADD64rr_DB, X86::ADD64rm, TB_NO_REVERSE},
@@ -3251,7 +3255,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable2[] = {
   {X86::XORPSrr, X86::XORPSrm, TB_ALIGN_16},
 };
 
-static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
+static const X86FoldTableEntry Table3[] = {
   {X86::VADDPDZ128rrkz, X86::VADDPDZ128rmkz, 0},
   {X86::VADDPDZ256rrkz, X86::VADDPDZ256rmkz, 0},
   {X86::VADDPDZrrkz, X86::VADDPDZrmkz, 0},
@@ -4861,7 +4865,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
   {X86::VXORPSZrrkz, X86::VXORPSZrmkz, 0},
 };
 
-static const X86MemoryFoldTableEntry MemoryFoldTable4[] = {
+static const X86FoldTableEntry Table4[] = {
   {X86::VADDPDZ128rrk, X86::VADDPDZ128rmk, 0},
   {X86::VADDPDZ256rrk, X86::VADDPDZ256rmk, 0},
   {X86::VADDPDZrrk, X86::VADDPDZrmk, 0},

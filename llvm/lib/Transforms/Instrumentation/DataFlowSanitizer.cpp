@@ -1288,7 +1288,7 @@ void DataFlowSanitizer::buildExternWeakCheckIfNeeded(IRBuilder<> &IRB,
   // for a extern weak function, add a check here to help identify the issue.
   if (GlobalValue::isExternalWeakLinkage(F->getLinkage())) {
     std::vector<Value *> Args;
-    Args.push_back(IRB.CreatePointerCast(F, IRB.getInt8PtrTy()));
+    Args.push_back(F);
     Args.push_back(IRB.CreateGlobalStringPtr(F->getName()));
     IRB.CreateCall(DFSanWrapperExternWeakNullFn, Args);
   }
@@ -2270,8 +2270,7 @@ std::pair<Value *, Value *> DFSanFunction::loadShadowOriginSansLoadTracking(
     IRBuilder<> IRB(Pos);
     CallInst *Call =
         IRB.CreateCall(DFS.DFSanLoadLabelAndOriginFn,
-                       {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                        ConstantInt::get(DFS.IntptrTy, Size)});
+                       {Addr, ConstantInt::get(DFS.IntptrTy, Size)});
     Call->addRetAttr(Attribute::ZExt);
     return {IRB.CreateTrunc(IRB.CreateLShr(Call, DFS.OriginWidthBits),
                             DFS.PrimitiveShadowTy),
@@ -2527,10 +2526,9 @@ void DFSanFunction::storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size,
   }
 
   if (shouldInstrumentWithCall()) {
-    IRB.CreateCall(DFS.DFSanMaybeStoreOriginFn,
-                   {CollapsedShadow,
-                    IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                    ConstantInt::get(DFS.IntptrTy, Size), Origin});
+    IRB.CreateCall(
+        DFS.DFSanMaybeStoreOriginFn,
+        {CollapsedShadow, Addr, ConstantInt::get(DFS.IntptrTy, Size), Origin});
   } else {
     Value *Cmp = convertToBool(CollapsedShadow, IRB, "_dfscmp");
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -2924,8 +2922,7 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   if (DFSF.DFS.shouldTrackOrigins()) {
     IRB.CreateCall(
         DFSF.DFS.DFSanMemOriginTransferFn,
-        {IRB.CreatePointerCast(I.getArgOperand(0), IRB.getInt8PtrTy()),
-         IRB.CreatePointerCast(I.getArgOperand(1), IRB.getInt8PtrTy()),
+        {I.getArgOperand(0), I.getArgOperand(1),
          IRB.CreateIntCast(I.getArgOperand(2), DFSF.DFS.IntptrTy, false)});
   }
 
@@ -3213,10 +3210,9 @@ void DFSanVisitor::visitLibAtomicLoad(CallBase &CB) {
   // TODO: Support ClCombinePointerLabelsOnLoad
   // TODO: Support ClEventCallbacks
 
-  NextIRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                     {NextIRB.CreatePointerCast(DstPtr, NextIRB.getInt8PtrTy()),
-                      NextIRB.CreatePointerCast(SrcPtr, NextIRB.getInt8PtrTy()),
-                      NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  NextIRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {DstPtr, SrcPtr, NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 Value *DFSanVisitor::makeAddReleaseOrderingTable(IRBuilder<> &IRB) {
@@ -3252,10 +3248,9 @@ void DFSanVisitor::visitLibAtomicStore(CallBase &CB) {
   // TODO: Support ClCombinePointerLabelsOnStore
   // TODO: Support ClEventCallbacks
 
-  IRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                 {IRB.CreatePointerCast(DstPtr, IRB.getInt8PtrTy()),
-                  IRB.CreatePointerCast(SrcPtr, IRB.getInt8PtrTy()),
-                  IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {DstPtr, SrcPtr, IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 void DFSanVisitor::visitLibAtomicExchange(CallBase &CB) {
@@ -3273,16 +3268,14 @@ void DFSanVisitor::visitLibAtomicExchange(CallBase &CB) {
   // the additional complexity to address this is not warrented.
 
   // Current Target to Dest
-  IRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                 {IRB.CreatePointerCast(DstPtr, IRB.getInt8PtrTy()),
-                  IRB.CreatePointerCast(TargetPtr, IRB.getInt8PtrTy()),
-                  IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {DstPtr, TargetPtr, IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 
   // Current Src to Target (overriding)
-  IRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginTransferFn,
-                 {IRB.CreatePointerCast(TargetPtr, IRB.getInt8PtrTy()),
-                  IRB.CreatePointerCast(SrcPtr, IRB.getInt8PtrTy()),
-                  IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanMemShadowOriginTransferFn,
+      {TargetPtr, SrcPtr, IRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 void DFSanVisitor::visitLibAtomicCompareExchange(CallBase &CB) {
@@ -3305,13 +3298,10 @@ void DFSanVisitor::visitLibAtomicCompareExchange(CallBase &CB) {
 
   // If original call returned true, copy Desired to Target.
   // If original call returned false, copy Target to Expected.
-  NextIRB.CreateCall(
-      DFSF.DFS.DFSanMemShadowOriginConditionalExchangeFn,
-      {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false),
-       NextIRB.CreatePointerCast(TargetPtr, NextIRB.getInt8PtrTy()),
-       NextIRB.CreatePointerCast(ExpectedPtr, NextIRB.getInt8PtrTy()),
-       NextIRB.CreatePointerCast(DesiredPtr, NextIRB.getInt8PtrTy()),
-       NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+  NextIRB.CreateCall(DFSF.DFS.DFSanMemShadowOriginConditionalExchangeFn,
+                     {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false),
+                      TargetPtr, ExpectedPtr, DesiredPtr,
+                      NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
 }
 
 void DFSanVisitor::visitCallBase(CallBase &CB) {

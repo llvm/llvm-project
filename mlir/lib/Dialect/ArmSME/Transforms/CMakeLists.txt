@@ -1,7 +1,6 @@
 add_mlir_dialect_library(MLIRArmSMETransforms
   ArmSMETypeConverter.cpp
   EnableArmStreaming.cpp
-  LegalizeForLLVMExport.cpp
   TileAllocation.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -12,7 +11,6 @@ add_mlir_dialect_library(MLIRArmSMETransforms
 
   LINK_LIBS PUBLIC
   MLIRArmSMEDialect
-  MLIRArmSMEUtils
   MLIRFuncDialect
   MLIRLLVMCommonConversion
   MLIRVectorDialect

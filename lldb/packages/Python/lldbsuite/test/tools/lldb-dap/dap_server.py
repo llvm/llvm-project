@@ -731,8 +731,9 @@ class DebugCommunication(object):
         postRunCommands=None,
         enableAutoVariableSummaries=False,
         enableSyntheticChildDebugging=False,
-        commandEscapePrefix="`",
+        commandEscapePrefix=None,
         customFrameFormat=None,
+        customThreadFormat=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -776,6 +777,8 @@ class DebugCommunication(object):
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
             args_dict["customFrameFormat"] = customFrameFormat
+        if customThreadFormat:
+            args_dict["customThreadFormat"] = customThreadFormat
 
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging

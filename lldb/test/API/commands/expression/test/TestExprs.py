@@ -12,6 +12,7 @@ o test_expr_commands_can_handle_quotes:
 """
 
 
+import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -43,9 +44,9 @@ class BasicExprCommandsTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-    @expectedFailure(
-        "llvm.org/pr17135 <rdar://problem/14874559> APFloat::toString does not identify the correct (i.e. least) precision."
-    )
+    # llvm.org/pr17135 <rdar://problem/14874559>
+    # APFloat::toString does not identify the correct (i.e. least) precision.
+    @unittest2.expectedFailure
     def test_floating_point_expr_commands(self):
         self.build_and_run()
 

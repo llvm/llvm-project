@@ -34,6 +34,14 @@ enum PragmaFloatControlKind {
   PFC_Push,      // #pragma float_control(push)
   PFC_Pop        // #pragma float_control(pop)
 };
+
+enum PragmaFPKind {
+  PFK_Contract,    // #pragma clang fp contract
+  PFK_Reassociate, // #pragma clang fp reassociate
+  PFK_Reciprocal,  // #pragma clang fp reciprocal
+  PFK_Exceptions,  // #pragma clang fp exceptions
+  PFK_EvalMethod   // #pragma clang fp eval_method
+};
 }
 
 #endif

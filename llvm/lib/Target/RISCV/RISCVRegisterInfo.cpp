@@ -85,10 +85,11 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   // Mark any registers requested to be reserved as such
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
-    if (MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(Reg))
+    if (Subtarget.isRegisterReservedByUser(Reg))
       markSuperRegs(Reserved, Reg);
   }
 
@@ -118,6 +119,13 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Floating point environment registers.
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
+    if (Subtarget.isRVE())
+      report_fatal_error("Graal reserved registers do not exist in RVE");
+    markSuperRegs(Reserved, RISCV::X23);
+    markSuperRegs(Reserved, RISCV::X27);
+  }
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;

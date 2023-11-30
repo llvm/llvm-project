@@ -19,7 +19,7 @@ def main():
     )
     parser.add_argument(
         "--check_longer_than",
-        default=0.5,
+        default=1,
         type=float,
         help="Only warn on tests longer than X seconds for at least one side",
     )

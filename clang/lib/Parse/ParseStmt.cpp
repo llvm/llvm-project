@@ -235,10 +235,7 @@ Retry:
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
-    if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
-         (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
-             ParsedStmtContext()) &&
-        ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
+    if (((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
@@ -475,6 +472,9 @@ Retry:
     // Do not prohibit attributes if they were OpenMP attributes.
     return ParseOpenMPDeclarativeOrExecutableDirective(StmtCtx);
 
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirectiveStmt();
+
   case tok::annot_pragma_ms_pointers_to_members:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
@@ -698,6 +698,18 @@ StmtResult Parser::ParseSEHLeaveStatement() {
   return Actions.ActOnSEHLeaveStmt(LeaveLoc, getCurScope());
 }
 
+static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
+  // When in C mode (but not Microsoft extensions mode), diagnose use of a
+  // label that is followed by a declaration rather than a statement.
+  if (!P.getLangOpts().CPlusPlus && !P.getLangOpts().MicrosoftExt &&
+      isa<DeclStmt>(SubStmt)) {
+    P.Diag(SubStmt->getBeginLoc(),
+           P.getLangOpts().C23
+               ? diag::warn_c23_compat_label_followed_by_declaration
+               : diag::ext_c_label_followed_by_declaration);
+  }
+}
+
 /// ParseLabeledStatement - We have an identifier and a ':' after it.
 ///
 ///       label:
@@ -712,9 +724,10 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
 
-  // The substatement is always a 'statement', not a 'declaration', but is
-  // otherwise in the same context as the labeled-statement.
-  StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
+  StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   Token IdentTok = Tok;  // Save the whole token.
   ConsumeToken();  // eat the identifier.
@@ -763,6 +776,8 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   if (SubStmt.isInvalid())
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
+  DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
+
   LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
                                               IdentTok.getLocation());
   Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
@@ -781,9 +796,10 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
                                       bool MissingCase, ExprResult Expr) {
   assert((MissingCase || Tok.is(tok::kw_case)) && "Not a case stmt!");
 
-  // The substatement is always a 'statement', not a 'declaration', but is
-  // otherwise in the same context as the labeled-statement.
-  StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
+  StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   // It is very common for code to contain many case statements recursively
   // nested, as in (but usually without indentation):
@@ -909,6 +925,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     // Broken sub-stmt shouldn't prevent forming the case statement properly.
     if (SubStmt.isInvalid())
       SubStmt = Actions.ActOnNullStmt(SourceLocation());
+    DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
     Actions.ActOnCaseStmtBody(DeepestParsedCaseStmt, SubStmt.get());
   }
 
@@ -924,9 +941,10 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
 StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::kw_default) && "Not a default stmt!");
 
-  // The substatement is always a 'statement', not a 'declaration', but is
-  // otherwise in the same context as the labeled-statement.
-  StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
+  // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
+  // substatement in a selection statement, in place of the loop body in an
+  // iteration statement, or in place of the statement that follows a label.
+  StmtCtx &= ~ParsedStmtContext::AllowStandaloneOpenMPDirectives;
 
   SourceLocation DefaultLoc = ConsumeToken();  // eat the 'default'.
 
@@ -960,6 +978,7 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   if (SubStmt.isInvalid())
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
+  DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
   return Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc,
                                   SubStmt.get(), getCurScope());
 }

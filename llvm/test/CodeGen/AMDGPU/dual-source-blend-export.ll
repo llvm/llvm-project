@@ -18,7 +18,7 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 inreg %PrimMask, <2 x float> %InterpC
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32 v8, -1, v8
 ; GCN-NEXT:    v_interp_p10_f32 v9, v5, v3, v5 wait_exp:2
 ; GCN-NEXT:    v_interp_p10_f32 v11, v6, v3, v6 wait_exp:1
-; GCN-NEXT:    v_interp_p10_f32 v10, v7, v3, v7
+; GCN-NEXT:    v_interp_p10_f32 v10, v7, v3, v7 wait_exp:0
 ; GCN-NEXT:    v_interp_p10_f32 v3, v4, v3, v4 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f32 v5, v5, v2, v9 wait_exp:7
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)

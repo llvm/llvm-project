@@ -481,9 +481,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::f32, MVT::f64}, Legal);
 
   if (Subtarget->haveRoundOpsF64())
-    setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FRINT}, MVT::f64, Legal);
+    setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FROUNDEVEN}, MVT::f64,
+                       Legal);
   else
-    setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FRINT, ISD::FFLOOR},
+    setOperationAction({ISD::FCEIL, ISD::FTRUNC, ISD::FROUNDEVEN, ISD::FFLOOR},
                        MVT::f64, Custom);
 
   setOperationAction(ISD::FFLOOR, MVT::f64, Legal);
@@ -1792,7 +1793,7 @@ SDValue SITargetLowering::lowerKernArgParameterPtr(SelectionDAG &DAG,
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
     MRI.getLiveInVirtReg(InputPtrReg->getRegister()), PtrVT);
 
-  return DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::Fixed(Offset));
+  return DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::getFixed(Offset));
 }
 
 SDValue SITargetLowering::getImplicitArgPtr(SelectionDAG &DAG,
@@ -6241,7 +6242,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
   uint32_t StructOffset = (AS == AMDGPUAS::LOCAL_ADDRESS) ? 0x40 : 0x44;
 
   SDValue Ptr =
-      DAG.getObjectPtrOffset(DL, QueuePtr, TypeSize::Fixed(StructOffset));
+      DAG.getObjectPtrOffset(DL, QueuePtr, TypeSize::getFixed(StructOffset));
 
   // TODO: Use custom target PseudoSourceValue.
   // TODO: We should use the value from the IR intrinsic call, but it might not
@@ -9084,12 +9085,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto F = LoadMMO->getFlags() &
              ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
-                                      Size, LoadMMO->getBaseAlign());
+    LoadMMO =
+        MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad, Size,
+                                LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
-                                sizeof(int32_t), LoadMMO->getBaseAlign());
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t),
+        LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
 
     auto Load = DAG.getMachineNode(Opc, DL, M->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});
@@ -9160,11 +9162,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
     auto F = LoadMMO->getFlags() &
              ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    LoadMMO = MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad,
-                                      Size, LoadMMO->getBaseAlign());
-    MachineMemOperand *StoreMMO =
-        MF.getMachineMemOperand(StorePtrI, F | MachineMemOperand::MOStore,
-                                sizeof(int32_t), Align(4));
+    LoadMMO =
+        MF.getMachineMemOperand(LoadPtrI, F | MachineMemOperand::MOLoad, Size,
+                                LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, sizeof(int32_t), Align(4),
+        LoadMMO->getAAInfo());
 
     auto Load = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     DAG.setNodeMemRefs(Load, {LoadMMO, StoreMMO});

@@ -82,19 +82,15 @@ struct SparsificationPass
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
     parallelization = options.parallelizationStrategy;
-    enableGPULibgen = options.enableGPULibgen;
     enableRuntimeLibrary = options.enableRuntimeLibrary;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     // Translate strategy flags to strategy options.
-    SparsificationOptions options(parallelization, enableGPULibgen,
-                                  enableRuntimeLibrary);
-    // Apply GPU libgen (if requested), sparsification, and cleanup rewriting.
+    SparsificationOptions options(parallelization, enableRuntimeLibrary);
+    // Apply sparsification and cleanup rewriting.
     RewritePatternSet patterns(ctx);
-    if (enableGPULibgen)
-      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
     populateSparsificationPatterns(patterns, options);
     scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
@@ -323,12 +319,18 @@ struct SparseGPUCodegenPass
     : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
   SparseGPUCodegenPass() = default;
   SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
-  SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
+  SparseGPUCodegenPass(unsigned nT, bool enableRT) {
+    numThreads = nT;
+    enableRuntimeLibrary = enableRT;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseGPUCodegenPatterns(patterns, numThreads);
+    if (numThreads == 0)
+      populateSparseGPULibgenPatterns(patterns, enableRuntimeLibrary);
+    else
+      populateSparseGPUCodegenPatterns(patterns, numThreads);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -457,8 +459,9 @@ std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass() {
   return std::make_unique<SparseGPUCodegenPass>();
 }
 
-std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads) {
-  return std::make_unique<SparseGPUCodegenPass>(numThreads);
+std::unique_ptr<Pass> mlir::createSparseGPUCodegenPass(unsigned numThreads,
+                                                       bool enableRT) {
+  return std::make_unique<SparseGPUCodegenPass>(numThreads, enableRT);
 }
 
 std::unique_ptr<Pass> mlir::createStorageSpecifierToLLVMPass() {

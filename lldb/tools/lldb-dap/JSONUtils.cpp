@@ -57,7 +57,7 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
                           llvm::StringRef defaultValue) {
   if (obj == nullptr)
     return defaultValue;
-  return GetString(*obj, key);
+  return GetString(*obj, key, defaultValue);
 }
 
 // Gets an unsigned integer from a JSON object using the key, or returns the
@@ -852,26 +852,33 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
 llvm::json::Value CreateThread(lldb::SBThread &thread) {
   llvm::json::Object object;
   object.try_emplace("id", (int64_t)thread.GetThreadID());
-  const char *thread_name = thread.GetName();
-  const char *queue_name = thread.GetQueueName();
-
   std::string thread_str;
-  if (thread_name) {
-    thread_str = std::string(thread_name);
-  } else if (queue_name) {
-    auto kind = thread.GetQueue().GetKind();
-    std::string queue_kind_label = "";
-    if (kind == lldb::eQueueKindSerial) {
-      queue_kind_label = " (serial)";
-    } else if (kind == lldb::eQueueKindConcurrent) {
-      queue_kind_label = " (concurrent)";
-    }
-
-    thread_str = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                               queue_name, queue_kind_label)
-                     .str();
+  lldb::SBStream stream;
+  if (g_dap.thread_format &&
+      thread.GetDescriptionWithFormat(g_dap.thread_format, stream).Success()) {
+    thread_str = stream.GetData();
   } else {
-    thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+    const char *thread_name = thread.GetName();
+    const char *queue_name = thread.GetQueueName();
+
+    if (thread_name) {
+      thread_str = std::string(thread_name);
+    } else if (queue_name) {
+      auto kind = thread.GetQueue().GetKind();
+      std::string queue_kind_label = "";
+      if (kind == lldb::eQueueKindSerial) {
+        queue_kind_label = " (serial)";
+      } else if (kind == lldb::eQueueKindConcurrent) {
+        queue_kind_label = " (concurrent)";
+      }
+
+      thread_str =
+          llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
+                        queue_name, queue_kind_label)
+              .str();
+    } else {
+      thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+    }
   }
 
   EmplaceSafeString(object, "name", thread_str);

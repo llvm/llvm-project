@@ -1819,6 +1819,8 @@ Token ASTReader::ReadToken(ModuleFile &F, const RecordDataImpl &Record,
     case tok::annot_pragma_openmp:
     case tok::annot_pragma_openmp_end:
     case tok::annot_pragma_unused:
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
       break;
     default:
       llvm_unreachable("missing deserialization code for annotation token");
@@ -3704,6 +3706,19 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         PendingInstantiations.push_back(getGlobalDeclID(F, Record[I++]));
         PendingInstantiations.push_back(
           ReadSourceLocation(F, Record, I).getRawEncoding());
+      }
+      break;
+
+    case PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES:
+      if (Record.size() % 2 != 0)
+        return llvm::createStringError(
+            std::errc::illegal_byte_sequence,
+            "Invalid PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES block");
+
+      for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
+        DeclID Key = getGlobalDeclID(F, Record[I++]);
+        DeclID Value = getGlobalDeclID(F, Record[I++]);
+        PendingInstantiationsOfConstexprEntities[Key].insert(Value);
       }
       break;
 
@@ -8716,6 +8731,20 @@ void ASTReader::ReadPendingInstantiations(
   PendingInstantiations.clear();
 }
 
+void ASTReader::ReadPendingInstantiationsOfConstexprEntity(
+    const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) {
+  for (auto *Redecl : D->redecls()) {
+    if (!Redecl->isFromASTFile())
+      continue;
+    DeclID Id = Redecl->getGlobalID();
+    auto It = PendingInstantiationsOfConstexprEntities.find(Id);
+    if (It == PendingInstantiationsOfConstexprEntities.end())
+      continue;
+    for (DeclID InstantiationId : It->second)
+      Decls.insert(cast<NamedDecl>(GetDecl(InstantiationId)));
+  }
+}
+
 void ASTReader::ReadLateParsedTemplates(
     llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
         &LPTMap) {
@@ -10274,6 +10303,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_compare:
     C = new (Context) OMPCompareClause();
     break;
+  case llvm::omp::OMPC_fail:
+    C = new (Context) OMPFailClause();
+    break;
   case llvm::omp::OMPC_seq_cst:
     C = new (Context) OMPSeqCstClause();
     break;
@@ -10666,6 +10698,16 @@ void OMPClauseReader::VisitOMPUpdateClause(OMPUpdateClause *C) {
 void OMPClauseReader::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseReader::VisitOMPCompareClause(OMPCompareClause *) {}
+
+// Read the parameter of fail clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPFailClause(OMPFailClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation FailParameterLoc = Record.readSourceLocation();
+  C->setFailParameterLoc(FailParameterLoc);
+  OpenMPClauseKind CKind = Record.readEnum<OpenMPClauseKind>();
+  C->setFailParameter(CKind);
+}
 
 void OMPClauseReader::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 
