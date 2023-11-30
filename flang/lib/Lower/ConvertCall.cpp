@@ -12,7 +12,6 @@
 
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Allocatable.h"
-#include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"

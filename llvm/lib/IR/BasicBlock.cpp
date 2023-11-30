@@ -1013,6 +1013,58 @@ DPMarker *BasicBlock::getMarker(InstListType::iterator It) {
   return It->DbgMarker;
 }
 
+void BasicBlock::reinsertInstInDPValues(
+    Instruction *I, std::optional<DPValue::self_iterator> Pos) {
+  // "I" was originally removed from a position where it was
+  // immediately in front of Pos. Any DPValues on that position then "fell down"
+  // onto Pos. "I" has been re-inserted at the front of that wedge of DPValues,
+  // shuffle them around to represent the original positioning. To illustrate:
+  //
+  //   Instructions:  I1---I---I0
+  //       DPValues:    DDD DDD
+  //
+  // Instruction "I" removed,
+  //
+  //   Instructions:  I1------I0
+  //       DPValues:    DDDDDD
+  //                       ^Pos
+  //
+  // Instruction "I" re-inserted (now):
+  //
+  //   Instructions:  I1---I------I0
+  //       DPValues:        DDDDDD
+  //                           ^Pos
+  //
+  // After this method completes:
+  //
+  //   Instructions:  I1---I---I0
+  //       DPValues:    DDD DDD
+
+  // This happens if there were no DPValues on I0. Are there now DPValues there?
+  if (!Pos) {
+    DPMarker *NextMarker = getNextMarker(I);
+    if (!NextMarker)
+      return;
+    if (NextMarker->StoredDPValues.empty())
+      return;
+    // There are DPMarkers there now -- they fell down from "I".
+    DPMarker *ThisMarker = createMarker(I);
+    ThisMarker->absorbDebugValues(*NextMarker, false);
+    return;
+  }
+
+  // Is there even a range of DPValues to move?
+  DPMarker *DPM = (*Pos)->getMarker();
+  auto Range = make_range(DPM->StoredDPValues.begin(), (*Pos));
+  if (Range.begin() == Range.end())
+    return;
+
+  // Otherwise: splice.
+  DPMarker *ThisMarker = createMarker(I);
+  assert(ThisMarker->StoredDPValues.empty());
+  ThisMarker->absorbDebugValues(Range, *DPM, true);
+}
+
 #ifndef NDEBUG
 /// In asserts builds, this checks the numbering. In non-asserts builds, it
 /// is defined as a no-op inline function in BasicBlock.h.

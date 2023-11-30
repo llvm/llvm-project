@@ -1401,6 +1401,44 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
   def  : RegRegStPat<store, XVSTX, LASX256, vt>;
 }
 
+// Vector extraction with constant index.
+def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
+          (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
+def : Pat<(i64 (vector_extract v16i16:$xj, uimm3:$imm)),
+          (VPICKVE2GR_H (EXTRACT_SUBREG v16i16:$xj, sub_128), uimm3:$imm)>;
+def : Pat<(i64 (vector_extract v8i32:$xj, uimm2:$imm)),
+          (VPICKVE2GR_W (EXTRACT_SUBREG v8i32:$xj, sub_128), uimm2:$imm)>;
+def : Pat<(i64 (vector_extract v4i64:$xj, uimm1:$imm)),
+          (VPICKVE2GR_D (EXTRACT_SUBREG v4i64:$xj, sub_128), uimm1:$imm)>;
+def : Pat<(f32 (vector_extract v8f32:$xj, uimm2:$imm)),
+          (f32 (EXTRACT_SUBREG (XVREPL128VEI_W v8f32:$xj, uimm2:$imm), sub_32))>;
+def : Pat<(f64 (vector_extract v4f64:$xj, uimm1:$imm)),
+          (f64 (EXTRACT_SUBREG (XVREPL128VEI_D v4f64:$xj, uimm1:$imm), sub_64))>;
+
+// Vector extraction with variable index.
+def : Pat<(i64 (vector_extract v32i8:$xj, i64:$rk)),
+          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (XVREPLVE_B v32i8:$xj,
+                                                                    i64:$rk),
+                                                         sub_32)),
+                                    GPR), (i64 24))>;
+def : Pat<(i64 (vector_extract v16i16:$xj, i64:$rk)),
+          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (XVREPLVE_H v16i16:$xj,
+                                                                    i64:$rk),
+                                                         sub_32)),
+                                    GPR), (i64 16))>;
+def : Pat<(i64 (vector_extract v8i32:$xj, i64:$rk)),
+          (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (XVREPLVE_W v8i32:$xj, i64:$rk),
+                                                 sub_32)),
+                            GPR)>;
+def : Pat<(i64 (vector_extract v4i64:$xj, i64:$rk)),
+          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (XVREPLVE_D v4i64:$xj, i64:$rk),
+                                                 sub_64)),
+                            GPR)>;
+def : Pat<(f32 (vector_extract v8f32:$xj, i64:$rk)),
+          (f32 (EXTRACT_SUBREG (XVREPLVE_W v8f32:$xj, i64:$rk), sub_32))>;
+def : Pat<(f64 (vector_extract v4f64:$xj, i64:$rk)),
+          (f64 (EXTRACT_SUBREG (XVREPLVE_D v4f64:$xj, i64:$rk), sub_64))>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern
