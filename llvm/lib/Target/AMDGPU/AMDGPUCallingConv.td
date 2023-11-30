@@ -189,9 +189,7 @@ def CC_AMDGPU_Func : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,
   CCIfType<[i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
 
-  CCIfType<[i1] , CCAssignToReg<
-    !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
-  >>,
+  CCIfType<[i1] , CCCustom<"CC_AMDGPU_Custom_I1">>,
 
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
@@ -207,8 +205,9 @@ def CC_AMDGPU_Func : CallingConv<[
 
 // Calling convention for leaf functions
 def RetCC_AMDGPU_Func : CallingConv<[
-  CCIfType<[i1], CCPromoteToType<i32>>,
-  CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i16], CCIfExtend<CCPromoteToType<i32>>>,
+  CCIfType<[i1] , CCCustom<"CC_AMDGPU_Custom_I1">>,
+
   CCIfType<[i32, f32, i16, f16, v2i16, v2f16, bf16, v2bf16], CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,

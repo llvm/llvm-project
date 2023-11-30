@@ -3026,8 +3026,13 @@ SDValue SITargetLowering::LowerFormalArguments(
       RC = &AMDGPU::VGPR_32RegClass;
     else if (AMDGPU::SGPR_32RegClass.contains(Reg))
       RC = &AMDGPU::SGPR_32RegClass;
-    else
-      llvm_unreachable("Unexpected register class in LowerFormalArguments!");
+    else {
+      if (VT == MVT::i1 && Subtarget->isWave64())
+        RC = &AMDGPU::SGPR_64RegClass;
+      else
+        llvm_unreachable("Unexpected register class in LowerFormalArguments!");
+    }
+
     EVT ValVT = VA.getValVT();
 
     Reg = MF.addLiveIn(Reg, RC);

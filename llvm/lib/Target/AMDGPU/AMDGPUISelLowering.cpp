@@ -29,6 +29,37 @@
 
 using namespace llvm;
 
+static bool CC_AMDGPU_Custom_I1(unsigned ValNo, MVT ValVT,
+                           MVT LocVT, CCValAssign::LocInfo LocInfo,
+                           ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  static bool IsWave64 = static_cast<const GCNSubtarget&>(State.getMachineFunction().getSubtarget()).isWave64();
+
+  static const MCPhysReg I1RegList1[] = {
+    AMDGPU::SGPR0_SGPR1, AMDGPU::SGPR2_SGPR3, AMDGPU::SGPR4_SGPR5,
+    AMDGPU::SGPR6_SGPR7, AMDGPU::SGPR8_SGPR9, AMDGPU::SGPR10_SGPR11,
+    AMDGPU::SGPR12_SGPR13, AMDGPU::SGPR14_SGPR15, AMDGPU::SGPR16_SGPR17,
+    AMDGPU::SGPR18_SGPR19, AMDGPU::SGPR20_SGPR21, AMDGPU::SGPR22_SGPR23,
+    AMDGPU::SGPR24_SGPR25, AMDGPU::SGPR26_SGPR27, AMDGPU::SGPR28_SGPR29
+  };
+
+  static const MCPhysReg I1RegList2[] = {
+    AMDGPU::SGPR0, AMDGPU::SGPR1, AMDGPU::SGPR2, AMDGPU::SGPR3, AMDGPU::SGPR4,
+    AMDGPU::SGPR5, AMDGPU::SGPR6, AMDGPU::SGPR7, AMDGPU::SGPR8, AMDGPU::SGPR9,
+    AMDGPU::SGPR10, AMDGPU::SGPR11, AMDGPU::SGPR12, AMDGPU::SGPR13,
+    AMDGPU::SGPR14, AMDGPU::SGPR15, AMDGPU::SGPR16, AMDGPU::SGPR17,
+    AMDGPU::SGPR18, AMDGPU::SGPR19, AMDGPU::SGPR20, AMDGPU::SGPR21,
+    AMDGPU::SGPR22, AMDGPU::SGPR23, AMDGPU::SGPR24, AMDGPU::SGPR25,
+    AMDGPU::SGPR26, AMDGPU::SGPR27, AMDGPU::SGPR28, AMDGPU::SGPR29
+  };
+
+  assert (LocVT == MVT::i1);
+  if (unsigned Reg = IsWave64 ? State.AllocateReg(I1RegList1) : State.AllocateReg(I1RegList2)) {
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+    return true;
+  }
+  return false; // not allocated
+}
+
 #include "AMDGPUGenCallingConv.inc"
 
 static cl::opt<bool> AMDGPUBypassSlowDiv(

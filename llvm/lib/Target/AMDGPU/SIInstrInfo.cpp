@@ -861,16 +861,6 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
 
     if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
-      // When calling convention allocates SGPR for i1 argument, we may
-      // have a SRPR_64 to SReg_32 copy for an outgoing i1 argument. Adjust
-      // the copy to avoid illegal copy.
-      if (AMDGPU::SGPR_64RegClass.contains(SrcReg)) {
-        auto sub0 = RI.getSubReg(SrcReg, AMDGPU::sub0);
-        if (sub0 != DestReg)
-          BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DestReg).addReg(sub0);
-        return;
-      }
-
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -904,20 +894,6 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
 
     if (!AMDGPU::SReg_64RegClass.contains(SrcReg)) {
-      // When an i1 argument is allocated to an SGPR_32, we may have a COPY
-      // from SGPR_32 to SReg_64. The following handles this case to avoid
-      // an illegal copy.
-      if (AMDGPU::SGPR_32RegClass.contains(SrcReg)) {
-        auto sub0 = RI.getSubReg(DestReg, AMDGPU::sub0);
-        if (sub0 != SrcReg) {
-          BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), sub0).addReg(SrcReg);
-        }
-        BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32),
-                RI.getSubReg(DestReg, AMDGPU::sub1))
-            .addImm(0);
-        return;
-      }
-
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }

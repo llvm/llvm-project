@@ -481,12 +481,6 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
       if (isLaneMaskReg(DstReg) || isVreg1(DstReg))
         continue;
 
-      // When the calling convention allocates i1 argument to SGPR,
-      // we may have a COPY with dst being an SGPR_32. This should
-      // not be lowered into V_CNDMASK_B32.
-      if (AMDGPU::SGPR_32RegClass.contains(DstReg))
-        continue;
-
       Changed = true;
 
       // Copy into a 32-bit vector register.
@@ -695,6 +689,13 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       assert(!MI.getOperand(1).getSubReg());
 
       if (!SrcReg.isVirtual() || (!isLaneMaskReg(SrcReg) && !isVreg1(SrcReg))) {
+        if (!SrcReg.isVirtual() && TII->getRegisterInfo().getRegSizeInBits(SrcReg, *MRI) == 64) {
+          // When calling convention allocates SGPR for i1, for GPUs with wavefront size 64, i1
+          // return value is put in 64b SGPR.
+          assert(ST->isWave64());
+          continue;
+        }
+
         assert(TII->getRegisterInfo().getRegSizeInBits(SrcReg, *MRI) == 32);
         Register TmpReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_CMP_NE_U32_e64), TmpReg)
