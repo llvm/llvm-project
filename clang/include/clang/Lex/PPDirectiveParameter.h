@@ -1,4 +1,4 @@
-//===--- MacroArgs.h - Formal argument info for Macros ----------*- C++ -*-===//
+//===--- PPDirectiveParameter.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the MacroArgs interface.
+// This file defines the base class for preprocessor directive parameters, such
+// as limit(1) or suffix(x) for #embed.
 //
 //===----------------------------------------------------------------------===//
 
