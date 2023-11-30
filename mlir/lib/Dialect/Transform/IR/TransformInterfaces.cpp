@@ -494,10 +494,10 @@ void transform::TransformState::recordOpHandleInvalidationOne(
   unsigned operandNo = consumingHandle.getOperandNumber();
   for (Operation *ancestor : potentialAncestors) {
     // clang-format off
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
       { (DBGS() << "----handle one ancestor: " << *ancestor << "\n"); });
-    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL, 
-      { (DBGS() << "----of payload with name: " 
+    DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
+      { (DBGS() << "----of payload with name: "
                 << payloadOp->getName().getIdentifier() << "\n"); });
     DEBUG_WITH_TYPE(DEBUG_TYPE_FULL,
       { (DBGS() << "----of payload: " << *payloadOp << "\n"); });
@@ -1008,54 +1008,26 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   if (options.getExpensiveChecksEnabled()) {
     // Remove erased ops from the transform state.
     for (Operation *op : consumedPayloadOps) {
-      // This payload op was consumed but it may still be mapped to one or
-      // multiple handles. Forget all handles that are mapped to the op, so that
-      // there are no dangling pointers in the transform dialect state. This is
-      // necessary so that the `cachedNames`-based checks work correctly.
-      //
-      // Note: Dangling pointers to erased payload ops are allowed if the
-      // corresponding handles are not used anymore. There is another
-      // "expensive-check" that looks for future uses of dangling payload op
-      // pointers (through arbitrary handles). Removing handles to erased ops
-      // does not interfere with the other expensive checks: handle invalidation
-      // happens earlier and keeps track of invalidated handles with
-      // pre-generated error messages, so we do not need the association to
-      // still be there when the invalidated handle is accessed.
-      SmallVector<Value> handles;
-      (void)getHandlesForPayloadOp(op, handles, /*includeOutOfScope=*/true);
-      for (Value handle : handles)
-        forgetMapping(handle, /*origOpFlatResults=*/ValueRange(),
-                      /*allowOutOfScope=*/true);
+      // Remove all consumed payload ops from the name cache. The list of
+      // payload ops was created before the transform op was applied. As part of
+      // the transform op application, consumed ops may have been erased and new
+      // ops created at the same pointer location. We cannot detect such
+      // "pointer reuse" at the moment, so such ops are also removed from the
+      // name cache. This weakens the `cachedNames`-based checks a little bit.
+      // (But it is not incorrect.)
       cachedNames.erase(op);
     }
 
     // Check cached operation names.
-    for (std::unique_ptr<Mappings> &mapping :
-         llvm::make_second_range(mappings)) {
-      for (Operation *op : llvm::make_first_range(mapping->reverse)) {
-        // Make sure that the name of the op has not changed. If it has changed,
-        // the op was removed and a new op was allocated at the same memory
-        // location. This means that we are missing op tracking somewhere.
-        auto cacheIt = cachedNames.find(op);
-        if (cacheIt == cachedNames.end()) {
-          DiagnosedDefiniteFailure diag =
-              emitDefiniteFailure(transform->getLoc())
-              << "expensive checks failure: operation not found in cache";
-          diag.attachNote(op->getLoc()) << "payload op";
-          return diag;
-        }
-        // If the `getName` call (or the above `attachNote`) is crashing, we
-        // have a dangling pointer. This usually means that an op was erased but
-        // the transform dialect was not made aware of that; e.g., missing
-        // "consumesHandle" or rewriter usage.
-        if (cacheIt->second != op->getName()) {
-          DiagnosedDefiniteFailure diag =
-              emitDefiniteFailure(transform->getLoc())
-              << "expensive checks failure: operation mismatch, expected "
-              << cacheIt->second;
-          diag.attachNote(op->getLoc()) << "payload op: " << op->getName();
-          return diag;
-        }
+    for (auto cacheIt : cachedNames) {
+      Operation *op = cacheIt.first;
+      if (op->getName() != cacheIt.second) {
+        DiagnosedDefiniteFailure diag =
+            emitDefiniteFailure(transform->getLoc())
+            << "expensive checks failure: operation mismatch, expected "
+            << cacheIt.second << " but found " << op->getName();
+        diag.attachNote(op->getLoc()) << "payload op: " << op->getName();
+        return diag;
       }
     }
   }
