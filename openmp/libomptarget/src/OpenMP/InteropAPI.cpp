@@ -1,4 +1,4 @@
-//===---------------interop.cpp - Implementation of interop directive -----===//
+//===-- InteropAPI.cpp - Implementation of OpenMP interoperability API ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "interop.h"
-#include "private.h"
+#include "OpenMP/InteropAPI.h"
+#include "OpenMP/InternalTypes.h"
+#include "OpenMP/omp.h"
+
+#include "device.h"
+#include "omptarget.h"
+
+extern "C" {
+
+void __kmpc_omp_wait_deps(ident_t *loc_ref, int32_t gtid, int32_t ndeps,
+                          kmp_depend_info_t *dep_list, int32_t ndeps_noalias,
+                          kmp_depend_info_t *noalias_dep_list)
+    __attribute__((weak));
+
+} // extern "C"
 
 namespace {
 omp_interop_rc_t getPropertyErrorType(omp_interop_property_t Property) {
@@ -176,17 +189,14 @@ __OMP_GET_INTEROP_TY3(const char *, type_desc)
 __OMP_GET_INTEROP_TY3(const char *, rc_desc)
 #undef __OMP_GET_INTEROP_TY3
 
-typedef int64_t kmp_int64;
-
-#ifdef __cplusplus
 extern "C" {
-#endif
-void __tgt_interop_init(ident_t *LocRef, kmp_int32 Gtid,
+
+void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
                         omp_interop_val_t *&InteropPtr,
-                        kmp_interop_type_t InteropType, kmp_int32 DeviceId,
-                        kmp_int32 Ndeps, kmp_depend_info_t *DepList,
-                        kmp_int32 HaveNowait) {
-  kmp_int32 NdepsNoalias = 0;
+                        kmp_interop_type_t InteropType, int32_t DeviceId,
+                        int32_t Ndeps, kmp_depend_info_t *DepList,
+                        int32_t HaveNowait) {
+  int32_t NdepsNoalias = 0;
   kmp_depend_info_t *NoaliasDepList = NULL;
   assert(InteropType != kmp_interop_type_unknown &&
          "Cannot initialize with unknown interop_type!");
@@ -221,11 +231,11 @@ void __tgt_interop_init(ident_t *LocRef, kmp_int32 Gtid,
   }
 }
 
-void __tgt_interop_use(ident_t *LocRef, kmp_int32 Gtid,
-                       omp_interop_val_t *&InteropPtr, kmp_int32 DeviceId,
-                       kmp_int32 Ndeps, kmp_depend_info_t *DepList,
-                       kmp_int32 HaveNowait) {
-  kmp_int32 NdepsNoalias = 0;
+void __tgt_interop_use(ident_t *LocRef, int32_t Gtid,
+                       omp_interop_val_t *&InteropPtr, int32_t DeviceId,
+                       int32_t Ndeps, kmp_depend_info_t *DepList,
+                       int32_t HaveNowait) {
+  int32_t NdepsNoalias = 0;
   kmp_depend_info_t *NoaliasDepList = NULL;
   assert(InteropPtr && "Cannot use nullptr!");
   omp_interop_val_t *InteropVal = InteropPtr;
@@ -249,11 +259,11 @@ void __tgt_interop_use(ident_t *LocRef, kmp_int32 Gtid,
   // TODO Flush the queue associated with the interop through the plugin
 }
 
-void __tgt_interop_destroy(ident_t *LocRef, kmp_int32 Gtid,
-                           omp_interop_val_t *&InteropPtr, kmp_int32 DeviceId,
-                           kmp_int32 Ndeps, kmp_depend_info_t *DepList,
-                           kmp_int32 HaveNowait) {
-  kmp_int32 NdepsNoalias = 0;
+void __tgt_interop_destroy(ident_t *LocRef, int32_t Gtid,
+                           omp_interop_val_t *&InteropPtr, int32_t DeviceId,
+                           int32_t Ndeps, kmp_depend_info_t *DepList,
+                           int32_t HaveNowait) {
+  int32_t NdepsNoalias = 0;
   kmp_depend_info_t *NoaliasDepList = NULL;
   assert(InteropPtr && "Cannot use nullptr!");
   omp_interop_val_t *InteropVal = InteropPtr;
@@ -281,6 +291,5 @@ void __tgt_interop_destroy(ident_t *LocRef, kmp_int32 Gtid,
   delete InteropPtr;
   InteropPtr = omp_interop_none;
 }
-#ifdef __cplusplus
+
 } // extern "C"
-#endif
