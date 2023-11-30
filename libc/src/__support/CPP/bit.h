@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This is inspired from LLVM ADT/bit.h header.
+// This is inspired by LLVM ADT/bit.h header.
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
@@ -69,9 +69,8 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
-template <typename T>
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr int countr_zero(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
   if (!value)
     return cpp::numeric_limits<T>::digits;
   if (value & 0x1)
@@ -109,9 +108,8 @@ ADD_SPECIALIZATION(countr_zero, unsigned long long, __builtin_ctzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of 0.
-template <typename T>
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr int countl_zero(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
   if (!value)
     return cpp::numeric_limits<T>::digits;
   // Bisection method.
@@ -147,9 +145,8 @@ ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of all ones.
-template <typename T>
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr int countl_one(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
   return cpp::countl_zero<T>(~value);
 }
 
@@ -160,9 +157,8 @@ template <typename T>
 /// Only unsigned integral types are allowed.
 ///
 /// Returns cpp::numeric_limits<T>::digits on an input of all ones.
-template <typename T>
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr int countr_one(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
   return cpp::countr_zero<T>(~value);
 }
 
@@ -170,9 +166,8 @@ template <typename T>
 /// Returns 0 otherwise.
 ///
 /// Ex. bit_width(5) == 3.
-template <typename T>
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
 [[nodiscard]] LIBC_INLINE constexpr int bit_width(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
   return cpp::numeric_limits<T>::digits - cpp::countl_zero(value);
 }
 
@@ -180,8 +175,8 @@ template <typename T>
 /// nonzero.  Returns 0 otherwise.
 ///
 /// Ex. bit_floor(5) == 4.
-template <typename T> [[nodiscard]] LIBC_INLINE constexpr T bit_floor(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr T bit_floor(T value) {
   if (!value)
     return 0;
   return T(1) << (cpp::bit_width(value) - 1);
@@ -194,8 +189,8 @@ template <typename T> [[nodiscard]] LIBC_INLINE constexpr T bit_floor(T value) {
 ///
 /// The return value is undefined if the input is larger than the largest power
 /// of two representable in T.
-template <typename T> [[nodiscard]] LIBC_INLINE constexpr T bit_ceil(T value) {
-  static_assert(cpp::is_unsigned_v<T>);
+template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
+[[nodiscard]] LIBC_INLINE constexpr T bit_ceil(T value) {
   if (value < 2)
     return 1;
   return T(1) << cpp::bit_width<T>(value - 1u);
