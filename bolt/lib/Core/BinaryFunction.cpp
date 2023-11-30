@@ -3352,9 +3352,9 @@ void BinaryFunction::fixBranches() {
         // We are going to generate two branches. Check if their targets are in
         // the same fragment as this block. If only one target is in the same
         // fragment, make it the destination of the conditional branch. There
-        // is a chance it will be a short branch which takes 5 bytes fewer than
+        // is a chance it will be a short branch which takes 4 bytes fewer than
         // a long conditional branch. For unconditional branch, the difference
-        // is 4 bytes.
+        // is 3 bytes.
         if (BB->getFragmentNum() != TSuccessor->getFragmentNum() &&
             BB->getFragmentNum() == FSuccessor->getFragmentNum())
           swapSuccessors();
