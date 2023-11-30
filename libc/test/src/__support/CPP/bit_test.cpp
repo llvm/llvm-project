@@ -139,17 +139,6 @@ TEST(LlvmLibcBitTest, BitFloor) {
             bit_floor(uint64_t(0xffffffffffffffff)));
 }
 
-TEST(LlvmLibcBitTest, PopCount) {
-  EXPECT_EQ(0, popcount(0U));
-  EXPECT_EQ(0, popcount(0ULL));
-
-  EXPECT_EQ(32, popcount(~0U));
-  EXPECT_EQ(64, popcount(~0ULL));
-
-  for (int i = 0; i != 32; ++i)
-    EXPECT_EQ(1, popcount(1U << i));
-}
-
 TYPED_TEST(LlvmLibcBitTest, RotateIsInvariantForZeroAndOne, UnsignedTypes) {
   constexpr T all_zeros = T(0);
   constexpr T all_ones = ~T(0);

@@ -196,37 +196,6 @@ template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
   return T(1) << cpp::bit_width<T>(value - 1u);
 }
 
-/// Count the number of set bits in a value.
-/// Ex. popcount(0xF000F000) = 8
-/// Returns 0 if the word is zero.
-///
-/// The non-builtin version uses an algorithm that counts bit set by dividing
-/// the integer into multiple lanes and reducing the result.
-/// https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-template <typename T, typename = cpp::enable_if_t<cpp::is_unsigned_v<T>>>
-[[nodiscard]] LIBC_INLINE constexpr int popcount(T value) {
-  if constexpr (sizeof(T) == 8) {
-#if LIBC_HAS_BUILTIN(__builtin_popcountll)
-    return (int)__builtin_popcountll(value);
-#endif
-    uint64_t v = value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return int((uint64_t)(v * 0x0101010101010101ULL) >> 56);
-  } else if constexpr (sizeof(T) <= 4) {
-#if LIBC_HAS_BUILTIN(__builtin_popcount)
-    return (int)__builtin_popcount(value);
-#endif
-    uint32_t v = value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return int(((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
-  } else {
-    static_assert(cpp::always_false<T>);
-  }
-}
-
 // Rotate algorithms make use of "Safe, Efficient, and Portable Rotate in C/C++"
 // from https://blog.regehr.org/archives/1063.
 
