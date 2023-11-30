@@ -206,9 +206,9 @@ private:
   // Sizes of branch instructions used to approximate block size increase
   // due to hot-warm splitting. Initialized to be 0. These values are updated
   // if the architecture is X86.
-  uint8_t BRANCH_SIZE = 0;
-  uint8_t LONG_UNCOND_BRANCH_SIZE_DELTA = 0;
-  uint8_t LONG_COND_BRANCH_SIZE_DELTA = 0;
+  uint8_t BranchSize = 0;
+  uint8_t LongUncondBranchSizeDelta = 0;
+  uint8_t LongCondBranchSizeDelta = 0;
 
   // Call graph.
   std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
@@ -226,11 +226,11 @@ private:
     // increase due to hot-warm splitting.
     if (BC.isX86()) {
       // a short branch takes 2 bytes.
-      BRANCH_SIZE = 2;
-      // a long unconditional branch takes BRANCH_SIZE + 3 bytes.
-      LONG_UNCOND_BRANCH_SIZE_DELTA = 3;
-      // a long conditional branch takes BRANCH_SIZE + 4 bytes.
-      LONG_COND_BRANCH_SIZE_DELTA = 4;
+      BranchSize = 2;
+      // a long unconditional branch takes BranchSize + 3 bytes.
+      LongUncondBranchSizeDelta = 3;
+      // a long conditional branch takes BranchSize + 4 bytes.
+      LongCondBranchSizeDelta = 4;
     }
 
     // Gather information about conditional and unconditional successors of
@@ -371,10 +371,10 @@ private:
           (JumpInfos[BB].UncondSuccessor && !JumpInfos[BB].HasUncondBranch &&
            BB->getLayoutIndex() == SplitIndex);
 
-      NewSize += BRANCH_SIZE * NeedNewUncondBranch +
-                 LONG_UNCOND_BRANCH_SIZE_DELTA *
+      NewSize += BranchSize * NeedNewUncondBranch +
+                 LongUncondBranchSizeDelta *
                      needNewLongBranch(BB, JumpInfos[BB].UncondSuccessor) +
-                 LONG_COND_BRANCH_SIZE_DELTA *
+                 LongCondBranchSizeDelta *
                      needNewLongBranch(BB, JumpInfos[BB].CondSuccessor);
       BB->setOutputStartAddress(CurrentAddr);
       CurrentAddr += NewSize;
