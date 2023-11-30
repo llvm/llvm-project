@@ -2083,10 +2083,10 @@ private:
     assert(sym && "There must be a symbol to bind");
     mlir::Type toTy = genType(*sym);
     // FIXME: this should be a "per iteration" temporary.
-    mlir::Value tmp = builder->createTemporary(
-        loc, toTy, toStringRef(sym->name()),
-        llvm::ArrayRef<mlir::NamedAttribute>{
-            Fortran::lower::getAdaptToByRefAttr(*builder)});
+    mlir::Value tmp =
+        builder->createTemporary(loc, toTy, toStringRef(sym->name()),
+                                 llvm::ArrayRef<mlir::NamedAttribute>{
+                                     fir::getAdaptToByRefAttr(*builder)});
     mlir::Value cast = builder->createConvert(loc, toTy, inducVar);
     builder->create<fir::StoreOp>(loc, cast, tmp);
     addSymbol(*sym, tmp, /*force=*/true);
