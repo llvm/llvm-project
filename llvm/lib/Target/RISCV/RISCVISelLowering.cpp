@@ -1393,7 +1393,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
                          ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
                          ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-                         ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL});
+                         ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
+                         ISD::INSERT_VECTOR_ELT});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -14342,6 +14343,75 @@ static SDValue performBUILD_VECTORCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getBuildVector(VT, DL, RHSOps));
 }
 
+static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
+                                               const RISCVSubtarget &Subtarget,
+                                               const RISCVTargetLowering &TLI) {
+  SDValue InVec = N->getOperand(0);
+  SDValue InVal = N->getOperand(1);
+  SDValue EltNo = N->getOperand(2);
+  SDLoc DL(N);
+
+  EVT VT = InVec.getValueType();
+  if (VT.isScalableVector())
+    return SDValue();
+
+  if (!InVec.hasOneUse())
+    return SDValue();
+
+  // Given insert_vector_elt (binop a, VecC), (same_binop b, C2), Elt
+  // move the insert_vector_elts into the arms of the binop.  Note that
+  // the new RHS must be a constant.
+  const unsigned InVecOpcode = InVec->getOpcode();
+  if (InVecOpcode == InVal->getOpcode() && TLI.isBinOp(InVecOpcode) &&
+      InVal.hasOneUse()) {
+    SDValue InVecLHS = InVec->getOperand(0);
+    SDValue InVecRHS = InVec->getOperand(1);
+    SDValue InValLHS = InVal->getOperand(0);
+    SDValue InValRHS = InVal->getOperand(1);
+
+    if (!ISD::isBuildVectorOfConstantSDNodes(InVecRHS.getNode()))
+      return SDValue();
+    if (!isa<ConstantSDNode>(InValRHS) && !isa<ConstantFPSDNode>(InValRHS))
+      return SDValue();
+    // FIXME: Return failure if the RHS type doesn't match the LHS. Shifts may
+    // have different LHS and RHS types.
+    if (InVec.getOperand(0).getValueType() != InVec.getOperand(1).getValueType())
+      return SDValue();
+    SDValue LHS = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                              InVecLHS, InValLHS, EltNo);
+    SDValue RHS = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                              InVecRHS, InValRHS, EltNo);
+    return DAG.getNode(InVecOpcode, DL, VT, LHS, RHS);
+  }
+
+  // Given insert_vector_elt (concat_vectors ...), InVal, Elt
+  // move the insert_vector_elt to the source operand of the concat_vector.
+  if (InVec.getOpcode() != ISD::CONCAT_VECTORS)
+    return SDValue();
+
+  auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
+  if (!IndexC)
+    return SDValue();
+  unsigned Elt = IndexC->getZExtValue();
+
+  EVT ConcatVT = InVec.getOperand(0).getValueType();
+  if (ConcatVT.getVectorElementType() != InVal.getValueType())
+    return SDValue();
+  unsigned ConcatNumElts = ConcatVT.getVectorNumElements();
+  SDValue NewIdx = DAG.getConstant(Elt % ConcatNumElts, DL,
+                                   EltNo.getValueType());
+
+  unsigned ConcatOpIdx = Elt / ConcatNumElts;
+  SDValue ConcatOp = InVec.getOperand(ConcatOpIdx);
+  ConcatOp = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ConcatVT,
+                         ConcatOp, InVal, NewIdx);
+
+  SmallVector<SDValue> ConcatOps;
+  ConcatOps.append(InVec->op_begin(), InVec->op_end());
+  ConcatOps[ConcatOpIdx] = ConcatOp;
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
+}
+
 // If we're concatenating a series of vector loads like
 // concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
 // Then we can turn this into a strided load by widening the vector elements
@@ -15405,6 +15475,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::CONCAT_VECTORS:
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
+      return V;
+    break;
+  case ISD::INSERT_VECTOR_ELT:
+    if (SDValue V = performINSERT_VECTOR_ELTCombine(N, DAG, Subtarget, *this))
       return V;
     break;
   case RISCVISD::VFMV_V_F_VL: {
