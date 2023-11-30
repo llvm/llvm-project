@@ -65,9 +65,11 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+// clang-format off
 #include <winsock2.h>
 #include <afunix.h>
 #include <io.h>
+// clang-format on
 #endif
 
 using namespace llvm;
