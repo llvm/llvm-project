@@ -553,13 +553,15 @@ void X86FoldTablesEmitter::addBroadcastEntry(
             MemInstName.contains("Qr") || MemInstName.contains("I64")) &&
            "Unmatched names for broadcast");
     Result.BroadcastKind = X86FoldTableEntry::BCAST_Q;
-  } else if (RegInstName.contains("PS") || RegInstName.contains("F32") ||
-             RegInstName.contains("CPH")) {
+  } else if ((RegInstName.contains("PS") || RegInstName.contains("F32") ||
+              RegInstName.contains("CPH")) &&
+             !RegInstName.contains("PH2PS")) {
     assert((MemInstName.contains("PS") || MemInstName.contains("F32") ||
             MemInstName.contains("CPH")) &&
            "Unmatched names for broadcast");
     Result.BroadcastKind = X86FoldTableEntry::BCAST_SS;
-  } else if (RegInstName.contains("PD") || RegInstName.contains("F64")) {
+  } else if ((RegInstName.contains("PD") || RegInstName.contains("F64")) &&
+             !RegInstName.contains("PH2PD")) {
     assert((MemInstName.contains("PD") || MemInstName.contains("F64")) &&
            "Unmatched names for broadcast");
     Result.BroadcastKind = X86FoldTableEntry::BCAST_SD;
