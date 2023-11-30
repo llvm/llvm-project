@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(int, hcreate, (size_t capacity)) {
   // We follow FreeBSD's implementation here. If the global_hash_table is
   // already initialized, this function will do nothing and return 1.
-  // https://android.googlesource.com/platform/bionic/+/refs/heads/main/libc/upstream-freebsd/lib/libc/stdlib/hcreate.c
+  // https://cgit.freebsd.org/src/tree/lib/libc/stdlib/hcreate.c
   if (internal::global_hash_table != nullptr)
     return 1;
 
