@@ -262,14 +262,15 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
 
     // Now that we've updated that use of the pointer, look for other uses of
     // the pointer to update.
+    Visited.insert(J);
     if (auto UJ = dyn_cast<User>(J))
       for (auto &U : UJ->uses()) {
         if (U->getType()->isPointerTy()) {
-          if (StoreInst *SI = dyn_cast<StoreInst>(U.getUser())) {
-            if (SI->getPointerOperandIndex() != U.getOperandNo())
-              continue;
-          }
-          if (AA->alias(U, AAPtr)) {
+          if (isa<GetElementPtrInst>(U.getUser()) ||
+           isa<PHINode>(U.getUser()) ||
+           isa<LoadInst>(U.getUser()) ||
+           isa<StoreInst>(U.getUser()) ||
+           isa<MemIntrinsic>(U.getUser())) {
             Instruction *K = cast<Instruction>(U.getUser());
             if (!Visited.count(K))
               WorkList.push_back(K);
@@ -283,10 +284,9 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
 
 bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
                                            ScalarEvolution *SE_,
-                                           DominatorTree *DT_, AAResults *AA_) {
+                                           DominatorTree *DT_) {
   SE = SE_;
   DT = DT_;
-  AA = AA_;
 
   bool Changed = false;
   for (auto &AssumeVH : AC.assumptions())
@@ -305,8 +305,7 @@ AlignmentFromAssumptionsPass::run(Function &F, FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  AAResults &AA = AM.getResult<AAManager>(F);
-  if (!runImpl(F, AC, &SE, &DT, &AA))
+  if (!runImpl(F, AC, &SE, &DT))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

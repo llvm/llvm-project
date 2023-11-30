@@ -43,6 +43,34 @@ bb3:
   ret void
 }
 
+define amdgpu_kernel void @test_loop_phi(ptr addrspace(1) nocapture readonly %arg, i32 %idx, ptr addrspace(3) nocapture %arg1) {
+; CHECK-LABEL: @test_loop_phi
+; PHI is supported - align 2 changed to 4
+; CHECK: load i32, ptr addrspace(1) %gep, align 4
+bb:
+  %ptr = getelementptr i32, ptr addrspace(1) %arg, i32 0
+  %end = getelementptr i32, ptr addrspace(1) %arg, i32 10
+  %cond = icmp ugt i32 %idx, 10
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %ptr1 = phi ptr addrspace(1) [%ptr, %bb], [%ptr2, %bb1]
+  %acc1 = phi i32 [0, %bb], [%acc2, %bb1]
+  %gep = getelementptr i32, ptr addrspace(1) %ptr1, i32 4
+  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) %arg, i64 4) ]
+  %val = load i32, ptr addrspace(1) %gep, align 2
+  %acc2 = add i32 %acc1, %val
+  %ptr2 = getelementptr i32, ptr addrspace(1) %ptr1, i32 %idx
+  %exit = icmp eq ptr addrspace(1) %ptr2, %end
+  br i1 %exit, label %bb1, label %bb2
+
+bb2:
+  %sum = phi i32 [0, %bb], [%acc2, %bb1]
+  %tmp4 = getelementptr inbounds i32, ptr addrspace(3) %arg1, i32 1
+  store i32 %sum, ptr addrspace(3) %tmp4, align 4
+  ret void
+}
+
 define amdgpu_kernel void @test_select(ptr addrspace(1) nocapture readonly %arg, i32 %idx, ptr addrspace(3) nocapture %arg1) {
 ; CHECK-LABEL: @test_select
 ; select is not supported - align 2 not changed
