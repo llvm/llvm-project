@@ -213,7 +213,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
 }
 #else
 TEST(LlvmLibcFPBitsTest, LongDoubleType) {
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_DOUBLE)
   return; // The tests for the "double" type cover for this case.
 #else
   using LongDoubleBits = FPBits<long double>;

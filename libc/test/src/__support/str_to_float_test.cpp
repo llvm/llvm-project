@@ -279,7 +279,7 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
   EXPECT_EQ(double_result.error, 0);
 }
 
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_DOUBLE)
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat64AsLongDouble) {
   eisel_lemire_test<long double>(123, 0, 0x1EC00000000000, 1029);
 }

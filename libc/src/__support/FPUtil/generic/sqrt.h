@@ -43,7 +43,7 @@ LIBC_INLINE void normalize(int &exponent,
   mantissa <<= shift;
 }
 
-#ifdef LONG_DOUBLE_IS_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_DOUBLE
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);

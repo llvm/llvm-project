@@ -19,8 +19,7 @@
 
 // 'long double' properties.
 #if (LDBL_MANT_DIG == DBL_MANT_DIG)
-// TODO: Replace with LIBC_LONG_DOUBLE_IS_DOUBLE
-#define LONG_DOUBLE_IS_DOUBLE
+#define LIBC_LONG_DOUBLE_IS_DOUBLE
 #endif
 #if (LDBL_MANT_DIG == 64)
 // TODO: Replace with LIBC_LONG_DOUBLE_IS_X86_BIN80
