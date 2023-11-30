@@ -496,7 +496,7 @@ def warn_pp_invalid_directive : Warning<
   err_pp_invalid_directive.Summary>, InGroup<DiagGroup<"unknown-directives">>;
 def warn_pp_unknown_parameter_ignored : Warning<
   "unknown%select{ | embed}0 preprocessor parameter '%1' ignored">,
-  InGroup<UnknownDirectiveParameters>;
+  InGroup<DiagGroup<"unknown-directive-parameters">>;
 def err_pp_unsupported_directive : Error<
   "unsupported%select{ | embed}0 directive: %1">;
 def err_pp_directive_required : Error<
