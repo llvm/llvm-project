@@ -984,8 +984,7 @@ ANNOTATION(header_unit)
 ANNOTATION(repl_input_end)
 
 // Annotation for #embed
-ANNOTATION(embed_start)
-ANNOTATION(embed_end)
+ANNOTATION(embed)
 
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION

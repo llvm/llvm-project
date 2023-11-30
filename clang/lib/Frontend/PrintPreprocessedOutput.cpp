@@ -472,11 +472,9 @@ void PrintPPOutputPPCallbacks::EmbedDirective(
     NumToksToSkip += Params.MaybeSuffixParam->Tokens.size();
   }
 
-  // This magic number comes from the number of tokens produced by
-  // Preprocessor::HandleEmbedDirectiveImpl(); if we start emitting more tokens
-  // while preprocessing, we will need to update this logic as well.
+  // We may need to skip the annotation token.
   if (SkipAnnotToks)
-    NumToksToSkip += 5;
+    NumToksToSkip++;
 
   *OS << " /* clang -E -dE */";
   setEmittedDirectiveOnThisLine();
@@ -961,51 +959,26 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       std::string Name = M->getFullModuleName();
       Callbacks->OS->write(Name.data(), Name.size());
       Callbacks->HandleNewlinesInToken(Name.data(), Name.size());
-    } else if (Tok.is(tok::annot_embed_start)) {
-      // Manually explode the base64 encoded data out to a stream of comma-
-      // delimited integer values. If the user passed -dE, that is handled by
-      // the EmbedDirective() callback. We should only get here if the user did
-      // not pass -dE.
+    } else if (Tok.is(tok::annot_embed)) {
+      // Manually explode the binary data out to a stream of comma-delimited
+      // integer values. If the user passed -dE, that is handled by the
+      // EmbedDirective() callback. We should only get here if the user did not
+      // pass -dE.
       assert(Callbacks->expandEmbedContents() &&
              "did not expect an embed annotation");
-      // Skip the start annotation token.
-      PP.Lex(Tok);
-
-      // Expand the contents of the file and hope for the best in terms of
-      // compile time performance. The first (few) tokens are type
-      // information; we will skip the explicit cast operations.
-      while (Tok.isOneOf(tok::kw_unsigned, tok::kw_char))
-        PP.Lex(Tok);
-
-      // Next is a string literal for the file name, which we can ignore.
-      assert(Tok.is(tok::string_literal) && "expected string literal token");
-      PP.Lex(Tok);
-
-      // Then we expect a comma followed by the string literal containing the
-      // binary contents.
-      assert(Tok.is(tok::comma) && "expected a comma token");
-      PP.Lex(Tok);
-      assert(Tok.is(tok::string_literal) && "expected string literal token");
-
-      // +1 and -2 are to skip quotation marks.
-      StringRef BinaryContents(Tok.getLiteralData() + 1, Tok.getLength() - 2);
+      auto *Data =
+          reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
 
       // Loop over the contents and print them as a comma-delimited list of
       // values.
       bool PrintComma = false;
-      for (auto Iter = BinaryContents.begin(), End = BinaryContents.end();
+      for (auto Iter = Data->BinaryData.begin(), End = Data->BinaryData.end();
            Iter != End; ++Iter) {
         if (PrintComma)
           *Callbacks->OS << ", ";
-        *Callbacks->OS << static_cast<unsigned>(
-            static_cast<unsigned char>(*Iter));
+        *Callbacks->OS << static_cast<unsigned>(*Iter);
         PrintComma = true;
       }
-
-      // Finally, we expect the end annotation token.
-      PP.Lex(Tok);
-      assert(Tok.is(tok::annot_embed_end) &&
-             "expected the end of the embed directive");
       IsStartOfLine = true;
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves

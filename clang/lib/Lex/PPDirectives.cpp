@@ -3812,53 +3812,25 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool InHasEmbed,
 void Preprocessor::HandleEmbedDirectiveImpl(
     SourceLocation HashLoc, StringRef ResolvedFilename,
     const LexEmbedParametersResult &Params, StringRef BinaryContents) {
-  // Pass off the annotation token stream. The parser expects:
-  //   if_empty-tokens or
-  //     prefix-tokens (if any)
-  //     embed-annotation-start
-  //       string-literal , string-literal
-  //     embed-annotation-stop
-  //     suffix-tokens (if any)
-  // where the first string-literal is the resolved file name of the file we
-  // loaded contents from, and the second string-literal is the binary data we
-  // loaded from the file. The comma separation between string-literals
-  // prevents the literals from combining into a single string literal.
-  //
-  // NOTE: if you change the token sequence, you will need to update
-  // Parser::ParseCastExpression() (the case for tok::annot_embed_start) as
-  // well as PrintPPOutputPPCallbacks::EmbedDirective() and
-  // PrintPreprocessedTokens() (the case for tok::annot_embed_start).
-  auto EmitToks = [&](ArrayRef<Token> Toks) {
-    size_t TokCount = Toks.size();
-    auto NewToks = std::make_unique<Token[]>(TokCount);
-    llvm::copy(Toks, NewToks.get());
-    EnterTokenStream(std::move(NewToks), TokCount, true, true);
-  };
   if (BinaryContents.empty()) {
     // If we have no binary contents, the only thing we need to emit are the
     // if_empty tokens, if any.
     // FIXME: this loses AST fidelity; nothing in the compiler will see that
     // these tokens came from #embed. We have to hack around this when printing
     // preprocessed output. The same is true for prefix and suffix tokens.
-    if (Params.MaybeIfEmptyParam)
-      EmitToks(Params.MaybeIfEmptyParam->Tokens);
+    if (Params.MaybeIfEmptyParam) {
+      ArrayRef<Token> Toks = Params.MaybeIfEmptyParam->Tokens;
+      size_t TokCount = Toks.size();
+      auto NewToks = std::make_unique<Token[]>(TokCount);
+      llvm::copy(Toks, NewToks.get());
+      EnterTokenStream(std::move(NewToks), TokCount, true, true);
+    }
     return;
   }
 
-  auto SetAnnotTok = [](Token &Tok, tok::TokenKind Kind, SourceLocation Loc) {
-    Tok.startToken();
-    Tok.setKind(Kind);
-    Tok.setAnnotationRange(Loc);
-  };
-  auto SetStrTok = [&](Token &Tok, StringRef Contents, SourceLocation Loc) {
-    Tok.startToken();
-    Tok.setKind(tok::string_literal);
-    CreateString(("\"" + Contents + "\"").str(), Tok, Loc, Loc);
-  };
-
   size_t NumPrefixToks = Params.PrefixTokenCount(),
          NumSuffixToks = Params.SuffixTokenCount();
-  size_t TotalNumToks = 5 + NumPrefixToks + NumSuffixToks;
+  size_t TotalNumToks = 1 + NumPrefixToks + NumSuffixToks;
   size_t CurIdx = 0;
   auto Toks = std::make_unique<Token[]>(TotalNumToks);
 
@@ -3868,18 +3840,15 @@ void Preprocessor::HandleEmbedDirectiveImpl(
     CurIdx += NumPrefixToks;
   }
 
-  // Now annotate the embed itself.
-  SetAnnotTok(Toks[CurIdx++], tok::annot_embed_start, HashLoc);
-
-  SetStrTok(Toks[CurIdx++], ResolvedFilename, HashLoc);
+  EmbedAnnotationData *Data = new (BP) EmbedAnnotationData;
+  Data->FileName = ResolvedFilename;
+  Data->BinaryData.resize(BinaryContents.size());
+  llvm::copy(BinaryContents, Data->BinaryData.begin());
 
   Toks[CurIdx].startToken();
-  Toks[CurIdx].setLocation(HashLoc);
-  Toks[CurIdx++].setKind(tok::comma);
-
-  SetStrTok(Toks[CurIdx++], BinaryContents, HashLoc);
-
-  SetAnnotTok(Toks[CurIdx++], tok::annot_embed_end, HashLoc);
+  Toks[CurIdx].setKind(tok::annot_embed);
+  Toks[CurIdx].setAnnotationRange(HashLoc);
+  Toks[CurIdx++].setAnnotationValue(Data);
 
   // Now add the suffix tokens, if any.
   if (Params.MaybeSuffixParam) {

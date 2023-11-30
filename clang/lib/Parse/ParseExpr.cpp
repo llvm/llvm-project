@@ -1052,51 +1052,30 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   }
 
-  case tok::annot_embed_start: {
-    // The preprocessor has already validated the syntax of the #embed
-    // directive and has produced this series of tokens, so we do not need to
-    // check for syntactic correctness. The form will be:
-    //    string-literal , string-literal
-    //
-    // where the first string-literal is the file name the user passed to the
-    // directive, and the second string-literal is the binary data from that
-    // file.
+  case tok::annot_embed: {
+    EmbedAnnotationData *Data =
+        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
     SourceLocation StartLoc = ConsumeAnnotationToken();
-    SourceRange DataTyExprSourceRange;
-    ExprResult FilenameArgExpr = ParseUnevaluatedStringLiteralExpression();
-    // There is a comma separating the string literals to prevent them from
-    // combining into a single string literal.
-    ExpectAndConsume(tok::comma);
-    // We need a real string literal expression and not an unevaluated one
-    // because this string literal may be used by list initialization, which
-    // asserts that it's not given an unevaluated string literal. So we will
-    // parse the unevaluated string literal and cook it into a real literal
-    // that we can use. We cannot parse an actual string literal expression
-    // because that leaves us with two problems with the string's type: 1) the
-    // element type will be char and not unsigned char, 2) the array type will
-    // account for the null terminator but the source data is not null
-    // terminated because it's not a real string literal.
-    ExprResult BinaryData = ParseUnevaluatedStringLiteralExpression();
-    StringLiteral *UnevalBinData = BinaryData.getAs<StringLiteral>();
     ASTContext &Context = Actions.getASTContext();
-    uint64_t ArraySizeRawVal[] = {UnevalBinData->getByteLength()};
-    llvm::APSInt ArraySize(llvm::APInt(
-        Context.getTypeSize(Context.getSizeType()), 1, ArraySizeRawVal));
-    QualType ArrayTy =
-        Context.getConstantArrayType(Context.UnsignedCharTy, ArraySize, nullptr,
-                                     ArraySizeModifier::Normal, 0);
-    StringLiteral *BinaryDataLiteral = StringLiteral::Create(
-        Context, UnevalBinData->getBytes(), StringLiteralKind::Ordinary, false,
-        ArrayTy, UnevalBinData->getExprLoc());
+    auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
+      uint64_t ArraySizeRawVal[] = {Str.size()};
+      llvm::APSInt ArraySize(llvm::APInt(
+          Context.getTypeSize(Context.getSizeType()), 1, ArraySizeRawVal));
+      QualType ArrayTy = Context.getConstantArrayType(
+          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+                                   false, ArrayTy, StartLoc);
+    };
 
-    // Now we expect the end annotation token.
-    assert(Tok.is(tok::annot_embed_end));
-    SourceLocation EndLoc = ConsumeAnnotationToken();
-    if (!Res.isInvalid()) {
-      Res = Actions.ActOnPPEmbedExpr(
-          StartLoc, BinaryData.get()->getExprLoc(), EndLoc,
-          FilenameArgExpr.getAs<StringLiteral>(), BinaryDataLiteral);
-    }
+    StringLiteral *FileNameArg =
+        CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
+    StringRef BinaryData{
+        reinterpret_cast<const char *>(Data->BinaryData.data()),
+        Data->BinaryData.size()};
+    StringLiteral *BinaryDataArg =
+        CreateStringLiteralFromStringRef(BinaryData, Context.UnsignedCharTy);
+    Res = Actions.ActOnPPEmbedExpr(StartLoc, StartLoc, StartLoc, FileNameArg,
+                                   BinaryDataArg);
   } break;
 
   case tok::kw___super:
