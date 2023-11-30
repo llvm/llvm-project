@@ -236,8 +236,7 @@ ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
 }
 
 static std::vector<std::string>
-collectNonISAExtFeature(const std::vector<std::string> &FeaturesNeedOverride,
-                        int XLen) {
+collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
   auto ParseResult =
       llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesNeedOverride);
 
@@ -265,11 +264,11 @@ resolveTargetAttrOverride(const std::vector<std::string> &FeaturesVec,
   if (I == FeaturesVec.end())
     return FeaturesVec;
 
-  const std::vector<std::string> FeaturesNeedOverride(FeaturesVec.begin(), I);
+  ArrayRef<std::string> FeaturesNeedOverride(&*FeaturesVec.begin(), &*I);
   std::vector<std::string> NonISAExtFeature =
       collectNonISAExtFeature(FeaturesNeedOverride, XLen);
 
-  auto ResolvedFeature = std::vector<std::string>(++I, FeaturesVec.end());
+  std::vector<std::string> ResolvedFeature(++I, FeaturesVec.end());
   ResolvedFeature.insert(ResolvedFeature.end(), NonISAExtFeature.begin(),
                          NonISAExtFeature.end());
 
@@ -415,8 +414,7 @@ static void handleFullArchString(StringRef FullArchStr,
     Features.push_back("+" + FullArchStr.str());
   } else {
     std::vector<std::string> FeatStrings = (*RII)->toFeatureVector();
-    for (auto FeatString : FeatStrings)
-      Features.push_back(FeatString);
+    Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
   }
 }
 

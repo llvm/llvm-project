@@ -804,7 +804,9 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();
   uint64_t ReductionDataSize =
-      DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
+      TeamsReductions.empty()
+          ? 0
+          : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
   OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
                                 C.getLangOpts().OpenMPCUDAReductionBufNum);

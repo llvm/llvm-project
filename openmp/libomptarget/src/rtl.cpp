@@ -12,11 +12,12 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/Profile.h"
 #include "Shared/Utils.h"
 
 #include <cassert>

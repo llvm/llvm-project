@@ -20,7 +20,7 @@
 #include "omptargetplugin.h"
 
 #ifdef OMPT_SUPPORT
-#include "OmptCallback.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "omp-tools.h"
 #endif
 
@@ -464,6 +464,10 @@ GenericKernelTy::getKernelLaunchEnvironment(
   if (isCtorOrDtor() || RecordReplay.isReplaying())
     return nullptr;
 
+  if (!KernelEnvironment.Configuration.ReductionDataSize ||
+      !KernelEnvironment.Configuration.ReductionBufferLength)
+    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
+
   // TODO: Check if the kernel needs a launch environment.
   auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
                                             /*HostPtr=*/nullptr,
@@ -478,8 +482,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
-  if (KernelEnvironment.Configuration.ReductionDataSize &&
-      KernelEnvironment.Configuration.ReductionBufferLength) {
+  {
     auto AllocOrErr = GenericDevice.dataAlloc(
         KernelEnvironment.Configuration.ReductionDataSize *
             KernelEnvironment.Configuration.ReductionBufferLength,

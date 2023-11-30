@@ -382,6 +382,11 @@ public:
     return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
   }
 
+  bool shouldFoldTerminatingConditionAfterLSR() const {
+    return TargetTransformInfoImplBase::
+        shouldFoldTerminatingConditionAfterLSR();
+  }
+
   bool isProfitableLSRChainElement(Instruction *I) {
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }

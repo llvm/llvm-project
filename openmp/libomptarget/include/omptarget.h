@@ -17,6 +17,8 @@
 #include "Shared/Environment.h"
 #include "Shared/SourceInfo.h"
 
+#include "OpenMP/InternalTypes.h"
+
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -289,6 +291,72 @@ private:
   ///
   /// \returns true if empty, false otherwise.
   bool isQueueEmpty() const;
+};
+
+// Wrapper for task stored async info objects.
+class TaskAsyncInfoWrapperTy {
+  // Invalid GTID as defined by libomp; keep in sync
+  static constexpr int KMP_GTID_DNE = -2;
+
+  const int ExecThreadID = KMP_GTID_DNE;
+  AsyncInfoTy LocalAsyncInfo;
+  AsyncInfoTy *AsyncInfo = &LocalAsyncInfo;
+  void **TaskAsyncInfoPtr = nullptr;
+
+public:
+  TaskAsyncInfoWrapperTy(DeviceTy &Device)
+      : ExecThreadID(__kmpc_global_thread_num(NULL)), LocalAsyncInfo(Device) {
+    // If we failed to acquired the current global thread id, we cannot
+    // re-enqueue the current task. Thus we should use the local blocking async
+    // info.
+    if (ExecThreadID == KMP_GTID_DNE)
+      return;
+
+    // Only tasks with an assigned task team can be re-enqueue and thus can
+    // use the non-blocking synchronization scheme. Thus we should use the local
+    // blocking async info, if we don´t have one.
+    if (!__kmpc_omp_has_task_team(ExecThreadID))
+      return;
+
+    // Acquire a pointer to the AsyncInfo stored inside the current task being
+    // executed.
+    TaskAsyncInfoPtr = __kmpc_omp_get_target_async_handle_ptr(ExecThreadID);
+
+    // If we cannot acquire such pointer, fallback to using the local blocking
+    // async info.
+    if (!TaskAsyncInfoPtr)
+      return;
+
+    // When creating a new task async info, the task handle must always be
+    // invalid. We must never overwrite any task async handle and there should
+    // never be any valid handle store inside the task at this point.
+    assert((*TaskAsyncInfoPtr) == nullptr &&
+           "Task async handle is not empty when dispatching new device "
+           "operations. The handle was not cleared properly or "
+           "__tgt_target_nowait_query should have been called!");
+
+    // If no valid async handle is present, a new AsyncInfo will be allocated
+    // and stored in the current task.
+    AsyncInfo = new AsyncInfoTy(Device, AsyncInfoTy::SyncTy::NON_BLOCKING);
+    *TaskAsyncInfoPtr = (void *)AsyncInfo;
+  }
+
+  ~TaskAsyncInfoWrapperTy() {
+    // Local async info destruction is automatically handled by ~AsyncInfoTy.
+    if (AsyncInfo == &LocalAsyncInfo)
+      return;
+
+    // If the are device operations still pending, return immediately without
+    // deallocating the handle.
+    if (!AsyncInfo->isDone())
+      return;
+
+    // Delete the handle and unset it from the OpenMP task data.
+    delete AsyncInfo;
+    *TaskAsyncInfoPtr = nullptr;
+  }
+
+  operator AsyncInfoTy &() { return *AsyncInfo; }
 };
 
 /// This struct is a record of non-contiguous information
