@@ -489,6 +489,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                                                 SS->getScopeRep(), &II);
       TypeLocBuilder TLB;
       DependentNameTypeLoc TL = TLB.push<DependentNameTypeLoc>(T);
+      TL.setElaboratedKeywordLoc(SourceLocation());
       TL.setQualifierLoc(SS->getWithLocInContext(Context));
       TL.setNameLoc(NameLoc);
       return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
