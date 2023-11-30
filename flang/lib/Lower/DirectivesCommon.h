@@ -586,6 +586,7 @@ void createEmptyRegionBlocks(
       if (eval.block->empty()) {
         eval.block->erase();
         eval.block = builder.createBlock(region);
+//abort();
       } else {
         [[maybe_unused]] mlir::Operation &terminatorOp = eval.block->back();
         assert(mlir::isa<TerminatorOps...>(terminatorOp) &&
