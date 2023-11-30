@@ -86,7 +86,7 @@ TEST(LlvmLibcBitTest, BitCeil) {
   EXPECT_EQ(uint32_t(4), bit_ceil(uint32_t(4)));
   EXPECT_EQ(uint64_t(4), bit_ceil(uint64_t(4)));
 
-  // The result is the largest representable value for each type.
+  // The result is the representable power of 2 for each type.
   EXPECT_EQ(uint8_t(0x80), bit_ceil(uint8_t(0x7f)));
   EXPECT_EQ(uint16_t(0x8000), bit_ceil(uint16_t(0x7fff)));
   EXPECT_EQ(uint32_t(0x80000000), bit_ceil(uint32_t(0x7fffffff)));
