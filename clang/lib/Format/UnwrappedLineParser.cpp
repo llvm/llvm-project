@@ -496,7 +496,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash) && !Line->InPPDirective) {
+    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
       NextTok = Tokens->getNextToken();
       do {
         NextTok = Tokens->getNextToken();
