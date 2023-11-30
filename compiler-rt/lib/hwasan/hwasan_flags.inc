@@ -86,8 +86,8 @@ HWASAN_FLAG(bool, fail_without_syscall_abi, true,
             "Exit if fail to request relaxed syscall ABI.")
 
 HWASAN_FLAG(
-    uptr, fixed_shadow_base, 0,
-    "If non-zero, HWASan will attempt to allocate the shadow at this address, "
+    uptr, fixed_shadow_base, -1,
+    "If not -1, HWASan will attempt to allocate the shadow at this address, "
     "instead of choosing one dynamically."
     "Tip: this can be combined with the compiler option, "
     "-hwasan-mapping-offset, to optimize the instrumentation.")

@@ -106,9 +106,7 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  // NULL is generally address zero, so it is not a valid location for the
-  // shadow.
-  if (flags()->fixed_shadow_base != 0) {
+  if (flags()->fixed_shadow_base != (uptr)-1) {
     __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
   } else {
     __hwasan_shadow_memory_dynamic_address =
