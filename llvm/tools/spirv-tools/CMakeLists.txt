@@ -23,18 +23,17 @@ if (NOT SPIRV_DIS OR NOT SPIRV_VAL)
     BINARY_DIR ${BINARY_DIR}
     BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR} --target spirv-dis spirv-val
     BUILD_BYPRODUCTS ${BINARY_DIR}/tools/spirv-dis ${BINARY_DIR}/tools/spirv-val
+    DOWNLOAD_COMMAND git clone https://github.com/KhronosGroup/SPIRV-Tools.git SPIRVTools &&
+      cd SPIRVTools &&
+      ${Python3_EXECUTABLE} utils/git-sync-deps
+    UPDATE_COMMAND git pull origin main &&
+      ${Python3_EXECUTABLE} utils/git-sync-deps
     # Don't auto-update on every build.
     UPDATE_DISCONNECTED 1
     # Allow manual updating with an explicit SPIRVTools-update target.
     STEP_TARGETS update
+    # Install handled below.
     INSTALL_COMMAND ""
-    )
-
-  ExternalProject_Add_Step(SPIRVTools get-deps
-    COMMENT "Getting SPIRV-Tools dependencies"
-    COMMAND ${Python3_EXECUTABLE} utils/git-sync-deps
-    DEPENDEES update
-    WORKING_DIRECTORY <SOURCE_DIR>
     )
 endif ()
 
