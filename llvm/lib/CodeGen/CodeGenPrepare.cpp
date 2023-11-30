@@ -2848,10 +2848,8 @@ class TypePromotionTransaction {
 
       // Record where we would have to re-insert the instruction in the sequence
       // of DPValues, if we ended up reinserting.
-      if (BB->IsNewDbgInfoFormat) {
-        DPMarker *DPM = BB->createMarker(Inst);
-        BeforeDPValue = DPM->getReinsertionPosition();
-      }
+      if (BB->IsNewDbgInfoFormat)
+        BeforeDPValue = Inst->getDbgReinsertionPosition();
 
       if (HasPrevInstruction) {
         Point.PrevInst = &*std::prev(Inst->getIterator());
