@@ -679,6 +679,8 @@ void DWARFRewriter::updateDebugInfo() {
     assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
 
     if (!opts::DwarfOutputPath.empty()) {
+      if (!sys::fs::exists(opts::DwarfOutputPath))
+        sys::fs::create_directory(opts::DwarfOutputPath);
       addStringHelper(DIEBldr, UnitDIE, Unit, CompDirAttrInfo,
                       opts::DwarfOutputPath.c_str());
     }
