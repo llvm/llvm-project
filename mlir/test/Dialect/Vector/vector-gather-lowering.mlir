@@ -161,7 +161,6 @@ func.func @gather_tensor_1d_none_set(%base: tensor<?xf32>, %v: vector<2xindex>, 
 #map = affine_map<()[s0] -> (s0 * 4096)>
 #map1 = affine_map<()[s0] -> (s0 * -4096 + 518400, 4096)>
 func.func @strided_gather(%base : memref<100x3xf32>,
-                          %M_out: memref<518400xf32>,
                           %idxs : vector<4xindex>,
                           %x : index, %y : index) -> vector<4xf32> {
   %c0 = arith.constant 0 : index
@@ -176,7 +175,6 @@ func.func @strided_gather(%base : memref<100x3xf32>,
 }
 // CHECK-LABEL:   func.func @strided_gather(
 // CHECK-SAME:                         %[[base:.*]]: memref<100x3xf32>,
-// CHECK-SAME:                         %[[M_out:.*]]: memref<518400xf32>,
 // CHECK-SAME:                         %[[IDXS:.*]]: vector<4xindex>,
 // CHECK-SAME:                         %[[VAL_4:.*]]: index,
 // CHECK-SAME:                         %[[VAL_5:.*]]: index) -> vector<4xf32> {
