@@ -4167,7 +4167,7 @@ let Predicates = [HasSVE2orSME2, HasLUT] in {
 //===----------------------------------------------------------------------===//
 // Checked Pointer Arithmetic (FEAT_CPA)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasSVEorSME, HasCPA] in {
+let Predicates = [HasSVE, HasCPA] in {
   // Add/subtract (vectors, unpredicated)
   def ADD_ZZZ_CPA : sve_int_bin_cons_arit_0<0b11, 0b010, "addpt", ZPR64>;
   def SUB_ZZZ_CPA : sve_int_bin_cons_arit_0<0b11, 0b011, "subpt", ZPR64>;
