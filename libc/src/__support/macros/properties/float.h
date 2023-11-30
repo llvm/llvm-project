@@ -62,7 +62,8 @@ using float16 = _Float16;
 #define LIBC_COMPILER_HAS_C23_FLOAT128
 #endif
 #if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 500)) &&  \
-    (defined(LIBC_TARGET_ARCH_IS_X86_64))
+    (defined(LIBC_TARGET_ARCH_IS_X86_64) &&                                    \
+     !defined(LIBC_TARGET_OS_IS_FUCHSIA))
 #define LIBC_COMPILER_HAS_FLOAT128_EXTENSION
 #endif
 
