@@ -316,10 +316,6 @@ bool SparseTensorEncodingAttr::isAllDense() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isDenseLT);
 }
 
-bool SparseTensorEncodingAttr::isCOO() const {
-  return getImpl() && isCOOType(*this, 0, true);
-}
-
 bool SparseTensorEncodingAttr::isAllOrdered() const {
   return !getImpl() || llvm::all_of(getLvlTypes(), isOrderedLT);
 }
@@ -1664,14 +1660,18 @@ LogicalResult ReorderCOOOp::verify() {
   SparseTensorType srcStt = getSparseTensorType(getInputCoo());
   SparseTensorType dstStt = getSparseTensorType(getResultCoo());
 
+  if (!isCOOType(srcStt.getEncoding(), 0, /*isUnique=*/true) ||
+      !isCOOType(dstStt.getEncoding(), 0, /*isUnique=*/true))
+    emitError("Unexpected non-COO sparse tensors");
+
   if (!srcStt.hasSameDimToLvl(dstStt))
     emitError("Unmatched dim2lvl map between input and result COO");
 
   if (srcStt.getPosType() != dstStt.getPosType() ||
       srcStt.getCrdType() != dstStt.getCrdType() ||
-      srcStt.getElementType() != dstStt.getElementType()) {
+      srcStt.getElementType() != dstStt.getElementType())
     emitError("Unmatched storage format between input and result COO");
-  }
+
   return success();
 }
 
