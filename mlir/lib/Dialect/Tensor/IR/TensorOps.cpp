@@ -3800,17 +3800,37 @@ static bool haveSameTiles(PackOp packOp, UnPackOp unPackOp) {
   return true;
 }
 
-/// Fold an unpack(pack(x)) to x.
+/// Returns true if the pack op does not need a padding value.
+static bool paddingIsNotNeeded(PackOp op) {
+  auto srcType = op.getSourceType();
+  if (llvm::any_of(op.getInnerDimsPos(),
+                   [&](int64_t pos) { return srcType.isDynamicDim(pos); }))
+    return false;
+  return !PackOp::requirePaddingValue(srcType.getShape(), op.getInnerDimsPos(),
+                                      op.getMixedTiles());
+}
+
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
-  UnPackOp unPackOp = packOp.getSource().getDefiningOp<UnPackOp>();
-  if (!unPackOp || unPackOp.getSourceType() != packOp.getDestType())
-    return failure();
-  if (packOp.getPaddingValue() ||
-      !hasSameInnerOuterAttribute(packOp, unPackOp) ||
-      !haveSameTiles(packOp, unPackOp))
-    return failure();
-  rewriter.replaceOp(packOp, unPackOp.getSource());
-  return success();
+  // Fold an unpack(pack(x)) to x.
+  if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
+    if (unPackOp.getSourceType() != packOp.getDestType())
+      return failure();
+    if (packOp.getPaddingValue() ||
+        !hasSameInnerOuterAttribute(packOp, unPackOp) ||
+        !haveSameTiles(packOp, unPackOp))
+      return failure();
+    rewriter.replaceOp(packOp, unPackOp.getSource());
+    return success();
+  }
+
+  // Fold optional PaddingValue operand away if padding is not needed.
+  if (packOp.getPaddingValue() && paddingIsNotNeeded(packOp)) {
+    rewriter.startRootUpdate(packOp);
+    packOp.getPaddingValueMutable().clear();
+    rewriter.finalizeRootUpdate(packOp);
+    return success();
+  }
+  return failure();
 }
 
 template <typename PackOrUnpackOp>
