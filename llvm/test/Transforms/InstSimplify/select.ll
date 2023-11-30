@@ -174,6 +174,18 @@ define i32 @test4(i32 %X) {
   ret i32 %cond
 }
 
+; FIXME: This is a miscompile.
+define i32 @test4_disjoint(i32 %X) {
+; CHECK-LABEL: @test4_disjoint(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp = icmp slt i32 %X, 0
+  %or = or disjoint i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %X, i32 %or
+  ret i32 %cond
+}
+
 ; Same as above, but the compare isn't canonical
 define i32 @test4noncanon(i32 %X) {
 ; CHECK-LABEL: @test4noncanon(
@@ -192,6 +204,16 @@ define i32 @test5(i32 %X) {
 ;
   %cmp = icmp slt i32 %X, 0
   %or = or i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %or, i32 %X
+  ret i32 %cond
+}
+
+define i32 @test5_disjoint(i32 %X) {
+; CHECK-LABEL: @test5_disjoint(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %cmp = icmp slt i32 %X, 0
+  %or = or disjoint i32 %X, -2147483648
   %cond = select i1 %cmp, i32 %or, i32 %X
   ret i32 %cond
 }
@@ -227,6 +249,16 @@ define i32 @test8(i32 %X) {
   ret i32 %cond
 }
 
+define i32 @test8_disjoint(i32 %X) {
+; CHECK-LABEL: @test8_disjoint(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %cmp = icmp sgt i32 %X, -1
+  %or = or disjoint i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %X, i32 %or
+  ret i32 %cond
+}
+
 define i32 @test9(i32 %X) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], -2147483648
@@ -234,6 +266,18 @@ define i32 @test9(i32 %X) {
 ;
   %cmp = icmp sgt i32 %X, -1
   %or = or i32 %X, -2147483648
+  %cond = select i1 %cmp, i32 %or, i32 %X
+  ret i32 %cond
+}
+
+; FIXME: This is a miscompile.
+define i32 @test9_disjoint(i32 %X) {
+; CHECK-LABEL: @test9_disjoint(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %cmp = icmp sgt i32 %X, -1
+  %or = or disjoint i32 %X, -2147483648
   %cond = select i1 %cmp, i32 %or, i32 %X
   ret i32 %cond
 }
