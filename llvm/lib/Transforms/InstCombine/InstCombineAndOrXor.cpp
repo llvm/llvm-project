@@ -4130,7 +4130,7 @@ static bool canFreelyInvert(InstCombiner &IC, Value *Op,
 static Value *freelyInvert(InstCombinerImpl &IC, Value *Op,
                            Instruction *IgnoredUser) {
   auto *I = cast<Instruction>(Op);
-  IC.Builder.SetInsertPoint(&**I->getInsertionPointAfterDef());
+  IC.Builder.SetInsertPoint(*I->getInsertionPointAfterDef());
   Value *NotOp = IC.Builder.CreateNot(Op, Op->getName() + ".not");
   Op->replaceUsesWithIf(NotOp,
                         [NotOp](Use &U) { return U.getUser() != NotOp; });

@@ -699,7 +699,7 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
 
   Value *Result = Orig;
   for (Value *V : NeedFreeze) {
-    auto FreezeInsertPt = *getFreezeInsertPt(V, DT);
+    BasicBlock::iterator FreezeInsertPt = *getFreezeInsertPt(V, DT);
     FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr");
     FI->insertBefore(*FreezeInsertPt->getParent(), FreezeInsertPt);
     ++FreezeAdded;
