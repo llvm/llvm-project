@@ -1,11 +1,9 @@
-# TODO: `DISABLE_SSE2_OPT` does not quite work yet.
-# We will investigate a better way of feature flag control.
 add_header_library(
   bitmask
   HDRS
     bitmask.h
   FLAGS
-    DISABLE_SSE2_OPT
+    PREFER_GENERIC
   DEPENDS
     libc.src.__support.bit
     libc.src.__support.macros.properties.cpu_features
