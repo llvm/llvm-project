@@ -4933,6 +4933,8 @@ def err_template_param_shadow : Error<
 def ext_template_param_shadow : ExtWarn<
   err_template_param_shadow.Summary>, InGroup<MicrosoftTemplateShadow>;
 def note_template_param_here : Note<"template parameter is declared here">;
+def note_template_param_external : Note<
+  "template parameter from hidden source: %0">;
 def warn_template_export_unsupported : Warning<
   "exported templates are unsupported">;
 def err_template_outside_namespace_or_class_scope : Error<
@@ -5061,6 +5063,8 @@ def err_template_arg_list_different_arity : Error<
   "%select{class template|function template|variable template|alias template|"
   "template template parameter|concept|template}1 %2">;
 def note_template_decl_here : Note<"template is declared here">;
+def note_template_decl_external : Note<
+  "template declaration from hidden source: %0">;
 def err_template_arg_must_be_type : Error<
   "template argument for template type parameter must be a type">;
 def err_template_arg_must_be_type_suggest : Error<

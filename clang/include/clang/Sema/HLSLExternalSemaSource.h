@@ -30,9 +30,9 @@ class HLSLExternalSemaSource : public ExternalSemaSource {
 
   void defineHLSLVectorAlias();
   void defineTrivialHLSLTypes();
-  void forwardDeclareHLSLTypes();
+  void defineHLSLTypesWithForwardDeclarations();
 
-  void completeBufferType(CXXRecordDecl *Record);
+  void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);
 
 public:
   ~HLSLExternalSemaSource() override;
