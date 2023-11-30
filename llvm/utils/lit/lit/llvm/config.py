@@ -97,6 +97,7 @@ class LLVMConfig(object):
         # part of the standard header.  But currently they aren't)
         host_triple = getattr(config, "host_triple", None)
         target_triple = getattr(config, "target_triple", None)
+        features.add("host=%s" % host_triple)
         features.add("target=%s" % target_triple)
         if host_triple and host_triple == target_triple:
             features.add("native")

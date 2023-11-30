@@ -839,6 +839,14 @@ static void __kmpc_omp_task_begin_if0_ompt(ident_t *loc_ref, kmp_int32 gtid,
 // loc_ref: source location information; points to beginning of task block.
 // gtid: global thread number.
 // task: task thunk for the started task.
+#ifdef __s390x__
+// This is required for OMPT_GET_FRAME_ADDRESS(1) to compile on s390x.
+// In order for it to work correctly, the caller also needs to be compiled with
+// backchain. If a caller is compiled without backchain,
+// OMPT_GET_FRAME_ADDRESS(1) will produce an incorrect value, but will not
+// crash.
+__attribute__((target("backchain")))
+#endif
 void __kmpc_omp_task_begin_if0(ident_t *loc_ref, kmp_int32 gtid,
                                kmp_task_t *task) {
 #if OMPT_SUPPORT

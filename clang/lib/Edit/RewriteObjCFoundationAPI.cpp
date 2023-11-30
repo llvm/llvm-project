@@ -643,7 +643,7 @@ static bool shouldNotRewriteImmediateMessageArgs(const ObjCMessageExpr *Msg,
 static bool rewriteToCharLiteral(const ObjCMessageExpr *Msg,
                                    const CharacterLiteral *Arg,
                                    const NSAPI &NS, Commit &commit) {
-  if (Arg->getKind() != CharacterLiteral::Ascii)
+  if (Arg->getKind() != CharacterLiteralKind::Ascii)
     return false;
   if (NS.isNSNumberLiteralSelector(NSAPI::NSNumberWithChar,
                                    Msg->getSelector())) {

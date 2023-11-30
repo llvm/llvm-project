@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -261,8 +262,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // It is safe and potentially profitable to load a vector directly:
   // inselt undef, load Scalar, 0 --> load VecPtr
   IRBuilder<> Builder(Load);
-  Value *CastedPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      SrcPtr, MinVecTy->getPointerTo(AS));
+  Value *CastedPtr =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
@@ -324,7 +325,7 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
 
   IRBuilder<> Builder(Load);
   Value *CastedPtr =
-      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Ty->getPointerTo(AS));
+      Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Value *VecLd = Builder.CreateAlignedLoad(Ty, CastedPtr, Alignment);
   replaceValue(I, *VecLd);
   ++NumVecLoad;
@@ -753,6 +754,13 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!isSplatValue(Op0) || !isSplatValue(Op1))
     return false;
 
+  // Check getSplatValue early in this function, to avoid doing unnecessary
+  // work.
+  Value *ScalarOp0 = getSplatValue(Op0);
+  Value *ScalarOp1 = getSplatValue(Op1);
+  if (!ScalarOp0 || !ScalarOp1)
+    return false;
+
   // For the binary VP intrinsics supported here, the result on disabled lanes
   // is a poison value. For now, only do this simplification if all lanes
   // are active.
@@ -841,8 +849,6 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!SafeToSpeculate && !isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT))
     return false;
 
-  Value *ScalarOp0 = getSplatValue(Op0);
-  Value *ScalarOp1 = getSplatValue(Op1);
   Value *ScalarVal =
       ScalarIntrID
           ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,

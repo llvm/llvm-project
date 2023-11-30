@@ -28,7 +28,7 @@ define i64 @sext_zext_add_mismatched_exts(i32 %A) {
 ; CHECK-NEXT:    [[B:%.*]] = ashr i32 [[A:%.*]], 7
 ; CHECK-NEXT:    [[C:%.*]] = lshr i32 [[A]], 9
 ; CHECK-NEXT:    [[D:%.*]] = sext i32 [[B]] to i64
-; CHECK-NEXT:    [[E:%.*]] = zext i32 [[C]] to i64
+; CHECK-NEXT:    [[E:%.*]] = zext nneg i32 [[C]] to i64
 ; CHECK-NEXT:    [[F:%.*]] = add nsw i64 [[D]], [[E]]
 ; CHECK-NEXT:    ret i64 [[F]]
 ;
@@ -125,7 +125,7 @@ define i64 @test1(i32 %V) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[NARROW:%.*]] = add nuw nsw i32 [[CALL1]], [[CALL2]]
-; CHECK-NEXT:    [[ADD:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %call1 = call i32 @callee(), !range !0
@@ -156,7 +156,7 @@ define i64 @test3(i32 %V) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[NARROW:%.*]] = mul nuw nsw i32 [[CALL1]], [[CALL2]]
-; CHECK-NEXT:    [[ADD:%.*]] = zext i32 [[NARROW]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = zext nneg i32 [[NARROW]] to i64
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %call1 = call i32 @callee(), !range !0
@@ -581,8 +581,8 @@ define i64 @test17(i32 %V) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @callee(), !range [[RNG0]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @callee(), !range [[RNG0]]
-; CHECK-NEXT:    [[SEXT1:%.*]] = zext i32 [[CALL1]] to i64
-; CHECK-NEXT:    [[SEXT2:%.*]] = zext i32 [[CALL2]] to i64
+; CHECK-NEXT:    [[SEXT1:%.*]] = zext nneg i32 [[CALL1]] to i64
+; CHECK-NEXT:    [[SEXT2:%.*]] = zext nneg i32 [[CALL2]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[SEXT1]], [[SEXT2]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;

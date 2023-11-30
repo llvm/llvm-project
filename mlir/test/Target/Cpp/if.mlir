@@ -3,7 +3,7 @@
 
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
-     %0 = emitc.call "func_const"(%arg1) : (f32) -> i32
+     %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
   }
   return
 }
@@ -23,9 +23,9 @@ func.func @test_if(%arg0: i1, %arg1: f32) {
 
 func.func @test_if_else(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
-    %0 = emitc.call "func_true"(%arg1) : (f32) -> i32
+    %0 = emitc.call_opaque "func_true"(%arg1) : (f32) -> i32
   } else {
-    %0 = emitc.call "func_false"(%arg1) : (f32) -> i32
+    %0 = emitc.call_opaque "func_false"(%arg1) : (f32) -> i32
   }
   return
 }
@@ -53,13 +53,13 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) {
   %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> i32
   %y = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> f64
   emitc.if %arg0 {
-    %1 = emitc.call "func_true_1"(%arg1) : (f32) -> i32
-    %2 = emitc.call "func_true_2"(%arg1) : (f32) -> f64
+    %1 = emitc.call_opaque "func_true_1"(%arg1) : (f32) -> i32
+    %2 = emitc.call_opaque "func_true_2"(%arg1) : (f32) -> f64
     emitc.assign %1 : i32 to %x : i32
     emitc.assign %2 : f64 to %y : f64
   } else {
-    %1 = emitc.call "func_false_1"(%arg1) : (f32) -> i32
-    %2 = emitc.call "func_false_2"(%arg1) : (f32) -> f64
+    %1 = emitc.call_opaque "func_false_1"(%arg1) : (f32) -> i32
+    %2 = emitc.call_opaque "func_false_2"(%arg1) : (f32) -> f64
     emitc.assign %1 : i32 to %x : i32
     emitc.assign %2 : f64 to %y : f64
   }

@@ -31,11 +31,11 @@ constexpr void test() {
   };
 
   std::array<int, 5> array{0, 1, 2, 3, 4};
-  FilterView view = make_filter_view(array.begin(), array.end(), AlwaysTrue{});
+  FilterView view = make_filter_view(array.data(), array.data() + array.size(), AlwaysTrue{});
 
   FilterSentinel const sent = view.end();
   std::same_as<Sentinel> decltype(auto) result = sent.base();
-  assert(base(base(result)) == array.end());
+  assert(base(base(result)) == array.data() + array.size());
 }
 
 constexpr bool tests() {

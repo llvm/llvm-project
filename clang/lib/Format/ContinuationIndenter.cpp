@@ -1208,8 +1208,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
 
   // Indentation of the statement following a Verilog case label is taken care
   // of in moveStateToNextToken.
-  if (Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous))
+  if (Style.isVerilog() && PreviousNonComment &&
+      Keywords.isVerilogEndOfLabel(*PreviousNonComment)) {
     return State.FirstIndent;
+  }
 
   if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
       State.Line->First->is(tok::kw_enum)) {
@@ -1227,9 +1229,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent;
   }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
-       (Current.is(tok::greater) &&
-        (Style.Language == FormatStyle::LK_Proto ||
-         Style.Language == FormatStyle::LK_TextProto))) &&
+       (Current.is(tok::greater) && Style.isProto())) &&
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
@@ -1276,9 +1276,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (Current.is(tok::identifier) && Current.Next &&
       (!Style.isVerilog() || Current.Next->is(tok::colon)) &&
       (Current.Next->is(TT_DictLiteral) ||
-       ((Style.Language == FormatStyle::LK_Proto ||
-         Style.Language == FormatStyle::LK_TextProto) &&
-        Current.Next->isOneOf(tok::less, tok::l_brace)))) {
+       (Style.isProto() && Current.Next->isOneOf(tok::less, tok::l_brace)))) {
     return CurrentState.Indent;
   }
   if (NextNonComment->is(TT_ObjCStringLiteral) &&
@@ -1428,8 +1426,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent - Current.Tok.getLength() -
            Current.SpacesRequiredBefore;
   }
-  if (Current.isOneOf(tok::comment, TT_BlockComment, TT_LineComment) &&
-      NextNonComment->isBinaryOperator() && CurrentState.UnindentOperator) {
+  if (Current.is(tok::comment) && NextNonComment->isBinaryOperator() &&
+      CurrentState.UnindentOperator) {
     return CurrentState.Indent - NextNonComment->Tok.getLength() -
            NextNonComment->SpacesRequiredBefore;
   }
@@ -1612,6 +1610,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       State.NextToken->MustBreakBefore &&
       Keywords.isVerilogEndOfLabel(Current)) {
     State.FirstIndent += Style.IndentWidth;
+    CurrentState.Indent = State.FirstIndent;
   }
 
   unsigned Penalty =
@@ -1795,9 +1794,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                        Current.MatchingParen->Previous &&
                        Current.MatchingParen->Previous->is(tok::comma);
     AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
-                      Style.Language == FormatStyle::LK_Proto ||
-                      Style.Language == FormatStyle::LK_TextProto ||
-                      !Style.BinPackArguments ||
+                      Style.isProto() || !Style.BinPackArguments ||
                       (NextNonComment && NextNonComment->isOneOf(
                                              TT_DesignatedInitializerPeriod,
                                              TT_DesignatedInitializerLSquare));

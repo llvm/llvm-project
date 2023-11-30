@@ -114,7 +114,7 @@ nonloc::SymbolVal SValBuilder::makeNonLoc(const SymExpr *operand,
   assert(operand);
   assert(!Loc::isLocType(toTy));
   if (fromTy == toTy)
-    return operand;
+    return nonloc::SymbolVal(operand);
   return nonloc::SymbolVal(SymMgr.getCastSymbol(operand, fromTy, toTy));
 }
 
@@ -229,6 +229,14 @@ SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
 
   SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, type, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
+}
+
+loc::MemRegionVal SValBuilder::getAllocaRegionVal(const Expr *E,
+                                                  const LocationContext *LCtx,
+                                                  unsigned VisitCount) {
+  const AllocaRegion *R =
+      getRegionManager().getAllocaRegion(E, VisitCount, LCtx);
+  return loc::MemRegionVal(R);
 }
 
 DefinedSVal SValBuilder::getMetadataSymbolVal(const void *symbolTag,
@@ -446,7 +454,7 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
 }
 
 SVal SValBuilder::evalMinus(NonLoc X) {
-  switch (X.getSubKind()) {
+  switch (X.getKind()) {
   case nonloc::ConcreteIntKind:
     return makeIntVal(-X.castAs<nonloc::ConcreteInt>().getValue());
   case nonloc::SymbolValKind:
@@ -458,7 +466,7 @@ SVal SValBuilder::evalMinus(NonLoc X) {
 }
 
 SVal SValBuilder::evalComplement(NonLoc X) {
-  switch (X.getSubKind()) {
+  switch (X.getKind()) {
   case nonloc::ConcreteIntKind:
     return makeIntVal(~X.castAs<nonloc::ConcreteInt>().getValue());
   case nonloc::SymbolValKind:
@@ -658,7 +666,7 @@ public:
   }
   SVal VisitUndefinedVal(UndefinedVal V) { return V; }
   SVal VisitUnknownVal(UnknownVal V) { return V; }
-  SVal VisitLocConcreteInt(loc::ConcreteInt V) {
+  SVal VisitConcreteInt(loc::ConcreteInt V) {
     // Pointer to bool.
     if (CastTy->isBooleanType())
       return VB.makeTruthVal(V.getValue().getBoolValue(), CastTy);
@@ -680,7 +688,7 @@ public:
     // Pointer to whatever else.
     return UnknownVal();
   }
-  SVal VisitLocGotoLabel(loc::GotoLabel V) {
+  SVal VisitGotoLabel(loc::GotoLabel V) {
     // Pointer to bool.
     if (CastTy->isBooleanType())
       // Labels are always true.
@@ -707,7 +715,7 @@ public:
     // Pointer to whatever else.
     return UnknownVal();
   }
-  SVal VisitLocMemRegionVal(loc::MemRegionVal V) {
+  SVal VisitMemRegionVal(loc::MemRegionVal V) {
     // Pointer to bool.
     if (CastTy->isBooleanType()) {
       const MemRegion *R = V.getRegion();
@@ -852,11 +860,11 @@ public:
     // necessary for bit-level reasoning as well.
     return UnknownVal();
   }
-  SVal VisitNonLocCompoundVal(nonloc::CompoundVal V) {
+  SVal VisitCompoundVal(nonloc::CompoundVal V) {
     // Compound to whatever.
     return UnknownVal();
   }
-  SVal VisitNonLocConcreteInt(nonloc::ConcreteInt V) {
+  SVal VisitConcreteInt(nonloc::ConcreteInt V) {
     auto CastedValue = [V, this]() {
       llvm::APSInt Value = V.getValue();
       VB.getBasicValueFactory().getAPSIntType(CastTy).apply(Value);
@@ -878,11 +886,11 @@ public:
     // Pointer to whatever else.
     return UnknownVal();
   }
-  SVal VisitNonLocLazyCompoundVal(nonloc::LazyCompoundVal V) {
+  SVal VisitLazyCompoundVal(nonloc::LazyCompoundVal V) {
     // LazyCompound to whatever.
     return UnknownVal();
   }
-  SVal VisitNonLocLocAsInteger(nonloc::LocAsInteger V) {
+  SVal VisitLocAsInteger(nonloc::LocAsInteger V) {
     Loc L = V.getLoc();
 
     // Pointer as integer to bool.
@@ -904,7 +912,7 @@ public:
     const MemRegion *R = L.getAsRegion();
     if (!IsUnknownOriginalType && R) {
       if (CastTy->isIntegralOrEnumerationType())
-        return VisitLocMemRegionVal(loc::MemRegionVal(R));
+        return VisitMemRegionVal(loc::MemRegionVal(R));
 
       if (Loc::isLocType(CastTy)) {
         assert(Loc::isLocType(OriginalTy) || OriginalTy->isFunctionType() ||
@@ -918,7 +926,7 @@ public:
     } else {
       if (Loc::isLocType(CastTy)) {
         if (IsUnknownOriginalType)
-          return VisitLocMemRegionVal(loc::MemRegionVal(R));
+          return VisitMemRegionVal(loc::MemRegionVal(R));
         return L;
       }
 
@@ -943,7 +951,7 @@ public:
     // Pointer as integer to whatever else.
     return UnknownVal();
   }
-  SVal VisitNonLocSymbolVal(nonloc::SymbolVal V) {
+  SVal VisitSymbolVal(nonloc::SymbolVal V) {
     SymbolRef SE = V.getSymbol();
 
     const bool IsUnknownOriginalType = OriginalTy.isNull();
@@ -980,10 +988,15 @@ public:
           return VB.makeNonLoc(SE, T, CastTy);
     }
 
+    // FIXME: We should be able to cast NonLoc -> Loc
+    // (when Loc::isLocType(CastTy) is true)
+    // But it's hard to do as SymbolicRegions can't refer to SymbolCasts holding
+    // generic SymExprs. Check the commit message for the details.
+
     // Symbol to pointer and whatever else.
     return UnknownVal();
   }
-  SVal VisitNonLocPointerToMember(nonloc::PointerToMember V) {
+  SVal VisitPointerToMember(nonloc::PointerToMember V) {
     // Member pointer to whatever.
     return V;
   }

@@ -1023,6 +1023,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     return;
 
   const VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+  assert(NewInfo.isValid() && !NewInfo.isUnknown());
   if (Info.isValid() && !needVSETVLI(MI, NewInfo, Info))
     return;
 
@@ -1036,24 +1037,23 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
   // places.
   DemandedFields Demanded = getDemanded(MI, MRI, ST);
-  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
-      PrevInfo.isValid() && !Info.isUnknown() && !PrevInfo.isUnknown()) {
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
+      !PrevInfo.isUnknown()) {
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
       Info.setVLMul(*NewVLMul);
   }
 
-  // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and
-  // VL > 0. We can discard the user requested AVL and just use the last
-  // one if we can prove it equally zero.  This removes a vsetvli entirely
-  // if the types match or allows use of cheaper avl preserving variant
-  // if VLMAX doesn't change.  If VLMAX might change, we couldn't use
-  // the 'vsetvli x0, x0, vtype" variant, so we avoid the transform to
-  // prevent extending live range of an avl register operand.
+  // If we only demand VL zeroness (i.e. vmv.s.x and vmv.x.s), then there are
+  // only two behaviors, VL = 0 and VL > 0. We can discard the user requested
+  // AVL and just use the last one if we can prove it equally zero. This
+  // removes a vsetvli entirely if the types match or allows use of cheaper avl
+  // preserving variant if VLMAX doesn't change. If VLMAX might change, we
+  // couldn't use the 'vsetvli x0, x0, vtype" variant, so we avoid the transform
+  // to prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
-  if (isScalarInsertInstr(MI) && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info, *MRI) &&
-      Info.hasSameVLMAX(PrevInfo)) {
+  if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
+      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo)) {
     if (PrevInfo.hasAVLImm())
       Info.setAVLImm(PrevInfo.getAVLImm());
     else
@@ -1308,29 +1308,6 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   }
 }
 
-/// Return true if the VL value configured by a vset(i)vli with the
-/// provided Info must be equal to the requested AVL.  That is, that
-/// AVL <= VLMAX.
-static bool willVLBeAVL(const VSETVLIInfo &Info, const RISCVSubtarget &ST) {
-  if (!Info.hasAVLImm())
-    // VLMAX is always the same value.
-    // TODO: Could extend to other registers by looking at the associated vreg
-    // def placement.
-    return RISCV::X0 == Info.getAVLReg();
-
-  unsigned AVL = Info.getAVLImm();
-  unsigned SEW = Info.getSEW();
-  unsigned AVLInBits = AVL * SEW;
-
-  unsigned LMul;
-  bool Fractional;
-  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(Info.getVLMUL());
-
-  if (Fractional)
-    return ST.getRealMinVLen() / LMul >= AVLInBits;
-  return ST.getRealMinVLen() * LMul >= AVLInBits;
-}
-
 /// Perform simple partial redundancy elimination of the VSETVLI instructions
 /// we're about to insert by looking for cases where we can PRE from the
 /// beginning of one block to the end of one of its predecessors.  Specifically,
@@ -1364,9 +1341,21 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   if (UnavailablePred->succ_size() != 1)
     return;
 
-  // If VL can be less than AVL, then we can't reduce the frequency of exec.
-  if (!willVLBeAVL(AvailableInfo, *ST))
-    return;
+  // If the AVL value is a register (other than our VLMAX sentinel),
+  // we need to prove the value is available at the point we're going
+  // to insert the vsetvli at.
+  if (AvailableInfo.hasAVLReg() && RISCV::X0 != AvailableInfo.getAVLReg()) {
+    MachineInstr *AVLDefMI = MRI->getVRegDef(AvailableInfo.getAVLReg());
+    if (!AVLDefMI)
+      return;
+    // This is an inline dominance check which covers the case of
+    // UnavailablePred being the preheader of a loop.
+    if (AVLDefMI->getParent() != UnavailablePred)
+      return;
+    for (auto &TermMI : UnavailablePred->terminators())
+      if (&TermMI == AVLDefMI)
+        return;
+  }
 
   // Model the effect of changing the input state of the block MBB to
   // AvailableInfo.  We're looking for two issues here; one legality,

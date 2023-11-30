@@ -1145,16 +1145,6 @@ val const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getShl]. *)
 val const_shl : llvalue -> llvalue -> llvalue
 
-(** [const_lshr c1 c2] returns the constant integer [c1] right-shifted by the
-    constant integer [c2] with zero extension.
-    See the method [llvm::ConstantExpr::getLShr]. *)
-val const_lshr : llvalue -> llvalue -> llvalue
-
-(** [const_ashr c1 c2] returns the constant integer [c1] right-shifted by the
-    constant integer [c2] with sign extension.
-    See the method [llvm::ConstantExpr::getAShr]. *)
-val const_ashr : llvalue -> llvalue -> llvalue
-
 (** [const_gep srcty pc indices] returns the constant [getElementPtr] of [pc]
     with source element type [srcty] and the constant integers indices from the
     array [indices].
@@ -1170,36 +1160,6 @@ val const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
     to the smaller integer type [ty].
     See the method [llvm::ConstantExpr::getTrunc]. *)
 val const_trunc : llvalue -> lltype -> llvalue
-
-(** [const_fptrunc c ty] returns the constant truncation of floating point
-    constant [c] to the smaller floating point type [ty].
-    See the method [llvm::ConstantExpr::getFPTrunc]. *)
-val const_fptrunc : llvalue -> lltype -> llvalue
-
-(** [const_fpext c ty] returns the constant extension of floating point constant
-    [c] to the larger floating point type [ty].
-    See the method [llvm::ConstantExpr::getFPExt]. *)
-val const_fpext : llvalue -> lltype -> llvalue
-
-(** [const_uitofp c ty] returns the constant floating point conversion of
-    unsigned integer constant [c] to the floating point type [ty].
-    See the method [llvm::ConstantExpr::getUIToFP]. *)
-val const_uitofp : llvalue -> lltype -> llvalue
-
-(** [const_sitofp c ty] returns the constant floating point conversion of
-    signed integer constant [c] to the floating point type [ty].
-    See the method [llvm::ConstantExpr::getSIToFP]. *)
-val const_sitofp : llvalue -> lltype -> llvalue
-
-(** [const_fptoui c ty] returns the constant unsigned integer conversion of
-    floating point constant [c] to integer type [ty].
-    See the method [llvm::ConstantExpr::getFPToUI]. *)
-val const_fptoui : llvalue -> lltype -> llvalue
-
-(** [const_fptoui c ty] returns the constant unsigned integer conversion of
-    floating point constant [c] to integer type [ty].
-    See the method [llvm::ConstantExpr::getFPToSI]. *)
-val const_fptosi : llvalue -> lltype -> llvalue
 
 (** [const_ptrtoint c ty] returns the constant integer conversion of
     pointer constant [c] to integer type [ty].
@@ -1225,11 +1185,6 @@ val const_trunc_or_bitcast : llvalue -> lltype -> llvalue
     cast conversion of constant [c] to type [ty] of equal size.
     See the method [llvm::ConstantExpr::getPointerCast]. *)
 val const_pointercast : llvalue -> lltype -> llvalue
-
-(** [const_fpcast c ty] returns a constant fpext, bitcast, or fptrunc for fp ->
-    fp casts of constant [c] to type [ty].
-    See the method [llvm::ConstantExpr::getFPCast]. *)
-val const_fpcast : llvalue -> lltype -> llvalue
 
 (** [const_extractelement vec i] returns the constant [i]th element of
     constant vector [vec]. [i] must be a constant [i32] value unsigned less than

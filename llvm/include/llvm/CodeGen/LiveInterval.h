@@ -520,8 +520,9 @@ namespace llvm {
         endIndex() < End.getBoundaryIndex();
     }
 
-    /// Remove the specified segment from this range.  Note that the segment
-    /// must be a single Segment in its entirety.
+    /// Remove the specified interval from this live range.
+    /// Does nothing if interval is not part of this live range.
+    /// Note that the interval must be within a single Segment in its entirety.
     void removeSegment(SlotIndex Start, SlotIndex End,
                        bool RemoveDeadValNo = false);
 

@@ -1258,7 +1258,7 @@ static void findKeepUniqueSections(COFFLinkerContext &ctx) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err;
+        const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(obj) + ": could not decode addrsig section: " + err);
@@ -2179,6 +2179,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
 
+  // Handle /dependentloadflag
+  for (auto *arg :
+       args.filtered(OPT_dependentloadflag, OPT_dependentloadflag_opt))
+    parseDependentLoadFlags(arg);
+
   if (tar) {
     llvm::TimeTraceScope timeScope("Reproducer: response file");
     tar->append("response.txt",
@@ -2355,6 +2360,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
+  if (isArm64EC(config->machine)) {
+    ctx.symtab.addAbsolute("__hybrid_code_map", 0);
+    ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+  }
+
   if (config->pseudoRelocs) {
     ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
     ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
@@ -2471,6 +2481,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
   ctx.symtab.compileBitcodeFiles();
+
+  if (Defined *d =
+          dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
+    config->gcroot.push_back(d);
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done

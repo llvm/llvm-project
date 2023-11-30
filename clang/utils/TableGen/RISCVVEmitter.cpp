@@ -151,7 +151,9 @@ static BasicType ParseBasicType(char c) {
   case 'd':
     return BasicType::Float64;
     break;
-
+  case 'b':
+    return BasicType::BFloat16;
+    break;
   default:
     return BasicType::Unknown;
   }
@@ -389,8 +391,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     }
   }
 
-  for (BasicType BT :
-       {BasicType::Float16, BasicType::Float32, BasicType::Float64}) {
+  for (BasicType BT : {BasicType::Float16, BasicType::Float32,
+                       BasicType::Float64, BasicType::BFloat16}) {
     for (int Log2LMUL : Log2LMULs) {
       auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
       if (T)
@@ -399,7 +401,9 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
         auto TupleT = TypeCache.computeType(
             BT, Log2LMUL,
             PrototypeDescriptor(BaseTypeModifier::Vector, getTupleVTM(NF),
-                                TypeModifier::Float));
+                                (BT == BasicType::BFloat16
+                                     ? TypeModifier::BFloat
+                                     : TypeModifier::Float)));
         if (TupleT)
           printType(*TupleT);
       }

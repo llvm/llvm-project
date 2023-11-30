@@ -145,6 +145,7 @@ ENUM_LANGOPT(ExceptionHandling, ExceptionHandlingKind, 3,
              ExceptionHandlingKind::None, "exception handling")
 LANGOPT(IgnoreExceptions  , 1, 0, "ignore exceptions")
 LANGOPT(ExternCNoUnwind   , 1, 0, "Assume extern C functions don't unwind")
+LANGOPT(AssumeNothrowExceptionDtor , 1, 0, "Assume exception object's destructor is nothrow")
 LANGOPT(TraditionalCPP    , 1, 0, "traditional CPP emulation")
 LANGOPT(RTTI              , 1, 1, "run-time type information")
 LANGOPT(RTTIData          , 1, 1, "emit run-time type information data")
@@ -268,6 +269,7 @@ LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA d
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr functions as __host__ __device__")
 LANGOPT(GPUDeviceApproxTranscendentals, 1, 0, "using approximate transcendental functions")
 LANGOPT(GPURelocatableDeviceCode, 1, 0, "generate relocatable device code")
+LANGOPT(OffloadImplicitHostDeviceTemplates, 1, 0, "assume template functions to be implicitly host device by default for CUDA/HIP")
 LANGOPT(GPUAllowDeviceInit, 1, 0, "allowing device side global init functions for HIP")
 LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, "default max threads per block for kernel launch bounds for HIP")
 LANGOPT(GPUDeferDiag, 1, 0, "defer host/device related diagnostic messages for CUDA/HIP")
@@ -282,6 +284,8 @@ LANGOPT(HIPUseNewLaunchAPI, 1, 0, "Use new kernel launching API for HIP")
 LANGOPT(OffloadUniformBlock, 1, 0, "Assume that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)")
 LANGOPT(HIPStdPar, 1, 0, "Enable Standard Parallel Algorithm Acceleration for HIP (experimental)")
 LANGOPT(HIPStdParInterposeAlloc, 1, 0, "Replace allocations / deallocations with HIP RT calls when Standard Parallel Algorithm Acceleration for HIP is enabled (Experimental)")
+
+LANGOPT(OpenACC           , 1, 0, "OpenACC Enabled")
 
 LANGOPT(SizedDeallocation , 1, 0, "sized deallocation")
 LANGOPT(AlignedAllocation , 1, 0, "aligned allocation")
@@ -347,9 +351,9 @@ LANGOPT(
     "type's inheritance model would be determined under the Microsoft ABI")
 
 ENUM_LANGOPT(GC, GCMode, 2, NonGC, "Objective-C Garbage Collection mode")
-ENUM_LANGOPT(ValueVisibilityMode, Visibility, 3, DefaultVisibility,
+BENIGN_ENUM_LANGOPT(ValueVisibilityMode, Visibility, 3, DefaultVisibility,
              "default visibility for functions and variables [-fvisibility]")
-ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
+BENIGN_ENUM_LANGOPT(TypeVisibilityMode, Visibility, 3, DefaultVisibility,
              "default visibility for types [-ftype-visibility]")
 LANGOPT(SetVisibilityForExternDecls, 1, 0,
         "apply global symbol visibility to external declarations without an explicit visibility")
@@ -399,6 +403,9 @@ LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 LANGOPT(XLPragmaPack, 1, 0, "IBM XL #pragma pack handling")
 
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
+
+LANGOPT(APINotes, 1, 0, "use external API notes")
+LANGOPT(APINotesModules, 1, 0, "use module-based external API notes")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "
                                            "field padding (0: none, 1:least "

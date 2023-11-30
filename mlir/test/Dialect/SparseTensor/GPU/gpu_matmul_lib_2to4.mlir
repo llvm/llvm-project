@@ -1,12 +1,11 @@
-// RUN: mlir-opt %s --linalg-generalize-named-ops \
-// RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
+// RUN: mlir-opt %s --linalg-generalize-named-ops --sparse-gpu-codegen="num-threads=0" | FileCheck %s
 
 // CHECK-LABEL:   func.func @matmul(
-// CHECK-SAME:                      %[[VAL_0:.*0]]: tensor<?x?xf16>,
-// CHECK-SAME:                      %[[VAL_1:.*1]]: tensor<?x?xf16>,
-// CHECK-SAME:                      %[[VAL_2:.*2]]: tensor<?x?xf16>) -> tensor<?x?xf16> {
-// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK-SAME:      %[[VAL_0:.*0]]: tensor<?x?xf16>,
+// CHECK-SAME:      %[[VAL_1:.*1]]: tensor<?x?xf16>,
+// CHECK-SAME:      %[[VAL_2:.*2]]: tensor<?x?xf16>) -> tensor<?x?xf16> {
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_5:.*]] = bufferization.to_memref %[[VAL_0]] : memref<?x?xf16>
 // CHECK:           %[[VAL_6:.*]] = gpu.wait async
 // CHECK:           %[[VAL_7:.*]] = memref.dim %[[VAL_5]], %[[VAL_3]] : memref<?x?xf16>

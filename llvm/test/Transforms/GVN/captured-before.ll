@@ -83,8 +83,7 @@ define i32 @test_capture_readonly() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
 ; CHECK-NEXT:    call void @capture(ptr readonly [[A]])
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 123
 ;
   %a = alloca i32
   store i32 123, ptr %a

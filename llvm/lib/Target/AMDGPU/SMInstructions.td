@@ -234,8 +234,6 @@ class SM_Atomic_Pseudo <string opName,
 
   let IsAtomicNoRet = !not(isRet);
   let IsAtomicRet = isRet;
-
-  let AsmMatchConverter = "cvtSMEMAtomic";
 }
 
 class SM_Pseudo_Atomic<string opName,
@@ -245,7 +243,7 @@ class SM_Pseudo_Atomic<string opName,
                        bit isRet,
                        string opNameWithSuffix =
                          opName # offsets.Variant # !if(isRet, "_RTN", ""),
-                       Operand CPolTy = !if(isRet, CPol_GLC1, CPol)> :
+                       Operand CPolTy = !if(isRet, CPol_GLC, CPol_NonGLC)> :
   SM_Atomic_Pseudo<opName,
                    !if(isRet, (outs dataClass:$sdst), (outs)),
                    !con((ins dataClass:$sdata, baseClass:$sbase), offsets.Ins,

@@ -447,12 +447,6 @@ def MemRef_CastOp : MemRef_Op<"cast", [
     ]> {
   let summary = "memref cast operation";
   let description = [{
-    Syntax:
-
-    ```
-    operation ::= ssa-id `=` `memref.cast` ssa-use `:` type `to` type
-    ```
-
     The `memref.cast` operation converts a memref from one type to an equivalent
     type with a compatible shape. The source and destination types are
     compatible if:
@@ -892,8 +886,8 @@ def MemRef_ExtractAlignedPointerAsIndexOp :
     ```
       %0 = memref.extract_aligned_pointer_as_index %arg : memref<4x4xf32> -> index
       %1 = arith.index_cast %0 : index to i64
-      %2 = llvm.inttoptr %1 : i64 to !llvm.ptr<f32>
-      call @foo(%2) : (!llvm.ptr<f32>) ->()
+      %2 = llvm.inttoptr %1 : i64 to !llvm.ptr
+      call @foo(%2) : (!llvm.ptr) ->()
     ```
   }];
 
@@ -2093,37 +2087,6 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// TensorStoreOp
-//===----------------------------------------------------------------------===//
-
-def TensorStoreOp : MemRef_Op<"tensor_store",
-    [SameOperandsShape, SameOperandsElementType,
-     TypesMatchWith<"type of 'value' matches tensor equivalent of 'memref'",
-                    "memref", "tensor",
-                    "getTensorTypeFromMemRefType($_self)">]> {
-  let summary = "tensor store operation";
-  let description = [{
-    Stores the contents of a tensor into a memref. The first operand is a value
-    of tensor type, the second operand is a value of memref type. The shapes and
-    element types of these must match, and are specified by the memref type.
-
-    Example:
-
-    ```mlir
-    %9 = dim %8, 1 : tensor<4x?xf32>
-    %10 = memref.alloc(%9) : memref<4x?xf32, #layout, memspace0>
-    memref.tensor_store %8, %10 : memref<4x?xf32, #layout, memspace0>
-    ```
-  }];
-
-  let arguments = (ins AnyTensor:$tensor, Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to store to",
-                       [MemWriteAt<0, FullEffect>]>:$memref);
-
-  let assemblyFormat = "$tensor `,` $memref attr-dict `:` type($memref)";
 }
 
 //===----------------------------------------------------------------------===//

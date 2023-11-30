@@ -1710,7 +1710,7 @@ define <4 x i64> @avx512_psrav_q_256_allbig(<4 x i64> %v) {
 
 define <2 x i64> @avx512_psrav_q_128_poison(<2 x i64> %v) {
 ; CHECK-LABEL: @avx512_psrav_q_128_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i64> [[V:%.*]], <i64 undef, i64 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i64> [[V:%.*]], <i64 poison, i64 8>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 poison, i64 0
@@ -1720,7 +1720,7 @@ define <2 x i64> @avx512_psrav_q_128_poison(<2 x i64> %v) {
 
 define <4 x i64> @avx512_psrav_q_256_poison(<4 x i64> %v) {
 ; CHECK-LABEL: @avx512_psrav_q_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
@@ -1756,7 +1756,7 @@ define <8 x i64> @avx512_psrav_q_512_allbig(<8 x i64> %v) {
 
 define <8 x i64> @avx512_psrav_q_512_poison(<8 x i64> %v) {
 ; CHECK-LABEL: @avx512_psrav_q_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = insertelement <8 x i64> <i64 0, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
@@ -1792,7 +1792,7 @@ define <8 x i16> @avx512_psrav_w_128_allbig(<8 x i16> %v) {
 
 define <8 x i16> @avx512_psrav_w_128_poison(<8 x i16> %v) {
 ; CHECK-LABEL: @avx512_psrav_w_128_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = insertelement <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 poison, i64 0
@@ -1828,7 +1828,7 @@ define <16 x i16> @avx512_psrav_w_256_allbig(<16 x i16> %v) {
 
 define <16 x i16> @avx512_psrav_w_256_poison(<16 x i16> %v) {
 ; CHECK-LABEL: @avx512_psrav_w_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = insertelement <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, i16 poison, i64 0
@@ -1864,7 +1864,7 @@ define <32 x i16> @avx512_psrav_w_512_allbig(<32 x i16> %v) {
 
 define <32 x i16> @avx512_psrav_w_512_poison(<32 x i16> %v) {
 ; CHECK-LABEL: @avx512_psrav_w_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = insertelement <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, i16 poison, i64 0
@@ -1946,7 +1946,7 @@ define <8 x i32> @avx2_psrlv_d_256_allbig(<8 x i32> %v) {
 
 define <4 x i32> @avx2_psrlv_d_128_poison(<4 x i32> %v) {
 ; CHECK-LABEL: @avx2_psrlv_d_128_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[V:%.*]], <i32 undef, i32 8, i32 16, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[V:%.*]], <i32 poison, i32 8, i32 16, i32 31>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = insertelement <4 x i32> <i32 0, i32 8, i32 16, i32 31>, i32 poison, i32 0
@@ -1956,7 +1956,7 @@ define <4 x i32> @avx2_psrlv_d_128_poison(<4 x i32> %v) {
 
 define <8 x i32> @avx2_psrlv_d_256_poison(<8 x i32> %v) {
 ; CHECK-LABEL: @avx2_psrlv_d_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i32> [[V:%.*]], <i32 0, i32 undef, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i32> [[V:%.*]], <i32 0, i32 poison, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
   %1 = insertelement <8 x i32> <i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>, i32 poison, i32 1
@@ -2045,7 +2045,7 @@ define <2 x i64> @avx2_psrlv_q_128_poison(<2 x i64> %v) {
 
 define <4 x i64> @avx2_psrlv_q_256_poison(<4 x i64> %v) {
 ; CHECK-LABEL: @avx2_psrlv_q_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
@@ -2089,7 +2089,7 @@ define <16 x i32> @avx512_psrlv_d_512_allbig(<16 x i32> %v) {
 
 define <16 x i32> @avx512_psrlv_d_512_poison(<16 x i32> %v) {
 ; CHECK-LABEL: @avx512_psrlv_d_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i32> [[V:%.*]], <i32 0, i32 undef, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0, i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i32> [[V:%.*]], <i32 0, i32 poison, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0, i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
 ; CHECK-NEXT:    ret <16 x i32> [[TMP1]]
 ;
   %1 = insertelement <16 x i32> <i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0, i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>, i32 poison, i32 1
@@ -2133,7 +2133,7 @@ define <8 x i64> @avx512_psrlv_q_512_allbig(<8 x i64> %v) {
 
 define <8 x i64> @avx512_psrlv_q_512_poison(<8 x i64> %v) {
 ; CHECK-LABEL: @avx512_psrlv_q_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = insertelement <8 x i64> <i64 0, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
@@ -2177,7 +2177,7 @@ define <8 x i16> @avx512_psrlv_w_128_allbig(<8 x i16> %v) {
 
 define <8 x i16> @avx512_psrlv_w_128_poison(<8 x i16> %v) {
 ; CHECK-LABEL: @avx512_psrlv_w_128_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <8 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = insertelement <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 poison, i64 0
@@ -2221,7 +2221,7 @@ define <16 x i16> @avx512_psrlv_w_256_allbig(<16 x i16> %v) {
 
 define <16 x i16> @avx512_psrlv_w_256_poison(<16 x i16> %v) {
 ; CHECK-LABEL: @avx512_psrlv_w_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <16 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = insertelement <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, i16 poison, i64 0
@@ -2265,7 +2265,7 @@ define <32 x i16> @avx512_psrlv_w_512_allbig(<32 x i16> %v) {
 
 define <32 x i16> @avx512_psrlv_w_512_poison(<32 x i16> %v) {
 ; CHECK-LABEL: @avx512_psrlv_w_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <32 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <32 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = insertelement <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, i16 poison, i64 0
@@ -2347,7 +2347,7 @@ define <8 x i32> @avx2_psllv_d_256_allbig(<8 x i32> %v) {
 
 define <4 x i32> @avx2_psllv_d_128_poison(<4 x i32> %v) {
 ; CHECK-LABEL: @avx2_psllv_d_128_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[V:%.*]], <i32 undef, i32 8, i32 16, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[V:%.*]], <i32 poison, i32 8, i32 16, i32 31>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = insertelement <4 x i32> <i32 0, i32 8, i32 16, i32 31>, i32 poison, i32 0
@@ -2357,7 +2357,7 @@ define <4 x i32> @avx2_psllv_d_128_poison(<4 x i32> %v) {
 
 define <8 x i32> @avx2_psllv_d_256_poison(<8 x i32> %v) {
 ; CHECK-LABEL: @avx2_psllv_d_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i32> [[V:%.*]], <i32 0, i32 undef, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i32> [[V:%.*]], <i32 0, i32 poison, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
   %1 = insertelement <8 x i32> <i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>, i32 poison, i32 1
@@ -2446,7 +2446,7 @@ define <2 x i64> @avx2_psllv_q_128_poison(<2 x i64> %v) {
 
 define <4 x i64> @avx2_psllv_q_256_poison(<4 x i64> %v) {
 ; CHECK-LABEL: @avx2_psllv_q_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
@@ -2490,7 +2490,7 @@ define <16 x i32> @avx512_psllv_d_512_allbig(<16 x i32> %v) {
 
 define <16 x i32> @avx512_psllv_d_512_poison(<16 x i32> %v) {
 ; CHECK-LABEL: @avx512_psllv_d_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i32> [[V:%.*]], <i32 0, i32 undef, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0, i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i32> [[V:%.*]], <i32 0, i32 poison, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0, i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>
 ; CHECK-NEXT:    ret <16 x i32> [[TMP1]]
 ;
   %1 = insertelement <16 x i32> <i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0, i32 0, i32 8, i32 16, i32 31, i32 31, i32 24, i32 8, i32 0>, i32 poison, i32 1
@@ -2534,7 +2534,7 @@ define <8 x i64> @avx512_psllv_q_512_allbig(<8 x i64> %v) {
 
 define <8 x i64> @avx512_psllv_q_512_poison(<8 x i64> %v) {
 ; CHECK-LABEL: @avx512_psllv_q_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %1 = insertelement <8 x i64> <i64 0, i64 8, i64 16, i64 31, i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
@@ -2578,7 +2578,7 @@ define <8 x i16> @avx512_psllv_w_128_allbig(<8 x i16> %v) {
 
 define <8 x i16> @avx512_psllv_w_128_poison(<8 x i16> %v) {
 ; CHECK-LABEL: @avx512_psllv_w_128_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <8 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = insertelement <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, i16 poison, i64 0
@@ -2622,7 +2622,7 @@ define <16 x i16> @avx512_psllv_w_256_allbig(<16 x i16> %v) {
 
 define <16 x i16> @avx512_psllv_w_256_poison(<16 x i16> %v) {
 ; CHECK-LABEL: @avx512_psllv_w_256_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <16 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = insertelement <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, i16 poison, i64 0
@@ -2666,7 +2666,7 @@ define <32 x i16> @avx512_psllv_w_512_allbig(<32 x i16> %v) {
 
 define <32 x i16> @avx512_psllv_w_512_poison(<32 x i16> %v) {
 ; CHECK-LABEL: @avx512_psllv_w_512_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <32 x i16> [[V:%.*]], <i16 undef, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <32 x i16> [[V:%.*]], <i16 poison, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = insertelement <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 15, i16 14, i16 13, i16 12, i16 11, i16 10, i16 9, i16 8, i16 7, i16 6, i16 5, i16 4, i16 3, i16 2, i16 1, i16 0>, i16 poison, i64 0
@@ -2816,7 +2816,7 @@ define <8 x i32> @avx2_psrai_d_256_masked(<8 x i32> %v, i32 %a) {
 define <8 x i64> @avx512_psrai_q_512_masked(<8 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx512_psrai_q_512_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <8 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2843,7 +2843,7 @@ define <4 x i32> @sse2_psrli_d_128_masked(<4 x i32> %v, i32 %a) {
 define <4 x i64> @avx2_psrli_q_256_masked(<4 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx2_psrli_q_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2871,7 +2871,7 @@ define <32 x i16> @avx512_psrli_w_512_masked(<32 x i16> %v, i32 %a) {
 define <2 x i64> @sse2_pslli_q_128_masked(<2 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @sse2_pslli_q_128_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[V:%.*]], [[DOTSPLAT]]

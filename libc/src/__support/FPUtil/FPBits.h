@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
-#include "PlatformDefs.h"
-
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/builtin_wrappers.h"
+#include "src/__support/bit.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 
 #include "FloatProperties.h"
 #include <stdint.h>
@@ -108,13 +107,14 @@ template <typename T> struct FPBits {
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
   template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
-  constexpr explicit FPBits(XType x) : bits(cpp::bit_cast<UIntType>(x)) {}
+  LIBC_INLINE constexpr explicit FPBits(XType x)
+      : bits(cpp::bit_cast<UIntType>(x)) {}
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
-  constexpr explicit FPBits(XType x) : bits(x) {}
+  LIBC_INLINE constexpr explicit FPBits(XType x) : bits(x) {}
 
-  FPBits() : bits(0) {}
+  LIBC_INLINE constexpr FPBits() : bits(0) {}
 
   LIBC_INLINE constexpr T get_val() const { return cpp::bit_cast<T>(bits); }
 
@@ -169,30 +169,38 @@ template <typename T> struct FPBits {
     return (bits & FloatProp::EXPONENT_MASK) == FloatProp::EXPONENT_MASK;
   }
 
-  LIBC_INLINE static constexpr FPBits<T> zero(bool sign = false) {
-    return FPBits(sign ? FloatProp::SIGN_MASK : UIntType(0));
+  LIBC_INLINE static constexpr T zero(bool sign = false) {
+    return FPBits(sign ? FloatProp::SIGN_MASK : UIntType(0)).get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<T> neg_zero() { return zero(true); }
+  LIBC_INLINE static constexpr T neg_zero() { return zero(true); }
 
-  LIBC_INLINE static constexpr FPBits<T> inf(bool sign = false) {
-    FPBits<T> bits(sign ? FloatProp::SIGN_MASK : UIntType(0));
-    bits.set_unbiased_exponent(MAX_EXPONENT);
-    return bits;
+  LIBC_INLINE static constexpr T inf(bool sign = false) {
+    return FPBits((sign ? FloatProp::SIGN_MASK : UIntType(0)) |
+                  FloatProp::EXPONENT_MASK)
+        .get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<T> neg_inf() {
-    FPBits<T> bits = inf();
-    bits.set_sign(1);
-    return bits;
+  LIBC_INLINE static constexpr T neg_inf() { return inf(true); }
+
+  LIBC_INLINE static constexpr T min_normal() {
+    return FPBits(MIN_NORMAL).get_val();
   }
 
-  LIBC_INLINE static constexpr FPBits<T> min_normal() {
-    return FPBits<T>(MIN_NORMAL);
+  LIBC_INLINE static constexpr T max_normal() {
+    return FPBits(MAX_NORMAL).get_val();
+  }
+
+  LIBC_INLINE static constexpr T min_denormal() {
+    return FPBits(MIN_SUBNORMAL).get_val();
+  }
+
+  LIBC_INLINE static constexpr T max_denormal() {
+    return FPBits(MAX_SUBNORMAL).get_val();
   }
 
   LIBC_INLINE static constexpr T build_nan(UIntType v) {
-    FPBits<T> bits = inf();
+    FPBits<T> bits(inf());
     bits.set_mantissa(v);
     return T(bits);
   }

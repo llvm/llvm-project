@@ -2,7 +2,7 @@
 ! and -Rpass-analysis)
 ! loop-delete isn't enabled at O0 so we use at least O1
 
-! DEFINE: %{output} = -emit-llvm -o /dev/null 2>&1
+! DEFINE: %{output} = -emit-llvm -flang-deprecated-no-hlfir -o /dev/null 2>&1
 
 ! Check fc1 can handle -Rpass
 ! RUN: %flang_fc1 %s -O1 -Rpass %{output} 2>&1 | FileCheck %s --check-prefix=REMARKS

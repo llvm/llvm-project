@@ -536,6 +536,29 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     }
   }
 
+  // We emit deprecation warning for deprecated specializations
+  // when their instantiation stacks originate outside
+  // of a system header, even if the diagnostics is suppresed at the
+  // point of definition.
+  SourceLocation InstantiationLoc =
+      S.getTopMostPointOfInstantiation(ReferringDecl);
+  bool ShouldAllowWarningInSystemHeader =
+      InstantiationLoc != Loc &&
+      !S.getSourceManager().isInSystemHeader(InstantiationLoc);
+  struct AllowWarningInSystemHeaders {
+    AllowWarningInSystemHeaders(DiagnosticsEngine &E,
+                                bool AllowWarningInSystemHeaders)
+        : Engine(E), Prev(E.getSuppressSystemWarnings()) {
+      E.setSuppressSystemWarnings(!AllowWarningInSystemHeaders);
+    }
+    ~AllowWarningInSystemHeaders() { Engine.setSuppressSystemWarnings(Prev); }
+
+  private:
+    DiagnosticsEngine &Engine;
+    bool Prev;
+  } SystemWarningOverrideRAII(S.getDiagnostics(),
+                              ShouldAllowWarningInSystemHeader);
+
   if (!Message.empty()) {
     S.Diag(Loc, diag_message) << ReferringDecl << Message << FixIts;
     if (ObjCProperty)

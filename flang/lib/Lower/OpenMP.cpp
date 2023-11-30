@@ -28,7 +28,14 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/CommandLine.h"
+
+static llvm::cl::opt<bool> treatIndexAsSection(
+    "openmp-treat-index-as-section",
+    llvm::cl::desc("In the OpenMP data clauses treat `a(N)` as `a(N:N)`."),
+    llvm::cl::init(true));
 
 using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
@@ -475,7 +482,10 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
 
 void DataSharingProcessor::defaultPrivatize() {
   for (const Fortran::semantics::Symbol *sym : defaultSymbols) {
-    if (!symbolsInNestedRegions.contains(sym) &&
+    if (!Fortran::semantics::IsProcedure(*sym) &&
+        !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
+        !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
+        !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym)) {
       cloneSymbol(sym);
@@ -555,16 +565,27 @@ public:
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
   bool
-  processIf(Fortran::lower::StatementContext &stmtCtx,
-            Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+  processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool
+  processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
             mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+
+  // This method is used to process a map clause.
+  // The optional parameters - mapSymTypes, mapSymLocs & mapSymbols are used to
+  // store the original type, location and Fortran symbol for the map operands.
+  // They may be used later on to create the block_arguments for some of the
+  // target directives that require it.
   bool processMap(mlir::Location currentLocation,
                   const llvm::omp::Directive &directive,
                   Fortran::semantics::SemanticsContext &semanticsContext,
                   Fortran::lower::StatementContext &stmtCtx,
-                  llvm::SmallVectorImpl<mlir::Value> &mapOperands) const;
+                  llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+                  llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
+                  llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
+                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                      *mapSymbols = nullptr) const;
   bool processReduction(
       mlir::Location currentLocation,
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
@@ -736,7 +757,7 @@ static mlir::Value getReductionInitValue(mlir::Location loc, mlir::Type type,
     if (auto ty = type.dyn_cast<mlir::FloatType>()) {
       const llvm::fltSemantics &sem = ty.getFloatSemantics();
       return builder.createRealConstant(
-          loc, type, llvm::APFloat::getSmallest(sem, /*Negative=*/true));
+          loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/false));
     }
     unsigned bits = type.getIntOrFloatBitWidth();
     int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
@@ -1100,7 +1121,6 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
 
 static mlir::Value getIfClauseOperand(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::StatementContext &stmtCtx,
     const Fortran::parser::OmpClause::If *ifClause,
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Location clauseLocation) {
@@ -1111,6 +1131,7 @@ static mlir::Value getIfClauseOperand(
   if (directive && directive.value() != directiveName)
     return nullptr;
 
+  Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
   mlir::Value ifVal = fir::getBase(
@@ -1577,7 +1598,8 @@ bool ClauseProcessor::processCopyin() const {
           mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) {
         assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
                "No host-association found");
-        converter.copyHostAssociateVar(*sym, copyAssignIP);
+        if (converter.isPresentShallowLookup(*sym))
+          converter.copyHostAssociateVar(*sym, copyAssignIP);
       };
   bool hasCopyin = findRepeatableClause<ClauseTy::Copyin>(
       [&](const ClauseTy::Copyin *copyinClause,
@@ -1656,7 +1678,6 @@ bool ClauseProcessor::processDepend(
 }
 
 bool ClauseProcessor::processIf(
-    Fortran::lower::StatementContext &stmtCtx,
     Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
     mlir::Value &result) const {
   bool found = false;
@@ -1664,7 +1685,7 @@ bool ClauseProcessor::processIf(
       [&](const ClauseTy::If *ifClause,
           const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
-        mlir::Value operand = getIfClauseOperand(converter, stmtCtx, ifClause,
+        mlir::Value operand = getIfClauseOperand(converter, ifClause,
                                                  directiveName, clauseLocation);
         // Assume that, at most, a single 'if' clause will be applicable to the
         // given directive.
@@ -1691,31 +1712,25 @@ static mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, std::stringstream &name,
                 mlir::SmallVector<mlir::Value> bounds, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, bool implicit,
+                mlir::omp::VariableCaptureKind mapCaptureType,
                 mlir::Type retTy) {
-  mlir::Value varPtrPtr;
+  mlir::Value varPtr, varPtrPtr;
+  mlir::TypeAttr varType;
+
   if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
   }
 
-  mlir::omp::MapInfoOp op =
-      builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr);
-  op.setVarTypeAttr(mlir::TypeAttr::get(
-      llvm::dyn_cast<mlir::omp::PointerLikeType>(retTy).getElementType()));
-  op.setNameAttr(builder.getStringAttr(name.str()));
-  op.setImplicit(implicit);
-  op.setMapType(mapType);
-  op.setMapCaptureType(mapCaptureType);
+  varPtr = baseAddr;
+  varType = mlir::TypeAttr::get(
+      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
 
-  unsigned insPos = 1;
-  if (varPtrPtr)
-    op->insertOperands(insPos++, varPtrPtr);
-  if (bounds.size() > 0)
-    op->insertOperands(insPos, bounds);
-  op->setAttr(mlir::omp::MapInfoOp::getOperandSegmentSizeAttr(),
-              builder.getDenseI32ArrayAttr(
-                  {1, varPtrPtr ? 1 : 0, static_cast<int32_t>(bounds.size())}));
+  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
+      loc, retTy, varPtr, varType, varPtrPtr, bounds,
+      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
+      builder.getStringAttr(name.str()));
   return op;
 }
 
@@ -1723,7 +1738,11 @@ bool ClauseProcessor::processMap(
     mlir::Location currentLocation, const llvm::omp::Directive &directive,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &stmtCtx,
-    llvm::SmallVectorImpl<mlir::Value> &mapOperands) const {
+    llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols)
+    const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   return findRepeatableClause<ClauseTy::Map>(
       [&](const ClauseTy::Map *mapClause,
@@ -1776,20 +1795,27 @@ bool ClauseProcessor::processMap(
           std::stringstream asFortran;
           mlir::Value baseAddr = Fortran::lower::gatherDataOperandAddrAndBounds<
               Fortran::parser::OmpObject, mlir::omp::DataBoundsType,
-              mlir::omp::DataBoundsOp>(converter, firOpBuilder,
-                                       semanticsContext, stmtCtx, ompObject,
-                                       clauseLocation, asFortran, bounds);
+              mlir::omp::DataBoundsOp>(
+              converter, firOpBuilder, semanticsContext, stmtCtx, ompObject,
+              clauseLocation, asFortran, bounds, treatIndexAsSection);
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mapOperands.push_back(createMapInfoOp(
+          mlir::Value mapOp = createMapInfoOp(
               firOpBuilder, clauseLocation, baseAddr, asFortran, bounds,
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
-              mlir::omp::VariableCaptureKind::ByRef, false,
-              baseAddr.getType()));
+              mlir::omp::VariableCaptureKind::ByRef, baseAddr.getType());
+
+          mapOperands.push_back(mapOp);
+          if (mapSymTypes)
+            mapSymTypes->push_back(baseAddr.getType());
+          if (mapSymLocs)
+            mapSymLocs->push_back(baseAddr.getLoc());
+          if (mapSymbols)
+            mapSymbols->push_back(getOmpObjectSymbol(ompObject));
         }
       });
 }
@@ -1821,6 +1847,18 @@ bool ClauseProcessor::processTo(
         // Case: declare target to(func, var1, var2)...
         gatherFuncAndVarSyms(toClause->v,
                              mlir::omp::DeclareTargetCaptureClause::to, result);
+      });
+}
+
+bool ClauseProcessor::processEnter(
+    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+  return findRepeatableClause<ClauseTy::Enter>(
+      [&](const ClauseTy::Enter *enterClause,
+          const Fortran::parser::CharBlock &) {
+        // Case: declare target enter(func, var1, var2)...
+        gatherFuncAndVarSyms(enterClause->v,
+                             mlir::omp::DeclareTargetCaptureClause::enter,
+                             result);
       });
 }
 
@@ -2066,7 +2104,7 @@ createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
       loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
       /*shapeParams*/ mlir::ValueRange{},
       llvm::ArrayRef<mlir::NamedAttribute>{
-          Fortran::lower::getAdaptToByRefAttr(firOpBuilder)});
+          fir::getAdaptToByRefAttr(firOpBuilder)});
   converter.bindSymbol(*sym, temp);
   firOpBuilder.restoreInsertionPoint(insPt);
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
@@ -2149,16 +2187,16 @@ static void createBodyOfOp(
 
   // Handle privatization. Do not privatize if this is the outer operation.
   if (clauses && !outerCombined) {
-    constexpr bool is_loop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
-                             std::is_same_v<Op, mlir::omp::SimdLoopOp>;
+    constexpr bool isLoop = std::is_same_v<Op, mlir::omp::WsLoopOp> ||
+                            std::is_same_v<Op, mlir::omp::SimdLoopOp>;
     if (!dsp) {
       DataSharingProcessor proc(converter, *clauses, eval);
       proc.processStep1();
-      proc.processStep2(op, is_loop);
+      proc.processStep2(op, isLoop);
     } else {
-      if (is_loop && args.size() > 0)
+      if (isLoop && args.size() > 0)
         dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
-      dsp->processStep2(op, is_loop);
+      dsp->processStep2(op, isLoop);
     }
 
     if (storeOp)
@@ -2172,7 +2210,7 @@ static void createBodyOfOp(
   }
 }
 
-static void createBodyOfTargetDataOp(
+static void genBodyOfTargetDataOp(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval, mlir::omp::DataOp &dataOp,
     const llvm::SmallVector<mlir::Type> &useDeviceTypes,
@@ -2188,18 +2226,17 @@ static void createBodyOfTargetDataOp(
   unsigned argIndex = 0;
   for (const Fortran::semantics::Symbol *sym : useDeviceSymbols) {
     const mlir::BlockArgument &arg = region.front().getArgument(argIndex);
-    mlir::Value val = fir::getBase(arg);
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
-    if (auto refType = val.getType().dyn_cast<fir::ReferenceType>()) {
+    if (auto refType = arg.getType().dyn_cast<fir::ReferenceType>()) {
       if (fir::isa_builtin_cptr_type(refType.getElementType())) {
-        converter.bindSymbol(*sym, val);
+        converter.bindSymbol(*sym, arg);
       } else {
         extVal.match(
             [&](const fir::MutableBoxValue &mbv) {
               converter.bindSymbol(
                   *sym,
                   fir::MutableBoxValue(
-                      val, fir::factory::getNonDeferredLenParams(extVal), {}));
+                      arg, fir::factory::getNonDeferredLenParams(extVal), {}));
             },
             [&](const auto &) {
               TODO(converter.getCurrentLocation(),
@@ -2281,14 +2318,14 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
                ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
   cp.processDefault();
   cp.processAllocate(allocatorOperands, allocateOperands);
-  cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
+  if (!outerCombined)
+    cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
 
   return genOpWithBody<mlir::omp::ParallelOp>(
       converter, eval, currentLocation, outerCombined, &clauseList,
@@ -2335,8 +2372,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
       dependOperands;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Task,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -2393,8 +2429,7 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processUseDevicePtr(devicePtrOperands, useDeviceTypes, useDeviceLocs,
@@ -2407,8 +2442,8 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
       deviceAddrOperands, mapOperands);
-  createBodyOfTargetDataOp(converter, eval, dataOp, useDeviceTypes,
-                           useDeviceLocs, useDeviceSymbols, currentLocation);
+  genBodyOfTargetDataOp(converter, eval, dataOp, useDeviceTypes, useDeviceLocs,
+                        useDeviceSymbols, currentLocation);
   return dataOp;
 }
 
@@ -2439,7 +2474,7 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
   }
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx, directiveName, ifClauseOperand);
+  cp.processIf(directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
@@ -2449,6 +2484,154 @@ genEnterExitDataOp(Fortran::lower::AbstractConverter &converter,
 
   return firOpBuilder.create<OpTy>(currentLocation, ifClauseOperand,
                                    deviceOperand, nowaitAttr, mapOperands);
+}
+
+// This functions creates a block for the body of the targetOp's region. It adds
+// all the symbols present in mapSymbols as block arguments to this block.
+static void genBodyOfTargetOp(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval, mlir::omp::TargetOp &targetOp,
+    const llvm::SmallVector<mlir::Type> &mapSymTypes,
+    const llvm::SmallVector<mlir::Location> &mapSymLocs,
+    const llvm::SmallVector<const Fortran::semantics::Symbol *> &mapSymbols,
+    const mlir::Location &currentLocation) {
+  assert(mapSymTypes.size() == mapSymLocs.size());
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Region &region = targetOp.getRegion();
+
+  auto *regionBlock =
+      firOpBuilder.createBlock(&region, {}, mapSymTypes, mapSymLocs);
+
+  unsigned argIndex = 0;
+
+  // Clones the `bounds` placing them inside the target region and returns them.
+  auto cloneBound = [&](mlir::Value bound) {
+    if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
+      mlir::Operation *clonedOp = bound.getDefiningOp()->clone();
+      regionBlock->push_back(clonedOp);
+      return clonedOp->getResult(0);
+    }
+    TODO(converter.getCurrentLocation(),
+         "target map clause operand unsupported bound type");
+  };
+
+  auto cloneBounds = [cloneBound](llvm::ArrayRef<mlir::Value> bounds) {
+    llvm::SmallVector<mlir::Value> clonedBounds;
+    for (mlir::Value bound : bounds)
+      clonedBounds.emplace_back(cloneBound(bound));
+    return clonedBounds;
+  };
+
+  // Bind the symbols to their corresponding block arguments.
+  for (const Fortran::semantics::Symbol *sym : mapSymbols) {
+    const mlir::BlockArgument &arg = region.getArgument(argIndex);
+    fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*sym);
+    extVal.match(
+        [&](const fir::BoxValue &v) {
+          converter.bindSymbol(*sym,
+                               fir::BoxValue(arg, cloneBounds(v.getLBounds()),
+                                             v.getExplicitParameters(),
+                                             v.getExplicitExtents()));
+        },
+        [&](const fir::MutableBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
+                                         v.getMutableProperties()));
+        },
+        [&](const fir::ArrayBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
+                                       cloneBounds(v.getLBounds()),
+                                       v.getSourceBox()));
+        },
+        [&](const fir::CharArrayBoxValue &v) {
+          converter.bindSymbol(
+              *sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
+                                           cloneBounds(v.getExtents()),
+                                           cloneBounds(v.getLBounds())));
+        },
+        [&](const fir::CharBoxValue &v) {
+          converter.bindSymbol(*sym,
+                               fir::CharBoxValue(arg, cloneBound(v.getLen())));
+        },
+        [&](const fir::UnboxedValue &v) { converter.bindSymbol(*sym, arg); },
+        [&](const auto &) {
+          TODO(converter.getCurrentLocation(),
+               "target map clause operand unsupported type");
+        });
+    argIndex++;
+  }
+
+  // Check if cloning the bounds introduced any dependency on the outer region.
+  // If so, then either clone them as well if they are MemoryEffectFree, or else
+  // copy them to a new temporary and add them to the map and block_argument
+  // lists and replace their uses with the new temporary.
+  llvm::SetVector<mlir::Value> valuesDefinedAbove;
+  mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
+  while (!valuesDefinedAbove.empty()) {
+    for (mlir::Value val : valuesDefinedAbove) {
+      mlir::Operation *valOp = val.getDefiningOp();
+      if (mlir::isMemoryEffectFree(valOp)) {
+        mlir::Operation *clonedOp = valOp->clone();
+        regionBlock->push_front(clonedOp);
+        val.replaceUsesWithIf(
+            clonedOp->getResult(0), [regionBlock](mlir::OpOperand &use) {
+              return use.getOwner()->getBlock() == regionBlock;
+            });
+      } else {
+        auto savedIP = firOpBuilder.getInsertionPoint();
+        firOpBuilder.setInsertionPointAfter(valOp);
+        auto copyVal =
+            firOpBuilder.createTemporary(val.getLoc(), val.getType());
+        firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
+
+        llvm::SmallVector<mlir::Value> bounds;
+        std::stringstream name;
+        firOpBuilder.setInsertionPoint(targetOp);
+        mlir::Value mapOp = createMapInfoOp(
+            firOpBuilder, copyVal.getLoc(), copyVal, name, bounds,
+            static_cast<
+                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+                llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
+            mlir::omp::VariableCaptureKind::ByCopy, copyVal.getType());
+        targetOp.getMapOperandsMutable().append(mapOp);
+        mlir::Value clonedValArg =
+            region.addArgument(copyVal.getType(), copyVal.getLoc());
+        firOpBuilder.setInsertionPointToStart(regionBlock);
+        auto loadOp = firOpBuilder.create<fir::LoadOp>(clonedValArg.getLoc(),
+                                                       clonedValArg);
+        val.replaceUsesWithIf(
+            loadOp->getResult(0), [regionBlock](mlir::OpOperand &use) {
+              return use.getOwner()->getBlock() == regionBlock;
+            });
+        firOpBuilder.setInsertionPoint(regionBlock, savedIP);
+      }
+    }
+    valuesDefinedAbove.clear();
+    mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
+  }
+
+  // Insert dummy instruction to remember the insertion position. The
+  // marker will be deleted since there are not uses.
+  // In the HLFIR flow there are hlfir.declares inserted above while
+  // setting block arguments.
+  mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
+      targetOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
+
+  // Create blocks for unstructured regions. This has to be done since
+  // blocks are initially allocated with the function as the parent region.
+  // the parent region of blocks.
+  if (eval.lowerAsUnstructured()) {
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
+  }
+
+  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+
+  // Create the insertion point after the marker.
+  firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 }
 
 static mlir::omp::TargetOp
@@ -2462,16 +2645,18 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifClauseOperand, deviceOperand, threadLimitOperand;
   mlir::UnitAttr nowaitAttr;
   llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<mlir::Type> mapSymTypes;
+  llvm::SmallVector<mlir::Location> mapSymLocs;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
                ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLimitOperand);
   cp.processNowait(nowaitAttr);
   cp.processMap(currentLocation, directive, semanticsContext, stmtCtx,
-                mapOperands);
+                mapOperands, &mapSymTypes, &mapSymLocs, &mapSymbols);
   cp.processTODO<Fortran::parser::OmpClause::Private,
                  Fortran::parser::OmpClause::Depend,
                  Fortran::parser::OmpClause::Firstprivate,
@@ -2484,10 +2669,79 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
                  Fortran::parser::OmpClause::Defaultmap>(
       currentLocation, llvm::omp::Directive::OMPD_target);
 
-  return genOpWithBody<mlir::omp::TargetOp>(
-      converter, eval, currentLocation, outerCombined, &clauseList,
-      ifClauseOperand, deviceOperand, threadLimitOperand, nowaitAttr,
-      mapOperands);
+  // 5.8.1 Implicit Data-Mapping Attribute Rules
+  // The following code follows the implicit data-mapping rules to map all the
+  // symbols used inside the region that have not been explicitly mapped using
+  // the map clause.
+  auto captureImplicitMap = [&](const Fortran::semantics::Symbol &sym) {
+    if (llvm::find(mapSymbols, &sym) == mapSymbols.end()) {
+      mlir::Value baseOp = converter.getSymbolAddress(sym);
+      if (!baseOp)
+        if (const auto *details = sym.template detailsIf<
+                                  Fortran::semantics::HostAssocDetails>()) {
+          baseOp = converter.getSymbolAddress(details->symbol());
+          converter.copySymbolBinding(details->symbol(), sym);
+        }
+
+      if (baseOp) {
+        llvm::SmallVector<mlir::Value> bounds;
+        std::stringstream name;
+        fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
+        name << sym.name().ToString();
+
+        mlir::Value baseAddr =
+            getDataOperandBaseAddr(converter, converter.getFirOpBuilder(), sym,
+                                   converter.getCurrentLocation());
+        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::BaseBoxType>())
+          bounds =
+              Fortran::lower::genBoundsOpsFromBox<mlir::omp::DataBoundsOp,
+                                                  mlir::omp::DataBoundsType>(
+                  converter.getFirOpBuilder(), converter.getCurrentLocation(),
+                  converter, dataExv, baseAddr);
+        if (fir::unwrapRefType(baseAddr.getType()).isa<fir::SequenceType>())
+          bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::DataBoundsOp,
+                                                    mlir::omp::DataBoundsType>(
+              converter.getFirOpBuilder(), converter.getCurrentLocation(),
+              converter, dataExv, baseAddr);
+
+        llvm::omp::OpenMPOffloadMappingFlags mapFlag =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+        mlir::omp::VariableCaptureKind captureKind =
+            mlir::omp::VariableCaptureKind::ByRef;
+        if (auto refType = baseOp.getType().dyn_cast<fir::ReferenceType>()) {
+          auto eleType = refType.getElementType();
+          if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+            captureKind = mlir::omp::VariableCaptureKind::ByCopy;
+          } else if (!fir::isa_builtin_cptr_type(eleType)) {
+            mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+            mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+          }
+        }
+
+        mlir::Value mapOp = createMapInfoOp(
+            converter.getFirOpBuilder(), baseOp.getLoc(), baseOp, name, bounds,
+            static_cast<
+                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+                mapFlag),
+            captureKind, baseOp.getType());
+
+        mapOperands.push_back(mapOp);
+        mapSymTypes.push_back(baseOp.getType());
+        mapSymLocs.push_back(baseOp.getLoc());
+        mapSymbols.push_back(&sym);
+      }
+    }
+  };
+  Fortran::lower::pft::visitAllSymbols(eval, captureImplicitMap);
+
+  auto targetOp = converter.getFirOpBuilder().create<mlir::omp::TargetOp>(
+      currentLocation, ifClauseOperand, deviceOperand, threadLimitOperand,
+      nowaitAttr, mapOperands);
+
+  genBodyOfTargetOp(converter, eval, targetOp, mapSymTypes, mapSymLocs,
+                    mapSymbols, currentLocation);
+
+  return targetOp;
 }
 
 static mlir::omp::TeamsOp
@@ -2503,8 +2757,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
 
   ClauseProcessor cp(converter, clauseList);
-  cp.processIf(stmtCtx,
-               Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
+  cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Teams,
                ifClauseOperand);
   cp.processAllocate(allocatorOperands, allocateOperands);
   cp.processDefault();
@@ -2555,6 +2808,7 @@ static mlir::omp::DeclareTargetDeviceType getDeclareTargetInfo(
 
     ClauseProcessor cp(converter, *clauseList);
     cp.processTo(symbolAndClause);
+    cp.processEnter(symbolAndClause);
     cp.processLink(symbolAndClause);
     cp.processDeviceType(deviceType);
     cp.processTODO<Fortran::parser::OmpClause::Indirect>(
@@ -2779,8 +3033,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Value> alignedVars, nontemporalVars;
     mlir::Value ifClauseOperand;
     mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
-    cp.processIf(stmtCtx,
-                 Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+    cp.processIf(Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
                  ifClauseOperand);
     cp.processSimdlen(simdlenClauseOperand);
     cp.processSafelen(safelenClauseOperand);
@@ -2868,8 +3121,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::Allocate>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Default>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Final>(&clause.u) &&
-        !std::get_if<Fortran::parser::OmpClause::Untied>(&clause.u) &&
-        !std::get_if<Fortran::parser::OmpClause::Mergeable>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Priority>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Reduction>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Depend>(&clause.u) &&

@@ -20,7 +20,7 @@
 
 struct A {
   int a;
-  virtual ~A(){};
+  virtual ~A() {}
 };
 struct B : A {};
 

@@ -117,6 +117,9 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
   case ScalarTypeKind::UnsignedInteger:
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
+  case ScalarTypeKind::BFloat:
+    QT = Context.BFloat16Ty;
+    break;
   case ScalarTypeKind::Float:
     switch (Type->getElementBitwidth()) {
     case 64:

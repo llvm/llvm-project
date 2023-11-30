@@ -32,6 +32,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ExprConstShared.h"
 #include "Interp/Context.h"
 #include "Interp/Frame.h"
 #include "Interp/State.h"
@@ -3184,9 +3185,14 @@ static bool HandleLValueIndirectMember(EvalInfo &Info, const Expr *E,
   return true;
 }
 
+enum class SizeOfType {
+  SizeOf,
+  DataSizeOf,
+};
+
 /// Get the size of the given type in char units.
-static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc,
-                         QualType Type, CharUnits &Size) {
+static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc, QualType Type,
+                         CharUnits &Size, SizeOfType SOT = SizeOfType::SizeOf) {
   // sizeof(void), __alignof__(void), sizeof(function) = 1 as a gcc
   // extension.
   if (Type->isVoidType() || Type->isFunctionType()) {
@@ -3206,7 +3212,10 @@ static bool HandleSizeof(EvalInfo &Info, SourceLocation Loc,
     return false;
   }
 
-  Size = Info.Ctx.getTypeSizeInChars(Type);
+  if (SOT == SizeOfType::SizeOf)
+    Size = Info.Ctx.getTypeSizeInChars(Type);
+  else
+    Size = Info.Ctx.getTypeInfoDataSizeInChars(Type).Width;
   return true;
 }
 
@@ -9043,7 +9052,7 @@ public:
         CharTy, Size, nullptr, ArraySizeModifier::Normal, 0);
 
     StringLiteral *SL =
-        StringLiteral::Create(Info.Ctx, ResultStr, StringLiteral::Ordinary,
+        StringLiteral::Create(Info.Ctx, ResultStr, StringLiteralKind::Ordinary,
                               /*Pascal*/ false, ArrayTy, E->getLocation());
 
     evaluateLValue(SL, Result);
@@ -11484,40 +11493,10 @@ bool IntExprEvaluator::CheckReferencedDecl(const Expr* E, const Decl* D) {
   return false;
 }
 
-/// Values returned by __builtin_classify_type, chosen to match the values
-/// produced by GCC's builtin.
-enum class GCCTypeClass {
-  None = -1,
-  Void = 0,
-  Integer = 1,
-  // GCC reserves 2 for character types, but instead classifies them as
-  // integers.
-  Enum = 3,
-  Bool = 4,
-  Pointer = 5,
-  // GCC reserves 6 for references, but appears to never use it (because
-  // expressions never have reference type, presumably).
-  PointerToDataMember = 7,
-  RealFloat = 8,
-  Complex = 9,
-  // GCC reserves 10 for functions, but does not use it since GCC version 6 due
-  // to decay to pointer. (Prior to version 6 it was only used in C++ mode).
-  // GCC claims to reserve 11 for pointers to member functions, but *actually*
-  // uses 12 for that purpose, same as for a class or struct. Maybe it
-  // internally implements a pointer to member as a struct?  Who knows.
-  PointerToMemberFunction = 12, // Not a bug, see above.
-  ClassOrStruct = 12,
-  Union = 13,
-  // GCC reserves 14 for arrays, but does not use it since GCC version 6 due to
-  // decay to pointer. (Prior to version 6 it was only used in C++ mode).
-  // GCC reserves 15 for strings, but actually uses 5 (pointer) for string
-  // literals.
-};
-
 /// EvaluateBuiltinClassifyType - Evaluate __builtin_classify_type the same way
 /// as GCC.
-static GCCTypeClass
-EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
+GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
+                                         const LangOptions &LangOpts) {
   assert(!T->isDependentType() && "unexpected dependent type");
 
   QualType CanTy = T.getCanonicalType();
@@ -11636,18 +11615,22 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     return EvaluateBuiltinClassifyType(
         CanTy->castAs<AtomicType>()->getValueType(), LangOpts);
 
-  case Type::BlockPointer:
   case Type::Vector:
   case Type::ExtVector:
+    return GCCTypeClass::Vector;
+
+  case Type::BlockPointer:
   case Type::ConstantMatrix:
   case Type::ObjCObject:
   case Type::ObjCInterface:
   case Type::ObjCObjectPointer:
   case Type::Pipe:
-  case Type::BitInt:
-    // GCC classifies vectors as None. We follow its lead and classify all
-    // other types that don't fit into the regular classification the same way.
+    // Classify all other types that don't fit into the regular
+    // classification the same way.
     return GCCTypeClass::None;
+
+  case Type::BitInt:
+    return GCCTypeClass::BitInt;
 
   case Type::LValueReference:
   case Type::RValueReference:
@@ -13689,6 +13672,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       return Success(1, E);
   }
 
+  case UETT_DataSizeOf:
   case UETT_SizeOf: {
     QualType SrcTy = E->getTypeOfArgument();
     // C++ [expr.sizeof]p2: "When applied to a reference or a reference type,
@@ -13697,8 +13681,11 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
       SrcTy = Ref->getPointeeType();
 
     CharUnits Sizeof;
-    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof))
+    if (!HandleSizeof(Info, E->getExprLoc(), SrcTy, Sizeof,
+                      E->getKind() == UETT_DataSizeOf ? SizeOfType::DataSizeOf
+                                                      : SizeOfType::SizeOf)) {
       return false;
+    }
     return Success(Sizeof, E);
   }
   case UETT_OpenMPRequiredSimdAlign:
@@ -15660,12 +15647,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // this doesn't escape.
   MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(this), true);
   APValue::LValueBase Base(&BaseMTE);
-
   Info.setEvaluatingDecl(Base, Result.Val);
-  LValue LVal;
-  LVal.set(Base);
 
-  {
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, this, Result.Val))
+      return false;
+  } else {
+    LValue LVal;
+    LVal.set(Base);
     // C++23 [intro.execution]/p5
     // A full-expression is [...] a constant-expression
     // So we need to make sure temporary objects are destroyed after having
@@ -15674,10 +15663,10 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
         Result.HasSideEffects || !Scope.destroy())
       return false;
-  }
 
-  if (!Info.discardCleanups())
-    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+    if (!Info.discardCleanups())
+      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+  }
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))

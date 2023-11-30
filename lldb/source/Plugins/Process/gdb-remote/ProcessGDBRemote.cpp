@@ -48,7 +48,6 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/Property.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -1668,27 +1667,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
-  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
-  // offsets if value of VG or SVG registers has changed since last stop.
-  const ArchSpec &arch = GetTarget().GetArchitecture();
-  if (arch.IsValid() && arch.GetTriple().isAArch64()) {
-    GDBRemoteRegisterContext *reg_ctx_sp =
-        static_cast<GDBRemoteRegisterContext *>(
-            gdb_thread->GetRegisterContext().get());
-
-    if (reg_ctx_sp) {
-      reg_ctx_sp->AArch64Reconfigure();
-      // Now we have changed the offsets of all the registers, so the values
-      // will be corrupted.
-      reg_ctx_sp->InvalidateAllRegisters();
-
-      // Expedited registers values will never contain registers that would be
-      // resized by AArch64Reconfigure. So we are safe to continue using these
-      // values. These values include vg, svg and useful general purpose
-      // registers so this saves a few read packets each time we make use of
-      // them.
-      ParseExpeditedRegisters(expedited_register_map, thread_sp);
-    }
+  if (reg_ctx_sp->ReconfigureRegisterInfo()) {
+    // Now we have changed the offsets of all the registers, so the values
+    // will be corrupted.
+    reg_ctx_sp->InvalidateAllRegisters();
+    // Expedited registers values will never contain registers that would be
+    // resized by a reconfigure. So we are safe to continue using these
+    // values.
+    ParseExpeditedRegisters(expedited_register_map, thread_sp);
   }
 
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());
@@ -1803,8 +1789,12 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // disable/step/re-enable it, so one of the valid watchpoint
           // addresses should be provided as \a wp_addr.
           StringExtractor desc_extractor(description.c_str());
+          // FIXME NativeThreadLinux::SetStoppedByWatchpoint sends this
+          // up as
+          //  <address within wp range> <wp hw index> <actual accessed addr>
+          // but this is not reading the <wp hw index>.  Seems like it
+          // wouldn't work on MIPS, where that third field is important.
           addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
-          uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
           bool silently_continue = false;
@@ -1821,7 +1811,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           if (!wp_sp && wp_addr != LLDB_INVALID_ADDRESS)
             wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);
           if (wp_sp) {
-            wp_sp->SetHardwareIndex(wp_index);
             watch_id = wp_sp->GetID();
           }
           if (watch_id == LLDB_INVALID_WATCH_ID) {
@@ -2252,17 +2241,13 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         WatchpointSP wp_sp =
             GetTarget().GetWatchpointList().FindByAddress(wp_addr);
-        uint32_t wp_index = LLDB_INVALID_INDEX32;
-
-        if (wp_sp)
-          wp_index = wp_sp->GetHardwareIndex();
 
         // Rewrite gdb standard watch/rwatch/awatch to
         // "reason:watchpoint" + "description:ADDR",
         // which is parsed in SetThreadStopInfo.
         reason = "watchpoint";
         StreamString ostr;
-        ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
+        ostr.Printf("%" PRIu64, wp_addr);
         description = std::string(ostr.GetString());
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();

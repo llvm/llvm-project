@@ -223,13 +223,13 @@ MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
 
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I,
-                                          bool SkipPseudoOp) {
+                                          Register Reg, bool SkipPseudoOp) {
   const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
 
   iterator E = end();
   while (I != E && (I->isPHI() || I->isPosition() || I->isDebugInstr() ||
                     (SkipPseudoOp && I->isPseudoProbe()) ||
-                    TII->isBasicBlockPrologue(*I)))
+                    TII->isBasicBlockPrologue(*I, Reg)))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.
@@ -1283,6 +1283,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(VNI &&
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+          for (auto &SR : LI.subranges())
+            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
         }
       }
     }
@@ -1302,8 +1304,16 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
         assert(VNI && "LiveInterval should have VNInfo where it is live.");
         LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+        // Update subranges with live values
+        for (auto &SR : LI.subranges()) {
+          VNInfo *VNI = SR.getVNInfoAt(PrevIndex);
+          if (VNI)
+            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
+        }
       } else if (!isLiveOut && !isLastMBB) {
         LI.removeSegment(StartIndex, EndIndex);
+        for (auto &SR : LI.subranges())
+          SR.removeSegment(StartIndex, EndIndex);
       }
     }
 

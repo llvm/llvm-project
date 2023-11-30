@@ -41,34 +41,6 @@ subroutine omp_task_final(bar)
 end subroutine omp_task_final
 
 !===============================================================================
-! `untied` clause
-!===============================================================================
-
-!CHECK-LABEL: func @_QPomp_task_untied() {
-subroutine omp_task_untied()
-  !CHECK: omp.task untied {
-  !$omp task untied
-  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
-  call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_untied
-
-!===============================================================================
-! `mergeable` clause
-!===============================================================================
-
-!CHECK-LABEL: func @_QPomp_task_mergeable() {
-subroutine omp_task_mergeable()
-  !CHECK: omp.task mergeable {
-  !$omp task mergeable
-  !CHECK: fir.call @_QPfoo() {{.*}}: () -> ()
-  call foo()
-  !CHECK: omp.terminator
-  !$omp end task
-end subroutine omp_task_mergeable
-
-!===============================================================================
 ! `priority` clause
 !===============================================================================
 
@@ -253,8 +225,8 @@ subroutine task_multiple_clauses()
   integer :: x, y, z
   logical :: buzz
 
-  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) untied mergeable priority(%{{.+}}) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
-  !$omp task if(buzz) final(buzz) untied mergeable priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
+  !CHECK: omp.task if(%{{.+}}) final(%{{.+}}) priority(%{{.+}}) allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !$omp task if(buzz) final(buzz) priority(z) allocate(omp_high_bw_mem_alloc: x) private(x) firstprivate(y)
 
 !CHECK: %[[X_PRIV_ALLOCA:.+]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFtask_multiple_clausesEx"}
 !CHECK: %[[X_PRIV:.+]]:2 = hlfir.declare %[[X_PRIV_ALLOCA]] {uniq_name = "_QFtask_multiple_clausesEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

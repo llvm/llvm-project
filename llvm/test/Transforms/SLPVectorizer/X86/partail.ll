@@ -23,20 +23,18 @@ define void @get_block(i32 %y_pos) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP6]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[TMP7]], undef
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP7]], <4 x i32> undef
-; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i32> [[TMP9]] to <4 x i64>
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i64> [[TMP10]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP12]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP11]], i32 1
+; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP9]], i32 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP14]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP11]], i32 2
+; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP9]], i32 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP16]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_2:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP11]], i32 3
-; CHECK-NEXT:    [[TMP19:%.*]] = sext i32 [[TMP18]] to i64
-; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP19]]
+; CHECK-NEXT:    [[ARRAYIDX31_3:%.*]] = getelementptr inbounds ptr, ptr undef, i64 [[TMP17]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
