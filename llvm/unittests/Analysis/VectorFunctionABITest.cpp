@@ -21,18 +21,15 @@ private:
   // Parser output.
   VFInfo Info;
   // Reset the data needed for the test.
-  void reset(const StringRef Name, const StringRef IRType) {
+  void reset(const StringRef SFunTy) {
     M = parseAssemblyString("declare void @dummy()", Err, Ctx);
     EXPECT_NE(M.get(), nullptr) << "Loading an invalid module.\n "
                                 << Err.getMessage() << "\n";
-    Type *Ty = parseType(IRType, Err, *(M.get()));
-    FTy = dyn_cast<FunctionType>(Ty);
-    EXPECT_NE(FTy, nullptr) << "Invalid function type string: " << IRType
+    Type *Ty = parseType(SFunTy, Err, *(M.get()));
+    ScalarFTy = dyn_cast<FunctionType>(Ty);
+    EXPECT_NE(ScalarFTy, nullptr) << "Invalid function type string: " << SFunTy
                             << "\n"
                             << Err.getMessage() << "\n";
-    F = M->getOrInsertFunction(Name, FTy);
-    EXPECT_NE(F.getCallee(), nullptr)
-        << "The function must be present in the module\n";
     // Reset the VFInfo
     Info = VFInfo();
     ScalarFuncParametersNum = 0;
@@ -42,7 +39,7 @@ private:
   LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
-  FunctionType *FTy = nullptr;
+  FunctionType *ScalarFTy = nullptr;
   FunctionCallee F;
 
 protected:
@@ -64,23 +61,23 @@ protected:
   // use to create the function in the module if it differs from the
   // standard mangled name.
   //
-  // \p IRType -> FunctionType string to be used for the signature of
+  // \p STy -> FunctionType string to be used for the signature of
   // the vector function.  The correct signature is needed by the
   // parser only for scalable functions. For the sake of testing, the
   // generic fixed-length case can use as signature `void()`.
   //
   bool invokeParser(const StringRef MangledName,
-                    const StringRef IRType = "void()") {
-    // Reset the VFInfo and the Module to be able to invoke
-    // `invokeParser` multiple times in the same test.
-    reset(MangledName, IRType);
+                    const StringRef SFunTy = "void()") {
+    // Reset the VFInfo and the Module to be able to invoke `invokeParser`
+    // multiple times in the same test.
+    reset(SFunTy);
 
     // Fake the arguments to the CallInst.
-    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, FTy);
+    const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, ScalarFTy);
     if (OptInfo) {
       Info = *OptInfo;
       ScalarFuncParametersNum =
-          Info.Shape.getScalarShape(FTy).Parameters.size();
+          Info.Shape.getScalarShape(ScalarFTy).Parameters.size();
       return true;
     }
     return false;
@@ -138,7 +135,7 @@ TEST_F(VFABIParserTest, OnlyValidNames) {
 }
 
 TEST_F(VFABIParserTest, ParamListParsing) {
-  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo(vector_foo)",
+  EXPECT_TRUE(invokeParser("_ZGVnN2vl16Ls32R3l_foo",
                            "void(i32, i32, i32, ptr, i32)"));
   EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VecFuncParameters.size(), (unsigned)5);
@@ -151,7 +148,7 @@ TEST_F(VFABIParserTest, ParamListParsing) {
             VFParameter({3, VFParamKind::OMP_LinearRef, 3}));
   EXPECT_EQ(VecFuncParameters[4], VFParameter({4, VFParamKind::OMP_Linear, 1}));
   EXPECT_EQ(ScalarName, "foo");
-  EXPECT_EQ(VectorName, "vector_foo");
+  EXPECT_EQ(VectorName, "_ZGVnN2vl16Ls32R3l_foo");
 }
 
 TEST_F(VFABIParserTest, ScalarNameAndVectorName_01) {
@@ -172,9 +169,17 @@ TEST_F(VFABIParserTest, ScalarNameAndVectorName_03) {
   EXPECT_EQ(VectorName, "fooBarAbcVec");
 }
 
+TEST_F(VFABIParserTest, ScalarNameOnly) {
+  EXPECT_TRUE(invokeParser("_ZGVnM2v___foo_bar_abc"));
+  EXPECT_EQ(ScalarName, "__foo_bar_abc");
+  // no vector name specified (as it's optional), so it should have the entire
+  // mangled name.
+  EXPECT_EQ(VectorName, "_ZGVnM2v___foo_bar_abc");
+}
+
 TEST_F(VFABIParserTest, Parse) {
   EXPECT_TRUE(
-      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_foo(vector_foo)",
+      invokeParser("_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_foo",
                    "void(i32, i32, i32, i32, ptr, i32, i32, i32, ptr)"));
   EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
   EXPECT_EQ(VF, ElementCount::getFixed(2));
@@ -198,7 +203,7 @@ TEST_F(VFABIParserTest, Parse) {
   EXPECT_EQ(VecFuncParameters[8],
             VFParameter({8, VFParamKind::OMP_LinearRef, 1000}));
   EXPECT_EQ(ScalarName, "foo");
-  EXPECT_EQ(VectorName, "vector_foo");
+  EXPECT_EQ(VectorName, "_ZGVnN2vls2Ls27Us4Rs5l1L10U100R1000_foo");
 }
 
 TEST_F(VFABIParserTest, ParseVectorName) {
@@ -303,29 +308,6 @@ TEST_F(VFABIParserTest, LinearWithoutCompileTime) {
             VFParameter({7, VFParamKind::OMP_LinearUVal, -1}));
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
-}
-
-TEST_F(VFABIParserTest, ISA) {
-  EXPECT_TRUE(invokeParser("_ZGVqN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::Unknown);
-
-  EXPECT_TRUE(invokeParser("_ZGVnN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
-
-  EXPECT_TRUE(invokeParser("_ZGVsN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::SVE);
-
-  EXPECT_TRUE(invokeParser("_ZGVbN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::SSE);
-
-  EXPECT_TRUE(invokeParser("_ZGVcN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::AVX);
-
-  EXPECT_TRUE(invokeParser("_ZGVdN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::AVX2);
-
-  EXPECT_TRUE(invokeParser("_ZGVeN2v_foo"));
-  EXPECT_EQ(ISA, VFISAKind::AVX512);
 }
 
 TEST_F(VFABIParserTest, LLVM_ISA) {
@@ -607,8 +589,6 @@ TEST_F(VFABIParserTest, IntrinsicsInLLVMIsa) {
 
 TEST_F(VFABIParserTest, ParseScalableRequiresDeclaration) {
   const char *MangledName = "_ZGVsMxv_sin(custom_vg)";
-  // The parser succeeds only when the correct function definition of
-  // `custom_vg` is added to the module.
   EXPECT_FALSE(invokeParser(MangledName));
   EXPECT_TRUE(invokeParser(MangledName, "void(i32)"));
   EXPECT_TRUE(matchScalarParamNum()) << "Different number of Scalar parameters";
