@@ -49,7 +49,6 @@ static OwningPtr<Descriptor> EmptyIntDescriptor() {
 
 template <int kind = sizeof(std::int64_t)>
 static OwningPtr<Descriptor> IntDescriptor(const int &value) {
-  Terminator terminator{__FILE__, __LINE__};
   OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
       kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
   if (descriptor->Allocate() != 0) {
