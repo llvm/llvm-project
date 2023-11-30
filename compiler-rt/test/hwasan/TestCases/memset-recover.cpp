@@ -3,10 +3,10 @@
 // RUN: %env_hwasan_opts=halt_on_error=1 not %run %t 2>&1 | FileCheck %s --implicit-check-not=RETURN_FROM_TEST
 
 #include <sanitizer/hwasan_interface.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdio.h>
 
 __attribute__((no_sanitize("hwaddress"))) void
 ForceCallInterceptor(void *p, int c, size_t size) {
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   }
   ForceCallInterceptor(p2, 0, size);
   free(p);
-  fprintf(stderr,  "RETURN_FROM_TEST\n");
+  fprintf(stderr, "RETURN_FROM_TEST\n");
   return 0;
   // CHECK: HWAddressSanitizer: tag-mismatch on address
   // CHECK: WRITE of size 4
