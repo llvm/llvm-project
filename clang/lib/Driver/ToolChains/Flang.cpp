@@ -142,26 +142,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Arg *aliasAnalysis = Args.getLastArg(options::OPT_falias_analysis,
-                                       options::OPT_fno_alias_analysis);
-  // only pass on the argument if it does not match that implied by the
-  // optimization level: so if optimization is requested, only forward
-  // -fno-alias-analysis. If optimization is not requested, only forward
-  // -falias-analysis.
-  Arg *optLevel =
-      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4);
-  if (aliasAnalysis) {
-    bool faliasAnalysis =
-        aliasAnalysis->getOption().matches(options::OPT_falias_analysis);
-    if (optLevel && !faliasAnalysis) {
-      CmdArgs.push_back("-fno-alias-analysis");
-    } else {
-      if (faliasAnalysis)
-        // requested alias analysis but no optimization enabled
-        CmdArgs.push_back("-falias-analysis");
-    }
-  }
-
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
@@ -277,6 +257,14 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   }
 }
 
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+  }
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -300,6 +288,9 @@ void Flang::addTargetOptions(const ArgList &Args,
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAMDGPUTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);

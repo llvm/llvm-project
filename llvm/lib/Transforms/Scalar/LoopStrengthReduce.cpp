@@ -188,8 +188,8 @@ static cl::opt<unsigned> SetupCostDepthLimit(
     "lsr-setupcost-depth-limit", cl::Hidden, cl::init(7),
     cl::desc("The limit on recursion depth for LSRs setup cost"));
 
-static cl::opt<bool> AllowTerminatingConditionFoldingAfterLSR(
-    "lsr-term-fold", cl::Hidden, cl::init(false),
+static cl::opt<cl::boolOrDefault> AllowTerminatingConditionFoldingAfterLSR(
+    "lsr-term-fold", cl::Hidden,
     cl::desc("Attempt to replace primary IV with other IV."));
 
 static cl::opt<bool> AllowDropSolutionIfLessProfitable(
@@ -6938,7 +6938,18 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     }
   }
 
-  if (AllowTerminatingConditionFoldingAfterLSR) {
+  const bool EnableFormTerm = [&] {
+    switch (AllowTerminatingConditionFoldingAfterLSR) {
+    case cl::BOU_TRUE:
+      return true;
+    case cl::BOU_FALSE:
+      return false;
+    case cl::BOU_UNSET:
+      return TTI.shouldFoldTerminatingConditionAfterLSR();
+    }
+  }();
+
+  if (EnableFormTerm) {
     if (auto Opt = canFoldTermCondOfLoop(L, SE, DT, LI)) {
       auto [ToFold, ToHelpFold, TermValueS, MustDrop] = *Opt;
 

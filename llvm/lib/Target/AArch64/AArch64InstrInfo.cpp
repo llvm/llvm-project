@@ -4231,7 +4231,7 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
 /// Only called for LdSt for which getMemOperandWithOffset returns true.
 bool AArch64InstrInfo::shouldClusterMemOps(
     ArrayRef<const MachineOperand *> BaseOps1,
-    ArrayRef<const MachineOperand *> BaseOps2, unsigned NumLoads,
+    ArrayRef<const MachineOperand *> BaseOps2, unsigned ClusterSize,
     unsigned NumBytes) const {
   assert(BaseOps1.size() == 1 && BaseOps2.size() == 1);
   const MachineOperand &BaseOp1 = *BaseOps1.front();
@@ -4249,7 +4249,7 @@ bool AArch64InstrInfo::shouldClusterMemOps(
     return false;
 
   // Only cluster up to a single pair.
-  if (NumLoads > 2)
+  if (ClusterSize > 2)
     return false;
 
   if (!isPairableLdStInst(FirstLdSt) || !isPairableLdStInst(SecondLdSt))

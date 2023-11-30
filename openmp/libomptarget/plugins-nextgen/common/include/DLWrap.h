@@ -1,4 +1,4 @@
-//===------- dlwrap.h - Convenience wrapper around dlopen/dlsym  -- C++ -*-===//
+//===-- Shared/DLWrap.h - Convenience wrapper for dlopen/dlsym --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,8 +38,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DLWRAP_H_INCLUDED
-#define DLWRAP_H_INCLUDED
+#ifndef OMPTARGET_SHARED_DLWRAP_H
+#define OMPTARGET_SHARED_DLWRAP_H
 
 #include <array>
 #include <cstddef>
@@ -283,4 +283,4 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
                                           x9, x10);                            \
   }
 
-#endif
+#endif // OMPTARGET_SHARED_DLWRAP_H

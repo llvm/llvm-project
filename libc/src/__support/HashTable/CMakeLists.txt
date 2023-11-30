@@ -5,6 +5,7 @@ add_header_library(
   FLAGS
     PREFER_GENERIC
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.bit
     libc.src.__support.macros.properties.cpu_features
 )
