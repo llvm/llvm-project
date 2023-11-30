@@ -337,6 +337,61 @@ func.func @iadd_poison(%arg0: i32) -> i32 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.IAddCarry
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @iaddcarry_x_0
+func.func @iaddcarry_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct
+  %c0 = spirv.Constant 0 : i32
+  %0 = spirv.IAddCarry %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_scalar_iaddcarry
+func.func @const_fold_scalar_iaddcarry() -> (!spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>) {
+  %c5 = spirv.Constant 5 : i32
+  %cn5 = spirv.Constant -5 : i32
+  %cn8 = spirv.Constant -8 : i32
+
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN3:.*]] = spirv.Constant -3
+  // CHECK-DAG: %[[UNDEF1:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER1:.*]] = spirv.CompositeInsert %[[CN3]], %[[UNDEF1]][0 : i32]
+  // CHECK-DAG: %[[CC_CN3_C0:.*]] = spirv.CompositeInsert %[[C0]], %[[INTER1]][1 : i32]
+  // CHECK-DAG: %[[C1:.*]] = spirv.Constant 1
+  // CHECK-DAG: %[[CN13:.*]] = spirv.Constant -13
+  // CHECK-DAG: %[[UNDEF2:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER2:.*]] = spirv.CompositeInsert %[[CN13]], %[[UNDEF2]][0 : i32]
+  // CHECK-DAG: %[[CC_CN13_C1:.*]] = spirv.CompositeInsert %[[C1]], %[[INTER2]][1 : i32]
+  %0 = spirv.IAddCarry %c5, %cn8 : !spirv.struct<(i32, i32)>
+  %1 = spirv.IAddCarry %cn5, %cn8 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[CC_CN3_C0]], %[[CC_CN13_C1]]
+  return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_vector_iaddcarry
+func.func @const_fold_vector_iaddcarry() -> !spirv.struct<(vector<3xi32>, vector<3xi32>)> {
+  %v0 = spirv.Constant dense<[5, -3, -1]> : vector<3xi32>
+  %v1 = spirv.Constant dense<[-8, -8, 1]> : vector<3xi32>
+
+  // CHECK-DAG: %[[CV1:.*]] = spirv.Constant dense<[-3, -11, 0]>
+  // CHECK-DAG: %[[CV2:.*]] = spirv.Constant dense<[0, 1, 1]>
+  // CHECK-DAG: %[[UNDEF:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER:.*]] = spirv.CompositeInsert %[[CV1]], %[[UNDEF]][0 : i32]
+  // CHECK-DAG: %[[CC_CV1_CV2:.*]] = spirv.CompositeInsert %[[CV2]], %[[INTER]][1 : i32]
+  %0 = spirv.IAddCarry %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+
+  // CHECK: return %[[CC_CV1_CV2]]
+  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IMul
 //===----------------------------------------------------------------------===//
 
@@ -401,6 +456,133 @@ func.func @const_fold_vector_imul() -> vector<3xi32> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.SMulExtended
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @smulextended_x_0
+func.func @smulextended_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[C0]], %[[C0]]
+  %c0 = spirv.Constant 0 : i32
+  %0 = spirv.SMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_scalar_smulextended
+func.func @const_fold_scalar_smulextended() -> (!spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>) {
+  %c5 = spirv.Constant 5 : i32
+  %cn5 = spirv.Constant -5 : i32
+  %cn8 = spirv.Constant -8 : i32
+
+  // CHECK-DAG: %[[CN40:.*]] = spirv.Constant -40
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  // CHECK-DAG: %[[UNDEF1:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER1:.*]] = spirv.CompositeInsert %[[CN40]], %[[UNDEF1]][0 : i32]
+  // CHECK-DAG: %[[CC_CN40_CN1:.*]] = spirv.CompositeInsert %[[CN1]], %[[INTER1]]
+  // CHECK-DAG: %[[C40:.*]] = spirv.Constant 40
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[UNDEF2:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER2:.*]] = spirv.CompositeInsert %[[C40]], %[[UNDEF2]][0 : i32]
+  // CHECK-DAG: %[[CC_C40_C0:.*]] = spirv.CompositeInsert %[[C0]], %[[INTER2]][1 : i32]
+  %0 = spirv.SMulExtended %c5, %cn8 : !spirv.struct<(i32, i32)>
+  %1 = spirv.SMulExtended %cn5, %cn8 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[CC_CN40_CN1]], %[[CC_C40_C0]]
+  return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_vector_smulextended
+func.func @const_fold_vector_smulextended() -> !spirv.struct<(vector<3xi32>, vector<3xi32>)> {
+  %v0 = spirv.Constant dense<[2147483647, -5, -1]> : vector<3xi32>
+  %v1 = spirv.Constant dense<[5, -8, 1]> : vector<3xi32>
+
+  // CHECK-DAG: %[[CV1:.*]] = spirv.Constant dense<[2147483643, 40, -1]>
+  // CHECK-DAG: %[[CV2:.*]] = spirv.Constant dense<[2, 0, -1]>
+  // CHECK-DAG: %[[UNDEF:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER:.*]] = spirv.CompositeInsert %[[CV1]], %[[UNDEF]][0 : i32]
+  // CHECK-DAG: %[[CC_CV1_CV2:.*]] = spirv.CompositeInsert %[[CV2]], %[[INTER]][1 : i32]
+  %0 = spirv.SMulExtended %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+
+  // CHECK: return %[[CC_CV1_CV2]]
+  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.UMulExtended
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umulextended_x_0
+func.func @umulextended_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[C0]], %[[C0]]
+  %c0 = spirv.Constant 0 : i32
+  %0 = spirv.UMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @umulextended_x_1
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @umulextended_x_1(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[ARG]], %[[C0]]
+  %c0 = spirv.Constant 1 : i32
+  %0 = spirv.UMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_scalar_umulextended
+func.func @const_fold_scalar_umulextended() -> (!spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>) {
+  %c5 = spirv.Constant 5 : i32
+  %cn5 = spirv.Constant -5 : i32
+  %cn8 = spirv.Constant -8 : i32
+
+
+  // CHECK-DAG: %[[C40:.*]] = spirv.Constant 40
+  // CHECK-DAG: %[[CN13:.*]] = spirv.Constant -13
+  // CHECK-DAG: %[[CN40:.*]] = spirv.Constant -40
+  // CHECK-DAG: %[[C4:.*]] = spirv.Constant 4
+  // CHECK-DAG: %[[UNDEF1:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER1:.*]] = spirv.CompositeInsert %[[CN40]], %[[UNDEF1]][0 : i32]
+  // CHECK-DAG: %[[CC_CN40_C4:.*]] = spirv.CompositeInsert %[[C4]], %[[INTER1]][1 : i32]
+  // CHECK-DAG: %[[UNDEF2:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER2:.*]] = spirv.CompositeInsert %[[C40]], %[[UNDEF2]][0 : i32]
+  // CHECK-DAG: %[[CC_C40_CN13:.*]] = spirv.CompositeInsert %[[CN13]], %[[INTER2]][1 : i32]
+  %0 = spirv.UMulExtended %c5, %cn8 : !spirv.struct<(i32, i32)>
+  %1 = spirv.UMulExtended %cn5, %cn8 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[CC_CN40_C4]], %[[CC_C40_CN13]]
+  return %0, %1 : !spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @const_fold_vector_umulextended
+func.func @const_fold_vector_umulextended() -> !spirv.struct<(vector<3xi32>, vector<3xi32>)> {
+  %v0 = spirv.Constant dense<[2147483647, -5, -1]> : vector<3xi32>
+  %v1 = spirv.Constant dense<[5, -8, 1]> : vector<3xi32>
+
+  // CHECK-DAG: %[[CV1:.*]] = spirv.Constant dense<[2147483643, 40, -1]>
+  // CHECK-DAG: %[[CV2:.*]] = spirv.Constant dense<[2, -13, 0]>
+  // CHECK-DAG: %[[UNDEF:.*]] = spirv.Undef
+  // CHECK-DAG: %[[INTER:.*]] = spirv.CompositeInsert %[[CV1]], %[[UNDEF]]
+  // CHECK-DAG: %[[CC_CV1_CV2:.*]] = spirv.CompositeInsert %[[CV2]], %[[INTER]]
+  %0 = spirv.UMulExtended %v0, %v1 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+
+  // CHECK: return %[[CC_CV1_CV2]]
+  return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+}
+
+// -----
+
+
+//===----------------------------------------------------------------------===//
 // spirv.ISub
 //===----------------------------------------------------------------------===//
 
@@ -463,8 +645,305 @@ func.func @const_fold_vector_isub() -> vector<3xi32> {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.SDiv
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sdiv_x_1
+func.func @sdiv_x_1(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: return %arg0 : i32
+  %c1 = spirv.Constant 1  : i32
+  %2 = spirv.SDiv %arg0, %c1: i32
+  return %2 : i32
+}
+
+// CHECK-LABEL: @sdiv_div_0_or_overflow
+func.func @sdiv_div_0_or_overflow() -> (i32, i32) {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  // CHECK-DAG: %[[CNMIN:.*]] = spirv.Constant -2147483648
+
+  %c0 = spirv.Constant 0 : i32
+  %cn1 = spirv.Constant -1 : i32
+  %min_i32 = spirv.Constant -2147483648 : i32
+
+  // CHECK: %0 = spirv.SDiv %[[CN1]], %[[C0]]
+  // CHECK: %1 = spirv.SDiv %[[CNMIN]], %[[CN1]]
+  %0 = spirv.SDiv %cn1, %c0 : i32
+  %1 = spirv.SDiv %min_i32, %cn1 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_sdiv
+func.func @const_fold_scalar_sdiv() -> (i32, i32, i32, i32) {
+  %c56 = spirv.Constant 56 : i32
+  %c7 = spirv.Constant 7 : i32
+  %cn8 = spirv.Constant -8 : i32
+  %c3 = spirv.Constant 3 : i32
+  %cn3 = spirv.Constant -3 : i32
+
+  // CHECK-DAG: %[[CN18:.*]] = spirv.Constant -18
+  // CHECK-DAG: %[[CN2:.*]] = spirv.Constant -2
+  // CHECK-DAG: %[[CN7:.*]] = spirv.Constant -7
+  // CHECK-DAG: %[[C8:.*]] = spirv.Constant 8
+  %0 = spirv.SDiv %c56, %c7 : i32
+  %1 = spirv.SDiv %c56, %cn8 : i32
+  %2 = spirv.SDiv %cn8, %c3 : i32
+  %3 = spirv.SDiv %c56, %cn3 : i32
+
+  // CHECK: return %[[C8]], %[[CN7]], %[[CN2]], %[[CN18]]
+  return %0, %1, %2, %3: i32, i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_sdiv
+func.func @const_fold_vector_sdiv() -> vector<3xi32> {
+  // CHECK: %[[CVEC:.*]] = spirv.Constant dense<[0, -1, -3]>
+
+  %cv_num = spirv.Constant dense<[42, 24, -16]> : vector<3xi32>
+  %cv_denom = spirv.Constant dense<[76, -24, 5]> : vector<3xi32>
+  %0 = spirv.SDiv %cv_num, %cv_denom : vector<3xi32>
+
+  // CHECK: return %[[CVEC]]
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SMod
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @smod_x_1
+func.func @smod_x_1(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CVEC0:.*]] = spirv.Constant dense<0>
+  %c1 = spirv.Constant 1 : i32
+  %cv1 = spirv.Constant dense<1> : vector<3xi32>
+  %0 = spirv.SMod %arg0, %c1: i32
+  %1 = spirv.SMod %arg1, %cv1: vector<3xi32>
+
+  // CHECK: return %[[C0]], %[[CVEC0]]
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @smod_div_0_or_overflow
+func.func @smod_div_0_or_overflow() -> (i32, i32) {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  // CHECK-DAG: %[[CNMIN:.*]] = spirv.Constant -2147483648
+
+  %c0 = spirv.Constant 0 : i32
+  %cn1 = spirv.Constant -1 : i32
+  %min_i32 = spirv.Constant -2147483648 : i32
+
+  // CHECK: %0 = spirv.SMod %[[CN1]], %[[C0]]
+  // CHECK: %1 = spirv.SMod %[[CNMIN]], %[[CN1]]
+  %0 = spirv.SMod %cn1, %c0 : i32
+  %1 = spirv.SMod %min_i32, %cn1 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_smod
+func.func @const_fold_scalar_smod() -> (i32, i32, i32, i32, i32, i32, i32, i32) {
+  %c56 = spirv.Constant 56 : i32
+  %cn56 = spirv.Constant -56 : i32
+  %c59 = spirv.Constant 59 : i32
+  %cn59 = spirv.Constant -59 : i32
+  %c7 = spirv.Constant 7 : i32
+  %cn8 = spirv.Constant -8 : i32
+  %c3 = spirv.Constant 3 : i32
+  %cn3 = spirv.Constant -3 : i32
+
+  // CHECK-DAG: %[[ZERO:.*]] = spirv.Constant 0 : i32
+  // CHECK-DAG: %[[TWO:.*]] = spirv.Constant 2 : i32
+  // CHECK-DAG: %[[FIFTYTHREE:.*]] = spirv.Constant 53 : i32
+  // CHECK-DAG: %[[NFIFTYTHREE:.*]] = spirv.Constant -53 : i32
+  // CHECK-DAG: %[[THREE:.*]] = spirv.Constant 3 : i32
+  // CHECK-DAG: %[[NTHREE:.*]] = spirv.Constant -3 : i32
+  %0 = spirv.SMod %c56, %c7 : i32
+  %1 = spirv.SMod %c56, %cn8 : i32
+  %2 = spirv.SMod %c56, %c3 : i32
+  %3 = spirv.SMod %cn3, %c56 : i32
+  %4 = spirv.SMod %cn3, %cn56 : i32
+  %5 = spirv.SMod %c59, %c56 : i32
+  %6 = spirv.SMod %c59, %cn56 : i32
+  %7 = spirv.SMod %cn59, %cn56 : i32
+
+  // CHECK: return %[[ZERO]], %[[ZERO]], %[[TWO]], %[[FIFTYTHREE]], %[[NTHREE]], %[[THREE]], %[[NFIFTYTHREE]], %[[NTHREE]]
+  return %0, %1, %2, %3, %4, %5, %6, %7 : i32, i32, i32, i32, i32, i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_smod
+func.func @const_fold_vector_smod() -> vector<3xi32> {
+  // CHECK: %[[CVEC:.*]] = spirv.Constant dense<[42, -4, 4]>
+
+  %cv = spirv.Constant dense<[42, 24, -16]> : vector<3xi32>
+  %cv_mod = spirv.Constant dense<[76, -7, 5]> : vector<3xi32>
+  %0 = spirv.SMod %cv, %cv_mod : vector<3xi32>
+
+  // CHECK: return %[[CVEC]]
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SRem
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @srem_x_1
+func.func @srem_x_1(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CVEC0:.*]] = spirv.Constant dense<0>
+  %c1 = spirv.Constant 1 : i32
+  %cv1 = spirv.Constant dense<1> : vector<3xi32>
+  %0 = spirv.SRem %arg0, %c1: i32
+  %1 = spirv.SRem %arg1, %cv1: vector<3xi32>
+
+  // CHECK: return %[[C0]], %[[CVEC0]]
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @srem_div_0_or_overflow
+func.func @srem_div_0_or_overflow() -> (i32, i32) {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  // CHECK-DAG: %[[CNMIN:.*]] = spirv.Constant -2147483648
+  %c0 = spirv.Constant 0 : i32
+  %cn1 = spirv.Constant -1 : i32
+  %min_i32 = spirv.Constant -2147483648 : i32
+
+  // CHECK: %0 = spirv.SRem %[[CN1]], %[[C0]]
+  // CHECK: %1 = spirv.SRem %[[CNMIN]], %[[CN1]]
+  %0 = spirv.SRem %cn1, %c0 : i32
+  %1 = spirv.SRem %min_i32, %cn1 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_srem
+func.func @const_fold_scalar_srem() -> (i32, i32, i32, i32, i32) {
+  %c56 = spirv.Constant 56 : i32
+  %c7 = spirv.Constant 7 : i32
+  %cn8 = spirv.Constant -8 : i32
+  %c3 = spirv.Constant 3 : i32
+  %cn3 = spirv.Constant -3 : i32
+
+  // CHECK-DAG: %[[ONE:.*]] = spirv.Constant 1 : i32
+  // CHECK-DAG: %[[NTHREE:.*]] = spirv.Constant -3 : i32
+  // CHECK-DAG: %[[TWO:.*]] = spirv.Constant 2 : i32
+  // CHECK-DAG: %[[ZERO:.*]] = spirv.Constant 0 : i32
+  %0 = spirv.SRem %c56, %c7 : i32
+  %1 = spirv.SRem %c56, %cn8 : i32
+  %2 = spirv.SRem %c56, %c3 : i32
+  %3 = spirv.SRem %cn3, %c56 : i32
+  %4 = spirv.SRem %c7, %cn3 : i32
+  // CHECK: return %[[ZERO]], %[[ZERO]], %[[TWO]], %[[NTHREE]], %[[ONE]]
+  return %0, %1, %2, %3, %4 : i32, i32, i32, i32, i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.UDiv
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @udiv_x_1
+func.func @udiv_x_1(%arg0 : i32) -> i32 {
+  // CHECK-NEXT: return %arg0 : i32
+  %c1 = spirv.Constant 1  : i32
+  %2 = spirv.UDiv %arg0, %c1: i32
+  return %2 : i32
+}
+
+// CHECK-LABEL: @udiv_div_0
+func.func @udiv_div_0() -> i32 {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  %c0 = spirv.Constant 0 : i32
+  %cn1 = spirv.Constant -1 : i32
+
+  // CHECK: %0 = spirv.UDiv %[[CN1]], %[[C0]]
+  %0 = spirv.UDiv %cn1, %c0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_udiv
+func.func @const_fold_scalar_udiv() -> (i32, i32, i32) {
+  %c56 = spirv.Constant 56 : i32
+  %c7 = spirv.Constant 7 : i32
+  %cn8 = spirv.Constant -8 : i32
+  %c3 = spirv.Constant 3 : i32
+
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CBIG:.*]] = spirv.Constant 1431655762
+  // CHECK-DAG: %[[C8:.*]] = spirv.Constant 8
+  %0 = spirv.UDiv %c56, %c7 : i32
+  %1 = spirv.UDiv %cn8, %c3 : i32
+  %2 = spirv.UDiv %c56, %cn8 : i32
+
+  // CHECK: return %[[C8]], %[[CBIG]], %[[C0]]
+  return %0, %1, %2 : i32, i32, i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.UMod
 //===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umod_x_1
+func.func @umod_x_1(%arg0: i32, %arg1: vector<3xi32>) -> (i32, vector<3xi32>) {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CVEC0:.*]] = spirv.Constant dense<0>
+  %c1 = spirv.Constant 1 : i32
+  %cv1 = spirv.Constant dense<1> : vector<3xi32>
+  %0 = spirv.UMod %arg0, %c1: i32
+  %1 = spirv.UMod %arg1, %cv1: vector<3xi32>
+
+  // CHECK: return %[[C0]], %[[CVEC0]]
+  return %0, %1 : i32, vector<3xi32>
+}
+
+// CHECK-LABEL: @umod_div_0
+func.func @umod_div_0() -> i32 {
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[CN1:.*]] = spirv.Constant -1
+  %c0 = spirv.Constant 0 : i32
+  %cn1 = spirv.Constant -1 : i32
+
+  // CHECK: %0 = spirv.UMod %[[CN1]], %[[C0]]
+  %0 = spirv.UMod %cn1, %c0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_umod
+func.func @const_fold_scalar_umod() -> (i32, i32, i32) {
+  %c56 = spirv.Constant 56 : i32
+  %c7 = spirv.Constant 7 : i32
+  %cn8 = spirv.Constant -8 : i32
+  %c3 = spirv.Constant 3 : i32
+
+  // CHECK-DAG: %[[C0:.*]] = spirv.Constant 0
+  // CHECK-DAG: %[[C2:.*]] = spirv.Constant 2
+  // CHECK-DAG: %[[C56:.*]] = spirv.Constant 56
+  %0 = spirv.UMod %c56, %c7 : i32
+  %1 = spirv.UMod %cn8, %c3 : i32
+  %2 = spirv.UMod %c56, %cn8 : i32
+
+  // CHECK: return %[[C0]], %[[C2]], %[[C56]]
+  return %0, %1, %2 : i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_umod
+func.func @const_fold_vector_umod() -> vector<3xi32> {
+  // CHECK: %[[CVEC:.*]] = spirv.Constant dense<[42, 24, 0]>
+
+  %cv = spirv.Constant dense<[42, 24, -16]> : vector<3xi32>
+  %cv_mod = spirv.Constant dense<[76, -7, 5]> : vector<3xi32>
+  %0 = spirv.UMod %cv, %cv_mod : vector<3xi32>
+
+  // CHECK: return %[[CVEC]]
+  return %0 : vector<3xi32>
+}
 
 // CHECK-LABEL: @umod_fold
 // CHECK-SAME: (%[[ARG:.*]]: i32)

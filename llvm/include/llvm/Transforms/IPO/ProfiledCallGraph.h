@@ -140,8 +140,11 @@ public:
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
       // from root. This does not affect SCC order.
-      ProfiledFunctions[Name] = ProfiledCallGraphNode(Name);
-      Root.Edges.emplace(&Root, &ProfiledFunctions[Name], 0);
+      // Store the pointer of the node because the map can be rehashed.
+      auto &Node =
+          ProfiledCallGraphNodeList.emplace_back(ProfiledCallGraphNode(Name));
+      ProfiledFunctions[Name] = &Node;
+      Root.Edges.emplace(&Root, ProfiledFunctions[Name], 0);
     }
   }
 
@@ -152,9 +155,9 @@ private:
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
     if (CalleeIt == ProfiledFunctions.end())
       return;
-    ProfiledCallGraphEdge Edge(&ProfiledFunctions[CallerName],
-                               &CalleeIt->second, Weight);
-    auto &Edges = ProfiledFunctions[CallerName].Edges;
+    ProfiledCallGraphEdge Edge(ProfiledFunctions[CallerName],
+                               CalleeIt->second, Weight);
+    auto &Edges = ProfiledFunctions[CallerName]->Edges;
     auto EdgeIt = Edges.find(Edge);
     if (EdgeIt == Edges.end()) {
       Edges.insert(Edge);
@@ -193,7 +196,7 @@ private:
       return;
 
     for (auto &Node : ProfiledFunctions) {
-      auto &Edges = Node.second.Edges;
+      auto &Edges = Node.second->Edges;
       auto I = Edges.begin();
       while (I != Edges.end()) {
         if (I->Weight <= Threshold)
@@ -205,7 +208,9 @@ private:
   }
 
   ProfiledCallGraphNode Root;
-  HashKeyMap<std::unordered_map, FunctionId, ProfiledCallGraphNode>
+  // backing buffer for ProfiledCallGraphNodes.
+  std::list<ProfiledCallGraphNode> ProfiledCallGraphNodeList;
+  HashKeyMap<llvm::DenseMap, FunctionId, ProfiledCallGraphNode*>
       ProfiledFunctions;
 };
 

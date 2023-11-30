@@ -45,10 +45,10 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
   endif()
 
-  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS 
-  # configuration flag, we automatically include sm80 tests when build for 
-  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and 
-  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in 
+  # When the Integration tests are requested via the MLIR_INCLUDE_INTEGRATION_TESTS
+  # configuration flag, we automatically include sm80 tests when build for
+  # cuSparse when the configuration flag MLIR_ENABLE_CUDA_CUSPARSE is set and
+  # include sm80 lt tests when the MLIR_ENABLE_CUDA_CUSPARSELT is set in
   # addition to those.
   if (MLIR_ENABLE_CUDA_CUSPARSE)
     set(MLIR_RUN_CUDA_SM80_TESTS ON)
@@ -101,6 +101,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-quant-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
+  mlir-capi-translation-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-pdll-lsp-server

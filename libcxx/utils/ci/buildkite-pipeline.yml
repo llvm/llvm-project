@@ -43,10 +43,6 @@ definitions:
 
 # Define agents using YAML anchors to reduce duplication
 agents_definitions:
-  _linux_agent: &linux_agent
-    agents:
-      queue: libcxx-builders
-      os: linux
   _windows_agent: &windows_agent
     agents:
       queue: windows
@@ -101,20 +97,6 @@ environment_definitions:
 
 
 steps:
-- label: Bootstrapping build
-  command: libcxx/utils/ci/run-buildbot bootstrapping-build
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Benchmarks
-  command: libcxx/utils/ci/run-buildbot benchmarks
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
 - group: ':windows: Windows'
   steps:
   - label: Clang-cl (DLL)
@@ -225,6 +207,11 @@ steps:
   - label: Armv7 -fno-exceptions
     command: libcxx/utils/ci/run-buildbot armv7-no-exceptions
     <<: *arm_agent_armv8l
+    <<: *common
+
+  - label: Armv7-M picolibc
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
+    <<: *arm_agent_aarch64
     <<: *common
 
 - group: AIX
