@@ -152,7 +152,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
     // Set libcalls.
     setLibcallName(RTLIB::MUL_I128, nullptr);
+    // The MULO libcall is not part of libgcc, only compiler-rt.
+    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
+
+  // The MULO libcall is not part of libgcc, only compiler-rt.
+  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
@@ -242,6 +247,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       // will be `Custom` handled in the future.
       setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -271,6 +277,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       // FIXME: Same as above.
       setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);

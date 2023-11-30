@@ -102,6 +102,8 @@ Changes to the AMDGPU Backend
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
+* Added support for Cortex-A520, Cortex-A720 and Cortex-X4 CPUs.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -128,6 +130,7 @@ Changes to the RISC-V Backend
 
 * The Zfa extension version was upgraded to 1.0 and is no longer experimental.
 * Zihintntl extension version was upgraded to 1.0 and is no longer experimental.
+* Intrinsics were added for Zk*, Zbb, and Zbc. See https://github.com/riscv-non-isa/riscv-c-api-doc/blob/master/riscv-c-api.md#scalar-bit-manipulation-extension-intrinsics
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -196,8 +199,19 @@ Changes to the C API
   The option structure exposes an additional setting (i.e., the target ABI) and
   provides default values for unspecified settings.
 
+* Added ``LLVMGetNNeg`` and ``LLVMSetNNeg`` for setting/getting the new nneg flag
+  on zext instructions
+
 Changes to the CodeGen infrastructure
 -------------------------------------
+
+* A new debug type ``isel-dump`` is added to show only the SelectionDAG dumps
+  after each ISel phase (i.e. ``-debug-only=isel-dump``). This new debug type
+  can be filtered by function names using ``-filter-print-funcs=<function names>``,
+  the same flag used to filter IR dumps after each Pass. Note that the existing
+  ``-debug-only=isel`` will take precedence over the new behavior and
+  print SelectionDAG dumps of every single function regardless of
+  ``-filter-print-funcs``'s values.
 
 * ``PrologEpilogInserter`` no longer supports register scavenging
   during forwards frame index elimination. Targets should use
@@ -210,6 +224,7 @@ Changes to the CodeGen infrastructure
 
 Changes to the Metadata Info
 ---------------------------------
+* Added a new loop metadata `!{!"llvm.loop.align", i32 64}`
 
 Changes to the Debug Info
 ---------------------------------

@@ -1433,7 +1433,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   // sdiv Op0, (sext i1 X) --> -Op0 (because if X is 0, the op is undefined)
   if (match(Op1, m_AllOnes()) ||
       (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
-    return BinaryOperator::CreateNeg(Op0);
+    return BinaryOperator::CreateNSWNeg(Op0);
 
   // X / INT_MIN --> X == INT_MIN
   if (match(Op1, m_SignMask()))
@@ -1456,7 +1456,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
       Constant *NegPow2C = ConstantExpr::getNeg(cast<Constant>(Op1));
       Constant *C = ConstantExpr::getExactLogBase2(NegPow2C);
       Value *Ashr = Builder.CreateAShr(Op0, C, I.getName() + ".neg", true);
-      return BinaryOperator::CreateNeg(Ashr);
+      return BinaryOperator::CreateNSWNeg(Ashr);
     }
   }
 
@@ -1518,7 +1518,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   if (KnownDividend.isNonNegative()) {
     // If both operands are unsigned, turn this into a udiv.
-    if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
+    if (isKnownNonNegative(Op1, SQ.getWithInstruction(&I))) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
       BO->setIsExact(I.isExact());
       return BO;

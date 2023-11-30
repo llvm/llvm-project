@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers instrprof_* intrinsics emitted by a frontend for profiling.
+// This pass lowers instrprof_* intrinsics emitted by an instrumentor.
 // It also builds the data structures and initialization code needed for
 // updating execution counts and emitting the profile at runtime.
 //
@@ -670,15 +670,11 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
-    Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getPtrTy()),
-                      Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
                               OpBundles);
   } else {
-    Value *Args[3] = {Ind->getTargetValue(),
-                      Builder.CreateBitCast(DataVar, Builder.getPtrTy()),
-                      Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(*M, *TLI, ValueProfilingCallType::MemOp),
         Args, OpBundles);
@@ -1484,10 +1480,10 @@ void InstrProfiling::emitRegistration() {
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
   for (Value *Data : CompilerUsedVars)
     if (!isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
+      IRB.CreateCall(RuntimeRegisterF, Data);
   for (Value *Data : UsedVars)
     if (Data != NamesVar && !isa<Function>(Data))
-      IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
+      IRB.CreateCall(RuntimeRegisterF, Data);
 
   if (NamesVar) {
     Type *ParamTypes[] = {VoidPtrTy, Int64Ty};
@@ -1496,8 +1492,7 @@ void InstrProfiling::emitRegistration() {
     auto *NamesRegisterF =
         Function::Create(NamesRegisterTy, GlobalVariable::ExternalLinkage,
                          getInstrProfNamesRegFuncName(), M);
-    IRB.CreateCall(NamesRegisterF, {IRB.CreateBitCast(NamesVar, VoidPtrTy),
-                                    IRB.getInt64(NamesSize)});
+    IRB.CreateCall(NamesRegisterF, {NamesVar, IRB.getInt64(NamesSize)});
   }
 
   IRB.CreateRetVoid();

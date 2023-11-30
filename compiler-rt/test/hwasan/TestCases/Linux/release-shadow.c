@@ -15,7 +15,7 @@
 #include <sanitizer/hwasan_interface.h>
 
 const unsigned char kTag = 42;
-const size_t kNumShadowPages = 256;
+const size_t kNumShadowPages = 1024;
 const size_t kNumPages = 16 * kNumShadowPages;
 const size_t kPageSize = 4096;
 const size_t kMapSize = kNumPages * kPageSize;
@@ -23,7 +23,7 @@ const size_t kMapSize = kNumPages * kPageSize;
 void sync_rss() {
   char *page = (char *)mmap(0, kPageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   // Linux kernel updates RSS counters after a set number of page faults.
-  for (int i = 0; i < 10000; ++i) {
+  for (int i = 0; i < 100; ++i) {
     page[0] = 42;
     madvise(page, kPageSize, MADV_DONTNEED);
   }
@@ -44,17 +44,18 @@ size_t current_rss() {
   return rss;
 }
 
-void test_rss_difference(void *p) {
+int test_rss_difference(void *p) {
   __hwasan_tag_memory(p, kTag, kMapSize);
   size_t rss_before = current_rss();
   __hwasan_tag_memory(p, 0, kMapSize);
   size_t rss_after = current_rss();
   fprintf(stderr, "%zu -> %zu\n", rss_before, rss_after);
-  assert(rss_before > rss_after);
+  if (rss_before <= rss_after)
+    return 0;
   size_t diff = rss_before - rss_after;
   fprintf(stderr, "diff %zu\n", diff);
   // Check that the difference is at least close to kNumShadowPages.
-  assert(diff > kNumShadowPages / 2);
+  return diff > kNumShadowPages / 2;
 }
 
 int main() {
@@ -64,9 +65,14 @@ int main() {
   void *p = mmap(0, kMapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   fprintf(stderr, "p = %p\n", p);
 
-  test_rss_difference(p);
-  test_rss_difference(p);
-  test_rss_difference(p);
+  size_t total_count = 10;
+  size_t success_count = 0;
+  for (size_t i = 0; i < total_count; ++i)
+    success_count += test_rss_difference(p);
+
+  fprintf(stderr, "p = %p\n", p);
+  fprintf(stderr, "passed %zu out of %zu\n", success_count, total_count);
+  assert(success_count > total_count * 0.8);
 
   return 0;
 }

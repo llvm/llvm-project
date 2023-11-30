@@ -1127,7 +1127,6 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryMask_FRM<VReg RetClass,
@@ -1147,7 +1146,6 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
-  let usesCustomInserter = 1;
 }
 
 class VPseudoUnaryNoMaskGPROut :

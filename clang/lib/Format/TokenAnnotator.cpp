@@ -227,8 +227,7 @@ private:
       }
       if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
           (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
-           !Style.isCSharp() && Style.Language != FormatStyle::LK_Proto &&
-           Style.Language != FormatStyle::LK_TextProto)) {
+           !Style.isCSharp() && !Style.isProto())) {
         return false;
       }
       // If a && or || is found and interpreted as a binary operator, this set
@@ -678,8 +677,7 @@ private:
       } else if (CurrentToken->is(tok::r_square) && Parent &&
                  Parent->is(TT_TemplateCloser)) {
         Left->setType(TT_ArraySubscriptLSquare);
-      } else if (Style.Language == FormatStyle::LK_Proto ||
-                 Style.Language == FormatStyle::LK_TextProto) {
+      } else if (Style.isProto()) {
         // Square braces in LK_Proto can either be message field attributes:
         //
         // optional Aaa aaa = 1 [
@@ -906,8 +904,7 @@ private:
           Previous = Previous->getPreviousNonComment();
         if ((CurrentToken->is(tok::colon) &&
              (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
-            Style.Language == FormatStyle::LK_Proto ||
-            Style.Language == FormatStyle::LK_TextProto) {
+            Style.isProto()) {
           OpeningBrace.setType(TT_DictLiteral);
           if (Previous->Tok.getIdentifierInfo() ||
               Previous->is(tok::string_literal)) {
@@ -1049,9 +1046,7 @@ private:
           Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
           Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
         Tok->setType(TT_ModulePartitionColon);
-      } else if (Contexts.back().ColonIsDictLiteral ||
-                 Style.Language == FormatStyle::LK_Proto ||
-                 Style.Language == FormatStyle::LK_TextProto) {
+      } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
           if (FormatToken *Previous = Tok->getPreviousNonComment())
@@ -1290,10 +1285,8 @@ private:
         Tok->SpacesRequiredBefore = 1;
       break;
     case tok::kw_operator:
-      if (Style.Language == FormatStyle::LK_TextProto ||
-          Style.Language == FormatStyle::LK_Proto) {
+      if (Style.isProto())
         break;
-      }
       while (CurrentToken &&
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
@@ -2028,6 +2021,9 @@ private:
     } else if (Current.is(tok::arrow) &&
                Style.Language == FormatStyle::LK_Java) {
       Current.setType(TT_TrailingReturnArrow);
+    } else if (Current.is(tok::arrow) && Style.isVerilog()) {
+      // The implication operator.
+      Current.setType(TT_BinaryOperator);
     } else if (Current.is(tok::arrow) && AutoFound &&
                Line.MightBeFunctionDecl && Current.NestingLevel == 0 &&
                !Current.Previous->isOneOf(tok::kw_operator, tok::identifier)) {
@@ -2206,8 +2202,10 @@ private:
       return false;
 
     if (const auto *NextNonComment = Tok.getNextNonComment();
-        !NextNonComment || NextNonComment->isPointerOrReference() ||
-        NextNonComment->isOneOf(tok::identifier, tok::string_literal)) {
+        (!NextNonComment && !Line.InMacroBody) ||
+        (NextNonComment &&
+         (NextNonComment->isPointerOrReference() ||
+          NextNonComment->isOneOf(tok::identifier, tok::string_literal)))) {
       return false;
     }
 
@@ -2389,9 +2387,8 @@ private:
       return true;
 
     // If a (non-string) literal follows, this is likely a cast.
-    if (Tok.Next->isNot(tok::string_literal) &&
-        (Tok.Next->Tok.isLiteral() ||
-         Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof))) {
+    if (Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof) ||
+        (Tok.Next->Tok.isLiteral() && Tok.Next->isNot(tok::string_literal))) {
       return true;
     }
 
@@ -2873,9 +2870,7 @@ private:
         return prec::Conditional;
       if (NextNonComment && Current->is(TT_SelectorName) &&
           (NextNonComment->isOneOf(TT_DictLiteral, TT_JsTypeColon) ||
-           ((Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TextProto) &&
-            NextNonComment->is(tok::less)))) {
+           (Style.isProto() && NextNonComment->is(tok::less)))) {
         return prec::Assignment;
       }
       if (Current->is(TT_JsComputedPropertyName))
@@ -3123,8 +3118,8 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && !NextNonCommentLine->First->Finalized &&
-        Line->isComment() && NextNonCommentLine->First->NewlinesBefore <= 1 &&
+    if (NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
+        Line->isComment() && !isClangFormatOff(Line->First->TokenText) &&
         NextNonCommentLine->First->OriginalColumn ==
             Line->First->OriginalColumn) {
       const bool PPDirectiveOrImportStmt =
@@ -3407,10 +3402,8 @@ static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
         Tok->isOneOf(TT_PointerOrReference, TT_StartOfName, tok::ellipsis)) {
       return true;
     }
-    if (Tok->isOneOf(tok::l_brace, tok::string_literal, TT_ObjCMethodExpr) ||
-        Tok->Tok.isLiteral()) {
+    if (Tok->isOneOf(tok::l_brace, TT_ObjCMethodExpr) || Tok->Tok.isLiteral())
       return false;
-    }
   }
   return false;
 }
@@ -3474,6 +3467,19 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       }
       SeenName = true;
       break;
+    }
+  }
+
+  if (IsCpp && LineIsFunctionDeclaration &&
+      Line.endsWith(tok::semi, tok::r_brace)) {
+    auto *Tok = Line.Last->Previous;
+    while (Tok->isNot(tok::r_brace))
+      Tok = Tok->Previous;
+    if (auto *LBrace = Tok->MatchingParen; LBrace) {
+      assert(LBrace->is(tok::l_brace));
+      Tok->setBlockKind(BK_Block);
+      LBrace->setBlockKind(BK_Block);
+      LBrace->setFinalizedType(TT_FunctionLBrace);
     }
   }
 
@@ -3725,7 +3731,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // Prefer breaking call chains (".foo") over empty "{}", "[]" or "()".
     if (Left.opensScope() && Right.closesScope())
       return 200;
-  } else if (Style.isProto()) {
+  } else if (Style.Language == FormatStyle::LK_Proto) {
     if (Right.is(tok::l_square))
       return 1;
     if (Right.is(tok::period))
@@ -4179,9 +4185,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||
-               ((Style.Language == FormatStyle::LK_Proto ||
-                 Style.Language == FormatStyle::LK_TextProto) &&
-                !Style.Cpp11BracedListStyle &&
+               (Style.isProto() && !Style.Cpp11BracedListStyle &&
                 LSquareTok.endsSequence(tok::l_square, tok::colon,
                                         TT_SelectorName));
       };
@@ -4447,8 +4451,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-  } else if (Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TextProto) {
+  } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
                      Keywords.kw_repeated, Keywords.kw_extend)) {
@@ -4705,6 +4708,9 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Left.is(TT_VerilogNumberBase) && Right.is(tok::numeric_constant))) {
       return false;
     }
+    // Add spaces around the implication operator `->`.
+    if (Left.is(tok::arrow) || Right.is(tok::arrow))
+      return true;
     // Don't add spaces between two at signs. Like in a coverage event.
     // Don't add spaces between at and a sensitivity list like
     // `@(posedge clk)`.
@@ -5065,11 +5071,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // it is hard to identify them in UnwrappedLineParser.
     if (!Keywords.isVerilogBegin(Right) && Keywords.isVerilogEndOfLabel(Left))
       return true;
-  } else if (Style.Language == FormatStyle::LK_Cpp ||
-             Style.Language == FormatStyle::LK_ObjC ||
-             Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TableGen ||
-             Style.Language == FormatStyle::LK_TextProto) {
+  } else if (Style.BreakAdjacentStringLiterals &&
+             (Style.isCpp() || Style.isProto() ||
+              Style.Language == FormatStyle::LK_TableGen)) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }
@@ -5321,9 +5325,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   // together.
   //
   // We ensure elsewhere that extensions are always on their own line.
-  if ((Style.Language == FormatStyle::LK_Proto ||
-       Style.Language == FormatStyle::LK_TextProto) &&
-      Right.is(TT_SelectorName) && Right.isNot(tok::r_square) && Right.Next) {
+  if (Style.isProto() && Right.is(TT_SelectorName) &&
+      Right.isNot(tok::r_square) && Right.Next) {
     // Keep `@submessage` together in:
     // @submessage { key: value }
     if (Left.is(tok::at))
@@ -5537,8 +5540,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   }
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
-    if (Style.Language == FormatStyle::LK_Proto ||
-        Style.Language == FormatStyle::LK_TextProto) {
+    if (Style.isProto()) {
       if (!Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
         return false;
       // Prevent cases like:

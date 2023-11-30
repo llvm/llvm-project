@@ -16,30 +16,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils.h"
 using namespace llvm;
-
-char UnifyFunctionExitNodesLegacyPass::ID = 0;
-
-UnifyFunctionExitNodesLegacyPass::UnifyFunctionExitNodesLegacyPass()
-    : FunctionPass(ID) {
-  initializeUnifyFunctionExitNodesLegacyPassPass(
-      *PassRegistry::getPassRegistry());
-}
-
-INITIALIZE_PASS(UnifyFunctionExitNodesLegacyPass, "mergereturn",
-                "Unify function exit nodes", false, false)
-
-Pass *llvm::createUnifyFunctionExitNodesPass() {
-  return new UnifyFunctionExitNodesLegacyPass();
-}
-
-void UnifyFunctionExitNodesLegacyPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
-  // We preserve the non-critical-edgeness property
-  AU.addPreservedID(BreakCriticalEdgesID);
-}
 
 namespace {
 
@@ -107,16 +85,6 @@ bool unifyReturnBlocks(Function &F) {
   return true;
 }
 } // namespace
-
-// Unify all exit nodes of the CFG by creating a new BasicBlock, and converting
-// all returns to unconditional branches to this new basic block. Also, unify
-// all unreachable blocks.
-bool UnifyFunctionExitNodesLegacyPass::runOnFunction(Function &F) {
-  bool Changed = false;
-  Changed |= unifyUnreachableBlocks(F);
-  Changed |= unifyReturnBlocks(F);
-  return Changed;
-}
 
 PreservedAnalyses UnifyFunctionExitNodesPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {

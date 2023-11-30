@@ -542,7 +542,7 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
 
 bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
-                                      unsigned NumLoads,
+                                      unsigned ClusterSize,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
@@ -568,8 +568,8 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   // (3) 9 <= LoadSize <= 12: cluster at max 2 mem ops
   // (4) 13 <= LoadSize <= 16: cluster at max 2 mem ops
   // (5) LoadSize >= 17: do not cluster
-  const unsigned LoadSize = NumBytes / NumLoads;
-  const unsigned NumDWORDs = ((LoadSize + 3) / 4) * NumLoads;
+  const unsigned LoadSize = NumBytes / ClusterSize;
+  const unsigned NumDWORDs = ((LoadSize + 3) / 4) * ClusterSize;
   return NumDWORDs <= 8;
 }
 
@@ -3454,6 +3454,19 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (!Src2->isReg() || RI.isSGPRClass(MRI->getRegClass(Src2->getReg())))
         return false;
 
+      // If src2 is also a literal constant then we have to choose which one to
+      // fold. In general it is better to choose madak so that the other literal
+      // can be materialized in an sgpr instead of a vgpr:
+      //   s_mov_b32 s0, literal
+      //   v_madak_f32 v0, s0, v0, literal
+      // Instead of:
+      //   v_mov_b32 v1, literal
+      //   v_madmk_f32 v0, v0, literal, v1
+      MachineInstr *Def = MRI->getUniqueVRegDef(Src2->getReg());
+      if (Def && Def->isMoveImmediate() &&
+          !isInlineConstant(Def->getOperand(1)))
+        return false;
+
       unsigned NewOpc =
           IsFMA ? (IsF32                    ? AMDGPU::V_FMAMK_F32
                    : ST.hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_t16
@@ -3499,43 +3512,38 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
     // Added part is the constant: Use v_madak_{f16, f32}.
     if (Src2->isReg() && Src2->getReg() == Reg) {
-      // Not allowed to use constant bus for another operand.
-      // We can however allow an inline immediate as src0.
-      bool Src0Inlined = false;
-      if (Src0->isReg()) {
-        // Try to inline constant if possible.
-        // If the Def moves immediate and the use is single
-        // We are saving VGPR here.
-        MachineInstr *Def = MRI->getUniqueVRegDef(Src0->getReg());
-        if (Def && Def->isMoveImmediate() &&
-          isInlineConstant(Def->getOperand(1)) &&
-          MRI->hasOneUse(Src0->getReg())) {
-          Src0->ChangeToImmediate(Def->getOperand(1).getImm());
-          Src0Inlined = true;
-        } else if ((Src0->getReg().isPhysical() &&
-                    (ST.getConstantBusLimit(Opc) <= 1 &&
-                     RI.isSGPRClass(RI.getPhysRegBaseClass(Src0->getReg())))) ||
-                   (Src0->getReg().isVirtual() &&
-                    (ST.getConstantBusLimit(Opc) <= 1 &&
-                     RI.isSGPRClass(MRI->getRegClass(Src0->getReg())))))
-          return false;
-          // VGPR is okay as Src0 - fallthrough
-      }
-
-      if (Src1->isReg() && !Src0Inlined ) {
-        // We have one slot for inlinable constant so far - try to fill it
-        MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
-        if (Def && Def->isMoveImmediate() &&
-            isInlineConstant(Def->getOperand(1)) &&
-            MRI->hasOneUse(Src1->getReg()) &&
-            commuteInstruction(UseMI)) {
+      if (ST.getConstantBusLimit(Opc) < 2) {
+        // Not allowed to use constant bus for another operand.
+        // We can however allow an inline immediate as src0.
+        bool Src0Inlined = false;
+        if (Src0->isReg()) {
+          // Try to inline constant if possible.
+          // If the Def moves immediate and the use is single
+          // We are saving VGPR here.
+          MachineInstr *Def = MRI->getUniqueVRegDef(Src0->getReg());
+          if (Def && Def->isMoveImmediate() &&
+              isInlineConstant(Def->getOperand(1)) &&
+              MRI->hasOneUse(Src0->getReg())) {
             Src0->ChangeToImmediate(Def->getOperand(1).getImm());
-        } else if ((Src1->getReg().isPhysical() &&
-                    RI.isSGPRClass(RI.getPhysRegBaseClass(Src1->getReg()))) ||
-                   (Src1->getReg().isVirtual() &&
-                    RI.isSGPRClass(MRI->getRegClass(Src1->getReg()))))
-          return false;
+            Src0Inlined = true;
+          } else if (ST.getConstantBusLimit(Opc) <= 1 &&
+                     RI.isSGPRReg(*MRI, Src0->getReg())) {
+            return false;
+          }
+          // VGPR is okay as Src0 - fallthrough
+        }
+
+        if (Src1->isReg() && !Src0Inlined) {
+          // We have one slot for inlinable constant so far - try to fill it
+          MachineInstr *Def = MRI->getUniqueVRegDef(Src1->getReg());
+          if (Def && Def->isMoveImmediate() &&
+              isInlineConstant(Def->getOperand(1)) &&
+              MRI->hasOneUse(Src1->getReg()) && commuteInstruction(UseMI))
+            Src0->ChangeToImmediate(Def->getOperand(1).getImm());
+          else if (RI.isSGPRReg(*MRI, Src1->getReg()))
+            return false;
           // VGPR is okay as Src1 - fallthrough
+        }
       }
 
       unsigned NewOpc =
@@ -4136,12 +4144,15 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
-    // This suffers the same problem as the scalar 16-bit cases.
-    return AMDGPU::isInlinableIntLiteralV216(Imm);
+    return (isInt<16>(Imm) || isUInt<16>(Imm)) &&
+           AMDGPU::isInlinableIntLiteral((int16_t)Imm);
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_FP16_DEFERRED:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP16: {
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
       // A few special case instructions have 16-bit operands on subtargets
       // where 16-bit instructions are not legal.
@@ -4153,12 +4164,6 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
     }
 
     return false;
-  }
-  case AMDGPU::OPERAND_REG_IMM_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16: {
-    uint32_t Trunc = static_cast<uint32_t>(Imm);
-    return AMDGPU::isInlinableLiteralV216(Trunc, ST.hasInv2PiInlineImm());
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
@@ -8736,6 +8741,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
@@ -8794,6 +8801,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  // TODO-GFX12: Remove this.
+  // Hack to allow some GFX12 codegen tests to run before all the encodings are
+  // implemented.
+  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
+    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

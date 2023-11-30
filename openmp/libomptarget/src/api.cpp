@@ -15,6 +15,9 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "OpenMP/omp.h"
+#include "Shared/Profile.h"
+
 #include "llvm/ADT/SmallVector.h"
 
 #include <climits>
@@ -210,7 +213,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
 }
 
 // The helper function that calls omp_target_memcpy or omp_target_memcpy_rect
-static int libomp_target_memcpy_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
+static int libomp_target_memcpy_async_task(int32_t Gtid, kmp_task_t *Task) {
   if (Task == nullptr)
     return OFFLOAD_FAIL;
 
@@ -241,7 +244,7 @@ static int libomp_target_memcpy_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
   return Rc;
 }
 
-static int libomp_target_memset_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
+static int libomp_target_memset_async_task(int32_t Gtid, kmp_task_t *Task) {
   if (!Task)
     return OFFLOAD_FAIL;
 
@@ -268,13 +271,13 @@ convertDepObjVector(llvm::SmallVector<kmp_depend_info_t> &Vec, int DepObjCount,
 
 template <class T>
 static inline int
-libomp_helper_task_creation(T *Args, int (*Fn)(kmp_int32, kmp_task_t *),
+libomp_helper_task_creation(T *Args, int (*Fn)(int32_t, kmp_task_t *),
                             int DepObjCount, omp_depend_t *DepObjList) {
   // Create global thread ID
   int Gtid = __kmpc_global_thread_num(nullptr);
 
   // Setup the hidden helper flags
-  kmp_int32 Flags = 0;
+  int32_t Flags = 0;
   kmp_tasking_flags_t *InputFlags = (kmp_tasking_flags_t *)&Flags;
   InputFlags->hidden_helper = 1;
 

@@ -233,6 +233,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   bool HasAVX2 = ST->hasAVX2();
   bool HasDQI = ST->hasDQI();
   bool HasBWI = ST->hasBWI();
+  bool HasVLX = ST->hasVLX();
 
   auto ConvertToBroadcast = [&](unsigned OpBcst256, unsigned OpBcst128,
                                 unsigned OpBcst64, unsigned OpBcst32,
@@ -352,20 +353,22 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         1);
   }
 
-  // Attempt to find a AVX512 mapping from a full width memory-fold instruction
-  // to a broadcast-fold instruction variant.
-  if ((MI.getDesc().TSFlags & X86II::EncodingMask) == X86II::EVEX) {
+  auto ConvertToBroadcastAVX512 = [&](unsigned OpSrc32, unsigned OpSrc64) {
     unsigned OpBcst32 = 0, OpBcst64 = 0;
     unsigned OpNoBcst32 = 0, OpNoBcst64 = 0;
-    if (const X86MemoryFoldTableEntry *Mem2Bcst =
-            llvm::lookupBroadcastFoldTable(Opc, 32)) {
-      OpBcst32 = Mem2Bcst->DstOp;
-      OpNoBcst32 = Mem2Bcst->Flags & TB_INDEX_MASK;
+    if (OpSrc32) {
+      if (const X86FoldTableEntry *Mem2Bcst =
+              llvm::lookupBroadcastFoldTable(OpSrc32, 32)) {
+        OpBcst32 = Mem2Bcst->DstOp;
+        OpNoBcst32 = Mem2Bcst->Flags & TB_INDEX_MASK;
+      }
     }
-    if (const X86MemoryFoldTableEntry *Mem2Bcst =
-            llvm::lookupBroadcastFoldTable(Opc, 64)) {
-      OpBcst64 = Mem2Bcst->DstOp;
-      OpNoBcst64 = Mem2Bcst->Flags & TB_INDEX_MASK;
+    if (OpSrc64) {
+      if (const X86FoldTableEntry *Mem2Bcst =
+              llvm::lookupBroadcastFoldTable(OpSrc64, 64)) {
+        OpBcst64 = Mem2Bcst->DstOp;
+        OpNoBcst64 = Mem2Bcst->Flags & TB_INDEX_MASK;
+      }
     }
     assert(((OpBcst32 == 0) || (OpBcst64 == 0) || (OpNoBcst32 == OpNoBcst64)) &&
            "OperandNo mismatch");
@@ -374,6 +377,70 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned OpNo = OpBcst32 == 0 ? OpNoBcst64 : OpNoBcst32;
       return ConvertToBroadcast(0, 0, OpBcst64, OpBcst32, 0, 0, OpNo);
     }
+    return false;
+  };
+
+  // Attempt to find a AVX512 mapping from a full width memory-fold instruction
+  // to a broadcast-fold instruction variant.
+  if ((MI.getDesc().TSFlags & X86II::EncodingMask) == X86II::EVEX)
+    return ConvertToBroadcastAVX512(Opc, Opc);
+
+  // Reverse the X86InstrInfo::setExecutionDomainCustom EVEX->VEX logic
+  // conversion to see if we can convert to a broadcasted (integer) logic op.
+  if (HasVLX && !HasDQI) {
+    unsigned OpSrc32 = 0, OpSrc64 = 0;
+    switch (Opc) {
+    case X86::VANDPDrm:
+    case X86::VANDPSrm:
+    case X86::VPANDrm:
+      OpSrc32 = X86 ::VPANDDZ128rm;
+      OpSrc64 = X86 ::VPANDQZ128rm;
+      break;
+    case X86::VANDPDYrm:
+    case X86::VANDPSYrm:
+    case X86::VPANDYrm:
+      OpSrc32 = X86 ::VPANDDZ256rm;
+      OpSrc64 = X86 ::VPANDQZ256rm;
+      break;
+    case X86::VANDNPDrm:
+    case X86::VANDNPSrm:
+    case X86::VPANDNrm:
+      OpSrc32 = X86 ::VPANDNDZ128rm;
+      OpSrc64 = X86 ::VPANDNQZ128rm;
+      break;
+    case X86::VANDNPDYrm:
+    case X86::VANDNPSYrm:
+    case X86::VPANDNYrm:
+      OpSrc32 = X86 ::VPANDNDZ256rm;
+      OpSrc64 = X86 ::VPANDNQZ256rm;
+      break;
+    case X86::VORPDrm:
+    case X86::VORPSrm:
+    case X86::VPORrm:
+      OpSrc32 = X86 ::VPORDZ128rm;
+      OpSrc64 = X86 ::VPORQZ128rm;
+      break;
+    case X86::VORPDYrm:
+    case X86::VORPSYrm:
+    case X86::VPORYrm:
+      OpSrc32 = X86 ::VPORDZ256rm;
+      OpSrc64 = X86 ::VPORQZ256rm;
+      break;
+    case X86::VXORPDrm:
+    case X86::VXORPSrm:
+    case X86::VPXORrm:
+      OpSrc32 = X86 ::VPXORDZ128rm;
+      OpSrc64 = X86 ::VPXORQZ128rm;
+      break;
+    case X86::VXORPDYrm:
+    case X86::VXORPSYrm:
+    case X86::VPXORYrm:
+      OpSrc32 = X86 ::VPXORDZ256rm;
+      OpSrc64 = X86 ::VPXORQZ256rm;
+      break;
+    }
+    if (OpSrc32 || OpSrc64)
+      return ConvertToBroadcastAVX512(OpSrc32, OpSrc64);
   }
 
   return false;

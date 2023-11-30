@@ -1242,6 +1242,10 @@ def anyext_oneuse : unop_oneuse<anyext>;
 def ext_oneuse    : unop_oneuse<ext>;
 def fpext_oneuse  : unop_oneuse<any_fpextend>;
 
+def 33signbits_node : PatLeaf<(i64 GPR:$src), [{
+  return CurDAG->ComputeNumSignBits(SDValue(N, 0)) > 32;
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -2002,6 +2006,15 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
                  (AddiPairImmSmall AddiPair:$rs2))>;
 }
 
+let Predicates = [HasShortForwardBranchOpt] in
+def : Pat<(XLenVT (abs GPR:$rs1)),
+          (PseudoCCSUB (XLenVT GPR:$rs1), (XLenVT X0), /* COND_LT */ 2,
+           (XLenVT GPR:$rs1), (XLenVT X0), (XLenVT GPR:$rs1))>;
+let Predicates = [HasShortForwardBranchOpt, IsRV64] in
+def : Pat<(sext_inreg (abs 33signbits_node:$rs1), i32),
+          (PseudoCCSUBW (i64 GPR:$rs1), (i64 X0), /* COND_LT */ 2,
+           (i64 GPR:$rs1), (i64 X0), (i64 GPR:$rs1))>;
+
 //===----------------------------------------------------------------------===//
 // Experimental RV64 i32 legalization patterns.
 //===----------------------------------------------------------------------===//
@@ -2114,3 +2127,9 @@ include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoXCV.td"
+
+//===----------------------------------------------------------------------===//
+// Global ISel
+//===----------------------------------------------------------------------===//
+
+include "RISCVInstrGISel.td"

@@ -2028,6 +2028,16 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
       isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
     return Constant::getNullValue(Op1->getType());
 
+  // (x << N) & ((x << M) - 1) --> 0, where x is known to be a power of 2 and
+  // M <= N.
+  const APInt *Shift1, *Shift2;
+  if (match(Op0, m_Shl(m_Value(X), m_APInt(Shift1))) &&
+      match(Op1, m_Add(m_Shl(m_Specific(X), m_APInt(Shift2)), m_AllOnes())) &&
+      isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, /*Depth*/ 0, Q.AC,
+                             Q.CxtI) &&
+      Shift1->uge(*Shift2))
+    return Constant::getNullValue(Op0->getType());
+
   if (Value *V =
           simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
     return V;
@@ -2435,13 +2445,13 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (C2->isMask() && // C2 == 0+1+
           match(A, m_c_Add(m_Specific(B), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C2, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C2, Q))
           return A;
       }
       // Or commutes, try both ways.
       if (C1->isMask() && match(B, m_c_Add(m_Specific(A), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C1, Q))
           return B;
       }
     }
@@ -4911,10 +4921,8 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 
   // Compute the (pointer) type returned by the GEP instruction.
   Type *LastType = GetElementPtrInst::getIndexedType(SrcTy, Indices);
-  Type *GEPTy = PointerType::get(LastType, AS);
-  if (VectorType *VT = dyn_cast<VectorType>(Ptr->getType()))
-    GEPTy = VectorType::get(GEPTy, VT->getElementCount());
-  else {
+  Type *GEPTy = Ptr->getType();
+  if (!GEPTy->isVectorTy()) {
     for (Value *Op : Indices) {
       // If one of the operands is a vector, the result type is a vector of
       // pointers. All vector operands must have the same number of elements.
@@ -4946,10 +4954,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       });
 
   if (Indices.size() == 1) {
-    // getelementptr P, 0 -> P.
-    if (match(Indices[0], m_Zero()) && Ptr->getType() == GEPTy)
-      return Ptr;
-
     Type *Ty = SrcTy;
     if (!IsScalableVec && Ty->isSized()) {
       Value *P;
@@ -6198,7 +6202,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // ctpop(and X, 1) --> and X, 1
     unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
     if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
-                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+                          Q))
       return Op0;
     break;
   }

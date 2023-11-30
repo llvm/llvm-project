@@ -495,10 +495,12 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
     return false;
   case X86::MOV8rm:
   case X86::KMOVBkm:
+  case X86::KMOVBkm_EVEX:
     MemBytes = 1;
     return true;
   case X86::MOV16rm:
   case X86::KMOVWkm:
+  case X86::KMOVWkm_EVEX:
   case X86::VMOVSHZrm:
   case X86::VMOVSHZrm_alt:
     MemBytes = 2;
@@ -511,6 +513,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVSSZrm:
   case X86::VMOVSSZrm_alt:
   case X86::KMOVDkm:
+  case X86::KMOVDkm_EVEX:
     MemBytes = 4;
     return true;
   case X86::MOV64rm:
@@ -524,6 +527,7 @@ static bool isFrameLoadOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
   case X86::KMOVQkm:
+  case X86::KMOVQkm_EVEX:
     MemBytes = 8;
     return true;
   case X86::MOVAPSrm:
@@ -593,10 +597,12 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
     return false;
   case X86::MOV8mr:
   case X86::KMOVBmk:
+  case X86::KMOVBmk_EVEX:
     MemBytes = 1;
     return true;
   case X86::MOV16mr:
   case X86::KMOVWmk:
+  case X86::KMOVWmk_EVEX:
   case X86::VMOVSHZmr:
     MemBytes = 2;
     return true;
@@ -605,6 +611,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::VMOVSSmr:
   case X86::VMOVSSZmr:
   case X86::KMOVDmk:
+  case X86::KMOVDmk_EVEX:
     MemBytes = 4;
     return true;
   case X86::MOV64mr:
@@ -616,6 +623,7 @@ static bool isFrameStoreOpcode(int Opcode, unsigned &MemBytes) {
   case X86::MMX_MOVQ64mr:
   case X86::MMX_MOVNTQmr:
   case X86::KMOVQmk:
+  case X86::KMOVQmk_EVEX:
     MemBytes = 8;
     return true;
   case X86::MOVAPSmr:
@@ -3519,6 +3527,7 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
                                         const X86Subtarget &Subtarget) {
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasEGPR = Subtarget.hasEGPR();
 
   // SrcReg(MaskReg) -> DestReg(GR64)
   // SrcReg(MaskReg) -> DestReg(GR32)
@@ -3527,10 +3536,11 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   if (X86::VK16RegClass.contains(SrcReg)) {
     if (X86::GR64RegClass.contains(DestReg)) {
       assert(Subtarget.hasBWI());
-      return X86::KMOVQrk;
+      return HasEGPR ? X86::KMOVQrk_EVEX : X86::KMOVQrk;
     }
     if (X86::GR32RegClass.contains(DestReg))
-      return Subtarget.hasBWI() ? X86::KMOVDrk : X86::KMOVWrk;
+      return Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVDrk_EVEX : X86::KMOVDrk)
+                                : (HasEGPR ? X86::KMOVWrk_EVEX : X86::KMOVWrk);
   }
 
   // SrcReg(GR64) -> DestReg(MaskReg)
@@ -3540,10 +3550,11 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   if (X86::VK16RegClass.contains(DestReg)) {
     if (X86::GR64RegClass.contains(SrcReg)) {
       assert(Subtarget.hasBWI());
-      return X86::KMOVQkr;
+      return HasEGPR ? X86::KMOVQkr_EVEX : X86::KMOVQkr;
     }
     if (X86::GR32RegClass.contains(SrcReg))
-      return Subtarget.hasBWI() ? X86::KMOVDkr : X86::KMOVWkr;
+      return Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVDkr_EVEX : X86::KMOVDkr)
+                                : (HasEGPR ? X86::KMOVWkr_EVEX : X86::KMOVWkr);
   }
 
 
@@ -3710,6 +3721,7 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
   bool HasAVX = STI.hasAVX();
   bool HasAVX512 = STI.hasAVX512();
   bool HasVLX = STI.hasVLX();
+  bool HasEGPR = STI.hasEGPR();
 
   assert(RC != nullptr && "Invalid target register class");
   switch (STI.getRegisterInfo()->getSpillSize(*RC)) {
@@ -3725,7 +3737,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     return Load ? X86::MOV8rm : X86::MOV8mr;
   case 2:
     if (X86::VK16RegClass.hasSubClassEq(RC))
-      return Load ? X86::KMOVWkm : X86::KMOVWmk;
+      return Load ? (HasEGPR ? X86::KMOVWkm_EVEX : X86::KMOVWkm)
+                  : (HasEGPR ? X86::KMOVWmk_EVEX : X86::KMOVWmk);
     assert(X86::GR16RegClass.hasSubClassEq(RC) && "Unknown 2-byte regclass");
     return Load ? X86::MOV16rm : X86::MOV16mr;
   case 4:
@@ -3743,7 +3756,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
       return Load ? X86::LD_Fp32m : X86::ST_Fp32m;
     if (X86::VK32RegClass.hasSubClassEq(RC)) {
       assert(STI.hasBWI() && "KMOVD requires BWI");
-      return Load ? X86::KMOVDkm : X86::KMOVDmk;
+      return Load ? (HasEGPR ? X86::KMOVDkm_EVEX : X86::KMOVDkm)
+                  : (HasEGPR ? X86::KMOVDmk_EVEX : X86::KMOVDmk);
     }
     // All of these mask pair classes have the same spill size, the same kind
     // of kmov instructions can be used with all of them.
@@ -3774,7 +3788,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
       return Load ? X86::LD_Fp64m : X86::ST_Fp64m;
     if (X86::VK64RegClass.hasSubClassEq(RC)) {
       assert(STI.hasBWI() && "KMOVQ requires BWI");
-      return Load ? X86::KMOVQkm : X86::KMOVQmk;
+      return Load ? (HasEGPR ? X86::KMOVQkm_EVEX : X86::KMOVQkm)
+                  : (HasEGPR ? X86::KMOVQmk_EVEX : X86::KMOVQmk);
     }
     llvm_unreachable("Unknown 8-byte regclass");
   case 10:
@@ -6596,7 +6611,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
           MF, MI, OpNum, MOs, InsertPt, Size, Alignment))
     return CustomMI;
 
-  const X86MemoryFoldTableEntry *I = nullptr;
+  const X86FoldTableEntry *I = nullptr;
 
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
@@ -7304,7 +7319,7 @@ extractStoreMMOs(ArrayRef<MachineMemOperand *> MMOs, MachineFunction &MF) {
   return StoreMMOs;
 }
 
-static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
+static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
                                    const TargetRegisterClass *RC,
                                    const X86Subtarget &STI) {
   assert(STI.hasAVX512() && "Expected at least AVX512!");
@@ -7352,7 +7367,7 @@ static unsigned getBroadcastOpcode(const X86MemoryFoldTableEntry *I,
 bool X86InstrInfo::unfoldMemoryOperand(
     MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
+  const X86FoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
   if (I == nullptr)
     return false;
   unsigned Opc = I->DstOp;
@@ -7494,7 +7509,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
   if (!N->isMachineOpcode())
     return false;
 
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(N->getMachineOpcode());
+  const X86FoldTableEntry *I = lookupUnfoldTable(N->getMachineOpcode());
   if (I == nullptr)
     return false;
   unsigned Opc = I->DstOp;
@@ -7617,7 +7632,7 @@ X86InstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
 unsigned X86InstrInfo::getOpcodeAfterMemoryUnfold(unsigned Opc,
                                       bool UnfoldLoad, bool UnfoldStore,
                                       unsigned *LoadRegIndex) const {
-  const X86MemoryFoldTableEntry *I = lookupUnfoldTable(Opc);
+  const X86FoldTableEntry *I = lookupUnfoldTable(Opc);
   if (I == nullptr)
     return 0;
   bool FoldedLoad = I->Flags & TB_FOLDED_LOAD;
@@ -7717,9 +7732,13 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
     case X86::VMOVDQA64Zrm:
     case X86::VMOVDQU64Zrm:
     case X86::KMOVBkm:
+    case X86::KMOVBkm_EVEX:
     case X86::KMOVWkm:
+    case X86::KMOVWkm_EVEX:
     case X86::KMOVDkm:
+    case X86::KMOVDkm_EVEX:
     case X86::KMOVQkm:
+    case X86::KMOVQkm_EVEX:
       return true;
     }
   };
@@ -9597,20 +9616,6 @@ void X86InstrInfo::setSpecialOperandAttr(MachineInstr &OldMI1,
                                          MachineInstr &OldMI2,
                                          MachineInstr &NewMI1,
                                          MachineInstr &NewMI2) const {
-  // Propagate FP flags from the original instructions.
-  // But clear poison-generating flags because those may not be valid now.
-  // TODO: There should be a helper function for copying only fast-math-flags.
-  uint32_t IntersectedFlags = OldMI1.getFlags() & OldMI2.getFlags();
-  NewMI1.setFlags(IntersectedFlags);
-  NewMI1.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  NewMI1.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  NewMI1.clearFlag(MachineInstr::MIFlag::IsExact);
-
-  NewMI2.setFlags(IntersectedFlags);
-  NewMI2.clearFlag(MachineInstr::MIFlag::NoSWrap);
-  NewMI2.clearFlag(MachineInstr::MIFlag::NoUWrap);
-  NewMI2.clearFlag(MachineInstr::MIFlag::IsExact);
-
   // Integer instructions may define an implicit EFLAGS dest register operand.
   MachineOperand *OldFlagDef1 = OldMI1.findRegisterDefOperand(X86::EFLAGS);
   MachineOperand *OldFlagDef2 = OldMI2.findRegisterDefOperand(X86::EFLAGS);
@@ -10285,6 +10290,15 @@ void X86InstrInfo::genAlternativeCodeSequence(
                                  InstrIdxForVirtReg);
     return;
   }
+}
+
+// See also: X86DAGToDAGISel::SelectInlineAsmMemoryOperand().
+void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
+                                         int FI) const {
+  X86AddressMode M;
+  M.BaseType = X86AddressMode::FrameIndexBase;
+  M.Base.FrameIndex = FI;
+  M.getFullAddress(Ops);
 }
 
 #define GET_INSTRINFO_HELPERS

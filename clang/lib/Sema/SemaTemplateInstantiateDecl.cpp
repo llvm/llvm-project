@@ -663,6 +663,14 @@ static bool isRelevantAttr(Sema &S, const Decl *D, const Attr *A) {
   return true;
 }
 
+static void instantiateDependentHLSLParamModifierAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const HLSLParamModifierAttr *Attr, Decl *New) {
+  ParmVarDecl *P = cast<ParmVarDecl>(New);
+  P->addAttr(Attr->clone(S.getASTContext()));
+  P->setType(S.getASTContext().getLValueReferenceType(P->getType()));
+}
+
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
@@ -782,6 +790,12 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+    }
+
+    if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {
+      instantiateDependentHLSLParamModifierAttr(*this, TemplateArgs, ParamAttr,
+                                                New);
+      continue;
     }
 
     // Existing DLL attribute on the instantiation takes precedence.
@@ -6207,13 +6221,13 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
       return D;
 
     // Determine whether this record is the "templated" declaration describing
-    // a class template or class template partial specialization.
+    // a class template or class template specialization.
     ClassTemplateDecl *ClassTemplate = Record->getDescribedClassTemplate();
     if (ClassTemplate)
       ClassTemplate = ClassTemplate->getCanonicalDecl();
-    else if (ClassTemplatePartialSpecializationDecl *PartialSpec
-               = dyn_cast<ClassTemplatePartialSpecializationDecl>(Record))
-      ClassTemplate = PartialSpec->getSpecializedTemplate()->getCanonicalDecl();
+    else if (ClassTemplateSpecializationDecl *Spec =
+                 dyn_cast<ClassTemplateSpecializationDecl>(Record))
+      ClassTemplate = Spec->getSpecializedTemplate()->getCanonicalDecl();
 
     // Walk the current context to find either the record or an instantiation of
     // it.
@@ -6479,6 +6493,34 @@ void Sema::PerformPendingInstantiations(bool LocalOnly) {
 
   if (!LocalOnly && LangOpts.PCHInstantiateTemplates)
     PendingInstantiations.swap(delayedPCHInstantiations);
+}
+
+// Instantiate all referenced specializations of the given function template
+// definition. This make sure that constexpr function templates that are defined
+// after the point of instantiation of their use can be evaluated after they
+// are defined. see CWG2497.
+void Sema::PerformPendingInstantiationsOfConstexprFunctions(FunctionDecl *Tpl) {
+
+  auto InstantiateAll = [&](const auto &Range) {
+    for (NamedDecl *D : Range) {
+      FunctionDecl *Fun = cast<FunctionDecl>(D);
+      InstantiateFunctionDefinition(Fun->getPointOfInstantiation(), Fun);
+    }
+  };
+
+  auto It =
+      PendingInstantiationsOfConstexprEntities.find(Tpl->getCanonicalDecl());
+  if (It != PendingInstantiationsOfConstexprEntities.end()) {
+    auto Decls = std::move(It->second);
+    PendingInstantiationsOfConstexprEntities.erase(It);
+    InstantiateAll(Decls);
+  }
+
+  llvm::SmallSetVector<NamedDecl *, 4> Decls;
+  if (ExternalSource) {
+    ExternalSource->ReadPendingInstantiationsOfConstexprEntity(Tpl, Decls);
+    InstantiateAll(Decls);
+  }
 }
 
 void Sema::PerformDependentDiagnostics(const DeclContext *Pattern,

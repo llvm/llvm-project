@@ -1308,16 +1308,47 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
   }
 };
 
-template <> struct MDNodeKeyImpl<DIArgList> {
+// DIArgLists are not MDNodes, but we still want to unique them in a DenseSet
+// based on a hash of their arguments.
+struct DIArgListKeyInfo {
   ArrayRef<ValueAsMetadata *> Args;
 
-  MDNodeKeyImpl(ArrayRef<ValueAsMetadata *> Args) : Args(Args) {}
-  MDNodeKeyImpl(const DIArgList *N) : Args(N->getArgs()) {}
+  DIArgListKeyInfo(ArrayRef<ValueAsMetadata *> Args) : Args(Args) {}
+  DIArgListKeyInfo(const DIArgList *N) : Args(N->getArgs()) {}
 
   bool isKeyOf(const DIArgList *RHS) const { return Args == RHS->getArgs(); }
 
   unsigned getHashValue() const {
     return hash_combine_range(Args.begin(), Args.end());
+  }
+};
+
+/// DenseMapInfo for DIArgList.
+struct DIArgListInfo {
+  using KeyTy = DIArgListKeyInfo;
+
+  static inline DIArgList *getEmptyKey() {
+    return DenseMapInfo<DIArgList *>::getEmptyKey();
+  }
+
+  static inline DIArgList *getTombstoneKey() {
+    return DenseMapInfo<DIArgList *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const KeyTy &Key) { return Key.getHashValue(); }
+
+  static unsigned getHashValue(const DIArgList *N) {
+    return KeyTy(N).getHashValue();
+  }
+
+  static bool isEqual(const KeyTy &LHS, const DIArgList *RHS) {
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return LHS.isKeyOf(RHS);
+  }
+
+  static bool isEqual(const DIArgList *LHS, const DIArgList *RHS) {
+    return LHS == RHS;
   }
 };
 
@@ -1471,6 +1502,7 @@ public:
   StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
+  DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;

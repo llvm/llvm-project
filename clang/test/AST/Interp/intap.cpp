@@ -35,6 +35,15 @@ static_assert(UBitIntZero1 == 0, "");
 constexpr unsigned _BitInt(2) BI1 = 3u;
 static_assert(BI1 == 3, "");
 
+constexpr _BitInt(4) MulA = 5;
+constexpr _BitInt(4) MulB = 7;
+static_assert(MulA * MulB == 50, ""); // ref-error {{not an integral constant expression}} \
+                                      // ref-note {{value 35 is outside the range of representable values of type '_BitInt(4)'}} \
+                                      // expected-error {{not an integral constant expression}} \
+                                      // expected-note {{value 35 is outside the range of representable values of type '_BitInt(4)'}}
+static_assert(MulA * 5 == 25, "");
+static_assert(-1 * MulB == -7, "");
+
 namespace APCast {
   constexpr _BitInt(10) A = 1;
   constexpr _BitInt(11) B = A;
@@ -66,12 +75,19 @@ namespace i128 {
                                        // ref-error {{static assertion failed}} \
                                        // ref-note {{'340282366920938463463374607431768211455 == 1'}}
 
+  constexpr uint128_t TooMuch = UINT128_MAX * 2;
+
   static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
   static_assert(INT128_MAX != 0, "");
   static_assert(INT128_MAX == 0, ""); // expected-error {{failed}} \
                                       // expected-note {{evaluates to '170141183460469231731687303715884105727 == 0'}} \
                                       // ref-error {{failed}} \
                                       // ref-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+
+  constexpr int128_t TooMuch2 = INT128_MAX * INT128_MAX; // ref-error {{must be initialized by a constant expression}} \
+                                                // ref-note {{value 28948022309329048855892746252171976962977213799489202546401021394546514198529 is outside the range of representable}} \
+                                                // expected-error {{must be initialized by a constant expression}} \
+                                                // expected-note {{value 28948022309329048855892746252171976962977213799489202546401021394546514198529 is outside the range of representable}}
 
   static const __int128_t INT128_MIN = -INT128_MAX - 1;
   constexpr __int128 A = INT128_MAX + 1; // expected-error {{must be initialized by a constant expression}} \

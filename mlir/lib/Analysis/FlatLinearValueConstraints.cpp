@@ -67,7 +67,9 @@ private:
 } // namespace
 
 // Flattens the expressions in map. Returns failure if 'expr' was unable to be
-// flattened (i.e., semi-affine expressions not handled yet).
+// flattened. For example two specific cases:
+// 1. semi-affine expressions not handled yet.
+// 2. has poison expression (i.e., division by zero).
 static LogicalResult
 getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
                         unsigned numSymbols,
@@ -85,8 +87,10 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
   for (auto expr : exprs) {
     if (!expr.isPureAffine())
       return failure();
-
-    flattener.walkPostOrder(expr);
+    // has poison expression
+    auto flattenResult = flattener.walkPostOrder(expr);
+    if (failed(flattenResult))
+      return failure();
   }
 
   assert(flattener.operandExprStack.size() == exprs.size());

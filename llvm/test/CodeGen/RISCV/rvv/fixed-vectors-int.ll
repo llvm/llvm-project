@@ -8237,3 +8237,63 @@ define void @mulhs_vx_v2i64(ptr %x) {
   store <2 x i64> %b, ptr %x
   ret void
 }
+
+define void @madd_vv_v2i64(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: madd_vv_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vmadd.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = add <2 x i64> %a, <i64 1, i64 1>
+  %c = mul <2 x i64> %b, %y
+  store <2 x i64> %c, ptr %x
+  ret void
+}
+
+define void @madd_vv_v2i64_2(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: madd_vv_v2i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vmadd.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = add <2 x i64> %a, <i64 1, i64 1>
+  %c = mul <2 x i64> %y, %b
+  store <2 x i64> %c, ptr %x
+  ret void
+}
+
+define void @msub_vv_v2i64(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: msub_vv_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vnmsub.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = sub <2 x i64> <i64 1, i64 1>, %a
+  %c = mul <2 x i64> %b, %y
+  store <2 x i64> %c, ptr %x
+  ret void
+}
+
+define void @msub_vv_v2i64_2(ptr %x, <2 x i64> %y) {
+; CHECK-LABEL: msub_vv_v2i64_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v9, (a0)
+; CHECK-NEXT:    vnmsub.vv v9, v8, v8
+; CHECK-NEXT:    vse64.v v9, (a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i64>, ptr %x
+  %b = sub <2 x i64> <i64 1, i64 1>, %a
+  %c = mul <2 x i64> %y, %b
+  store <2 x i64> %c, ptr %x
+  ret void
+}

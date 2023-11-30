@@ -355,6 +355,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       byte_size = form_value.Unsigned();
       break;
 
+    case DW_AT_alignment:
+      alignment = form_value.Unsigned();
+      break;
+
     case DW_AT_byte_stride:
       byte_stride = form_value.Unsigned();
       break;
@@ -976,8 +980,9 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
   return clang::CC_C;
 }
 
-TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
-                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP
+DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
+                                     const ParsedDWARFTypeAttributes &attrs) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1086,16 +1091,10 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         }
 
         if (class_opaque_type) {
-          // If accessibility isn't set to anything valid, assume public
-          // for now...
-          if (attrs.accessibility == eAccessNone)
-            attrs.accessibility = eAccessPublic;
-
           clang::ObjCMethodDecl *objc_method_decl =
               m_ast.AddMethodToObjCObjectType(
                   class_opaque_type, attrs.name.GetCString(), clang_type,
-                  attrs.accessibility, attrs.is_artificial, is_variadic,
-                  attrs.is_objc_direct_call);
+                  attrs.is_artificial, is_variadic, attrs.is_objc_direct_call);
           type_handled = objc_method_decl != nullptr;
           if (type_handled) {
             LinkDeclContextToDIE(objc_method_decl, die);
@@ -1202,14 +1201,15 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   // Neither GCC 4.2 nor clang++ currently set a valid
                   // accessibility in the DWARF for C++ methods...
                   // Default to public for now...
-                  if (attrs.accessibility == eAccessNone)
-                    attrs.accessibility = eAccessPublic;
+                  const auto accessibility = attrs.accessibility == eAccessNone
+                                                 ? eAccessPublic
+                                                 : attrs.accessibility;
 
                   clang::CXXMethodDecl *cxx_method_decl =
                       m_ast.AddMethodToCXXRecordType(
                           class_opaque_type.GetOpaqueQualType(),
                           attrs.name.GetCString(), attrs.mangled_name,
-                          clang_type, attrs.accessibility, attrs.is_virtual,
+                          clang_type, accessibility, attrs.is_virtual,
                           is_static, attrs.is_inline, attrs.is_explicit,
                           is_attr_used, attrs.is_artificial);
 
@@ -1921,17 +1921,21 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             die.GetOffset(), attrs.name.GetCString());
       }
 
-      // If the byte size of the record is specified then overwrite the size
-      // that would be computed by Clang. This is only needed as LLDB's
-      // TypeSystemClang is always in C++ mode, but some compilers such as
-      // GCC and Clang give empty structs a size of 0 in C mode (in contrast to
-      // the size of 1 for empty structs that would be computed in C++ mode).
-      if (attrs.byte_size) {
+      // Setting authority byte size and alignment for empty structures.
+      //
+      // If the byte size or alignmenet of the record is specified then
+      // overwrite the ones that would be computed by Clang.
+      // This is only needed as LLDB's TypeSystemClang is always in C++ mode,
+      // but some compilers such as GCC and Clang give empty structs a size of 0
+      // in C mode (in contrast to the size of 1 for empty structs that would be
+      // computed in C++ mode).
+      if (attrs.byte_size || attrs.alignment) {
         clang::RecordDecl *record_decl =
             TypeSystemClang::GetAsRecordDecl(clang_type);
         if (record_decl) {
           ClangASTImporter::LayoutInfo layout;
-          layout.bit_size = *attrs.byte_size * 8;
+          layout.bit_size = attrs.byte_size.value_or(0) * 8;
+          layout.alignment = attrs.alignment.value_or(0) * 8;
           GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
@@ -2270,6 +2274,9 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (layout_info.bit_size == 0)
       layout_info.bit_size =
           die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+    if (layout_info.alignment == 0)
+      layout_info.alignment =
+          die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
 
     clang::CXXRecordDecl *record_decl =
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
@@ -2963,9 +2970,9 @@ void DWARFASTParserClang::ParseSingleMember(
   // whereas GCC emits it only for static data members if not part of an
   // anonymous namespace. The flag that is consistently emitted for static
   // data members is DW_AT_declaration, so we check it instead.
-  // FIXME: Since DWARFv5, static data members are marked DW_AT_variable so we
+  // The following block is only necessary to support DWARFv4 and earlier.
+  // Starting with DWARFv5, static data members are marked DW_AT_variable so we
   // can consistently detect them on both GCC and Clang without below heuristic.
-  // Remove this block if we ever drop DWARFv4 support.
   if (attrs.member_byte_offset == UINT32_MAX &&
       attrs.data_bit_offset == UINT64_MAX && attrs.is_declaration) {
     CreateStaticMemberVariable(die, attrs, class_clang_type);

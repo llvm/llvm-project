@@ -163,7 +163,8 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+      mlir::ValueRange(entryOp.getAccPtr()));
 
   modBuilder.setInsertionPointAfter(registerFuncOp);
   builder.restoreInsertionPoint(crtInsPt);
@@ -195,7 +196,7 @@ static void createDeclareDeallocFuncWithArg(
           /*structured=*/false, /*implicit=*/false, clause,
           boxAddrOp.getType());
   builder.create<mlir::acc::DeclareExitOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::Value{}, mlir::ValueRange(entryOp.getAccPtr()));
 
   mlir::Value varPtr;
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
@@ -2762,7 +2763,13 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   EntryOp entryOp = createDataEntryOp<EntryOp>(
       builder, loc, addrOp.getResTy(), asFortran, bounds,
       /*structured=*/false, implicit, clause, addrOp.getResTy().getType());
-  builder.create<DeclareOp>(loc, mlir::ValueRange(entryOp.getAccPtr()));
+  if constexpr (std::is_same_v<DeclareOp, mlir::acc::DeclareEnterOp>)
+    builder.create<DeclareOp>(
+        loc, mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+        mlir::ValueRange(entryOp.getAccPtr()));
+  else
+    builder.create<DeclareOp>(loc, mlir::Value{},
+                              mlir::ValueRange(entryOp.getAccPtr()));
   mlir::Value varPtr;
   if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
     builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
@@ -2812,7 +2819,8 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::acc::DeclareTokenType::get(entryOp.getContext()),
+      mlir::ValueRange(entryOp.getAccPtr()));
 
   modBuilder.setInsertionPointAfter(registerFuncOp);
 }
@@ -2850,7 +2858,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
           boxAddrOp.getType());
 
   builder.create<mlir::acc::DeclareExitOp>(
-      loc, mlir::ValueRange(entryOp.getAccPtr()));
+      loc, mlir::Value{}, mlir::ValueRange(entryOp.getAccPtr()));
 
   mlir::Value varPtr;
   if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
@@ -3092,34 +3100,37 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
 
   mlir::func::FuncOp funcOp = builder.getFunction();
   auto ops = funcOp.getOps<mlir::acc::DeclareEnterOp>();
+  mlir::Value declareToken;
   if (ops.empty()) {
-    builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
+    declareToken = builder.create<mlir::acc::DeclareEnterOp>(
+        loc, mlir::acc::DeclareTokenType::get(builder.getContext()),
+        dataClauseOperands);
   } else {
     auto declareOp = *ops.begin();
     auto newDeclareOp = builder.create<mlir::acc::DeclareEnterOp>(
-        loc, declareOp.getDataClauseOperands());
+        loc, mlir::acc::DeclareTokenType::get(builder.getContext()),
+        declareOp.getDataClauseOperands());
     newDeclareOp.getDataClauseOperandsMutable().append(dataClauseOperands);
+    declareToken = newDeclareOp.getToken();
     declareOp.erase();
   }
 
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
                             copyEntryOperands, copyoutEntryOperands,
-                            deviceResidentEntryOperands]() {
+                            deviceResidentEntryOperands, declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
     operands.append(copyEntryOperands);
     operands.append(copyoutEntryOperands);
 
-    if (!operands.empty()) {
-      mlir::func::FuncOp funcOp = builder.getFunction();
-      auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
-      if (ops.empty()) {
-        builder.create<mlir::acc::DeclareExitOp>(loc, operands);
-      } else {
-        auto declareOp = *ops.begin();
-        declareOp.getDataClauseOperandsMutable().append(operands);
-      }
+    mlir::func::FuncOp funcOp = builder.getFunction();
+    auto ops = funcOp.getOps<mlir::acc::DeclareExitOp>();
+    if (ops.empty()) {
+      builder.create<mlir::acc::DeclareExitOp>(loc, declareToken, operands);
+    } else {
+      auto declareOp = *ops.begin();
+      declareOp.getDataClauseOperandsMutable().append(operands);
     }
 
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(

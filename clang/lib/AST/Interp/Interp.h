@@ -770,9 +770,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (LHS.inArray() && LHS.isRoot())
+    if (LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (RHS.inArray() && RHS.isRoot())
+    if (RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1004,7 +1004,7 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  auto *B = S.P.getGlobal(I);
+  const Block *B = S.P.getGlobal(I);
   if (B->isExtern())
     return false;
   S.Stk.push<T>(B->deref<T>());
