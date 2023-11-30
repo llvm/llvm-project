@@ -59,6 +59,13 @@ struct IsVariableHelper
         }
       }
       return false;
+    } else if constexpr (std::is_same_v<T, SomeType>) {
+      if (std::holds_alternative<ProcedureDesignator>(x.u) ||
+          std::holds_alternative<ProcedureRef>(x.u)) {
+        return false; // procedure pointer
+      } else {
+        return (*this)(x.u);
+      }
     } else {
       return (*this)(x.u);
     }
