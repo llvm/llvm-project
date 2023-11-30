@@ -1,4 +1,4 @@
-//===--- arm_vector_type.td - ARM Fixed vector types compiler interface ---===//
+//===--- arm_vector_types.td - ARM Fixed vector types compiler interface ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
