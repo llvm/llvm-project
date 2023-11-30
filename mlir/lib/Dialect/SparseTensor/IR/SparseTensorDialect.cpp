@@ -710,7 +710,8 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
 // SparseTensorType Methods.
 //===----------------------------------------------------------------------===//
 
-bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl, bool isUnique) const {
+bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
+                                                      bool isUnique) const {
   if (!hasEncoding())
     return false;
   if (!isCompressedLvl(startLvl) && !isLooseCompressedLvl(startLvl))
