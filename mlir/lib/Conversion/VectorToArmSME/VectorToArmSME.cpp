@@ -45,7 +45,7 @@ static scf::ForOp createLoopOverTileSlices(PatternRewriter &rewriter,
                                            ValueRange{initTile});
   rewriter.setInsertionPointToStart(forOp.getBody());
   auto nextTile = callback(forOp);
-  rewriter.create<scf::YieldOp>(loc, ValueRange{nextTile});
+  rewriter.create<scf::YieldOp>(loc, nextTile.getResult());
   return forOp;
 }
 

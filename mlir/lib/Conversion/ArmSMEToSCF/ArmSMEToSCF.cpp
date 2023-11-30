@@ -128,7 +128,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
         tileLoadOp.createOpAndForwardTileId<arm_sme::LoadTileSliceOp>(
             rewriter, loc, tileType, tileLoadOp.getBase(), allTruePredicate,
             currentTile, memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
-    rewriter.create<scf::YieldOp>(loc, ValueRange{loadSlice});
+    rewriter.create<scf::YieldOp>(loc, loadSlice.getResult());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -233,7 +233,7 @@ struct TileLoadOpWithMaskAndPadZeroConversion
         tileLoadOp.createOpAndForwardTileId<arm_sme::LoadTileSliceOp>(
             rewriter, loc, tileType, tileLoadOp.getBase(), numColsOp,
             currentTile, memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
-    rewriter.create<scf::YieldOp>(loc, ValueRange{loadSlice});
+    rewriter.create<scf::YieldOp>(loc, loadSlice.getResult());
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -363,7 +363,7 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
         tileLoadOp.createOpAndForwardTileId<arm_sme::MoveVectorToTileSliceOp>(
             rewriter, loc, tileType, loadSlice->getResult(0), currentTile,
             tileSliceIndex, tileLoadOp.getLayout());
-    rewriter.create<scf::YieldOp>(loc, ValueRange{moveSlice});
+    rewriter.create<scf::YieldOp>(loc, moveSlice.getResult());
 
     rewriter.setInsertionPointAfter(forOp);
 
