@@ -42930,12 +42930,6 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Canonicalize fp zero vectors - these sometimes don't fold due to one use
-  // limits.
-  if (VT.isVector() && TLI.isTypeLegal(VT) && ISD::isBuildVectorAllZeros(N) &&
-      (VT.getScalarType() == MVT::f32 || VT.getScalarType() == MVT::f64))
-    return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(N0));
-
   // Try to remove a bitcast of constant vXi1 vector. We have to legalize
   // most of these to scalar anyway.
   if (Subtarget.hasAVX512() && VT.isScalarInteger() &&

@@ -15,8 +15,8 @@ define void @test1() {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl $0, M1+4
 ; X32-NEXT:    movl $0, M1
-; X32-NEXT:    movl $0, M2+4
-; X32-NEXT:    movl $0, M2
+; X32-NEXT:    xorps %xmm0, %xmm0
+; X32-NEXT:    movlps %xmm0, M2
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test1:
