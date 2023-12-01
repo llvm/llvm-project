@@ -1193,7 +1193,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
 }
 
 static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
-                        ArrayRef<uint8_t> Bytes) {
+                        ArrayRef<uint8_t> Bytes, formatted_raw_ostream &OS) {
   // print out data up to 8 bytes at a time in hex and ascii
   uint8_t AsciiData[9] = {'\0'};
   uint8_t Byte;
@@ -1201,9 +1201,9 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
 
   for (; Index < End; ++Index) {
     if (NumBytes == 0)
-      outs() << format("%8" PRIx64 ":", SectionAddr + Index);
+      OS << format("%8" PRIx64 ":", SectionAddr + Index);
     Byte = Bytes.slice(Index)[0];
-    outs() << format(" %02x", Byte);
+    OS << format(" %02x", Byte);
     AsciiData[NumBytes] = isPrint(Byte) ? Byte : '.';
 
     uint8_t IndentOffset = 0;
@@ -1218,9 +1218,9 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
     }
     if (NumBytes == 8) {
       AsciiData[8] = '\0';
-      outs() << std::string(IndentOffset, ' ') << "         ";
-      outs() << reinterpret_cast<char *>(AsciiData);
-      outs() << '\n';
+      OS << std::string(IndentOffset, ' ') << "         ";
+      OS << reinterpret_cast<char *>(AsciiData);
+      OS << '\n';
       NumBytes = 0;
     }
   }
@@ -1850,12 +1850,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       Start -= SectionAddr;
       End -= SectionAddr;
 
+
+      formatted_raw_ostream FOS(outs());
+
       if (!PrintedSection) {
         PrintedSection = true;
-        outs() << "\nDisassembly of section ";
+        FOS << "\nDisassembly of section ";
         if (!SegmentName.empty())
-          outs() << SegmentName << ",";
-        outs() << SectionName << ":\n";
+          FOS << SegmentName << ",";
+        FOS << SectionName << ":\n";
       }
 
       bool PrintedLabel = false;
@@ -1867,22 +1870,23 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         const StringRef SymbolName = SymNamesHere[i];
 
         if (!PrintedLabel) {
-          outs() << '\n';
+          FOS << '\n';
           PrintedLabel = true;
         }
         if (LeadingAddr)
-          outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
-                           SectionAddr + Start + VMAAdjustment);
+          FOS << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
+                        SectionAddr + Start + VMAAdjustment);
         if (Obj.isXCOFF() && SymbolDescription) {
-          outs() << getXCOFFSymbolDescription(Symbol, SymbolName) << ":\n";
+          FOS << getXCOFFSymbolDescription(Symbol, SymbolName) << ":";
         } else
-          outs() << '<' << SymbolName << ">:\n";
+          FOS << '<' << SymbolName << ">:";
+        LVP.printAfterOtherLine(FOS, false);
       }
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
       if (Section.isVirtual()) {
-        outs() << "...\n";
+        FOS << "...\n";
         continue;
       }
 
@@ -1926,12 +1930,12 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // distance to the next symbol, and sometimes it will be just a
           // prologue and we should start disassembling instructions from where
           // it left off.
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error in decoding " << SymNamesHere[SHI]
-                 << " : decoding failed region as bytes.\n";
+          FOS << DT->Context->getAsmInfo()->getCommentString()
+              << " error in decoding " << SymNamesHere[SHI]
+              << " : decoding failed region as bytes.\n";
           for (uint64_t I = 0; I < Size; ++I) {
-            outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                   << "\n";
+            FOS << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                << "\n";
           }
         }
         Start += Size;
@@ -1943,7 +1947,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
       if (DisassembleAsELFData) {
-        dumpELFData(SectionAddr, Index, End, Bytes);
+        dumpELFData(SectionAddr, Index, End, Bytes, FOS);
         Index = End;
         continue;
       }
@@ -1953,8 +1957,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           Obj.isXCOFF() && Section.isText() && TracebackTable &&
           Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass &&
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
-
-      formatted_raw_ostream FOS(outs());
 
       // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
       // are (incorrectly) written directly to the unbuffered raw_ostream
@@ -2047,12 +2049,16 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // Print local label if there's any.
           auto Iter1 = BBAddrMapLabels.find(SectionAddr + Index);
           if (Iter1 != BBAddrMapLabels.end()) {
-            for (StringRef Label : Iter1->second)
-              FOS << "<" << Label << ">:\n";
+            for (StringRef Label : Iter1->second) {
+              FOS << "<" << Label << ">:";
+              LVP.printAfterOtherLine(FOS, true);
+            }
           } else {
             auto Iter2 = AllLabels.find(SectionAddr + Index);
-            if (Iter2 != AllLabels.end())
-              FOS << "<" << Iter2->second << ">:\n";
+            if (Iter2 != AllLabels.end()) {
+              FOS << "<" << Iter2->second << ">:";
+              LVP.printAfterOtherLine(FOS, true);
+            }
           }
 
           // Disassemble a real instruction or a data when disassemble all is
