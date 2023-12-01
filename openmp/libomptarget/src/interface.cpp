@@ -13,13 +13,14 @@
 
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/OMPT/Callback.h"
+#include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/EnvironmentVar.h"
 #include "Shared/Profile.h"
-#include "Shared/Utils.h"
 
 #include "Utils/ExponentialBackoff.h"
 

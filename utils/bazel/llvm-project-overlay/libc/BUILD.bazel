@@ -86,6 +86,7 @@ libc_support_library(
     deps = [
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
+        ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
     ],
 )
@@ -431,7 +432,6 @@ libc_support_library(
     hdrs = ["src/__support/number_pair.h"],
     deps = [
         ":__support_cpp_type_traits",
-        ":__support_named_pair",
     ],
 )
 
@@ -474,8 +474,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_str_to_num_result",
     hdrs = ["src/__support/str_to_num_result.h"],
-    deps = [
-    ],
+    deps = [":__support_macros_attributes"],
 )
 
 libc_support_library(
@@ -588,11 +587,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_named_pair",
-    hdrs = ["src/__support/named_pair.h"],
-)
-
-libc_support_library(
     name = "__support_bit",
     hdrs = ["src/__support/bit.h"],
     deps = [
@@ -608,7 +602,6 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
-        ":__support_named_pair",
     ],
 )
 

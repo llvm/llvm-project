@@ -36,3 +36,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.posix_madvise
 )
+
+add_entrypoint_object(
+  mincore
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mincore
+)
