@@ -1412,14 +1412,15 @@ static std::optional<Instruction *>
 instCombineSVEAllOrNoActive(InstCombiner &IC, IntrinsicInst &II,
                             Intrinsic::ID IID) {
   if (match(II.getOperand(0), m_ZeroInt())) {
-    if (II.getIntrinsicID() != IID)
+    if (II.getIntrinsicID() != IID) {
       // llvm_ir, pred(0), op1, op2 - Spec says to return op1 when all lanes are
       // inactive for sv[func]_m or sv[func]_z
       return IC.replaceInstUsesWith(II, II.getOperand(1));
-    else
+    } else {
       // llvm_ir_u, pred(0), op1, op2 - Spec says to return undef when all lanes
       // are inactive for sv[func]_x
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
+    }
   }
   if (II.getIntrinsicID() != IID)
     return instCombineSVEAllActive(II, IID);
