@@ -487,7 +487,6 @@ feature_test_macros = [
                 "c++20": 202311  # DR P2909R4 Fix formatting of code units as integers
             },
             "headers": [""],  # Note not in format
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_formatters",
