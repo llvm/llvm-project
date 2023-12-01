@@ -61,6 +61,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
             IntegratedTestKeywordParser("MY_TAG.", ParserKind.TAG),
             IntegratedTestKeywordParser("MY_DNE_TAG.", ParserKind.TAG),
             IntegratedTestKeywordParser("MY_LIST:", ParserKind.LIST),
+            IntegratedTestKeywordParser("MY_SPACE_LIST:", ParserKind.SPACE_LIST),
             IntegratedTestKeywordParser("MY_BOOL:", ParserKind.BOOLEAN_EXPR),
             IntegratedTestKeywordParser("MY_INT:", ParserKind.INTEGER),
             IntegratedTestKeywordParser("MY_RUN:", ParserKind.COMMAND),
@@ -103,6 +104,26 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         self.parse_test(parsers)
         list_parser = self.get_parser(parsers, "MY_LIST:")
         self.assertEqual(list_parser.getValue(), ["one", "two", "three", "four"])
+
+    def test_space_lists(self):
+        parsers = self.make_parsers()
+        self.parse_test(parsers)
+        space_list_parser = self.get_parser(parsers, "MY_SPACE_LIST:")
+        self.assertEqual(
+            space_list_parser.getValue(),
+            [
+                "orange",
+                "tabby",
+                "tortie",
+                "tuxedo",
+                "void",
+                "multiple",
+                "spaces",
+                "cute,",
+                "fluffy,",
+                "kittens",
+            ],
+        )
 
     def test_commands(self):
         parsers = self.make_parsers()
@@ -221,6 +242,14 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
             pass
         except BaseException as e:
             self.fail("LIST_WITH_DOT. raised the wrong exception: %r" % e)
+
+        try:
+            IntegratedTestKeywordParser("SPACE_LIST_WITH_DOT.", ParserKind.SPACE_LIST),
+            self.fail("SPACE_LIST_WITH_DOT. failed to raise an exception")
+        except ValueError as e:
+            pass
+        except BaseException as e:
+            self.fail("SPACE_LIST_WITH_DOT. raised the wrong exception: %r" % e)
 
         try:
             IntegratedTestKeywordParser(
