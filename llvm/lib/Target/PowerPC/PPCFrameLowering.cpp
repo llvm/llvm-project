@@ -2335,9 +2335,9 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // in our CalleSaveInfo vector.
 
     for (auto &CalleeSaveReg : CSI) {
-      const MCPhysReg &Reg = CalleeSaveReg.getReg();
-      const MCPhysReg &Lower = RegInfo->getSubReg(Reg, 1);
-      const MCPhysReg &Higher = RegInfo->getSubReg(Reg, 2);
+      MCPhysReg Reg = CalleeSaveReg.getReg();
+      MCPhysReg Lower = RegInfo->getSubReg(Reg, 1);
+      MCPhysReg Higher = RegInfo->getSubReg(Reg, 2);
 
       if ( // Check only for SuperRegs.
           Lower &&
