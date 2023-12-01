@@ -41,6 +41,7 @@ CASV1_SIMPLE_GROUP_REF(SymbolTableRef, mc:symbol_table)
 CASV1_SIMPLE_GROUP_REF(DebugStringSectionRef, mc:debug_string_section)
 CASV1_SIMPLE_GROUP_REF(DIEAbbrevSetRef, mc:debug_DIE_abbrev_set)
 CASV1_SIMPLE_GROUP_REF(DIETopLevelRef, mc:debug_DIE_top_level)
+CASV1_SIMPLE_GROUP_REF(DIEDedupeTopLevelRef, mc:debug_DIE_Dedupe_top_level)
 
 #undef CASV1_SIMPLE_GROUP_REF
 #endif /* CASV1_SIMPLE_GPOUP_REF */

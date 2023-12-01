@@ -2906,6 +2906,16 @@ DIETopLevelRef::create(MCCASBuilder &MB, ArrayRef<cas::ObjectRef> Children) {
   return get(B->build());
 }
 
+Expected<DIEDedupeTopLevelRef>
+DIEDedupeTopLevelRef::create(MCCASBuilder &MB,
+                             ArrayRef<cas::ObjectRef> Children) {
+  Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
+  if (!B)
+    return B.takeError();
+  append_range(B->Refs, Children);
+  return get(B->build());
+}
+
 Expected<DIEDataRef> DIEDataRef::create(MCCASBuilder &MB,
                                         ArrayRef<cas::ObjectRef> Children,
                                         ArrayRef<char> Contents) {
