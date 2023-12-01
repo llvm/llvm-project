@@ -29,23 +29,35 @@ TEST(LlvmLibcMincoreTest, UnMappedMemory) {
   EXPECT_THAT(res, Fails(ENOMEM, -1));
 }
 
+// It is always possible to find an aligned boundary if we allocate page sized
+// memory.
+static char *aligned_addr(void *addr, size_t alignment) {
+  char *byte_addr = static_cast<char *>(addr);
+  uintptr_t addr_val = reinterpret_cast<uintptr_t>(addr);
+  uintptr_t offset =
+      addr_val % alignment == 0 ? 0 : alignment - (addr_val % alignment);
+  return byte_addr + offset;
+}
+
 TEST(LlvmLibcMincoreTest, InvalidVec) {
   size_t page_size = static_cast<size_t>(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE));
-  void *addr = LIBC_NAMESPACE::mmap(nullptr, 4 * page_size, PROT_READ,
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, 5 * page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
-  EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+  // Since we allocated 5 pages, we can find an aligned boundary after which
+  // there are at least 4 pages
+  char *aligned = aligned_addr(addr, page_size);
   libc_errno = 0;
-  int res = LIBC_NAMESPACE::mincore(addr, 1, nullptr);
+  int res = LIBC_NAMESPACE::mincore(aligned, 1, nullptr);
   EXPECT_THAT(res, Fails(EFAULT, -1));
   void *area = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(area, MAP_FAILED);
   unsigned char *ptr = static_cast<unsigned char *>(area) + page_size - 3;
-  res = LIBC_NAMESPACE::mincore(addr, 4 * page_size, ptr);
+  res = LIBC_NAMESPACE::mincore(aligned, 4 * page_size, ptr);
   EXPECT_THAT(res, Fails(EFAULT, -1));
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(area, 2), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, 5 * page_size), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::munmap(area, page_size), Succeeds());
 }
 
 TEST(LlvmLibcMincoreTest, UnalignedAddr) {
@@ -53,9 +65,10 @@ TEST(LlvmLibcMincoreTest, UnalignedAddr) {
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
-  EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+  char *aligned = aligned_addr(addr, page_size);
   libc_errno = 0;
-  int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, nullptr);
+  int res =
+      LIBC_NAMESPACE::mincore(static_cast<char *>(aligned) + 1, 1, nullptr);
   EXPECT_THAT(res, Fails(EINVAL, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
@@ -65,10 +78,10 @@ TEST(LlvmLibcMincoreTest, NoError) {
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
-  EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+  char *aligned = aligned_addr(addr, page_size);
   unsigned char vec;
   libc_errno = 0;
-  int res = LIBC_NAMESPACE::mincore(addr, 1, &vec);
+  int res = LIBC_NAMESPACE::mincore(aligned, 1, &vec);
   EXPECT_THAT(res, Succeeds());
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
@@ -78,10 +91,10 @@ TEST(LlvmLibcMincoreTest, NegativeLength) {
   void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
-  EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+  char *aligned = aligned_addr(addr, page_size);
   unsigned char vec;
   libc_errno = 0;
-  int res = LIBC_NAMESPACE::mincore(addr, -1, &vec);
+  int res = LIBC_NAMESPACE::mincore(aligned, -1, &vec);
   EXPECT_THAT(res, Fails(ENOMEM, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
@@ -89,16 +102,18 @@ TEST(LlvmLibcMincoreTest, NegativeLength) {
 TEST(LlvmLibcMincoreTest, PageOut) {
   unsigned char vec;
   size_t page_size = static_cast<size_t>(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE));
-  void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
-                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  // allocate 2 pages since we need to page out page_size bytes
+  void *addr =
+      LIBC_NAMESPACE::mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE,
+                           MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
-  EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+  char *aligned = aligned_addr(addr, page_size);
 
   // touch the page
   {
-    static_cast<char *>(addr)[0] = 0;
+    aligned[0] = 0;
     libc_errno = 0;
-    int res = LIBC_NAMESPACE::mincore(addr, 1, &vec);
+    int res = LIBC_NAMESPACE::mincore(aligned, 1, &vec);
     EXPECT_EQ(vec & 1u, 1u);
     EXPECT_THAT(res, Succeeds());
   }
@@ -106,14 +121,14 @@ TEST(LlvmLibcMincoreTest, PageOut) {
   // page out the memory
   {
     libc_errno = 0;
-    EXPECT_THAT(LIBC_NAMESPACE::madvise(addr, page_size, MADV_DONTNEED),
+    EXPECT_THAT(LIBC_NAMESPACE::madvise(aligned, page_size, MADV_DONTNEED),
                 Succeeds());
 
     libc_errno = 0;
-    int res = LIBC_NAMESPACE::mincore(addr, page_size, &vec);
+    int res = LIBC_NAMESPACE::mincore(aligned, 1, &vec);
     EXPECT_EQ(vec & 1u, 0u);
     EXPECT_THAT(res, Succeeds());
   }
 
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, 2 * page_size), Succeeds());
 }
