@@ -621,3 +621,11 @@ func.func @set_max_register() {
   nvvm.setmaxregister decrease 40
   func.return
 }
+
+// -----
+
+func.func @cp_bulk_commit() {
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.commit_group;"
+  nvvm.cp.async.bulk.commit.group
+  func.return
+}
