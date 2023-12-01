@@ -96,14 +96,14 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   ASAN_WRITE_RANGE(ctx, ptr, size)
 #define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
   ASAN_READ_RANGE(ctx, ptr, size)
-#  define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)    \
-    ASAN_INTERCEPTOR_ENTER(ctx, func);                \
-    do {                                              \
-      if (AsanInitIsRunning())                        \
-        return REAL(func)(__VA_ARGS__);               \
-      if (SANITIZER_APPLE && UNLIKELY(!AsanInited())) \
-        return REAL(func)(__VA_ARGS__);               \
-      ENSURE_ASAN_INITED();                           \
+#  define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)   \
+    ASAN_INTERCEPTOR_ENTER(ctx, func);               \
+    do {                                             \
+      if (asan_init_is_running)                      \
+        return REAL(func)(__VA_ARGS__);              \
+      if (SANITIZER_APPLE && UNLIKELY(!asan_inited)) \
+        return REAL(func)(__VA_ARGS__);              \
+      ENSURE_ASAN_INITED();                          \
     } while (false)
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
   do {                                            \
@@ -556,7 +556,7 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!asan_inited))
     return internal_strdup(s);
   ENSURE_ASAN_INITED();
   uptr length = internal_strlen(s);
@@ -575,7 +575,7 @@ INTERCEPTOR(char*, strdup, const char *s) {
 INTERCEPTOR(char*, __strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!asan_inited))
     return internal_strdup(s);
   ENSURE_ASAN_INITED();
   uptr length = internal_strlen(s);
@@ -636,7 +636,7 @@ INTERCEPTOR(int, atoi, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atoi);
 #if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!asan_inited))
     return REAL(atoi)(nptr);
 #  endif
   ENSURE_ASAN_INITED();
@@ -658,7 +658,7 @@ INTERCEPTOR(long, atol, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atol);
 #if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!asan_inited))
     return REAL(atol)(nptr);
 #  endif
   ENSURE_ASAN_INITED();
@@ -697,7 +697,7 @@ static void AtCxaAtexit(void *unused) {
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
 #if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!asan_inited))
     return REAL(__cxa_atexit)(func, arg, dso_handle);
 #    endif
   ENSURE_ASAN_INITED();
