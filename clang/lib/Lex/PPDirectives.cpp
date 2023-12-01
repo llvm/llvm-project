@@ -1083,85 +1083,63 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
     llvm::Expected<FileEntryRef> ShouldBeEntry =
-        FM.getFileRef(Filename, true, OpenFile);
+        FM.getFileRef(Filename, OpenFile);
     return llvm::expectedToOptional(std::move(ShouldBeEntry));
   }
+
+  auto SeparateComponents = [](SmallVectorImpl<char> &LookupPath,
+                               StringRef StartingFrom, StringRef FileName,
+                               bool RemoveInitialFileComponentFromLookupPath) {
+    llvm::sys::path::native(StartingFrom, LookupPath);
+    if (RemoveInitialFileComponentFromLookupPath)
+      llvm::sys::path::remove_filename(LookupPath);
+    if (!LookupPath.empty() &&
+        !llvm::sys::path::is_separator(LookupPath.back())) {
+      LookupPath.push_back(llvm::sys::path::get_separator().front());
+    }
+    LookupPath.append(FileName.begin(), FileName.end());
+  };
 
   // Otherwise, it's search time!
   SmallString<512> LookupPath;
   // Non-angled lookup
   if (!isAngled) {
-    bool TryLocalLookup = false;
     if (LookupFromFile) {
-      // Use file-based lookup here
+      // Use file-based lookup.
       StringRef FullFileDir = LookupFromFile->tryGetRealPathName();
       if (!FullFileDir.empty()) {
-        llvm::sys::path::native(FullFileDir, LookupPath);
-        llvm::sys::path::remove_filename(LookupPath);
-        TryLocalLookup = true;
-      }
-    } else {
-      // Cannot do local lookup: give up.
-      TryLocalLookup = false;
-    }
-    if (TryLocalLookup) {
-      if (!LookupPath.empty() &&
-          !llvm::sys::path::is_separator(LookupPath.back())) {
-        LookupPath.append(llvm::sys::path::get_separator());
-      }
-      LookupPath.append(Filename);
-      llvm::Expected<FileEntryRef> ShouldBeEntry =
-          FM.getFileRef(LookupPath, true, OpenFile);
-      if (ShouldBeEntry) {
-        return std::move(*ShouldBeEntry);
-      } else {
+        SeparateComponents(LookupPath, FullFileDir, Filename, true);
+        llvm::Expected<FileEntryRef> ShouldBeEntry =
+            FM.getFileRef(LookupPath, OpenFile);
+        if (ShouldBeEntry)
+          return llvm::expectedToOptional(std::move(ShouldBeEntry));
         llvm::consumeError(ShouldBeEntry.takeError());
       }
     }
-  }
 
-  if (!isAngled) {
-    // do working directory lookup
+    // Otherwise, do working directory lookup.
     LookupPath.clear();
     auto MaybeWorkingDirEntry = FM.getDirectoryRef(".");
     if (MaybeWorkingDirEntry) {
       DirectoryEntryRef WorkingDirEntry = *MaybeWorkingDirEntry;
       StringRef WorkingDir = WorkingDirEntry.getName();
       if (!WorkingDir.empty()) {
-        llvm::sys::path::native(WorkingDir, LookupPath);
-        if (!LookupPath.empty() &&
-            !llvm::sys::path::is_separator(LookupPath.back())) {
-          LookupPath.append(llvm::sys::path::get_separator());
-        }
-        LookupPath.append(llvm::sys::path::get_separator());
-        LookupPath.append(Filename);
+        SeparateComponents(LookupPath, WorkingDir, Filename, false);
         llvm::Expected<FileEntryRef> ShouldBeEntry =
-            FM.getFileRef(LookupPath, true, OpenFile);
-        if (ShouldBeEntry) {
-          return std::move(*ShouldBeEntry);
-        } else {
-          llvm::consumeError(ShouldBeEntry.takeError());
-        }
+            FM.getFileRef(LookupPath, OpenFile);
+        if (ShouldBeEntry)
+          return llvm::expectedToOptional(std::move(ShouldBeEntry));
+        llvm::consumeError(ShouldBeEntry.takeError());
       }
     }
   }
 
   for (const auto &Entry : PPOpts->EmbedEntries) {
     LookupPath.clear();
-    llvm::sys::path::native(Entry, LookupPath);
-    if (!LookupPath.empty() &&
-        !llvm::sys::path::is_separator(LookupPath.back())) {
-      LookupPath.append(llvm::sys::path::get_separator());
-    }
-    LookupPath.append(Filename.begin(), Filename.end());
-    llvm::sys::path::native(LookupPath);
+    SeparateComponents(LookupPath, Entry, Filename, false);
     llvm::Expected<FileEntryRef> ShouldBeEntry =
-        FM.getFileRef(LookupPath, true, OpenFile);
-    if (ShouldBeEntry) {
-      return std::move(*ShouldBeEntry);
-    } else {
-      llvm::consumeError(ShouldBeEntry.takeError());
-    }
+        FM.getFileRef(LookupPath, OpenFile);
+    return llvm::expectedToOptional(std::move(ShouldBeEntry));
   }
   return std::nullopt;
 }
@@ -3902,7 +3880,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   // error.
   assert(!Filename.empty());
   OptionalFileEntryRef MaybeFileRef =
-      this->LookupEmbedFile(Filename, isAngled, false, LookupFromFile);
+      this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
     if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
