@@ -5558,7 +5558,8 @@ class FoldTransposeShapeCast : public OpRewritePattern<TransposeOp> {
     Value transposeSrc = transpOp.getVector();
     auto shapeCastOp = transposeSrc.getDefiningOp<vector::ShapeCastOp>();
     if (!shapeCastOp)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          transpOp, "TransposeOp source is not ShapeCastOp");
 
     auto sourceType = transpOp.getSourceVectorType();
     auto resultType = transpOp.getResultVectorType();
@@ -5580,7 +5581,8 @@ class FoldTransposeShapeCast : public OpRewritePattern<TransposeOp> {
     for (auto [srcDim, resDim] :
          llvm::zip_equal(sourceWithoutUnitDims, resultWithoutUnitDims)) {
       if (srcDim != resDim)
-        return failure();
+        return rewriter.notifyMatchFailure(transpOp,
+                                           "TransposeOp permutes non-unit dim");
     }
 
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transpOp, resultType,
