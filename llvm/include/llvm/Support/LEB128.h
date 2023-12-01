@@ -142,8 +142,7 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
       break;
     }
     uint64_t Slice = *p & 0x7f;
-    if (Shift >= 63 && ((Shift == 63 && (Slice << Shift >> Shift) != Slice) ||
-                        (Shift > 63 && Slice != 0))) {
+    if ((Shift >= 64 && Slice != 0) || Slice << Shift >> Shift != Slice) {
       if (error)
         *error = "uleb128 too big for uint64";
       Value = 0;
@@ -178,8 +177,8 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
     }
     Byte = *p;
     uint64_t Slice = Byte & 0x7f;
-    if ((Shift >= 63) && ((Shift == 63 && Slice != 0 && Slice != 0x7f) ||
-                          (Shift > 63 && Slice != (Value < 0 ? 0x7f : 0x00)))) {
+    if ((Shift >= 64 && Slice != (Value < 0 ? 0x7f : 0x00)) ||
+        (Shift == 63 && Slice != 0 && Slice != 0x7f)) {
       if (error)
         *error = "sleb128 too big for int64";
       if (n)
