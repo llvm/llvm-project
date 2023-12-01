@@ -1,4 +1,4 @@
-//===------------ Environment.h - OpenMP GPU environments --------- C++ -*-===//
+//===-- Shared/Environment.h - OpenMP GPU environments ------------ C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTARGET_ENVIRONMENT_H_
-#define _OMPTARGET_ENVIRONMENT_H_
+#ifndef OMPTARGET_SHARED_ENVIRONMENT_H
+#define OMPTARGET_SHARED_ENVIRONMENT_H
 
 #ifdef OMPTARGET_DEVICE_RUNTIME
 #include "Types.h"
@@ -105,4 +105,4 @@ struct KernelLaunchEnvironmentTy {
   void *ReductionBuffer = nullptr;
 };
 
-#endif // _OMPTARGET_ENVIRONMENT_H_
+#endif // OMPTARGET_SHARED_ENVIRONMENT_H
