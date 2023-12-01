@@ -404,8 +404,7 @@ public:
     return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
   }
 
-  template <int64_t Max>
-  void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc);
+  void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc, uint32_t MaxImm);
 
   template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
@@ -1867,12 +1866,12 @@ void AArch64DAGToDAGISel::SelectFrintFromVT(SDNode *N, unsigned NumVecs,
   SelectUnaryMultiIntrinsic(N, NumVecs, true, Opcode);
 }
 
-template <int64_t Max>
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
-                                                unsigned Opc) {
+                                                unsigned Opc,
+                                                uint32_t MaxImm) {
   if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(4)))
-    if (Imm->getZExtValue() > Max)
+    if (Imm->getZExtValue() > MaxImm)
       return;
 
   SDValue ZtValue;
@@ -5109,7 +5108,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {AArch64::LUTI2_4ZTZI_B, AArch64::LUTI2_4ZTZI_H,
                AArch64::LUTI2_4ZTZI_S}))
         // Second Immediate must be <= 3:
-        SelectMultiVectorLuti<3>(Node, 4, Opc);
+        SelectMultiVectorLuti(Node, 4, Opc, 3);
       return;
     }
     case Intrinsic::aarch64_sme_luti4_lane_zt_x4: {
@@ -5117,7 +5116,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               Node->getValueType(0),
               {0, AArch64::LUTI4_4ZTZI_H, AArch64::LUTI4_4ZTZI_S}))
         // Second Immediate must be <= 1:
-        SelectMultiVectorLuti<1>(Node, 4, Opc);
+        SelectMultiVectorLuti(Node, 4, Opc, 1);
       return;
     }
     }
