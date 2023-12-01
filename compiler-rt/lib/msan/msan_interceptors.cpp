@@ -252,7 +252,7 @@ static NOINLINE void clear_mallinfo(T *sret) {
   __msan_unpoison(sret, sizeof(*sret));
 }
 
-// Interceptor relies on NRVO and assumes that sret will be pre-allocated in
+// Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
 INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
   __sanitizer_struct_mallinfo sret;
@@ -260,9 +260,16 @@ INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
   return sret;
 }
 
+INTERCEPTOR(__sanitizer_struct_mallinfo2, mallinfo2) {
+  __sanitizer_struct_mallinfo2 sret;
+  clear_mallinfo(&sret);
+  return sret;
+}
 #  define MSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2 INTERCEPT_FUNCTION(mallinfo2)
 #else
 #define MSAN_MAYBE_INTERCEPT_MALLINFO
+#  define MSAN_MAYBE_INTERCEPT_MALLINFO2
 #endif
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
@@ -1787,6 +1794,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_CFREE;
   MSAN_MAYBE_INTERCEPT_MALLOC_USABLE_SIZE;
   MSAN_MAYBE_INTERCEPT_MALLINFO;
+  MSAN_MAYBE_INTERCEPT_MALLINFO2;
   MSAN_MAYBE_INTERCEPT_MALLOPT;
   MSAN_MAYBE_INTERCEPT_MALLOC_STATS;
   INTERCEPT_FUNCTION(fread);
