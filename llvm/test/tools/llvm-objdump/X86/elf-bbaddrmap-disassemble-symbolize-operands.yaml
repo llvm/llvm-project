@@ -30,16 +30,6 @@
 # ATT-NEXT:   jmp    <BB1>
 # ATT-NEXT: <BB5>:
 # ATT-NEXT:   retq
-# ATT:      <bar>:
-# ATT-NEXT: <BB0>:
-# ATT-NEXT:   pushq  %rax
-# ATT-NEXT:   movl   %edx, %eax
-# ATT-NEXT:   je     <BB2>
-# ATT-NEXT: <BB1>:
-# ATT-NEXT:   xorl   %esi, %esi
-# ATT-NEXT: <BB2>:
-# ATT-NEXT:   callq  <bar>
-# ATT-NEXT:   retq
 
 # INTEL:      <foo>:
 # INTEL-NEXT: <BB3>:
@@ -51,16 +41,6 @@
 # INTEL-NEXT:   jge   <BB5>
 # INTEL-NEXT:   jmp   <BB1>
 # INTEL-NEXT: <BB5>:
-# INTEL-NEXT:   ret
-# INTEL:      <bar>:
-# INTEL-NEXT: <BB0>:
-# INTEL-NEXT:   push  rax
-# INTEL-NEXT:   mov   eax, edx
-# INTEL-NEXT:   je    <BB2>
-# INTEL-NEXT: <BB1>:
-# INTEL-NEXT:   xor   esi, esi
-# INTEL-NEXT: <BB2>:
-# INTEL-NEXT:   call  <bar>
 # INTEL-NEXT:   ret
 
 ## This object file contains a separate text section and SHT_LLVM_BB_ADDR_MAP
@@ -111,30 +91,11 @@ Sections:
             AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
-  - Name:   .llvm_bb_addr_map.bar
-    Type:   SHT_LLVM_BB_ADDR_MAP
-    Link:   .text.bar
-    Entries:
-      - Version: 1
-        Address: [[BAR_ADDR]]
-        BBEntries:
-          - AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x1
-          - AddressOffset: 0x4
-            Size:          0x2
-            Metadata:      0x0
-          - AddressOffset: 0x0
-            Size:          0x6
-            Metadata:      0x0
 
 Symbols:
   - Name:    foo
     Section: .text.foo
     Value:   [[FOO_ADDR]]
-  - Name:    bar
-    Section: .text.bar
-    Value:   [[BAR_ADDR]]
   - Name:    symbol
     Section: .data
     Value:   0x600c
@@ -153,11 +114,6 @@ Sections:
     Address: 0x4000
     Flags:   [SHF_ALLOC, SHF_EXECINSTR]
     Content: '503b0505200000907d02ebf5c3'
-  - Name:    .text.bar
-    Type:    SHT_PROGBITS
-    Address: 0x5000
-    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
-    Content: '5089d0740231f6e8f4ffffffc3'
   - Name:    .data
     Type:    SHT_PROGBITS
     Flags:   [SHF_ALLOC, SHF_WRITE]
@@ -185,26 +141,11 @@ Sections:
             AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
-      - Version: 1
-        Address: 0x5000
-        BBEntries:
-          - AddressOffset: 0x0
-            Size:          0x1
-            Metadata:      0x1
-          - AddressOffset: 0x4
-            Size:          0x2
-            Metadata:      0x0
-          - AddressOffset: 0x0
-            Size:          0x6
-            Metadata:      0x0
 
 Symbols:
   - Name:    foo
     Section: .text.foo
     Value:   0x4000
-  - Name:    bar
-    Section: .text.bar
-    Value:   0x5000
   - Name:    symbol
     Section: .data
     Value:   0x600c

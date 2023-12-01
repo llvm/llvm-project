@@ -516,6 +516,19 @@ Sections:
   DoCheck(UnsupportedVersionYamlString,
           "unsupported SHT_LLVM_BB_ADDR_MAP version: 3");
 
+  // Check that we can detect deprecated versions.
+  SmallString<128> DeprecatedVersionYamlString(CommonYamlString);
+  DeprecatedVersionYamlString += R"(
+        Version: 1
+        BBEntries:
+          - AddressOffset: 0x0
+            Size:          0x1
+            Metadata:      0x2
+)";
+
+  DoCheck(DeprecatedVersionYamlString,
+          "deprecated SHT_LLVM_BB_ADDR_MAP version: 1");
+
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
   CommonVersionedYamlString += R"(
         Version: 2
@@ -641,7 +654,7 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 2
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x33333
         BBEntries:
           - ID:            0
@@ -649,10 +662,10 @@ Sections:
             Size:          0x3
             Metadata:      0x6
   - Name: .llvm_bb_addr_map_4
-    Type: SHT_LLVM_BB_ADDR_MAP_V0
+    Type: SHT_LLVM_BB_ADDR_MAP
   # Link: 0 (by default, can be overriden)
     Entries:
-      - Version: 0
+      - Version: 2
         Address: 0x44444
         BBEntries:
           - ID:            0
@@ -721,7 +734,7 @@ Sections:
 
   DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/4,
                "unable to get the linked-to section for "
-               "SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: invalid section "
+               "SHT_LLVM_BB_ADDR_MAP section with index 4: invalid section "
                "index: 10");
   // Linked sections are not checked when we don't target a specific text
   // section.
@@ -731,12 +744,12 @@ Sections:
   // Check that we can detect when bb-address-map decoding fails.
   SmallString<128> TruncatedYamlString(CommonYamlString);
   TruncatedYamlString += R"(
-    ShSize: 0x8
+    ShSize: 0xa
 )";
 
   DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
-               "unable to read SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: "
-               "unable to decode LEB128 at offset 0x00000008: malformed "
+               "unable to read SHT_LLVM_BB_ADDR_MAP section with index 4: "
+               "unable to decode LEB128 at offset 0x0000000a: malformed "
                "uleb128, extends past end");
   // Check that we can read the other section's bb-address-maps which are
   // valid.

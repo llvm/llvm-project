@@ -7425,8 +7425,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP ||
-           Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP_V0;
+    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP;
   };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
       this->Obj.getSectionAndRelocations(IsMatch);

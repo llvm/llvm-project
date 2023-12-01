@@ -310,7 +310,6 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_SYMPART);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_EHDR);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_PHDR);
-    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP_V0);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
@@ -703,9 +702,11 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
       Version = Data.getU8(Cur);
       if (!Cur)
         break;
-      if (Version > 2)
-        return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
+      if (Version != 2) {
+        return createError(Twine((Version < 2 ? "deprecated" : "unsupported")) +
+                           " SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
+      }
       Data.getU8(Cur); // Feature byte
     }
     uint64_t SectionOffset = Cur.tell();
@@ -728,15 +729,13 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
     for (uint32_t BlockIndex = 0;
          !MetadataDecodeErr && !ULEBSizeErr && Cur && (BlockIndex < NumBlocks);
          ++BlockIndex) {
-      uint32_t ID = Version >= 2 ? ReadULEB128AsUInt32() : BlockIndex;
+      uint32_t ID = ReadULEB128AsUInt32();
       uint32_t Offset = ReadULEB128AsUInt32();
       uint32_t Size = ReadULEB128AsUInt32();
       uint32_t MD = ReadULEB128AsUInt32();
-      if (Version >= 1) {
-        // Offset is calculated relative to the end of the previous BB.
-        Offset += PrevBBEndOffset;
-        PrevBBEndOffset = Offset + Size;
-      }
+      // Offset is calculated relative to the end of the previous BB.
+      Offset += PrevBBEndOffset;
+      PrevBBEndOffset = Offset + Size;
       Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
           BBAddrMap::BBEntry::Metadata::decode(MD);
       if (!MetadataOrErr) {

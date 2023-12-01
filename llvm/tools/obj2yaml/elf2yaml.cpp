@@ -626,7 +626,6 @@ ELFDumper<ELFT>::dumpSections() {
     case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
       return
           [this](const Elf_Shdr *S) { return dumpCallGraphProfileSection(S); };
-    case ELF::SHT_LLVM_BB_ADDR_MAP_V0:
     case ELF::SHT_LLVM_BB_ADDR_MAP:
       return [this](const Elf_Shdr *S) { return dumpBBAddrMapSection(S); };
     case ELF::SHT_STRTAB:
@@ -908,7 +907,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     std::vector<ELFYAML::BBAddrMapEntry::BBEntry> BBEntries;
     // Read the specified number of BB entries, or until decoding fails.
     for (uint64_t BlockIndex = 0; Cur && BlockIndex < NumBlocks; ++BlockIndex) {
-      uint32_t ID = Version >= 2 ? Data.getULEB128(Cur) : BlockIndex;
+      uint32_t ID = Data.getULEB128(Cur);
       uint64_t Offset = Data.getULEB128(Cur);
       uint64_t Size = Data.getULEB128(Cur);
       uint64_t Metadata = Data.getULEB128(Cur);

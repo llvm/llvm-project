@@ -683,7 +683,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_SYMPART);
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
-  ECase(SHT_LLVM_BB_ADDR_MAP_V0);
   ECase(SHT_LLVM_BB_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
@@ -1678,7 +1677,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::CallGraphProfileSection());
     sectionMapping(IO, *cast<ELFYAML::CallGraphProfileSection>(Section.get()));
     break;
-  case ELF::SHT_LLVM_BB_ADDR_MAP_V0:
   case ELF::SHT_LLVM_BB_ADDR_MAP:
     if (!IO.outputting())
       Section.reset(new ELFYAML::BBAddrMapSection());
