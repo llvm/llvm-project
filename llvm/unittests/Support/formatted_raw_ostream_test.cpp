@@ -56,15 +56,14 @@ TEST(formatted_raw_ostreamTest, Test_LineColumn) {
   EXPECT_EQ(1U, C.getLine());
   EXPECT_EQ(0U, C.getColumn());
 
-  // '\t' advances column to the next multiple of 8.
-  // FIXME: If the column number is already a multiple of 8 this will do
-  // nothing, is this behaviour correct?
+  // '\t' advances column to the next multiple of 8, and always by at least 1
+  // column.
   C << "1\t";
   EXPECT_EQ(8U, C.getColumn());
   C << "\t";
-  EXPECT_EQ(8U, C.getColumn());
-  C << "1234567\t";
   EXPECT_EQ(16U, C.getColumn());
+  C << "1234567\t";
+  EXPECT_EQ(24U, C.getColumn());
   EXPECT_EQ(1U, C.getLine());
 }
 

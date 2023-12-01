@@ -45,6 +45,7 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
       break;
     case '\t':
       // Assumes tab stop = 8 characters.
+      Column += 1;
       Column += (8 - (Column & 0x7)) & 0x7;
       break;
     }
