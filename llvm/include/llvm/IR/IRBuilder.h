@@ -565,6 +565,7 @@ public:
   }
 
   /// Fetch the type representing a pointer to an 8-bit integer value.
+  [[deprecated("Pointers no longer have element types. Use getPtrTy instead.")]]
   PointerType *getInt8PtrTy(unsigned AddrSpace = 0) {
     return getPtrTy(AddrSpace);
   }
