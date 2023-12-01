@@ -8114,8 +8114,8 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     const char *name, // the full symbol name as seen in the symbol table
                       // (lldb::opaque_compiler_type_t type, "-[NString
                       // stringWithCString:]")
-    const CompilerType &method_clang_type, lldb::AccessType access,
-    bool is_artificial, bool is_variadic, bool is_objc_direct_call) {
+    const CompilerType &method_clang_type, bool is_artificial, bool is_variadic,
+    bool is_objc_direct_call) {
   if (!type || !method_clang_type.IsValid())
     return nullptr;
 
