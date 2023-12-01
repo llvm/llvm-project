@@ -40,6 +40,10 @@ struct PluginAdaptorTy {
   /// Return the number of devices available to this plugin.
   int32_t getNumDevices() const { return NumberOfDevices; }
 
+  /// Add all offload entries described by \p DI to the devices managed by this
+  /// plugin.
+  void addOffloadEntries(DeviceImageTy &DI);
+
   /// RTL index, index is the number of devices of other RTLs that were
   /// registered before, i.e. the OpenMP index of the first device to be
   /// registered with this RTL.
@@ -89,8 +93,8 @@ struct PluginManager {
   /// RTLs identified on the host
   PluginAdaptorManagerTy RTLs;
 
-  void addDeviceImage(__tgt_device_image &TgtDeviceImage) {
-    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtDeviceImage));
+  void addDeviceImage(__tgt_bin_desc &TgtBinDesc, __tgt_device_image &TgtDeviceImage) {
+    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
   /// Iterate over all device images registered with this plugin.
