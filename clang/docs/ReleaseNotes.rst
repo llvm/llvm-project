@@ -790,6 +790,9 @@ Bug Fixes to C++ Support
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
 
+- Fix crash when parsing nested requirement. Fixes:
+  (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
