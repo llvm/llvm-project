@@ -34,4 +34,4 @@ mv "$current.tmp" "$current"
 clang-format --style=file --assume-filename="$path" < "$other" > "$other.tmp"
 mv "$other.tmp" "$other"
 
-git merge-file -L "$current" -L "$base" -L "$other" "$current" "$base" "$other"
+git merge-file -Lcurrent -Lbase -Lother "$current" "$base" "$other"
