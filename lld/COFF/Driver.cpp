@@ -1258,7 +1258,7 @@ static void findKeepUniqueSections(COFFLinkerContext &ctx) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err = nullptr;
+        const char *err;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(obj) + ": could not decode addrsig section: " + err);
