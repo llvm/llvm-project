@@ -23,24 +23,6 @@
 
 #include <cstdint>
 
-extern int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
-                           void **ArgsBase, void **Args, int64_t *ArgSizes,
-                           int64_t *ArgTypes, map_var_info_t *ArgNames,
-                           void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                           bool FromMapper = false);
-
-extern int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
-                         void **ArgBases, void **Args, int64_t *ArgSizes,
-                         int64_t *ArgTypes, map_var_info_t *ArgNames,
-                         void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                         bool FromMapper = false);
-
-extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
-                            void **ArgsBase, void **Args, int64_t *ArgSizes,
-                            int64_t *ArgTypes, map_var_info_t *ArgNames,
-                            void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                            bool FromMapper = false);
-
 extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
@@ -64,42 +46,6 @@ extern void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
                                 const char *Name);
 extern void targetUnlockExplicit(void *HostPtr, int DeviceNum,
                                  const char *Name);
-
-// This structure stores information of a mapped memory region.
-struct MapComponentInfoTy {
-  void *Base;
-  void *Begin;
-  int64_t Size;
-  int64_t Type;
-  void *Name;
-  MapComponentInfoTy() = default;
-  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type,
-                     void *Name)
-      : Base(Base), Begin(Begin), Size(Size), Type(Type), Name(Name) {}
-};
-
-// This structure stores all components of a user-defined mapper. The number of
-// components are dynamically decided, so we utilize C++ STL vector
-// implementation here.
-struct MapperComponentsTy {
-  llvm::SmallVector<MapComponentInfoTy> Components;
-  int32_t size() { return Components.size(); }
-};
-
-// The mapper function pointer type. It follows the signature below:
-// void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
-//                                           void *base, void *begin,
-//                                           size_t size, int64_t type,
-//                                           void * name);
-typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
-                                void *);
-
-// Function pointer type for targetData* functions (targetDataBegin,
-// targetDataEnd and targetDataUpdate).
-typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
-                                   void **, int64_t *, int64_t *,
-                                   map_var_info_t *, void **, AsyncInfoTy &,
-                                   bool);
 
 // Implemented in libomp, they are called from within __tgt_* functions.
 #ifdef __cplusplus
@@ -201,34 +147,6 @@ struct TargetMemsetArgsTy {
 #ifdef __cplusplus
 }
 #endif
-
-////////////////////////////////////////////////////////////////////////////////
-/// dump a table of all the host-target pointer pairs on failure
-static inline void dumpTargetPointerMappings(const ident_t *Loc,
-                                             DeviceTy &Device) {
-  DeviceTy::HDTTMapAccessorTy HDTTMap =
-      Device.HostDataToTargetMap.getExclusiveAccessor();
-  if (HDTTMap->empty())
-    return;
-
-  SourceInfo Kernel(Loc);
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-       "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
-       Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
-  INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
-       "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
-       "Declaration");
-  for (const auto &It : *HDTTMap) {
-    HostDataToTargetTy &HDTT = *It.HDTT;
-    SourceInfo Info(HDTT.HstPtrName);
-    INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
-         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
-         DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
-         HDTT.HstPtrEnd - HDTT.HstPtrBegin, HDTT.dynRefCountToStr().c_str(),
-         HDTT.holdRefCountToStr().c_str(), Info.getName(), Info.getFilename(),
-         Info.getLine(), Info.getColumn());
-  }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Print out the names and properties of the arguments to each kernel
