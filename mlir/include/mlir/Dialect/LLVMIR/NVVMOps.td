@@ -400,6 +400,48 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   let assemblyFormat = "attr-dict";
 }
 
+def SharedSpaceCTA : I32EnumAttrCase<"shared_cta", 0, "cta">;
+def SharedSpaceCluster   : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
+def SharedSpace : I32EnumAttr<"SharedSpace", "Shared memory space",
+  [SharedSpaceCTA, SharedSpaceCluster]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def SharedSpaceAttr : EnumAttr<NVVM_Dialect, SharedSpace, "shared_space"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
+def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
+def ProxyAsyncGlobal   : I32EnumAttrCase<"async_global", 2, "async.global">;
+def ProxyAsyncShared   : I32EnumAttrCase<"async_shared", 3, "async.shared">;
+def ProxyKind : I32EnumAttr<"ProxyKind", "Proxy kind",
+  [ProxyAlias, ProxyAsync, ProxyAsyncGlobal, ProxyAsyncShared]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
+  Arguments<(ins ProxyKindAttr:$kind,
+                 OptionalAttr<SharedSpaceAttr>:$space)> {
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      std::string ptx = "fence.proxy.";
+      ptx += stringifyProxyKind(getKind());
+      if(getKind() == NVVM::ProxyKind::async_shared)
+        { ptx += "::"; ptx += stringifySharedSpace(getSpace().value()); }
+      ptx += ";";
+      return ptx;
+    }
+  }];
+  let hasVerifier = 1;
+}
+
 def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
 def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
 def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
