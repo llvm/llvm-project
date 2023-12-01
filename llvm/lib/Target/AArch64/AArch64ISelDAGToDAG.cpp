@@ -326,9 +326,14 @@ public:
     return false;
   }
 
-  template <unsigned BaseReg> bool ImmToTile(SDValue N, SDValue &Imm) {
+  template <unsigned BaseReg, unsigned Max>
+  bool ImmToTile(SDValue N, SDValue &Imm) {
     if (auto *CI = dyn_cast<ConstantSDNode>(N)) {
       uint64_t C = CI->getZExtValue();
+
+      if (C > Max)
+        return false;
+
       Imm = CurDAG->getRegister(BaseReg + C, MVT::Other);
       return true;
     }
