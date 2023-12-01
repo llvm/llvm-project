@@ -1061,7 +1061,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     return;
 
   const VSETVLIInfo PrevInfo = Info;
-  if (Info.hasSEWLMULRatioOnly() || !Info.isValid() || Info.isUnknown())
+  if (!Info.isValid() || Info.isUnknown())
     Info = NewInfo;
 
   if (!RISCVII::hasVLOp(TSFlags)) {
@@ -1086,6 +1086,14 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
           IncomingInfo.getTailAgnostic(),
       (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
           IncomingInfo.getMaskAgnostic());
+
+  // If we only knew the sew/lmul ratio previously, replace the VTYPE but keep
+  // the AVL.
+  if (Info.hasSEWLMULRatioOnly()) {
+    VSETVLIInfo RatiolessInfo = IncomingInfo;
+    RatiolessInfo.setAVL(Info);
+    Info = RatiolessInfo;
+  }
 }
 
 static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
