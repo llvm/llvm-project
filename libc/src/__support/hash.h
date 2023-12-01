@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_HASH_H
 
 #include "src/__support/CPP/bit.h"           // rotl
+#include "src/__support/CPP/limits.h"        // numeric_limits
 #include "src/__support/UInt128.h"           // UInt128
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include <stdint.h>                          // For uint64_t
@@ -152,8 +153,9 @@ public:
     }
   }
   LIBC_INLINE uint64_t finish() {
-    int rot = buffer & 63;
-    uint64_t folded = folded_multiply(buffer, pad);
+    const uint64_t folded = folded_multiply(buffer, pad);
+    // Only keep the bottom bits of buffer that fits in an int.
+    const int rot = buffer & cpp::numeric_limits<int>::digits;
     return cpp::rotl(folded, rot);
   }
 };

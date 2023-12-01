@@ -238,6 +238,7 @@ add_header_library(
   DEPENDS
     .uint128
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.macros.attributes
 )
 
