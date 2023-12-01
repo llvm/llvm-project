@@ -12,8 +12,9 @@
 
 #include "GlobalHandler.h"
 #include "PluginInterface.h"
-#include "Utilities.h"
 #include "Utils/ELF.h"
+
+#include "Shared/Utils.h"
 
 #include <cstring>
 
