@@ -946,15 +946,10 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
-def FeatureUnalignedScalarMem
-   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
-                      "true", "Has reasonably performant unaligned scalar "
-                      "loads and stores">;
-
-def FeatureUnalignedVectorMem
-   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
-                      "true", "Has reasonably performant unaligned vector "
-                      "loads and stores">;
+def FeatureFastUnalignedAccess
+   : SubtargetFeature<"fast-unaligned-access", "HasFastUnalignedAccess",
+                      "true", "Has reasonably performant unaligned "
+                      "loads and stores (both scalar and vector)">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
