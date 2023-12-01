@@ -72,7 +72,7 @@ namespace dr107 { // dr107: yes
   extern "C" S operator+(S, S) { return S(); }
 }
 
-namespace dr108 { // dr108: yes
+namespace dr108 { // dr108: 2.9
   template<typename T> struct A {
     struct B { typedef int X; };
     B::X x;
@@ -143,7 +143,7 @@ namespace dr114 { // dr114: yes
   } b; // expected-error {{abstract}}
 }
 
-namespace dr115 { // dr115: yes
+namespace dr115 { // dr115: 3.0
   template<typename T> int f(T); // expected-note +{{}}
   template<typename T> int g(T); // expected-note +{{}}
   template<typename T> int g(T, int); // expected-note +{{}}
@@ -480,7 +480,7 @@ namespace dr140 { // dr140: yes
   void g(int n) { n = 2; }
 }
 
-namespace dr141 { // dr141: yes
+namespace dr141 { // dr141: 3.1
   template<typename T> void f();
   template<typename T> struct S { int n; }; // expected-note {{'::dr141::S<int>::n' declared here}}
   struct A : S<int> {
@@ -518,7 +518,7 @@ namespace dr141 { // dr141: yes
   void i() { C<X>().i(); } // ok!!
 }
 
-namespace dr142 { // dr142: yes
+namespace dr142 { // dr142: 2.8
   class B { // expected-note +{{here}}
   public:
     int mi; // expected-note +{{here}}
@@ -602,7 +602,7 @@ namespace dr148 { // dr148: yes
 
 // dr149: na
 
-namespace dr151 { // dr151: yes
+namespace dr151 { // dr151: 3.1
   struct X {};
   typedef int X::*p;
 #if __cplusplus < 201103L
@@ -655,7 +655,7 @@ namespace dr159 { // dr159: 3.5
 
 // dr160: na
 
-namespace dr161 { // dr161: yes
+namespace dr161 { // dr161: 3.1
   class A {
   protected:
     struct B { int n; } b; // expected-note 2{{here}}
@@ -724,7 +724,7 @@ namespace dr165 { // dr165: no
   void N::g() {}
 }
 
-namespace dr166 { // dr166: yes
+namespace dr166 { // dr166: 2.9
   namespace A { class X; }
 
   template<typename T> int f(T t) { return t.n; }
@@ -827,7 +827,7 @@ namespace dr173 { // dr173: yes
 
 // dr174: sup 1012
 
-namespace dr175 { // dr175: yes
+namespace dr175 { // dr175: 2.8
   struct A {}; // expected-note {{here}}
   struct B : private A {}; // expected-note {{constrained by private inheritance}}
   struct C : B {
@@ -836,7 +836,7 @@ namespace dr175 { // dr175: yes
   };
 }
 
-namespace dr176 { // dr176: yes
+namespace dr176 { // dr176: 3.1
   template<typename T> class Y;
   template<> class Y<int> {
     void f() {
@@ -904,7 +904,7 @@ namespace dr179 { // dr179: yes
   int n = &f - &f; // expected-error {{arithmetic on pointers to the function type 'void ()'}}
 }
 
-namespace dr180 { // dr180: yes
+namespace dr180 { // dr180: 2.8
   template<typename T> struct X : T, T::some_base {
     X() : T::some_type_that_might_be_T(), T::some_base() {}
     friend class T::some_class;
