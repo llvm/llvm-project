@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 
 #define DEBUG_TYPE "vectorutils"
 
@@ -1475,6 +1477,49 @@ void VFABI::getVectorVariantNames(
     } else
       LLVM_DEBUG(dbgs() << "VFABI: Invalid mapping '" << S << "'\n");
   }
+}
+
+// Returns whether any of the operands or return type of \p I are vectors.
+static bool isVectorized(const Instruction *I) {
+  if (I->getType()->isVectorTy())
+    return true;
+  for (auto &U : I->operands())
+    if (U->getType()->isVectorTy())
+      return true;
+  return false;
+}
+
+std::optional<std::pair<FunctionType *, int>>
+VFABI::createFunctionType(const VFInfo &Info, const Instruction *I,
+                          const Module *M) {
+  // only vectorized calls should reach this method
+  if (!isVectorized(I))
+    return std::nullopt;
+
+  ElementCount VF = Info.Shape.VF;
+  // get vectorized operands
+  const bool IsCall = isa<CallBase>(I);
+  SmallVector<Type *, 8> VecParams;
+  for (auto [i, U] : enumerate(I->operands())) {
+    // ignore the function pointer when the Instruction is a call
+    if (IsCall && i == I->getNumOperands() - 1)
+      break;
+    VecParams.push_back(U->getType());
+  }
+
+  // Append a mask and get its position.
+  int MaskPos = -1;
+  if (Info.isMasked()) {
+    auto OptMaskPos = Info.getParamIndexForOptionalMask();
+    if (!OptMaskPos)
+      return std::nullopt;
+
+    MaskPos = OptMaskPos.value();
+    VectorType *MaskTy = VectorType::get(Type::getInt1Ty(M->getContext()), VF);
+    VecParams.insert(VecParams.begin() + MaskPos, MaskTy);
+  }
+  FunctionType *VecFTy = FunctionType::get(I->getType(), VecParams, false);
+  return std::make_pair(VecFTy, MaskPos);
 }
 
 bool VFShape::hasValidParameterList() const {
