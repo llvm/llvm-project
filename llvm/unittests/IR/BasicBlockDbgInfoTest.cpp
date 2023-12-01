@@ -42,6 +42,79 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 
 namespace {
 
+// We can occasionally moveAfter an instruction so that it moves to the
+// position that it already resides at. This is fine -- but gets complicated
+// with dbg.value intrinsics. By moving an instruction, we can end up changing
+// nothing but the location of debug-info intrinsics. That has to be modelled
+// by DPValues, the dbg.value replacement.
+TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
+      %c = add i16 %b, 1, !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  // Convert the module to "new" form debug-info.
+  M->convertToNewDbgValues();
+  // Fetch the entry block,
+  BasicBlock &BB = M->getFunction("f")->getEntryBlock();
+
+  Instruction *Inst1 = &*BB.begin();
+  Instruction *Inst2 = &*std::next(BB.begin());
+  Instruction *RetInst = &*std::next(Inst2->getIterator());
+  EXPECT_TRUE(Inst1->hasDbgValues());
+  EXPECT_TRUE(Inst2->hasDbgValues());
+  EXPECT_FALSE(RetInst->hasDbgValues());
+
+  // If we move Inst2 to be after Inst1, then it comes _immediately_ after. Were
+  // we in dbg.value form we would then have:
+  //    dbg.value
+  //    %b = add
+  //    %c = add
+  //    dbg.value
+  // Check that this is replicated by DPValues.
+  Inst2->moveAfter(Inst1);
+
+  // Inst1 should only have one DPValue on it.
+  EXPECT_TRUE(Inst1->hasDbgValues());
+  auto Range1 = Inst1->getDbgValueRange();
+  EXPECT_EQ(std::distance(Range1.begin(), Range1.end()), 1u);
+  // Inst2 should have none.
+  EXPECT_FALSE(Inst2->hasDbgValues());
+  // While the return inst should now have one on it.
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto Range2 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(Range2.begin(), Range2.end()), 1u);
+
+  M->convertFromNewDbgValues();
+
+  UseNewDbgInfoFormat = false;
+}
+
+
 TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
