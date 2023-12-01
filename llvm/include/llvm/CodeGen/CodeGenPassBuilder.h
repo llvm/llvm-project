@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
@@ -716,7 +717,7 @@ template <typename Derived>
 void CodeGenPassBuilder<Derived>::addISelPrepare(AddIRPass &addPass) const {
   derived().addPreISel(addPass);
 
-  addPass(CallBrPrepare());
+  addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
   addPass(SafeStackPass(&TM));
