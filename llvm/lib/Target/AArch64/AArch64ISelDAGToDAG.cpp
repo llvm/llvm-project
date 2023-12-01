@@ -1875,7 +1875,8 @@ void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
       return;
 
   SDValue ZtValue;
-  ImmToTile<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue);
+  if (!ImmToTile<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
+    return;
   SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
