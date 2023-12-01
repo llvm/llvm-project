@@ -238,6 +238,8 @@ public:
 
   bool merge(const WaitcntBrackets &Other);
 
+  RegInterval getRegInterval(Register Reg, const MachineRegisterInfo *MRI,
+                             const SIRegisterInfo *TRI) const;
   RegInterval getRegInterval(const MachineInstr *MI,
                              const MachineRegisterInfo *MRI,
                              const SIRegisterInfo *TRI, unsigned OpNo) const;
@@ -490,45 +492,51 @@ public:
 
 } // end anonymous namespace
 
+RegInterval WaitcntBrackets::getRegInterval(Register Reg,
+                                            const MachineRegisterInfo *MRI,
+                                            const SIRegisterInfo *TRI) const {
+  RegInterval Result;
+
+  unsigned RegNo = TRI->getEncodingValue(AMDGPU::getMCReg(Reg, *ST)) &
+                   AMDGPU::HWEncoding::REG_IDX_MASK;
+
+  if (TRI->isVectorRegister(*MRI, Reg)) {
+    assert(RegNo >= Encoding.VGPR0 && RegNo <= Encoding.VGPRL);
+    Result.first = RegNo - Encoding.VGPR0;
+    if (TRI->isAGPR(*MRI, Reg))
+      Result.first += AGPR_OFFSET;
+    assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
+  } else if (TRI->isSGPRReg(*MRI, Reg)) {
+    assert(RegNo >= Encoding.SGPR0 && RegNo < SQ_MAX_PGM_SGPRS);
+    Result.first = RegNo - Encoding.SGPR0 + NUM_ALL_VGPRS;
+    assert(Result.first >= NUM_ALL_VGPRS &&
+           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
+  }
+  // TODO: Handle TTMP
+  // else if (TRI->isTTMP(*MRI, Reg)) ...
+  else
+    return {-1, -1};
+
+  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+  Result.second = Result.first + ((Size + 16) / 32);
+
+  return Result;
+}
+
 RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
                                             const MachineRegisterInfo *MRI,
                                             const SIRegisterInfo *TRI,
                                             unsigned OpNo) const {
   const MachineOperand &Op = MI->getOperand(OpNo);
-  if (!TRI->isInAllocatableClass(Op.getReg()))
-    return {-1, -1};
 
   // A use via a PW operand does not need a waitcnt.
   // A partial write is not a WAW.
   assert(!Op.getSubReg() || !Op.isUndef());
-
-  RegInterval Result;
-
-  unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST)) &
-                 AMDGPU::HWEncoding::REG_IDX_MASK;
-
-  if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
-    Result.first = Reg - Encoding.VGPR0;
-    if (TRI->isAGPR(*MRI, Op.getReg()))
-      Result.first += AGPR_OFFSET;
-    assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
-    assert(Result.first >= NUM_ALL_VGPRS &&
-           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
-  }
-  // TODO: Handle TTMP
-  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
-  else
+  if (!TRI->isInAllocatableClass(Op.getReg()))
     return {-1, -1};
 
-  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
-  unsigned Size = TRI->getRegSizeInBits(*RC);
-  Result.second = Result.first + ((Size + 16) / 32);
-
-  return Result;
+  return getRegInterval(Op.getReg(), MRI, TRI);
 }
 
 void WaitcntBrackets::setExpScore(const MachineInstr *MI,
