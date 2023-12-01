@@ -24,6 +24,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 
+if(LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
+else()
+  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+endif()
+
 # Message utilities.
 include(LibomptargetUtils)
 
@@ -115,6 +121,8 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+  "Path to folder where intermediate libraries will be output")
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
