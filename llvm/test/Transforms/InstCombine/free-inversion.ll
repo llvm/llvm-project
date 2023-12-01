@@ -499,9 +499,7 @@ define i8 @lshr_nneg(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_nneg(
 ; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor i8 [[X]], -1
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X_NOT]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR_NOT:%.*]] = xor i8 [[SHR]], -1
+; CHECK-NEXT:    [[SHR_NOT:%.*]] = ashr i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[SHR_NOT]]
 ;
   %neg = icmp slt i8 %x, 0
@@ -521,6 +519,18 @@ define i8 @lshr_not_nneg(i8 %x, i8 %y) {
 ;
   %x.not = xor i8 %x, -1
   %shr = lshr i8 %x.not, %y
+  %shr.not = xor i8 %shr, -1
+  ret i8 %shr.not
+}
+
+define i8 @lshr_not_nneg2(i8 %x) {
+; CHECK-LABEL: @lshr_not_nneg2(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[SHR_NOT1:%.*]] = or i8 [[SHR]], -128
+; CHECK-NEXT:    ret i8 [[SHR_NOT1]]
+;
+  %x.not = xor i8 %x, -1
+  %shr = lshr i8 %x.not, 1
   %shr.not = xor i8 %shr, -1
   ret i8 %shr.not
 }
