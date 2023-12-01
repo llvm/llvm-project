@@ -49,7 +49,7 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
   if (PM->delayRegisterLib(Desc))
     return;
 
-  PM->RTLs.registerLib(Desc);
+  PM->registerLib(Desc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -60,7 +60,7 @@ EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
   TIMESCOPE();
-  PM->RTLs.unregisterLib(Desc);
+  PM->unregisterLib(Desc);
 }
 
 template <typename TargetAsyncInfoTy>
