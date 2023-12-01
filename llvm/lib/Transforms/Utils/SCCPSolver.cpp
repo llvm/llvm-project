@@ -187,6 +187,7 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
     NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst->setIsExact(Inst.isExact());
     break;
   }
   case Instruction::SDiv:
@@ -199,6 +200,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
     NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    if (Inst.getOpcode() == Instruction::SDiv)
+      NewInst->setIsExact(Inst.isExact());
     break;
   }
   default:

@@ -9,9 +9,11 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Breakpoint/WatchpointResource.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Process.h"
@@ -161,7 +163,7 @@ bool Watchpoint::VariableWatchpointDisabler(void *baton,
               "callback for watchpoint %" PRId32
               " matched internal breakpoint execution context",
               watch_sp->GetID());
-    process_sp->DisableWatchpoint(watch_sp.get());
+    process_sp->DisableWatchpoint(watch_sp);
     return false;
   }
   LLDB_LOGF(log,
@@ -266,33 +268,69 @@ void Watchpoint::Dump(Stream *s) const {
 
 // If prefix is nullptr, we display the watch id and ignore the prefix
 // altogether.
-void Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
-  if (!prefix) {
-    s->Printf("\nWatchpoint %u hit:", GetID());
-    prefix = "";
-  }
+bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
+  bool printed_anything = false;
+
+  // For read watchpoints, don't display any before/after value changes.
+  if (m_watch_read && !m_watch_modify && !m_watch_write)
+    return printed_anything;
+
+  s->Printf("\n");
+  s->Printf("Watchpoint %u hit:\n", GetID());
+
+  StreamString values_ss;
+  if (prefix)
+    values_ss.Indent(prefix);
 
   if (m_old_value_sp) {
-    const char *old_value_cstr = m_old_value_sp->GetValueAsCString();
-    if (old_value_cstr && old_value_cstr[0])
-      s->Printf("\n%sold value: %s", prefix, old_value_cstr);
-    else {
-      const char *old_summary_cstr = m_old_value_sp->GetSummaryAsCString();
-      if (old_summary_cstr && old_summary_cstr[0])
-        s->Printf("\n%sold value: %s", prefix, old_summary_cstr);
+    if (auto *old_value_cstr = m_old_value_sp->GetValueAsCString()) {
+      values_ss.Printf("old value: %s", old_value_cstr);
+    } else {
+      if (auto *old_summary_cstr = m_old_value_sp->GetSummaryAsCString())
+        values_ss.Printf("old value: %s", old_summary_cstr);
+      else {
+        StreamString strm;
+        DumpValueObjectOptions options;
+        options.SetUseDynamicType(eNoDynamicValues)
+            .SetHideRootType(true)
+            .SetHideRootName(true)
+            .SetHideName(true);
+        m_old_value_sp->Dump(strm, options);
+        if (strm.GetData())
+          values_ss.Printf("old value: %s", strm.GetData());
+      }
     }
   }
 
   if (m_new_value_sp) {
-    const char *new_value_cstr = m_new_value_sp->GetValueAsCString();
-    if (new_value_cstr && new_value_cstr[0])
-      s->Printf("\n%snew value: %s", prefix, new_value_cstr);
+    if (values_ss.GetSize())
+      values_ss.Printf("\n");
+
+    if (auto *new_value_cstr = m_new_value_sp->GetValueAsCString())
+      values_ss.Printf("new value: %s", new_value_cstr);
     else {
-      const char *new_summary_cstr = m_new_value_sp->GetSummaryAsCString();
-      if (new_summary_cstr && new_summary_cstr[0])
-        s->Printf("\n%snew value: %s", prefix, new_summary_cstr);
+      if (auto *new_summary_cstr = m_new_value_sp->GetSummaryAsCString())
+        values_ss.Printf("new value: %s", new_summary_cstr);
+      else {
+        StreamString strm;
+        DumpValueObjectOptions options;
+        options.SetUseDynamicType(eNoDynamicValues)
+            .SetHideRootType(true)
+            .SetHideRootName(true)
+            .SetHideName(true);
+        m_new_value_sp->Dump(strm, options);
+        if (strm.GetData())
+          values_ss.Printf("new value: %s", strm.GetData());
+      }
     }
   }
+
+  if (values_ss.GetSize()) {
+    s->Printf("%s", values_ss.GetData());
+    printed_anything = true;
+  }
+
+  return printed_anything;
 }
 
 void Watchpoint::DumpWithLevel(Stream *s,
@@ -324,8 +362,8 @@ void Watchpoint::DumpWithLevel(Stream *s,
   }
 
   if (description_level >= lldb::eDescriptionLevelVerbose) {
-    s->Printf("\n    hw_index = %i  hit_count = %-4u  ignore_count = %-4u",
-              GetHardwareIndex(), GetHitCount(), GetIgnoreCount());
+    s->Printf("\n    hit_count = %-4u  ignore_count = %-4u", GetHitCount(),
+              GetIgnoreCount());
   }
 }
 
@@ -350,9 +388,7 @@ bool Watchpoint::IsDisabledDuringEphemeralMode() {
 
 void Watchpoint::SetEnabled(bool enabled, bool notify) {
   if (!enabled) {
-    if (!m_is_ephemeral)
-      SetHardwareIndex(LLDB_INVALID_INDEX32);
-    else
+    if (m_is_ephemeral)
       ++m_disabled_count;
 
     // Don't clear the snapshots for now.

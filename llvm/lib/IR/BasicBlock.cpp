@@ -39,8 +39,8 @@ cl::opt<bool>
 DPMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
          "Tried to create a marker in a non new debug-info block!");
-  assert(I->DbgMarker == nullptr &&
-         "Tried to create marker for instuction that already has one!");
+  if (I->DbgMarker)
+    return I->DbgMarker;
   DPMarker *Marker = new DPMarker();
   Marker->MarkedInstr = I;
   I->DbgMarker = Marker;
@@ -617,7 +617,7 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
                                        this->getNextNode());
 
   // Save DebugLoc of split point before invalidating iterator.
-  DebugLoc Loc = I->getDebugLoc();
+  DebugLoc Loc = I->getStableDebugLoc();
   // Move all of the specified instructions from the original basic block into
   // the new basic block.
   New->splice(New->end(), this, I, end());
@@ -918,8 +918,8 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
   // move their markers onto Last. They remain in the Src block. No action
   // needed.
   if (!ReadFromHead) {
-    DPMarker *OntoLast = Src->getMarker(Last);
-    DPMarker *FromFirst = Src->getMarker(First);
+    DPMarker *OntoLast = Src->createMarker(Last);
+    DPMarker *FromFirst = Src->createMarker(First);
     OntoLast->absorbDebugValues(*FromFirst,
                                 true); // Always insert at head of it.
   }
@@ -985,8 +985,9 @@ void BasicBlock::insertDPValueAfter(DPValue *DPV, Instruction *I) {
   assert(I->getParent() == this);
 
   iterator NextIt = std::next(I->getIterator());
-  DPMarker *NextMarker =
-      (NextIt == end()) ? getTrailingDPValues() : NextIt->DbgMarker;
+  DPMarker *NextMarker = getMarker(NextIt);
+  if (!NextMarker)
+    NextMarker = createMarker(NextIt);
   NextMarker->insertDPValue(DPV, true);
 }
 
@@ -1010,6 +1011,58 @@ DPMarker *BasicBlock::getMarker(InstListType::iterator It) {
     return DPM;
   }
   return It->DbgMarker;
+}
+
+void BasicBlock::reinsertInstInDPValues(
+    Instruction *I, std::optional<DPValue::self_iterator> Pos) {
+  // "I" was originally removed from a position where it was
+  // immediately in front of Pos. Any DPValues on that position then "fell down"
+  // onto Pos. "I" has been re-inserted at the front of that wedge of DPValues,
+  // shuffle them around to represent the original positioning. To illustrate:
+  //
+  //   Instructions:  I1---I---I0
+  //       DPValues:    DDD DDD
+  //
+  // Instruction "I" removed,
+  //
+  //   Instructions:  I1------I0
+  //       DPValues:    DDDDDD
+  //                       ^Pos
+  //
+  // Instruction "I" re-inserted (now):
+  //
+  //   Instructions:  I1---I------I0
+  //       DPValues:        DDDDDD
+  //                           ^Pos
+  //
+  // After this method completes:
+  //
+  //   Instructions:  I1---I---I0
+  //       DPValues:    DDD DDD
+
+  // This happens if there were no DPValues on I0. Are there now DPValues there?
+  if (!Pos) {
+    DPMarker *NextMarker = getNextMarker(I);
+    if (!NextMarker)
+      return;
+    if (NextMarker->StoredDPValues.empty())
+      return;
+    // There are DPMarkers there now -- they fell down from "I".
+    DPMarker *ThisMarker = createMarker(I);
+    ThisMarker->absorbDebugValues(*NextMarker, false);
+    return;
+  }
+
+  // Is there even a range of DPValues to move?
+  DPMarker *DPM = (*Pos)->getMarker();
+  auto Range = make_range(DPM->StoredDPValues.begin(), (*Pos));
+  if (Range.begin() == Range.end())
+    return;
+
+  // Otherwise: splice.
+  DPMarker *ThisMarker = createMarker(I);
+  assert(ThisMarker->StoredDPValues.empty());
+  ThisMarker->absorbDebugValues(Range, *DPM, true);
 }
 
 #ifndef NDEBUG

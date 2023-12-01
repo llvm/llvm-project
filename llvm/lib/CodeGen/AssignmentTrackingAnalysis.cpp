@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <cstdint>
 #include <optional>
+#include <queue>
 #include <sstream>
 #include <unordered_map>
 

@@ -231,9 +231,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    [[INSERT_INSERT41:%.*]] = or i64 [[INSERT_SHIFT52]], [[INSERT_EXT39]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[S1]], [[INSERT_INSERT41]]
 ; CHECK-NEXT:    [[NE:%.*]] = icmp ne i64 [[REM]], 0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INSERT_INSERT41]], 0
-; CHECK-NEXT:    [[SPEC_SELECT57:%.*]] = or i1 [[NE]], [[CMP]]
-; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[SPEC_SELECT57]] to i32
+; CHECK-NEXT:    [[LOR_EXT:%.*]] = zext i1 [[NE]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[D:%.*]], align 4
 ; CHECK-NEXT:    [[CONV15:%.*]] = sext i16 [[T1]] to i32
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp sge i32 [[T2]], [[CONV15]]
@@ -243,7 +241,7 @@ define i1 @PR51762(ptr %i, i32 %t0, i16 %t1, ptr %p, ptr %d, ptr %f, i32 %p2, i1
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[F]], align 4
 ; CHECK-NEXT:    [[REM18:%.*]] = srem i32 [[LOR_EXT]], [[ADD]]
 ; CHECK-NEXT:    [[CONV19:%.*]] = zext nneg i32 [[REM18]] to i64
-; CHECK-NEXT:    store i32 0, ptr [[D]], align 8
+; CHECK-NEXT:    store i32 [[SROA38]], ptr [[D]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[INSERT_INSERT41]], [[CONV19]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[R]])
 ; CHECK-NEXT:    ret i1 [[R]]

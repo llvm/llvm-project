@@ -97,13 +97,14 @@ enum class TypeModifier : uint8_t {
   UnsignedInteger = 1 << 3,
   SignedInteger = 1 << 4,
   Float = 1 << 5,
+  BFloat = 1 << 6,
   // LMUL1 should be kind of VectorTypeModifier, but that might come with
   // Widening2XVector for widening reduction.
   // However that might require VectorTypeModifier become bitmask rather than
   // simple enum, so we decide keek LMUL1 in TypeModifier for code size
   // optimization of clang binary size.
-  LMUL1 = 1 << 6,
-  MaxOffset = 6,
+  LMUL1 = 1 << 7,
+  MaxOffset = 7,
   LLVM_MARK_AS_BITMASK_ENUM(LMUL1),
 };
 

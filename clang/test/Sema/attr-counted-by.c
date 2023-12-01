@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fstrict-flex-arrays=3 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
 
@@ -38,7 +38,12 @@ struct array_of_ints_count {
 
 struct not_a_fam {
   int count;
-  struct bar *non_fam __counted_by(count); // expected-error {{'counted_by' only applies to flexible array members}}
+  struct bar *non_fam __counted_by(count); // expected-error {{'counted_by' only applies to C99 flexible array members}}
+};
+
+struct not_a_c99_fam {
+  int count;
+  struct bar *non_c99_fam[0] __counted_by(count); // expected-error {{'counted_by' only applies to C99 flexible array members}}
 };
 
 struct annotated_with_anon_struct {

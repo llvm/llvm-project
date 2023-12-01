@@ -7,8 +7,8 @@
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
 // RUN: %clang -### -S %s -g -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
-// RUN: %clang -### -S %s -g -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
+// RUN: %clang -### -S %s -g -target x86_64-pc-freebsd 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 // RUN: %clang -### -S %s -g --target=x86_64-unknown-haiku 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 
@@ -27,8 +27,8 @@
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-STANDALONE %s
 // RUN: %clang -### -S %s -g0 -g -target i686-pc-openbsd 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
-// RUN: %clang -### -S %s -g0 -g -target x86_64-pc-freebsd10.0 2>&1 \
-// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF2 %s
+// RUN: %clang -### -S %s -g0 -g -target x86_64-pc-freebsd 2>&1 \
+// RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 // RUN: %clang -### -S %s -g0 -g --target=x86_64-unknown-haiku 2>&1 \
 // RUN:             | FileCheck --check-prefix=CHECK-WITH-G-DWARF4 %s
 // RUN: %clang -### -S %s -g0 -g --target=i386-pc-solaris 2>&1 \

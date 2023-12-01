@@ -1431,6 +1431,7 @@ private:
             resultRef = builder->createConvert(loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
+    bridge.openAccCtx().finalizeAndPop();
     bridge.fctCtx().finalizeAndPop();
     builder->create<mlir::func::ReturnOp>(loc, resultVal);
   }
@@ -1458,9 +1459,11 @@ private:
     } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
       mlir::Value retval = builder->create<fir::LoadOp>(
           toLocation(), getAltReturnResult(symbol));
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       builder->create<mlir::func::ReturnOp>(toLocation(), retval);
     } else {
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       genExitRoutine();
     }
@@ -2080,10 +2083,10 @@ private:
     assert(sym && "There must be a symbol to bind");
     mlir::Type toTy = genType(*sym);
     // FIXME: this should be a "per iteration" temporary.
-    mlir::Value tmp = builder->createTemporary(
-        loc, toTy, toStringRef(sym->name()),
-        llvm::ArrayRef<mlir::NamedAttribute>{
-            Fortran::lower::getAdaptToByRefAttr(*builder)});
+    mlir::Value tmp =
+        builder->createTemporary(loc, toTy, toStringRef(sym->name()),
+                                 llvm::ArrayRef<mlir::NamedAttribute>{
+                                     fir::getAdaptToByRefAttr(*builder)});
     mlir::Value cast = builder->createConvert(loc, toTy, inducVar);
     builder->create<fir::StoreOp>(loc, cast, tmp);
     addSymbol(*sym, tmp, /*force=*/true);
@@ -2379,16 +2382,31 @@ private:
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
-    genOpenACCConstruct(*this, bridge.getSemanticsContext(), getEval(), acc);
+    mlir::Value exitCond = genOpenACCConstruct(
+        *this, bridge.getSemanticsContext(), getEval(), acc);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
+
+    const Fortran::parser::OpenACCLoopConstruct *accLoop =
+        std::get_if<Fortran::parser::OpenACCLoopConstruct>(&acc.u);
+    if (accLoop && exitCond) {
+      Fortran::lower::pft::FunctionLikeUnit *funit =
+          getEval().getOwningProcedure();
+      assert(funit && "not inside main program, function or subroutine");
+      mlir::Block *continueBlock =
+          builder->getBlock()->splitBlock(builder->getBlock()->end());
+      builder->create<mlir::cf::CondBranchOp>(toLocation(), exitCond,
+                                              funit->finalBlock, continueBlock);
+      builder->setInsertionPointToEnd(continueBlock);
+    }
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), accDecl, accRoutineInfos);
+                                   bridge.openAccCtx(), accDecl,
+                                   accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
@@ -3091,6 +3109,17 @@ private:
       const Fortran::lower::SomeExpr *expr =
           Fortran::semantics::GetExpr(pointerObject);
       assert(expr);
+      if (Fortran::evaluate::IsProcedurePointer(*expr)) {
+        Fortran::lower::StatementContext stmtCtx;
+        hlfir::Entity pptr = Fortran::lower::convertExprToHLFIR(
+            loc, *this, *expr, localSymbols, stmtCtx);
+        auto boxTy{
+            Fortran::lower::getUntypedBoxProcType(builder->getContext())};
+        hlfir::Entity nullBoxProc(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, nullBoxProc, pptr);
+        return;
+      }
       fir::MutableBoxValue box = genExprMutableBox(loc, *expr);
       fir::factory::disassociateMutableBox(*builder, loc, box);
     }
@@ -3237,8 +3266,24 @@ private:
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
-    if (Fortran::evaluate::IsProcedure(assign.rhs))
+
+    if (!lowerToHighLevelFIR() && Fortran::evaluate::IsProcedure(assign.rhs))
       TODO(loc, "procedure pointer assignment");
+    if (Fortran::evaluate::IsProcedurePointer(assign.lhs)) {
+      hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
+          loc, *this, assign.lhs, localSymbols, stmtCtx);
+      if (Fortran::evaluate::IsNullProcedurePointer(assign.rhs)) {
+        auto boxTy{Fortran::lower::getUntypedBoxProcType(&getMLIRContext())};
+        hlfir::Entity rhs(
+            fir::factory::createNullBoxProc(*builder, loc, boxTy));
+        builder->createStoreWithConvert(loc, rhs, lhs);
+        return;
+      }
+      hlfir::Entity rhs(getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, stmtCtx)));
+      builder->createStoreWithConvert(loc, rhs, lhs);
+      return;
+    }
 
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
@@ -4060,10 +4105,15 @@ private:
     // Branch to the last block of the SUBROUTINE, which has the actual return.
     if (!funit->finalBlock) {
       mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+      Fortran::lower::setInsertionPointAfterOpenACCLoopIfInside(*builder);
       funit->finalBlock = builder->createBlock(&builder->getRegion());
       builder->restoreInsertionPoint(insPt);
     }
-    builder->create<mlir::cf::BranchOp>(loc, funit->finalBlock);
+
+    if (Fortran::lower::isInOpenACCLoop(*builder))
+      Fortran::lower::genEarlyReturnInOpenACCLoop(*builder, loc);
+    else
+      builder->create<mlir::cf::BranchOp>(loc, funit->finalBlock);
   }
 
   void genFIR(const Fortran::parser::CycleStmt &) {
@@ -4204,6 +4254,7 @@ private:
   void startNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     assert(!builder && "expected nullptr");
     bridge.fctCtx().pushScope();
+    bridge.openAccCtx().pushScope();
     const Fortran::semantics::Scope &scope = funit.getScope();
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
                if (auto *sym = scope.symbol()) llvm::dbgs() << " " << *sym;
@@ -4444,6 +4495,7 @@ private:
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
     if (funit.isMainProgram()) {
+      bridge.openAccCtx().finalizeAndPop();
       bridge.fctCtx().finalizeAndPop();
       genExitRoutine();
     } else {

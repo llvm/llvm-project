@@ -737,6 +737,9 @@ inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
   return !(LHS == RHS);
 }
 
+/// The file extension used for the source representation of API notes.
+static const constexpr char SOURCE_APINOTES_EXTENSION[] = "apinotes";
+
 /// Opaque context ID used to refer to an Objective-C class or protocol or a C++
 /// namespace.
 class ContextID {

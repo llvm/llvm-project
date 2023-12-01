@@ -413,7 +413,7 @@ define i32 @test_two_phis_simple(i32 %start_1, i32 %start_2, i32 %len) {
 ; CHECK-NEXT:    symbolic max exit count for backedge: %start_2
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%start_1 umin_seq %start_2)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

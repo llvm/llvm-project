@@ -1351,7 +1351,6 @@ void IntegerRelation::simplify() {
     changed |= removeDuplicateConstraints();
   }
   // Current set is not empty.
-  return;
 }
 
 /// Removes local variables using equalities. Each equality is checked if it

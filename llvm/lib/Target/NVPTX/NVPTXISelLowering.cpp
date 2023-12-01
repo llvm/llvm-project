@@ -508,6 +508,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2i16, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i16, Expand);
 
+  // Conversion to/from i8/i8x4 is always legal.
   setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4i8, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i8, Custom);
@@ -606,6 +607,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f64, MVT::v4f32, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v8f64, MVT::v8bf16, Expand);
   // Turn FP truncstore into trunc + store.
   // FIXME: vector types should also be expanded
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
@@ -713,8 +718,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM,
-                       ISD::VSELECT});
+                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::STORE,
+                       ISD::UREM, ISD::VSELECT});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -2912,7 +2917,6 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
         DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
                                 MemSD->getMemoryVT(), MemSD->getMemOperand());
 
-    // return DCI.CombineTo(N, NewSt, true);
     return NewSt;
   }
 
@@ -5553,6 +5557,51 @@ static SDValue PerformLOADCombine(SDNode *N,
       DL);
 }
 
+// Lower a v16i8 (or a v8i8) store into a StoreV4 (or StoreV2) operation with
+// i32 results instead of letting ReplaceLoadVector split it into smaller stores
+// during legalization. This is done at dag-combine1 time, so that vector
+// operations with i8 elements can be optimised away instead of being needlessly
+// split during legalization, which involves storing to the stack and loading it
+// back.
+static SDValue PerformSTORECombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  StoreSDNode *ST = cast<StoreSDNode>(N);
+  EVT VT = ST->getValue().getValueType();
+  if (VT != MVT::v16i8 && VT != MVT::v8i8)
+    return SDValue();
+
+  // Create a v4i32 vector store operation, effectively <4 x v4i8>.
+  unsigned Opc = VT == MVT::v16i8 ? NVPTXISD::StoreV4 : NVPTXISD::StoreV2;
+  EVT NewVT = VT == MVT::v16i8 ? MVT::v4i32 : MVT::v2i32;
+  unsigned NumElts = NewVT.getVectorNumElements();
+
+  // Create a vector of the type required by the new store: v16i8 -> v4i32.
+  SDValue NewStoreValue = DCI.DAG.getBitcast(NewVT, ST->getValue());
+
+  // Operands for the store.
+  SmallVector<SDValue, 8> Ops;
+  Ops.reserve(N->getNumOperands() + NumElts - 1);
+  // Chain value.
+  Ops.push_back(N->ops().front());
+
+  SDLoc DL(N);
+  SmallVector<SDValue> Elts(NumElts);
+  // Break v4i32 (or v2i32) into four (or two) elements.
+  for (unsigned I = 0; I < NumElts; ++I)
+    Elts[I] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                          NewStoreValue.getValueType().getVectorElementType(),
+                          NewStoreValue, DAG.getIntPtrConstant(I, DL));
+  Ops.append(Elts.begin(), Elts.end());
+  // Any remaining operands.
+  Ops.append(N->op_begin() + 2, N->op_end());
+
+  SDValue NewStore = DAG.getMemIntrinsicNode(Opc, DL, DAG.getVTList(MVT::Other),
+                                             Ops, NewVT, ST->getMemOperand());
+  // Return the new chain.
+  return NewStore.getValue(0);
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5574,6 +5623,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformSETCCCombine(N, DCI, STI.getSmVersion());
     case ISD::LOAD:
       return PerformLOADCombine(N, DCI);
+    case ISD::STORE:
+      return PerformSTORECombine(N, DCI);
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:

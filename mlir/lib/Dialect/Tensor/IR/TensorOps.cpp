@@ -1261,7 +1261,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
 
     for (int64_t newdim : newShape) {
       // This check also occurs in the verifier, but we need it here too
-      // since intermediate passes may have some replaced dynamic dimensions
+      // since intermediate passes may have replaced some dynamic dimensions
       // by constants.
       if (newdim < 0 && !ShapedType::isDynamic(newdim))
         return failure();
@@ -2361,8 +2361,8 @@ public:
     SmallVector<OpFoldResult> mixedStrides(insertSliceOp.getMixedStrides());
 
     // No constant operands were folded, just return;
-    if (failed(foldDynamicIndexList(mixedOffsets)) &&
-        failed(foldDynamicIndexList(mixedSizes)) &&
+    if (failed(foldDynamicIndexList(mixedOffsets, /*onlyNonNegative=*/true)) &&
+        failed(foldDynamicIndexList(mixedSizes, /*onlyNonNegative=*/true)) &&
         failed(foldDynamicIndexList(mixedStrides)))
       return failure();
 
@@ -2497,8 +2497,12 @@ struct InsertSliceOpSourceCastInserter final
                                      srcType.getShape().end());
     for (int64_t i = 0; i < srcType.getRank(); ++i) {
       if (std::optional<int64_t> constInt =
-              getConstantIntValue(insertSliceOp.getMixedSizes()[i]))
+              getConstantIntValue(insertSliceOp.getMixedSizes()[i])) {
+        // Bail on invalid IR.
+        if (*constInt < 0)
+          return failure();
         newSrcShape[i] = *constInt;
+      }
     }
 
     RankedTensorType newSrcType =

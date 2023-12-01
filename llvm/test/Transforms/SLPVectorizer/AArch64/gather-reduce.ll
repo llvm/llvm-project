@@ -295,9 +295,9 @@ define i32 @gather_reduce_8x16_i64(ptr nocapture readonly %a, ptr nocapture read
 ; GENERIC-NEXT:    [[A_ADDR_0101:%.*]] = phi ptr [ [[INCDEC_PTR58:%.*]], [[FOR_BODY]] ], [ [[A:%.*]], [[FOR_BODY_PREHEADER]] ]
 ; GENERIC-NEXT:    [[INCDEC_PTR58]] = getelementptr inbounds i16, ptr [[A_ADDR_0101]], i64 8
 ; GENERIC-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[A_ADDR_0101]], align 2
-; GENERIC-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[TMP0]] to <8 x i32>
+; GENERIC-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[TMP0]] to <8 x i32>
 ; GENERIC-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[B:%.*]], align 2
-; GENERIC-NEXT:    [[TMP3:%.*]] = sext <8 x i16> [[TMP2]] to <8 x i32>
+; GENERIC-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i32>
 ; GENERIC-NEXT:    [[TMP4:%.*]] = sub nsw <8 x i32> [[TMP1]], [[TMP3]]
 ; GENERIC-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP4]], i64 0
 ; GENERIC-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
@@ -368,9 +368,9 @@ define i32 @gather_reduce_8x16_i64(ptr nocapture readonly %a, ptr nocapture read
 ; KRYO-NEXT:    [[A_ADDR_0101:%.*]] = phi ptr [ [[INCDEC_PTR58:%.*]], [[FOR_BODY]] ], [ [[A:%.*]], [[FOR_BODY_PREHEADER]] ]
 ; KRYO-NEXT:    [[INCDEC_PTR58]] = getelementptr inbounds i16, ptr [[A_ADDR_0101]], i64 8
 ; KRYO-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[A_ADDR_0101]], align 2
-; KRYO-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[TMP0]] to <8 x i32>
+; KRYO-NEXT:    [[TMP1:%.*]] = zext <8 x i16> [[TMP0]] to <8 x i32>
 ; KRYO-NEXT:    [[TMP2:%.*]] = load <8 x i16>, ptr [[B:%.*]], align 2
-; KRYO-NEXT:    [[TMP3:%.*]] = sext <8 x i16> [[TMP2]] to <8 x i32>
+; KRYO-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i32>
 ; KRYO-NEXT:    [[TMP4:%.*]] = sub nsw <8 x i32> [[TMP1]], [[TMP3]]
 ; KRYO-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP4]], i64 0
 ; KRYO-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64

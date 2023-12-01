@@ -1993,6 +1993,58 @@ static Value *simplifyLogicOfAddSub(Value *Op0, Value *Op1,
   return nullptr;
 }
 
+// Commutative patterns for and that will be tried with both operand orders.
+static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
+                                     const SimplifyQuery &Q,
+                                     unsigned MaxRecurse) {
+  // ~A & A =  0
+  if (match(Op0, m_Not(m_Specific(Op1))))
+    return Constant::getNullValue(Op0->getType());
+
+  // (A | ?) & A = A
+  if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
+    return Op1;
+
+  // (X | ~Y) & (X | Y) --> X
+  Value *X, *Y;
+  if (match(Op0, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
+      match(Op1, m_c_Or(m_Deferred(X), m_Deferred(Y))))
+    return X;
+
+  // If we have a multiplication overflow check that is being 'and'ed with a
+  // check that one of the multipliers is not zero, we can omit the 'and', and
+  // only keep the overflow check.
+  if (isCheckForZeroAndMulWithOverflow(Op0, Op1, true))
+    return Op1;
+
+  // -A & A = A if A is a power of two or zero.
+  if (match(Op0, m_Neg(m_Specific(Op1))) &&
+      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
+    return Op1;
+
+  // This is a similar pattern used for checking if a value is a power-of-2:
+  // (A - 1) & A --> 0 (if A is a power-of-2 or 0)
+  if (match(Op0, m_Add(m_Specific(Op1), m_AllOnes())) &&
+      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
+    return Constant::getNullValue(Op1->getType());
+
+  // (x << N) & ((x << M) - 1) --> 0, where x is known to be a power of 2 and
+  // M <= N.
+  const APInt *Shift1, *Shift2;
+  if (match(Op0, m_Shl(m_Value(X), m_APInt(Shift1))) &&
+      match(Op1, m_Add(m_Shl(m_Specific(X), m_APInt(Shift2)), m_AllOnes())) &&
+      isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, /*Depth*/ 0, Q.AC,
+                             Q.CxtI) &&
+      Shift1->uge(*Shift2))
+    return Constant::getNullValue(Op0->getType());
+
+  if (Value *V =
+          simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
+    return V;
+
+  return nullptr;
+}
+
 /// Given operands for an And, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
@@ -2020,26 +2072,10 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_AllOnes()))
     return Op0;
 
-  // A & ~A  =  ~A & A  =  0
-  if (match(Op0, m_Not(m_Specific(Op1))) || match(Op1, m_Not(m_Specific(Op0))))
-    return Constant::getNullValue(Op0->getType());
-
-  // (A | ?) & A = A
-  if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
-    return Op1;
-
-  // A & (A | ?) = A
-  if (match(Op1, m_c_Or(m_Specific(Op0), m_Value())))
-    return Op0;
-
-  // (X | Y) & (X | ~Y) --> X (commuted 8 ways)
-  Value *X, *Y;
-  if (match(Op0, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
-      match(Op1, m_c_Or(m_Deferred(X), m_Deferred(Y))))
-    return X;
-  if (match(Op1, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
-      match(Op0, m_c_Or(m_Deferred(X), m_Deferred(Y))))
-    return X;
+  if (Value *Res = simplifyAndCommutative(Op0, Op1, Q, MaxRecurse))
+    return Res;
+  if (Value *Res = simplifyAndCommutative(Op1, Op0, Q, MaxRecurse))
+    return Res;
 
   if (Value *V = simplifyLogicOfAddSub(Op0, Op1, Instruction::And))
     return V;
@@ -2047,6 +2083,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // A mask that only clears known zeros of a shifted value is a no-op.
   const APInt *Mask;
   const APInt *ShAmt;
+  Value *X, *Y;
   if (match(Op1, m_APInt(Mask))) {
     // If all bits in the inverted and shifted mask are clear:
     // and (shl X, ShAmt), Mask --> shl X, ShAmt
@@ -2073,42 +2110,6 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     if (PowerC->getActiveBits() >= Known.getMaxValue().getActiveBits())
       return ConstantInt::getNullValue(Op1->getType());
   }
-
-  // If we have a multiplication overflow check that is being 'and'ed with a
-  // check that one of the multipliers is not zero, we can omit the 'and', and
-  // only keep the overflow check.
-  if (isCheckForZeroAndMulWithOverflow(Op0, Op1, true))
-    return Op1;
-  if (isCheckForZeroAndMulWithOverflow(Op1, Op0, true))
-    return Op0;
-
-  // A & (-A) = A if A is a power of two or zero.
-  if (match(Op0, m_Neg(m_Specific(Op1))) ||
-      match(Op1, m_Neg(m_Specific(Op0)))) {
-    if (isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI,
-                               Q.DT))
-      return Op0;
-    if (isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI,
-                               Q.DT))
-      return Op1;
-  }
-
-  // This is a similar pattern used for checking if a value is a power-of-2:
-  // (A - 1) & A --> 0 (if A is a power-of-2 or 0)
-  // A & (A - 1) --> 0 (if A is a power-of-2 or 0)
-  if (match(Op0, m_Add(m_Specific(Op1), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
-    return Constant::getNullValue(Op1->getType());
-  if (match(Op1, m_Add(m_Specific(Op0), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
-    return Constant::getNullValue(Op0->getType());
-
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
-    return V;
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::And, Op1, Op0, Q, MaxRecurse))
-    return V;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, true))
     return V;
@@ -2444,13 +2445,13 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (C2->isMask() && // C2 == 0+1+
           match(A, m_c_Add(m_Specific(B), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C2, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C2, Q))
           return A;
       }
       // Or commutes, try both ways.
       if (C1->isMask() && match(B, m_c_Add(m_Specific(A), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C1, Q))
           return B;
       }
     }
@@ -4330,8 +4331,17 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 
       // x & x -> x, x | x -> x
       if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
-          NewOps[0] == NewOps[1])
+          NewOps[0] == NewOps[1]) {
+        // or disjoint x, x results in poison.
+        if (auto *PDI = dyn_cast<PossiblyDisjointInst>(BO)) {
+          if (PDI->isDisjoint()) {
+            if (!DropFlags)
+              return nullptr;
+            DropFlags->push_back(BO);
+          }
+        }
         return NewOps[0];
+      }
 
       // x - x -> 0, x ^ x -> 0. This is non-refining, because x is non-poison
       // by assumption and this case never wraps, so nowrap flags can be
@@ -4446,14 +4456,22 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
     // (X & Y) == 0 ? X | Y : X  --> X | Y
     // (X & Y) != 0 ? X | Y : X  --> X
     if (FalseVal == X && match(TrueVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (TrueWhenUnset && cast<PossiblyDisjointInst>(TrueVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
 
     // (X & Y) == 0 ? X : X | Y  --> X
     // (X & Y) != 0 ? X : X | Y  --> X | Y
     if (TrueVal == X && match(FalseVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (!TrueWhenUnset && cast<PossiblyDisjointInst>(FalseVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
   }
 
   return nullptr;
@@ -4920,10 +4938,8 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 
   // Compute the (pointer) type returned by the GEP instruction.
   Type *LastType = GetElementPtrInst::getIndexedType(SrcTy, Indices);
-  Type *GEPTy = PointerType::get(LastType, AS);
-  if (VectorType *VT = dyn_cast<VectorType>(Ptr->getType()))
-    GEPTy = VectorType::get(GEPTy, VT->getElementCount());
-  else {
+  Type *GEPTy = Ptr->getType();
+  if (!GEPTy->isVectorTy()) {
     for (Value *Op : Indices) {
       // If one of the operands is a vector, the result type is a vector of
       // pointers. All vector operands must have the same number of elements.
@@ -4955,10 +4971,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       });
 
   if (Indices.size() == 1) {
-    // getelementptr P, 0 -> P.
-    if (match(Indices[0], m_Zero()) && Ptr->getType() == GEPTy)
-      return Ptr;
-
     Type *Ty = SrcTy;
     if (!IsScalableVec && Ty->isSized()) {
       Value *P;
@@ -6207,7 +6219,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // ctpop(and X, 1) --> and X, 1
     unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
     if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
-                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+                          Q))
       return Op0;
     break;
   }

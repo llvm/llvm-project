@@ -1,23 +1,33 @@
 # This script checks that YamlProfileReader in llvm-bolt is reading data
 # correctly and stale data is corrected by profile inference.
 
+REQUIRES: asserts
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 # Testing "usqrt"
-RUN: llvm-bolt %t.exe -o /dev/null --b %p/Inputs/blarge_profile_stale.yaml \
+RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=usqrt --infer-stale-profile=1 \
-RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 2>&1 | FileCheck %s -check-prefix=CHECK1
+RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 --debug-only=bolt-prof 2>&1 | FileCheck %s -check-prefix=CHECK1
 # Testing "SolveCubic"
-RUN: llvm-bolt %t.exe -o /dev/null --b %p/Inputs/blarge_profile_stale.yaml \
+RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=SolveCubic --infer-stale-profile=1 \
-RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 2>&1 | FileCheck %s -check-prefix=CHECK2
+RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 --debug-only=bolt-prof 2>&1 | FileCheck %s -check-prefix=CHECK2
 
 # Function "usqrt" has stale profile, since the number of blocks in the profile
 # (nblocks=6) does not match the size of the CFG in the binary. The entry
 # block (bid=0) has an incorrect (missing) count, which should be inferred by
 # the algorithm.
 
-# Verify that yaml reader works as expected.
+# Verify inference details.
 CHECK1:  pre-processing profile using YAML profile reader
+CHECK1:  applying profile inference for "usqrt"
+CHECK1: Matched yaml block (bid = 0) with hash 1111111111111111 to BB (index = 0) with hash 36007ba1d80c0000
+CHECK1-NEXT: loose match
+CHECK1:  Matched yaml block (bid = 1) with hash d70d7a64320e0010 to BB (index = 1) with hash d70d7a64320e0010
+CHECK1-NEXT: exact match
+CHECK1:  Matched yaml block (bid = 3) with hash 5c06705524800039 to BB (index = 3) with hash 5c06705524800039
+CHECK1-NEXT: exact match
+
+# Verify that yaml reader works as expected.
 CHECK1:    Binary Function "usqrt" after building cfg {
 CHECK1:      State       : CFG constructed
 CHECK1:      Address     : 0x401170
@@ -28,6 +38,7 @@ CHECK1:      BB Count    : 5
 CHECK1:      Exec Count  : 20
 CHECK1:      Branch Count: 640
 CHECK1:    }
+
 # Verify block counts.
 CHECK1:    .LBB01 (4 instructions, align : 1)
 CHECK1:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 20)
@@ -48,7 +59,21 @@ CHECK1:  inferred profile for 2 (100.00% of profiled, 100.00% of stale) function
 # verifies that the inference is able to match two blocks (bid=1 and bid=13)
 # using "loose" hashes and then correctly propagate the counts.
 
+# Verify inference details.
 CHECK2:  pre-processing profile using YAML profile reader
+CHECK2:  applying profile inference for "SolveCubic"
+CHECK2:  Matched yaml block (bid = 0) with hash 4600940a609c0000 to BB (index = 0) with hash 4600940a609c0000
+CHECK2-NEXT:  exact match
+CHECK2:  Matched yaml block (bid = 1) with hash 167a1f084f130088 to BB (index = 1) with hash 167a1f084f130088
+CHECK2-NEXT:  exact match
+CHECK2:  Matched yaml block (bid = 13) with hash a8d50000f81902a7 to BB (index = 13) with hash a8d5aa43f81902a7
+CHECK2-NEXT:  loose match
+CHECK2:  Matched yaml block (bid = 3) with hash c516000073dc00a0 to BB (index = 3) with hash c516b1c973dc00a0
+CHECK2-NEXT:  loose match
+CHECK2:  Matched yaml block (bid = 5) with hash 6446e1ea500111 to BB (index = 5) with hash 6446e1ea500111
+CHECK2-NEXT:  exact match
+
+# Verify that yaml reader works as expected.
 CHECK2:    Binary Function "SolveCubic" after building cfg {
 CHECK2:      State       : CFG constructed
 CHECK2:      Address     : 0x400e00
@@ -58,6 +83,7 @@ CHECK2:      IsSimple    : 1
 CHECK2:      BB Count    : 18
 CHECK2:      Exec Count  : 151
 CHECK2:      Branch Count: 552
+
 # Verify block counts.
 CHECK2:    .LBB00 (43 instructions, align : 1)
 CHECK2:      Successors: .Ltmp[[#BB7:]] (mispreds: 0, count: 0), .LFT[[#BB1:]] (mispreds: 0, count: 151)

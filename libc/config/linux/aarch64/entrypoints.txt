@@ -136,6 +136,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mprotect
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
+    libc.src.sys.mman.mincore
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -316,6 +317,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.nexttoward
+    libc.src.math.nexttowardf
+    libc.src.math.nexttowardl
     libc.src.math.powf
     libc.src.math.remainderf
     libc.src.math.remainder
@@ -447,6 +451,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigprocmask
     libc.src.signal.sigfillset
     libc.src.signal.signal
+
+    # search.h entrypoints
+    libc.src.search.hcreate
+    libc.src.search.hcreate_r
+    libc.src.search.hsearch
+    libc.src.search.hsearch_r
+    libc.src.search.hdestroy
+    libc.src.search.hdestroy_r
 
     # threads.h entrypoints
     libc.src.threads.call_once
