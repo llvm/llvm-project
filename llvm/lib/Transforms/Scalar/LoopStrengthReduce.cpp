@@ -6947,6 +6947,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     case cl::BOU_UNSET:
       return TTI.shouldFoldTerminatingConditionAfterLSR();
     }
+    llvm_unreachable("Unhandled cl::boolOrDefault enum");
   }();
 
   if (EnableFormTerm) {

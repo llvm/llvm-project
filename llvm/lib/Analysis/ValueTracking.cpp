@@ -868,17 +868,17 @@ getKnownBitsFromAndXorOr(const Operator *I, const APInt &DemandedElts,
 }
 
 // Public so this can be used in `SimplifyDemandedUseBits`.
-KnownBits llvm::analyzeKnownBitsFromAndXorOr(
-    const Operator *I, const KnownBits &KnownLHS, const KnownBits &KnownRHS,
-    unsigned Depth, const DataLayout &DL, AssumptionCache *AC,
-    const Instruction *CxtI, const DominatorTree *DT, bool UseInstrInfo) {
+KnownBits llvm::analyzeKnownBitsFromAndXorOr(const Operator *I,
+                                             const KnownBits &KnownLHS,
+                                             const KnownBits &KnownRHS,
+                                             unsigned Depth,
+                                             const SimplifyQuery &SQ) {
   auto *FVTy = dyn_cast<FixedVectorType>(I->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
 
-  return getKnownBitsFromAndXorOr(
-      I, DemandedElts, KnownLHS, KnownRHS, Depth,
-      SimplifyQuery(DL, DT, AC, safeCxtI(I, CxtI), UseInstrInfo));
+  return getKnownBitsFromAndXorOr(I, DemandedElts, KnownLHS, KnownRHS, Depth,
+                                  SQ);
 }
 
 ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {

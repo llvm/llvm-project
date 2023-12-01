@@ -62,20 +62,34 @@ public:
     if (const auto &cycleName{cycleStmt.v}) {
       CheckConstructNameBranching("CYCLE", cycleName.value());
     } else {
-      switch ((llvm::omp::Directive)currentDirective_) {
-      // exclude directives which do not need a check for unlabelled CYCLES
-      case llvm::omp::Directive::OMPD_do:
-      case llvm::omp::Directive::OMPD_simd:
-      case llvm::omp::Directive::OMPD_parallel_do:
-      case llvm::omp::Directive::OMPD_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do:
-      case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for:
-      case llvm::omp::Directive::OMPD_distribute_simd:
-      case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
-        return;
-      default:
-        break;
+      if constexpr (std::is_same_v<D, llvm::omp::Directive>) {
+        switch ((llvm::omp::Directive)currentDirective_) {
+        // exclude directives which do not need a check for unlabelled CYCLES
+        case llvm::omp::Directive::OMPD_do:
+        case llvm::omp::Directive::OMPD_simd:
+        case llvm::omp::Directive::OMPD_parallel_do:
+        case llvm::omp::Directive::OMPD_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do:
+        case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for:
+        case llvm::omp::Directive::OMPD_distribute_simd:
+        case llvm::omp::Directive::OMPD_distribute_parallel_for_simd:
+          return;
+        default:
+          break;
+        }
+      } else if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
+        switch ((llvm::acc::Directive)currentDirective_) {
+        // exclude loop directives which do not need a check for unlabelled
+        // CYCLES
+        case llvm::acc::Directive::ACCD_loop:
+        case llvm::acc::Directive::ACCD_kernels_loop:
+        case llvm::acc::Directive::ACCD_parallel_loop:
+        case llvm::acc::Directive::ACCD_serial_loop:
+          return;
+        default:
+          break;
+        }
       }
       CheckConstructNameBranching("CYCLE");
     }
