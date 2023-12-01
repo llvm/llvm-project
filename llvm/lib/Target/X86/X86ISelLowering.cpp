@@ -1135,6 +1135,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::v8f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v8f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
