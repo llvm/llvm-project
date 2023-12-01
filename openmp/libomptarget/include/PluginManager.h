@@ -143,6 +143,11 @@ struct PluginManager {
     DelayedBinDesc.clear();
   }
 
+  int getNumDevices() {
+    std::lock_guard<decltype(RTLsMtx)> Lock(RTLsMtx);
+    return Devices.size();
+  }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
