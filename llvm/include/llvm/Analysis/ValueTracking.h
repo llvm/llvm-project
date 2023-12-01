@@ -148,11 +148,8 @@ bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-bool isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                     AssumptionCache *AC = nullptr,
-                     const Instruction *CxtI = nullptr,
-                     const DominatorTree *DT = nullptr,
-                     bool UseInstrInfo = true);
+bool isKnownNegative(const Value *V, const SimplifyQuery &DL,
+                     unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
