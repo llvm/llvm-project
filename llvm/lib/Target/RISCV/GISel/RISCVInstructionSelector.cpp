@@ -48,6 +48,9 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  bool isRegInGprb(Register Reg, MachineRegisterInfo &MRI) const;
+  bool isRegInFprb(Register Reg, MachineRegisterInfo &MRI) const;
+
   // tblgen-erated 'select' implementation, used as the initial selector for
   // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
@@ -77,6 +80,10 @@ private:
                                       MachineRegisterInfo &MRI) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
+  bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
+                         MachineRegisterInfo &MRI) const;
+  bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
+                           MachineRegisterInfo &MRI) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
@@ -627,9 +634,45 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectImplicitDef(MI, MIB, MRI);
+  case TargetOpcode::G_MERGE_VALUES:
+    return selectMergeValues(MI, MIB, MRI);
+  case TargetOpcode::G_UNMERGE_VALUES:
+    return selectUnmergeValues(MI, MIB, MRI);
   default:
     return false;
   }
+}
+
+bool RISCVInstructionSelector::selectMergeValues(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
+
+  // Build a F64 Pair from operands
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Dst = MI.getOperand(0).getReg();
+  Register Lo = MI.getOperand(1).getReg();
+  Register Hi = MI.getOperand(2).getReg();
+  if (!isRegInFprb(Dst, MRI) || !isRegInGprb(Lo, MRI) || !isRegInGprb(Hi, MRI))
+    return false;
+  MI.setDesc(TII.get(RISCV::BuildPairF64Pseudo));
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+}
+
+bool RISCVInstructionSelector::selectUnmergeValues(
+    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+
+  // Split F64 Src into two s32 parts
+  if (MI.getNumOperands() != 3)
+    return false;
+  Register Src = MI.getOperand(2).getReg();
+  Register Lo = MI.getOperand(0).getReg();
+  Register Hi = MI.getOperand(1).getReg();
+  if (!isRegInFprb(Src, MRI) || !isRegInGprb(Lo, MRI) || !isRegInGprb(Hi, MRI))
+    return false;
+  MI.setDesc(TII.get(RISCV::SplitF64Pseudo));
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
@@ -713,6 +756,16 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
 
   // TODO: Non-GPR register classes.
   return nullptr;
+}
+
+bool RISCVInstructionSelector::isRegInGprb(Register Reg,
+                                           MachineRegisterInfo &MRI) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == RISCV::GPRBRegBankID;
+}
+
+bool RISCVInstructionSelector::isRegInFprb(Register Reg,
+                                           MachineRegisterInfo &MRI) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == RISCV::FPRBRegBankID;
 }
 
 bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
