@@ -1024,7 +1024,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
 // Some float128 systems (specifically the ones used for aarch64 buildbots)
 // don't respect signs for long double NaNs.
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80) || defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
+#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80) ||                                \
+    defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
   written = LIBC_NAMESPACE::sprintf(buff, "%LF", -ld_nan);
   ASSERT_STREQ_LEN(written, buff, "-NAN");
 #endif
