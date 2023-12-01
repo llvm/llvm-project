@@ -624,7 +624,7 @@ public:
                                  MachineInstr &MI, MachineBasicBlock *BB,
                                  bool HasTile) const;
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
-                                 unsigned Opcode, bool IsZTDest) const;
+                                 unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
