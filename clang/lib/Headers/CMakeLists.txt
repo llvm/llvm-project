@@ -283,10 +283,12 @@ set(files
   )
 
 set(cuda_wrapper_files
+  cuda_wrappers/__config
   cuda_wrappers/algorithm
   cuda_wrappers/cmath
   cuda_wrappers/complex
   cuda_wrappers/new
+  cuda_wrappers/string
 )
 
 set(cuda_wrapper_bits_files
