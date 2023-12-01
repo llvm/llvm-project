@@ -3,6 +3,21 @@
 
 # ERROR-COUNT-20: error:
 # ERROR-NOT: error:
+# CHECK: {evex}	kmovb	%k1, %k2
+# CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0xd1]
+         {evex}	kmovb	%k1, %k2
+# CHECK: {evex}	kmovw	%k1, %k2
+# CHECK: encoding: [0x62,0xf1,0x7c,0x08,0x90,0xd1]
+         {evex}	kmovw	%k1, %k2
+# CHECK: {evex}	kmovd	%k1, %k2
+# CHECK: encoding: [0x62,0xf1,0xfd,0x08,0x90,0xd1]
+         {evex}	kmovd	%k1, %k2
+# CHECK: {evex}	kmovq	%k1, %k2
+
+# CHECK-NOT: {evex}
+
+# CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0xd1]
+         {evex}	kmovq	%k1, %k2
 # CHECK: kmovb	%r16d, %k1
 # CHECK: encoding: [0x62,0xf9,0x7d,0x08,0x92,0xc8]
          kmovb	%r16d, %k1
@@ -54,16 +69,3 @@
 # CHECK: kmovq	%k1, (%r16,%r17)
 # CHECK: encoding: [0x62,0xf9,0xf8,0x08,0x91,0x0c,0x08]
          kmovq	%k1, (%r16,%r17)
-
-# CHECK: {evex}	kmovb	%k1, %k2
-# CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0xd1]
-         {evex}	kmovb	%k1, %k2
-# CHECK: {evex}	kmovw	%k1, %k2
-# CHECK: encoding: [0x62,0xf1,0x7c,0x08,0x90,0xd1]
-         {evex}	kmovw	%k1, %k2
-# CHECK: {evex}	kmovd	%k1, %k2
-# CHECK: encoding: [0x62,0xf1,0xfd,0x08,0x90,0xd1]
-         {evex}	kmovd	%k1, %k2
-# CHECK: {evex}	kmovq	%k1, %k2
-# CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0xd1]
-         {evex}	kmovq	%k1, %k2
