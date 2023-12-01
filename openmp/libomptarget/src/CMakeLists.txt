@@ -20,6 +20,7 @@ add_llvm_library(omptarget
   OmptTracingBuffer.cpp
   rtl.cpp
   LegacyAPI.cpp
+  PluginManager.cpp
 
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
