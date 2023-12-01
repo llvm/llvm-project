@@ -89,7 +89,7 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     template <typename OutIt>
     void canonicalDimSizes(OutIt outIt) {
       std::copy(getDimSizes().begin(), getDimSizes().end(), outIt);
-      std::fill_n(outIt, getRank() - getDimSizes().size(), 0);
+      std::fill_n(outIt, getRank() - getDimSizes().size(), ::mlir::ShapedType::kDynamic);
     }
   }];
   let hasVerifier = 1;
