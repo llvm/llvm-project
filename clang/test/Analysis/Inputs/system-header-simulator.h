@@ -50,6 +50,7 @@ size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 size_t fwrite(const void *restrict, size_t, size_t, FILE *restrict);
 int fgetc(FILE *stream);
 int fputc(int ch, FILE *stream);
+int fputs(const char *restrict s, FILE *restrict stream);
 int fseek(FILE *__stream, long int __off, int __whence);
 long int ftell(FILE *__stream);
 void rewind(FILE *__stream);
