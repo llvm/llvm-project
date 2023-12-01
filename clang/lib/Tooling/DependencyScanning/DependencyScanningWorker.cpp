@@ -803,7 +803,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   DependencyScanningAction Action(
       WorkingDirectory, DepsConsumer, Controller, DepFS, DepCASFS, CacheFS,
       Format,
-      ScanningOptimizations::None, /*DisableFree=*/false, EagerLoadModules,
+      ScanningOptimizations::Default, /*DisableFree=*/false, EagerLoadModules,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
       getCASOpts(),
       /*ModuleName=*/std::nullopt, VerboseOS);
