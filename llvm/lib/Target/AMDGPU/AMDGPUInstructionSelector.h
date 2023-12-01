@@ -195,7 +195,7 @@ private:
   selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
-  selectDotIUVOP3PMods(MachineOperand &Root) const;
+  selectVOP3PModsNeg(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;

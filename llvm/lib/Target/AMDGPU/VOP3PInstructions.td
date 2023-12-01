@@ -465,8 +465,8 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
   // Dot-iu Intrinsics have extra operands and require separate codegen pattern.
-  def : GCNPat < (intrinsic_node (DotIUVOP3PMods i32:$src0_mods), i32:$src0,
-                                 (DotIUVOP3PMods i32:$src1_mods), i32:$src1,
+  def : GCNPat < (intrinsic_node (VOP3PModsNeg i32:$src0_mods), i32:$src0,
+                                 (VOP3PModsNeg i32:$src1_mods), i32:$src1,
                                  i32:$src2, (i1 timm:$clamp)),
                  (!cast<Instruction>(NAME) $src0_mods, i32:$src0,
                                            $src1_mods, i32:$src1,
@@ -903,8 +903,8 @@ class WMMAOpSelPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
 
 class WMMAUIClampPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
   GCNPat < (P.DstVT (node
-                                (DotIUVOP3PMods i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
-                                (DotIUVOP3PMods i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
+                                (VOP3PModsNeg i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
+                                (VOP3PModsNeg i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
                                 (P.Src2VT P.Src2VT:$src2), (i1 timm:$clamp)
                    )),
                    (P.DstVT (Inst i32:$src0_modifiers, P.Src0VT:$src0, i32:$src1_modifiers, P.Src1VT:$src1, (i32 8), P.Src2VT:$src2, i1:$clamp))
@@ -1136,7 +1136,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 
   dag Src0InPat  = !cond(IsAB_F16  : (ins (Src0VT (WMMAModsF16Neg Src0VT:$src0, i32:$src0_modifiers))),
                          IsAB_BF16 : (ins Src0VT:$src0),
-                         IsIU      : (ins (DotIUVOP3PMods i32:$src0_modifiers), Src0VT:$src0),
+                         IsIU      : (ins (VOP3PModsNeg i32:$src0_modifiers), Src0VT:$src0),
                          IsFP8BF8  : (ins Src0VT:$src0));
   dag Src0OutPat = !cond(IsAB_F16  : (ins i32:$src0_modifiers, Src0VT:$src0),
                          IsAB_BF16 : (ins (i32 8), Src0VT:$src0),
@@ -1144,7 +1144,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                          IsFP8BF8  : (ins Src0VT:$src0));
   dag Src1InPat  = !cond(IsAB_F16  : (ins (Src1VT (WMMAModsF16Neg Src1VT:$src1, i32:$src1_modifiers))),
                          IsAB_BF16 : (ins Src1VT:$src1),
-                         IsIU      : (ins (DotIUVOP3PMods i32:$src1_modifiers), Src1VT:$src1),
+                         IsIU      : (ins (VOP3PModsNeg i32:$src1_modifiers), Src1VT:$src1),
                          IsFP8BF8  : (ins Src1VT:$src1));
   dag Src1OutPat = !cond(IsAB_F16  : (ins i32:$src1_modifiers, Src1VT:$src1),
                          IsAB_BF16 : (ins (i32 8), Src1VT:$src1),

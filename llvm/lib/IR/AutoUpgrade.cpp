@@ -968,19 +968,20 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'c': {
-    if (Name.starts_with("ctlz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                        F->arg_begin()->getType());
-      return true;
+    if (F->arg_size() == 1) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("ctlz.", Intrinsic::ctlz)
+                             .StartsWith("cttz.", Intrinsic::cttz)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
     }
-    if (Name.starts_with("cttz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.equals("coro.end") && F->arg_size() == 2) {
+
+    if (F->arg_size() == 2 && Name.equals("coro.end")) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
