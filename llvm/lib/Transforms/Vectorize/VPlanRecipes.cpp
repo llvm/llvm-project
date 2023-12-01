@@ -652,6 +652,10 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
     if (GEPFlags.IsInBounds)
       O << " inbounds";
     break;
+  case OperationType::NonNegOp:
+    if (NonNegFlags.NonNeg)
+      O << " nneg";
+    break;
   case OperationType::Other:
     break;
   }
