@@ -464,16 +464,18 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
           executable, rpc_client_symbol_name, &dev_agent, &rpc_client_sym))
     handle_error(err);
 
-  void *rpc_client_host;
-  if (hsa_status_t err =
-          hsa_amd_memory_pool_allocate(coarsegrained_pool, sizeof(void *),
-                                       /*flags=*/0, &rpc_client_host))
-    handle_error(err);
-
   void *rpc_client_dev;
   if (hsa_status_t err = hsa_executable_symbol_get_info(
           rpc_client_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
           &rpc_client_dev))
+    handle_error(err);
+
+  // Pin some memory we can use to obtain the address of the rpc client.
+  void *rpc_client_storage = nullptr;
+  void *rpc_client_host = nullptr;
+  if (hsa_status_t err =
+          hsa_amd_memory_lock(&rpc_client_storage, sizeof(void *),
+                              /*agents=*/nullptr, 0, &rpc_client_host))
     handle_error(err);
 
   // Copy the address of the client buffer from the device to the host.
@@ -482,12 +484,11 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   void *rpc_client_buffer;
-  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          coarsegrained_pool, rpc_get_client_size(),
-          /*flags=*/0, &rpc_client_buffer))
+  if (hsa_status_t err = hsa_amd_memory_lock(
+          const_cast<void *>(rpc_get_client_buffer(device_id)),
+          rpc_get_client_size(),
+          /*agents=*/nullptr, 0, &rpc_client_buffer))
     handle_error(err);
-  std::memcpy(rpc_client_buffer, rpc_get_client_buffer(device_id),
-              rpc_get_client_size());
 
   // Copy the RPC client buffer to the address pointed to by the symbol.
   if (hsa_status_t err =
@@ -495,9 +496,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                      rpc_client_buffer, host_agent, rpc_get_client_size()))
     handle_error(err);
 
-  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_buffer))
+  if (hsa_status_t err = hsa_amd_memory_unlock(
+          const_cast<void *>(rpc_get_client_buffer(device_id))))
     handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_client_host))
+  if (hsa_status_t err = hsa_amd_memory_unlock(rpc_client_host))
     handle_error(err);
 
   // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.

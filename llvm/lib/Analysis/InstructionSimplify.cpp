@@ -2445,13 +2445,13 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       if (C2->isMask() && // C2 == 0+1+
           match(A, m_c_Add(m_Specific(B), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C2, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C2, Q))
           return A;
       }
       // Or commutes, try both ways.
       if (C1->isMask() && match(B, m_c_Add(m_Specific(A), m_Value(N)))) {
         // Add commutes, try both ways.
-        if (MaskedValueIsZero(N, *C1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+        if (MaskedValueIsZero(N, *C1, Q))
           return B;
       }
     }
@@ -4331,8 +4331,17 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 
       // x & x -> x, x | x -> x
       if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
-          NewOps[0] == NewOps[1])
+          NewOps[0] == NewOps[1]) {
+        // or disjoint x, x results in poison.
+        if (auto *PDI = dyn_cast<PossiblyDisjointInst>(BO)) {
+          if (PDI->isDisjoint()) {
+            if (!DropFlags)
+              return nullptr;
+            DropFlags->push_back(BO);
+          }
+        }
         return NewOps[0];
+      }
 
       // x - x -> 0, x ^ x -> 0. This is non-refining, because x is non-poison
       // by assumption and this case never wraps, so nowrap flags can be
@@ -4447,14 +4456,22 @@ static Value *simplifySelectBitTest(Value *TrueVal, Value *FalseVal, Value *X,
     // (X & Y) == 0 ? X | Y : X  --> X | Y
     // (X & Y) != 0 ? X | Y : X  --> X
     if (FalseVal == X && match(TrueVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (TrueWhenUnset && cast<PossiblyDisjointInst>(TrueVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
 
     // (X & Y) == 0 ? X : X | Y  --> X
     // (X & Y) != 0 ? X : X | Y  --> X | Y
     if (TrueVal == X && match(FalseVal, m_Or(m_Specific(X), m_APInt(C))) &&
-        *Y == *C)
+        *Y == *C) {
+      // We can't return the or if it has the disjoint flag.
+      if (!TrueWhenUnset && cast<PossiblyDisjointInst>(FalseVal)->isDisjoint())
+        return nullptr;
       return TrueWhenUnset ? TrueVal : FalseVal;
+    }
   }
 
   return nullptr;
@@ -6202,7 +6219,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     // ctpop(and X, 1) --> and X, 1
     unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
     if (MaskedValueIsZero(Op0, APInt::getHighBitsSet(BitWidth, BitWidth - 1),
-                          Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+                          Q))
       return Op0;
     break;
   }

@@ -7318,28 +7318,17 @@ class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
   let mayLoad = 1;
 }
 
-multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
-                               RegisterOperand listty, ZPRRegOp zprty> {
-  def _REAL : sve_mem_cld_si_base<dtype, nf, asm, listty>;
-
-  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
-  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
-                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
-  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
-                  (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
-
-  // We need a layer of indirection because early machine code passes balk at
-  // physical register (i.e. FFR) uses that have no previous definition.
-  let hasSideEffects = 1, hasNoSchedulingInfo = 1, mayLoad = 1 in {
-  def "" : Pseudo<(outs listty:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), []>,
-           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4)>;
-  }
-}
-
 multiclass sve_mem_cld_si<bits<4> dtype, string asm, RegisterOperand listty,
-                          ZPRRegOp zprty>
-: sve_mem_cld_si_base<dtype, 0, asm, listty, zprty>;
+                          ZPRRegOp zprty> {
+  def "" : sve_mem_cld_si_base<dtype, 0, asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
+                  (!cast<Instruction>(NAME) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+}
 
 class sve_mem_cldnt_si_base<bits<2> msz, string asm, RegisterOperand VecList>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4),
@@ -7559,8 +7548,23 @@ multiclass sve_mem_cldff_ss<bits<4> dtype, string asm, RegisterOperand listty,
 }
 
 multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
-                            ZPRRegOp zprty>
-: sve_mem_cld_si_base<dtype, 1, asm, listty, zprty>;
+                            ZPRRegOp zprty> {
+  def _REAL : sve_mem_cld_si_base<dtype, 1, asm, listty>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
+                  (!cast<Instruction>(NAME # _REAL) zprty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), 0>;
+  def : InstAlias<asm # "\t$Zt, $Pg/z, [$Rn]",
+                  (!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1, mayLoad = 1 in {
+  def "" : Pseudo<(outs listty:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4), []>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) listty:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, simm4s1:$imm4)>;
+  }
+}
 
 class sve_mem_eld_si<bits<2> sz, bits<3> nregs, RegisterOperand VecList,
                      string asm, Operand immtype>
@@ -10419,4 +10423,35 @@ multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
     bits<2> idx;
     let Inst{23-22} = idx;
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Checked Pointer Arithmetic (FEAT_CPA)
+//===----------------------------------------------------------------------===//
+class sve_int_mad_cpa<string asm>
+    : I<(outs ZPR64:$Zdn), (ins ZPR64:$_Zdn, ZPR64:$Zm, ZPR64:$Za),
+        asm, "\t$Zdn, $Zm, $Za", "", []>, Sched<[]> {
+  bits<5> Zdn;
+  bits<5> Zm;
+  bits<5> Za;
+  let Inst{31-24} = 0b01000100;
+  let Inst{23-22} = 0b11; // sz
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = 0b1;
+  let Inst{14-10} = 0b10110; // opc
+  let Inst{9-5}   = Za;
+  let Inst{4-0}   = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = ZPR64.ElementSize;
+  let hasSideEffects = 0;
+}
+
+class sve_int_mla_cpa<string asm>
+    : sve2_int_mla<0b11, 0b10100, asm, ZPR64, ZPR64> {
+  let Inst{15} = 0b1;
+
+  let ElementSize = ZPR64.ElementSize;
 }

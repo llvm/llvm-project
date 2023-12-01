@@ -958,8 +958,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // Make a copy in a temporary.
       auto copy = builder.create<hlfir::AsExprOp>(loc, entity);
       mlir::Type storageType = entity.getType();
+      mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
       hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-          loc, builder, hlfir::Entity{copy}, storageType, "adapt.valuebyref");
+          loc, builder, hlfir::Entity{copy}, storageType, "", byRefAttr);
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
@@ -986,8 +987,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     // The actual is an expression value, place it into a temporary
     // and register the temporary destruction after the call.
     mlir::Type storageType = converter.genType(expr);
+    mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-        loc, builder, entity, storageType, "adapt.valuebyref");
+        loc, builder, entity, storageType, "", byRefAttr);
     entity = hlfir::Entity{associate.getBase()};
     preparedDummy.pushExprAssociateCleanUp(associate);
     if (mustSetDynamicTypeToDummyType) {
@@ -1395,8 +1397,9 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
     CallContext &callContext) {
   auto &builder = callContext.getBuilder();
   const auto &loc = callContext.loc;
-  assert(intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-                          callContext.procRef, *intrinsic, callContext.converter));
+  assert(intrinsic &&
+         Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+             callContext.procRef, *intrinsic, callContext.converter));
 
   // helper to get a particular prepared argument
   auto getArgument = [&](std::size_t i, bool loadArg) -> fir::ExtendedValue {

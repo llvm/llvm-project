@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -56,11 +57,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_SADDO, G_SSUBO}).minScalar(0, sXLen).lower();
 
-  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
-      .customIf([=, &ST](const LegalityQuery &Query) {
-        return ST.is64Bit() && typeIs(0, s32)(Query) && typeIs(1, s32)(Query);
-      })
-      .legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
+  auto &ShiftActions = getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL});
+  if (ST.is64Bit())
+    ShiftActions.customFor({{s32, s32}});
+  ShiftActions.legalFor({{s32, s32}, {s32, sXLen}, {sXLen, sXLen}})
       .widenScalarToNextPow2(0)
       .clampScalar(1, s32, sXLen)
       .clampScalar(0, s32, sXLen)
@@ -85,8 +85,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;
     unsigned LitTyIdx = Op == G_MERGE_VALUES ? 1 : 0;
-    getActionDefinitionsBuilder(Op)
-        .widenScalarToNextPow2(LitTyIdx, XLen)
+    auto &MergeUnmergeActions = getActionDefinitionsBuilder(Op);
+    if (XLen == 32 && ST.hasStdExtD()) {
+      LLT IdxZeroTy = G_MERGE_VALUES ? s64 : s32;
+      LLT IdxOneTy = G_MERGE_VALUES ? s32 : s64;
+      MergeUnmergeActions.legalFor({IdxZeroTy, IdxOneTy});
+    }
+    MergeUnmergeActions.widenScalarToNextPow2(LitTyIdx, XLen)
         .widenScalarToNextPow2(BigTyIdx, XLen)
         .clampScalar(LitTyIdx, sXLen, sXLen)
         .clampScalar(BigTyIdx, sXLen, sXLen);
@@ -139,10 +144,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .clampScalar(1, sXLen, sXLen)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{sXLen, sXLen}, {s32, sXLen}, {p0, sXLen}})
-      .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sXLen)
+  auto &SelectActions = getActionDefinitionsBuilder(G_SELECT).legalFor(
+      {{s32, sXLen}, {p0, sXLen}});
+  if (XLen == 64 || ST.hasStdExtD())
+    SelectActions.legalFor({{s64, sXLen}});
+  SelectActions.widenScalarToNextPow2(0)
+      .clampScalar(0, s32, (XLen == 64 || ST.hasStdExtD()) ? s64 : s32)
       .clampScalar(1, sXLen, sXLen);
 
   auto &LoadStoreActions =
@@ -167,7 +174,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   LoadStoreActions.clampScalar(0, s32, sXLen).lower();
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
-  getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, sXLen}});
+  getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{sXLen, p0}})
@@ -254,6 +261,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                                G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM})
       .legalIf(typeIsScalarFPArith(0, ST));
 
+  getActionDefinitionsBuilder(G_FCOPYSIGN)
+      .legalIf(all(typeIsScalarFPArith(0, ST), typeIsScalarFPArith(1, ST)));
+
   getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
       [=, &ST](const LegalityQuery &Query) -> bool {
         return (ST.hasStdExtD() && typeIs(0, s32)(Query) &&
@@ -290,6 +300,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR})
       .libcallFor({s32, s64});
 
+  getActionDefinitionsBuilder(G_VASTART).customFor({p0});
+
   getLegacyLegalizerInfo().computeTables();
 }
 
@@ -314,6 +326,22 @@ bool RISCVLegalizerInfo::legalizeShlAshrLshr(
   Observer.changingInstr(MI);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
   Observer.changedInstr(MI);
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
+                                         MachineIRBuilder &MIRBuilder) const {
+  // Stores the address of the VarArgsFrameIndex slot into the memory location
+  assert(MI.getOpcode() == TargetOpcode::G_VASTART);
+  MachineFunction *MF = MI.getParent()->getParent();
+  RISCVMachineFunctionInfo *FuncInfo = MF->getInfo<RISCVMachineFunctionInfo>();
+  int FI = FuncInfo->getVarArgsFrameIndex();
+  LLT AddrTy = MIRBuilder.getMRI()->getType(MI.getOperand(0).getReg());
+  auto FINAddr = MIRBuilder.buildFrameIndex(AddrTy, FI);
+  assert(MI.hasOneMemOperand());
+  MIRBuilder.buildStore(MI.getOperand(0).getReg(), FINAddr,
+                        *MI.memoperands()[0]);
+  MI.eraseFromParent();
   return true;
 }
 
@@ -357,6 +385,8 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_VASTART:
+    return legalizeVAStart(MI, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

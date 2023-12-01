@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: target={{.+}}-windows-gnu
-// XFAIL: LIBCXX-AIX-FIXME
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+// UNSUPPORTED: !non-lockfree-atomics
 // Hangs with msan.
 // UNSUPPORTED: msan
 

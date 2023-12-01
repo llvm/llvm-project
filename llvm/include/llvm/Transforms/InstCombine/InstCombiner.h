@@ -240,18 +240,18 @@ public:
   /// dereferenceable).
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
-  static Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
                                       BuilderTy *Builder, bool &DoesConsume,
                                       unsigned Depth);
 
-  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
     DoesConsume = false;
     return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
                                  /*Depth*/ 0);
   }
 
-  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+  Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder) {
     bool Unused;
     return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
@@ -263,13 +263,13 @@ public:
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
-  static bool isFreeToInvert(Value *V, bool WillInvertAllUses,
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses,
                              bool &DoesConsume) {
     return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
                              DoesConsume) != nullptr;
   }
 
-  static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
+  bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
     bool Unused;
     return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
@@ -279,7 +279,7 @@ public:
   /// NOTE: for Instructions only!
   ///
   /// See also: isFreeToInvert()
-  static bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
+  bool canFreelyInvertAllUsersOf(Instruction *V, Value *IgnoredUser) {
     // Look at every user of V.
     for (Use &U : V->uses()) {
       if (U.getUser() == IgnoredUser)
@@ -464,12 +464,12 @@ public:
 
   void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
                         const Instruction *CxtI) const {
-    llvm::computeKnownBits(V, Known, DL, Depth, &AC, CxtI, &DT);
+    llvm::computeKnownBits(V, Known, Depth, SQ.getWithInstruction(CxtI));
   }
 
   KnownBits computeKnownBits(const Value *V, unsigned Depth,
                              const Instruction *CxtI) const {
-    return llvm::computeKnownBits(V, DL, Depth, &AC, CxtI, &DT);
+    return llvm::computeKnownBits(V, Depth, SQ.getWithInstruction(CxtI));
   }
 
   bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero = false,
@@ -480,7 +480,7 @@ public:
 
   bool MaskedValueIsZero(const Value *V, const APInt &Mask, unsigned Depth = 0,
                          const Instruction *CxtI = nullptr) const {
-    return llvm::MaskedValueIsZero(V, Mask, DL, Depth, &AC, CxtI, &DT);
+    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
   }
 
   unsigned ComputeNumSignBits(const Value *Op, unsigned Depth = 0,

@@ -103,7 +103,7 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
 
 // Re-link builtin bitcodes after optimization
-static cl::opt<bool> ClRelinkBuiltinBitcodePostop(
+cl::opt<bool> ClRelinkBuiltinBitcodePostop(
     "relink-builtin-bitcode-postop", cl::Optional,
     cl::desc("Re-link builtin bitcodes after optimization."), cl::init(false));
 }
@@ -996,9 +996,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 
     if (CodeGenOpts.FatLTO) {
-      MPM.addPass(PB.buildFatLTODefaultPipeline(
-          Level, PrepareForThinLTO,
-          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
+      assert(CodeGenOpts.UnifiedLTO && "FatLTO requires UnifiedLTO");
+      MPM.addPass(PB.buildFatLTODefaultPipeline(Level));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1042,7 +1041,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
                                     /*EmitLTOSummary=*/true));
       }
-
     } else {
       // Emit a module summary by default for Regular LTO except for ld64
       // targets
@@ -1073,7 +1071,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
       TheModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
                                uint32_t(CodeGenOpts.EnableSplitLTOUnit));
-    if (CodeGenOpts.UnifiedLTO && !TheModule->getModuleFlag("UnifiedLTO"))
+    // FatLTO always means UnifiedLTO
+    if (!TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 

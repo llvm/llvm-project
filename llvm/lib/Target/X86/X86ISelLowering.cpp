@@ -1135,6 +1135,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::v8f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v8f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1396,8 +1399,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
     }
 
-    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
-
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
     setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i16, MVT::v8i32);
@@ -1596,8 +1597,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STORE,              VT, Custom);
     }
     setF16Action(MVT::v16f16, Expand);
-    if (Subtarget.hasAVX2())
-      setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FNEG, MVT::v16f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -2054,6 +2056,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+    setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with
@@ -4556,15 +4561,17 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, MaskVec);
 }
 
-static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+static const ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   if (Ptr.getOpcode() == X86ISD::Wrapper ||
       Ptr.getOpcode() == X86ISD::WrapperRIP)
     Ptr = Ptr.getOperand(0);
+  return dyn_cast<ConstantPoolSDNode>(Ptr);
+}
 
-  auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
+  const ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
     return nullptr;
-
   return CNode->getConstVal();
 }
 
@@ -56939,13 +56946,13 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
         if (VT == MVT::i8 || VT == MVT::i1)
-          return std::make_pair(0U, &X86::GR8RegClass);
+          return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
         if (VT == MVT::i16)
-          return std::make_pair(0U, &X86::GR16RegClass);
+          return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
         if (VT == MVT::i32 || VT == MVT::f32)
-          return std::make_pair(0U, &X86::GR32RegClass);
+          return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
         if (VT != MVT::f80 && !VT.isVector())
-          return std::make_pair(0U, &X86::GR64RegClass);
+          return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
         break;
       }
       [[fallthrough]];
@@ -56964,14 +56971,14 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'r':   // GENERAL_REGS
     case 'l':   // INDEX_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
-        return std::make_pair(0U, &X86::GR8RegClass);
+        return std::make_pair(0U, &X86::GR8_NOREX2RegClass);
       if (VT == MVT::i16)
-        return std::make_pair(0U, &X86::GR16RegClass);
+        return std::make_pair(0U, &X86::GR16_NOREX2RegClass);
       if (VT == MVT::i32 || VT == MVT::f32 ||
           (!VT.isVector() && !Subtarget.is64Bit()))
-        return std::make_pair(0U, &X86::GR32RegClass);
+        return std::make_pair(0U, &X86::GR32_NOREX2RegClass);
       if (VT != MVT::f80 && !VT.isVector())
-        return std::make_pair(0U, &X86::GR64RegClass);
+        return std::make_pair(0U, &X86::GR64_NOREX2RegClass);
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)

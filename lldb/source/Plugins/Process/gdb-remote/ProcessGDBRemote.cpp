@@ -2377,8 +2377,10 @@ Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
   if (m_public_state.GetValue() == eStateAttaching) {
-    // We are being asked to halt during an attach. We need to just close our
-    // file handle and debugserver will go away, and we can be done...
+    // We are being asked to halt during an attach. We used to just close our
+    // file handle and debugserver will go away, but with remote proxies, it
+    // is better to send a positive signal, so let's send the interrupt first...
+    caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
     m_gdb_comm.Disconnect();
   } else
     caused_stop = m_gdb_comm.Interrupt(GetInterruptTimeout());
@@ -5544,7 +5546,7 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
     addr_t addr = wp_res_sp->GetLoadAddress();
     size_t size = wp_res_sp->GetByteSize();
     GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
-    m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,
+    m_gdb_comm.SendGDBStoppointTypePacket(type, enable, addr, size,
                                           GetInterruptTimeout());
   }
 }

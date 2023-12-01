@@ -11,14 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OmptCallback.h"
-#include "OmptInterface.h"
+#include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/EnvironmentVar.h"
+#include "Shared/Profile.h"
+
+#include "Utils/ExponentialBackoff.h"
 
 #include <cassert>
 #include <cstdint>
@@ -319,9 +323,8 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   if (KernelArgs->Flags.NoWait)
     return targetKernel<TaskAsyncInfoWrapperTy>(
         Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
-  else
-    return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
-                                     HostPtr, KernelArgs);
+  return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
+                                   HostPtr, KernelArgs);
 }
 
 /// Activates the record replay mechanism.
@@ -451,8 +454,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // for the device operations (work/spin wait on them) or block until they are
   // completed (use device side blocking mechanism). This allows the runtime to
   // adapt itself when there are a lot of long-running target regions in-flight.
-  using namespace llvm::omp::target;
-  static thread_local ExponentialBackoff QueryCounter(
+  static thread_local utils::ExponentialBackoff QueryCounter(
       Int64Envar("OMPTARGET_QUERY_COUNT_MAX", 10),
       Int64Envar("OMPTARGET_QUERY_COUNT_THRESHOLD", 5),
       Envar<float>("OMPTARGET_QUERY_COUNT_BACKOFF_FACTOR", 0.5f));

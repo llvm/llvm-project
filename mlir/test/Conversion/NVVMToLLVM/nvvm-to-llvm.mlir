@@ -611,3 +611,21 @@ llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
   nvvm.prefetch.tensormap %desc, predicate = %pred : !llvm.ptr, i1
   llvm.return
 }
+
+// -----
+
+func.func @set_max_register() {
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.inc.sync.aligned.u32 $0;", "n"
+  nvvm.setmaxregister increase 232
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "setmaxnreg.dec.sync.aligned.u32 $0;", "n"
+  nvvm.setmaxregister decrease 40
+  func.return
+}
+
+// -----
+
+func.func @cp_bulk_commit() {
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.bulk.commit_group;"
+  nvvm.cp.async.bulk.commit.group
+  func.return
+}

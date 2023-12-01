@@ -72,9 +72,12 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -750,26 +753,6 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
     } else {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
-    }
-  }
-  return Result;
-}
-
-Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
-  EmbedBitcodeOptions Result;
-  while (!Params.empty()) {
-    StringRef ParamName;
-    std::tie(ParamName, Params) = Params.split(';');
-
-    if (ParamName == "thinlto") {
-      Result.IsThinLTO = true;
-    } else if (ParamName == "emit-summary") {
-      Result.EmitLTOSummary = true;
-    } else {
-      return make_error<StringError>(
-          formatv("invalid EmbedBitcode pass parameter '{0}' ", ParamName)
               .str(),
           inconvertibleErrorCode());
     }

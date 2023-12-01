@@ -8,9 +8,10 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: availability-synchronization_library-missing
 // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
+// XFAIL: target={{x86_64-.*}} && tsan
 // XFAIL: target={{x86_64-.*}} && msan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
+// XFAIL: !has-64-bit-atomics
+// UNSUPPORTED: !non-lockfree-atomics
 
 // void wait(T old, memory_order order = memory_order::seq_cst) const volatile noexcept;
 // void wait(T old, memory_order order = memory_order::seq_cst) const noexcept;

@@ -595,6 +595,9 @@ mlir_c_api_cc_library(
     capi_deps = [
         ":CAPIIR",
     ],
+    header_deps = [
+        "//llvm:Support",
+    ],
     includes = ["include"],
     deps = [
         ":LLVMToLLVMIRTranslation",
@@ -602,7 +605,6 @@ mlir_c_api_cc_library(
         ":ToLLVMIRTranslation",
         ":ToLLVMIRTranslationRegistration",
         "//llvm:Core",
-        "//llvm:Support",
     ],
 )
 
@@ -1973,6 +1975,23 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "ArmSMEOpInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    deps = [":ArmSMETdFiles"],
+)
+
+gentbl_cc_library(
     name = "ArmSMEIntrinsicOpsIncGen",
     tbl_outs = [
         (
@@ -1994,13 +2013,30 @@ gentbl_cc_library(
 )
 
 cc_library(
-    name = "ArmSMEDialect",
-    srcs = ["lib/Dialect/ArmSME/IR/ArmSME.cpp"],
-    hdrs = ["include/mlir/Dialect/ArmSME/IR/ArmSME.h"],
-    includes = ["include"],
+    name = "ArmSMEEnums",
+    hdrs = [
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.h",
+    ],
     deps = [
         ":ArmSMEIncGen",
+        ":ArmSMEOpsIncGen",
+        ":IR",
+    ],
+)
+
+cc_library(
+    name = "ArmSMEDialect",
+    srcs = glob(["lib/Dialect/ArmSME/IR/*.cpp"]),
+    hdrs = [
+        "include/mlir/Dialect/ArmSME/IR/ArmSME.h",
+        "include/mlir/Dialect/ArmSME/Utils/Utils.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArmSMEEnums",
+        ":ArmSMEIncGen",
         ":ArmSMEIntrinsicOpsIncGen",
+        ":ArmSMEOpInterfacesIncGen",
         ":ArmSMEOpsIncGen",
         ":IR",
         ":LLVMDialect",
@@ -2014,19 +2050,6 @@ cc_library(
 )
 
 cc_library(
-    name = "ArmSMEUtils",
-    srcs = glob(["lib/Dialect/ArmSME/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/ArmSME/Utils/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":ArmSMEDialect",
-        ":Dialect",
-        ":IR",
-    ],
-)
-
-cc_library(
     name = "ArmSMETransforms",
     srcs = glob(["lib/Dialect/ArmSME/Transforms/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
@@ -2035,7 +2058,7 @@ cc_library(
         ":ArithDialect",
         ":ArmSMEDialect",
         ":ArmSMETransformsPassIncGen",
-        ":ArmSMEUtils",
+        ":ControlFlowDialect",
         ":FuncDialect",
         ":IR",
         ":LLVMCommonConversion",
@@ -2044,6 +2067,7 @@ cc_library(
         ":SCFDialect",
         ":Transforms",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -2055,7 +2079,6 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArmSMEDialect",
-        ":ArmSMEUtils",
         ":ConversionPassIncGen",
         ":Pass",
         ":SCFDialect",
@@ -2072,7 +2095,6 @@ cc_library(
         ":ArithDialect",
         ":ArmSMEDialect",
         ":ArmSMETransforms",
-        ":ArmSMEUtils",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":LLVMCommonConversion",
@@ -5717,6 +5739,7 @@ cc_library(
         ":AsyncToLLVM",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
         ":FuncToLLVM",
         ":GPUDialect",
         ":GPUTransforms",
@@ -10978,7 +11001,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
-        ":ArmSMEUtils",
         ":ConversionPassIncGen",
         ":IR",
         ":MemRefDialect",

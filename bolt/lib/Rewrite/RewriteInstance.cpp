@@ -3478,11 +3478,21 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
     if (B->getName() == BC->getHotTextMoverSectionName())
       return false;
 
-    // Depending on the option, put main text at the beginning or at the end.
-    if (opts::HotFunctionsAtEnd)
-      return B->getName() == BC->getMainCodeSectionName();
-    else
-      return A->getName() == BC->getMainCodeSectionName();
+    // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
+    // order.
+    if (opts::HotFunctionsAtEnd) {
+      if (B->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (A->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (B->getName() == BC->getWarmCodeSectionName());
+    } else {
+      if (A->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (B->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (A->getName() == BC->getWarmCodeSectionName());
+    }
   };
 
   // Determine the order of sections.
@@ -3524,6 +3534,9 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
 
     // Allocate sections starting at a given Address.
     auto allocateAt = [&](uint64_t Address) {
+      const char *LastNonColdSectionName = BC->HasWarmSection
+                                               ? BC->getWarmCodeSectionName()
+                                               : BC->getMainCodeSectionName();
       for (BinarySection *Section : CodeSections) {
         Address = alignTo(Address, Section->getAlignment());
         Section->setOutputAddress(Address);
@@ -3532,13 +3545,13 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
         // Hugify: Additional huge page from right side due to
         // weird ASLR mapping addresses (4KB aligned)
         if (opts::Hugify && !BC->HasFixedLoadAddress &&
-            Section->getName() == BC->getMainCodeSectionName())
+            Section->getName() == LastNonColdSectionName)
           Address = alignTo(Address, Section->getAlignment());
       }
 
       // Make sure we allocate enough space for huge pages.
       ErrorOr<BinarySection &> TextSection =
-          BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+          BC->getUniqueSectionByName(LastNonColdSectionName);
       if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
         uint64_t HotTextEnd =
             TextSection->getOutputAddress() + TextSection->getOutputSize();
@@ -4396,6 +4409,21 @@ void RewriteInstance::updateELFSymbolTable(
     return NewIndex;
   };
 
+  // Get the extra symbol name of a split fragment; used in addExtraSymbols.
+  auto getSplitSymbolName = [&](const FunctionFragment &FF,
+                                const ELFSymTy &FunctionSymbol) {
+    SmallString<256> SymbolName;
+    if (BC->HasWarmSection)
+      SymbolName =
+          formatv("{0}.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+                  FF.getFragmentNum() == FragmentNum::warm() ? "warm" : "cold");
+    else
+      SymbolName = formatv("{0}.cold.{1}",
+                           cantFail(FunctionSymbol.getName(StringSection)),
+                           FF.getFragmentNum().get() - 1);
+    return SymbolName;
+  };
+
   // Add extra symbols for the function.
   //
   // Note that addExtraSymbols() could be called multiple times for the same
@@ -4423,9 +4451,8 @@ void RewriteInstance::updateELFSymbolTable(
            Function.getLayout().getSplitFragments()) {
         if (FF.getAddress()) {
           ELFSymTy NewColdSym = FunctionSymbol;
-          const SmallString<256> SymbolName = formatv(
-              "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-              FF.getFragmentNum().get() - 1);
+          const SmallString<256> SymbolName =
+              getSplitSymbolName(FF, FunctionSymbol);
           NewColdSym.st_name = AddToStrTab(SymbolName);
           NewColdSym.st_shndx =
               Function.getCodeSection(FF.getFragmentNum())->getIndex();

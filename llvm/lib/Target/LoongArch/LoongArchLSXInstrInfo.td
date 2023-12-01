@@ -141,9 +141,13 @@ def lsxsplati16 : PatFrag<(ops node:$e0),
 def lsxsplati32 : PatFrag<(ops node:$e0),
                           (v4i32 (build_vector node:$e0, node:$e0,
                                                node:$e0, node:$e0))>;
-
 def lsxsplati64 : PatFrag<(ops node:$e0),
                           (v2i64 (build_vector node:$e0, node:$e0))>;
+def lsxsplatf32 : PatFrag<(ops node:$e0),
+                          (v4f32 (build_vector node:$e0, node:$e0,
+                                               node:$e0, node:$e0))>;
+def lsxsplatf64 : PatFrag<(ops node:$e0),
+                          (v2f64 (build_vector node:$e0, node:$e0))>;
 
 def to_valid_timm : SDNodeXForm<timm, [{
   auto CN = cast<ConstantSDNode>(N);
@@ -1257,10 +1261,6 @@ multiclass PatShiftVrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LSX128:$vj, uimm6:$imm)>;
 }
 
-class PatVrVrB<SDPatternOperator OpNode, LAInst Inst>
-    : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
-          (Inst LSX128:$vj, LSX128:$vk)>;
-
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -1308,13 +1308,20 @@ defm : PatVrVr<srem, "VMOD">;
 defm : PatVrVrU<urem, "VMOD">;
 
 // VAND_V
-def : PatVrVrB<and, VAND_V>;
-// VNOR_V
-def : PatVrVrB<or, VOR_V>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(and (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VAND_V LSX128:$vj, LSX128:$vk)>;
+// VOR_V
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(or (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VOR_V LSX128:$vj, LSX128:$vk)>;
 // VXOR_V
-def : PatVrVrB<xor, VXOR_V>;
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(xor (vt LSX128:$vj), (vt LSX128:$vk)),
+          (VXOR_V LSX128:$vj, LSX128:$vk)>;
 // VNOR_V
-def : Pat<(vnot (or (v16i8 LSX128:$vj), (v16i8 LSX128:$vk))),
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in
+def : Pat<(vnot (or (vt LSX128:$vj), (vt LSX128:$vk))),
           (VNOR_V LSX128:$vj, LSX128:$vk)>;
 
 // VANDI_B
@@ -1462,6 +1469,11 @@ def : Pat<(vector_insert v4i32:$vd, GRLenVT:$rj, uimm2:$imm),
 def : Pat<(vector_insert v2i64:$vd, GRLenVT:$rj, uimm1:$imm),
           (VINSGR2VR_D v2i64:$vd, GRLenVT:$rj, uimm1:$imm)>;
 
+def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, uimm2:$imm),
+          (VINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm2:$imm)>;
+def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, uimm1:$imm),
+          (VINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm1:$imm)>;
+
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),
           (VPICKVE2GR_B v16i8:$vd, uimm4:$imm)>;
@@ -1493,6 +1505,12 @@ def : Pat<(loongarch_vreplve v4i32:$vj, GRLenVT:$rk),
 def : Pat<(loongarch_vreplve v2i64:$vj, GRLenVT:$rk),
           (VREPLVE_D v2i64:$vj, GRLenVT:$rk)>;
 
+// VREPLVEI_{W/D}
+def : Pat<(lsxsplatf32 FPR32:$fj),
+          (VREPLVEI_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32), 0)>;
+def : Pat<(lsxsplatf64 FPR64:$fj),
+          (VREPLVEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
+
 // Loads/Stores
 foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
   defm : LdPat<load, VLD, vt>;
@@ -1500,6 +1518,44 @@ foreach vt = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
   defm : StPat<store, VST, LSX128, vt>;
   def  : RegRegStPat<store, VSTX, LSX128, vt>;
 }
+
+// Vector extraction with constant index.
+def : Pat<(i64 (vector_extract v16i8:$vj, uimm4:$imm)),
+          (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
+def : Pat<(i64 (vector_extract v8i16:$vj, uimm3:$imm)),
+          (VPICKVE2GR_H v8i16:$vj, uimm3:$imm)>;
+def : Pat<(i64 (vector_extract v4i32:$vj, uimm2:$imm)),
+          (VPICKVE2GR_W v4i32:$vj, uimm2:$imm)>;
+def : Pat<(i64 (vector_extract v2i64:$vj, uimm1:$imm)),
+          (VPICKVE2GR_D v2i64:$vj, uimm1:$imm)>;
+def : Pat<(f32 (vector_extract v4f32:$vj, uimm2:$imm)),
+          (f32 (EXTRACT_SUBREG (VREPLVEI_W v4f32:$vj, uimm2:$imm), sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, uimm1:$imm)),
+          (f64 (EXTRACT_SUBREG (VREPLVEI_D v2f64:$vj, uimm1:$imm), sub_64))>;
+
+// Vector extraction with variable index.
+def : Pat<(i64 (vector_extract v16i8:$vj, i64:$rk)),
+          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_B v16i8:$vj,
+                                                                    i64:$rk),
+                                                         sub_32)),
+                                    GPR), (i64 24))>;
+def : Pat<(i64 (vector_extract v8i16:$vj, i64:$rk)),
+          (SRAI_W (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_H v8i16:$vj,
+                                                                    i64:$rk),
+                                                         sub_32)),
+                                    GPR), (i64 16))>;
+def : Pat<(i64 (vector_extract v4i32:$vj, i64:$rk)),
+          (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG (VREPLVE_W v4i32:$vj, i64:$rk),
+                                                 sub_32)),
+                            GPR)>;
+def : Pat<(i64 (vector_extract v2i64:$vj, i64:$rk)),
+          (COPY_TO_REGCLASS (f64 (EXTRACT_SUBREG (VREPLVE_D v2i64:$vj, i64:$rk),
+                                                 sub_64)),
+                            GPR)>;
+def : Pat<(f32 (vector_extract v4f32:$vj, i64:$rk)),
+          (f32 (EXTRACT_SUBREG (VREPLVE_W v4f32:$vj, i64:$rk), sub_32))>;
+def : Pat<(f64 (vector_extract v2f64:$vj, i64:$rk)),
+          (f64 (EXTRACT_SUBREG (VREPLVE_D v2f64:$vj, i64:$rk), sub_64))>;
 
 } // Predicates = [HasExtLSX]
 

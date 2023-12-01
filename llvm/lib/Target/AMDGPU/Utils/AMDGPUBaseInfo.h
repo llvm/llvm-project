@@ -1287,6 +1287,9 @@ LLVM_READNONE
 bool isInlinableIntLiteralV216(int32_t Literal);
 
 LLVM_READNONE
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType);
+
+LLVM_READNONE
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 LLVM_READNONE

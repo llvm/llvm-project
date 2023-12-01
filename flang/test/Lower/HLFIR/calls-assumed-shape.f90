@@ -111,6 +111,6 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_explicit_by_val(
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_2:[a-z0-9]*]]) {uniq_name = "_QFtest_explicit_by_valEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:  %[[VAL_4:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<10xf32>>) -> !hlfir.expr<10xf32>
-! CHECK:  %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]](%[[VAL_2]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<10xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>, i1)
+! CHECK:  %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<10xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>, i1)
 ! CHECK:  fir.call @_QPtakes_explicit_by_value(%[[VAL_5]]#1) {{.*}} : (!fir.ref<!fir.array<10xf32>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_5]]#1, %[[VAL_5]]#2 : !fir.ref<!fir.array<10xf32>>, i1

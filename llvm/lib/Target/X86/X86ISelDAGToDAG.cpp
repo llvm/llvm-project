@@ -1054,7 +1054,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       SDValue Ptr = Ld->getBasePtr();
       SDValue Chain = Ld->getChain();
       for (SDNode *User : Ptr->uses()) {
-        auto *UserLd = dyn_cast<LoadSDNode>(N);
+        auto *UserLd = dyn_cast<LoadSDNode>(User);
         MVT UserVT = User->getSimpleValueType(0);
         if (User != N && UserLd && ISD::isNormalLoad(User) &&
             UserLd->getBasePtr() == Ptr && UserLd->getChain() == Chain &&
