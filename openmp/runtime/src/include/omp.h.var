@@ -15,6 +15,7 @@
 #ifndef __OMP_H
 #   define __OMP_H
 
+#   include <stddef.h>
 #   include <stdlib.h>
 #   include <stdint.h>
 

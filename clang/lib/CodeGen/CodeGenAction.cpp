@@ -58,6 +58,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "codegenaction"
 
+namespace llvm {
+extern cl::opt<bool> ClRelinkBuiltinBitcodePostop;
+}
+
 namespace clang {
 class BackendConsumer;
 class ClangDiagnosticHandler final : public DiagnosticHandler {
@@ -252,32 +256,37 @@ bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
       }
 
     CurLinkModule = LM.Module.get();
-
-    // TODO: If CloneModule() is updated to support cloning of unmaterialized
-    // modules, we can remove this
     bool Err;
-    if (Error E = CurLinkModule->materializeAll())
-      return false;
+
+    auto DoLink = [&](auto &Mod) {
+      if (LM.Internalize) {
+        Err = Linker::linkModules(
+            *M, std::move(Mod), LM.LinkFlags,
+            [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+              internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+                return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+              });
+            });
+      } else
+        Err = Linker::linkModules(*M, std::move(Mod), LM.LinkFlags);
+    };
 
     // Create a Clone to move to the linker, which preserves the original
     // linking modules, allowing them to be linked again in the future
-    // TODO: Add a ShouldCleanup option to make Cloning optional. When
-    // set, we can pass the original modules to the linker for cleanup
-    std::unique_ptr<llvm::Module> Clone = llvm::CloneModule(*LM.Module);
+    if (ClRelinkBuiltinBitcodePostop) {
+      // TODO: If CloneModule() is updated to support cloning of unmaterialized
+      // modules, we can remove this
+      if (Error E = CurLinkModule->materializeAll())
+        return false;
 
-    if (LM.Internalize) {
-      Err = Linker::linkModules(
-          *M, std::move(Clone), LM.LinkFlags,
-          [](llvm::Module &M, const llvm::StringSet<> &GVS) {
-            internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
-              return !GV.hasName() || (GVS.count(GV.getName()) == 0);
-            });
-          });
-    } else
-      Err = Linker::linkModules(*M, std::move(Clone), LM.LinkFlags);
+      std::unique_ptr<llvm::Module> Clone = llvm::CloneModule(*LM.Module);
 
-    if (Err)
-      return true;
+      DoLink(Clone);
+    }
+    // Otherwise we can link (and clean up) the original modules
+    else {
+      DoLink(LM.Module);
+    }
   }
 
   return false; // success

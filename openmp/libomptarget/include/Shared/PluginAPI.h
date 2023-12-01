@@ -1,4 +1,4 @@
-//===-- omptargetplugin.h - Target dependent OpenMP Plugin API --*- C++ -*-===//
+//===-- Shared/PluginAPI.h - Target independent plugin API ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTARGETPLUGIN_H_
-#define _OMPTARGETPLUGIN_H_
+#ifndef OMPTARGET_SHARED_PLUGIN_API_H
+#define OMPTARGET_SHARED_PLUGIN_API_H
 
-#include <omptarget.h>
+#include <cstddef>
+#include <cstdint>
 
-#ifdef __cplusplus
+#include "Shared/APITypes.h"
+
 extern "C" {
-#endif
 
 // Return the number of available physical processors to execute teams
 // supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
@@ -233,9 +234,6 @@ int32_t __tgt_rtl_data_notify_unmapped(int32_t ID, void *HstPtr);
 // Set the global device identifier offset, such that the plugin may determine a
 // unique device number.
 int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset);
-
-#ifdef __cplusplus
 }
-#endif
 
-#endif // _OMPTARGETPLUGIN_H_
+#endif // OMPTARGET_SHARED_PLUGIN_API_H

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers instrprof_* intrinsics emitted by a frontend for profiling.
+// This pass lowers instrprof_* intrinsics emitted by an instrumentor.
 // It also builds the data structures and initialization code needed for
 // updating execution counts and emitting the profile at runtime.
 //
