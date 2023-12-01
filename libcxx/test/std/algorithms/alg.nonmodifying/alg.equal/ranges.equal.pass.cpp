@@ -23,6 +23,7 @@
 //                                Proj1 proj1 = {}, Proj2 proj2 = {});
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <concepts>
 #include <functional>
@@ -200,14 +201,18 @@ constexpr void test_iterators() {
 
   { // check that two empty ranges work
     {
-      int a[] = {};
-      int b[] = {};
+      std::array<int, 0> a_arr = {};
+      int* const a = a_arr.data();
+      std::array<int, 0> b_arr = {};
+      int* const b = b_arr.data();
       auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a)), Iter2(b), Sent2(Iter2(b)));
       assert(ret);
     }
     {
-      int a[] = {};
-      int b[] = {};
+      std::array<int, 0> a_arr = {};
+      int* const a = a_arr.data();
+      std::array<int, 0> b_arr = {};
+      int* const b = b_arr.data();
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b)));
       auto ret = std::ranges::equal(range1, range2);
@@ -217,13 +222,15 @@ constexpr void test_iterators() {
 
   { // check that it works with the first range empty
     {
-      int a[] = {};
+      std::array<int, 0> a_arr = {};
+      int* const a = a_arr.data();
       int b[] = {1, 2};
       auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a)), Iter2(b), Sent2(Iter2(b + 2)));
       assert(!ret);
     }
     {
-      int a[] = {};
+      std::array<int, 0> a_arr = {};
+      int* const a = a_arr.data();
       int b[] = {1, 2};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 2)));
@@ -235,13 +242,15 @@ constexpr void test_iterators() {
   { // check that it works with the second range empty
     {
       int a[] = {1, 2};
-      int b[] = {};
+      std::array<int, 0> b_arr = {};
+      int* const b = b_arr.data();
       auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 2)), Iter2(b), Sent2(Iter2(b)));
       assert(!ret);
     }
     {
       int a[] = {1, 2};
-      int b[] = {};
+      std::array<int, 0> b_arr = {};
+      int* const b = b_arr.data();
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 2)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b)));
       auto ret = std::ranges::equal(range1, range2);

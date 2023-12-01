@@ -17,6 +17,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 
 #include "test_macros.h"
@@ -26,7 +27,8 @@ template <class Iter>
 void
 test_with_iterator()
 {
-    int empty[] = {};
+    std::array<int, 0> empty_arr = {};
+    int* const empty = empty_arr.data();
     std::random_shuffle(Iter(empty), Iter(empty));
 
     const int all_elements[] = {1, 2, 3, 4};

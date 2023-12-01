@@ -89,7 +89,8 @@ constexpr bool test_iterators() {
   }
 
   { // first range empty
-    int a[] = {};
+    std::array<int, 0> a_arr = {};
+    int* const a = a_arr.data();
     int b[] = {5, 4, 3, 2, 1};
     int c[5];
 
@@ -103,7 +104,8 @@ constexpr bool test_iterators() {
 
   { // second range empty
     int a[] = {5, 4, 3, 2, 1};
-    int b[] = {};
+    std::array<int, 0> b_arr = {};
+    int* const b = b_arr.data();
     int c[5];
 
     auto ret = std::ranges::transform(
@@ -115,8 +117,10 @@ constexpr bool test_iterators() {
   }
 
   { // both ranges empty
-    int a[] = {};
-    int b[] = {};
+    std::array<int, 0> a_arr = {};
+    int* const a = a_arr.data();
+    std::array<int, 0> b_arr = {};
+    int* const b = b_arr.data();
     int c[5];
 
     auto ret = std::ranges::transform(

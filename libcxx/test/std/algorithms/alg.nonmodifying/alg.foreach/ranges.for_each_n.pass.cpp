@@ -16,6 +16,7 @@
 //     ranges::for_each_n(I first, iter_difference_t<I> n, Fun f, Proj proj = {});
 
 #include <algorithm>
+#include <array>
 #include <ranges>
 
 #include "almost_satisfies_types.h"
@@ -58,7 +59,8 @@ constexpr void test_iterator() {
   }
 
   { // check that an empty range works
-    int a[] = {};
+    std::array<int, 0> a_arr = {};
+    int* const a = a_arr.data();
     std::ranges::for_each_n(Iter(a), 0, [](auto&) { assert(false); });
   }
 }

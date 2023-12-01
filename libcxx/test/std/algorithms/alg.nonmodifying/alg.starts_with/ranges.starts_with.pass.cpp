@@ -136,14 +136,16 @@ constexpr void test_iterators() {
   { // prefix has zero length
     {
       int a[] = {1, 2, 3, 4, 5, 6};
-      int p[] = {};
+      std::array<int, 0> p_arr = {};
+      int* const p = p_arr.data();
       std::same_as<bool> decltype(auto) ret =
           std::ranges::starts_with(Iter1(a), Sent1(Iter1(a + 6)), Iter2(p), Sent2(Iter2(p)));
       assert(ret);
     }
     {
       int a[]                               = {1, 2, 3, 4, 5, 6};
-      int p[]                               = {};
+      std::array<int, 0> p_arr = {};
+      int* const p = p_arr.data();
       auto whole                            = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 6)));
       auto prefix                           = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
       std::same_as<bool> decltype(auto) ret = std::ranges::starts_with(whole, prefix);
@@ -153,14 +155,16 @@ constexpr void test_iterators() {
 
   { // range has zero length
     {
-      int a[] = {};
+      std::array<int, 0> a_arr = {};
+      int* const a = a_arr.data();
       int p[] = {1, 2, 3, 4, 5, 6, 7, 8};
       std::same_as<bool> decltype(auto) ret =
           std::ranges::starts_with(Iter1(a), Sent1(Iter1(a)), Iter2(p), Sent2(Iter2(p + 8)));
       assert(!ret);
     }
     {
-      int a[]                               = {};
+      std::array<int, 0> a_arr = {};
+      int* const a = a_arr.data();
       int p[]                               = {1, 2, 3, 4, 5, 6, 7, 8};
       auto whole                            = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
       auto prefix                           = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 8)));
