@@ -181,7 +181,7 @@ debug info. The type name has a special name prefix (e.g.,
 ``__bounds_safety$bidi_indexable``) which can be recognized by a debug info
 consumer to provide support that goes beyond showing the internal structure of
 the wide pointer. There are no DWARF extensions needed to support wide pointers.
-In our implementation, LLDB recognized wide pointer types by name and
+In our implementation, LLDB recognizes wide pointer types by name and
 reconstructs them as wide pointer Clang AST types for use in the expression
 evaluator.
 
