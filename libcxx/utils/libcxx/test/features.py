@@ -190,6 +190,17 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    Feature(
+        name="has-64-bit-atomics",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            #include <atomic>
+            std::atomic_uint64_t x;
+            int main(int, char**) { (void)x.load(); return 0; }
+          """,
+        ),
+    ),
     # TODO: Remove this feature once compiler-rt includes __atomic_is_lockfree()
     # on all supported platforms.
     Feature(
@@ -265,7 +276,8 @@ DEFAULT_FEATURES = [
             #include <unistd.h>
             #include <sys/wait.h>
             int main(int, char**) {
-              return 0;
+              int fd[2];
+              return pipe(fd);
             }
           """,
         ),
@@ -412,6 +424,19 @@ DEFAULT_FEATURES += [
     Feature(
         name="LIBCXX-FREEBSD-FIXME",
         when=lambda cfg: "__FreeBSD__" in compilerMacros(cfg),
+    ),
+    Feature(
+        name="LIBCXX-PICOLIBC-FIXME",
+        when=lambda cfg: sourceBuilds(
+            cfg,
+            """
+            #include <string.h>
+            #ifndef __PICOLIBC__
+            #error not picolibc
+            #endif
+            int main(int, char**) { return 0; }
+          """,
+        ),
     ),
 ]
 
