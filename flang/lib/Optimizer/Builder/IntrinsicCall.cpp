@@ -4138,17 +4138,46 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type resultType,
       fir::getBase(args[1]), fir::getLen(args[1]));
 }
 
+static bool isOptional(mlir::Value value) {
+  auto varIface = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+      value.getDefiningOp());
+  return varIface && varIface.isOptional();
+}
+
 // LOC
 fir::ExtendedValue
 IntrinsicLibrary::genLoc(mlir::Type resultType,
                          llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Value argValue = fir::getBase(args[0]);
-  assert(fir::isa_box_type(argValue.getType()) &&
+  mlir::Value box = fir::getBase(args[0]);
+  assert(fir::isa_box_type(box.getType()) &&
          "argument must have been lowered to box type");
-  bool isFunc = argValue.getType().isa<fir::BoxProcType>();
-  mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
-  return builder.createConvert(loc, fir::unwrapRefType(resultType), argAddr);
+  bool isFunc = box.getType().isa<fir::BoxProcType>();
+  if (!isOptional(box)) {
+    mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
+    return builder.createConvert(loc, resultType, argAddr);
+  }
+  // Optional assumed shape case.  Although this is not specified in this GNU
+  // intrinsic extension, LOC accepts absent optional and returns zero in that
+  // case.
+  // Note that the other OPTIONAL cases do not fall here since `box` was
+  // created when preparing the argument cases, but the box can be safely be
+  // used for all those cases and the address will be null if absent.
+  mlir::Value isPresent =
+      builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), box);
+  return builder
+      .genIfOp(loc, {resultType}, isPresent,
+               /*withElseRegion=*/true)
+      .genThen([&]() {
+        mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
+        mlir::Value cast = builder.createConvert(loc, resultType, argAddr);
+        builder.create<fir::ResultOp>(loc, cast);
+      })
+      .genElse([&]() {
+        mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+        builder.create<fir::ResultOp>(loc, zero);
+      })
+      .getResults()[0];
 }
 
 // MASKL, MASKR
