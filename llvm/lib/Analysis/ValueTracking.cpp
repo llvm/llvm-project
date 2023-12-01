@@ -276,12 +276,9 @@ bool llvm::isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth,
       V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
-bool llvm::isKnownNonNegative(const Value *V, const DataLayout &DL,
-                              unsigned Depth, AssumptionCache *AC,
-                              const Instruction *CxtI, const DominatorTree *DT,
-                              bool UseInstrInfo) {
-  KnownBits Known = computeKnownBits(V, DL, Depth, AC, CxtI, DT, UseInstrInfo);
-  return Known.isNonNegative();
+bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
+                              unsigned Depth) {
+  return computeKnownBits(V, Depth, SQ).isNonNegative();
 }
 
 bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,
@@ -292,7 +289,8 @@ bool llvm::isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth,
 
   // TODO: We'd doing two recursive queries here.  We should factor this such
   // that only a single query is needed.
-  return isKnownNonNegative(V, DL, Depth, AC, CxtI, DT, UseInstrInfo) &&
+  return isKnownNonNegative(V, SimplifyQuery(DL, DT, AC, CxtI, UseInstrInfo),
+                            Depth) &&
          isKnownNonZero(V, DL, Depth, AC, CxtI, DT, UseInstrInfo);
 }
 
