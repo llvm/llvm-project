@@ -5,6 +5,6 @@
 #pragma push_macro("__noinline__")
 #undef __noinline__
 #define __noinline__ __noinline__
-#include_next "__config"
+#include_next <__config>
 
 #pragma pop_macro("__noinline__")
