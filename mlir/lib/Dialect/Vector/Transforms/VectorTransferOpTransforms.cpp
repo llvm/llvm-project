@@ -332,7 +332,7 @@ static FailureOr<Value>
 createMaskDropNonScalableUnitDims(PatternRewriter &rewriter, Location loc,
                                   vector::CreateMaskOp op) {
   auto type = op.getType();
-  auto reducedType = trimNonScalableUnitDims(type);
+  VectorType reducedType = trimNonScalableUnitDims(type);
   if (reducedType.getRank() == type.getRank())
     return failure();
 
@@ -383,7 +383,7 @@ class TransferReadDropUnitDimsPattern
       return failure();
     // Check if the reduced vector shape matches the reduced source shape.
     // Otherwise, this case is not supported yet.
-    auto reducedVectorType = trimNonScalableUnitDims(vectorType);
+    VectorType reducedVectorType = trimNonScalableUnitDims(vectorType);
     if (reducedRank != reducedVectorType.getRank())
       return failure();
     if (llvm::any_of(transferReadOp.getIndices(), [](Value v) {
@@ -451,7 +451,7 @@ class TransferWriteDropUnitDimsPattern
       return failure();
     // Check if the reduced vector shape matches the reduced destination shape.
     // Otherwise, this case is not supported yet.
-    auto reducedVectorType = trimNonScalableUnitDims(vectorType);
+    VectorType reducedVectorType = trimNonScalableUnitDims(vectorType);
     if (reducedRank != reducedVectorType.getRank())
       return failure();
     if (llvm::any_of(transferWriteOp.getIndices(), [](Value v) {
