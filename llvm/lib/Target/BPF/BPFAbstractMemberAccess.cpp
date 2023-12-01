@@ -172,6 +172,8 @@ private:
   bool IsValidAIChain(const MDNode *ParentMeta, uint32_t ParentAI,
                       const MDNode *ChildMeta);
   bool removePreserveAccessIndexIntrinsic(Function &F);
+  void replaceWithGEP(std::vector<CallInst *> &CallList,
+                      uint32_t NumOfZerosIndex, uint32_t DIIndex);
   bool HasPreserveFieldInfoCall(CallInfoStack &CallStack);
   void GetStorageBitRange(DIDerivedType *MemberTy, Align RecordAlignment,
                           uint32_t &StartBitOffset, uint32_t &EndBitOffset);
@@ -183,6 +185,7 @@ private:
                                  std::string &AccessKey, MDNode *&BaseMeta);
   MDNode *computeAccessKey(CallInst *Call, CallInfo &CInfo,
                            std::string &AccessKey, bool &IsInt32Ret);
+  uint64_t getConstant(const Value *IndexValue);
   bool transformGEPChain(CallInst *Call, CallInfo &CInfo);
 };
 
@@ -323,12 +326,6 @@ static Type *getBaseElementType(const CallInst *Call) {
   return Call->getParamElementType(0);
 }
 
-static uint64_t getConstant(const Value *IndexValue) {
-  const ConstantInt *CV = dyn_cast<ConstantInt>(IndexValue);
-  assert(CV);
-  return CV->getValue().getZExtValue();
-}
-
 /// Check whether a call is a preserve_*_access_index intrinsic call or not.
 bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
                                                           CallInfo &CInfo) {
@@ -413,36 +410,26 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
   return false;
 }
 
-static void replaceWithGEP(CallInst *Call, uint32_t DimensionIndex,
-                           uint32_t GEPIndex) {
-  uint32_t Dimension = 1;
-  if (DimensionIndex > 0)
-    Dimension = getConstant(Call->getArgOperand(DimensionIndex));
+void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
+                                             uint32_t DimensionIndex,
+                                             uint32_t GEPIndex) {
+  for (auto *Call : CallList) {
+    uint32_t Dimension = 1;
+    if (DimensionIndex > 0)
+      Dimension = getConstant(Call->getArgOperand(DimensionIndex));
 
-  Constant *Zero =
-      ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
-  SmallVector<Value *, 4> IdxList;
-  for (unsigned I = 0; I < Dimension; ++I)
-    IdxList.push_back(Zero);
-  IdxList.push_back(Call->getArgOperand(GEPIndex));
+    Constant *Zero =
+        ConstantInt::get(Type::getInt32Ty(Call->getParent()->getContext()), 0);
+    SmallVector<Value *, 4> IdxList;
+    for (unsigned I = 0; I < Dimension; ++I)
+      IdxList.push_back(Zero);
+    IdxList.push_back(Call->getArgOperand(GEPIndex));
 
-  auto *GEP = GetElementPtrInst::CreateInBounds(
-      getBaseElementType(Call), Call->getArgOperand(0), IdxList, "", Call);
-  Call->replaceAllUsesWith(GEP);
-  Call->eraseFromParent();
-}
-
-void BPFCoreSharedInfo::removeArrayAccessCall(CallInst *Call) {
-  replaceWithGEP(Call, 1, 2);
-}
-
-void BPFCoreSharedInfo::removeStructAccessCall(CallInst *Call) {
-  replaceWithGEP(Call, 0, 1);
-}
-
-void BPFCoreSharedInfo::removeUnionAccessCall(CallInst *Call) {
-  Call->replaceAllUsesWith(Call->getArgOperand(0));
-  Call->eraseFromParent();
+    auto *GEP = GetElementPtrInst::CreateInBounds(
+        getBaseElementType(Call), Call->getArgOperand(0), IdxList, "", Call);
+    Call->replaceAllUsesWith(GEP);
+    Call->eraseFromParent();
+  }
 }
 
 bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
@@ -477,12 +464,12 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
   // . addr = preserve_struct_access_index(base, gep_index, di_index)
   //   is transformed to
   //     addr = GEP(base, 0, gep_index)
-  for (CallInst *Call : PreserveArrayIndexCalls)
-    BPFCoreSharedInfo::removeArrayAccessCall(Call);
-  for (CallInst *Call : PreserveStructIndexCalls)
-    BPFCoreSharedInfo::removeStructAccessCall(Call);
-  for (CallInst *Call : PreserveUnionIndexCalls)
-    BPFCoreSharedInfo::removeUnionAccessCall(Call);
+  replaceWithGEP(PreserveArrayIndexCalls, 1, 2);
+  replaceWithGEP(PreserveStructIndexCalls, 0, 1);
+  for (auto *Call : PreserveUnionIndexCalls) {
+    Call->replaceAllUsesWith(Call->getArgOperand(0));
+    Call->eraseFromParent();
+  }
 
   return Found;
 }
@@ -645,6 +632,12 @@ void BPFAbstractMemberAccess::collectAICallChains(Function &F) {
 
       traceAICall(Call, CInfo);
     }
+}
+
+uint64_t BPFAbstractMemberAccess::getConstant(const Value *IndexValue) {
+  const ConstantInt *CV = dyn_cast<ConstantInt>(IndexValue);
+  assert(CV);
+  return CV->getValue().getZExtValue();
 }
 
 /// Get the start and the end of storage offset for \p MemberTy.

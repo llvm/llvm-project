@@ -2469,10 +2469,6 @@ def int_preserve_struct_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                  [IntrNoMem,
                                                   ImmArg<ArgIndex<1>>,
                                                   ImmArg<ArgIndex<2>>]>;
-def int_preserve_static_offset : DefaultAttrsIntrinsic<[llvm_ptr_ty],
-                                                       [llvm_ptr_ty],
-                                                       [IntrNoMem, IntrSpeculatable,
-                                                        ReadNone <ArgIndex<0>>]>;
 
 //===------------ Intrinsics to perform common vector shuffles ------------===//
 

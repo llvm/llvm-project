@@ -93,7 +93,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
                         cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(false));
+                        cl::init(true));
 
 static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
