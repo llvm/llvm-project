@@ -26,7 +26,7 @@
 // TODO: Replace with LIBC_LONG_DOUBLE_IS_X86_BIN80
 #define SPECIAL_X86_LONG_DOUBLE
 #elif (LDBL_MANT_DIG == 113)
-#define LIBC_LONG_DOUBLE_IS_IEEE754_BIN128
+#define LIBC_LONG_DOUBLE_IS_FLOAT128
 #endif
 
 // float16 support.
@@ -70,13 +70,13 @@ using float16 = _Float16;
 using float128 = _Float128;
 #elif defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION)
 using float128 = __float128;
-#elif defined(LIBC_LONG_DOUBLE_IS_IEEE754_BIN128)
+#elif defined(LIBC_LONG_DOUBLE_IS_FLOAT128)
 using float128 = long double;
 #endif
 
 #if defined(LIBC_COMPILER_HAS_C23_FLOAT128) ||                                 \
     defined(LIBC_COMPILER_HAS_FLOAT128_EXTENSION) ||                           \
-    defined(LIBC_LONG_DOUBLE_IS_IEEE754_BIN128)
+    defined(LIBC_LONG_DOUBLE_IS_FLOAT128)
 // TODO: Replace with LIBC_HAS_FLOAT128
 #define LIBC_COMPILER_HAS_FLOAT128
 #endif
