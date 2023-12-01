@@ -33,19 +33,32 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 protected:
-  // This is virtual so that derived classes can implement additional behavior.
-  virtual void makeDiagnostic(DiagnosticBuilder Diagnostic, const VarDecl &Var,
-                              const Stmt &BlockStmt, const DeclStmt &Stmt,
-                              ASTContext &Context, bool IssueFix);
+  // A helper to manipulate the state common to
+  // `CopyFromMethodReturn` and `CopyFromLocalVar`.
+  struct CheckContext {
+    CheckContext(const ast_matchers::MatchFinder::MatchResult &Result);
+    const VarDecl &Var;
+    const Stmt &BlockStmt;
+    const DeclStmt &VarDeclStmt;
+    clang::ASTContext &ASTCtx;
+    const bool IssueFix;
+    const bool IsVarUnused;
+    const bool IsVarOnlyUsedAsConst;
+  };
+
+  // Create diagnostics. These are virtual so that derived classes can change
+  // behaviour.
+  virtual void diagnoseCopyFromMethodReturn(const CheckContext &Ctx,
+                                            const VarDecl *ObjectArg);
+  virtual void diagnoseCopyFromLocalVar(const CheckContext &Ctx,
+                                        const VarDecl &OldVar);
 
 private:
-  void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
-                                  const DeclStmt &Stmt, bool IssueFix,
-                                  const VarDecl *ObjectArg,
-                                  ASTContext &Context);
-  void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
-                              const Stmt &BlockStmt, const DeclStmt &Stmt,
-                              bool IssueFix, ASTContext &Context);
+  void handleCopyFromMethodReturn(const CheckContext &Ctx,
+                                  const VarDecl *ObjectArg);
+  void handleCopyFromLocalVar(const CheckContext &Ctx, const VarDecl &OldVar);
+
+  void maybeIssueFixes(const CheckContext &Ctx, DiagnosticBuilder &Diagnostic);
 
   const std::vector<StringRef> AllowedTypes;
   const std::vector<StringRef> ExcludedContainerTypes;

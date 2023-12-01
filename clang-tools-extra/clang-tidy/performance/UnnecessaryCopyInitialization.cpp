@@ -262,20 +262,26 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
+UnnecessaryCopyInitialization::CheckContext::CheckContext(
+    const ast_matchers::MatchFinder::MatchResult &Result)
+    : Var(*Result.Nodes.getNodeAs<VarDecl>("newVarDecl")),
+      BlockStmt(*Result.Nodes.getNodeAs<Stmt>("blockStmt")),
+      VarDeclStmt(*Result.Nodes.getNodeAs<DeclStmt>("declStmt")),
+      ASTCtx(*Result.Context),
+      // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
+      // since we cannot place them correctly.
+      IssueFix(VarDeclStmt.isSingleDecl() && !Var.getLocation().isMacroID()),
+      IsVarUnused(isVariableUnused(Var, BlockStmt, ASTCtx)),
+      IsVarOnlyUsedAsConst(isOnlyUsedAsConst(Var, BlockStmt, ASTCtx)) {}
+
 void UnnecessaryCopyInitialization::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *NewVar = Result.Nodes.getNodeAs<VarDecl>("newVarDecl");
+  const CheckContext Context(Result);
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
-  const auto *BlockStmt = Result.Nodes.getNodeAs<Stmt>("blockStmt");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
-  const auto *Stmt = Result.Nodes.getNodeAs<DeclStmt>("declStmt");
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
-
-  // Do not propose fixes if the DeclStmt has multiple VarDecls or in macros
-  // since we cannot place them correctly.
-  bool IssueFix = Stmt->isSingleDecl() && !NewVar->getLocation().isMacroID();
 
   // A constructor that looks like T(const T& t, bool arg = false) counts as a
   // copy only when it is called with default arguments for the arguments after
@@ -290,69 +296,72 @@ void UnnecessaryCopyInitialization::check(
   // instantiations where the types differ and rely on implicit conversion would
   // no longer compile if we switched to a reference.
   if (differentReplacedTemplateParams(
-          NewVar->getType(), constructorArgumentType(OldVar, Result.Nodes),
+          Context.Var.getType(), constructorArgumentType(OldVar, Result.Nodes),
           *Result.Context))
     return;
 
   if (OldVar == nullptr) {
-    handleCopyFromMethodReturn(*NewVar, *BlockStmt, *Stmt, IssueFix, ObjectArg,
-                               *Result.Context);
+    // `auto NewVar = functionCall();`
+    handleCopyFromMethodReturn(Context, ObjectArg);
   } else {
-    handleCopyFromLocalVar(*NewVar, *OldVar, *BlockStmt, *Stmt, IssueFix,
-                           *Result.Context);
+    // `auto NewVar = OldVar;`
+    handleCopyFromLocalVar(Context, *OldVar);
   }
 }
 
-void UnnecessaryCopyInitialization::makeDiagnostic(
-    DiagnosticBuilder Diagnostic, const VarDecl &Var, const Stmt &BlockStmt,
-    const DeclStmt &Stmt, ASTContext &Context, bool IssueFix) {
-  const bool IsVarUnused = isVariableUnused(Var, BlockStmt, Context);
-  Diagnostic << &Var << IsVarUnused;
-  if (!IssueFix)
-    return;
-  if (IsVarUnused)
-    recordRemoval(Stmt, Context, Diagnostic);
-  else
-    recordFixes(Var, Context, Diagnostic);
-}
-
 void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
-    const VarDecl &Var, const Stmt &BlockStmt, const DeclStmt &Stmt,
-    bool IssueFix, const VarDecl *ObjectArg, ASTContext &Context) {
-  bool IsConstQualified = Var.getType().isConstQualified();
-  if (!IsConstQualified && !isOnlyUsedAsConst(Var, BlockStmt, Context))
+    const CheckContext &Ctx, const VarDecl *ObjectArg) {
+  bool IsConstQualified = Ctx.Var.getType().isConstQualified();
+  if (!IsConstQualified && !Ctx.IsVarOnlyUsedAsConst)
     return;
   if (ObjectArg != nullptr &&
-      !isInitializingVariableImmutable(*ObjectArg, BlockStmt, Context,
+      !isInitializingVariableImmutable(*ObjectArg, Ctx.BlockStmt, Ctx.ASTCtx,
                                        ExcludedContainerTypes))
     return;
-
-  auto Diagnostic =
-      diag(Var.getLocation(),
-           "the %select{|const qualified }0variable %1 is copy-constructed "
-           "from a const reference%select{"
-           "%select{ but is only used as const reference|}0"
-           "| but is never used}2; consider "
-           "%select{making it a const reference|removing the statement}2")
-      << IsConstQualified;
-  makeDiagnostic(std::move(Diagnostic), Var, BlockStmt, Stmt, Context,
-                 IssueFix);
+  diagnoseCopyFromMethodReturn(Ctx, ObjectArg);
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
-    const VarDecl &Var, const VarDecl &OldVar, const Stmt &BlockStmt,
-    const DeclStmt &Stmt, bool IssueFix, ASTContext &Context) {
-  if (!isOnlyUsedAsConst(Var, BlockStmt, Context) ||
-      !isInitializingVariableImmutable(OldVar, BlockStmt, Context,
+    const CheckContext &Ctx, const VarDecl &OldVar) {
+  if (!Ctx.IsVarOnlyUsedAsConst ||
+      !isInitializingVariableImmutable(OldVar, Ctx.BlockStmt, Ctx.ASTCtx,
                                        ExcludedContainerTypes))
     return;
-  auto Diagnostic = diag(Var.getLocation(),
-                         "local copy %1 of the variable %0 is never modified"
-                         "%select{| and never used}2; consider "
-                         "%select{avoiding the copy|removing the statement}2")
-                    << &OldVar;
-  makeDiagnostic(std::move(Diagnostic), Var, BlockStmt, Stmt, Context,
-                 IssueFix);
+  diagnoseCopyFromLocalVar(Ctx, OldVar);
+}
+
+void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
+    const CheckContext &Ctx, const VarDecl *ObjectArg) {
+  auto Diagnostic =
+      diag(Ctx.Var.getLocation(),
+           "the %select{|const qualified }0variable %1 is "
+           "copy-constructed "
+           "from a const reference%select{%select{ but is only used as const "
+           "reference|}0| but is never used}2; consider "
+           "%select{making it a const reference|removing the statement}2")
+      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.IsVarUnused;
+  maybeIssueFixes(Ctx, Diagnostic);
+}
+void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
+    const CheckContext &Ctx, const VarDecl &OldVar) {
+  auto Diagnostic =
+      diag(Ctx.Var.getLocation(),
+           "local copy %1 of the variable %0 is never modified%select{"
+           "| and never used}2; consider %select{avoiding the copy|removing "
+           "the statement}2")
+      << &OldVar << &Ctx.Var << Ctx.IsVarUnused;
+  maybeIssueFixes(Ctx, Diagnostic);
+}
+
+void UnnecessaryCopyInitialization::maybeIssueFixes(
+    const CheckContext &Ctx, DiagnosticBuilder &Diagnostic) {
+  if (Ctx.IssueFix) {
+    if (Ctx.IsVarUnused) {
+      recordRemoval(Ctx.VarDeclStmt, Ctx.ASTCtx, Diagnostic);
+    } else {
+      recordFixes(Ctx.Var, Ctx.ASTCtx, Diagnostic);
+    }
+  }
 }
 
 void UnnecessaryCopyInitialization::storeOptions(
