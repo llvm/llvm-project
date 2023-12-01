@@ -2,7 +2,7 @@
 
 define void @frame_pointer_func() "frame-pointer"="non-leaf" {
   ; CHECK: llvm.func @frame_pointer_func()
-  ; CHECK-SAME: attributes {frame_pointer = 1 : i64}   
+  ; CHECK-SAME: attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
   
   ret void
 }

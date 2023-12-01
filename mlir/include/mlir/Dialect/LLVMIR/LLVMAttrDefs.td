@@ -51,9 +51,9 @@ def LinkageAttr : LLVM_Attr<"Linkage", "linkage"> {
 // FramePointerKindAttr
 //===----------------------------------------------------------------------===//
 
-def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", ""> {
+def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
   let parameters = (ins "framePointerKind::FramePointerKind":$framePointerKind);
-  let assemblyFormat = "$framePointerKind";
+  let assemblyFormat = "`<` $framePointerKind `>`";
 }
 
 //===----------------------------------------------------------------------===//

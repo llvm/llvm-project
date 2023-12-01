@@ -1697,7 +1697,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   // Process frame-pointer attribute.
   if (func->hasFnAttribute("frame-pointer")) {
-    StringRef stringRefFramePointerKind = func->getFnAttribute("frame-pointer").getValueAsString();
+    StringRef stringRefFramePointerKind =
+        func->getFnAttribute("frame-pointer").getValueAsString();
     funcOp.setFramePointerAttr(LLVM::FramePointerKindAttr::get(
         funcOp.getContext(), LLVM::framePointerKind::symbolizeFramePointerKind(
                                  stringRefFramePointerKind)
