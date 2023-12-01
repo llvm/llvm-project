@@ -86,6 +86,7 @@ libc_support_library(
     deps = [
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
+        ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_os",
     ],
 )
