@@ -391,7 +391,7 @@ void PrintAddressSpaceLayout() {
 }
 
 static void AsanInitInternal() {
-  if (LIKELY(AsanInited()))
+  if (LIKELY(asan_inited))
     return;
   SanitizerToolName = "AddressSanitizer";
   CHECK(!AsanInitIsRunning() && "ASan init calls itself!");
