@@ -697,7 +697,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   ScalarFunc<T, Char>(
 #ifndef _MSC_VER
                       [&FromInt64](const Scalar<Char> &c) {
-                        return FromInt64(CharacterUtils<Char::kind>::ICHAR(c));
+                        return FromInt64(CharacterUtils<Char::kind>::ICHAR(
+                            CharacterUtils<Char::kind>::Resize(c, 1)));
                       }));
 #else // _MSC_VER
       // MSVC 14 get confused by the original code above and
@@ -707,7 +708,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       // so remove the FromInt64 error checking lambda that
       // seems to have caused the proble.
                       [](const Scalar<Char> &c) {
-                        return CharacterUtils<Char::kind>::ICHAR(c);
+                        return CharacterUtils<Char::kind>::ICHAR(
+                            CharacterUtils<Char::kind>::Resize(c, 1));
                       }));
 #endif // _MSC_VER
             },
