@@ -39,7 +39,7 @@ using namespace llvm::omp::target::ompt;
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
   TIMESCOPE();
-  PM->RTLs.registerRequires(Flags);
+  PM->addRequirements(Flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
