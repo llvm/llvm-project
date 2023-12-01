@@ -609,7 +609,8 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
 
   // Update mayload/maystore metadata, and memoperands.
-  const VirtRegInfo &RI = AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
+  const VirtRegInfo &RI =
+      AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
   MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
   MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
   if (RI.Reads) {
