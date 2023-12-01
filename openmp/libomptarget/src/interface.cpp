@@ -54,7 +54,7 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize all available devices without registering any image
-EXTERN void __tgt_init_all_rtls() { PM->RTLs.initAllRTLs(); }
+EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
@@ -448,7 +448,7 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->RTLs.AllRTLs) {
+  for (auto &R : PM->pluginAdaptors()) {
     if (R.set_info_flag)
       R.set_info_flag(NewInfoLevel);
   }
