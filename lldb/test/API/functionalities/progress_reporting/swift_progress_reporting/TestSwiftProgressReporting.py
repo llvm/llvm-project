@@ -37,11 +37,14 @@ class TestSwiftProgressReporting(TestBase):
         self.runCmd("expr boo")
         self.runCmd("v s")
 
-        beacons = [ "Loading Swift module",
-                    "Caching Swift user imports from",
-                    "Setting up Swift reflection for",
-                    "Getting Swift compile unit imports for",
-                    "Importing module", "Importing overlay module"]
+        beacons = [
+            "Loading Swift module",
+            "Importing modules used in expression",
+            "Setting up Swift reflection",
+            "Getting Swift compile unit imports for",
+            "Importing Swift modules",
+            "Importing Swift standard library",
+        ]
 
         while len(beacons):
             event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)

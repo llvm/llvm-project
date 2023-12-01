@@ -473,18 +473,15 @@ void SwiftLanguageRuntimeImpl::ProcessModulesToAdd() {
 
   auto &target = m_process.GetTarget();
   auto exe_module = target.GetExecutableModule();
-  Progress progress(
-      llvm::formatv("Setting up Swift reflection for '{0}'",
-                    exe_module->GetFileSpec().GetFilename().AsCString()),
-      modules_to_add_snapshot.GetSize());
-
+  Progress progress("Setting up Swift reflection");
   size_t completion = 0;
 
   // Add all defered modules to reflection context that were added to
   // the target since this SwiftLanguageRuntime was created.
   modules_to_add_snapshot.ForEach([&](const ModuleSP &module_sp) -> bool {
     AddModuleToReflectionContext(module_sp);
-    progress.Increment(++completion);
+    progress.Increment(++completion,
+                       module_sp->GetFileSpec().GetFilename().AsCString());
     return true;
   });
 }

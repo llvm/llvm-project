@@ -298,9 +298,6 @@ public:
   swift::ModuleDecl *CreateModule(const SourceModule &module, Status &error,
                                   swift::ImplicitImportInfo importInfo);
 
-  static bool ReportModuleLoadingProgress(llvm::StringRef module_name,
-                                          bool is_overlay);
-
   // This function should only be called when all search paths
   // for all items in a swift::ASTContext have been setup to
   // allow for imports to happen correctly. Use with caution,
