@@ -93,7 +93,7 @@ void LoopExpand::runOnOperation() {
       return;
     }
 
-    llvm::SmallVector<mlir::Value> lbs, ubs, steps;
+    llvm::SmallVector<mlir::Value> lbs, ubs, steps, iterArgs;
     llvm::SmallVector<fir::DoLoopOp> loops;
 
     // Create the loop nest, move the acc.loop body inside and move the loop
@@ -107,9 +107,10 @@ void LoopExpand::runOnOperation() {
           builder.createConvert(loc, idxTy, accLoopOp.getUpperbound()[i]));
       steps.push_back(
           builder.createConvert(loc, idxTy, accLoopOp.getStep()[i]));
+      iterArgs.push_back(builder.createConvert(loc, fir::unwrapRefType(ivs[i].getType()), accLoopOp.getLowerbound()[i]));
       fir::DoLoopOp doLoopOp = builder.create<fir::DoLoopOp>(
           loc, lbs[i], ubs[i], steps[i], /*unordered=*/false, finalCountValue,
-          mlir::ValueRange{accLoopOp.getLowerbound()[i]});
+          mlir::ValueRange{iterArgs[i]});
       loops.push_back(doLoopOp);
 
       if (isInnerLoop) {
@@ -118,8 +119,7 @@ void LoopExpand::runOnOperation() {
         doLoopOp.getRegion().takeBody(*accLoopOp.getLoopRegions().front());
         // Recreate the block arguments.
         doLoopOp.getBody()->addArgument(builder.getIndexType(), loc);
-        doLoopOp.getBody()->addArgument(accLoopOp.getLowerbound()[i].getType(),
-                                        loc);
+        doLoopOp.getBody()->addArgument(iterArgs[i].getType(), loc);
       } else {
         builder.setInsertionPointToStart(doLoopOp.getBody());
       }
@@ -144,18 +144,23 @@ void LoopExpand::runOnOperation() {
 
       // Step loopVariable to help optimizations such as vectorization.
       // Induction variable elimination will clean up as necessary.
-      mlir::Value convStep = builder.create<fir::ConvertOp>(
-          loc, accLoopOp.getStep()[i].getType(), loops[i].getStep());
       mlir::Value loopVar = builder.create<fir::LoadOp>(loc, ivs[i]);
+      mlir::Value convStep = builder.create<fir::ConvertOp>(
+          loc, loopVar.getType(), loops[i].getStep());
       results.push_back(
           builder.create<mlir::arith::AddIOp>(loc, loopVar, convStep));
       builder.create<fir::ResultOp>(loc, results);
 
       // Convert ops have been created outside of the acc.loop operation. They
       // need to be moved back before their uses.
-      lbs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
-      ubs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
-      steps[i].getDefiningOp()->moveBefore(loops[i].getOperation());
+      if (mlir::isa<fir::ConvertOp>(lbs[i].getDefiningOp()))
+        lbs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
+      if (mlir::isa<fir::ConvertOp>(ubs[i].getDefiningOp()))
+        ubs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
+      if (mlir::isa<fir::ConvertOp>(steps[i].getDefiningOp()))
+        steps[i].getDefiningOp()->moveBefore(loops[i].getOperation());
+      if (mlir::isa<fir::ConvertOp>(iterArgs[i].getDefiningOp()))
+        iterArgs[i].getDefiningOp()->moveBefore(loops[i].getOperation());
     }
 
     builder.setInsertionPointToEnd(newAccLoopBlock);

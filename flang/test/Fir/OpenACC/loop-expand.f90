@@ -19,8 +19,8 @@ end subroutine
 ! CHECK:   %{{.*}} = fir.do_loop %[[ARG1:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] iter_args(%[[ARG2:.*]] = %{{.*}}) -> (index, i32) {
 ! CHECK:     fir.store %[[ARG2]] to %2#1 : !fir.ref<i32>
 ! CHECK:     %[[INCR1:.*]] = arith.addi %[[ARG1]], %[[STEP0]] : index
-! CHECK:     %[[CONV_STEP:.*]] = fir.convert %[[STEP0]] : (index) -> i32
 ! CHECK:     %[[LOAD_I:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
+! CHECK:     %[[CONV_STEP:.*]] = fir.convert %[[STEP0]] : (index) -> i32
 ! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_I]], %[[CONV_STEP]] : i32
 ! CHECK:     fir.result %[[INCR1]], %[[INCR2]] : index, i32
 ! CHECK:   }
@@ -51,8 +51,8 @@ end subroutine
 ! CHECK:     fir.do_loop
 ! CHECK:     }
 ! CHECK:     %[[INCR1:.*]] = arith.addi %[[ARG1]], %[[STEP0]] : index
-! CHECK:     %[[CONV_STEP:.*]] = fir.convert %[[STEP0]] : (index) -> i32
 ! CHECK:     %[[LOAD_I:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
+! CHECK:     %[[CONV_STEP:.*]] = fir.convert %[[STEP0]] : (index) -> i32
 ! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_I]], %[[CONV_STEP]] : i32
 ! CHECK:     fir.result %[[INCR1]], %[[INCR2]] : index, i32
 ! CHECK:   }
@@ -73,8 +73,8 @@ subroutine loop_with_nest(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPloop_with_nest
-! CHECK: %[[I:.*]]:2 = hlfir.declare %1 {uniq_name = "_QFloop_with_nestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: %[[J:.*]]:2 = hlfir.declare %3 {uniq_name = "_QFloop_with_nestEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_with_nestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[J:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_with_nestEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:   %[[LB0:.*]] = fir.convert %{{.*}} : (i32) -> index
 ! CHECK:   %[[UB0:.*]] = fir.convert %{{.*}} : (i32) -> index
@@ -88,15 +88,15 @@ end subroutine
 ! CHECK:       fir.store %[[ARG4]] to %[[J]]#1 : !fir.ref<i32>
 
 ! CHECK:       %[[INCR1:.*]] = arith.addi %[[ARG3]], %[[STEP1]] : index
-! CHECK:       %[[CONV_STEP1:.*]] = fir.convert %[[STEP1]] : (index) -> i32
 ! CHECK:       %[[LOAD_J:.*]] = fir.load %[[J]]#1 : !fir.ref<i32>
+! CHECK:       %[[CONV_STEP1:.*]] = fir.convert %[[STEP1]] : (index) -> i32
 ! CHECK:       %[[INCR2:.*]] = arith.addi %[[LOAD_J]], %[[CONV_STEP1]] : i32
 ! CHECK:       fir.result %[[INCR1]], %[[INCR2]] : index, i32
 ! CHECK:     }
 ! CHECK:     %[[INCR1:.*]] = arith.addi %[[ARG1]], %[[STEP0]] : index
-! CHECK:     %[[CONV_STEP0:.*]] = fir.convert %[[STEP0]] : (index) -> i32
 ! CHECK:     %[[LOAD_I:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
-! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_I]], %18 : i32
+! CHECK:     %[[CONV_STEP0:.*]] = fir.convert %[[STEP0]] : (index) -> i32
+! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_I]], %[[CONV_STEP0]] : i32
 ! CHECK:     fir.result %[[INCR1]], %[[INCR2]] : index, i32
 ! CHECK:   }
 ! CHECK:   acc.yield
@@ -116,3 +116,35 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPloop_unstructured
 ! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>)
+
+subroutine loop_iv_8()
+  integer(4), parameter :: N = 10
+  integer(8) :: ii
+  real(4) :: array(N)
+
+  !$acc parallel loop
+  do ii = 1, N
+    array(ii) = ii
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPloop_iv_8()
+
+! CHECK: %[[II:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_iv_8Eii"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK: acc.loop
+! CHECK: %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
+! CHECK: %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
+! CHECK: %[[STEP0:.*]] = fir.convert %c1_i32_0 : (i32) -> index
+! CHECK: %[[ITER_ARG:.*]] = fir.convert %c1_i32 : (i32) -> i64
+! CHECK:   %{{.*}}:2 = fir.do_loop %[[ARG0:.*]] = %[[LB0]] to %[[UB0]] step %[[STEP0]] iter_args(%[[ARG1:.*]] = %[[ITER_ARG]]) -> (index, i64) {
+! CHECK:     fir.store %[[ARG1]] to %[[II]]#1 : !fir.ref<i64>
+
+! CHECK:     %[[INCR1:.*]] = arith.addi %[[ARG0]], %[[STEP0]] : index
+! CHECK:     %[[LOAD_II:.*]] = fir.load %[[II]]#1 : !fir.ref<i64>
+! CHECK:     %[[CONV_STEP0:.*]] = fir.convert %[[STEP0]] : (index) -> i64
+! CHECK:     %[[INCR2:.*]] = arith.addi %[[LOAD_II]], %[[CONV_STEP0]] : i64
+! CHECK:     fir.result %[[INCR1]], %[[INCR2]] : index, i64
+! CHECK:   }
+! CHECK:   acc.yield
+! CHECK: }
+     
