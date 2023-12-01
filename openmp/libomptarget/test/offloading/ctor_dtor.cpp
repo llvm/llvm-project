@@ -6,7 +6,7 @@
 //
 // DUMP:     Device 0 offload entries:
 // DUMP-DAG:   global var.: s
-// DUMP-DAG:        kernel: __omp_offloading_16_{{.*}}_main_
+// DUMP-DAG:        kernel: __omp_offloading_{{.*}}_main_
 //
 #include <cstdio>
 struct S {
