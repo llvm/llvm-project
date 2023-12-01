@@ -108,6 +108,8 @@ def _get_platform_os(p):
             platform = "freebsd"
         elif platform.startswith("netbsd"):
             platform = "netbsd"
+        elif platform.startswith("openbsd"):
+            platform = "openbsd"
         return platform
 
     return ""
