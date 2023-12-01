@@ -18,10 +18,9 @@
 #include <float.h> // LDBL_MANT_DIG
 
 // 'long double' properties.
-#if (LDBL_MANT_DIG == DBL_MANT_DIG)
+#if (LDBL_MANT_DIG == 53)
 #define LIBC_LONG_DOUBLE_IS_FLOAT64
-#endif
-#if (LDBL_MANT_DIG == 64)
+#elif (LDBL_MANT_DIG == 64)
 // TODO: Replace with LIBC_LONG_DOUBLE_IS_X86_BIN80
 #define SPECIAL_X86_LONG_DOUBLE
 #elif (LDBL_MANT_DIG == 113)
