@@ -79,6 +79,8 @@ add_header_library(
   str_to_num_result
   HDRS
     str_to_num_result.h
+  DEPENDS
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
