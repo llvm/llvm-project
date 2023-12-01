@@ -9,7 +9,6 @@
 #
 #   $ git config merge.libcxx-reformat.name "Run clang-format when rebasing libc++ patches"
 #   $ git config merge.libcxx-reformat.driver "libcxx/utils/clang-format-merge-driver.sh %O %A %B %P"
-#   $ git config merge.libcxx-reformat.recursive binary
 #
 # This is based on https://github.com/nico/hack/blob/main/notes/auto_git_rebase_across_mechanical_changes.md.
 # Many thanks to Nico Weber for paving the way here.
