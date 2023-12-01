@@ -16844,10 +16844,6 @@ void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 // register-size fields in the same situations they would be for fixed
 // arguments.
 
-static const MCPhysReg ArgGPRs[] = {
-  RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13,
-  RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17
-};
 static const MCPhysReg ArgFPR16s[] = {
   RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H,
   RISCV::F14_H, RISCV::F15_H, RISCV::F16_H, RISCV::F17_H
@@ -16872,6 +16868,15 @@ static const MCPhysReg ArgVRM4s[] = {RISCV::V8M4, RISCV::V12M4, RISCV::V16M4,
                                      RISCV::V20M4};
 static const MCPhysReg ArgVRM8s[] = {RISCV::V8M8, RISCV::V16M8};
 
+ArrayRef<MCPhysReg> RISCV::getArgGPRs() {
+  static const MCPhysReg ArgGPRs[] = {
+    RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13,
+    RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17
+  };
+
+  return ArrayRef(ArgGPRs);
+}
+
 // Pass a 2*XLEN argument that has been split into two XLEN values through
 // registers or the stack as necessary.
 static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
@@ -16879,6 +16884,7 @@ static bool CC_RISCVAssign2XLen(unsigned XLen, CCState &State, CCValAssign VA1,
                                 MVT ValVT2, MVT LocVT2,
                                 ISD::ArgFlagsTy ArgFlags2) {
   unsigned XLenInBytes = XLen / 8;
+  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs();
   if (Register Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
     State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
@@ -16998,6 +17004,8 @@ bool RISCV::CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
     LocVT = MVT::i64;
     LocInfo = CCValAssign::BCvt;
   }
+
+  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs();
 
   // If this is a variadic argument, the RISC-V calling convention requires
   // that it is assigned an 'even' or 'aligned' register if it has 8-byte
@@ -17684,7 +17692,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
 
   if (IsVarArg) {
-    ArrayRef<MCPhysReg> ArgRegs = ArrayRef(ArgGPRs);
+    ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs();
     unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
     const TargetRegisterClass *RC = &RISCV::GPRRegClass;
     MachineFrameInfo &MFI = MF.getFrameInfo();
