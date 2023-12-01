@@ -133,6 +133,9 @@
 // Re-worked external template instantiations for std::string with a focus on
 // performance and fast-path inlining.
 #    define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
+// Don't retain a copy of the old shrinking behaviour of basic_string::reserve(size_type)
+// and alter it's mangling for compatibility reasons.
+#    define _LIBCPP_ABI_DO_NOT_RETAIN_SHRINKING_RESERVE
 // Enable clang::trivial_abi on std::unique_ptr.
 #    define _LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
 // Enable clang::trivial_abi on std::shared_ptr and std::weak_ptr

@@ -16,6 +16,19 @@ New entries should be added directly below the "Version" header.
 Version 18.0
 ------------
 
+* [libcxx] retain a version of basic_string::reserve(0) that shrinks
+
+  This PR adds a different mangling for the version of basic_string<>::reserve(size_type) that
+  doesn't deallocates/shrinks. P0966R1 in C++20 requires we no longer do the shrink, but
+  certain versions of the move assignment operator in basic string for LLVM >= 6 used this
+  to free memory as part of the move, so we retain a restricted version of this with alternate
+  mangling for compatibility.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7reserveB2v2Em
+  Symbol added: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveB2v2Em
+
 * [libc++] Simplify the implementation of locale::id
 
   This patch removes a symbol defined in the library for std::locale::id::__init().

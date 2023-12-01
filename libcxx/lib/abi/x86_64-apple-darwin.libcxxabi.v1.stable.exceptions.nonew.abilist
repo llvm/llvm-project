@@ -954,6 +954,7 @@
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7replaceEmmPKcm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7replaceEmmRKS5_mm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7replaceEmmmc', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7reserveB2v2Em', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7reserveEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__grow_byEmmmmmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9push_backEc', 'type': 'FUNC'}
@@ -992,6 +993,7 @@
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7replaceEmmPKwm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7replaceEmmRKS5_mm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7replaceEmmmw', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveB2v2Em', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7reserveEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9__grow_byEmmmmmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE9push_backEw', 'type': 'FUNC'}
