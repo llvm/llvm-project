@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <iostream>
 
