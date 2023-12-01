@@ -21,8 +21,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Debug.h"
-#include "Utilities.h"
+#include "Shared/Debug.h"
+#include "Shared/Utils.h"
 #include "omptarget.h"
 
 /// Base class of per-device allocator.

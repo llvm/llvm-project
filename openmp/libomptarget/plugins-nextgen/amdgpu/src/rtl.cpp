@@ -20,12 +20,13 @@
 #include <unistd.h>
 #include <unordered_map>
 
-#include "Debug.h"
+#include "Shared/Debug.h"
+#include "Shared/Utils.h"
+
 #include "Environment.h"
 #include "GlobalHandler.h"
 #include "OmptCallback.h"
 #include "PluginInterface.h"
-#include "Utilities.h"
 #include "UtilitiesRTL.h"
 #include "omptarget.h"
 
