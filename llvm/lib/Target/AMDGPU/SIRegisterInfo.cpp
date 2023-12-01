@@ -3084,7 +3084,8 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                                          const RegisterBank &RB) const {
   switch (RB.getID()) {
   case AMDGPU::VGPRRegBankID:
-    return getVGPRClassForBitWidth(std::max(32u, Size));
+    return getVGPRClassForBitWidth(
+        std::max(ST.useRealTrue16Insts() ? 16u : 32u, Size));
   case AMDGPU::VCCRegBankID:
     assert(Size == 1);
     return isWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
