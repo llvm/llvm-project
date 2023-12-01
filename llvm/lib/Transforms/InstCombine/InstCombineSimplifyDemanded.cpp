@@ -24,6 +24,12 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+static cl::opt<bool>
+    VerifyKnownBits("instcombine-verify-known-bits",
+                    cl::desc("Verify that computeKnownBits() and "
+                             "SimplifyDemandedBits() are consistent"),
+                    cl::Hidden, cl::init(false));
+
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
 /// constant that are not demanded. If so, shrink the constant and return true.
@@ -1033,6 +1039,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   // TODO: We could return `(inttoptr const)` for pointers.
   if (!V->getType()->isPointerTy() && DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
+
+  if (VerifyKnownBits) {
+    KnownBits ReferenceKnown = computeKnownBits(V, Depth, CxtI);
+    if (Known != ReferenceKnown) {
+      errs() << "Mismatched known bits for " << *V << " in "
+             << I->getFunction()->getName() << "\n";
+      errs() << "computeKnownBits(): " << ReferenceKnown << "\n";
+      errs() << "SimplifyDemandedBits(): " << Known << "\n";
+      std::abort();
+    }
+  }
+
   return nullptr;
 }
 
