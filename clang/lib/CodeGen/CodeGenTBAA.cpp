@@ -428,7 +428,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
   // the helper can recursively call us.
   llvm::MDNode *TypeNode = getBaseTypeInfoHelper(Ty);
   LLVM_ATTRIBUTE_UNUSED auto inserted =
-      BaseTypeMetadataCache.try_emplace(Ty, TypeNode);
+      BaseTypeMetadataCache.insert({Ty, TypeNode});
   assert(inserted.second && "BaseType metadata was already inserted");
 
   return TypeNode;
