@@ -481,7 +481,7 @@ emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
 
 static void emitDWOBuilder(const std::string &DWOName,
                            DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
-                           const DWARFUnit &SplitCU, DWARFUnit &CU,
+                           DWARFUnit &SplitCU, DWARFUnit &CU,
                            DWARFRewriter::DWPState &State,
                            DebugLocWriter &LocWriter) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
@@ -498,17 +498,15 @@ static void emitDWOBuilder(const std::string &DWOName,
   DWARFRewriter::UnitMetaVectorType TUMetaVector;
   DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
-    // TODO: Handle DWP as input. Right now it will iterate over all of CUs and
-    // TUs
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_info_section_units()) {
+      if (!CU->isTypeUnit())
+        continue;
       DWARFRewriter::UnitMeta MI =
           emitUnit(DWODIEBuilder, *Streamer, *CU.get());
-      if (CU->isTypeUnit())
-        TUMetaVector.emplace_back(MI);
-      else
-        CUMI = MI;
+      TUMetaVector.emplace_back(MI);
     }
+    CUMI = emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_compile_units())
@@ -707,7 +705,7 @@ void DWARFRewriter::updateDebugInfo() {
     // Skipping CUs that failed to load.
     if (SplitCU) {
       DIEBuilder DWODIEBuilder(&(*SplitCU)->getContext(), true);
-      DWODIEBuilder.buildBoth();
+      DWODIEBuilder.buildDWOUnit(**SplitCU);
       std::string DWOName = updateDWONameCompDir(
           *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
 
