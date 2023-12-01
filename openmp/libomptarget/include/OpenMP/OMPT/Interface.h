@@ -1,4 +1,4 @@
-//===-------- OmptInterface.h - Target independent OpenMP target RTL ------===//
+//===-- OpenMP/OMPT/Interface.h - OpenMP Tooling interfaces ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Declarations for OpenMP Tool callback dispatchers
+// Declarations for OpenMP Tool callback dispatchers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,7 +18,7 @@
 #include <functional>
 #include <tuple>
 
-#include "OmptCallback.h"
+#include "Callback.h"
 #include "omp-tools.h"
 
 #include "llvm/Support/ErrorHandling.h"
