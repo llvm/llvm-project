@@ -344,7 +344,8 @@ void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules) {
+                                        bool EagerLoadModules,
+                                        llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
   SmallString<32> Scratch;
@@ -369,6 +370,9 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   // will be readable.
   HashBuilder.add(getClangFullRepositoryVersion());
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
+  llvm::ErrorOr<std::string> CWD = VFS.getCurrentWorkingDirectory();
+  if (CWD)
+    HashBuilder.add(*CWD);
 
   // Save and restore options that should not affect the hash, e.g. the exact
   // contents of input files, or prefix mappings.
@@ -426,7 +430,8 @@ static void checkCompileCacheKeyMatch(cas::ObjectStore &CAS,
 
 void ModuleDepCollector::associateWithContextHash(
     const CowCompilerInvocation &CI, ModuleDeps &Deps) {
-  Deps.ID.ContextHash = getModuleContextHash(Deps, CI, EagerLoadModules);
+  Deps.ID.ContextHash = getModuleContextHash(
+      Deps, CI, EagerLoadModules, ScanInstance.getVirtualFileSystem());
   bool Inserted = ModuleDepsByID.insert({Deps.ID, &Deps}).second;
   (void)Inserted;
   assert(Inserted && "duplicate module mapping");
