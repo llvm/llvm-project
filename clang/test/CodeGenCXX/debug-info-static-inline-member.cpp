@@ -16,7 +16,6 @@ struct Foo {
     static constexpr float cexpr_float = 2.0 + 1.0;
     static constexpr Enum cexpr_enum = Enum::VAL;
     static constexpr Empty cexpr_struct_with_addr{};
-    static inline    Enum inline_enum = Enum::VAL;
 
     template<typename T, unsigned V>
     static constexpr auto cexpr_template = V;
