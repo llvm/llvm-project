@@ -614,9 +614,8 @@ define <16 x i32> @insertelt_c3_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_ra
 define <16 x i32> @insertelt_c12_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_range(2,2) {
 ; CHECK-LABEL: insertelt_c12_v16xi32_exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 13, e32, m4, tu, ma
-; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vslideup.vi v8, v12, 12
+; CHECK-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v11, a0
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 12
   ret <16 x i32> %v
@@ -625,9 +624,9 @@ define <16 x i32> @insertelt_c12_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 define <16 x i32> @insertelt_c13_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_range(2,2) {
 ; CHECK-LABEL: insertelt_c13_v16xi32_exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 14, e32, m4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vslideup.vi v8, v12, 13
+; CHECK-NEXT:    vslideup.vi v11, v12, 1
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 13
   ret <16 x i32> %v
@@ -636,9 +635,9 @@ define <16 x i32> @insertelt_c13_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 define <16 x i32> @insertelt_c14_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_range(2,2) {
 ; CHECK-LABEL: insertelt_c14_v16xi32_exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 15, e32, m4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vslideup.vi v8, v12, 14
+; CHECK-NEXT:    vslideup.vi v11, v12, 2
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 14
   ret <16 x i32> %v
@@ -647,9 +646,9 @@ define <16 x i32> @insertelt_c14_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 define <16 x i32> @insertelt_c15_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_range(2,2) {
 ; CHECK-LABEL: insertelt_c15_v16xi32_exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v12, a0
-; CHECK-NEXT:    vslideup.vi v8, v12, 15
+; CHECK-NEXT:    vslideup.vi v11, v12, 3
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 15
   ret <16 x i32> %v
@@ -658,18 +657,15 @@ define <16 x i32> @insertelt_c15_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 define <8 x i64> @insertelt_c4_v8xi64_exact(<8 x i64> %vin, i64 %a) vscale_range(2,2) {
 ; RV32-LABEL: insertelt_c4_v8xi64_exact:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, m4, ta, ma
-; RV32-NEXT:    vslide1down.vx v12, v8, a0
-; RV32-NEXT:    vslide1down.vx v12, v12, a1
-; RV32-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
-; RV32-NEXT:    vslideup.vi v8, v12, 4
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vslide1down.vx v10, v10, a0
+; RV32-NEXT:    vslide1down.vx v10, v10, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_c4_v8xi64_exact:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
-; RV64-NEXT:    vmv.s.x v12, a0
-; RV64-NEXT:    vslideup.vi v8, v12, 4
+; RV64-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; RV64-NEXT:    vmv.s.x v10, a0
 ; RV64-NEXT:    ret
   %v = insertelement <8 x i64> %vin, i64 %a, i32 4
   ret <8 x i64> %v
@@ -678,18 +674,18 @@ define <8 x i64> @insertelt_c4_v8xi64_exact(<8 x i64> %vin, i64 %a) vscale_range
 define <8 x i64> @insertelt_c5_v8xi64_exact(<8 x i64> %vin, i64 %a) vscale_range(2,2) {
 ; RV32-LABEL: insertelt_c5_v8xi64_exact:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; RV32-NEXT:    vslide1down.vx v12, v8, a0
 ; RV32-NEXT:    vslide1down.vx v12, v12, a1
-; RV32-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
-; RV32-NEXT:    vslideup.vi v8, v12, 5
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV32-NEXT:    vslideup.vi v10, v12, 1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_c5_v8xi64_exact:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 6, e64, m4, tu, ma
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV64-NEXT:    vmv.s.x v12, a0
-; RV64-NEXT:    vslideup.vi v8, v12, 5
+; RV64-NEXT:    vslideup.vi v10, v12, 1
 ; RV64-NEXT:    ret
   %v = insertelement <8 x i64> %vin, i64 %a, i32 5
   ret <8 x i64> %v
