@@ -246,9 +246,10 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
-std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
-                           StringRef FileName,
-                           uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
+std::string getLegacyPGOFuncName(StringRef Name,
+                                 GlobalValue::LinkageTypes Linkage,
+                                 StringRef FileName,
+                                 uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
   // Value names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
   // naming convention. Do not include that '1' in the PGO profile name.
@@ -303,7 +304,7 @@ static StringRef getStrippedSourceFileName(const GlobalObject &GO) {
 // ; is used because it is unlikely to be found in either <filepath> or
 // <linkage-name>.
 //
-// Older compilers used getPGOFuncName() which has the format
+// Older compilers used getLegacyPGOFuncName() which has the format
 // [<filepath>:]<function-name>. <filepath> is used to discriminate between
 // possibly identical function names when linkage is local and <function-name>
 // simply comes from F.getName(). This caused trouble for Objective-C functions
@@ -316,6 +317,12 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
                             GlobalValue::LinkageTypes Linkage,
                             StringRef FileName) {
   SmallString<64> Name;
+  // Keep mangler handling outside of `getGlobalIdentifier` for two reasons.
+  // First of all, passing global object gives other information (e.g. linkage)
+  // besides its name. and these information might affect mangled name.
+  // Secondly, `getGlobalIdentifier` only drops `\1` prefix but mangler might
+  // do more changes. Moving mangler's way of handling `\1` into
+  // `getGlobalIdentifier` might introduce unwanted change for existing callers.
   Mangler().getNameWithPrefix(Name, &GO, /*CannotUsePrivateLabel=*/true);
   return GlobalValue::getGlobalIdentifier(Name, Linkage, FileName);
 }
@@ -364,14 +371,17 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
+// DEPRECATED. Use `getIRPGOFuncName`for new code. See that function for
+// details. The implementation is kept for profile matching from older profiles.
+// FIXME: Possibly rename this to `getLegacyPGOFuncName` and update all callers.
 // This is similar to `getIRPGOFuncName` except that this function calls
-// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
+// 'getLegacyPGOFuncName' to get a name and `getIRPGOFuncName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
 // comments of `getIRPGONameForGlobalObject`.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(F);
-    return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
+    return getLegacyPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
@@ -381,7 +391,7 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
-  return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
+  return getLegacyPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
 // See getIRPGOFuncName() for a discription of the format.
@@ -396,7 +406,8 @@ getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
   if (FileName.empty())
     return PGOFuncName;
-  // Drop the file name including ':'. See also getPGOFuncName.
+  // Drop the file name including ':' or ';'. See getIRPGONameForGlobalObject as
+  // well.
   if (PGOFuncName.startswith(FileName))
     PGOFuncName = PGOFuncName.drop_front(FileName.size() + 1);
   return PGOFuncName;

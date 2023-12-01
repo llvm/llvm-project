@@ -34,7 +34,9 @@ using namespace CodeGen;
 void CodeGenPGO::setFuncName(StringRef Name,
                              llvm::GlobalValue::LinkageTypes Linkage) {
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
-  FuncName = llvm::getPGOFuncName(
+  // FIXME: Maybe use IRPGOFuncName (not the legacy format) in clang
+  // instrumentation.
+  FuncName = llvm::getLegacyPGOFuncName(
       Name, Linkage, CGM.getCodeGenOpts().MainFileName,
       PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
 

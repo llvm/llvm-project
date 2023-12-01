@@ -17,13 +17,13 @@ cat > ${OUTDIR}/lib.h << EOF
 void global_func();
 EOF
 
-# Creates lib.cc. global_func might call one of two indirect callees. Both
-# indirect callees have internal linkage.
+# Creates lib.cc. global_func might call one of two indirect callees. One callee
+# has internal linkage and the other has external linkage.
 cat > ${OUTDIR}/lib.cc << EOF
 #include "lib.h"
 
 static void callee0() {}
-static void callee1() {}
+void callee1() {}
 
 typedef void (*FPT)(); 
 FPT calleeAddrs[] = {callee0, callee1};

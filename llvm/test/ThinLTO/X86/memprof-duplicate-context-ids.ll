@@ -265,5 +265,3 @@ attributes #0 = { noinline optnone}
 ; DISTRIB: ^[[F:[0-9]+]] = gv: (guid: 11254287701717398916, {{.*}} callsites: ((callee: ^[[D]], clones: (0)
 ; DISTRIB: ^[[B:[0-9]+]] = gv: (guid: 13579056193435805313, {{.*}} callsites: ((callee: ^[[D]], clones: (1)
 ; DISTRIB: ^[[C:[0-9]+]] = gv: (guid: 15101436305866936160, {{.*}} callsites: ((callee: ^[[D:[0-9]+]], clones: (1)
-
-
