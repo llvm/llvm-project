@@ -112,11 +112,11 @@ int TerminationCheck(int status, const Descriptor *command,
     }
   }
 #ifdef _WIN32
-  // On WIN32 API std::system directly returns exit status
-  int exitStatusVal = status;
+  // On WIN32 API std::system returns exit status directly
+  int exitStatusVal{status};
   if (exitStatusVal == 1) {
 #else
-  int exitStatusVal = WEXITSTATUS(status);
+  int exitStatusVal{WEXITSTATUS(status)};
   if (exitStatusVal == 127 || exitStatusVal == 126) {
 #endif
     if (!cmdstat) {
@@ -177,8 +177,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
   if (wait) {
     // either wait is not specified or wait is true: synchronous mode
     int status{std::system(command->OffsetElement())};
-    int exitStatusVal =
-        TerminationCheck(status, command, cmdstat, cmdmsg, terminator);
+    int exitStatusVal{
+        TerminationCheck(status, command, cmdstat, cmdmsg, terminator)};
     CheckAndStoreIntToDescriptor(exitstat, exitStatusVal, terminator);
   } else {
 // Asynchronous mode
@@ -186,13 +186,13 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
+    si.cb{sizeof(si)};
     ZeroMemory(&pi, sizeof(pi));
 
     // append "cmd.exe /c " to the beginning of command
-    const char *cmd = command->OffsetElement();
-    const char *prefix = "cmd.exe /c ";
-    char *newCmd = (char *)malloc(strlen(prefix) + strlen(cmd) + 1);
+    const char *cmd{command->OffsetElement()};
+    const char *prefix{"cmd.exe /c "};
+    char *newCmd{(char *)malloc(strlen(prefix) + strlen(cmd) + 1)};
     if (newCmd != NULL) {
       std::strcpy(newCmd, prefix);
       std::strcat(newCmd, cmd);
@@ -201,9 +201,9 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     }
 
     // Convert the narrow string to a wide string
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, NULL, 0);
-    wchar_t *wcmd = new wchar_t[size_needed];
-    if (MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, wcmd, size_needed) == 0) {
+    int sizeNeede{MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, NULL, 0)};
+    wchar_t *wcmd{new wchar_t[sizeNeeded]};
+    if (MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, wcmd, sizeNeeded) == 0) {
       terminator.Crash(
           "Char to wider char conversion failed with error code: %lu.",
           GetLastError());
@@ -225,7 +225,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     }
     delete[] wcmd;
 #else
-    pid_t pid = fork();
+    pid_t pid{fork()};
     if (pid < 0) {
       if (!cmdstat) {
         terminator.Crash("Fork failed with pid: %d.", pid);
@@ -234,7 +234,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
         CheckAndCopyToDescriptor(cmdmsg, "Fork failed", 11);
       }
     } else if (pid == 0) {
-      int status = std::system(command->OffsetElement());
+      int status{std::system(command->OffsetElement())};
       TerminationCheck(status, command, cmdstat, cmdmsg, terminator);
       exit(status);
     }

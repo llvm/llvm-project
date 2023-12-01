@@ -860,6 +860,8 @@ used in constant expressions have currently no folding support at all.
 
 - **`WAIT`:**
   - If set to `false`, the command is executed asynchronously. If not preset or set to `false`, it is executed synchronously.
+  - Sync: achieved by passing command into `std::system` on all systems.
+  - Async: achieved by calling a `fork()` on POSIX-compatible systems, or `CreateProcess()` on Windows.
 
 - **`CMDSTAT`:**
   - -2: No error condition occurs, but `WAIT` is present with the value `false`, and the processor does not support asynchronous execution.
