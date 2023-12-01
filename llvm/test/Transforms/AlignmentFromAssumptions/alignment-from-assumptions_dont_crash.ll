@@ -103,20 +103,32 @@ bb:
   ret void
 }
 
-define amdgpu_kernel void @test_store_ptr(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) {
+define amdgpu_kernel void @test_load_store_ptr_as_val(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(3) nocapture %arg1) {
 bb:
-; CHECK-LABEL: @test_store_ptr
-; GEPs are supported so the alignment is changed from 2 to 4
-; CHECK: load i32, ptr addrspace(1) %tmp2, align 4
+; CHECK-LABEL: @test_load_store_ptr_as_val
 ; This store uses a pointer not as adress but as a value to store!
-; CHECK: store ptr addrspace(1) %tmp2, ptr addrspace(3) %tmp4, align 2 
-  %tmp2 = getelementptr inbounds i32, ptr addrspace(1) %arg, i64 1
+; CHECK: store ptr addrspace(1) %tmp3, ptr addrspace(3) %tmp4, align 2 
+  %tmp2 = getelementptr ptr addrspace(1), ptr addrspace(1) %arg, i64 16
   call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) %arg, i64 4) ]
-  %tmp3 = load i32, ptr addrspace(1) %tmp2, align 2
+  %tmp3 = load ptr addrspace(1), ptr addrspace(1) %tmp2, align 2
   %tmp4 = getelementptr inbounds i32, ptr addrspace(3) %arg1, i32 1
-  store i32 %tmp3, ptr addrspace(3) %tmp4, align 4
-  store ptr addrspace(1) %tmp2, ptr addrspace(3) %tmp4, align 2
+  store ptr addrspace(1) %tmp3, ptr addrspace(3) %tmp4, align 2
   ret void
 }
+
+define amdgpu_kernel void @test_load_store_ptr_as_addr(ptr addrspace(1) nocapture readonly %arg, i32 %valToStore) {
+; CHECK-LABEL: @test_load_store_ptr_as_addr
+; CHECK: %tmp3 = load ptr addrspace(3), ptr addrspace(1) %tmp2, align 4
+; store uses %tmp3 as an address BUT the %arg and %tmp3 have different address spaces
+; so, the align 2 is not changed
+; CHECK: store i32 %valToStore, ptr addrspace(3) %tmp3, align 2
+bb:
+  %tmp2 = getelementptr ptr addrspace(3), ptr addrspace(1) %arg, i64 16
+  call void @llvm.assume(i1 true) [ "align"(ptr addrspace(1) %arg, i64 4) ]
+  %tmp3 = load ptr addrspace(3), ptr addrspace(1) %tmp2, align 2
+  store i32 %valToStore, ptr addrspace(3) %tmp3, align 2
+  ret void
+}
+
 
 declare void @llvm.assume(i1 noundef)
