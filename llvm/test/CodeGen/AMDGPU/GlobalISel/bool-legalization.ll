@@ -27,16 +27,20 @@ define amdgpu_ps float @select_vgpr_sgpr_trunc_cond(i32 inreg %a, i32 %b, i32 %c
 define amdgpu_ps float @select_vgpr_sgpr_trunc_and_cond(i32 inreg %a.0, i32 inreg %a.1, i32 %b, i32 %c) {
 ; WAVE64-LABEL: select_vgpr_sgpr_trunc_and_cond:
 ; WAVE64:       ; %bb.0:
-; WAVE64-NEXT:    s_and_b32 s0, s0, s1
+; WAVE64-NEXT:    s_and_b32 s1, 1, s1
+; WAVE64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s1
 ; WAVE64-NEXT:    s_and_b32 s0, 1, s0
+; WAVE64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; WAVE64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s0
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; WAVE64-NEXT:    ; return to shader part epilog
 ;
 ; WAVE32-LABEL: select_vgpr_sgpr_trunc_and_cond:
 ; WAVE32:       ; %bb.0:
-; WAVE32-NEXT:    s_and_b32 s0, s0, s1
+; WAVE32-NEXT:    s_and_b32 s1, 1, s1
 ; WAVE32-NEXT:    s_and_b32 s0, 1, s0
+; WAVE32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s1
+; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; WAVE32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s0
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; WAVE32-NEXT:    ; return to shader part epilog
@@ -51,10 +55,12 @@ define amdgpu_ps float @select_vgpr_sgpr_trunc_and_cond(i32 inreg %a.0, i32 inre
 define amdgpu_ps i32 @select_sgpr_trunc_and_cond(i32 inreg %a.0, i32 inreg %a.1, i32 inreg %b, i32 inreg %c) {
 ; GCN-LABEL: select_sgpr_trunc_and_cond:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_and_b32 s0, s0, s1
+; GCN-NEXT:    s_and_b32 s1, s1, 1
+; GCN-NEXT:    s_cmp_lg_u32 s1, 0
+; GCN-NEXT:    s_cselect_b32 s1, s2, s3
 ; GCN-NEXT:    s_and_b32 s0, s0, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cselect_b32 s0, s2, s3
+; GCN-NEXT:    s_cselect_b32 s0, s1, s3
 ; GCN-NEXT:    ; return to shader part epilog
   %cc.0 = trunc i32 %a.0 to i1
   %cc.1 = trunc i32 %a.1 to i1

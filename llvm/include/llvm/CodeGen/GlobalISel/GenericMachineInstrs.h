@@ -558,6 +558,47 @@ public:
   }
 };
 
+/// Represents a logical binary operator.
+class GLogicalBinOp : public GenericMachineInstr {
+public:
+  Register getLHSReg() const { return getOperand(1).getReg(); }
+  Register getRHSReg() const { return getOperand(2).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_OR:
+    case TargetOpcode::G_XOR:
+      return true;
+    default:
+      return false;
+    };
+  }
+};
+
+/// Represents a G_AND.
+class GAnd : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_AND;
+  }
+};
+
+/// Represents a G_OR.
+class GOr : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_OR;
+  }
+};
+
+/// Represents a G_XOR.
+class GXor : public GLogicalBinOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_XOR;
+  }
+};
 
 } // namespace llvm
 

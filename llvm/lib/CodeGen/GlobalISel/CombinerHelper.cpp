@@ -6224,3 +6224,78 @@ void CombinerHelper::applyCommuteBinOpOperands(MachineInstr &MI) {
   MI.getOperand(2).setReg(LHSReg);
   Observer.changedInstr(MI);
 }
+
+bool CombinerHelper::tryCombineSelectLogical(GSelect *Select,
+                                             BuildFnTy &MatchInfo) {
+  MachineInstr *CondDef = MRI.getVRegDef(Select->getCondReg());
+  LLT DstTy = MRI.getType(Select->getReg(0));
+  uint32_t Flags = Select->getFlags();
+  Register DstReg = Select->getReg(0);
+
+  if (isa<GLogicalBinOp>(CondDef)) {
+    // The chaining might look like a pessimization.
+    // In fact, it is an optimization. One instruction def`ing
+    // the condiiton is
+    // removed and the conditions of the selects get simplified.
+    // In the next iteration, the combiner has to do less work to
+    // further simplify them.
+    if (isa<GAnd>(CondDef)) {
+      GAnd *And = cast<GAnd>(CondDef);
+      // transform: select (and (Cond0, Cond1)), X, Y
+      // to:        select Cond0, (select Cond1, X, Y), Y
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        Register Inner = MRI.createGenericVirtualRegister(DstTy);
+        B.buildSelect(Inner, And->getRHSReg(), Select->getTrueReg(),
+                      Select->getFalseReg(), Flags);
+        B.buildSelect(DstReg, And->getLHSReg(), Inner, Select->getFalseReg(),
+                      Flags);
+      };
+      return true;
+    } else if (isa<GOr>(CondDef)) {
+      GOr *Or = cast<GOr>(CondDef);
+      // transform: select (or (Cond0, Cond1)), X, Y
+      // to:        select Cond0, X, (select Cond1, X, Y)
+      MatchInfo = [=](MachineIRBuilder &B) {
+        B.setInstrAndDebugLoc(*Select);
+        Register Inner = MRI.createGenericVirtualRegister(DstTy);
+        B.buildSelect(Inner, Or->getRHSReg(), Select->getTrueReg(),
+                      Select->getFalseReg(), Flags);
+        B.buildSelect(DstReg, Or->getLHSReg(), Select->getTrueReg(), Inner,
+                      Flags);
+      };
+      return true;
+    } else if (isa<GXor>(CondDef)) {
+      GXor *Xor = cast<GXor>(CondDef);
+      auto IConstant =
+          getIConstantVRegValWithLookThrough(Xor->getRHSReg(), MRI);
+      if (IConstant && IConstant->Value == 1) {
+        // transform: select (xor Cond0, 1), X, Y
+        // to:        select Cond0 Y, X
+        // a xor 1 reads like not a.
+        MatchInfo = [=](MachineIRBuilder &B) {
+          B.setInstrAndDebugLoc(*Select);
+          B.buildSelect(DstReg, Xor->getLHSReg(), Select->getFalseReg(),
+                        Select->getTrueReg(), Flags);
+        };
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) {
+  GSelect *Select = cast<GSelect>(&MI);
+
+  // FIXME: support vector conditions
+  if (MRI.getType(Select->getCondReg()).isVector())
+    return false;
+
+  // combine selects where the condition is def'd by logical binary operations.
+  if (tryCombineSelectLogical(Select, MatchInfo))
+    return true;
+
+  return false;
+}

@@ -812,6 +812,9 @@ public:
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
 
+  // combine selects.
+  bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -902,6 +905,10 @@ private:
   /// select (fcmp uge x, 1.0) 1.0, x -> fminnm x, 1.0
   bool matchFPSelectToMinMax(Register Dst, Register Cond, Register TrueVal,
                              Register FalseVal, BuildFnTy &MatchInfo);
+
+  /// Try to combine selects where the condition is def'd by logical binary
+  /// operators.
+  bool tryCombineSelectLogical(GSelect *Select, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 
