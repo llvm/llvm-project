@@ -13,6 +13,7 @@
 
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
 
 #include <float.h> // LDBL_MANT_DIG
@@ -30,7 +31,7 @@
 #endif
 
 // float16 support.
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE2)
 #if (defined(LIBC_COMPILER_CLANG_VER) && (LIBC_COMPILER_CLANG_VER >= 1500)) || \
     (defined(LIBC_COMPILER_GCC_VER) && (LIBC_COMPILER_GCC_VER >= 1201))
 #define LIBC_COMPILER_HAS_C23_FLOAT16
