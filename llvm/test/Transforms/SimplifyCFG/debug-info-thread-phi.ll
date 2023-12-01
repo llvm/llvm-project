@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes=debugify,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt %s -passes=debugify,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S --try-experimental-debuginfo-iterators | FileCheck %s
 ; Tests Bug 37966
 
 define void @bar(i32 %aa) {
