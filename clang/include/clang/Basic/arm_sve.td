@@ -2130,6 +2130,21 @@ let TargetGuard = "sme2" in {
   def SVURSHL_X2 : SInst<"svrshl[_{d}_x2]", "222", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_x2", [IsStreaming], []>;
   def SVSRSHL_X4 : SInst<"svrshl[_{d}_x4]", "444", "csil",     MergeNone, "aarch64_sve_srshl_x4", [IsStreaming], []>;
   def SVURSHL_X4 : SInst<"svrshl[_{d}_x4]", "444", "UcUsUiUl", MergeNone, "aarch64_sve_urshl_x4", [IsStreaming], []>;
+
+  def SVQRSHRN_X4   : SInst<"svqrshrn[_{0}_{d}_x4]", "q4i", "il",   MergeNone, "aarch64_sve_sqrshrn_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+  def SVUQRSHRN_X4  : SInst<"svqrshrn[_{0}_{d}_x4]", "b4i", "UiUl", MergeNone, "aarch64_sve_uqrshrn_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  // SQRSHR / UQRSHR
+  def SVQRSHR_X2  : SInst<"svqrshr[_{0}_{d}_x2]", "h2i", "i",    MergeNone, "aarch64_sve_sqrshr_x2", [IsStreaming], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVUQRSHR_X2 : SInst<"svqrshr[_{0}_{d}_x2]", "e2i", "Ui",   MergeNone, "aarch64_sve_uqrshr_x2", [IsStreaming], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVQRSHR_X4  : SInst<"svqrshr[_{0}_{d}_x4]", "q4i", "il",   MergeNone, "aarch64_sve_sqrshr_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+  def SVUQRSHR_X4 : SInst<"svqrshr[_{0}_{d}_x4]", "b4i", "UiUl", MergeNone, "aarch64_sve_uqrshr_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  // SQRSHRU
+  def SVSQRSHRU_X2 : SInst<"svqrshru[_{0}_{d}_x2]", "e2i", "i",  MergeNone, "aarch64_sve_sqrshru_x2", [IsStreaming], [ImmCheck<1, ImmCheck1_16>]>;
+  def SVSQRSHRU_X4 : SInst<"svqrshru[_{0}_{d}_x4]", "b4i", "il", MergeNone, "aarch64_sve_sqrshru_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
+
+  def SVSQRSHRUN_X4 : SInst<"svqrshrun[_{0}_{d}_x4]", "b4i", "il", MergeNone, "aarch64_sve_sqrshrun_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
 }
 
 let TargetGuard = "sve2p1" in {
