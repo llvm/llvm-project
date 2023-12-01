@@ -22,4 +22,3 @@ _func1:
 @ ADDEND:      sub	r0, pc, #8
 @ ADDEND-NEXT: adr.w	r0, #-4
 
-

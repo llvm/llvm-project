@@ -13,11 +13,14 @@ _func1:
     bx lr
 
 // Checking the encoding only, as the disassembly is not quite correct here.
+//00000000 <_func1>:
+//       0: a0ff         	adr	r0, #1020 <_func1+0x103>
 
 // Thumb16 encoding supports only adding of the encoded immediate (not
 // subtracting, see [Arm ARM]), therefore sign change is required if the pcrel
 // offset is negative. This makes the calculation of the addend for
 // R_ARM_THM_PC8 more complex, for details see [ELF for the Arm 32-bit
 // architecture].
-@ ADDEND: a0ff
+
+@ ADDEND: a0ff adr
 
