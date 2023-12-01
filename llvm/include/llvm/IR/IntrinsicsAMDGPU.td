@@ -2140,12 +2140,14 @@ def int_amdgcn_alignbyte : ClangBuiltin<"__builtin_amdgcn_alignbyte">,
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_mul_i24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+// mul24 intrinsics can return i32 or i64.
+// When returning i64, they're lowered to a mul24/mulhi24 pair.
+def int_amdgcn_mul_i24 : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_mul_u24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+def int_amdgcn_mul_u24 : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;

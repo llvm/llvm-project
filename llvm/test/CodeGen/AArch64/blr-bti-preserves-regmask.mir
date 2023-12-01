@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=aarch64-expand-pseudo -o - %s | FileCheck %s
+
+# When expanding a BLR_BTI, we should keep the regmask that was attached to it.
+# Otherwise we could end up using a register after the BL which was clobbered by
+# the function that was called.
+# CHECK:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit $sp {
+# CHECK:      BL @_setjmp, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp
+# CHECK:      HINT 36
+# CHECK:    }
+
+--- |
+  define void @a() {
+    ret void
+  }
+
+  declare void @_setjmp(...)
+...
+---
+name: a
+body: |
+  bb.0:
+    BLR_BTI @_setjmp, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+...
