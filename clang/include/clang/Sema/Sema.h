@@ -59,6 +59,7 @@
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -10127,6 +10128,12 @@ public:
   /// but have not yet been performed.
   std::deque<PendingImplicitInstantiation> PendingInstantiations;
 
+  /// Track constexpr functions referenced before they are (lexically) defined.
+  /// The key is the pattern, associated with a list of specialisations that
+  /// need to be instantiated when the pattern is defined.
+  llvm::DenseMap<NamedDecl *, SmallVector<NamedDecl *>>
+      PendingInstantiationsOfConstexprEntities;
+
   /// Queue of implicit template instantiations that cannot be performed
   /// eagerly.
   SmallVector<PendingImplicitInstantiation, 1> LateParsedInstantiations;
@@ -10445,6 +10452,9 @@ public:
                                      bool Recursive = false,
                                      bool DefinitionRequired = false,
                                      bool AtEndOfTU = false);
+
+  void PerformPendingInstantiationsOfConstexprFunctions(FunctionDecl *Template);
+
   VarTemplateSpecializationDecl *BuildVarTemplateInstantiation(
       VarTemplateDecl *VarTemplate, VarDecl *FromVar,
       const TemplateArgumentList &TemplateArgList,
