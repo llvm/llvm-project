@@ -351,23 +351,65 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   if (!config->thinLTOCacheDir.empty())
     pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
 
-  if (!config->ltoObjPath.empty()) {
-    saveBuffer(buf[0], config->ltoObjPath);
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i], config->ltoObjPath + Twine(i));
-  }
+  auto doSaveBuffer = [&](const StringRef Arg, const StringRef Suffix = "") {
+    // There are a few cases:
+    // (1) path/test.o (using current directory)
+    // (2) /tmp/test-a7a1e4.o (using tmp directory)
+    // (3) if the input obj is in a archive. the module name is like
+    // "arch/x86/built-in.a(procfs.o at 11368)"
+    //
+    // This function replaces '/' and '(' with '-' and terminates at the
+    // last '.'.  it returns the following for the above cases, respectively,
+    // (1) path_test
+    // (2) tmp_test-a7a1e4 (remove the first /).
+    // (3) arch_x86_build-in.a_procfs
+    //
+    auto getFileNameString = [](const StringRef Str) {
+      if (Str.empty())
+        return std::string();
+      size_t End = Str.find_last_of(".");
+      size_t Begin = 0;
+      if (Str[0] == '/' || Str[0] == '\\')
+        Begin = 1;
+      std::string Ret = Str.substr(Begin, End - Begin).str();
+      auto position = std::string::npos;
+      while ((position = Ret.find_first_of("/\\(")) != std::string::npos) {
+        Ret.replace(position, 1, 1, '_');
+      }
+      return Ret;
+    };
 
-  if (config->saveTempsArgs.contains("prelink")) {
+    auto saveBufferOrFile = [](const StringRef &Buf, const MemoryBuffer *File,
+                               const Twine &Path) {
+      if (Buf.empty() && File)
+        return saveBuffer(File->getBuffer(), Path);
+      saveBuffer(Buf, Path);
+    };
+
     if (!buf[0].empty())
-      saveBuffer(buf[0], config->outputFile + ".lto.o");
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i], config->outputFile + Twine(i) + ".lto.o");
-  }
+      saveBufferOrFile(buf[0], files[0].get(), Arg + Suffix);
+    for (unsigned i = 1; i != maxTasks; ++i) {
+      if (!config->ltoOutputModuleName) {
+        saveBufferOrFile(buf[i], files[i].get(), Arg + Twine(i) + Suffix);
+      } else {
+        const std::string Name =
+            getFileNameString(ltoObj->getModuleName(i - 1));
+        saveBufferOrFile(buf[i], files[i].get(),
+                         Arg + "_" + Twine(i) + "_" + Name + Suffix);
+      }
+    }
+  };
+
+  if (!config->ltoObjPath.empty())
+    doSaveBuffer(config->ltoObjPath,
+                 config->ltoOutputModuleName ? ".lto.o" : "");
+
+  if (config->saveTempsArgs.contains("prelink"))
+    doSaveBuffer(config->outputFile, ".lto.o");
 
   if (config->ltoEmitAsm) {
-    saveBuffer(buf[0], config->outputFile);
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i], config->outputFile + Twine(i));
+    doSaveBuffer(config->outputFile,
+                 config->ltoOutputModuleName ? ".lto.s" : "");
     return {};
   }
 

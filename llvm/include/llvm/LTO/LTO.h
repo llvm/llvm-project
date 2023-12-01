@@ -299,7 +299,18 @@ public:
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
-  static ArrayRef<const char*> getRuntimeLibcallSymbols();
+  static ArrayRef<const char *> getRuntimeLibcallSymbols();
+
+  /// Return the name of n-th module. This only applies to ThinLTO.
+  StringRef getModuleName(size_t N) const {
+    size_t I = N;
+    if (I >= ThinLTO.ModuleMap.size())
+      return "";
+    auto it = ThinLTO.ModuleMap.begin();
+    while (I--)
+      it++;
+    return (*it).first;
+  }
 
 private:
   Config Conf;

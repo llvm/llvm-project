@@ -610,6 +610,9 @@ defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
 defm lto_known_safe_vtables : EEq<"lto-known-safe-vtables",
   "When --lto-validate-all-vtables-have-type-infos is enabled, skip validation on these vtables (_ZTV symbols)">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
+defm lto_output_module_name: BB<"lto-output-module-name",
+  "In ThinLTO, using the module name in the final native objects or asm files",
+  "Do not include the module names in final objects and asm files">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
 defm lto_validate_all_vtables_have_type_infos: BB<"lto-validate-all-vtables-have-type-infos",
