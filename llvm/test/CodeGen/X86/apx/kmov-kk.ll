@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512f,+egpr -show-mc-encoding | FileCheck --check-prefix=EGPR %s
 
 define <16 x i32> @kmovkk(ptr %base, <16 x i32> %ind, i16 %mask) {
-; EGPR: kmovw   %esi, %k1                       # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x92,0xce]
+; EGPR: kmovq   %k1, %k2                        # EVEX TO VEX Compression encoding: [0xc4,0xe1,0xf8,0x90,0xd1]
   %broadcast.splatinsert = insertelement <16 x ptr> undef, ptr %base, i32 0
   %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
   %gep.random = getelementptr i32, <16 x ptr> %broadcast.splat, <16 x i32> %ind
