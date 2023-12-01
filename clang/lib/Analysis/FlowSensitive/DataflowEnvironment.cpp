@@ -377,6 +377,49 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   CallStack.push_back(&DeclCtx);
 }
 
+void Environment::initialize() {
+  const DeclContext *DeclCtx = getDeclCtx();
+  if (DeclCtx == nullptr)
+    return;
+
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
+    assert(FuncDecl->getBody() != nullptr);
+
+    initFieldsGlobalsAndFuncs(FuncDecl);
+
+    for (const auto *ParamDecl : FuncDecl->parameters()) {
+      assert(ParamDecl != nullptr);
+      setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
+    }
+  }
+
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
+    auto *Parent = MethodDecl->getParent();
+    assert(Parent != nullptr);
+
+    if (Parent->isLambda()) {
+      for (auto Capture : Parent->captures()) {
+        if (Capture.capturesVariable()) {
+          const auto *VarDecl = Capture.getCapturedVar();
+          assert(VarDecl != nullptr);
+          setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
+        } else if (Capture.capturesThis()) {
+          const auto *SurroundingMethodDecl =
+              cast<CXXMethodDecl>(DeclCtx->getNonClosureAncestor());
+          QualType ThisPointeeType =
+              SurroundingMethodDecl->getFunctionObjectParameterType();
+          setThisPointeeStorageLocation(
+              cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+        }
+      }
+    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
+      setThisPointeeStorageLocation(
+          cast<RecordValue>(createValue(ThisPointeeType))->getLoc());
+    }
+  }
+}
+
 // FIXME: Add support for resetting globals after function calls to enable
 // the implementation of sound analyses.
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {

@@ -166,9 +166,14 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
-  /// Assigns storage locations and values to all global variables, fields
-  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
-  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
+  /// Assigns storage locations and values to all parameters, captures, global
+  /// variables, fields and functions referenced in the function currently being
+  /// analyzed.
+  ///
+  /// Requirements:
+  ///
+  ///  The function must have a body.
+  void initialize();
 
   /// Returns a new environment that is a copy of this one.
   ///
@@ -645,7 +650,10 @@ private:
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
 
-private:
+  /// Assigns storage locations and values to all global variables, fields
+  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
+  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
+
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 

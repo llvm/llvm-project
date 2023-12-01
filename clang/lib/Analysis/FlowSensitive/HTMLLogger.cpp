@@ -137,9 +137,9 @@ public:
               dump(*Val);
         });
 
-      for (const auto &Prop : RLoc->synthetic_fields())
-        JOS.attributeObject(("sf:" + Prop.first()).str(),
-                            [&] { dump(*Prop.second); });
+      for (const auto &SyntheticField : RLoc->synthetic_fields())
+        JOS.attributeObject(("sf:" + SyntheticField.first()).str(),
+                            [&] { dump(*SyntheticField.second); });
     }
   }
 

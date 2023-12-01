@@ -76,8 +76,8 @@ public:
 /// the base class are directly accessible as children of this location.
 ///
 /// Record storage locations may also contain so-called synthetic fields. These
-/// are typically used to the internal state of a class (e.g. the value stored
-/// in a `std::optional`) without having to depend on that class's
+/// are typically used to model the internal state of a class (e.g. the value
+/// stored in a `std::optional`) without having to depend on that class's
 /// implementation details. All `RecordStorageLocation`s of a given type should
 /// have the same synthetic fields.
 ///

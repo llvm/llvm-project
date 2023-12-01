@@ -492,56 +492,6 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
-static Environment initializeEnvironment(const Environment &InitEnv) {
-  Environment ResultEnv = InitEnv.fork();
-
-  const DeclContext *DeclCtx = ResultEnv.getDeclCtx();
-  if (DeclCtx == nullptr)
-    return ResultEnv;
-
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
-    assert(FuncDecl->getBody() != nullptr);
-
-    ResultEnv.initFieldsGlobalsAndFuncs(FuncDecl);
-
-    for (const auto *ParamDecl : FuncDecl->parameters()) {
-      assert(ParamDecl != nullptr);
-      ResultEnv.setStorageLocation(*ParamDecl,
-                                   ResultEnv.createObject(*ParamDecl, nullptr));
-    }
-  }
-
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
-    auto *Parent = MethodDecl->getParent();
-    assert(Parent != nullptr);
-
-    if (Parent->isLambda()) {
-      for (auto Capture : Parent->captures()) {
-        if (Capture.capturesVariable()) {
-          const auto *VarDecl = Capture.getCapturedVar();
-          assert(VarDecl != nullptr);
-          ResultEnv.setStorageLocation(
-              *VarDecl, ResultEnv.createObject(*VarDecl, nullptr));
-        } else if (Capture.capturesThis()) {
-          const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(DeclCtx->getNonClosureAncestor());
-          QualType ThisPointeeType =
-              SurroundingMethodDecl->getFunctionObjectParameterType();
-          ResultEnv.setThisPointeeStorageLocation(
-              cast<RecordValue>(ResultEnv.createValue(ThisPointeeType))
-                  ->getLoc());
-        }
-      }
-    } else if (MethodDecl->isImplicitObjectMemberFunction()) {
-      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
-      ResultEnv.setThisPointeeStorageLocation(
-          cast<RecordValue>(ResultEnv.createValue(ThisPointeeType))->getLoc());
-    }
-  }
-
-  return ResultEnv;
-}
-
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
@@ -551,10 +501,11 @@ runTypeErasedDataflowAnalysis(
         PostVisitCFG) {
   PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
 
-  auto MaybeStartingEnv =
-      InitEnv.callStackSize() == 1
-          ? std::make_optional<Environment>(initializeEnvironment(InitEnv))
-          : std::nullopt;
+  std::optional<Environment> MaybeStartingEnv;
+  if (InitEnv.callStackSize() == 1) {
+    MaybeStartingEnv = InitEnv.fork();
+    MaybeStartingEnv->initialize();
+  }
   const Environment &StartingEnv =
       MaybeStartingEnv ? *MaybeStartingEnv : InitEnv;
 
