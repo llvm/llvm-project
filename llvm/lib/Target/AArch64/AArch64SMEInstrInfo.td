@@ -541,8 +541,8 @@ defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101, int_aarch64_sme_umops
 
 def ZERO_T : sme2_zero_zt<"zero", 0b0001>;
 
-def LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100>;
-def STR_TX : sme2_spill_fill_vector<"str", 0b11111100>;
+defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, int_aarch64_sme_ldr_zt>;
+defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, int_aarch64_sme_str_zt>;
 
 def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
 def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
