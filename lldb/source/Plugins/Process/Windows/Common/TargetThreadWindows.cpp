@@ -15,6 +15,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include "ProcessWindows.h"
 #include "ProcessWindowsLog.h"
@@ -32,6 +33,9 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+using GetThreadDescriptionFunctionPtr = HRESULT
+WINAPI (*)(HANDLE hThread, PWSTR *ppszThreadDescription);
 
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
@@ -174,4 +178,31 @@ Status TargetThreadWindows::DoResume() {
   }
 
   return Status();
+}
+
+const char *TargetThreadWindows::GetName() {
+  Log *log = GetLog(LLDBLog::Thread);
+  HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
+  if (hModule) {
+    auto GetThreadDescription =
+        reinterpret_cast<GetThreadDescriptionFunctionPtr>(
+            ::GetProcAddress(hModule, "GetThreadDescription"));
+    LLDB_LOGF(log, "GetProcAddress: %p",
+              reinterpret_cast<void *>(GetThreadDescription));
+    if (GetThreadDescription) {
+      PWSTR pszThreadName;
+      if (SUCCEEDED(GetThreadDescription(
+              m_host_thread.GetNativeThread().GetSystemHandle(),
+              &pszThreadName))) {
+        LLDB_LOGF(log, "GetThreadDescription: %ls", pszThreadName);
+        llvm::convertUTF16ToUTF8String(
+            llvm::ArrayRef(reinterpret_cast<char *>(pszThreadName),
+                           wcslen(pszThreadName) * sizeof(wchar_t)),
+            m_name);
+        ::LocalFree(pszThreadName);
+      }
+    }
+  }
+
+  return m_name.c_str();
 }
