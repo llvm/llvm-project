@@ -173,7 +173,7 @@ class _PlatformContext(object):
 def createPlatformContext():
     if platformIsDarwin():
         return _PlatformContext("DYLD_LIBRARY_PATH", ":", "lib", "dylib")
-    elif getPlatform() in ("freebsd", "linux", "netbsd"):
+    elif getPlatform() in ("linux", "freebsd", "netbsd", "openbsd"):
         return _PlatformContext("LD_LIBRARY_PATH", ":", "lib", "so")
     else:
         return _PlatformContext("PATH", ";", "", "dll")
