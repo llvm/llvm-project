@@ -630,6 +630,9 @@ KEYWORD(__noinline__                , KEYCUDA)
 KEYWORD(cbuffer                     , KEYHLSL)
 KEYWORD(tbuffer                     , KEYHLSL)
 KEYWORD(groupshared                 , KEYHLSL)
+KEYWORD(in                          , KEYHLSL)
+KEYWORD(inout                       , KEYHLSL)
+KEYWORD(out                         , KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)
