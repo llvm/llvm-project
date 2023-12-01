@@ -15,24 +15,24 @@
 # Many thanks to Nico Weber for paving the way here.
 
 # Path to the file's contents at the ancestor's version.
-base=$1
+base="$1"
 
 # Path to the file's contents at the current version.
-current=$2
+current="$2"
 
 # Path to the file's contents at the other branch's version (for nonlinear histories, there might be multiple other branches).
-other=$3
+other="$3"
 
 # The path of the file in the repository.
-path=$4
+path="$4"
 
-clang-format --style=file --assume-filename=$path < $base > $base.tmp
-mv $base.tmp $base
+clang-format --style=file --assume-filename="$path" < "$base" > "$base.tmp"
+mv "$base.tmp" "$base"
 
-clang-format --style=file --assume-filename=$path < $current > $current.tmp
-mv $current.tmp $current
+clang-format --style=file --assume-filename="$path" < "$current" > "$current.tmp"
+mv "$current.tmp" "$current"
 
-clang-format --style=file --assume-filename=$path < $other > $other.tmp
-mv $other.tmp $other
+clang-format --style=file --assume-filename="$path" < "$other" > "$other.tmp"
+mv "$other.tmp" "$other"
 
-git merge-file $current $base $other
+git merge-file -L "$current" -L "$base" -L "$other" "$current" "$base" "$other"
