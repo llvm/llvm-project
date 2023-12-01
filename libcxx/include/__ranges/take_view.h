@@ -87,7 +87,7 @@ public:
         return ranges::begin(__base_);
       } else {
         using _DifferenceT = range_difference_t<_View>;
-        auto __size = size();
+        auto __size        = range_difference_t<_View>(size());
         return counted_iterator(ranges::begin(__base_), static_cast<_DifferenceT>(__size));
       }
     } else {
@@ -102,7 +102,7 @@ public:
         return ranges::begin(__base_);
       } else {
         using _DifferenceT = range_difference_t<const _View>;
-        auto __size = size();
+        auto __size        = range_difference_t<_View>(size());
         return counted_iterator(ranges::begin(__base_), static_cast<_DifferenceT>(__size));
       }
     } else {
@@ -114,7 +114,7 @@ public:
   constexpr auto end() requires (!__simple_view<_View>) {
     if constexpr (sized_range<_View>) {
       if constexpr (random_access_range<_View>) {
-        return ranges::begin(__base_) + size();
+        return ranges::begin(__base_) + range_difference_t<_View>(size());
       } else {
         return default_sentinel;
       }
@@ -127,7 +127,7 @@ public:
   constexpr auto end() const requires range<const _View> {
     if constexpr (sized_range<const _View>) {
       if constexpr (random_access_range<const _View>) {
-        return ranges::begin(__base_) + size();
+        return ranges::begin(__base_) + range_difference_t<_View>(size());
       } else {
         return default_sentinel;
       }

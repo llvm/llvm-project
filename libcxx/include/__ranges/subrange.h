@@ -122,15 +122,12 @@ namespace ranges {
       : subrange(ranges::begin(__range), ranges::end(__range))
     { }
 
-    template<__different_from<subrange> _Range>
-      requires borrowed_range<_Range> &&
-               __convertible_to_non_slicing<iterator_t<_Range>, _Iter> &&
+    template <__different_from<subrange> _Range>
+      requires borrowed_range<_Range> && __convertible_to_non_slicing<iterator_t<_Range>, _Iter> &&
                convertible_to<sentinel_t<_Range>, _Sent>
-    _LIBCPP_HIDE_FROM_ABI
-    constexpr subrange(_Range&& __range)
-      requires _StoreSize && sized_range<_Range>
-      : subrange(__range, ranges::size(__range))
-    { }
+               _LIBCPP_HIDE_FROM_ABI constexpr subrange(_Range&& __range)
+                 requires _StoreSize && sized_range<_Range>
+        : subrange(__range, static_cast<decltype(__size_)>(ranges::size(__range))) {}
 
     template<borrowed_range _Range>
       requires __convertible_to_non_slicing<iterator_t<_Range>, _Iter> &&

@@ -38,12 +38,13 @@ namespace ranges::views {
 namespace __counted {
 
   struct __fn {
-    template<contiguous_iterator _It>
-    _LIBCPP_HIDE_FROM_ABI
-    static constexpr auto __go(_It __it, iter_difference_t<_It> __count)
-      noexcept(noexcept(span(std::to_address(__it), static_cast<size_t>(__count))))
-      // Deliberately omit return-type SFINAE, because to_address is not SFINAE-friendly
-      { return          span(std::to_address(__it), static_cast<size_t>(__count)); }
+    template <contiguous_iterator _It>
+    _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_It __it, iter_difference_t<_It> __count) noexcept(
+        noexcept(span(std::to_address(__it), static_cast<size_t>(static_cast<iter_difference_t<_It>>(__count)))))
+    // Deliberately omit return-type SFINAE, because to_address is not SFINAE-friendly
+    {
+      return span(std::to_address(__it), static_cast<size_t>(static_cast<iter_difference_t<_It>>(__count)));
+    }
 
     template<random_access_iterator _It>
     _LIBCPP_HIDE_FROM_ABI
