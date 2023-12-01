@@ -109,7 +109,7 @@ public:
                   addEvaluation(lower::pft::Evaluation{
                       removeIndirection(x), pftParentStack.back(),
                       stmt.position, stmt.label});
-                  checkForRoundingModeCall(x.value());
+                  checkForFPEnvironmentCalls(x.value());
                   return true;
                 },
                 [&](const common::Indirection<parser::IfStmt> &x) {
@@ -129,22 +129,43 @@ public:
     return true;
   }
 
-  /// Check for a call statement that could modify the fp rounding mode.
-  void checkForRoundingModeCall(const parser::CallStmt &callStmt) {
-    const auto &pd = std::get<parser::ProcedureDesignator>(callStmt.call.t);
-    const auto *callName = std::get_if<parser::Name>(&pd.u);
+  /// Check for calls that could modify the floating point environment.
+  /// See F18 Clauses
+  ///  - 17.1p3 (Overview of IEEE arithmetic support)
+  ///  - 17.3p3 (The exceptions)
+  ///  - 17.4p5 (The rounding modes)
+  ///  - 17.6p1 (Halting)
+  void checkForFPEnvironmentCalls(const parser::CallStmt &callStmt) {
+    const auto *callName = std::get_if<parser::Name>(
+        &std::get<parser::ProcedureDesignator>(callStmt.call.t).u);
     if (!callName)
       return;
     const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
+    if (!procSym.owner().IsModule())
+      return;
+    const Fortran::semantics::Symbol &modSym = *procSym.owner().symbol();
+    if (!modSym.attrs().test(Fortran::semantics::Attr::INTRINSIC))
+      return;
+    // Modules IEEE_FEATURES, IEEE_EXCEPTIONS, and IEEE_ARITHMETIC get common
+    // declarations from several __fortran_... support module files.
+    llvm::StringRef modName = toStringRef(modSym.name());
+    if (!modName.startswith("ieee_") && !modName.startswith("__fortran_"))
+      return;
     llvm::StringRef procName = toStringRef(procSym.name());
+    if (!procName.startswith("ieee_"))
+      return;
+    lower::pft::FunctionLikeUnit *proc =
+        evaluationListStack.back()->back().getOwningProcedure();
+    proc->hasIeeeAccess = true;
     if (!procName.startswith("ieee_set_"))
       return;
-    if (procName == "ieee_set_rounding_mode_0" ||
-        procName == "ieee_set_modes_0" || procName == "ieee_set_status_0")
-      evaluationListStack.back()
-          ->back()
-          .getOwningProcedure()
-          ->mayModifyRoundingMode = true;
+    if (procName.startswith("ieee_set_modes_") ||
+        procName.startswith("ieee_set_status_"))
+      proc->mayModifyHaltingMode = proc->mayModifyRoundingMode = true;
+    else if (procName.startswith("ieee_set_halting_mode_"))
+      proc->mayModifyHaltingMode = true;
+    else if (procName.startswith("ieee_set_rounding_mode_"))
+      proc->mayModifyRoundingMode = true;
   }
 
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the
@@ -1667,9 +1688,8 @@ private:
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const parser::MainProgram &func, const lower::pft::PftNode &parent,
     const semantics::SemanticsContext &semanticsContext)
-    : ProgramUnit{func, parent}, endStmt{
-                                     getFunctionStmt<parser::EndProgramStmt>(
-                                         func)} {
+    : ProgramUnit{func, parent},
+      endStmt{getFunctionStmt<parser::EndProgramStmt>(func)} {
   const auto &programStmt =
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t);
   if (programStmt.has_value()) {
@@ -1753,8 +1773,8 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     const parser::Submodule &m, const lower::pft::PftNode &parent)
-    : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::SubmoduleStmt>(
-                                  m)},
+    : ProgramUnit{m, parent},
+      beginStmt{getModuleStmt<parser::SubmoduleStmt>(m)},
       endStmt{getModuleStmt<parser::EndSubmoduleStmt>(m)} {}
 
 parser::CharBlock
