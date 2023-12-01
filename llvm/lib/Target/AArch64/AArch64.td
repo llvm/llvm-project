@@ -1147,6 +1147,22 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureZCRegMove,
                                     FeatureZCZeroing]>;
 
+def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
+                                    "Apple A17", [
+                                    FeatureAlternateSExtLoadCVTF32Pattern,
+                                    FeatureArithmeticBccFusion,
+                                    FeatureArithmeticCbzFusion,
+                                    FeatureDisableLatencySchedHeuristic,
+                                    FeatureFuseAddress,
+                                    FeatureFuseAES,
+                                    FeatureFuseArithmeticLogic,
+                                    FeatureFuseCCSelect,
+                                    FeatureFuseCryptoEOR,
+                                    FeatureFuseLiterals,
+                                    FeatureStorePairSuppress,
+                                    FeatureZCRegMove,
+                                    FeatureZCZeroing]>;
+
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureExynosCheapAsMoveHandling,
@@ -1446,6 +1462,10 @@ def ProcessorFeatures {
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
                                      FeatureHCX];
+  list<SubtargetFeature> AppleA17 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
+                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                     FeatureFullFP16, FeatureFP16FML,
+                                     FeatureHCX];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
@@ -1629,12 +1649,15 @@ def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
 def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
-
+def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
+                     [TuneAppleA17]>;
 // Mac CPUs
 def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
 def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
                      [TuneAppleA15]>;
+def : ProcessorModel<"apple-m3", CycloneModel, ProcessorFeatures.AppleA16,
+                     [TuneAppleA16]>;
 
 // watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
