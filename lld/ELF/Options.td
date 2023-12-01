@@ -510,6 +510,15 @@ defm warn_backrefs_exclude
          "which should be ignored for --warn-backrefs.">,
       MetaVarName<"<glob>">;
 
+defm warn_mismatch_sections_in_comdat_groups: BB<"warn-mismatch-sections-in-comdat-groups",
+    "Warn about discarded sections in a comdat group that have different contents from a retained section in a comdat group with the same key",
+    "Do not warn about discarded sections in a comdat group that have different contents from a retained section in a comdat group with the same key">;
+
+defm warn_mismatch_sections_in_comdat_groups_exclude
+    : EEq<"warn-mismatch-sections-in-comdat-groups-exclude",
+         "Glob describing sections to ignore checking for --warn-mismatch-sections-in-comdat-groups.">,
+      MetaVarName<"<glob>">;
+
 defm warn_common: B<"warn-common",
     "Warn about duplicate common symbols",
     "Do not warn about duplicate common symbols (default)">;

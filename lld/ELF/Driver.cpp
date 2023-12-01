@@ -1437,6 +1437,9 @@ static void readConfigs(opt::InputArgList &args) {
       OPT_use_android_relr_tags, OPT_no_use_android_relr_tags, false);
   config->warnBackrefs =
       args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
+  config->warnMismatchSectionsInComdatGroups =
+      args.hasFlag(OPT_warn_mismatch_sections_in_comdat_groups,
+                   OPT_no_warn_mismatch_sections_in_comdat_groups, false);
   config->warnCommon = args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
   config->warnSymbolOrdering =
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
@@ -1704,6 +1707,17 @@ static void readConfigs(opt::InputArgList &args) {
     StringRef pattern(arg->getValue());
     if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
       config->warnBackrefsExclude.push_back(std::move(*pat));
+    else
+      error(arg->getSpelling() + ": " + toString(pat.takeError()) + ": " +
+            pattern);
+  }
+
+  for (opt::Arg *arg :
+       args.filtered(OPT_warn_mismatch_sections_in_comdat_groups_exclude)) {
+    StringRef pattern(arg->getValue());
+    if (Expected<GlobPattern> pat = GlobPattern::create(pattern))
+      config->warnMismatchSectionsInComdatGroupsExclude.push_back(
+          std::move(*pat));
     else
       error(arg->getSpelling() + ": " + toString(pat.takeError()) + ": " +
             pattern);

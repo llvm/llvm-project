@@ -304,6 +304,10 @@ private:
 
   bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
+  void checkComdatGroups(bool recordedNewSection, const InputFile *otherFile,
+                         ArrayRef<Elf_Word> sectionsInGroup,
+                         StringRef signature);
+
   // Each ELF symbol contains a section index which the symbol belongs to.
   // However, because the number of bits dedicated for that is limited, a
   // symbol can directly point to a section only when the section index is

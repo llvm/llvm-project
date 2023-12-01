@@ -561,6 +561,84 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
+template <class ELFT>
+void ObjFile<ELFT>::checkComdatGroups(bool recordedNewSection,
+                                      const InputFile *otherFile,
+                                      ArrayRef<Elf_Word> sectionsInGroup,
+                                      StringRef signature) {
+  ArrayRef<Elf_Shdr> objSections = this->getELFShdrs<ELFT>();
+  object::ELFFile<ELFT> obj = this->getObj();
+  StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
+  const auto &exclude = config->warnMismatchSectionsInComdatGroupsExclude;
+
+  // First check for a given comdat group, we have all the necessary sections.
+  if (recordedNewSection) {
+    // The signature was recorded - we need to save the section names for this
+    // group.
+    for (uint32_t secIdx : sectionsInGroup) {
+      const Elf_Shdr &section = objSections[secIdx];
+      StringRef sectionName =
+          CHECK(obj.getSectionName(section, shstrtab), this);
+      symtab.comdatGroupSectionNames[CachedHashStringRef(signature)].insert(
+          sectionName);
+    }
+  } else {
+    // The signature was not recorded - this comdat group has a set of section
+    // names associated with it. Check the sets match.
+    const llvm::StringSet<> &cachedSectionNames =
+        symtab.comdatGroupSectionNames.at(CachedHashStringRef(signature));
+    size_t cachedSize = cachedSectionNames.size();
+    size_t foundSize = sectionsInGroup.size();
+    if (cachedSize != foundSize) {
+      warn("comdat group with signature '" + signature + "' in '" +
+           otherFile->getName() + "' has " + Twine(cachedSize) +
+           " section(s) while group in '" + this->getName() + "' has " +
+           Twine(foundSize) + " section(s)");
+      return;
+    }
+
+    // Group sizes match, but may have different section names.
+    for (uint32_t secIdx : sectionsInGroup) {
+      const Elf_Shdr &section = objSections[secIdx];
+      StringRef sectionName =
+          CHECK(obj.getSectionName(section, shstrtab), this);
+      if (!cachedSectionNames.contains(sectionName)) {
+        warn("comdat group with signature '" + signature + "' in '" +
+             otherFile->getName() + "' does not have section '" + sectionName +
+             "' which is part of comdat group in '" + this->getName() + "'");
+        return;
+      }
+    }
+  }
+
+  // Get all sections part of the group seen here.
+  for (uint32_t secIdx : sectionsInGroup) {
+    const Elf_Shdr &section = objSections[secIdx];
+    ArrayRef<uint8_t> contents =
+        CHECK(obj.template getSectionContentsAsArray<uint8_t>(section), this);
+    StringRef sectionName = CHECK(obj.getSectionName(section, shstrtab), this);
+
+    auto pair = symtab.comdatGroupSectionContents.try_emplace(
+        CachedHashStringRef(sectionName), contents);
+    bool added = pair.second;
+    ArrayRef<uint8_t> cachedContents = pair.first->second;
+
+    bool ignoreSection =
+        std::any_of(exclude.begin(), exclude.end(),
+                    [&sectionName](const llvm::GlobPattern &pat) {
+                      return pat.match(sectionName);
+                    });
+
+    if (!added && !ignoreSection && this != otherFile &&
+        !contents.equals(cachedContents)) {
+      warn("section '" + sectionName + "' for comdat group with signature '" +
+           signature + "' has different contents between '" + this->getName() +
+           "' and '" + otherFile->getName() + "'");
+      return;
+    }
+  }
+}
+
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
@@ -646,10 +724,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     if (flag && flag != GRP_COMDAT)
       fatal(toString(this) + ": unsupported SHT_GROUP format");
 
-    bool keepGroup =
-        (flag & GRP_COMDAT) == 0 || ignoreComdats ||
-        symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this)
-            .second;
+    bool keepGroup = (flag & GRP_COMDAT) == 0 || ignoreComdats;
+    if (!keepGroup) {
+      auto pair =
+          symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this);
+      keepGroup = pair.second;
+      if (config->warnMismatchSectionsInComdatGroups)
+        checkComdatGroups(pair.second, pair.first->second, entries.slice(1),
+                          signature);
+    }
     if (keepGroup) {
       if (config->relocatable)
         this->sections[i] = createInputSection(
