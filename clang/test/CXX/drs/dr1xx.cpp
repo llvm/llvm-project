@@ -686,14 +686,13 @@ namespace dr142 { // dr142: 2.8
 
 namespace dr143 { // dr143: yes
   namespace A { struct X; }
-  namespace B { void f(A::X); } // #dr143-f
+  namespace B { void f(A::X); }
   namespace A {
     struct X { friend void B::f(X); };
   }
   void g(A::X x) {
     f(x);
-    // expected-error@-1 {{use of undeclared identifier 'f'; did you mean 'B::f'?}}
-    // expected-note@#dr143-f {{'B::f' declared here}}
+    // expected-error@-1 {{use of undeclared identifier 'f'}}
   }
 }
 
