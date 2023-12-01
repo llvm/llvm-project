@@ -539,7 +539,7 @@ defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001, int_aarch64_sme_smops
 defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100, int_aarch64_sme_umopa_za32>;
 defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101, int_aarch64_sme_umops_za32>;
 
-def ZERO_T : sme2_zero_zt<"zero", 0b0001>;
+defm ZERO_T : sme2_zero_zt<"zero", 0b0001>;
 
 defm LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100, int_aarch64_sme_ldr_zt>;
 defm STR_TX : sme2_spill_fill_vector<"str", 0b11111100, int_aarch64_sme_str_zt>;
