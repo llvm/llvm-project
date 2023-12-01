@@ -73,25 +73,17 @@ struct PluginAdaptorTy {
   std::mutex Mtx;
 };
 
-/// RTLs identified in the system.
-struct PluginAdaptorManagerTy {
-  explicit PluginAdaptorManagerTy() = default;
-
-  // Register a shared library with all (compatible) RTLs.
-  void registerLib(__tgt_bin_desc *Desc);
-
-  // Unregister a shared library from all RTLs.
-  void unregisterLib(__tgt_bin_desc *Desc);
-};
-
 /// Struct for the data required to handle plugins
 struct PluginManager {
   PluginManager() {}
 
   void init();
 
-  /// RTLs identified on the host
-  PluginAdaptorManagerTy RTLs;
+  // Register a shared library with all (compatible) RTLs.
+  void registerLib(__tgt_bin_desc *Desc);
+
+  // Unregister a shared library from all RTLs.
+  void unregisterLib(__tgt_bin_desc *Desc);
 
   void addDeviceImage(__tgt_bin_desc &TgtBinDesc, __tgt_device_image &TgtDeviceImage) {
     DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
