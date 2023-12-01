@@ -76,5 +76,6 @@ add_libc_unittest(
     libc.src.sys.mman.munmap
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
+    libc.src.unistd.sysconf
     libc.test.UnitTest.ErrnoSetterMatcher
 )
