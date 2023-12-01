@@ -12875,8 +12875,10 @@ multiclass avx512_vp2intersect<X86SchedWriteWidths sched, AVX512VLVectorVTInfo _
   }
 }
 
+let ExeDomain = SSEPackedInt in {
 defm VP2INTERSECTD : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i32_info>;
 defm VP2INTERSECTQ : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i64_info>, REX_W;
+}
 
 multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
                              X86SchedWriteWidths sched,
