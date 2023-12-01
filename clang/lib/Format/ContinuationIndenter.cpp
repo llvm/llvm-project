@@ -1229,9 +1229,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent;
   }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
-       (Current.is(tok::greater) &&
-        (Style.Language == FormatStyle::LK_Proto ||
-         Style.Language == FormatStyle::LK_TextProto))) &&
+       (Current.is(tok::greater) && Style.isProto())) &&
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
@@ -1278,9 +1276,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (Current.is(tok::identifier) && Current.Next &&
       (!Style.isVerilog() || Current.Next->is(tok::colon)) &&
       (Current.Next->is(TT_DictLiteral) ||
-       ((Style.Language == FormatStyle::LK_Proto ||
-         Style.Language == FormatStyle::LK_TextProto) &&
-        Current.Next->isOneOf(tok::less, tok::l_brace)))) {
+       (Style.isProto() && Current.Next->isOneOf(tok::less, tok::l_brace)))) {
     return CurrentState.Indent;
   }
   if (NextNonComment->is(TT_ObjCStringLiteral) &&
@@ -1798,9 +1794,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                        Current.MatchingParen->Previous &&
                        Current.MatchingParen->Previous->is(tok::comma);
     AvoidBinPacking = EndsInComma || Current.is(TT_DictLiteral) ||
-                      Style.Language == FormatStyle::LK_Proto ||
-                      Style.Language == FormatStyle::LK_TextProto ||
-                      !Style.BinPackArguments ||
+                      Style.isProto() || !Style.BinPackArguments ||
                       (NextNonComment && NextNonComment->isOneOf(
                                              TT_DesignatedInitializerPeriod,
                                              TT_DesignatedInitializerLSquare));
