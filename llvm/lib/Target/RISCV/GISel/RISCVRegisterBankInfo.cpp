@@ -141,6 +141,7 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FCOPYSIGN:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FLOG10:
