@@ -156,6 +156,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/socket.h entrypoints
     libc.src.sys.socket.socket
+    libc.src.sys.socket.bind
 
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
