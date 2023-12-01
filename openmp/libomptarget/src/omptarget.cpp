@@ -300,7 +300,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (PM->RTLs.UsedRTLs.empty()) {
+      if (!PM->getNumUsedPlugins()) {
         llvm::SmallVector<llvm::StringRef> Archs;
         llvm::transform(PM->Images, std::back_inserter(Archs),
                         [](const auto &X) {
