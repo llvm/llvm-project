@@ -428,6 +428,13 @@ def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
 def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
   Arguments<(ins ProxyKindAttr:$kind,
                  OptionalAttr<SharedSpaceAttr>:$space)> {
+  let description = [{
+    Fence operation with proxy to establish an ordering between memory accesses
+    that may happen through different proxies.
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+  
   let assemblyFormat = "attr-dict";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
