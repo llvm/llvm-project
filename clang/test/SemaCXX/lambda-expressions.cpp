@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++11 -Wno-unused-value -fsyntax-only -verify=expected,expected-cxx14,cxx11 -fblocks %s
 // RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify -verify=expected-cxx14 -fblocks %s
 // RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify -ast-dump -fblocks %s | FileCheck %s
 
@@ -558,8 +559,8 @@ struct B {
   int x;
   A a = [&] { int y = x; };
   A b = [&] { [&] { [&] { int y = x; }; }; };
-  A d = [&](auto param) { int y = x; };
-  A e = [&](auto param) { [&] { [&](auto param2) { int y = x; }; }; };
+  A d = [&](auto param) { int y = x; }; // cxx11-error {{'auto' not allowed in lambda parameter}}
+  A e = [&](auto param) { [&] { [&](auto param2) { int y = x; }; }; }; // cxx11-error 2 {{'auto' not allowed in lambda parameter}}
 };
 
 B<int> b;
@@ -589,6 +590,7 @@ struct S1 {
 void foo1() {
   auto s0 = S1{[name=]() {}}; // expected-error 2 {{expected expression}}
   auto s1 = S1{[name=name]() {}}; // expected-error {{use of undeclared identifier 'name'; did you mean 'name1'?}}
+                                  // cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
 }
 }
 
@@ -604,7 +606,7 @@ namespace PR25627_dont_odr_use_local_consts {
 
 namespace ConversionOperatorDoesNotHaveDeducedReturnType {
   auto x = [](int){};
-  auto y = [](auto &v) -> void { v.n = 0; };
+  auto y = [](auto &v) -> void { v.n = 0; }; // cxx11-error {{'auto' not allowed in lambda parameter}} cxx11-note {{candidate function not viable}} cxx11-note {{conversion candidate}}
   using T = decltype(x);
   using U = decltype(y);
   using ExpectedTypeT = void (*)(int);
@@ -624,14 +626,14 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
     template<typename T>
       friend constexpr U::operator ExpectedTypeU<T>() const noexcept;
 #else
-    friend auto T::operator()(int) const;
+    friend auto T::operator()(int) const; // cxx11-error {{'auto' return without trailing return type; deduced return types are a C++14 extension}}
     friend T::operator ExpectedTypeT() const;
 
     template<typename T>
-      friend void U::operator()(T&) const;
+      friend void U::operator()(T&) const; // cxx11-error {{friend declaration of 'operator()' does not match any declaration}}
     // FIXME: This should not match, as above.
     template<typename T>
-      friend U::operator ExpectedTypeU<T>() const;
+      friend U::operator ExpectedTypeU<T>() const; // cxx11-error {{friend declaration of 'operator void (*)(type-parameter-0-0 &)' does not match any declaration}}
 #endif
 
   private:
@@ -639,7 +641,7 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
   };
 
   // Should be OK: lambda's call operator is a friend.
-  void use(X &x) { y(x); }
+  void use(X &x) { y(x); } // cxx11-error {{no matching function for call to object}}
 
   // This used to crash in return type deduction for the conversion opreator.
   struct A { int n; void f() { +[](decltype(n)) {}; } };
