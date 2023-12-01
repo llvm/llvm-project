@@ -471,10 +471,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   // Pin some memory we can use to obtain the address of the rpc client.
-  void *rpc_client_storage = nullptr;
+  void *rpc_client_storage = malloc(sizeof(void *));
   void *rpc_client_host = nullptr;
   if (hsa_status_t err =
-          hsa_amd_memory_lock(&rpc_client_storage, sizeof(void *),
+          hsa_amd_memory_lock(rpc_client_storage, sizeof(void *),
                               /*agents=*/nullptr, 0, &rpc_client_host))
     handle_error(err);
 
@@ -501,6 +501,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_unlock(rpc_client_host))
     handle_error(err);
+  free(rpc_client_storage);
 
   // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.
   // If the clock_freq symbol is missing, no work to do.
