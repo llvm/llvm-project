@@ -71,27 +71,6 @@ using namespace llvm;
 
 namespace {
 
-enum class IFuncLowering {
-  SymbolResolverIfSupported,
-  SymbolResolverAlways,
-  SymbolResolverNever
-};
-
-static cl::opt<IFuncLowering> PreferredIFuncLowering(
-    "arm64-darwin-ifunc-symbol_resolver",
-    cl::init(IFuncLowering::SymbolResolverNever),
-    cl::desc("Pick the lowering for ifuncs on darwin platforms"), cl::Hidden,
-    cl::values(
-        clEnumValN(
-            IFuncLowering::SymbolResolverIfSupported, "if_supported",
-            "Use .symbol_resolver's when known to be supported by the linker."),
-        clEnumValN(IFuncLowering::SymbolResolverAlways, "always",
-                   "Always use .symbol_resolvers. NOTE: this might not be "
-                   "supported by the linker in all cases."),
-        clEnumValN(IFuncLowering::SymbolResolverNever, "never",
-                   "Use a manual lowering, doing what the linker would have "
-                   "done, but in the compiler.")));
-
 class AArch64AsmPrinter : public AsmPrinter {
   AArch64MCInstLower MCInstLowering;
   FaultMaps FM;
@@ -224,9 +203,6 @@ private:
   }
 
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI) override;
-
-  void emitLinkerSymbolResolver(Module &M, const GlobalIFunc &GI);
-  void emitManualSymbolResolver(Module &M, const GlobalIFunc &GI);
 };
 
 } // end anonymous namespace
@@ -1838,51 +1814,26 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-void AArch64AsmPrinter::emitLinkerSymbolResolver(Module &M,
-                                                 const GlobalIFunc &GI) {
-  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
+void AArch64AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
+  if (!TM.getTargetTriple().isOSBinFormatMachO())
+    return AsmPrinter::emitGlobalIFunc(M, GI);
 
-  MCSymbol *Name = getSymbol(&GI);
+  // On Darwin platforms, emit a manually-constructed .symbol_resolver that
+  // implements the symbol resolution duties of the IFunc.
+  //
+  // Normally, this would be handled by linker magic, but unfortunately there are
+  // a few limitations in ld64 and ld-prime's implementation of .symbol_resolver
+  // that mean we can't always use them:
+  //
+  //    *  resolvers cannot be the target of an alias
+  //    *  resolvers cannot have private linkage
+  //    *  resolvers cannot have linkonce linkage
+  //    *  resolvers cannot appear in executables
+  //    *  resolvers cannot appear in bundles
+  //
+  // This works around that by emitting a close approximation of what the linker
+  // would have done.
 
-  // NOTE: non-global .symbol_resolvers are not yet supported by Darwin linkers
-
-  if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
-  else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
-  else
-    assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
-
-  OutStreamer->emitCodeAlignment(Align(4), STI);
-  OutStreamer->emitLabel(Name);
-  OutStreamer->emitSymbolAttribute(Name, MCSA_SymbolResolver);
-  emitVisibility(Name, GI.getVisibility());
-
-  // ld-prime does not seem to support aliases of symbol resolvers, so we have
-  // to tail call the resolver manually.
-  OutStreamer->emitInstruction(
-      MCInstBuilder(AArch64::B)
-          .addOperand(MCOperand::createExpr(lowerConstant(GI.getResolver()))),
-      *STI);
-}
-
-/// \brief Emit a manually-constructed .symbol_resolver that implements the
-/// symbol resolution duties of the IFunc.
-///
-/// Normally, this would be handled by linker magic, but unfortunately there are
-/// a few limitations in ld64 and ld-prime's implementation of .symbol_resolver
-/// that mean we can't always use them:
-///
-///    *  resolvers cannot be the target of an alias
-///    *  resolvers cannot have private linkage
-///    *  resolvers cannot have linkonce linkage
-///    *  resolvers cannot appear in executables
-///    *  resolvers cannot appear in bundles
-///
-/// This works around that by emitting a close approximation of what the linker
-/// would have done.
-void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
-                                                 const GlobalIFunc &GI) {
   auto EmitLinkage = [&](MCSymbol *Sym) {
     if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
@@ -1964,33 +1915,35 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
                                    .addReg(AArch64::X16),
                                *STI);
 
+  // These stub helpers are only ever called once, so here we're optimizing for
+  // minimum size by using the pre-indexed store variants, which saves a few
+  // bytes of instructions to bump & restore sp.
+
   // _ifunc.stub_helper:
-  //   stp	fp, lr, [sp, #-16]
-  //   sub	fp, sp, 16
-  //   stp	x1, x0, [sp, #-32]
-  //   stp	x3, x2, [sp, #-48]
-  //   stp	x5, x4, [sp, #-64]
-  //   stp	x7, x6, [sp, #-80]
-  //   stp	d1, d0, [sp, #-96]
-  //   stp	d3, d2, [sp, #-112]
-  //   stp	d5, d4, [sp, #-128]
-  //   stp	d7, d6, [sp, #-144]
-  //   sub	sp, sp, 144
+  //   stp	fp, lr, [sp, #-16]!
+  //   mov	fp, sp
+  //   stp	x1, x0, [sp, #-16]!
+  //   stp	x3, x2, [sp, #-16]!
+  //   stp	x5, x4, [sp, #-16]!
+  //   stp	x7, x6, [sp, #-16]!
+  //   stp	d1, d0, [sp, #-16]!
+  //   stp	d3, d2, [sp, #-16]!
+  //   stp	d5, d4, [sp, #-16]!
+  //   stp	d7, d6, [sp, #-16]!
   //   bl	_resolver
   //   adrp	x16, lazy_pointer@GOTPAGE
   //   ldr	x16, [x16, lazy_pointer@GOTPAGEOFF]
   //   str	x0, [x16]
   //   mov	x16, x0
-  //   add	sp, sp, 144
-  //   ldp	d7, d6, [sp, #-144]
-  //   ldp	d5, d4, [sp, #-128]
-  //   ldp	d3, d2, [sp, #-112]
-  //   ldp	d1, d0, [sp, #-96]
-  //   ldp	x7, x6, [sp, #-80]
-  //   ldp	x5, x4, [sp, #-64]
-  //   ldp	x3, x2, [sp, #-48]
-  //   ldp	x1, x0, [sp, #-32]
-  //   ldp	fp, lr, [sp, #-16]
+  //   ldp	d7, d6, [sp], #16
+  //   ldp	d5, d4, [sp], #16
+  //   ldp	d3, d2, [sp], #16
+  //   ldp	d1, d0, [sp], #16
+  //   ldp	x7, x6, [sp], #16
+  //   ldp	x5, x4, [sp], #16
+  //   ldp	x3, x2, [sp], #16
+  //   ldp	x1, x0, [sp], #16
+  //   ldp	fp, lr, [sp], #16
   //   br	x16
 
   EmitLinkage(StubHelper);
@@ -1998,42 +1951,38 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
   OutStreamer->emitLabel(StubHelper);
   emitVisibility(StubHelper, GI.getVisibility());
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXi)
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
+                                   .addReg(AArch64::SP)
                                    .addReg(AArch64::FP)
                                    .addReg(AArch64::LR)
                                    .addReg(AArch64::SP)
                                    .addImm(-2),
                                *STI);
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBXri)
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
                                    .addReg(AArch64::FP)
                                    .addReg(AArch64::SP)
-                                   .addImm(16)
+                                   .addImm(0)
                                    .addImm(0),
                                *STI);
 
-  for (int I = 0; I != 8; I += 2)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXi)
-                                     .addReg(AArch64::X1 + I)
-                                     .addReg(AArch64::X0 + I)
+  for (int I = 0; I != 4; ++I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPXpre)
                                      .addReg(AArch64::SP)
-                                     .addImm(-4 - I),
+                                     .addReg(AArch64::X1 + 2 * I)
+                                     .addReg(AArch64::X0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-2),
                                  *STI);
 
-  for (int I = 0; I != 8; I += 2)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPDi)
-                                     .addReg(AArch64::D1 + I)
-                                     .addReg(AArch64::D0 + I)
+  for (int I = 0; I != 4; ++I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::STPDpre)
                                      .addReg(AArch64::SP)
-                                     .addImm(-12 - I),
+                                     .addReg(AArch64::D1 + 2 * I)
+                                     .addReg(AArch64::D0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(-2),
                                  *STI);
-
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBXri)
-                                   .addReg(AArch64::SP)
-                                   .addReg(AArch64::SP)
-                                   .addImm(144)
-                                   .addImm(0),
-                               *STI);
 
   OutStreamer->emitInstruction(
       MCInstBuilder(AArch64::BL)
@@ -2081,34 +2030,30 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
                                    .addImm(0),
                                *STI);
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
-                                   .addReg(AArch64::SP)
-                                   .addReg(AArch64::SP)
-                                   .addImm(144)
-                                   .addImm(0),
-                               *STI);
-
-  for (int I = 6; I != -2; I -= 2)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPDi)
-                                     .addReg(AArch64::D1 + I)
-                                     .addReg(AArch64::D0 + I)
+  for (int I = 3; I != -1; --I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPDpost)
                                      .addReg(AArch64::SP)
-                                     .addImm(-12 - I),
+                                     .addReg(AArch64::D1 + 2 * I)
+                                     .addReg(AArch64::D0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(2),
                                  *STI);
 
-  for (int I = 6; I != -2; I -= 2)
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXi)
-                                     .addReg(AArch64::X1 + I)
-                                     .addReg(AArch64::X0 + I)
+  for (int I = 3; I != -1; --I)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
                                      .addReg(AArch64::SP)
-                                     .addImm(-4 - I),
+                                     .addReg(AArch64::X1 + 2 * I)
+                                     .addReg(AArch64::X0 + 2 * I)
+                                     .addReg(AArch64::SP)
+                                     .addImm(2),
                                  *STI);
 
-  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXi)
+  OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDPXpost)
+                                   .addReg(AArch64::SP)
                                    .addReg(AArch64::FP)
                                    .addReg(AArch64::LR)
                                    .addReg(AArch64::SP)
-                                   .addImm(-2),
+                                   .addImm(2),
                                *STI);
 
   OutStreamer->emitInstruction(MCInstBuilder(TM.getTargetTriple().isArm64e()
@@ -2116,27 +2061,6 @@ void AArch64AsmPrinter::emitManualSymbolResolver(Module &M,
                                                  : AArch64::BR)
                                    .addReg(AArch64::X16),
                                *STI);
-}
-
-void AArch64AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
-  if (!TM.getTargetTriple().isOSBinFormatMachO())
-    return AsmPrinter::emitGlobalIFunc(M, GI);
-
-  switch (PreferredIFuncLowering) {
-  case IFuncLowering::SymbolResolverAlways:
-    return emitLinkerSymbolResolver(M, GI);
-  case IFuncLowering::SymbolResolverNever:
-    return emitManualSymbolResolver(M, GI);
-  case IFuncLowering::SymbolResolverIfSupported:
-    if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
-      return emitLinkerSymbolResolver(M, GI);
-    else if (GI.hasWeakLinkage() || GI.hasLinkOnceLinkage())
-      // NOTE: non-global .symbol_resolvers are not yet supported by Darwin
-      // linkers
-      return emitManualSymbolResolver(M, GI);
-    else
-      assert(GI.hasLocalLinkage() && "Invalid ifunc linkage");
-  }
 }
 
 // Force static initialization.
