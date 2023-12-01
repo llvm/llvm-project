@@ -21,14 +21,14 @@ private:
   // Parser output.
   VFInfo Info;
   // Reset the data needed for the test.
-  void reset(const StringRef SFunTy) {
+  void reset(const StringRef ScalarFTyStr) {
     M = parseAssemblyString("declare void @dummy()", Err, Ctx);
     EXPECT_NE(M.get(), nullptr) << "Loading an invalid module.\n "
                                 << Err.getMessage() << "\n";
-    Type *Ty = parseType(SFunTy, Err, *(M.get()));
+    Type *Ty = parseType(ScalarFTyStr, Err, *(M.get()));
     ScalarFTy = dyn_cast<FunctionType>(Ty);
     EXPECT_NE(ScalarFTy, nullptr)
-        << "Invalid function type string: " << SFunTy << "\n"
+        << "Invalid function type string: " << ScalarFTyStr << "\n"
         << Err.getMessage() << "\n";
     // Reset the VFInfo
     Info = VFInfo();
