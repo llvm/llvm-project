@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_OPENMP_MAPPING_H
 #define OMPTARGET_OPENMP_MAPPING_H
 
+#include "Shared/EnvironmentVar.h"
 #include "omptarget.h"
 
 #include <cstdint>
@@ -25,6 +26,24 @@ struct DeviceTy;
 class AsyncInfoTy;
 
 using map_var_info_t = void *;
+
+class MappingConfig {
+
+  MappingConfig() {
+    BoolEnvar ForceAtomic = BoolEnvar("LIBOMPTARGET_MAP_FORCE_ATOMIC", true);
+    UseEventsForAtomicTransfers = ForceAtomic;
+  }
+
+public:
+  static const MappingConfig &get() {
+    static MappingConfig MP;
+    return MP;
+  };
+
+  /// Flag to indicate if we use events to ensure the atomicity of
+  /// map clauses or not. Can be modified with an environment variable.
+  bool UseEventsForAtomicTransfers = true;
+};
 
 /// Information about shadow pointers.
 struct ShadowPtrInfoTy {
