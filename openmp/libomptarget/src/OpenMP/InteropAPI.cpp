@@ -10,6 +10,7 @@
 #include "OpenMP/InternalTypes.h"
 #include "OpenMP/omp.h"
 
+#include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
 

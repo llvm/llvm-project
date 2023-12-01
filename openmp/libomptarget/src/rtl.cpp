@@ -13,6 +13,7 @@
 #include "llvm/Object/OffloadBinary.h"
 
 #include "OpenMP/OMPT/Callback.h"
+#include "PluginManager.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -38,8 +39,6 @@ static const char *RTLNames[] = {
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
 };
-
-PluginManager *PM;
 
 static char *ProfileTraceFile = nullptr;
 
@@ -91,7 +90,7 @@ __attribute__((destructor(101))) void deinit() {
   }
 }
 
-void RTLsTy::loadRTLs() {
+void PluginAdaptorManagerTy::loadRTLs() {
   // Parse environment variable OMP_TARGET_OFFLOAD (if set)
   PM->TargetOffloadPolicy =
       (kmp_target_offload_kind_t)__kmpc_get_target_offload();
@@ -106,7 +105,7 @@ void RTLsTy::loadRTLs() {
   for (const char *Name : RTLNames) {
     AllRTLs.emplace_back();
 
-    RTLInfoTy &RTL = AllRTLs.back();
+    PluginAdaptorTy &RTL = AllRTLs.back();
 
     const std::string BaseRTLName(Name);
     if (!attemptLoadRTL(BaseRTLName + ".so", RTL))
@@ -116,7 +115,7 @@ void RTLsTy::loadRTLs() {
   DP("RTLs loaded!\n");
 }
 
-bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
+bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAdaptorTy &RTL) {
   const char *Name = RTLName.c_str();
 
   DP("Loading library '%s'...\n", Name);
@@ -259,7 +258,7 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
 // Functionality for registering libs
 
 static void registerImageIntoTranslationTable(TranslationTable &TT,
-                                              RTLInfoTy &RTL,
+                                              PluginAdaptorTy &RTL,
                                               __tgt_device_image *Image) {
 
   // same size, as when we increase one, we also increase the other.
@@ -290,7 +289,7 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
 
 static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
                                              __tgt_device_image *Img,
-                                             RTLInfoTy *RTL) {
+                                             PluginAdaptorTy *RTL) {
 
   for (int32_t I = 0; I < RTL->NumberOfDevices; ++I) {
     DeviceTy &Device = *PM->Devices[RTL->Idx + I];
@@ -361,7 +360,7 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
   return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
 }
 
-void RTLsTy::registerRequires(int64_t Flags) {
+void PluginAdaptorManagerTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
   // Minimal check: only set requires flags if previous value
   // is undefined. This ensures that only the first call to this
@@ -402,7 +401,7 @@ void RTLsTy::registerRequires(int64_t Flags) {
      Flags, RequiresFlags);
 }
 
-void RTLsTy::initRTLonce(RTLInfoTy &R) {
+void PluginAdaptorManagerTy::initRTLonce(PluginAdaptorTy &R) {
   // If this RTL is not already in use, initialize it.
   if (R.IsUsed || !R.NumberOfDevices)
     return;
@@ -430,12 +429,12 @@ void RTLsTy::initRTLonce(RTLInfoTy &R) {
   DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler.get()), R.Idx);
 }
 
-void RTLsTy::initAllRTLs() {
+void PluginAdaptorManagerTy::initAllRTLs() {
   for (auto &R : AllRTLs)
     initRTLonce(R);
 }
 
-void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
+void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
   // Extract the exectuable image and extra information if availible.
@@ -449,7 +448,7 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
     __tgt_device_image *Img = &ImageAndInfo.first;
     __tgt_image_info *Info = &ImageAndInfo.second;
 
-    RTLInfoTy *FoundRTL = nullptr;
+    PluginAdaptorTy *FoundRTL = nullptr;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
@@ -509,7 +508,7 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
   DP("Done registering entries!\n");
 }
 
-void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
+void PluginAdaptorManagerTy::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");
 
   PM->RTLsMtx.lock();
@@ -518,7 +517,7 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &ImageAndInfo.first;
 
-    RTLInfoTy *FoundRTL = NULL;
+    PluginAdaptorTy *FoundRTL = NULL;
 
     // Scan the RTLs that have associated images until we find one that supports
     // the current image. We only need to scan RTLs that are already being used.
