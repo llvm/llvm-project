@@ -23,6 +23,9 @@ on:
       - 'cmake/**'
       - '.github/workflows/libcxx-build-and-test.yaml'
 
+permissions:
+  contents: read # Default everything to read-only
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
