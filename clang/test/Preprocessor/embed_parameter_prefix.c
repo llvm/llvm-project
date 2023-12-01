@@ -24,3 +24,7 @@ const struct S s = {
 static_assert(s.x == 100);
 static_assert(s.y == 10);
 static_assert(s.z == 'b');
+
+// Ensure that an empty file does not produce any prefix tokens. If it did,
+// there would be random tokens here that the parser would trip on.
+#embed <media/empty> prefix(0)

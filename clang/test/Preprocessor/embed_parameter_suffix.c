@@ -25,3 +25,7 @@ const struct S s = {
 static_assert(s.x == 'b');
 static_assert(s.y == 100);
 static_assert(s.z == 10);
+
+// Ensure that an empty file does not produce any suffix tokens. If it did,
+// there would be random tokens here that the parser would trip on.
+#embed <media/empty> suffix(0)
