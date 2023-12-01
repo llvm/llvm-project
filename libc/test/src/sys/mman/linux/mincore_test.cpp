@@ -67,8 +67,7 @@ TEST(LlvmLibcMincoreTest, UnalignedAddr) {
   EXPECT_NE(addr, MAP_FAILED);
   char *aligned = aligned_addr(addr, page_size);
   libc_errno = 0;
-  int res =
-      LIBC_NAMESPACE::mincore(static_cast<char *>(aligned) + 1, 1, nullptr);
+  int res = LIBC_NAMESPACE::mincore(aligned + 1, 1, nullptr);
   EXPECT_THAT(res, Fails(EINVAL, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
