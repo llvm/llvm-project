@@ -1,16 +1,20 @@
-//===----------------------------------------------------------------------===//
+//===-- OpenMP/omp.h - Copies of OpenMP user facing types and APIs - C++ -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This copies some OpenMP user facing types and APIs for easy reach within the
+// implementation.
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef _INTEROP_H_
-#define _INTEROP_H_
+#ifndef OMPTARGET_OPENMP_OMP_H
+#define OMPTARGET_OPENMP_OMP_H
 
-#include "omptarget.h"
-#include <assert.h>
+#include <cstdint>
 
 #if defined(_WIN32)
 #define __KAI_KMPC_CONVENTION __cdecl
@@ -24,9 +28,13 @@
 #endif
 #endif
 
-#ifdef __cplusplus
 extern "C" {
-#endif
+
+int omp_get_default_device(void) __attribute__((weak));
+
+/// InteropAPI
+///
+///{
 
 /// TODO: Include the `omp.h` of the current build
 /* OpenMP 5.1 interop */
@@ -81,9 +89,8 @@ int __KAI_KMPC_CONVENTION omp_get_num_interop_properties(const omp_interop_t);
  * The `omp_get_interop_int` routine retrieves an integer property from an
  * `omp_interop_t` object.
  */
-omp_intptr_t __KAI_KMPC_CONVENTION omp_get_interop_int(const omp_interop_t,
-                                                       omp_interop_property_t,
-                                                       int *);
+omp_intptr_t __KAI_KMPC_CONVENTION
+omp_get_interop_int(const omp_interop_t, omp_interop_property_t, int *);
 /*!
  * The `omp_get_interop_ptr` routine retrieves a pointer property from an
  * `omp_interop_t` object.
@@ -94,9 +101,8 @@ void *__KAI_KMPC_CONVENTION omp_get_interop_ptr(const omp_interop_t,
  * The `omp_get_interop_str` routine retrieves a string property from an
  * `omp_interop_t` object.
  */
-const char *__KAI_KMPC_CONVENTION omp_get_interop_str(const omp_interop_t,
-                                                      omp_interop_property_t,
-                                                      int *);
+const char *__KAI_KMPC_CONVENTION
+omp_get_interop_str(const omp_interop_t, omp_interop_property_t, int *);
 /*!
  * The `omp_get_interop_name` routine retrieves a property name from an
  * `omp_interop_t` object.
@@ -121,13 +127,6 @@ typedef enum omp_interop_backend_type_t {
   omp_interop_backend_type_cuda_1 = 1,
 } omp_interop_backend_type_t;
 
-typedef enum kmp_interop_type_t {
-  kmp_interop_type_unknown = -1,
-  kmp_interop_type_platform,
-  kmp_interop_type_device,
-  kmp_interop_type_tasksync,
-} kmp_interop_type_t;
-
 typedef enum omp_foreign_runtime_ids {
   cuda = 1,
   cuda_driver = 2,
@@ -137,21 +136,8 @@ typedef enum omp_foreign_runtime_ids {
   level_zero = 6,
 } omp_foreign_runtime_ids_t;
 
-/// The interop value type, aka. the interop object.
-typedef struct omp_interop_val_t {
-  /// Device and interop-type are determined at construction time and fix.
-  omp_interop_val_t(intptr_t device_id, kmp_interop_type_t interop_type)
-      : interop_type(interop_type), device_id(device_id) {}
-  const char *err_str = nullptr;
-  __tgt_async_info *async_info = nullptr;
-  __tgt_device_info device_info;
-  const kmp_interop_type_t interop_type;
-  const intptr_t device_id;
-  const omp_foreign_runtime_ids_t vendor_id = cuda;
-  const intptr_t backend_type_id = omp_interop_backend_type_cuda_1;
-} omp_interop_val_t;
+///} InteropAPI
 
-#ifdef __cplusplus
-}
-#endif
-#endif
+} // extern "C"
+
+#endif // OMPTARGET_OPENMP_OMP_H
