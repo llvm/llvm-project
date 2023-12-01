@@ -174,7 +174,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   LoadStoreActions.clampScalar(0, s32, sXLen).lower();
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
-  getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, sXLen}});
+  getActionDefinitionsBuilder({G_PTR_ADD, G_PTRMASK}).legalFor({{p0, sXLen}});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{sXLen, p0}})
