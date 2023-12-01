@@ -602,7 +602,7 @@ public:
   }
 };
 
-#ifndef LIBC_LONG_DOUBLE_IS_DOUBLE
+#ifndef LIBC_LONG_DOUBLE_IS_FLOAT64
 // --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
 
 template <>
@@ -754,7 +754,7 @@ FloatToString<long double>::get_negative_block(int block_index) {
   }
 }
 
-#endif // LIBC_LONG_DOUBLE_IS_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_FLOAT64
 
 } // namespace LIBC_NAMESPACE
 
