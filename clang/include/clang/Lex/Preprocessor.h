@@ -2991,7 +2991,7 @@ public:
 /// preprocessor to the parser through an annotation token.
 struct EmbedAnnotationData {
   llvm::SmallString<32> FileName;
-  std::vector<unsigned char> BinaryData;
+  StringRef BinaryData;
 };
 
 /// Registry of pragma handlers added by plugins

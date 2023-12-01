@@ -3820,8 +3820,7 @@ void Preprocessor::HandleEmbedDirectiveImpl(
 
   EmbedAnnotationData *Data = new (BP) EmbedAnnotationData;
   Data->FileName = ResolvedFilename;
-  Data->BinaryData.resize(BinaryContents.size());
-  llvm::copy(BinaryContents, Data->BinaryData.begin());
+  Data->BinaryData = BinaryContents;
 
   Toks[CurIdx].startToken();
   Toks[CurIdx].setKind(tok::annot_embed);
@@ -3889,23 +3888,23 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
     return;
   }
-  std::optional<int64_t> MaybeSignedLimit{};
-  if (Params.MaybeLimitParam) {
-    // FIXME: just like with the clang::offset() and if_empty() parameters,
-    // this loses source fidelity in the AST; it has no idea there was a limit
-    // involved.
-    MaybeSignedLimit = static_cast<int64_t>(Params.MaybeLimitParam->Limit);
-  }
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MaybeFile =
-      getFileManager().getBufferForFile(*MaybeFileRef, false, false,
-                                        MaybeSignedLimit);
+  std::optional<llvm::MemoryBufferRef> MaybeFile =
+      getSourceManager().getMemoryBufferForFileOrNone(*MaybeFileRef);
   if (!MaybeFile) {
     // could not find file
     Diag(FilenameTok, diag::err_cannot_open_file)
         << Filename << "a buffer to the contents could not be created";
     return;
   }
-  StringRef BinaryContents = MaybeFile.get()->getBuffer();
+  StringRef BinaryContents = MaybeFile->getBuffer();
+
+  if (Params.MaybeLimitParam) {
+    // FIXME: just like with the clang::offset() and if_empty() parameters,
+    // this loses source fidelity in the AST; it has no idea there was a limit
+    // involved.
+    BinaryContents = BinaryContents.drop_back(Params.MaybeLimitParam->Limit);
+  }
+
   if (Params.MaybeOffsetParam) {
     // FIXME: just like with the limit() and if_empty() parameters, this loses
     // source fidelity in the AST; it has no idea that there was an offset

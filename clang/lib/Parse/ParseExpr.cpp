@@ -1069,11 +1069,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
     StringLiteral *FileNameArg =
         CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
-    StringRef BinaryData{
-        reinterpret_cast<const char *>(Data->BinaryData.data()),
-        Data->BinaryData.size()};
-    StringLiteral *BinaryDataArg =
-        CreateStringLiteralFromStringRef(BinaryData, Context.UnsignedCharTy);
+    StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
+        Data->BinaryData, Context.UnsignedCharTy);
     Res = Actions.ActOnPPEmbedExpr(StartLoc, StartLoc, StartLoc, FileNameArg,
                                    BinaryDataArg);
   } break;
