@@ -487,7 +487,7 @@ RankedTensorType ConcatOp::inferResultType(int64_t dim, TypeRange inputTypes) {
   // The concatenation dim must be in the range [0, rank).
   assert(dim >= 0 && dim < concatRank && "Invalid concatenation dim");
 
-  SmallVector<int64_t> sizes((concatRank));
+  SmallVector<int64_t> sizes(concatRank);
   for (int64_t i = 0, e = concatRank; i < e; ++i) {
     if (i == dim)
       continue;
@@ -537,7 +537,7 @@ LogicalResult ConcatOp::verify() {
   if (dim >= resultRank)
     return emitOpError("concatenation dim must be less than the tensor rank");
 
-  SmallVector<int64_t> sizes((resultRank));
+  SmallVector<int64_t> sizes(resultRank);
   for (int64_t i = 0, e = resultRank; i < e; ++i) {
     if (i == dim)
       continue;
@@ -604,7 +604,7 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
 
   // Take the sum of the input sizes along the concatenated dim.
   AffineExpr sum = builder.getAffineDimExpr(0);
-  SmallVector<OpFoldResult> sizes{
+  SmallVector<OpFoldResult> sizes = {
       builder.create<tensor::DimOp>(init.getLoc(), init, 0).getResult()};
   for (auto [idx, input] : llvm::enumerate(inputs.drop_front())) {
     sum = sum + builder.getAffineDimExpr(idx + 1);

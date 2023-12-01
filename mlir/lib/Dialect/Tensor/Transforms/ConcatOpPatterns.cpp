@@ -53,8 +53,8 @@ struct DecomposeTensorConcatOp : public OpRewritePattern<ConcatOp> {
 
     // Compute the partial sums for the slice offsets.
     AffineExpr sum = rewriter.getAffineDimExpr(0);
-    SmallVector<AffineExpr> partialSums{sum};
-    SmallVector<OpFoldResult> offsetStrides{rewriter.getIndexAttr(0)};
+    SmallVector<AffineExpr> partialSums = {sum};
+    SmallVector<OpFoldResult> offsetStrides = {rewriter.getIndexAttr(0)};
     for (auto [idx, input] :
          llvm::enumerate(concatOp.getInputs().drop_back())) {
       sum = sum + rewriter.getAffineDimExpr(idx + 1);
