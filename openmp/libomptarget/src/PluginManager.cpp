@@ -69,6 +69,14 @@ PluginAdaptorTy::PluginAdaptorTy(const std::string &Name) : Name(Name) {
   DP("Registered '%s' with %d devices!\n", Name.c_str(), NumberOfDevices);
 }
 
+void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
+  for (int32_t I = 0; I < NumberOfDevices; ++I) {
+    DeviceTy &Device = *PM->Devices[DeviceOffset + I];
+    for (OffloadEntryTy &Entry : DI.entries())
+      Device.addOffloadEntry(Entry);
+  }
+}
+
 void PluginManager::init() {
   DP("Loading RTLs...\n");
 
