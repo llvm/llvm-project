@@ -677,10 +677,16 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     auto *someChar{UnwrapExpr<Expr<SomeCharacter>>(args[0])};
     CHECK(someChar);
     if (auto len{ToInt64(someChar->LEN())}) {
-      if (len.value() != 1) {
+      if (len.value() < 1) {
+        context.messages().Say(
+            "Character in intrinsic function %s must have length one"_err_en_US,
+            name);
+      } else if (len.value() > 1 &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::Portability)) {
         // Do not die, this was not checked before
         context.messages().Say(
-            "Character in intrinsic function %s must have length one"_warn_en_US,
+            "Character in intrinsic function %s should have length one"_port_en_US,
             name);
       } else {
         return common::visit(
