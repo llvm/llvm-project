@@ -358,7 +358,6 @@ private:
 
 public:
   OmptTracingBufferMgr();
-  ~OmptTracingBufferMgr();
   OmptTracingBufferMgr(const OmptTracingBufferMgr &) = delete;
   OmptTracingBufferMgr &operator=(const OmptTracingBufferMgr &) = delete;
 

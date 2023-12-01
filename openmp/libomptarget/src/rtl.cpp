@@ -13,6 +13,7 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/OffloadArch/OffloadArch.h"
 
+#include "OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "device.h"
@@ -48,6 +49,7 @@ static char *ProfileTraceFile = nullptr;
 
 #ifdef OMPT_SUPPORT
 extern void ompt::connectLibrary();
+extern OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 #endif
 
 __attribute__((constructor(101))) void init() {
@@ -570,6 +572,11 @@ void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
 
 void PluginAdaptorManagerTy::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");
+
+  // Flush in-process OMPT trace records and shut down helper threads
+  // before unloading the library.
+  OMPT_TRACING_IF_ENABLED(
+      llvm::omp::target::ompt::TraceRecordManager.shutdownHelperThreads(););
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.

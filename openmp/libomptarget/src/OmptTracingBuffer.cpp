@@ -722,7 +722,3 @@ OmptTracingBufferMgr::OmptTracingBufferMgr() {
   // no need to hold locks for init() since object is getting constructed here
   init();
 }
-
-OmptTracingBufferMgr::~OmptTracingBufferMgr() {
-  OMPT_TRACING_IF_ENABLED(shutdownHelperThreads(););
-}
