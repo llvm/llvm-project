@@ -2624,7 +2624,7 @@ public:
   void printComdat(const Comdat *C);
   void printFunction(const Function *F);
   void printArgument(const Argument *FA, AttributeSet Attrs);
-  void printBasicBlock(const BasicBlock *BB, bool NameOnly = false);
+  void printBasicBlock(const BasicBlock *BB);
   void printInstructionLine(const Instruction &I);
   void printInstruction(const Instruction &I);
   void printDPMarker(const DPMarker &DPI);
@@ -3960,25 +3960,20 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
 }
 
 /// printBasicBlock - This member is called for each basic block in a method.
-void AssemblyWriter::printBasicBlock(const BasicBlock *BB, bool NameOnly) {
-  const bool IsEntryBlock = BB->getParent() && BB->isEntryBlock();
-  const bool UnnamedEntry = !BB->hasName() && IsEntryBlock;
-  if (!NameOnly && !UnnamedEntry)
+void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
+  bool IsEntryBlock = BB->getParent() && BB->isEntryBlock();
+  if (BB->hasName()) {              // Print out the label if it exists...
     Out << "\n";
-  if (BB->hasName()) { // Print out the label if it exists...
     PrintLLVMName(Out, BB->getName(), LabelPrefix);
+    Out << ':';
   } else if (!IsEntryBlock) {
+    Out << "\n";
     int Slot = Machine.getLocalSlot(BB);
     if (Slot != -1)
-      Out << Slot;
+      Out << Slot << ":";
     else
-      Out << "<badref>";
+      Out << "<badref>:";
   }
-
-  if (NameOnly)
-    return;
-  if (!UnnamedEntry)
-    Out << ":";
 
   if (!IsEntryBlock) {
     // Output predecessors for the block.
@@ -4663,14 +4658,14 @@ void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 }
 
 void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
-                       bool ShouldPreserveUseListOrder, bool IsForDebug,
-                       bool NameOnly) const {
+                     bool ShouldPreserveUseListOrder,
+                     bool IsForDebug) const {
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
                    IsForDebug,
                    ShouldPreserveUseListOrder);
-  W.printBasicBlock(this, NameOnly);
+  W.printBasicBlock(this);
 }
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,

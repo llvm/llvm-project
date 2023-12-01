@@ -420,8 +420,8 @@ public:
   /// Print the basic block to an output stream with an optional
   /// AssemblyAnnotationWriter.
   void print(raw_ostream &OS, AssemblyAnnotationWriter *AAW = nullptr,
-             bool ShouldPreserveUseListOrder = false, bool IsForDebug = false,
-             bool NameOnly = false) const;
+             bool ShouldPreserveUseListOrder = false,
+             bool IsForDebug = false) const;
 
   //===--------------------------------------------------------------------===//
   /// Instruction iterator methods
