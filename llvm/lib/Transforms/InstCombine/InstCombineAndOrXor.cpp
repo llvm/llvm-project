@@ -3844,15 +3844,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
-  // Try to infer the disjoint flag.
-  if (!cast<PossiblyDisjointInst>(I).isDisjoint()) {
-    WithCache<const Value *> LHSCache(Op0), RHSCache(Op1);
-    if (haveNoCommonBitsSet(LHSCache, RHSCache, SQ.getWithInstruction(&I))) {
-      cast<PossiblyDisjointInst>(I).setIsDisjoint(true);
-      return &I;
-    }
-  }
-
   return nullptr;
 }
 
