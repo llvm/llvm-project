@@ -645,6 +645,9 @@ Bug Fixes in This Version
 - Fix crash when the object used as a ``static_assert`` message has ``size`` or ``data`` members
   which are not member functions.
 - Support UDLs in ``static_assert`` message.
+- Fixed false positive error emitted by clang when performing qualified name
+  lookup and the current class instantiation has dependent bases.
+  Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
