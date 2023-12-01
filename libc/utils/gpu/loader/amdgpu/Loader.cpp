@@ -466,9 +466,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
 
   void *rpc_client_host;
   if (hsa_status_t err =
-          hsa_amd_memory_pool_allocate(coarsegrained_pool, sizeof(void *),
+          hsa_amd_memory_pool_allocate(finegrained_pool, sizeof(void *),
                                        /*flags=*/0, &rpc_client_host))
     handle_error(err);
+  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, rpc_client_host);
 
   void *rpc_client_dev;
   if (hsa_status_t err = hsa_executable_symbol_get_info(

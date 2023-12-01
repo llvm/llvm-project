@@ -194,12 +194,6 @@ struct SplitCacheDirected final : public SplitStrategy {
   }
 
 private:
-  struct JumpInfo {
-    bool HasUncondBranch = false;
-    BinaryBasicBlock *CondSuccessor = nullptr;
-    BinaryBasicBlock *UncondSuccessor = nullptr;
-  };
-
   struct CallInfo {
     size_t Length;
     size_t Count;
@@ -218,7 +212,6 @@ private:
   DenseMap<const BinaryBasicBlock *, size_t> GlobalIndices;
   DenseMap<const BinaryBasicBlock *, size_t> BBSizes;
   DenseMap<const BinaryBasicBlock *, size_t> BBOffsets;
-  DenseMap<const BinaryBasicBlock *, JumpInfo> JumpInfos;
 
   // Call graph.
   std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
@@ -231,27 +224,6 @@ private:
   }
 
   void initializeAuxiliaryVariables() {
-    // Gather information about conditional and unconditional successors of
-    // each basic block; this information will be used to estimate block size
-    // increase due to hot-warm splitting.
-    auto analyzeBranches = [&](BinaryBasicBlock &BB) {
-      JumpInfo BBJumpInfo;
-      const MCSymbol *TBB = nullptr;
-      const MCSymbol *FBB = nullptr;
-      MCInst *CondBranch = nullptr;
-      MCInst *UncondBranch = nullptr;
-      if (BB.analyzeBranch(TBB, FBB, CondBranch, UncondBranch)) {
-        BBJumpInfo.HasUncondBranch = UncondBranch != nullptr;
-        if (BB.succ_size() == 1) {
-          BBJumpInfo.UncondSuccessor = BB.getSuccessor();
-        } else if (BB.succ_size() == 2) {
-          BBJumpInfo.CondSuccessor = BB.getConditionalSuccessor(true);
-          BBJumpInfo.UncondSuccessor = BB.getConditionalSuccessor(false);
-        }
-      }
-      return BBJumpInfo;
-    };
-
     for (BinaryFunction *BF : BC.getSortedFunctions()) {
       if (!shouldConsiderForCallGraph(*BF))
         continue;
@@ -273,9 +245,6 @@ private:
         BBOffsets[BB] = OrigHotSectionSize;
         if (!BB->isSplit())
           OrigHotSectionSize += BBSizes[BB];
-
-        // (Un)Conditional branch instruction information.
-        JumpInfos[BB] = analyzeBranches(*BB);
       }
     }
   }
