@@ -391,13 +391,13 @@ bool CodeGenAction::beginSourceFileAction() {
 
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
-      ci.getInvocation().getSemanticsContext().defaultKinds();
+      ci.getSemanticsContext().defaultKinds();
   fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
-      *mlirCtx, ci.getInvocation().getSemanticsContext(), defKinds,
-      ci.getInvocation().getSemanticsContext().intrinsics(),
-      ci.getInvocation().getSemanticsContext().targetCharacteristics(),
+      *mlirCtx, ci.getSemanticsContext(), defKinds,
+      ci.getSemanticsContext().intrinsics(),
+      ci.getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
@@ -424,7 +424,7 @@ bool CodeGenAction::beginSourceFileAction() {
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
-  lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
+  lb.lower(parseTree, ci.getSemanticsContext());
 
   // Add target specific items like dependent libraries, target specific
   // constants etc.
@@ -697,8 +697,8 @@ void DebugPreFIRTreeAction::executeAction() {
   auto &parseTree{*ci.getParsing().parseTree()};
 
   // Dump pre-FIR tree
-  if (auto ast{Fortran::lower::createPFT(
-          parseTree, ci.getInvocation().getSemanticsContext())}) {
+  if (auto ast{
+          Fortran::lower::createPFT(parseTree, ci.getSemanticsContext())}) {
     Fortran::lower::dumpPFT(llvm::outs(), *ast);
   } else {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -736,10 +736,8 @@ void GetDefinitionAction::executeAction() {
 
   llvm::outs() << "String range: >" << charBlock->ToString() << "<\n";
 
-  auto *symbol{ci.getInvocation()
-                   .getSemanticsContext()
-                   .FindScope(*charBlock)
-                   .FindSymbol(*charBlock)};
+  auto *symbol{
+      ci.getSemanticsContext().FindScope(*charBlock).FindSymbol(*charBlock)};
   if (!symbol) {
     ci.getDiagnostics().Report(diagID);
     return;
