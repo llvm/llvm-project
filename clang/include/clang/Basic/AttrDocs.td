@@ -7222,6 +7222,7 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
 
 def HLSLParamQualifierDocs : Documentation {
   let Category = DocCatVariable;
+  let Heading = "HLSL Parameter Modifiers";
   let Content = [{
 HLSL function parameters are passed by value. Parameter declarations support
 three qualifiers to denote parameter passing behavior. The three qualifiers are
