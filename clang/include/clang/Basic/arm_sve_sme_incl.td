@@ -93,6 +93,7 @@
 // m: uint32_t
 // n: uint64_t
 
+// [: svuint8_t
 // t: svint32_t
 // z: svuint32_t
 // g: svuint64_t

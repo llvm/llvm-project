@@ -333,6 +333,6 @@ let TargetGuard = "sme2" in {
 // lookup table expand four contiguous registers
 //
 let TargetGuard = "sme2" in {
-  def SVLUTI2_LANE_ZT_X4 : Inst<"svluti2_lane_zt_{d}_x4", "4.didi", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x4", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
-  def SVLUTI4_LANE_ZT_X4 : Inst<"svluti4_lane_zt_{d}_x4", "4.didi", "sUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x4", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_1>]>;
+  def SVLUTI2_LANE_ZT_X4 : Inst<"svluti2_lane_zt_{d}_x4", "4.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x4", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
+  def SVLUTI4_LANE_ZT_X4 : Inst<"svluti4_lane_zt_{d}_x4", "4.di[i", "sUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x4", [IsStreaming, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_1>]>;
 }

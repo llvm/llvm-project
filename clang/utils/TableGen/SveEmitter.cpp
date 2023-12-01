@@ -744,6 +744,12 @@ void SVEType::applyModifier(char Mod) {
     BFloat = false;
     ElementBitwidth = 64;
     break;
+  case '[':
+    Signed = false;
+    Float = false;
+    BFloat = false;
+    ElementBitwidth = 8;
+    break;
   case 't':
     Signed = true;
     Float = false;
