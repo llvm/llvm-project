@@ -130,7 +130,7 @@ void InstallAtExitCheckLeaks();
   if (&__asan_on_error) \
   __asan_on_error()
 
-// Unless synchronization is used during initialization, 
+// Unless synchronization is used during initialization,
 // race conditions can appear causing incorrect states or internal check
 // failures, depending on the loading thread and when ASAN is loaded on Windows.
 // From a multithreaded managed environment, if an ASAN instrumented dll
