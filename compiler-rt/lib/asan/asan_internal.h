@@ -130,6 +130,17 @@ void InstallAtExitCheckLeaks();
   if (&__asan_on_error) \
   __asan_on_error()
 
+// Unless synchronization is used during initialization, 
+// race conditions can appear causing incorrect states or internal check
+// failures, depending on the loading thread and when ASAN is loaded on Windows.
+// From a multithreaded managed environment, if an ASAN instrumented dll
+// is loading on a spawned thread, an intercepted function may be called on
+// multiple threads while ASAN is still in the process of initialization. This
+// can also cause the ASAN thread registry to create the "main" thread after
+// another thread, resulting in a TID != 0.
+//
+// Two threads can also race to initialize ASAN, resulting in either incorrect
+// state or internal check failures for init already running.
 bool AsanInited();
 bool AsanInitIsRunning();  // Used to avoid infinite recursion in __asan_init().
 extern bool replace_intrin_cached;
