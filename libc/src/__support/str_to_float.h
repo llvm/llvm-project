@@ -89,7 +89,7 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
   return;
 }
 
-#if defined(SPECIAL_X86_LONG_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void
 set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
@@ -529,7 +529,7 @@ public:
   static constexpr long double MAX_EXACT_INT =
       ClingerConsts<double>::MAX_EXACT_INT;
 };
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> class ClingerConsts<long double> {
 public:
   static constexpr long double POWERS_OF_TEN_ARRAY[] = {
