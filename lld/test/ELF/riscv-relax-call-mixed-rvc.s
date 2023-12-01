@@ -3,16 +3,16 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=-c,+relax b.s -o b.o
 
-# RUN: ld.lld a.o b.o --shared -o a
+# RUN: ld.lld a.o b.o --shared -o a -Ttext=0x10000
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases a | FileCheck %s
 
 ## This needs to be a *uncompressed* jal instruction since it came from the
 ## source file which does not enable C
 # CHECK-LABEL: <foo>:
-# CHECK-NEXT:    1260: jal zero, 0x1260 <foo>
-# CHECK-NEXT:    1264: addi zero, zero, 0
+# CHECK-NEXT:    10000: jal zero, {{.*}} <foo>
+# CHECK-NEXT:    10004: sub zero, zero, zero
 
-# w/C
+# w/ C
 #--- a.s
 	.text
 	.attribute	4, 16
@@ -27,4 +27,6 @@
 	.type	foo,@function
 foo:
     tail    foo
-    nop
+    # Pick a non-canonical nop to ensure test output can't be confused
+    # with riscv_align padding
+    sub zero, zero, zero
