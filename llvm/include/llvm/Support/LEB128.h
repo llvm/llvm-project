@@ -125,14 +125,15 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
 }
 
 /// Utility function to decode a ULEB128 value.
+///
+/// If \p error is non-null, it will point to a static error message,
+/// if an error occured. It will not be modified on success.
 inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
                               const uint8_t *end = nullptr,
                               const char **error = nullptr) {
   const uint8_t *orig_p = p;
   uint64_t Value = 0;
   unsigned Shift = 0;
-  if (error)
-    *error = nullptr;
   do {
     if (p == end) {
       if (error)
@@ -158,6 +159,9 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
 }
 
 /// Utility function to decode a SLEB128 value.
+///
+/// If \p error is non-null, it will point to a static error message,
+/// if an error occured. It will not be modified on success.
 inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
                              const uint8_t *end = nullptr,
                              const char **error = nullptr) {
@@ -165,8 +169,6 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   int64_t Value = 0;
   unsigned Shift = 0;
   uint8_t Byte;
-  if (error)
-    *error = nullptr;
   do {
     if (p == end) {
       if (error)
