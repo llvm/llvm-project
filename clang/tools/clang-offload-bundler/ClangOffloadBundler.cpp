@@ -130,6 +130,11 @@ int main(int argc, const char **argv) {
     BundleAlignment("bundle-align",
                     cl::desc("Alignment of bundle for binary files"),
                     cl::init(1), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> CheckInputArchive(
+      "check-input-archive",
+      cl::desc("Check if input heterogeneous archive is "
+               "valid in terms of TargetID rules.\n"),
+      cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<bool> HipOpenmpCompatible(
     "hip-openmp-compatible",
     cl::desc("Treat hip and hipv4 offload kinds as "
@@ -162,6 +167,7 @@ int main(int argc, const char **argv) {
   // Avoid using cl::opt variables after these assignments when possible
   OffloadBundlerConfig BundlerConfig;
   BundlerConfig.AllowMissingBundles = AllowMissingBundles;
+  BundlerConfig.CheckInputArchive = CheckInputArchive;
   BundlerConfig.PrintExternalCommands = PrintExternalCommands;
   BundlerConfig.HipOpenmpCompatible = HipOpenmpCompatible;
   BundlerConfig.BundleAlignment = BundleAlignment;
@@ -272,6 +278,19 @@ int main(int argc, const char **argv) {
           InputFileNames.front(),
           BundlerConfig); });
     return 0;
+  }
+
+  if (BundlerConfig.CheckInputArchive) {
+    if (!Unbundle) {
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive cannot be used while "
+                                    "bundling"));
+    }
+    if (Unbundle && BundlerConfig.FilesType != "a") {
+      reportError(createStringError(errc::invalid_argument,
+                                    "-check-input-archive can only be used for "
+                                    "unbundling archives (-type=a)"));
+    }
   }
 
   if (OutputFileNames.size() == 0) {
