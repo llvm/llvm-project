@@ -19808,7 +19808,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
   if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps())
-    return AndMask.ugt(1024);
+    return !Subtarget.hasStdExtZbs() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
 
