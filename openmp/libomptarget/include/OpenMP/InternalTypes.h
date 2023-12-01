@@ -16,13 +16,11 @@
 #include <cstddef>
 #include <cstdint>
 
-typedef intptr_t kmp_intptr_t;
-
 extern "C" {
 
 // Compiler sends us this info:
 typedef struct kmp_depend_info {
-  kmp_intptr_t base_addr;
+  intptr_t base_addr;
   size_t len;
   struct {
     bool in : 1;
