@@ -491,6 +491,8 @@ public:
 
   unsigned getSEW() const { return SEW; }
   RISCVII::VLMUL getVLMUL() const { return VLMul; }
+  bool getTailAgnostic() const { return TailAgnostic; }
+  bool getMaskAgnostic() const { return MaskAgnostic; }
 
   bool hasNonZeroAVL(const MachineRegisterInfo &MRI) const {
     if (hasAVLImm())
@@ -1040,9 +1042,13 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   return true;
 }
 
-// Given an incoming state reaching MI, modifies that state so that it is minimally
-// compatible with MI.  The resulting state is guaranteed to be semantically legal
-// for MI, but may not be the state requested by MI.
+static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
+                                  DemandedFields &Demanded,
+                                  const MachineRegisterInfo *MRI);
+
+// Given an incoming state reaching MI, minimally modifies that state so that it
+// is compatible with MI. The resulting state is guaranteed to be semantically
+// legal for MI, but may not be the state requested by MI.
 void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
                                         const MachineInstr &MI) const {
   uint64_t TSFlags = MI.getDesc().TSFlags;
@@ -1055,20 +1061,47 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
     return;
 
   const VSETVLIInfo PrevInfo = Info;
-  Info = NewInfo;
+  if (Info.hasSEWLMULRatioOnly() || !Info.isValid() || Info.isUnknown())
+    Info = NewInfo;
 
-  if (!RISCVII::hasVLOp(TSFlags))
+  if (!RISCVII::hasVLOp(TSFlags)) {
+    Info = NewInfo;
     return;
+  }
+
+  DemandedFields Demanded = getDemanded(MI, MRI, ST);
+  const VSETVLIInfo IncomingInfo =
+      adjustIncoming(PrevInfo, NewInfo, Demanded, MRI);
+
+  if (Demanded.usedVL())
+    Info.setAVL(IncomingInfo);
+
+  Info.setVTYPE(
+      ((Demanded.LMUL || Demanded.SEWLMULRatio) ? IncomingInfo : Info)
+          .getVLMUL(),
+      ((Demanded.SEW || Demanded.SEWLMULRatio) ? IncomingInfo : Info).getSEW(),
+      // Prefer tail/mask agnostic since it can be relaxed to undisturbed later
+      // if needed.
+      (Demanded.TailPolicy ? IncomingInfo : Info).getTailAgnostic() ||
+          IncomingInfo.getTailAgnostic(),
+      (Demanded.MaskPolicy ? IncomingInfo : Info).getMaskAgnostic() ||
+          IncomingInfo.getMaskAgnostic());
+}
+
+static VSETVLIInfo adjustIncoming(VSETVLIInfo PrevInfo, VSETVLIInfo NewInfo,
+                                  DemandedFields &Demanded,
+                                  const MachineRegisterInfo *MRI) {
+  VSETVLIInfo Info = NewInfo;
 
   // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
   // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
   // places.
-  DemandedFields Demanded = getDemanded(MI, MRI, ST);
   if (!Demanded.LMUL && !Demanded.SEWLMULRatio && PrevInfo.isValid() &&
       !PrevInfo.isUnknown()) {
     if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
             PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
       Info.setVLMul(*NewVLMul);
+    Demanded.LMUL = true;
   }
 
   // If we only demand VL zeroness (i.e. vmv.s.x and vmv.x.s), then there are
@@ -1080,8 +1113,12 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   // to prevent extending live range of an avl register operand.
   // TODO: We can probably relax this for immediates.
   if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
-      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo))
+      PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo)) {
     Info.setAVL(PrevInfo);
+    Demanded.demandVL();
+  }
+
+  return Info;
 }
 
 // Given a state with which we evaluated MI (see transferBefore above for why
