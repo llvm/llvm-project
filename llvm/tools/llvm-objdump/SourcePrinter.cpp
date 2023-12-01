@@ -95,7 +95,7 @@ void LiveVariablePrinter::addFunction(DWARFDie D) {
 // Get the column number (in characters) at which the first live variable
 // line should be printed.
 unsigned LiveVariablePrinter::getIndentLevel() const {
-  return DbgIndent + getInstStartColumn(STI);
+  return GetColumnIndent(STI, DisassemblyColumn::Variables);
 }
 
 // Indent to the first live-range column to the right of the currently

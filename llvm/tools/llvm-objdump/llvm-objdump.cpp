@@ -477,26 +477,82 @@ unsigned objdump::getInstStartColumn(const MCSubtargetInfo &STI) {
   return !ShowRawInsn ? 16 : STI.getTargetTriple().isX86() ? 40 : 24;
 }
 
-static void AlignToInstStartColumn(size_t Start, const MCSubtargetInfo &STI,
-                                   raw_ostream &OS) {
-  // The output of printInst starts with a tab. Print some spaces so that
-  // the tab has 1 column and advances to the target tab stop.
-  unsigned TabStop = getInstStartColumn(STI);
-  unsigned Column = OS.tell() - Start;
-  OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
+unsigned EncodingColumnWidth(Triple const &Triple) {
+  switch (Triple.getArch()) {
+  case Triple::x86:
+  case Triple::x86_64:
+    return 30;
+  default:
+    return 14;
+  }
+}
+
+unsigned objdump::GetColumnIndent(MCSubtargetInfo const &STI,
+                                  DisassemblyColumn Col) {
+  unsigned Indent = 0;
+
+  if (Col == DisassemblyColumn::Address)
+    return Indent;
+
+  // Address: 8 chars of address, followed by ": "
+  Indent += 10;
+
+  if (Col == DisassemblyColumn::Encoding)
+    return Indent;
+
+  // Encoding: depends on architecture
+  if (ShowRawInsn)
+      Indent += EncodingColumnWidth(STI.getTargetTriple());
+
+  // Special case for assembly string: the assembly printer uses tabs, so we
+  // need to ensure we start the instruction on a tab stop (multiple of 8).
+  Indent = alignTo(Indent, 8);
+  if (Col == DisassemblyColumn::Assembly) {
+    return Indent;
+  }
+
+  // Assembly width can be configured with --debug-vars-indent=
+  // FIXME this variable name is confusing.
+  Indent += DbgIndent;
+
+  if (Col == DisassemblyColumn::Variables)
+    return Indent;
+
+  llvm_unreachable("Unhandled DisassemblyColumn");
+}
+
+void objdump::IndentToColumn(MCSubtargetInfo const &STI,
+                             formatted_raw_ostream &OS, DisassemblyColumn Col) {
+  unsigned TargetIndent = GetColumnIndent(STI, Col);
+  unsigned CurrentIndent = OS.getColumn();
+
+  // Special case for assembly string: the output of printInst starts with a
+  // tab, so we want to start printing one character before a tab stop, so it
+  // always has a width of one. GetColumnIndent already guarantees that
+  // TargetIndent will be a multple of 8.
+  // TODO Add a way to avoid printing the leading tab, to simplify this.
+  // TODO 7 characters isn't enough for a lot of mnemonics, add an option to
+  // increase the gap to the first operand.
+  if (Col == DisassemblyColumn::Assembly) {
+    TargetIndent -= 1;
+    if (TargetIndent < CurrentIndent)
+      TargetIndent =  alignTo(CurrentIndent + 1, 8) - 1;
+  }
+
+  if (TargetIndent > CurrentIndent)
+    OS.indent(TargetIndent - CurrentIndent);
 }
 
 void objdump::printRawData(ArrayRef<uint8_t> Bytes, uint64_t Address,
                            formatted_raw_ostream &OS,
                            MCSubtargetInfo const &STI) {
-  size_t Start = OS.tell();
   if (LeadingAddr)
     OS << format("%8" PRIx64 ":", Address);
   if (ShowRawInsn) {
     OS << ' ';
     dumpBytes(Bytes, OS);
   }
-  AlignToInstStartColumn(Start, STI, OS);
+  IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
 }
 
 namespace {
@@ -565,6 +621,8 @@ public:
     LVP.printBetweenInsts(OS, false);
 
     printRawData(Bytes, Address.Address, OS, STI);
+
+    IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
 
     if (MI) {
       // See MCInstPrinter::printInst. On targets where a PC relative immediate
@@ -749,7 +807,6 @@ public:
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
     LVP.printBetweenInsts(OS, false);
 
-    size_t Start = OS.tell();
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address.Address);
     if (ShowRawInsn) {
@@ -775,7 +832,7 @@ public:
       }
     }
 
-    AlignToInstStartColumn(Start, STI, OS);
+    IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
 
     if (MI) {
       IP.printInst(MI, Address.Address, "", STI, OS);
@@ -803,7 +860,6 @@ public:
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
     LVP.printBetweenInsts(OS, false);
 
-    size_t Start = OS.tell();
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address.Address);
     if (ShowRawInsn) {
@@ -820,7 +876,7 @@ public:
       }
     }
 
-    AlignToInstStartColumn(Start, STI, OS);
+    IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
 
     if (MI) {
       IP.printInst(MI, Address.Address, "", STI, OS);
@@ -1166,14 +1222,14 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                uint64_t End, const ObjectFile &Obj,
                                ArrayRef<uint8_t> Bytes,
                                ArrayRef<MappingSymbolPair> MappingSymbols,
-                               const MCSubtargetInfo &STI, raw_ostream &OS) {
+                               const MCSubtargetInfo &STI,
+                               formatted_raw_ostream &OS) {
   llvm::endianness Endian =
       Obj.isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
-  size_t Start = OS.tell();
   OS << format("%8" PRIx64 ": ", SectionAddr + Index);
   if (Index + 4 <= End) {
     dumpBytes(Bytes.slice(Index, 4), OS);
-    AlignToInstStartColumn(Start, STI, OS);
+    IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
     OS << "\t.word\t"
            << format_hex(support::endian::read32(Bytes.data() + Index, Endian),
                          10);
@@ -1181,13 +1237,13 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
   }
   if (Index + 2 <= End) {
     dumpBytes(Bytes.slice(Index, 2), OS);
-    AlignToInstStartColumn(Start, STI, OS);
+    IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
     OS << "\t.short\t"
        << format_hex(support::endian::read16(Bytes.data() + Index, Endian), 6);
     return 2;
   }
   dumpBytes(Bytes.slice(Index, 1), OS);
-  AlignToInstStartColumn(Start, STI, OS);
+  IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
   OS << "\t.byte\t" << format_hex(Bytes[Index], 4);
   return 1;
 }
