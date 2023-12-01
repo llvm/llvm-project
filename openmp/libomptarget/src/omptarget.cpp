@@ -18,6 +18,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/Profile.h"
+
 #include "OpenMP/omp.h"
 
 #include "llvm/ADT/StringExtras.h"
