@@ -14,6 +14,10 @@
 #include "mlir/Tools/lsp-server-support/Transport.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Program.h"
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
 
 using namespace mlir;
 using namespace mlir::lsp;
@@ -67,6 +71,11 @@ LogicalResult mlir::MlirLspServerMain(int argc, char **argv,
   // Configure the transport used for communication.
   llvm::sys::ChangeStdinToBinary();
   JSONTransport transport(stdin, llvm::outs(), inputStyle, prettyPrint);
+  if (int flags = fcntl(STDIN_FILENO, F_GETFL, 0); flags < 0) {
+    Logger::debug("Error getting fcntl flags: %s\n", strerror(errno));
+  } else if (fcntl(STDIN_FILENO, F_SETFL, flags & ~(O_NONBLOCK)) < 0) {
+    Logger::debug("Error setting blocking stding: %s\n", strerror(errno));
+  }
 
   // Register the additionally supported URI schemes for the MLIR server.
   URIForFile::registerSupportedScheme("mlir.bytecode-mlir");
