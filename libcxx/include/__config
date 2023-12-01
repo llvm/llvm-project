@@ -825,18 +825,11 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_END_NAMESPACE_STD }}
 #  define _VSTD std
 
-#  if _LIBCPP_STD_VER >= 17
-#    define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM                                                                         \
-       _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
-#  else
-#    define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM                                                                         \
-      _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
-#  endif
+#  define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM _LIBCPP_BEGIN_NAMESPACE_STD                                               \
+                                             inline namespace __fs { namespace filesystem {
 
 #  define _LIBCPP_END_NAMESPACE_FILESYSTEM _LIBCPP_END_NAMESPACE_STD }}
 // clang-format on
-
-#  define _VSTD_FS std::__fs::filesystem
 
 #  if __has_attribute(__enable_if__)
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
