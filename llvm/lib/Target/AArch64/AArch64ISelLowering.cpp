@@ -2726,7 +2726,8 @@ AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
   const AArch64InstrInfo &TII =
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   Register TargetReg = MI.getOperand(0).getReg();
-  MachineBasicBlock::iterator NextInst = TII.probedStackAlloc(MBBI, TargetReg, false);
+  MachineBasicBlock::iterator NextInst =
+      TII.probedStackAlloc(MBBI, TargetReg, false);
 
   MI.eraseFromParent();
   return NextInst->getParent();
