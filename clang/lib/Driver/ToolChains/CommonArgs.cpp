@@ -1116,14 +1116,13 @@ bool tools::addOpenMPRuntime(ArgStringList &CmdArgs, const ToolChain &TC,
   return true;
 }
 
-// TODO: add -fno-fortran-main option and check it in this function.
 void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) {
   // These are handled earlier on Windows by telling the frontend driver to add
   // the correct libraries to link against as dependents in the object file.
   if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-    bool DontLinkFortranMain = Args.getLastArg(options::OPT_no_fortran_main) != nullptr;
+    bool DontLinkFortranMain = Args.hasArg(options::OPT_no_fortran_main);
     if (!DontLinkFortranMain) {
       // The --whole-archive option needs to be part of the link line to
       // make sure that the main() function from Fortran_main.a is pulled
