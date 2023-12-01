@@ -1329,11 +1329,11 @@ void LoopEmitter::enterTensorsAtDenseLvls(
         // Update the slice information as we enter the new loop.
         info.minCrd = info.offset = MULI(iv, C_IDX(stride));
         info.isNonEmpty = constantI1(builder, loc, true);
-        levelReducedDep[tid][lvl]++;
       } else {
         posits[tid][lvl] =
             genAddress(builder, loc, tid, lvl, ADDI(info.offset, iv));
       }
+      levelReducedDep[tid][lvl]++;
     } else {
       // Skips the synthetic tensor
       if (isSynTensor(tid))
@@ -1369,11 +1369,11 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       // moves forward to the next slice.
       invalidateSliceIterIdx(rewriter, loc, tid, lvl);
       info.minCrd = info.offset = info.isNonEmpty = Value();
-      levelReducedDep[tid][lvl]--;
     } else {
       forwardsReducedSliceLevelTreeIt(rewriter, loc, tid, lvl,
                                       constantIndex(rewriter, loc, 1));
     }
+    levelReducedDep[tid][lvl]--;
   }
   if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
@@ -1460,8 +1460,8 @@ void LoopEmitter::forwardsReducedSliceLevelTreeIt(OpBuilder &builder,
   // level (but not resolved). Since we forward an iterator at higher level of
   // the tree, the subtree need to be pruned.
   Level leafLvl = rootLvl + 1;
-  while (leafLvl < stt.getLvlRank() && !dependentLvlMap[tid][leafLvl].empty()) {
-    assert(depFullyReduced(tid, leafLvl));
+  while (leafLvl < stt.getLvlRank() && !dependentLvlMap[tid][leafLvl].empty() &&
+         depFullyReduced(tid, leafLvl)) {
     leafLvl++;
   }
 
