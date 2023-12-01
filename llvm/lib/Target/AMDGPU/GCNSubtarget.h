@@ -302,20 +302,6 @@ public:
     return (Generation)Gen;
   }
 
-  unsigned getMaxWaveScratchSize() const {
-    // See COMPUTE_TMPRING_SIZE.WAVESIZE.
-    if (getGeneration() >= GFX12) {
-      // 18-bit field in units of 64-dword.
-      return (64 * 4) * ((1 << 18) - 1);
-    }
-    if (getGeneration() == GFX11) {
-      // 15-bit field in units of 64-dword.
-      return (64 * 4) * ((1 << 15) - 1);
-    }
-    // 13-bit field in units of 256-dword.
-    return (256 * 4) * ((1 << 13) - 1);
-  }
-
   /// Return the number of high bits known to be zero for a frame index.
   unsigned getKnownHighZeroBitsForFrameIndex() const {
     return llvm::countl_zero(getMaxWaveScratchSize()) + getWavefrontSizeLog2();

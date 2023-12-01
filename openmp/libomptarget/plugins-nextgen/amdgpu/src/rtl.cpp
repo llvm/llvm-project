@@ -704,7 +704,7 @@ struct AMDGPUQueueTy {
   /// signal and can define an optional input signal (nullptr if none).
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
-                         uint32_t GroupSize, uint64_t StackSize,
+                         uint32_t GroupSize, uint32_t StackSize,
                          AMDGPUSignalTy *OutputSignal,
                          AMDGPUSignalTy *InputSignal) {
     assert(OutputSignal && "Invalid kernel output signal");
@@ -743,7 +743,8 @@ struct AMDGPUQueueTy {
     Packet->grid_size_y = 1;
     Packet->grid_size_z = 1;
     Packet->private_segment_size =
-        Kernel.usesDynamicStack() ? StackSize : Kernel.getPrivateSize();
+        Kernel.usesDynamicStack() ? std::max(Kernel.getPrivateSize(), StackSize)
+                                  : Kernel.getPrivateSize();
     Packet->group_segment_size = GroupSize;
     Packet->kernel_object = Kernel.getKernelObject();
     Packet->kernarg_address = KernelArgs;
@@ -1212,7 +1213,7 @@ public:
   /// the kernel args buffer to the specified memory manager.
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
-                         uint32_t GroupSize, uint64_t StackSize,
+                         uint32_t GroupSize, uint32_t StackSize,
                          AMDGPUMemoryManagerTy &MemoryManager) {
     if (Queue == nullptr)
       return Plugin::error("Target queue was nullptr");
@@ -1975,6 +1976,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             .contains("xnack+"))
       IsXnackEnabled = true;
 
+    // See: 'getMaxWaveScratchSize' in 'llvm/lib/Target/AMDGPU/GCNSubtarget.h'.
+    // See: e.g. 'FeatureMaxWaveScratchSize13x256' in
+    //           'llvm/lib/Target/AMDGPU/AMDGPUFeatures.td'
+    // ToDo: Relay MaxWaveScratchSize value here
+    // MaxThreadScratchSize = GCNSubtarget.getMaxWaveScratchSize() /
+    // WavefrontSize;
+
     // detect if device is an APU.
     if (auto Err = checkIfAPU())
       return Err;
@@ -2708,7 +2716,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
   Error setDeviceStackSize(uint64_t Value) override {
-    StackSize = Value;
+    if (Value > MaxThreadScratchSize) {
+      // Cap device scratch size.
+      MESSAGE("Scratch memory size will be set to %d. Reason: Requested size "
+              "%ld would exceed available resources.",
+              MaxThreadScratchSize, Value);
+      StackSize = MaxThreadScratchSize;
+    } else {
+      // Apply device scratch size, since it is within limits.
+      StackSize = Value;
+    }
+
     return Plugin::success();
   }
   Error getDeviceHeapSize(uint64_t &Value) override {
@@ -2896,9 +2914,12 @@ private:
   /// The current size of the global device memory pool (managed by us).
   uint64_t DeviceMemoryPoolSize = 1L << 29L /*512MB=*/;
 
-  /// The current size of the stack that will be used in cases where it could
-  /// not be statically determined.
-  uint64_t StackSize = 16 * 1024 /* 16 KB */;
+  /// Default: 1024, in conformity to hipLimitStackSize.
+  uint64_t StackSize = 1024 /* 1 KiB */;
+
+  // The maximum scratch memory size per thread.
+  // See COMPUTE_TMPRING_SIZE.WAVESIZE (divided by threads per wave).
+  uint32_t MaxThreadScratchSize;
 
   /// Is the plugin associated with an APU?
   bool IsAPU = false;
@@ -3314,7 +3335,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
-                                  GroupSize, StackSize, ArgsMemoryManager);
+                                  GroupSize, static_cast<uint32_t>(StackSize),
+                                  ArgsMemoryManager);
 }
 
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,

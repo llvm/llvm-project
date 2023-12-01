@@ -206,6 +206,10 @@ unsigned getLocalMemorySize(const MCSubtargetInfo *STI);
 /// \p STI.
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI);
 
+/// \returns Maximum dynamic callstack size in bytes for given subtarget
+/// \p STI.
+unsigned getMaxWaveScratchSize(const MCSubtargetInfo *STI);
+
 /// \returns Number of execution units per compute unit for given subtarget \p
 /// STI.
 unsigned getEUsPerCU(const MCSubtargetInfo *STI);

@@ -900,6 +900,22 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
   return 0;
 }
 
+unsigned getMaxWaveScratchSize(const MCSubtargetInfo *STI) {
+  // See COMPUTE_TMPRING_SIZE.WAVESIZE.
+  if (STI->getFeatureBits().test(FeatureMaxWaveScratchSize18x64)) {
+    // 18-bit field in units of 64-dword.
+    return (64 * 4) * ((1 << 18) - 1);
+  }
+
+  if (STI->getFeatureBits().test(FeatureMaxWaveScratchSize15x64)) {
+    // 15-bit field in units of 64-dword.
+    return (64 * 4) * ((1 << 15) - 1);
+  }
+
+  // 13-bit field in units of 256-dword.
+  return (256 * 4) * ((1 << 13) - 1);
+}
+
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
   // workgroup must share". For gfx10 in CU mode this is the CU, which contains
