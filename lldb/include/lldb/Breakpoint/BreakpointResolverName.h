@@ -50,7 +50,7 @@ public:
                          lldb::LanguageType language, lldb::addr_t offset,
                          bool skip_prologue);
 
-  static BreakpointResolver *
+  static lldb::BreakpointResolverSP
   CreateFromStructuredData(const lldb::BreakpointSP &bkpt,
                            const StructuredData::Dictionary &data_dict,
                            Status &error);

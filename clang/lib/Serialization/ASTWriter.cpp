@@ -849,6 +849,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SEMA_DECL_REFS);
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
+  RECORD(PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES);
   RECORD(UPDATE_VISIBLE);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
@@ -1261,8 +1262,8 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
   }
 
-  // Write out the diagnostic/pragma mappings.
-  WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
+  if (!HSOpts.ModulesSkipPragmaDiagnosticMappings)
+    WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
   // Header search entry usage.
   auto HSEntryUsage = PP.getHeaderSearchInfo().computeUserEntryUsage();
@@ -4501,6 +4502,8 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_openmp:
     case tok::annot_pragma_openmp_end:
     case tok::annot_pragma_unused:
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openacc_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");
@@ -4834,6 +4837,16 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   assert(SemaRef.PendingLocalImplicitInstantiations.empty() &&
          "There are local ones at end of translation unit!");
 
+  // Build a record containing all pending instantiations of constexpr
+  // entities.
+  RecordData PendingInstantiationsOfConstexprEntities;
+  for (const auto &I : SemaRef.PendingInstantiationsOfConstexprEntities) {
+    for (const auto &Elem : I.second) {
+      AddDeclRef(I.first, PendingInstantiationsOfConstexprEntities);
+      AddDeclRef(Elem, PendingInstantiationsOfConstexprEntities);
+    }
+  }
+
   // Build a record containing some declaration references.
   RecordData SemaDeclRefs;
   if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
@@ -5150,6 +5163,11 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // Write the record containing pending implicit instantiations.
   if (!PendingInstantiations.empty())
     Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
+
+  // Write the record containing pending instantiations of constexpr entities.
+  if (!PendingInstantiationsOfConstexprEntities.empty())
+    Stream.EmitRecord(PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES,
+                      PendingInstantiationsOfConstexprEntities);
 
   // Write the record containing declaration references of Sema.
   if (!SemaDeclRefs.empty())
@@ -6619,6 +6637,13 @@ void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *C) {
 void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}
 
 void OMPClauseWriter::VisitOMPCompareClause(OMPCompareClause *) {}
+
+// Save the parameter of fail clause.
+void OMPClauseWriter::VisitOMPFailClause(OMPFailClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getFailParameterLoc());
+  Record.writeEnum(C->getFailParameter());
+}
 
 void OMPClauseWriter::VisitOMPSeqCstClause(OMPSeqCstClause *) {}
 

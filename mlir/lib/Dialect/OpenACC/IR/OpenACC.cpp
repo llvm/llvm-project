@@ -893,7 +893,6 @@ Value LoopOp::getDataOperand(unsigned i) {
   numOptional += getGangStatic() ? 1 : 0;
   numOptional += getVectorLength() ? 1 : 0;
   numOptional += getWorkerNum() ? 1 : 0;
-  numOptional += getVectorLength() ? 1 : 0;
   numOptional += getTileOperands().size();
   numOptional += getCacheOperands().size();
   return getOperand(numOptional + i);
@@ -1088,9 +1087,10 @@ LogicalResult AtomicCaptureOp::verifyRegions() { return verifyRegionsCommon(); }
 //===----------------------------------------------------------------------===//
 
 template <typename Op>
-static LogicalResult checkDeclareOperands(Op &op,
-                                          const mlir::ValueRange &operands) {
-  if (operands.empty())
+static LogicalResult
+checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
+                     bool requireAtLeastOneOperand = true) {
+  if (operands.empty() && requireAtLeastOneOperand)
     return emitError(
         op->getLoc(),
         "at least one operand must appear on the declare operation");
@@ -1152,6 +1152,9 @@ LogicalResult acc::DeclareEnterOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult acc::DeclareExitOp::verify() {
+  if (getToken())
+    return checkDeclareOperands(*this, this->getDataClauseOperands(),
+                                /*requireAtLeastOneOperand=*/false);
   return checkDeclareOperands(*this, this->getDataClauseOperands());
 }
 

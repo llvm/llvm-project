@@ -44,7 +44,8 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 const Scope *FindModuleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
-const Scope *FindPureProcedureContaining(const Symbol &);
+const Scope *FindOpenACCConstructContaining(const Scope *);
+
 const Symbol *FindPointerComponent(const Scope &);
 const Symbol *FindPointerComponent(const DerivedTypeSpec &);
 const Symbol *FindPointerComponent(const DeclTypeSpec &);
@@ -142,6 +143,9 @@ inline bool IsPointer(const Symbol &symbol) {
 }
 inline bool IsAllocatable(const Symbol &symbol) {
   return symbol.attrs().test(Attr::ALLOCATABLE);
+}
+inline bool IsValue(const Symbol &symbol) {
+  return symbol.attrs().test(Attr::VALUE);
 }
 // IsAllocatableOrObjectPointer() may be the better choice
 inline bool IsAllocatableOrPointer(const Symbol &symbol) {

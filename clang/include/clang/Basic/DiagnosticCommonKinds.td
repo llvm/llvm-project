@@ -260,8 +260,6 @@ def ext_clang_diagnose_if : Extension<"'diagnose_if' is a clang extension">,
                             InGroup<GccCompat>;
 def err_too_large_for_fixed_point : Error<
   "this value is too large for this fixed point type">;
-def err_fixed_point_not_enabled : Error<"compile with "
-  "'-ffixed-point' to enable fixed point types">;
 def err_unimplemented_conversion_with_fixed_point_type : Error<
   "conversion between fixed point and %0 is not yet supported">;
 
@@ -346,6 +344,8 @@ def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
+def warn_invalid_feature_combination : Warning<
+  "invalid feature combination: %0">, InGroup<DiagGroup<"invalid-feature-combination">>;
 def warn_target_unrecognized_env : Warning<
   "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
   InGroup<InvalidCommandLineArgument>;
@@ -389,6 +389,19 @@ def note_mt_message : Note<"[rewriter] %0">;
 // ARCMigrate
 def warn_arcmt_nsalloc_realloc : Warning<"[rewriter] call returns pointer to GC managed memory; it will become unmanaged in ARC">;
 def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to be used with an object with ownership other than __unsafe_unretained">;
+
+// API notes
+def err_apinotes_message : Error<"%0">;
+def warn_apinotes_message : Warning<"%0">, InGroup<DiagGroup<"apinotes">>;
+def note_apinotes_message : Note<"%0">;
+
+class NonportablePrivateAPINotesPath  : Warning<
+  "private API notes file for module '%0' should be named "
+  "'%0_private.apinotes', not '%1'">;
+def warn_apinotes_private_case : NonportablePrivateAPINotesPath,
+  InGroup<DiagGroup<"nonportable-private-apinotes-path">>;
+def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath,
+  DefaultIgnore, InGroup<DiagGroup<"nonportable-private-system-apinotes-path">>;
 
 // C++ for OpenCL.
 def err_openclcxx_not_supported : Error<

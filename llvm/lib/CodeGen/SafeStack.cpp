@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/SafeStack.h"
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -192,7 +193,7 @@ public:
   SafeStack(Function &F, const TargetLoweringBase &TL, const DataLayout &DL,
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), DL(DL), DTU(DTU), SE(SE),
-        StackPtrTy(Type::getInt8PtrTy(F.getContext())),
+        StackPtrTy(PointerType::getUnqual(F.getContext())),
         IntPtrTy(DL.getIntPtrType(F.getContext())),
         Int32Ty(Type::getInt32Ty(F.getContext())),
         Int8Ty(Type::getInt8Ty(F.getContext())) {}
@@ -793,7 +794,7 @@ bool SafeStack::run() {
         DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
   if (SafeStackUsePointerAddress) {
     FunctionCallee Fn = F.getParent()->getOrInsertFunction(
-        "__safestack_pointer_address", StackPtrTy->getPointerTo(0));
+        "__safestack_pointer_address", IRB.getPtrTy(0));
     UnsafeStackPtr = IRB.CreateCall(Fn);
   } else {
     UnsafeStackPtr = TL.getSafeStackPointerLocation(IRB);
@@ -926,6 +927,42 @@ public:
 };
 
 } // end anonymous namespace
+
+PreservedAnalyses SafeStackPass::run(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+  LLVM_DEBUG(dbgs() << "[SafeStack] Function: " << F.getName() << "\n");
+
+  if (!F.hasFnAttribute(Attribute::SafeStack)) {
+    LLVM_DEBUG(dbgs() << "[SafeStack]     safestack is not requested"
+                         " for this function\n");
+    return PreservedAnalyses::all();
+  }
+
+  if (F.isDeclaration()) {
+    LLVM_DEBUG(dbgs() << "[SafeStack]     function definition"
+                         " is not available\n");
+    return PreservedAnalyses::all();
+  }
+
+  auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+  if (!TL)
+    report_fatal_error("TargetLowering instance is required");
+
+  auto &DL = F.getParent()->getDataLayout();
+
+  // preserve DominatorTree
+  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  bool Changed = SafeStack(F, *TL, DL, &DTU, SE).run();
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 char SafeStackLegacyPass::ID = 0;
 

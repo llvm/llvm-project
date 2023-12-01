@@ -193,9 +193,18 @@ bool ParsedAttr::isTypeAttr() const { return getInfo().IsType; }
 bool ParsedAttr::isStmtAttr() const { return getInfo().IsStmt; }
 
 bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
-  return getInfo().existsInTarget(Target) &&
-         getInfo().spellingExistsInTarget(Target,
-                                          getAttributeSpellingListIndex());
+  Kind K = getParsedKind();
+
+  // If the attribute has a target-specific spelling, check that it exists.
+  // Only call this if the attr is not ignored/unknown. For most targets, this
+  // function just returns true.
+  bool HasSpelling = K != IgnoredAttribute && K != UnknownAttribute &&
+                     K != NoSemaHandlerAttribute;
+  bool TargetSpecificSpellingExists =
+      !HasSpelling ||
+      getInfo().spellingExistsInTarget(Target, getAttributeSpellingListIndex());
+
+  return getInfo().existsInTarget(Target) && TargetSpecificSpellingExists;
 }
 
 bool ParsedAttr::isKnownToGCC() const { return getInfo().IsKnownToGCC; }

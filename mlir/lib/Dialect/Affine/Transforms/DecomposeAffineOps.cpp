@@ -102,12 +102,12 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(op, "expected no dims");
 
   AffineExpr remainingExp = m.getResult(0);
-  auto binExpr = remainingExp.dyn_cast<AffineBinaryOpExpr>();
+  auto binExpr = dyn_cast<AffineBinaryOpExpr>(remainingExp);
   if (!binExpr)
     return rewriter.notifyMatchFailure(op, "terminal affine.apply");
 
-  if (!binExpr.getLHS().isa<AffineBinaryOpExpr>() &&
-      !binExpr.getRHS().isa<AffineBinaryOpExpr>())
+  if (!isa<AffineBinaryOpExpr>(binExpr.getLHS()) &&
+      !isa<AffineBinaryOpExpr>(binExpr.getRHS()))
     return rewriter.notifyMatchFailure(op, "terminal affine.apply");
 
   bool supportedKind = ((binExpr.getKind() == AffineExprKind::Add) ||
@@ -123,7 +123,7 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
   MLIRContext *ctx = op->getContext();
   SmallVector<AffineExpr> subExpressions;
   while (true) {
-    auto currentBinExpr = remainingExp.dyn_cast<AffineBinaryOpExpr>();
+    auto currentBinExpr = dyn_cast<AffineBinaryOpExpr>(remainingExp);
     if (!currentBinExpr || currentBinExpr.getKind() != binExpr.getKind()) {
       subExpressions.push_back(remainingExp);
       LLVM_DEBUG(DBGS() << "--terminal: " << subExpressions.back() << "\n");

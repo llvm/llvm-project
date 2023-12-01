@@ -26,7 +26,7 @@ int main(int, char**) {
   static_assert(test_constraints_insert_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_sequence_insert_range<std::deque<int, Alloc>, Iter, Sent>([](auto&& c) {
+    test_sequence_insert_range<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
   });

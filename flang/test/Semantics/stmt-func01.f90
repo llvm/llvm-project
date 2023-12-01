@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! C1577
 program main
   type t1(k,l)
@@ -52,4 +52,34 @@ program main
     !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope
     sf13(x) = 2.*x
   end subroutine
+end
+
+subroutine s0
+  allocatable :: sf
+  !ERROR: 'sf' is not a callable procedure
+  sf(x) = 1.
+end
+
+subroutine s1
+  asynchronous :: sf
+  !ERROR: An entity may not have the ASYNCHRONOUS attribute unless it is a variable
+  sf(x) = 1.
+end
+
+subroutine s2
+  pointer :: sf
+  !ERROR: A statement function must not have the POINTER attribute
+  sf(x) = 1.
+end
+
+subroutine s3
+  save :: sf
+  !ERROR: The entity 'sf' with an explicit SAVE attribute must be a variable, procedure pointer, or COMMON block
+  sf(x) = 1.
+end
+
+subroutine s4
+  volatile :: sf
+  !ERROR: VOLATILE attribute may apply only to a variable
+  sf(x) = 1.
 end

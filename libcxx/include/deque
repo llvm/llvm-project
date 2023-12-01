@@ -966,8 +966,7 @@ public:
 // __asan_annotate_container_with_allocator to false.
 // For more details, see the "Using libc++" documentation page or
 // the documentation for __sanitizer_annotate_contiguous_container.
-#if !defined(_LIBCPP_HAS_NO_ASAN) && _LIBCPP_CLANG_VER >= 1600
-    // TODO LLVM18: Remove the special-casing
+#if !defined(_LIBCPP_HAS_NO_ASAN)
     _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
         const void* __beg,
         const void* __end,
@@ -982,7 +981,7 @@ public:
 #else
     _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
         const void*, const void*, const void*, const void*, const void*, const void*) const _NOEXCEPT {}
-#endif // !defined(_LIBCPP_HAS_NO_ASAN) && _LIBCPP_CLANG_VER >= 1600
+#endif // !defined(_LIBCPP_HAS_NO_ASAN)
 
     _LIBCPP_HIDE_FROM_ABI
     void __annotate_from_to(size_type __beg, size_type __end, __asan_annotation_type __annotation_type, __asan_annotation_place __place) const _NOEXCEPT {

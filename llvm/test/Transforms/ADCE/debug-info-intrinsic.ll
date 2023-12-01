@@ -1,4 +1,5 @@
 ; RUN: opt -passes=adce -S < %s | FileCheck %s
+; RUN: opt -passes=adce -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 ; Test that debug info intrinsics in dead scopes get eliminated by -adce.
 
 ; Generated with 'clang -g -S -emit-llvm | opt -passes=mem2reg -inline' at r262899

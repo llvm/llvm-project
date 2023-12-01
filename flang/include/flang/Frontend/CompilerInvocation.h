@@ -87,9 +87,6 @@ class CompilerInvocation : public CompilerInvocationBase {
   // intrinsic of iso_fortran_env.
   std::string allCompilerInvocOpts;
 
-  // Semantics context
-  std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext;
-
   /// Semantic options
   // TODO: Merge with or translate to frontendOpts. We shouldn't need two sets
   // of options.
@@ -159,12 +156,9 @@ public:
     return loweringOpts;
   }
 
-  Fortran::semantics::SemanticsContext &getSemanticsContext() {
-    return *semanticsContext;
-  }
-  const Fortran::semantics::SemanticsContext &getSemanticsContext() const {
-    return *semanticsContext;
-  }
+  /// Creates and configures semantics context based on the compilation flags.
+  std::unique_ptr<Fortran::semantics::SemanticsContext>
+  getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }

@@ -11,7 +11,7 @@ define i32 @prolog_spill(i32 %arg0, i32 %arg1, i32 %arg2) {
   ; REGALLOC-NEXT:   renamable $vgpr3 = IMPLICIT_DEF
   ; REGALLOC-NEXT:   SI_SPILL_V32_SAVE killed $vgpr2, %stack.5, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.5, addrspace 5)
   ; REGALLOC-NEXT:   SI_SPILL_V32_SAVE killed $vgpr1, %stack.4, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
-  ; REGALLOC-NEXT:   renamable $vgpr1 = COPY killed $vgpr0
+  ; REGALLOC-NEXT:   renamable $vgpr1 = COPY $vgpr0
   ; REGALLOC-NEXT:   $vgpr0 = SI_SPILL_WWM_V32_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   renamable $sgpr4 = S_MOV_B32 49
   ; REGALLOC-NEXT:   renamable $sgpr4_sgpr5 = V_CMP_GT_I32_e64 killed $vgpr1, killed $sgpr4, implicit $exec

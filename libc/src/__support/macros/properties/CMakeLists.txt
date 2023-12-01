@@ -11,9 +11,26 @@ add_header_library(
 )
 
 add_header_library(
+  os
+  HDRS
+    os.h
+)
+
+add_header_library(
   cpu_features
   HDRS
     cpu_features.h
   DEPENDS
     .architectures
+)
+
+add_header_library(
+  float
+  HDRS
+    float.h
+  DEPENDS
+    .architectures
+    .compiler
+    .cpu_features
+    .os
 )

@@ -74,7 +74,7 @@ int main(int, char**) {
   std::array a5{3, 4, 5, 6, 7};
   // check that explicit construction works, i.e. no error
   static_assert(std::is_constructible_v< std::extents<int, D, D, 5, D, D>, decltype(a5)>,
-                "extents unexpectectly not constructible");
+                "extents unexpectedly not constructible");
   // check that implicit construction doesn't work
   assert((implicit_construction<std::extents<int, D, D, 5, D, D>>(a5).value == false));
 

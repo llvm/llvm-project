@@ -59,8 +59,8 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened safe debug)
-set(LIBCXX_HARDENING_MODE "unchecked" CACHE STRING
+set(LIBCXX_SUPPORTED_HARDENING_MODES none fast extensive debug)
+set(LIBCXX_HARDENING_MODE "none" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
    compiled library and will be the default when compiling user code. Note that
    users can override this setting in their own code. This does not affect the
@@ -251,17 +251,18 @@ option(LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
 
 # Generate and install a linker script inplace of libc++.so. The linker script
 # will link libc++ to the correct ABI library. This option is on by default
-# on UNIX platforms other than Apple unless
-# 'LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY' is on. This option is also
-# disabled when the ABI library is not specified or is specified to be "none".
-set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
-if (LLVM_HAVE_LINK_VERSION_SCRIPT AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
-      AND NOT LIBCXX_CXX_ABI STREQUAL "none"
-      AND Python3_EXECUTABLE
-      AND LIBCXX_ENABLE_SHARED)
-    set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+# on UNIX platforms other than Apple unless we statically link libc++abi
+# inside libc++.so, we don't build libc++.so at all or we don't have any
+# ABI library.
+if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY
+    OR NOT LIBCXX_ENABLE_SHARED
+    OR LIBCXX_CXX_ABI STREQUAL "none")
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
+elseif(UNIX AND NOT APPLE)
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE ON)
+else()
+  set(ENABLE_LINKER_SCRIPT_DEFAULT_VALUE OFF)
 endif()
-
 option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       "Use and install a linker script for the given ABI library"
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
@@ -507,7 +508,7 @@ function(cxx_add_basic_build_flags target)
   # Use C++23 for all targets.
   set_target_properties(${target} PROPERTIES
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED OFF
+    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
     CXX_EXTENSIONS NO)
 
   # When building the dylib, don't warn for unavailable aligned allocation
@@ -620,10 +621,10 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
         append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
       endif()
     elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
             USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Thread")
       append_flags(SANITIZER_FLAGS -fsanitize=thread)
     elseif (USE_SANITIZER STREQUAL "DataFlow")
@@ -638,6 +639,8 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
 endfunction()
 
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+add_library(cxx-sanitizer-flags INTERFACE)
+target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 
 # Link system libraries =======================================================
 function(cxx_link_system_libraries target)
@@ -751,24 +754,16 @@ config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_N
 
 # TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
-  set(LIBCXX_HARDENING_MODE "safe")
+  set(LIBCXX_HARDENING_MODE "extensive")
 endif()
-if (LIBCXX_HARDENING_MODE STREQUAL "hardened")
-  config_define(1 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-elseif (LIBCXX_HARDENING_MODE STREQUAL "safe")
-  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(1 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
+if (LIBCXX_HARDENING_MODE STREQUAL "none")
+  config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")
+  config_define(4 _LIBCPP_HARDENING_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "extensive")
+  config_define(16 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
-  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(1 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
-elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
-  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
-  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
+  config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
 endif()
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")
@@ -828,6 +823,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
+  target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)
 endfunction()
 
 #===============================================================================

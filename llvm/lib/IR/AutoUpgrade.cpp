@@ -122,342 +122,372 @@ static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // like to use this information to remove upgrade code for some older
   // intrinsics. It is currently undecided how we will determine that future
   // point.
-  if (Name == "addcarryx.u32" || // Added in 8.0
-      Name == "addcarryx.u64" || // Added in 8.0
-      Name == "addcarry.u32" || // Added in 8.0
-      Name == "addcarry.u64" || // Added in 8.0
-      Name == "subborrow.u32" || // Added in 8.0
-      Name == "subborrow.u64" || // Added in 8.0
-      Name.starts_with("sse2.padds.") || // Added in 8.0
-      Name.starts_with("sse2.psubs.") || // Added in 8.0
-      Name.starts_with("sse2.paddus.") || // Added in 8.0
-      Name.starts_with("sse2.psubus.") || // Added in 8.0
-      Name.starts_with("avx2.padds.") || // Added in 8.0
-      Name.starts_with("avx2.psubs.") || // Added in 8.0
-      Name.starts_with("avx2.paddus.") || // Added in 8.0
-      Name.starts_with("avx2.psubus.") || // Added in 8.0
-      Name.starts_with("avx512.padds.") || // Added in 8.0
-      Name.starts_with("avx512.psubs.") || // Added in 8.0
-      Name.starts_with("avx512.mask.padds.") || // Added in 8.0
-      Name.starts_with("avx512.mask.psubs.") || // Added in 8.0
-      Name.starts_with("avx512.mask.paddus.") || // Added in 8.0
-      Name.starts_with("avx512.mask.psubus.") || // Added in 8.0
-      Name=="ssse3.pabs.b.128" || // Added in 6.0
-      Name=="ssse3.pabs.w.128" || // Added in 6.0
-      Name=="ssse3.pabs.d.128" || // Added in 6.0
-      Name.starts_with("fma4.vfmadd.s") || // Added in 7.0
-      Name.starts_with("fma.vfmadd.") || // Added in 7.0
-      Name.starts_with("fma.vfmsub.") || // Added in 7.0
-      Name.starts_with("fma.vfmsubadd.") || // Added in 7.0
-      Name.starts_with("fma.vfnmadd.") || // Added in 7.0
-      Name.starts_with("fma.vfnmsub.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vfmadd.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vfnmadd.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vfnmsub.") || // Added in 7.0
-      Name.starts_with("avx512.mask3.vfmadd.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vfmadd.") || // Added in 7.0
-      Name.starts_with("avx512.mask3.vfmsub.") || // Added in 7.0
-      Name.starts_with("avx512.mask3.vfnmsub.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vfmaddsub.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vfmaddsub.") || // Added in 7.0
-      Name.starts_with("avx512.mask3.vfmaddsub.") || // Added in 7.0
-      Name.starts_with("avx512.mask3.vfmsubadd.") || // Added in 7.0
-      Name.starts_with("avx512.mask.shuf.i") || // Added in 6.0
-      Name.starts_with("avx512.mask.shuf.f") || // Added in 6.0
-      Name.starts_with("avx512.kunpck") || //added in 6.0
-      Name.starts_with("avx2.pabs.") || // Added in 6.0
-      Name.starts_with("avx512.mask.pabs.") || // Added in 6.0
-      Name.starts_with("avx512.broadcastm") || // Added in 6.0
-      Name == "sse.sqrt.ss" || // Added in 7.0
-      Name == "sse2.sqrt.sd" || // Added in 7.0
-      Name.starts_with("avx512.mask.sqrt.p") || // Added in 7.0
-      Name.starts_with("avx.sqrt.p") || // Added in 7.0
-      Name.starts_with("sse2.sqrt.p") || // Added in 7.0
-      Name.starts_with("sse.sqrt.p") || // Added in 7.0
-      Name.starts_with("avx512.mask.pbroadcast") || // Added in 6.0
-      Name.starts_with("sse2.pcmpeq.") || // Added in 3.1
-      Name.starts_with("sse2.pcmpgt.") || // Added in 3.1
-      Name.starts_with("avx2.pcmpeq.") || // Added in 3.1
-      Name.starts_with("avx2.pcmpgt.") || // Added in 3.1
-      Name.starts_with("avx512.mask.pcmpeq.") || // Added in 3.9
-      Name.starts_with("avx512.mask.pcmpgt.") || // Added in 3.9
-      Name.starts_with("avx.vperm2f128.") || // Added in 6.0
-      Name == "avx2.vperm2i128" || // Added in 6.0
-      Name == "sse.add.ss" || // Added in 4.0
-      Name == "sse2.add.sd" || // Added in 4.0
-      Name == "sse.sub.ss" || // Added in 4.0
-      Name == "sse2.sub.sd" || // Added in 4.0
-      Name == "sse.mul.ss" || // Added in 4.0
-      Name == "sse2.mul.sd" || // Added in 4.0
-      Name == "sse.div.ss" || // Added in 4.0
-      Name == "sse2.div.sd" || // Added in 4.0
-      Name == "sse41.pmaxsb" || // Added in 3.9
-      Name == "sse2.pmaxs.w" || // Added in 3.9
-      Name == "sse41.pmaxsd" || // Added in 3.9
-      Name == "sse2.pmaxu.b" || // Added in 3.9
-      Name == "sse41.pmaxuw" || // Added in 3.9
-      Name == "sse41.pmaxud" || // Added in 3.9
-      Name == "sse41.pminsb" || // Added in 3.9
-      Name == "sse2.pmins.w" || // Added in 3.9
-      Name == "sse41.pminsd" || // Added in 3.9
-      Name == "sse2.pminu.b" || // Added in 3.9
-      Name == "sse41.pminuw" || // Added in 3.9
-      Name == "sse41.pminud" || // Added in 3.9
-      Name == "avx512.kand.w" || // Added in 7.0
-      Name == "avx512.kandn.w" || // Added in 7.0
-      Name == "avx512.knot.w" || // Added in 7.0
-      Name == "avx512.kor.w" || // Added in 7.0
-      Name == "avx512.kxor.w" || // Added in 7.0
-      Name == "avx512.kxnor.w" || // Added in 7.0
-      Name == "avx512.kortestc.w" || // Added in 7.0
-      Name == "avx512.kortestz.w" || // Added in 7.0
-      Name.starts_with("avx512.mask.pshuf.b.") || // Added in 4.0
-      Name.starts_with("avx2.pmax") || // Added in 3.9
-      Name.starts_with("avx2.pmin") || // Added in 3.9
-      Name.starts_with("avx512.mask.pmax") || // Added in 4.0
-      Name.starts_with("avx512.mask.pmin") || // Added in 4.0
-      Name.starts_with("avx2.vbroadcast") || // Added in 3.8
-      Name.starts_with("avx2.pbroadcast") || // Added in 3.8
-      Name.starts_with("avx.vpermil.") || // Added in 3.1
-      Name.starts_with("sse2.pshuf") || // Added in 3.9
-      Name.starts_with("avx512.pbroadcast") || // Added in 3.9
-      Name.starts_with("avx512.mask.broadcast.s") || // Added in 3.9
-      Name.starts_with("avx512.mask.movddup") || // Added in 3.9
-      Name.starts_with("avx512.mask.movshdup") || // Added in 3.9
-      Name.starts_with("avx512.mask.movsldup") || // Added in 3.9
-      Name.starts_with("avx512.mask.pshuf.d.") || // Added in 3.9
-      Name.starts_with("avx512.mask.pshufl.w.") || // Added in 3.9
-      Name.starts_with("avx512.mask.pshufh.w.") || // Added in 3.9
-      Name.starts_with("avx512.mask.shuf.p") || // Added in 4.0
-      Name.starts_with("avx512.mask.vpermil.p") || // Added in 3.9
-      Name.starts_with("avx512.mask.perm.df.") || // Added in 3.9
-      Name.starts_with("avx512.mask.perm.di.") || // Added in 3.9
-      Name.starts_with("avx512.mask.punpckl") || // Added in 3.9
-      Name.starts_with("avx512.mask.punpckh") || // Added in 3.9
-      Name.starts_with("avx512.mask.unpckl.") || // Added in 3.9
-      Name.starts_with("avx512.mask.unpckh.") || // Added in 3.9
-      Name.starts_with("avx512.mask.pand.") || // Added in 3.9
-      Name.starts_with("avx512.mask.pandn.") || // Added in 3.9
-      Name.starts_with("avx512.mask.por.") || // Added in 3.9
-      Name.starts_with("avx512.mask.pxor.") || // Added in 3.9
-      Name.starts_with("avx512.mask.and.") || // Added in 3.9
-      Name.starts_with("avx512.mask.andn.") || // Added in 3.9
-      Name.starts_with("avx512.mask.or.") || // Added in 3.9
-      Name.starts_with("avx512.mask.xor.") || // Added in 3.9
-      Name.starts_with("avx512.mask.padd.") || // Added in 4.0
-      Name.starts_with("avx512.mask.psub.") || // Added in 4.0
-      Name.starts_with("avx512.mask.pmull.") || // Added in 4.0
-      Name.starts_with("avx512.mask.cvtdq2pd.") || // Added in 4.0
-      Name.starts_with("avx512.mask.cvtudq2pd.") || // Added in 4.0
-      Name.starts_with("avx512.mask.cvtudq2ps.") || // Added in 7.0 updated 9.0
-      Name.starts_with("avx512.mask.cvtqq2pd.") || // Added in 7.0 updated 9.0
-      Name.starts_with("avx512.mask.cvtuqq2pd.") || // Added in 7.0 updated 9.0
-      Name.starts_with("avx512.mask.cvtdq2ps.") || // Added in 7.0 updated 9.0
-      Name == "avx512.mask.vcvtph2ps.128" || // Added in 11.0
-      Name == "avx512.mask.vcvtph2ps.256" || // Added in 11.0
-      Name == "avx512.mask.cvtqq2ps.256" || // Added in 9.0
-      Name == "avx512.mask.cvtqq2ps.512" || // Added in 9.0
-      Name == "avx512.mask.cvtuqq2ps.256" || // Added in 9.0
-      Name == "avx512.mask.cvtuqq2ps.512" || // Added in 9.0
-      Name == "avx512.mask.cvtpd2dq.256" || // Added in 7.0
-      Name == "avx512.mask.cvtpd2ps.256" || // Added in 7.0
-      Name == "avx512.mask.cvttpd2dq.256" || // Added in 7.0
-      Name == "avx512.mask.cvttps2dq.128" || // Added in 7.0
-      Name == "avx512.mask.cvttps2dq.256" || // Added in 7.0
-      Name == "avx512.mask.cvtps2pd.128" || // Added in 7.0
-      Name == "avx512.mask.cvtps2pd.256" || // Added in 7.0
-      Name == "avx512.cvtusi2sd" || // Added in 7.0
-      Name.starts_with("avx512.mask.permvar.") || // Added in 7.0
-      Name == "sse2.pmulu.dq" || // Added in 7.0
-      Name == "sse41.pmuldq" || // Added in 7.0
-      Name == "avx2.pmulu.dq" || // Added in 7.0
-      Name == "avx2.pmul.dq" || // Added in 7.0
-      Name == "avx512.pmulu.dq.512" || // Added in 7.0
-      Name == "avx512.pmul.dq.512" || // Added in 7.0
-      Name.starts_with("avx512.mask.pmul.dq.") || // Added in 4.0
-      Name.starts_with("avx512.mask.pmulu.dq.") || // Added in 4.0
-      Name.starts_with("avx512.mask.pmul.hr.sw.") || // Added in 7.0
-      Name.starts_with("avx512.mask.pmulh.w.") || // Added in 7.0
-      Name.starts_with("avx512.mask.pmulhu.w.") || // Added in 7.0
-      Name.starts_with("avx512.mask.pmaddw.d.") || // Added in 7.0
-      Name.starts_with("avx512.mask.pmaddubs.w.") || // Added in 7.0
-      Name.starts_with("avx512.mask.packsswb.") || // Added in 5.0
-      Name.starts_with("avx512.mask.packssdw.") || // Added in 5.0
-      Name.starts_with("avx512.mask.packuswb.") || // Added in 5.0
-      Name.starts_with("avx512.mask.packusdw.") || // Added in 5.0
-      Name.starts_with("avx512.mask.cmp.b") || // Added in 5.0
-      Name.starts_with("avx512.mask.cmp.d") || // Added in 5.0
-      Name.starts_with("avx512.mask.cmp.q") || // Added in 5.0
-      Name.starts_with("avx512.mask.cmp.w") || // Added in 5.0
-      Name.starts_with("avx512.cmp.p") || // Added in 12.0
-      Name.starts_with("avx512.mask.ucmp.") || // Added in 5.0
-      Name.starts_with("avx512.cvtb2mask.") || // Added in 7.0
-      Name.starts_with("avx512.cvtw2mask.") || // Added in 7.0
-      Name.starts_with("avx512.cvtd2mask.") || // Added in 7.0
-      Name.starts_with("avx512.cvtq2mask.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpermilvar.") || // Added in 4.0
-      Name.starts_with("avx512.mask.psll.d") || // Added in 4.0
-      Name.starts_with("avx512.mask.psll.q") || // Added in 4.0
-      Name.starts_with("avx512.mask.psll.w") || // Added in 4.0
-      Name.starts_with("avx512.mask.psra.d") || // Added in 4.0
-      Name.starts_with("avx512.mask.psra.q") || // Added in 4.0
-      Name.starts_with("avx512.mask.psra.w") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrl.d") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrl.q") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrl.w") || // Added in 4.0
-      Name.starts_with("avx512.mask.pslli") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrai") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrli") || // Added in 4.0
-      Name.starts_with("avx512.mask.psllv") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrav") || // Added in 4.0
-      Name.starts_with("avx512.mask.psrlv") || // Added in 4.0
-      Name.starts_with("sse41.pmovsx") || // Added in 3.8
-      Name.starts_with("sse41.pmovzx") || // Added in 3.9
-      Name.starts_with("avx2.pmovsx") || // Added in 3.9
-      Name.starts_with("avx2.pmovzx") || // Added in 3.9
-      Name.starts_with("avx512.mask.pmovsx") || // Added in 4.0
-      Name.starts_with("avx512.mask.pmovzx") || // Added in 4.0
-      Name.starts_with("avx512.mask.lzcnt.") || // Added in 5.0
-      Name.starts_with("avx512.mask.pternlog.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.pternlog.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpmadd52") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vpmadd52") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpermi2var.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpermt2var.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vpermt2var.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpdpbusd.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vpdpbusd.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpdpbusds.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vpdpbusds.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpdpwssd.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vpdpwssd.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpdpwssds.") || // Added in 7.0
-      Name.starts_with("avx512.maskz.vpdpwssds.") || // Added in 7.0
-      Name.starts_with("avx512.mask.dbpsadbw.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpshld.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpshrd.") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpshldv.") || // Added in 8.0
-      Name.starts_with("avx512.mask.vpshrdv.") || // Added in 8.0
-      Name.starts_with("avx512.maskz.vpshldv.") || // Added in 8.0
-      Name.starts_with("avx512.maskz.vpshrdv.") || // Added in 8.0
-      Name.starts_with("avx512.vpshld.") || // Added in 8.0
-      Name.starts_with("avx512.vpshrd.") || // Added in 8.0
-      Name.starts_with("avx512.mask.add.p") || // Added in 7.0. 128/256 in 4.0
-      Name.starts_with("avx512.mask.sub.p") || // Added in 7.0. 128/256 in 4.0
-      Name.starts_with("avx512.mask.mul.p") || // Added in 7.0. 128/256 in 4.0
-      Name.starts_with("avx512.mask.div.p") || // Added in 7.0. 128/256 in 4.0
-      Name.starts_with("avx512.mask.max.p") || // Added in 7.0. 128/256 in 5.0
-      Name.starts_with("avx512.mask.min.p") || // Added in 7.0. 128/256 in 5.0
-      Name.starts_with("avx512.mask.fpclass.p") || // Added in 7.0
-      Name.starts_with("avx512.mask.vpshufbitqmb.") || // Added in 8.0
-      Name.starts_with("avx512.mask.pmultishift.qb.") || // Added in 8.0
-      Name.starts_with("avx512.mask.conflict.") || // Added in 9.0
-      Name == "avx512.mask.pmov.qd.256" || // Added in 9.0
-      Name == "avx512.mask.pmov.qd.512" || // Added in 9.0
-      Name == "avx512.mask.pmov.wb.256" || // Added in 9.0
-      Name == "avx512.mask.pmov.wb.512" || // Added in 9.0
-      Name == "sse.cvtsi2ss" || // Added in 7.0
-      Name == "sse.cvtsi642ss" || // Added in 7.0
-      Name == "sse2.cvtsi2sd" || // Added in 7.0
-      Name == "sse2.cvtsi642sd" || // Added in 7.0
-      Name == "sse2.cvtss2sd" || // Added in 7.0
-      Name == "sse2.cvtdq2pd" || // Added in 3.9
-      Name == "sse2.cvtdq2ps" || // Added in 7.0
-      Name == "sse2.cvtps2pd" || // Added in 3.9
-      Name == "avx.cvtdq2.pd.256" || // Added in 3.9
-      Name == "avx.cvtdq2.ps.256" || // Added in 7.0
-      Name == "avx.cvt.ps2.pd.256" || // Added in 3.9
-      Name.starts_with("vcvtph2ps.") || // Added in 11.0
-      Name.starts_with("avx.vinsertf128.") || // Added in 3.7
-      Name == "avx2.vinserti128" || // Added in 3.7
-      Name.starts_with("avx512.mask.insert") || // Added in 4.0
-      Name.starts_with("avx.vextractf128.") || // Added in 3.7
-      Name == "avx2.vextracti128" || // Added in 3.7
-      Name.starts_with("avx512.mask.vextract") || // Added in 4.0
-      Name.starts_with("sse4a.movnt.") || // Added in 3.9
-      Name.starts_with("avx.movnt.") || // Added in 3.2
-      Name.starts_with("avx512.storent.") || // Added in 3.9
-      Name == "sse41.movntdqa" || // Added in 5.0
-      Name == "avx2.movntdqa" || // Added in 5.0
-      Name == "avx512.movntdqa" || // Added in 5.0
-      Name == "sse2.storel.dq" || // Added in 3.9
-      Name.starts_with("sse.storeu.") || // Added in 3.9
-      Name.starts_with("sse2.storeu.") || // Added in 3.9
-      Name.starts_with("avx.storeu.") || // Added in 3.9
-      Name.starts_with("avx512.mask.storeu.") || // Added in 3.9
-      Name.starts_with("avx512.mask.store.p") || // Added in 3.9
-      Name.starts_with("avx512.mask.store.b.") || // Added in 3.9
-      Name.starts_with("avx512.mask.store.w.") || // Added in 3.9
-      Name.starts_with("avx512.mask.store.d.") || // Added in 3.9
-      Name.starts_with("avx512.mask.store.q.") || // Added in 3.9
-      Name == "avx512.mask.store.ss" || // Added in 7.0
-      Name.starts_with("avx512.mask.loadu.") || // Added in 3.9
-      Name.starts_with("avx512.mask.load.") || // Added in 3.9
-      Name.starts_with("avx512.mask.expand.load.") || // Added in 7.0
-      Name.starts_with("avx512.mask.compress.store.") || // Added in 7.0
-      Name.starts_with("avx512.mask.expand.b") || // Added in 9.0
-      Name.starts_with("avx512.mask.expand.w") || // Added in 9.0
-      Name.starts_with("avx512.mask.expand.d") || // Added in 9.0
-      Name.starts_with("avx512.mask.expand.q") || // Added in 9.0
-      Name.starts_with("avx512.mask.expand.p") || // Added in 9.0
-      Name.starts_with("avx512.mask.compress.b") || // Added in 9.0
-      Name.starts_with("avx512.mask.compress.w") || // Added in 9.0
-      Name.starts_with("avx512.mask.compress.d") || // Added in 9.0
-      Name.starts_with("avx512.mask.compress.q") || // Added in 9.0
-      Name.starts_with("avx512.mask.compress.p") || // Added in 9.0
-      Name == "sse42.crc32.64.8" || // Added in 3.4
-      Name.starts_with("avx.vbroadcast.s") || // Added in 3.5
-      Name.starts_with("avx512.vbroadcast.s") || // Added in 7.0
-      Name.starts_with("avx512.mask.palignr.") || // Added in 3.9
-      Name.starts_with("avx512.mask.valign.") || // Added in 4.0
-      Name.starts_with("sse2.psll.dq") || // Added in 3.7
-      Name.starts_with("sse2.psrl.dq") || // Added in 3.7
-      Name.starts_with("avx2.psll.dq") || // Added in 3.7
-      Name.starts_with("avx2.psrl.dq") || // Added in 3.7
-      Name.starts_with("avx512.psll.dq") || // Added in 3.9
-      Name.starts_with("avx512.psrl.dq") || // Added in 3.9
-      Name == "sse41.pblendw" || // Added in 3.7
-      Name.starts_with("sse41.blendp") || // Added in 3.7
-      Name.starts_with("avx.blend.p") || // Added in 3.7
-      Name == "avx2.pblendw" || // Added in 3.7
-      Name.starts_with("avx2.pblendd.") || // Added in 3.7
-      Name.starts_with("avx.vbroadcastf128") || // Added in 4.0
-      Name == "avx2.vbroadcasti128" || // Added in 3.7
-      Name.starts_with("avx512.mask.broadcastf32x4.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcastf64x2.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcastf32x8.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcastf64x4.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcasti32x4.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcasti64x2.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcasti32x8.") || // Added in 6.0
-      Name.starts_with("avx512.mask.broadcasti64x4.") || // Added in 6.0
-      Name == "xop.vpcmov" || // Added in 3.8
-      Name == "xop.vpcmov.256" || // Added in 5.0
-      Name.starts_with("avx512.mask.move.s") || // Added in 4.0
-      Name.starts_with("avx512.cvtmask2") || // Added in 5.0
-      Name.starts_with("xop.vpcom") || // Added in 3.2, Updated in 9.0
-      Name.starts_with("xop.vprot") || // Added in 8.0
-      Name.starts_with("avx512.prol") || // Added in 8.0
-      Name.starts_with("avx512.pror") || // Added in 8.0
-      Name.starts_with("avx512.mask.prorv.") || // Added in 8.0
-      Name.starts_with("avx512.mask.pror.") ||  // Added in 8.0
-      Name.starts_with("avx512.mask.prolv.") || // Added in 8.0
-      Name.starts_with("avx512.mask.prol.") ||  // Added in 8.0
-      Name.starts_with("avx512.ptestm") || //Added in 6.0
-      Name.starts_with("avx512.ptestnm") || //Added in 6.0
-      Name.starts_with("avx512.mask.pavg")) // Added in 6.0
-    return true;
+  if (Name.consume_front("avx."))
+    return (Name.starts_with("blend.p") ||        // Added in 3.7
+            Name == "cvt.ps2.pd.256" ||           // Added in 3.9
+            Name == "cvtdq2.pd.256" ||            // Added in 3.9
+            Name == "cvtdq2.ps.256" ||            // Added in 7.0
+            Name.starts_with("movnt.") ||         // Added in 3.2
+            Name.starts_with("sqrt.p") ||         // Added in 7.0
+            Name.starts_with("storeu.") ||        // Added in 3.9
+            Name.starts_with("vbroadcast.s") ||   // Added in 3.5
+            Name.starts_with("vbroadcastf128") || // Added in 4.0
+            Name.starts_with("vextractf128.") ||  // Added in 3.7
+            Name.starts_with("vinsertf128.") ||   // Added in 3.7
+            Name.starts_with("vperm2f128.") ||    // Added in 6.0
+            Name.starts_with("vpermil."));        // Added in 3.1
 
-  return false;
+  if (Name.consume_front("avx2."))
+    return (Name == "movntdqa" ||             // Added in 5.0
+            Name.starts_with("pabs.") ||      // Added in 6.0
+            Name.starts_with("padds.") ||     // Added in 8.0
+            Name.starts_with("paddus.") ||    // Added in 8.0
+            Name.starts_with("pblendd.") ||   // Added in 3.7
+            Name == "pblendw" ||              // Added in 3.7
+            Name.starts_with("pbroadcast") || // Added in 3.8
+            Name.starts_with("pcmpeq.") ||    // Added in 3.1
+            Name.starts_with("pcmpgt.") ||    // Added in 3.1
+            Name.starts_with("pmax") ||       // Added in 3.9
+            Name.starts_with("pmin") ||       // Added in 3.9
+            Name.starts_with("pmovsx") ||     // Added in 3.9
+            Name.starts_with("pmovzx") ||     // Added in 3.9
+            Name == "pmul.dq" ||              // Added in 7.0
+            Name == "pmulu.dq" ||             // Added in 7.0
+            Name.starts_with("psll.dq") ||    // Added in 3.7
+            Name.starts_with("psrl.dq") ||    // Added in 3.7
+            Name.starts_with("psubs.") ||     // Added in 8.0
+            Name.starts_with("psubus.") ||    // Added in 8.0
+            Name.starts_with("vbroadcast") || // Added in 3.8
+            Name == "vbroadcasti128" ||       // Added in 3.7
+            Name == "vextracti128" ||         // Added in 3.7
+            Name == "vinserti128" ||          // Added in 3.7
+            Name == "vperm2i128");            // Added in 6.0
+
+  if (Name.consume_front("avx512.")) {
+    if (Name.consume_front("mask."))
+      // 'avx512.mask.*'
+      return (Name.starts_with("add.p") ||       // Added in 7.0. 128/256 in 4.0
+              Name.starts_with("and.") ||        // Added in 3.9
+              Name.starts_with("andn.") ||       // Added in 3.9
+              Name.starts_with("broadcast.s") || // Added in 3.9
+              Name.starts_with("broadcastf32x4.") || // Added in 6.0
+              Name.starts_with("broadcastf32x8.") || // Added in 6.0
+              Name.starts_with("broadcastf64x2.") || // Added in 6.0
+              Name.starts_with("broadcastf64x4.") || // Added in 6.0
+              Name.starts_with("broadcasti32x4.") || // Added in 6.0
+              Name.starts_with("broadcasti32x8.") || // Added in 6.0
+              Name.starts_with("broadcasti64x2.") || // Added in 6.0
+              Name.starts_with("broadcasti64x4.") || // Added in 6.0
+              Name.starts_with("cmp.b") ||           // Added in 5.0
+              Name.starts_with("cmp.d") ||           // Added in 5.0
+              Name.starts_with("cmp.q") ||           // Added in 5.0
+              Name.starts_with("cmp.w") ||           // Added in 5.0
+              Name.starts_with("compress.b") ||      // Added in 9.0
+              Name.starts_with("compress.d") ||      // Added in 9.0
+              Name.starts_with("compress.p") ||      // Added in 9.0
+              Name.starts_with("compress.q") ||      // Added in 9.0
+              Name.starts_with("compress.store.") || // Added in 7.0
+              Name.starts_with("compress.w") ||      // Added in 9.0
+              Name.starts_with("conflict.") ||       // Added in 9.0
+              Name.starts_with("cvtdq2pd.") ||       // Added in 4.0
+              Name.starts_with("cvtdq2ps.") ||       // Added in 7.0 updated 9.0
+              Name == "cvtpd2dq.256" ||              // Added in 7.0
+              Name == "cvtpd2ps.256" ||              // Added in 7.0
+              Name == "cvtps2pd.128" ||              // Added in 7.0
+              Name == "cvtps2pd.256" ||              // Added in 7.0
+              Name.starts_with("cvtqq2pd.") ||       // Added in 7.0 updated 9.0
+              Name == "cvtqq2ps.256" ||              // Added in 9.0
+              Name == "cvtqq2ps.512" ||              // Added in 9.0
+              Name == "cvttpd2dq.256" ||             // Added in 7.0
+              Name == "cvttps2dq.128" ||             // Added in 7.0
+              Name == "cvttps2dq.256" ||             // Added in 7.0
+              Name.starts_with("cvtudq2pd.") ||      // Added in 4.0
+              Name.starts_with("cvtudq2ps.") ||      // Added in 7.0 updated 9.0
+              Name.starts_with("cvtuqq2pd.") ||      // Added in 7.0 updated 9.0
+              Name == "cvtuqq2ps.256" ||             // Added in 9.0
+              Name == "cvtuqq2ps.512" ||             // Added in 9.0
+              Name.starts_with("dbpsadbw.") ||       // Added in 7.0
+              Name.starts_with("div.p") ||    // Added in 7.0. 128/256 in 4.0
+              Name.starts_with("expand.b") || // Added in 9.0
+              Name.starts_with("expand.d") || // Added in 9.0
+              Name.starts_with("expand.load.") || // Added in 7.0
+              Name.starts_with("expand.p") ||     // Added in 9.0
+              Name.starts_with("expand.q") ||     // Added in 9.0
+              Name.starts_with("expand.w") ||     // Added in 9.0
+              Name.starts_with("fpclass.p") ||    // Added in 7.0
+              Name.starts_with("insert") ||       // Added in 4.0
+              Name.starts_with("load.") ||        // Added in 3.9
+              Name.starts_with("loadu.") ||       // Added in 3.9
+              Name.starts_with("lzcnt.") ||       // Added in 5.0
+              Name.starts_with("max.p") ||       // Added in 7.0. 128/256 in 5.0
+              Name.starts_with("min.p") ||       // Added in 7.0. 128/256 in 5.0
+              Name.starts_with("movddup") ||     // Added in 3.9
+              Name.starts_with("move.s") ||      // Added in 4.0
+              Name.starts_with("movshdup") ||    // Added in 3.9
+              Name.starts_with("movsldup") ||    // Added in 3.9
+              Name.starts_with("mul.p") ||       // Added in 7.0. 128/256 in 4.0
+              Name.starts_with("or.") ||         // Added in 3.9
+              Name.starts_with("pabs.") ||       // Added in 6.0
+              Name.starts_with("packssdw.") ||   // Added in 5.0
+              Name.starts_with("packsswb.") ||   // Added in 5.0
+              Name.starts_with("packusdw.") ||   // Added in 5.0
+              Name.starts_with("packuswb.") ||   // Added in 5.0
+              Name.starts_with("padd.") ||       // Added in 4.0
+              Name.starts_with("padds.") ||      // Added in 8.0
+              Name.starts_with("paddus.") ||     // Added in 8.0
+              Name.starts_with("palignr.") ||    // Added in 3.9
+              Name.starts_with("pand.") ||       // Added in 3.9
+              Name.starts_with("pandn.") ||      // Added in 3.9
+              Name.starts_with("pavg") ||        // Added in 6.0
+              Name.starts_with("pbroadcast") ||  // Added in 6.0
+              Name.starts_with("pcmpeq.") ||     // Added in 3.9
+              Name.starts_with("pcmpgt.") ||     // Added in 3.9
+              Name.starts_with("perm.df.") ||    // Added in 3.9
+              Name.starts_with("perm.di.") ||    // Added in 3.9
+              Name.starts_with("permvar.") ||    // Added in 7.0
+              Name.starts_with("pmaddubs.w.") || // Added in 7.0
+              Name.starts_with("pmaddw.d.") ||   // Added in 7.0
+              Name.starts_with("pmax") ||        // Added in 4.0
+              Name.starts_with("pmin") ||        // Added in 4.0
+              Name == "pmov.qd.256" ||           // Added in 9.0
+              Name == "pmov.qd.512" ||           // Added in 9.0
+              Name == "pmov.wb.256" ||           // Added in 9.0
+              Name == "pmov.wb.512" ||           // Added in 9.0
+              Name.starts_with("pmovsx") ||      // Added in 4.0
+              Name.starts_with("pmovzx") ||      // Added in 4.0
+              Name.starts_with("pmul.dq.") ||    // Added in 4.0
+              Name.starts_with("pmul.hr.sw.") || // Added in 7.0
+              Name.starts_with("pmulh.w.") ||    // Added in 7.0
+              Name.starts_with("pmulhu.w.") ||   // Added in 7.0
+              Name.starts_with("pmull.") ||      // Added in 4.0
+              Name.starts_with("pmultishift.qb.") || // Added in 8.0
+              Name.starts_with("pmulu.dq.") ||       // Added in 4.0
+              Name.starts_with("por.") ||            // Added in 3.9
+              Name.starts_with("prol.") ||           // Added in 8.0
+              Name.starts_with("prolv.") ||          // Added in 8.0
+              Name.starts_with("pror.") ||           // Added in 8.0
+              Name.starts_with("prorv.") ||          // Added in 8.0
+              Name.starts_with("pshuf.b.") ||        // Added in 4.0
+              Name.starts_with("pshuf.d.") ||        // Added in 3.9
+              Name.starts_with("pshufh.w.") ||       // Added in 3.9
+              Name.starts_with("pshufl.w.") ||       // Added in 3.9
+              Name.starts_with("psll.d") ||          // Added in 4.0
+              Name.starts_with("psll.q") ||          // Added in 4.0
+              Name.starts_with("psll.w") ||          // Added in 4.0
+              Name.starts_with("pslli") ||           // Added in 4.0
+              Name.starts_with("psllv") ||           // Added in 4.0
+              Name.starts_with("psra.d") ||          // Added in 4.0
+              Name.starts_with("psra.q") ||          // Added in 4.0
+              Name.starts_with("psra.w") ||          // Added in 4.0
+              Name.starts_with("psrai") ||           // Added in 4.0
+              Name.starts_with("psrav") ||           // Added in 4.0
+              Name.starts_with("psrl.d") ||          // Added in 4.0
+              Name.starts_with("psrl.q") ||          // Added in 4.0
+              Name.starts_with("psrl.w") ||          // Added in 4.0
+              Name.starts_with("psrli") ||           // Added in 4.0
+              Name.starts_with("psrlv") ||           // Added in 4.0
+              Name.starts_with("psub.") ||           // Added in 4.0
+              Name.starts_with("psubs.") ||          // Added in 8.0
+              Name.starts_with("psubus.") ||         // Added in 8.0
+              Name.starts_with("pternlog.") ||       // Added in 7.0
+              Name.starts_with("punpckh") ||         // Added in 3.9
+              Name.starts_with("punpckl") ||         // Added in 3.9
+              Name.starts_with("pxor.") ||           // Added in 3.9
+              Name.starts_with("shuf.f") ||          // Added in 6.0
+              Name.starts_with("shuf.i") ||          // Added in 6.0
+              Name.starts_with("shuf.p") ||          // Added in 4.0
+              Name.starts_with("sqrt.p") ||          // Added in 7.0
+              Name.starts_with("store.b.") ||        // Added in 3.9
+              Name.starts_with("store.d.") ||        // Added in 3.9
+              Name.starts_with("store.p") ||         // Added in 3.9
+              Name.starts_with("store.q.") ||        // Added in 3.9
+              Name.starts_with("store.w.") ||        // Added in 3.9
+              Name == "store.ss" ||                  // Added in 7.0
+              Name.starts_with("storeu.") ||         // Added in 3.9
+              Name.starts_with("sub.p") ||       // Added in 7.0. 128/256 in 4.0
+              Name.starts_with("ucmp.") ||       // Added in 5.0
+              Name.starts_with("unpckh.") ||     // Added in 3.9
+              Name.starts_with("unpckl.") ||     // Added in 3.9
+              Name.starts_with("valign.") ||     // Added in 4.0
+              Name == "vcvtph2ps.128" ||         // Added in 11.0
+              Name == "vcvtph2ps.256" ||         // Added in 11.0
+              Name.starts_with("vextract") ||    // Added in 4.0
+              Name.starts_with("vfmadd.") ||     // Added in 7.0
+              Name.starts_with("vfmaddsub.") ||  // Added in 7.0
+              Name.starts_with("vfnmadd.") ||    // Added in 7.0
+              Name.starts_with("vfnmsub.") ||    // Added in 7.0
+              Name.starts_with("vpdpbusd.") ||   // Added in 7.0
+              Name.starts_with("vpdpbusds.") ||  // Added in 7.0
+              Name.starts_with("vpdpwssd.") ||   // Added in 7.0
+              Name.starts_with("vpdpwssds.") ||  // Added in 7.0
+              Name.starts_with("vpermi2var.") || // Added in 7.0
+              Name.starts_with("vpermil.p") ||   // Added in 3.9
+              Name.starts_with("vpermilvar.") || // Added in 4.0
+              Name.starts_with("vpermt2var.") || // Added in 7.0
+              Name.starts_with("vpmadd52") ||    // Added in 7.0
+              Name.starts_with("vpshld.") ||     // Added in 7.0
+              Name.starts_with("vpshldv.") ||    // Added in 8.0
+              Name.starts_with("vpshrd.") ||     // Added in 7.0
+              Name.starts_with("vpshrdv.") ||    // Added in 8.0
+              Name.starts_with("vpshufbitqmb.") || // Added in 8.0
+              Name.starts_with("xor."));           // Added in 3.9
+
+    if (Name.consume_front("mask3."))
+      // 'avx512.mask3.*'
+      return (Name.starts_with("vfmadd.") ||    // Added in 7.0
+              Name.starts_with("vfmaddsub.") || // Added in 7.0
+              Name.starts_with("vfmsub.") ||    // Added in 7.0
+              Name.starts_with("vfmsubadd.") || // Added in 7.0
+              Name.starts_with("vfnmsub."));    // Added in 7.0
+
+    if (Name.consume_front("maskz."))
+      // 'avx512.maskz.*'
+      return (Name.starts_with("pternlog.") ||   // Added in 7.0
+              Name.starts_with("vfmadd.") ||     // Added in 7.0
+              Name.starts_with("vfmaddsub.") ||  // Added in 7.0
+              Name.starts_with("vpdpbusd.") ||   // Added in 7.0
+              Name.starts_with("vpdpbusds.") ||  // Added in 7.0
+              Name.starts_with("vpdpwssd.") ||   // Added in 7.0
+              Name.starts_with("vpdpwssds.") ||  // Added in 7.0
+              Name.starts_with("vpermt2var.") || // Added in 7.0
+              Name.starts_with("vpmadd52") ||    // Added in 7.0
+              Name.starts_with("vpshldv.") ||    // Added in 8.0
+              Name.starts_with("vpshrdv."));     // Added in 8.0
+
+    // 'avx512.*'
+    return (Name == "movntdqa" ||               // Added in 5.0
+            Name == "pmul.dq.512" ||            // Added in 7.0
+            Name == "pmulu.dq.512" ||           // Added in 7.0
+            Name.starts_with("broadcastm") ||   // Added in 6.0
+            Name.starts_with("cmp.p") ||        // Added in 12.0
+            Name.starts_with("cvtb2mask.") ||   // Added in 7.0
+            Name.starts_with("cvtd2mask.") ||   // Added in 7.0
+            Name.starts_with("cvtmask2") ||     // Added in 5.0
+            Name.starts_with("cvtq2mask.") ||   // Added in 7.0
+            Name == "cvtusi2sd" ||              // Added in 7.0
+            Name.starts_with("cvtw2mask.") ||   // Added in 7.0
+            Name == "kand.w" ||                 // Added in 7.0
+            Name == "kandn.w" ||                // Added in 7.0
+            Name == "knot.w" ||                 // Added in 7.0
+            Name == "kor.w" ||                  // Added in 7.0
+            Name == "kortestc.w" ||             // Added in 7.0
+            Name == "kortestz.w" ||             // Added in 7.0
+            Name.starts_with("kunpck") ||       // added in 6.0
+            Name == "kxnor.w" ||                // Added in 7.0
+            Name == "kxor.w" ||                 // Added in 7.0
+            Name.starts_with("padds.") ||       // Added in 8.0
+            Name.starts_with("pbroadcast") ||   // Added in 3.9
+            Name.starts_with("prol") ||         // Added in 8.0
+            Name.starts_with("pror") ||         // Added in 8.0
+            Name.starts_with("psll.dq") ||      // Added in 3.9
+            Name.starts_with("psrl.dq") ||      // Added in 3.9
+            Name.starts_with("psubs.") ||       // Added in 8.0
+            Name.starts_with("ptestm") ||       // Added in 6.0
+            Name.starts_with("ptestnm") ||      // Added in 6.0
+            Name.starts_with("storent.") ||     // Added in 3.9
+            Name.starts_with("vbroadcast.s") || // Added in 7.0
+            Name.starts_with("vpshld.") ||      // Added in 8.0
+            Name.starts_with("vpshrd."));       // Added in 8.0
+  }
+
+  if (Name.consume_front("fma."))
+    return (Name.starts_with("vfmadd.") ||    // Added in 7.0
+            Name.starts_with("vfmsub.") ||    // Added in 7.0
+            Name.starts_with("vfmsubadd.") || // Added in 7.0
+            Name.starts_with("vfnmadd.") ||   // Added in 7.0
+            Name.starts_with("vfnmsub."));    // Added in 7.0
+
+  if (Name.consume_front("fma4."))
+    return Name.starts_with("vfmadd.s"); // Added in 7.0
+
+  if (Name.consume_front("sse."))
+    return (Name == "add.ss" ||            // Added in 4.0
+            Name == "cvtsi2ss" ||          // Added in 7.0
+            Name == "cvtsi642ss" ||        // Added in 7.0
+            Name == "div.ss" ||            // Added in 4.0
+            Name == "mul.ss" ||            // Added in 4.0
+            Name.starts_with("sqrt.p") ||  // Added in 7.0
+            Name == "sqrt.ss" ||           // Added in 7.0
+            Name.starts_with("storeu.") || // Added in 3.9
+            Name == "sub.ss");             // Added in 4.0
+
+  if (Name.consume_front("sse2."))
+    return (Name == "add.sd" ||            // Added in 4.0
+            Name == "cvtdq2pd" ||          // Added in 3.9
+            Name == "cvtdq2ps" ||          // Added in 7.0
+            Name == "cvtps2pd" ||          // Added in 3.9
+            Name == "cvtsi2sd" ||          // Added in 7.0
+            Name == "cvtsi642sd" ||        // Added in 7.0
+            Name == "cvtss2sd" ||          // Added in 7.0
+            Name == "div.sd" ||            // Added in 4.0
+            Name == "mul.sd" ||            // Added in 4.0
+            Name.starts_with("padds.") ||  // Added in 8.0
+            Name.starts_with("paddus.") || // Added in 8.0
+            Name.starts_with("pcmpeq.") || // Added in 3.1
+            Name.starts_with("pcmpgt.") || // Added in 3.1
+            Name == "pmaxs.w" ||           // Added in 3.9
+            Name == "pmaxu.b" ||           // Added in 3.9
+            Name == "pmins.w" ||           // Added in 3.9
+            Name == "pminu.b" ||           // Added in 3.9
+            Name == "pmulu.dq" ||          // Added in 7.0
+            Name.starts_with("pshuf") ||   // Added in 3.9
+            Name.starts_with("psll.dq") || // Added in 3.7
+            Name.starts_with("psrl.dq") || // Added in 3.7
+            Name.starts_with("psubs.") ||  // Added in 8.0
+            Name.starts_with("psubus.") || // Added in 8.0
+            Name.starts_with("sqrt.p") ||  // Added in 7.0
+            Name == "sqrt.sd" ||           // Added in 7.0
+            Name == "storel.dq" ||         // Added in 3.9
+            Name.starts_with("storeu.") || // Added in 3.9
+            Name == "sub.sd");             // Added in 4.0
+
+  if (Name.consume_front("sse41."))
+    return (Name.starts_with("blendp") || // Added in 3.7
+            Name == "movntdqa" ||         // Added in 5.0
+            Name == "pblendw" ||          // Added in 3.7
+            Name == "pmaxsb" ||           // Added in 3.9
+            Name == "pmaxsd" ||           // Added in 3.9
+            Name == "pmaxud" ||           // Added in 3.9
+            Name == "pmaxuw" ||           // Added in 3.9
+            Name == "pminsb" ||           // Added in 3.9
+            Name == "pminsd" ||           // Added in 3.9
+            Name == "pminud" ||           // Added in 3.9
+            Name == "pminuw" ||           // Added in 3.9
+            Name.starts_with("pmovsx") || // Added in 3.8
+            Name.starts_with("pmovzx") || // Added in 3.9
+            Name == "pmuldq");            // Added in 7.0
+
+  if (Name.consume_front("sse42."))
+    return Name == "crc32.64.8"; // Added in 3.4
+
+  if (Name.consume_front("sse4a."))
+    return Name.starts_with("movnt."); // Added in 3.9
+
+  if (Name.consume_front("ssse3."))
+    return (Name == "pabs.b.128" || // Added in 6.0
+            Name == "pabs.d.128" || // Added in 6.0
+            Name == "pabs.w.128");  // Added in 6.0
+
+  if (Name.consume_front("xop."))
+    return (Name == "vpcmov" ||          // Added in 3.8
+            Name == "vpcmov.256" ||      // Added in 5.0
+            Name.starts_with("vpcom") || // Added in 3.2, Updated in 9.0
+            Name.starts_with("vprot"));  // Added in 8.0
+
+  return (Name == "addcarry.u32" ||        // Added in 8.0
+          Name == "addcarry.u64" ||        // Added in 8.0
+          Name == "addcarryx.u32" ||       // Added in 8.0
+          Name == "addcarryx.u64" ||       // Added in 8.0
+          Name == "subborrow.u32" ||       // Added in 8.0
+          Name == "subborrow.u64" ||       // Added in 8.0
+          Name.starts_with("vcvtph2ps.")); // Added in 11.0
 }
 
 static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
                                         Function *&NewFn) {
   // Only handle intrinsics that start with "x86.".
-  if (!Name.starts_with("x86."))
+  if (!Name.consume_front("x86."))
     return false;
-  // Remove "x86." prefix.
-  Name = Name.substr(4);
 
   if (ShouldUpgradeX86Intrinsic(F, Name)) {
     NewFn = nullptr;
@@ -475,113 +505,112 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return true;
   }
 
+  Intrinsic::ID ID;
+
   // SSE4.1 ptest functions may have an old signature.
-  if (Name.starts_with("sse41.ptest")) { // Added in 3.2
-    if (Name.substr(11) == "c")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestc, NewFn);
-    if (Name.substr(11) == "z")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestz, NewFn);
-    if (Name.substr(11) == "nzc")
-      return UpgradePTESTIntrinsic(F, Intrinsic::x86_sse41_ptestnzc, NewFn);
+  if (Name.consume_front("sse41.ptest")) { // Added in 3.2
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("c", Intrinsic::x86_sse41_ptestc)
+             .Case("z", Intrinsic::x86_sse41_ptestz)
+             .Case("nzc", Intrinsic::x86_sse41_ptestnzc)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradePTESTIntrinsic(F, ID, NewFn);
+
+    return false;
   }
+
   // Several blend and other instructions with masks used the wrong number of
   // bits.
-  if (Name == "sse41.insertps") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_insertps,
-                                            NewFn);
-  if (Name == "sse41.dppd") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_dppd,
-                                            NewFn);
-  if (Name == "sse41.dpps") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_dpps,
-                                            NewFn);
-  if (Name == "sse41.mpsadbw") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_sse41_mpsadbw,
-                                            NewFn);
-  if (Name == "avx.dp.ps.256") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx_dp_ps_256,
-                                            NewFn);
-  if (Name == "avx2.mpsadbw") // Added in 3.6
-    return UpgradeX86IntrinsicsWith8BitMask(F, Intrinsic::x86_avx2_mpsadbw,
-                                            NewFn);
-  if (Name == "avx512.mask.cmp.pd.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.pd.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_pd_512,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.128") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_128,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.256") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_256,
-                                     NewFn);
-  if (Name == "avx512.mask.cmp.ps.512") // Added in 7.0
-    return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_512,
-                                     NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.128") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128, NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.256") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256, NewFn);
-  if (Name == "avx512bf16.cvtne2ps2bf16.512") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512, NewFn);
-  if (Name == "avx512bf16.mask.cvtneps2bf16.128") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128, NewFn);
-  if (Name == "avx512bf16.cvtneps2bf16.256") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_256, NewFn);
-  if (Name == "avx512bf16.cvtneps2bf16.512") // Added in 9.0
-    return UpgradeX86BF16Intrinsic(
-        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_512, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.128") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_128, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.256") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_256, NewFn);
-  if (Name == "avx512bf16.dpbf16ps.512") // Added in 9.0
-    return UpgradeX86BF16DPIntrinsic(
-        F, Intrinsic::x86_avx512bf16_dpbf16ps_512, NewFn);
 
-  // frcz.ss/sd may need to have an argument dropped. Added in 3.2
-  if (Name.starts_with("xop.vfrcz.ss") && F->arg_size() == 2) {
-    rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_xop_vfrcz_ss);
-    return true;
+  // Added in 3.6
+  ID = StringSwitch<Intrinsic::ID>(Name)
+           .Case("sse41.insertps", Intrinsic::x86_sse41_insertps)
+           .Case("sse41.dppd", Intrinsic::x86_sse41_dppd)
+           .Case("sse41.dpps", Intrinsic::x86_sse41_dpps)
+           .Case("sse41.mpsadbw", Intrinsic::x86_sse41_mpsadbw)
+           .Case("avx.dp.ps.256", Intrinsic::x86_avx_dp_ps_256)
+           .Case("avx2.mpsadbw", Intrinsic::x86_avx2_mpsadbw)
+           .Default(Intrinsic::not_intrinsic);
+  if (ID != Intrinsic::not_intrinsic)
+    return UpgradeX86IntrinsicsWith8BitMask(F, ID, NewFn);
+
+  if (Name.consume_front("avx512.mask.cmp.")) {
+    // Added in 7.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("pd.128", Intrinsic::x86_avx512_mask_cmp_pd_128)
+             .Case("pd.256", Intrinsic::x86_avx512_mask_cmp_pd_256)
+             .Case("pd.512", Intrinsic::x86_avx512_mask_cmp_pd_512)
+             .Case("ps.128", Intrinsic::x86_avx512_mask_cmp_ps_128)
+             .Case("ps.256", Intrinsic::x86_avx512_mask_cmp_ps_256)
+             .Case("ps.512", Intrinsic::x86_avx512_mask_cmp_ps_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86MaskedFPCompare(F, ID, NewFn);
+    return false; // No other 'x86.avx523.mask.cmp.*'.
   }
-  if (Name.starts_with("xop.vfrcz.sd") && F->arg_size() == 2) {
-    rename(F);
-    NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::x86_xop_vfrcz_sd);
-    return true;
+
+  if (Name.consume_front("avx512bf16.")) {
+    // Added in 9.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("cvtne2ps2bf16.128",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128)
+             .Case("cvtne2ps2bf16.256",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256)
+             .Case("cvtne2ps2bf16.512",
+                   Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512)
+             .Case("mask.cvtneps2bf16.128",
+                   Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128)
+             .Case("cvtneps2bf16.256",
+                   Intrinsic::x86_avx512bf16_cvtneps2bf16_256)
+             .Case("cvtneps2bf16.512",
+                   Intrinsic::x86_avx512bf16_cvtneps2bf16_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86BF16Intrinsic(F, ID, NewFn);
+
+    // Added in 9.0
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("dpbf16ps.128", Intrinsic::x86_avx512bf16_dpbf16ps_128)
+             .Case("dpbf16ps.256", Intrinsic::x86_avx512bf16_dpbf16ps_256)
+             .Case("dpbf16ps.512", Intrinsic::x86_avx512bf16_dpbf16ps_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return UpgradeX86BF16DPIntrinsic(F, ID, NewFn);
+    return false; // No other 'x86.avx512bf16.*'.
   }
-  // Upgrade any XOP PERMIL2 index operand still using a float/double vector.
-  if (Name.starts_with("xop.vpermil2")) { // Added in 3.9
-    auto Idx = F->getFunctionType()->getParamType(2);
-    if (Idx->isFPOrFPVectorTy()) {
+
+  if (Name.consume_front("xop.")) {
+    Intrinsic::ID ID = Intrinsic::not_intrinsic;
+    if (Name.startswith("vpermil2")) { // Added in 3.9
+      // Upgrade any XOP PERMIL2 index operand still using a float/double
+      // vector.
+      auto Idx = F->getFunctionType()->getParamType(2);
+      if (Idx->isFPOrFPVectorTy()) {
+        unsigned IdxSize = Idx->getPrimitiveSizeInBits();
+        unsigned EltSize = Idx->getScalarSizeInBits();
+        if (EltSize == 64 && IdxSize == 128)
+          ID = Intrinsic::x86_xop_vpermil2pd;
+        else if (EltSize == 32 && IdxSize == 128)
+          ID = Intrinsic::x86_xop_vpermil2ps;
+        else if (EltSize == 64 && IdxSize == 256)
+          ID = Intrinsic::x86_xop_vpermil2pd_256;
+        else
+          ID = Intrinsic::x86_xop_vpermil2ps_256;
+      }
+    } else if (F->arg_size() == 2)
+      // frcz.ss/sd may need to have an argument dropped. Added in 3.2
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("vfrcz.ss", Intrinsic::x86_xop_vfrcz_ss)
+               .Case("vfrcz.sd", Intrinsic::x86_xop_vfrcz_sd)
+               .Default(Intrinsic::not_intrinsic);
+
+    if (ID != Intrinsic::not_intrinsic) {
       rename(F);
-      unsigned IdxSize = Idx->getPrimitiveSizeInBits();
-      unsigned EltSize = Idx->getScalarSizeInBits();
-      Intrinsic::ID Permil2ID;
-      if (EltSize == 64 && IdxSize == 128)
-        Permil2ID = Intrinsic::x86_xop_vpermil2pd;
-      else if (EltSize == 32 && IdxSize == 128)
-        Permil2ID = Intrinsic::x86_xop_vpermil2ps;
-      else if (EltSize == 64 && IdxSize == 256)
-        Permil2ID = Intrinsic::x86_xop_vpermil2pd_256;
-      else
-        Permil2ID = Intrinsic::x86_xop_vpermil2ps_256;
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Permil2ID);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
       return true;
     }
+    return false; // No other 'x86.xop.*'
   }
 
   if (Name == "seh.recoverfp") {
@@ -939,19 +968,20 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'c': {
-    if (Name.starts_with("ctlz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                        F->arg_begin()->getType());
-      return true;
+    if (F->arg_size() == 1) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("ctlz.", Intrinsic::ctlz)
+                             .StartsWith("cttz.", Intrinsic::cttz)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
     }
-    if (Name.starts_with("cttz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.equals("coro.end") && F->arg_size() == 2) {
+
+    if (F->arg_size() == 2 && Name.equals("coro.end")) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;

@@ -271,7 +271,7 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
 
   RegScavenger RS;
   RS.enterBasicBlockEnd(MBB);
-  RS.backward(MIs.back()->getIterator());
+  RS.backward(std::next(MIs.back()->getIterator()));
   return RS.scavengeRegisterBackwards(*RCToScavenge, FirstMI.getIterator(),
                                       /*RestoreAfter=*/false, /*SPAdj=*/0,
                                       /*AllowSpill=*/false);

@@ -37,7 +37,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; DEFAULT-NOT: warning:
 ; EXPENSIVE:   warning:
 define void @dropped_instruction(i64 %arg1) {
-  call void @llvm.dbg.value(metadata i64 %arg1, metadata !3, metadata !DIExpression(DW_OP_plus_uconst, 42, DW_OP_stack_value)), !dbg !5
+  call void @llvm.dbg.value(metadata !DIArgList(i64 %arg1, i64 undef), metadata !3, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)), !dbg !5
   ret void
 }
 

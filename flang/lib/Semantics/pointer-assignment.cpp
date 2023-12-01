@@ -359,11 +359,17 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
     const Procedure *rhsProcedure,
     const evaluate::SpecificIntrinsic *specific) {
   std::string whyNot;
+  std::optional<std::string> warning;
   CharacterizeProcedure();
   if (std::optional<MessageFixedText> msg{evaluate::CheckProcCompatibility(
-          isCall, procedure_, rhsProcedure, specific, whyNot)}) {
+          isCall, procedure_, rhsProcedure, specific, whyNot, warning)}) {
     Say(std::move(*msg), description_, rhsName, whyNot);
     return false;
+  }
+  if (context_.ShouldWarn(common::UsageWarning::ProcDummyArgShapes) &&
+      warning) {
+    Say("%s and %s may not be completely compatible procedures: %s"_warn_en_US,
+        description_, rhsName, std::move(*warning));
   }
   return true;
 }
@@ -380,7 +386,7 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
         return false;
       }
     } else if (symbol->has<ProcBindingDetails>() &&
-        context_.ShouldWarn(common::UsageWarning::Portability)) {
+        context_.ShouldWarn(common::LanguageFeature::BindingAsProcedure)) {
       evaluate::SayWithDeclaration(foldingContext_.messages(), *symbol,
           "Procedure binding '%s' used as target of a pointer assignment"_port_en_US,
           symbol->name());

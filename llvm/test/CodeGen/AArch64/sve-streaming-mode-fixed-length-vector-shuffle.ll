@@ -8,22 +8,11 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @shuffle_ext_byone_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; CHECK-LABEL: shuffle_ext_byone_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov z1.h, z0.h[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z2.h, z0.h[2]
-; CHECK-NEXT:    mov z3.h, z0.h[3]
-; CHECK-NEXT:    strh w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    strh w9, [sp, #12]
-; CHECK-NEXT:    strh w8, [sp, #10]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %ret = shufflevector <4 x i8> %op1, <4 x i8> %op2, <4 x i32> <i32 0, i32 3, i32 2, i32 1>
   ret <4 x i8> %ret

@@ -18,7 +18,7 @@ define void @logical_and_m_const(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -50,7 +50,7 @@ define void @logical_and_nonzero(i32 %m) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (2 umin %m)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (2 umin %m)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -83,7 +83,7 @@ define void @logical_and_zero(i32 %m) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -147,7 +147,7 @@ define void @logical_or_m_const(i32 %n) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (2 umin %n)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -179,7 +179,7 @@ define void @logical_or_nonzero(i32 %m) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (2 umin %m)
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (2 umin %m)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop
@@ -212,7 +212,7 @@ define void @logical_or_zero(i32 %m) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 0
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
   br label %loop

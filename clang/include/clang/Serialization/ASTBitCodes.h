@@ -695,6 +695,10 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  /// Record code for constexpr templated entities that have been used but not
+  /// yet instantiated.
+  PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES = 68,
 };
 
 /// Record types used within a source manager block.
@@ -1101,7 +1105,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 500;
+const unsigned NUM_PREDEF_TYPE_IDS = 502;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

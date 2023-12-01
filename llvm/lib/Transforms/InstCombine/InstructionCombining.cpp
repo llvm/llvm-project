@@ -356,6 +356,7 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
+  Cast->dropPoisonGeneratingFlags();
   return true;
 }
 
@@ -747,6 +748,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
 //   -> (arithmetic_shift Binop1((not X), Y), Amt)
 
 Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
+  const DataLayout &DL = I.getModule()->getDataLayout();
   auto IsValidBinOpc = [](unsigned Opc) {
     switch (Opc) {
     default:
@@ -795,9 +797,10 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
 
     // Otherwise, need mask that meets the below requirement.
     // (logic_shift (inv_logic_shift Mask, ShAmt), ShAmt) == Mask
-    return ConstantExpr::get(
-               ShOpc, ConstantExpr::get(GetInvShift(ShOpc), CMask, CShift),
-               CShift) == CMask;
+    Constant *MaskInvShift =
+        ConstantFoldBinaryOpOperands(GetInvShift(ShOpc), CMask, CShift, DL);
+    return ConstantFoldBinaryOpOperands(ShOpc, MaskInvShift, CShift, DL) ==
+           CMask;
   };
 
   auto MatchBinOp = [&](unsigned ShOpnum) -> Instruction * {
@@ -867,7 +870,8 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
     if (!CanDistributeBinops(I.getOpcode(), BinOpc, ShOpc, CMask, CShift))
       return nullptr;
 
-    Constant *NewCMask = ConstantExpr::get(GetInvShift(ShOpc), CMask, CShift);
+    Constant *NewCMask =
+        ConstantFoldBinaryOpOperands(GetInvShift(ShOpc), CMask, CShift, DL);
     Value *NewBinOp2 = Builder.CreateBinOp(
         static_cast<Instruction::BinaryOps>(BinOpc), X, NewCMask);
     Value *NewBinOp1 = Builder.CreateBinOp(I.getOpcode(), Y, NewBinOp2);
@@ -1181,6 +1185,8 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       break;
     case Instruction::Xor:
       replaceInstUsesWith(cast<Instruction>(*U), I);
+      // Add to worklist for DCE.
+      addToWorklist(cast<Instruction>(U));
       break;
     default:
       llvm_unreachable("Got unexpected user - out of sync with "
@@ -2100,6 +2106,120 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   return nullptr;
 }
 
+Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                           BuilderTy *Builder,
+                                           bool &DoesConsume, unsigned Depth) {
+  static Value *const NonNull = reinterpret_cast<Value *>(uintptr_t(1));
+  // ~(~(X)) -> X.
+  Value *A, *B;
+  if (match(V, m_Not(m_Value(A)))) {
+    DoesConsume = true;
+    return A;
+  }
+
+  Constant *C;
+  // Constants can be considered to be not'ed values.
+  if (match(V, m_ImmConstant(C)))
+    return ConstantExpr::getNot(C);
+
+  if (Depth++ >= MaxAnalysisRecursionDepth)
+    return nullptr;
+
+  // The rest of the cases require that we invert all uses so don't bother
+  // doing the analysis if we know we can't use the result.
+  if (!WillInvertAllUses)
+    return nullptr;
+
+  // Compares can be inverted if all of their uses are being modified to use
+  // the ~V.
+  if (auto *I = dyn_cast<CmpInst>(V)) {
+    if (Builder != nullptr)
+      return Builder->CreateCmp(I->getInversePredicate(), I->getOperand(0),
+                                I->getOperand(1));
+    return NonNull;
+  }
+
+  // If `V` is of the form `A + B` then `-1 - V` can be folded into
+  // `(-1 - B) - A` if we are willing to invert all of the uses.
+  if (match(V, m_Add(m_Value(A), m_Value(B)))) {
+    if (auto *BV = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSub(BV, A) : NonNull;
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSub(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // If `V` is of the form `A ^ ~B` then `~(A ^ ~B)` can be folded
+  // into `A ^ B` if we are willing to invert all of the uses.
+  if (match(V, m_Xor(m_Value(A), m_Value(B)))) {
+    if (auto *BV = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateXor(A, BV) : NonNull;
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateXor(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // If `V` is of the form `B - A` then `-1 - V` can be folded into
+  // `A + (-1 - B)` if we are willing to invert all of the uses.
+  if (match(V, m_Sub(m_Value(A), m_Value(B)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateAdd(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // If `V` is of the form `(~A) s>> B` then `~((~A) s>> B)` can be folded
+  // into `A s>> B` if we are willing to invert all of the uses.
+  if (match(V, m_AShr(m_Value(A), m_Value(B)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  // Treat lshr with non-negative operand as ashr.
+  if (match(V, m_LShr(m_Value(A), m_Value(B))) &&
+      isKnownNonNegative(A, SQ.getWithInstruction(cast<Instruction>(V)),
+                         Depth)) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
+    return nullptr;
+  }
+
+  Value *Cond;
+  // LogicOps are special in that we canonicalize them at the cost of an
+  // instruction.
+  bool IsSelect = match(V, m_Select(m_Value(Cond), m_Value(A), m_Value(B))) &&
+                  !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
+  // Selects/min/max with invertible operands are freely invertible
+  if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B)))) {
+    if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder*/ nullptr,
+                               DoesConsume, Depth))
+      return nullptr;
+    if (Value *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                            DoesConsume, Depth)) {
+      if (Builder != nullptr) {
+        Value *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                            DoesConsume, Depth);
+        assert(NotB != nullptr &&
+               "Unable to build inverted value for known freely invertable op");
+        if (auto *II = dyn_cast<IntrinsicInst>(V))
+          return Builder->CreateBinaryIntrinsic(
+              getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
+        return Builder->CreateSelect(Cond, NotA, NotB);
+      }
+      return NonNull;
+    }
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getOperand(0);
   SmallVector<Value *, 8> Indices(GEP.indices());
@@ -2326,14 +2446,30 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (match(GEP.getOperand(1),
               m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
       //   %idx = add i64 %idx1, %idx2
-      //   %gep = getelementptr i32, i32* %ptr, i64 %idx
+      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
-      //   %newptr = getelementptr i32, i32* %ptr, i64 %idx1
-      //   %newgep = getelementptr i32, i32* %newptr, i64 %idx2
+      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
+      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
       auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
                                        GEP.getPointerOperand(), Idx1);
       return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
                                        Idx2);
+    }
+    ConstantInt *C;
+    if (match(GEP.getOperand(1), m_OneUse(m_SExt(m_OneUse(m_NSWAdd(
+                                     m_Value(Idx1), m_ConstantInt(C))))))) {
+      // %add = add nsw i32 %idx1, idx2
+      // %sidx = sext i32 %add to i64
+      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      // as:
+      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
+      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      auto *NewPtr = Builder.CreateGEP(
+          GEP.getResultElementType(), GEP.getPointerOperand(),
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()));
+      return GetElementPtrInst::Create(
+          GEP.getResultElementType(), NewPtr,
+          Builder.CreateSExt(C, GEP.getOperand(1)->getType()));
     }
   }
 
@@ -2539,9 +2675,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
   SmallVector<DbgVariableIntrinsic *, 8> DVIs;
+  SmallVector<DPValue *, 8> DPVs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI);
+    findDbgUsers(DVIs, &MI, &DPVs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -2581,6 +2718,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         for (auto *DVI : DVIs)
           if (DVI->isAddressOfVariable())
             ConvertDebugDeclareToDebugValue(DVI, SI, *DIB);
+        for (auto *DPV : DPVs)
+          if (DPV->isAddressOfVariable())
+            ConvertDebugDeclareToDebugValue(DPV, SI, *DIB);
       } else {
         // Casts, GEP, or anything else: we're about to delete this instruction,
         // so it can not have any valid uses.
@@ -2619,9 +2759,15 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     // If there is a dead store to `%a` in @trivially_inlinable_no_op, the
     // "arg0" dbg.value may be stale after the call. However, failing to remove
     // the DW_OP_deref dbg.value causes large gaps in location coverage.
+    //
+    // FIXME: the Assignment Tracking project has now likely made this
+    // redundant (and it's sometimes harmful).
     for (auto *DVI : DVIs)
       if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
         DVI->eraseFromParent();
+    for (auto *DPV : DPVs)
+      if (DPV->isAddressOfVariable() || DPV->getExpression()->startsWithDeref())
+        DPV->eraseFromParent();
 
     return eraseInstFromFunction(MI);
   }
@@ -2865,9 +3011,15 @@ void InstCombinerImpl::handleUnreachableFrom(
     }
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
+    // RemoveDIs: erase debug-info on this instruction manually.
+    Inst.dropDbgValues();
     eraseInstFromFunction(Inst);
     MadeIRChange = true;
   }
+
+  // RemoveDIs: to match behaviour in dbg.value mode, drop debug-info on
+  // terminator too.
+  BB->getTerminator()->dropDbgValues();
 
   // Handle potentially dead successors.
   for (BasicBlock *Succ : successors(BB))
@@ -3691,19 +3843,27 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   // *all* uses if the operand is an invoke/callbr and the use is in a phi on
   // the normal/default destination. This is why the domination check in the
   // replacement below is still necessary.
-  Instruction *MoveBefore;
+  BasicBlock::iterator MoveBefore;
   if (isa<Argument>(Op)) {
     MoveBefore =
-        &*FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+        FI.getFunction()->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
   } else {
-    MoveBefore = cast<Instruction>(Op)->getInsertionPointAfterDef();
-    if (!MoveBefore)
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
       return false;
+    MoveBefore = *MoveBeforeOpt;
   }
 
+  // Don't move to the position of a debug intrinsic.
+  if (isa<DbgInfoIntrinsic>(MoveBefore))
+    MoveBefore = MoveBefore->getNextNonDebugInstruction()->getIterator();
+  // Re-point iterator to come after any debug-info records, if we're
+  // running in "RemoveDIs" mode
+  MoveBefore.setHeadBit(false);
+
   bool Changed = false;
-  if (&FI != MoveBefore) {
-    FI.moveBefore(*MoveBefore->getParent(), MoveBefore->getIterator());
+  if (&FI != &*MoveBefore) {
+    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
     Changed = true;
   }
 
@@ -3920,6 +4080,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // For all debug values in the destination block, the sunk instruction
   // will still be available, so they do not need to be dropped.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
+  SmallVector<DPValue *, 2> DPValuesToSalvage;
   for (auto &DbgUser : DbgUsers)
     if (DbgUser->getParent() != DestBlock)
       DbgUsersToSalvage.push_back(DbgUser);
@@ -3963,7 +4124,10 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // Perform salvaging without the clones, then sink the clones.
   if (!DIIClones.empty()) {
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage);
+    // RemoveDIs: pass in empty vector of DPValues until we get to instrumenting
+    // this pass.
+    SmallVector<DPValue *, 1> DummyDPValues;
+    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, DummyDPValues);
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
@@ -4361,8 +4525,7 @@ static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI, unsigned MaxIterations, bool VerifyFixpoint,
-    LoopInfo *LI) {
+    ProfileSummaryInfo *PSI, LoopInfo *LI, const InstCombineOptions &Opts) {
   auto &DL = F.getParent()->getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -4388,8 +4551,8 @@ static bool combineInstructionsOverFunction(
   while (true) {
     ++Iteration;
 
-    if (Iteration > MaxIterations && !VerifyFixpoint) {
-      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << MaxIterations
+    if (Iteration > Opts.MaxIterations && !Opts.VerifyFixpoint) {
+      LLVM_DEBUG(dbgs() << "\n\n[IC] Iteration limit #" << Opts.MaxIterations
                         << " on " << F.getName()
                         << " reached; stopping without verifying fixpoint\n");
       break;
@@ -4408,10 +4571,10 @@ static bool combineInstructionsOverFunction(
       break;
 
     MadeIRChange = true;
-    if (Iteration > MaxIterations) {
+    if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(MaxIterations) + " iterations");
+          Twine(Opts.MaxIterations) + " iterations");
     }
   }
 
@@ -4462,8 +4625,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, Options.MaxIterations,
-                                       Options.VerifyFixpoint, LI))
+                                       BFI, PSI, LI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -4512,9 +4674,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       nullptr;
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI,
-                                         InstCombineDefaultMaxIterations,
-                                         /*VerifyFixpoint */ false, LI);
+                                         BFI, PSI, LI, InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

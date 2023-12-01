@@ -28,6 +28,11 @@ public:
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
+  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+    return llvm::SmallVector<llvm::StringLiteral>(
+        {"get_stop_reason", "get_register_context"});
+  }
+
   lldb::tid_t GetThreadID() override;
 
   std::optional<std::string> GetName() override;

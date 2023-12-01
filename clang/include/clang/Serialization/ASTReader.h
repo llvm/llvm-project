@@ -312,9 +312,6 @@ public:
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
-
-private:
-  void Error(const char *Msg);
 };
 
 /// ASTReaderListenter implementation to set SuggestedPredefines of
@@ -816,6 +813,9 @@ private:
   /// instantiation where the first value is the ID of the decl and the second
   /// is the instantiation location.
   SmallVector<serialization::DeclID, 64> PendingInstantiations;
+
+  llvm::DenseMap<serialization::DeclID, std::set<serialization::DeclID>>
+      PendingInstantiationsOfConstexprEntities;
 
   //@}
 
@@ -2103,6 +2103,9 @@ public:
   void ReadPendingInstantiations(
                   SmallVectorImpl<std::pair<ValueDecl *,
                                             SourceLocation>> &Pending) override;
+
+  virtual void ReadPendingInstantiationsOfConstexprEntity(
+      const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) override;
 
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>

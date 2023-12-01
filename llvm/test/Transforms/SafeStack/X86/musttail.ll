@@ -1,6 +1,7 @@
 ; To test that safestack does not break the musttail call contract.
 ;
 ; RUN: opt < %s --safe-stack -S | FileCheck %s
+; RUN: opt < %s -passes=safe-stack -S | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

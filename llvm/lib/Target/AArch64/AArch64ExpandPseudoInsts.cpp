@@ -19,7 +19,6 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -838,6 +837,7 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
   Call->addOperand(CallTarget);
   Call->setCFIType(*MBB.getParent(), MI.getCFIType());
+  Call->copyImplicitOps(*MBB.getParent(), MI);
 
   MachineInstr *BTI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))
