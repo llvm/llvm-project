@@ -18,7 +18,7 @@
 
 #if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
 #define SELECT_CONST(val, _, __) val
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 #define SELECT_CONST(_, val, __) val
 #else
 #define SELECT_CONST(_, __, val) val
