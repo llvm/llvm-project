@@ -37,7 +37,7 @@
 #endif
 #endif
 
-#if (defined(__Fuchsia__))
+#if defined(__Fuchsia__)
 #define LIBC_TARGET_OS_IS_FUCHSIA
 #endif
 
