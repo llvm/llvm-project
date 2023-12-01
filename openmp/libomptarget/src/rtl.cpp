@@ -14,6 +14,7 @@
 
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
+#include "Shared/Debug.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -132,50 +133,21 @@ bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAd
 
   DP("Successfully loaded library '%s'!\n", Name);
 
-  // Remove plugin on failure to call optional init_plugin
-  *((void **)&RTL.init_plugin) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_plugin");
-  if (RTL.init_plugin) {
-    int32_t Rc = RTL.init_plugin();
-    if (Rc != OFFLOAD_SUCCESS) {
-      DP("Unable to initialize library '%s': %u!\n", Name, Rc);
-      return false;
-    }
+#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+  *((void **)&RTL.NAME) =                                                      \
+      DynLibrary->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME));               \
+  if (MANDATORY && !RTL.NAME) {                                                \
+    DP("Invalid plugin as necessary interface is not found.\n");               \
+    return false;                                                              \
   }
 
-  bool ValidPlugin = true;
+#include "Shared/PluginAPI.inc"
+#undef PLUGIN_API_HANDLE
 
-  if (!(*((void **)&RTL.is_valid_binary) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.number_of_devices) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.init_device) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.load_binary) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_load_binary")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_alloc) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_alloc")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_submit) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_retrieve) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_delete) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_delete")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.launch_kernel) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel")))
-    ValidPlugin = false;
-
-  // Invalid plugin
-  if (!ValidPlugin) {
-    DP("Invalid plugin as necessary interface is not found.\n");
+  // Remove plugin on failure to call optional init_plugin
+  int32_t Rc = RTL.init_plugin();
+  if (Rc != OFFLOAD_SUCCESS) {
+    DP("Unable to initialize library '%s': %u!\n", Name, Rc);
     return false;
   }
 
@@ -191,62 +163,6 @@ bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAd
 #endif
 
   DP("Registering RTL %s supporting %d devices!\n", Name, RTL.NumberOfDevices);
-
-  // Optional functions
-  *((void **)&RTL.is_valid_binary_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-  *((void **)&RTL.init_requires) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
-  *((void **)&RTL.data_submit_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
-  *((void **)&RTL.data_retrieve_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
-  *((void **)&RTL.synchronize) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
-  *((void **)&RTL.query_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_async");
-  *((void **)&RTL.data_exchange) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
-  *((void **)&RTL.data_exchange_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
-  *((void **)&RTL.is_data_exchangable) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
-  *((void **)&RTL.supports_empty_images) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
-  *((void **)&RTL.set_info_flag) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_info_flag");
-  *((void **)&RTL.print_device_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_print_device_info");
-  *((void **)&RTL.create_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_create_event");
-  *((void **)&RTL.record_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_record_event");
-  *((void **)&RTL.wait_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_wait_event");
-  *((void **)&RTL.sync_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
-  *((void **)&RTL.destroy_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
-  *((void **)&RTL.release_async_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
-  *((void **)&RTL.init_async_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_async_info");
-  *((void **)&RTL.init_device_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device_info");
-  *((void **)&RTL.data_lock) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_lock");
-  *((void **)&RTL.data_unlock) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_unlock");
-  *((void **)&RTL.data_notify_mapped) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_mapped");
-  *((void **)&RTL.data_notify_unmapped) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
-  *((void **)&RTL.set_device_offset) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_device_offset");
-
-  // Record Replay RTL
-  *((void **)&RTL.activate_record_replay) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_initialize_record_replay");
 
   RTL.LibraryHandler = std::move(DynLibrary);
 

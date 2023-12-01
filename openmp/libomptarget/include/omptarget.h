@@ -121,29 +121,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEFAULT
 };
 
-/// This struct contains all of the arguments to a target kernel region launch.
-struct KernelArgsTy {
-  uint32_t Version;       // Version of this struct for ABI compatibility.
-  uint32_t NumArgs;       // Number of arguments in each input pointer.
-  void **ArgBasePtrs;     // Base pointer of each argument (e.g. a struct).
-  void **ArgPtrs;         // Pointer to the argument data.
-  int64_t *ArgSizes;      // Size of the argument data in bytes.
-  int64_t *ArgTypes;      // Type of the data (e.g. to / from).
-  void **ArgNames;        // Name of the data for debugging, possibly null.
-  void **ArgMappers;      // User-defined mappers, possibly null.
-  uint64_t Tripcount;     // Tripcount for the teams / distribute loop, 0 otherwise.
-  struct {
-    uint64_t NoWait : 1;  // Was this kernel spawned with a `nowait` clause.
-    uint64_t Unused : 63;
-  } Flags;
-  uint32_t NumTeams[3];    // The number of teams (for x,y,z dimension).
-  uint32_t ThreadLimit[3]; // The number of threads (for x,y,z dimension).
-  uint32_t DynCGroupMem;   // Amount of dynamic cgroup memory requested.
-};
-static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
-              "Invalid struct size");
-static_assert(sizeof(KernelArgsTy) == (8 * sizeof(int32_t) + 3 * sizeof(int64_t) + 4 * sizeof(void**) + 2 * sizeof(int64_t*)),
-              "Invalid struct size");
 inline KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
 	     nullptr, nullptr, nullptr,   nullptr,
 	     0,      {0,0},       {1, 0, 0}, {1, 0, 0}, 0};
