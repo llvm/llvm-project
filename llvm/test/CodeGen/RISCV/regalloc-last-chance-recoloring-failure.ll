@@ -45,7 +45,7 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    call func@plt
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vrgather.vv v4, v8, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    csrr a2, vlenb
