@@ -4503,11 +4503,11 @@ bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
 }
 
 // Return whether the operation has NoUnsignedWrap property.
-bool isNoUnsignedWrap(MachineInstr *Addr) {
+static bool isNoUnsignedWrap(MachineInstr *Addr) {
   return Addr->getOpcode() == TargetOpcode::G_OR ||
          (Addr->getOpcode() == TargetOpcode::G_PTR_ADD &&
           Addr->getFlag(MachineInstr::NoUWrap));
-};
+}
 
 // Check that the base address of flat scratch load/store in the form of `base +
 // offset` is legal to be put in SGPR/VGPR (i.e. unsigned per hardware
