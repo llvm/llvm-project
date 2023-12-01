@@ -838,7 +838,7 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
                          Dest
                            |
      this-block:    ~~~~~~~~
-      Src-block             ++++B---B---B---B:::C
+      Src-block:            ++++B---B---B---B:::C
                                 |               |
                                First           Last
 
@@ -868,14 +868,13 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
   if (Dest == end() && !Dest.getHeadBit() && OurTrailingDPValues) {
     // Are the "+" DPValues not supposed to move? If so, detach them
     // temporarily.
-    if (!First.getHeadBit() && Src->getMarker(First) &&
-        !Src->getMarker(First)->empty()) {
+    if (!First.getHeadBit() && First->hasDbgValues()) {
       MoreDanglingDPValues = Src->getMarker(First);
       MoreDanglingDPValues->removeFromParent();
     }
 
-    if (DPMarker *CurMarker = Src->getMarker(First);
-        CurMarker && !CurMarker->empty()) {
+    if (First->hasDbgValues()) {
+      DPMarker *CurMarker = Src->getMarker(First);
       // Place them at the front, it would look like this:
       //            Dest
       //              |
@@ -884,13 +883,13 @@ void BasicBlock::spliceDebugInfo(BasicBlock::iterator Dest, BasicBlock *Src,
       //                        |               |
       //                       First           Last
       CurMarker->absorbDebugValues(*OurTrailingDPValues, true);
-      delete OurTrailingDPValues;
+      OurTrailingDPValues->eraseFromParent();
     } else {
       // No current marker, create one and absorb in. (FIXME: we can avoid an
       // allocation in the future).
-      CurMarker = Src->createMarker(&*First);
+      DPMarker *CurMarker = Src->createMarker(&*First);
       CurMarker->absorbDebugValues(*OurTrailingDPValues, false);
-      delete OurTrailingDPValues;
+      OurTrailingDPValues->eraseFromParent();
     }
     deleteTrailingDPValues();
     First.setHeadBit(true);
