@@ -1117,6 +1117,21 @@ static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
       (GlobalObject::VCallVisibility)(RawFlags >> 3));
 }
 
+static void getDecodedHotnessCallEdgeInfo(uint64_t RawFlags,
+                                          CalleeInfo::HotnessType &Hotness,
+                                          bool &HasTailCall) {
+  Hotness = static_cast<CalleeInfo::HotnessType>(RawFlags & 0x7); // 3 bits
+  HasTailCall = (RawFlags & 0x8);                                 // 1 bit
+}
+
+static void getDecodedRelBFCallEdgeInfo(uint64_t RawFlags, uint64_t &RelBF,
+                                        bool &HasTailCall) {
+  static constexpr uint64_t RelBlockFreqMask =
+      (1 << CalleeInfo::RelBlockFreqBits) - 1;
+  RelBF = RawFlags & RelBlockFreqMask; // RelBlockFreqBits bits
+  HasTailCall = (RawFlags & (1 << CalleeInfo::RelBlockFreqBits)); // 1 bit
+}
+
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
   switch (Val) {
   default: // Map unknown visibilities to default.
@@ -7007,6 +7022,7 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
   Ret.reserve(Record.size());
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
+    bool HasTailCall = false;
     uint64_t RelBF = 0;
     ValueInfo Callee = std::get<0>(getValueInfoFromValueId(Record[I]));
     if (IsOldProfileFormat) {
@@ -7014,10 +7030,11 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
       if (HasProfile)
         I += 1; // Skip old profilecount field
     } else if (HasProfile)
-      Hotness = static_cast<CalleeInfo::HotnessType>(Record[++I]);
+      getDecodedHotnessCallEdgeInfo(Record[++I], Hotness, HasTailCall);
     else if (HasRelBF)
-      RelBF = Record[++I];
-    Ret.push_back(FunctionSummary::EdgeTy{Callee, CalleeInfo(Hotness, RelBF)});
+      getDecodedRelBFCallEdgeInfo(Record[++I], RelBF, HasTailCall);
+    Ret.push_back(FunctionSummary::EdgeTy{
+        Callee, CalleeInfo(Hotness, HasTailCall, RelBF)});
   }
   return Ret;
 }
@@ -7231,14 +7248,15 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
       break;
     }
+    // FS_PERMODULE is legacy and does not have support for the tail call flag.
     // FS_PERMODULE: [valueid, flags, instcount, fflags, numrefs,
     //                numrefs x valueid, n x (valueid)]
     // FS_PERMODULE_PROFILE: [valueid, flags, instcount, fflags, numrefs,
     //                        numrefs x valueid,
-    //                        n x (valueid, hotness)]
+    //                        n x (valueid, hotness+tailcall flags)]
     // FS_PERMODULE_RELBF: [valueid, flags, instcount, fflags, numrefs,
     //                      numrefs x valueid,
-    //                      n x (valueid, relblockfreq)]
+    //                      n x (valueid, relblockfreq+tailcall)]
     case bitc::FS_PERMODULE:
     case bitc::FS_PERMODULE_RELBF:
     case bitc::FS_PERMODULE_PROFILE: {
@@ -7385,10 +7403,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.addGlobalValueSummary(std::get<0>(GUID), std::move(VS));
       break;
     }
+    // FS_COMBINED is legacy and does not have support for the tail call flag.
     // FS_COMBINED: [valueid, modid, flags, instcount, fflags, numrefs,
     //               numrefs x valueid, n x (valueid)]
     // FS_COMBINED_PROFILE: [valueid, modid, flags, instcount, fflags, numrefs,
-    //                       numrefs x valueid, n x (valueid, hotness)]
+    //                       numrefs x valueid,
+    //                       n x (valueid, hotness+tailcall flags)]
     case bitc::FS_COMBINED:
     case bitc::FS_COMBINED_PROFILE: {
       unsigned ValueID = Record[0];

@@ -3216,6 +3216,10 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
         Out << ", hotness: " << getHotnessName(Call.second.getHotness());
       else if (Call.second.RelBlockFreq)
         Out << ", relbf: " << Call.second.RelBlockFreq;
+      // Follow the convention of emitting flags as a boolean value, but only
+      // emit if true to avoid unnecessary verbosity and test churn.
+      if (Call.second.HasTailCall)
+        Out << ", tail: 1";
       Out << ")";
     }
     Out << ")";
