@@ -17,8 +17,8 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVSubtarget.h"
 #include "RISCVISelDAGToDAG.h"
+#include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
