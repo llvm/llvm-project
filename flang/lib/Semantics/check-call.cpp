@@ -529,17 +529,18 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               dummyName);
         }
         if (actualIsArrayElement && actualLastSymbol &&
-            IsPointer(*actualLastSymbol)) {
-          basicError = true;
-          messages.Say(
-              "Element of pointer array may not be associated with a %s array"_err_en_US,
-              dummyName);
-        }
-        if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
-          basicError = true;
-          messages.Say(
-              "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
-              dummyName);
+            !evaluate::IsContiguous(*actualLastSymbol, foldingContext)) {
+          if (IsPointer(*actualLastSymbol)) {
+            basicError = true;
+            messages.Say(
+                "Element of pointer array may not be associated with a %s array"_err_en_US,
+                dummyName);
+          } else if (IsAssumedShape(*actualLastSymbol)) {
+            basicError = true;
+            messages.Say(
+                "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
+                dummyName);
+          }
         }
       }
     }

@@ -3531,7 +3531,8 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
     Symbol &ultimate{symbol->GetUltimate()};
     if (ultimate.has<ObjectEntityDetails>() ||
         ultimate.has<AssocEntityDetails>() ||
-        CouldBeDataPointerValuedFunction(&ultimate)) {
+        CouldBeDataPointerValuedFunction(&ultimate) ||
+        (&symbol->owner() == &currScope() && IsFunctionResult(*symbol))) {
       misparsedStmtFuncFound_ = true;
       return false;
     }
@@ -7731,7 +7732,6 @@ void ResolveNamesVisitor::HandleProcedureName(
   } else if (CheckUseError(name)) {
     // error was reported
   } else {
-    auto &nonUltimateSymbol{*symbol};
     symbol = &Resolve(name, symbol)->GetUltimate();
     CheckEntryDummyUse(name.source, symbol);
     bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
@@ -7756,9 +7756,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       // is created for the current scope.
       // Operate on non ultimate symbol so that HostAssocDetails are also
       // created for symbols used associated in the host procedure.
-      if (IsUplevelReference(nonUltimateSymbol)) {
-        MakeHostAssocSymbol(name, nonUltimateSymbol);
-      }
+      ResolveName(name);
     } else if (symbol->test(Symbol::Flag::Implicit)) {
       Say(name,
           "Use of '%s' as a procedure conflicts with its implicit definition"_err_en_US);
