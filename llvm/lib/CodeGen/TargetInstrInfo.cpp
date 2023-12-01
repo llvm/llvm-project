@@ -567,11 +567,8 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
 
 static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
                                     const TargetInstrInfo &TII) {
-  MachineOperand &MO = MI->getOperand(OpNo);
-  const VirtRegInfo &RI = AnalyzeVirtRegInBundle(*MI, MO.getReg());
-
   // If the machine operand is tied, untie it first.
-  if (MO.isTied()) {
+  if (MI->getOperand(OpNo).isTied()) {
     unsigned TiedTo = MI->findTiedOperandIdx(OpNo);
     MI->untieRegOperand(OpNo);
     // Intentional recursion!
@@ -591,24 +588,6 @@ static void foldInlineAsmMemOperand(MachineInstr *MI, unsigned OpNo, int FI,
   F.setMemConstraint(InlineAsm::ConstraintCode::m);
   MachineOperand &MD = MI->getOperand(OpNo - 1);
   MD.setImm(F);
-
-  // Update mayload/maystore metadata, and memoperands.
-  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
-  MachineOperand &ExtraMO = MI->getOperand(InlineAsm::MIOp_ExtraInfo);
-  if (RI.Reads) {
-    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
-    Flags |= MachineMemOperand::MOLoad;
-  }
-  if (RI.Writes) {
-    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
-    Flags |= MachineMemOperand::MOStore;
-  }
-  MachineFunction *MF = MI->getMF();
-  const MachineFrameInfo &MFI = MF->getFrameInfo();
-  MachineMemOperand *MMO = MF->getMachineMemOperand(
-      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
-      MFI.getObjectAlign(FI));
-  MI->addMemOperand(*MF, MMO);
 }
 
 // Returns nullptr if not possible to fold.
@@ -628,6 +607,25 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
   MachineInstr &NewMI = TII.duplicate(*MI.getParent(), MI.getIterator(), MI);
 
   foldInlineAsmMemOperand(&NewMI, Op, FI, TII);
+
+  // Update mayload/maystore metadata, and memoperands.
+  const VirtRegInfo &RI = AnalyzeVirtRegInBundle(MI, MI.getOperand(Op).getReg());
+  MachineOperand &ExtraMO = NewMI.getOperand(InlineAsm::MIOp_ExtraInfo);
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  if (RI.Reads) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayLoad);
+    Flags |= MachineMemOperand::MOLoad;
+  }
+  if (RI.Writes) {
+    ExtraMO.setImm(ExtraMO.getImm() | InlineAsm::Extra_MayStore);
+    Flags |= MachineMemOperand::MOStore;
+  }
+  MachineFunction *MF = NewMI.getMF();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  MachineMemOperand *MMO = MF->getMachineMemOperand(
+      MachinePointerInfo::getFixedStack(*MF, FI), Flags, MFI.getObjectSize(FI),
+      MFI.getObjectAlign(FI));
+  NewMI.addMemOperand(*MF, MMO);
 
   return &NewMI;
 }
