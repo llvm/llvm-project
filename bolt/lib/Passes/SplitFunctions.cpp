@@ -203,13 +203,6 @@ private:
   DenseMap<const BinaryBasicBlock *, size_t> BBOffsets;
   DenseMap<const BinaryBasicBlock *, JumpInfo> JumpInfos;
 
-  // Sizes of branch instructions used to approximate block size increase
-  // due to hot-warm splitting. Initialized to be 0. These values are updated
-  // if the architecture is X86.
-  uint8_t BranchSize = 0;
-  uint8_t LongUncondBranchSizeDelta = 0;
-  uint8_t LongCondBranchSizeDelta = 0;
-
   // Call graph.
   std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
   std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callees;
@@ -221,18 +214,6 @@ private:
   }
 
   void initializeAuxiliaryVariables() {
-    // In X86, long branch instructions take more bytes than short branches.
-    // Adjust sizes of branch instructions used to approximate block size
-    // increase due to hot-warm splitting.
-    if (BC.isX86()) {
-      // a short branch takes 2 bytes.
-      BranchSize = 2;
-      // a long unconditional branch takes BranchSize + 3 bytes.
-      LongUncondBranchSizeDelta = 3;
-      // a long conditional branch takes BranchSize + 4 bytes.
-      LongCondBranchSizeDelta = 4;
-    }
-
     // Gather information about conditional and unconditional successors of
     // each basic block; this information will be used to estimate block size
     // increase due to hot-warm splitting.
@@ -285,7 +266,7 @@ private:
   void buildCallGraph() {
     Callers.resize(TotalNumBlocks);
     Callees.resize(TotalNumBlocks);
-    for (BinaryFunction *SrcFunction : BC.getSortedFunctions()) {
+    for (const BinaryFunction *SrcFunction : BC.getSortedFunctions()) {
       if (!shouldConsiderForCallGraph(*SrcFunction))
         continue;
 
@@ -335,25 +316,19 @@ private:
   estimatePostSplitBBAddress(const BasicBlockOrder &BlockOrder,
                              const size_t SplitIndex) {
     assert(SplitIndex < BlockOrder.size() && "Invalid split index");
-    // Helper function estimating if a branch needs a longer branch instruction.
-    // The function returns true if the following two conditions are satisfied:
-    // condition 1. One of SrcBB and DstBB is in hot, the other is in warm.
-    // condition 2. The pre-split branch distance is within 8 bits.
-    auto needNewLongBranch = [&](const BinaryBasicBlock *SrcBB,
-                                 const BinaryBasicBlock *DstBB) {
-      if (!SrcBB || !DstBB)
-        return false;
-      // The following checks for condition 1.
-      if (SrcBB->isSplit() || DstBB->isSplit())
-        return false;
-      if ((SrcBB->getLayoutIndex() <= SplitIndex) ==
-          (DstBB->getLayoutIndex() <= SplitIndex))
-        return false;
-      // The following checks for condition 2.
-      return (AbsoluteDifference(BBOffsets[DstBB],
-                                 BBOffsets[SrcBB] + BBSizes[SrcBB]) <=
-              std::numeric_limits<int8_t>::max());
-    };
+
+    // Update function layout assuming hot-warm splitting at SplitIndex
+    for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
+      BinaryBasicBlock *BB = BlockOrder[Index];
+      if (BB->getFragmentNum() == FragmentNum::cold())
+        break;
+      BB->setFragmentNum(Index <= SplitIndex ? FragmentNum::main()
+                                             : FragmentNum::warm());
+    }
+    BinaryFunction *BF = BlockOrder[0]->getFunction();
+    BF->getLayout().update(BlockOrder);
+    // Populate BB.OutputAddressRange under the updated layout.
+    BC.calculateEmittedSize(*BF);
 
     // Populate BB.OutputAddressRange with estimated new start and end addresses
     // and compute the old end address of the hot section and the new end
@@ -363,21 +338,10 @@ private:
     size_t CurrentAddr = BBOffsets[BlockOrder[0]];
     for (BinaryBasicBlock *BB : BlockOrder) {
       // We only care about new addresses of blocks in hot/warm.
-      if (BB->isSplit())
+      if (BB->getFragmentNum() == FragmentNum::cold())
         break;
-      size_t NewSize = BBSizes[BB];
-      // Need to add a new branch instruction if a fall-through branch is split.
-      bool NeedNewUncondBranch =
-          (JumpInfos[BB].UncondSuccessor && !JumpInfos[BB].HasUncondBranch &&
-           BB->getLayoutIndex() == SplitIndex);
-
-      NewSize += BranchSize * NeedNewUncondBranch +
-                 LongUncondBranchSizeDelta *
-                     needNewLongBranch(BB, JumpInfos[BB].UncondSuccessor) +
-                 LongCondBranchSizeDelta *
-                     needNewLongBranch(BB, JumpInfos[BB].CondSuccessor);
       BB->setOutputStartAddress(CurrentAddr);
-      CurrentAddr += NewSize;
+      CurrentAddr += BB->getOutputSize();
       BB->setOutputEndAddress(CurrentAddr);
       if (BB->getLayoutIndex() == SplitIndex) {
         NewHotEndAddr = CurrentAddr;
@@ -387,7 +351,6 @@ private:
       }
       OldHotEndAddr = BBOffsets[BB] + BBSizes[BB];
     }
-
     return std::make_pair(OldHotEndAddr, NewHotEndAddr);
   }
 
@@ -403,9 +366,9 @@ private:
 
     const BinaryFunction *ThisBF = &BF;
     const BinaryBasicBlock *ThisBB = &(ThisBF->front());
-    size_t ThisGI = GlobalIndices[ThisBB];
+    const size_t ThisGI = GlobalIndices[ThisBB];
 
-    for (BinaryFunction *DstBF : BC.getSortedFunctions()) {
+    for (const BinaryFunction *DstBF : BC.getSortedFunctions()) {
       if (!shouldConsiderForCallGraph(*DstBF))
         continue;
 
@@ -413,7 +376,7 @@ private:
       if (DstBB->getKnownExecutionCount() == 0)
         continue;
 
-      size_t DstGI = GlobalIndices[DstBB];
+      const size_t DstGI = GlobalIndices[DstBB];
       for (const BinaryBasicBlock *SrcBB : Callers[DstGI]) {
         const BinaryFunction *SrcBF = SrcBB->getFunction();
         if (ThisBF == SrcBF)
@@ -421,17 +384,18 @@ private:
 
         const size_t CallCount = SrcBB->getKnownExecutionCount();
 
-        size_t SrcGI = GlobalIndices[SrcBB];
+        const size_t SrcGI = GlobalIndices[SrcBB];
 
-        bool IsCoverCall = (SrcGI < ThisGI && ThisGI < DstGI) ||
-                           (DstGI <= ThisGI && ThisGI < SrcGI);
+        const bool IsCoverCall = (SrcGI < ThisGI && ThisGI < DstGI) ||
+                                 (DstGI <= ThisGI && ThisGI < SrcGI);
         if (!IsCoverCall)
           continue;
 
-        size_t SrcBBEndAddr = BBOffsets[SrcBB] + BBSizes[SrcBB];
-        size_t DstBBStartAddr = BBOffsets[DstBB];
-        size_t CallLength = AbsoluteDifference(SrcBBEndAddr, DstBBStartAddr);
-        CallInfo CI{CallLength, CallCount};
+        const size_t SrcBBEndAddr = BBOffsets[SrcBB] + BBSizes[SrcBB];
+        const size_t DstBBStartAddr = BBOffsets[DstBB];
+        const size_t CallLength =
+            AbsoluteDifference(SrcBBEndAddr, DstBBStartAddr);
+        const CallInfo CI{CallLength, CallCount};
         CoverCalls.emplace_back(CI);
       }
     }
