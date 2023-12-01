@@ -1123,6 +1123,15 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 1);
   }
 
+  if (CodeGenOpts.StackClashProtector)
+    getModule().addModuleFlag(
+        llvm::Module::Override, "probe-stack",
+        llvm::MDString::get(TheModule.getContext(), "inline-asm"));
+
+  if (CodeGenOpts.StackProbeSize && CodeGenOpts.StackProbeSize != 4096)
+    getModule().addModuleFlag(llvm::Module::Min, "stack-probe-size",
+                              CodeGenOpts.StackProbeSize);
+
   if (!CodeGenOpts.MemoryProfileOutput.empty()) {
     llvm::LLVMContext &Ctx = TheModule.getContext();
     getModule().addModuleFlag(
@@ -2341,6 +2350,10 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
   if (CodeGenOpts.StackClashProtector)
     B.addAttribute("probe-stack", "inline-asm");
+
+  if (CodeGenOpts.StackProbeSize && CodeGenOpts.StackProbeSize != 4096)
+    B.addAttribute("stack-probe-size",
+                   std::to_string(CodeGenOpts.StackProbeSize));
 
   if (!hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
