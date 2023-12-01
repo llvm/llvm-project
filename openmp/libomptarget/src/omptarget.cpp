@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "PluginManager.h"
@@ -281,17 +282,13 @@ static int initLibrary(DeviceTy &Device) {
 }
 
 void handleTargetOutcome(bool Success, ident_t *Loc) {
-  switch (PM->TargetOffloadPolicy) {
-  case tgt_disabled:
+  switch (OffloadPolicy::get(*PM).Kind) {
+  case OffloadPolicy::DISABLED:
     if (Success) {
       FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
     }
     break;
-  case tgt_default:
-    FATAL_MESSAGE0(1, "default offloading policy must be switched to "
-                      "mandatory or disabled");
-    break;
-  case tgt_mandatory:
+  case OffloadPolicy::MANDATORY:
     if (!Success) {
       if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
         for (auto &Device : PM->Devices)
@@ -329,27 +326,6 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
   }
 }
 
-static void handleDefaultTargetOffload() {
-  std::lock_guard<decltype(PM->TargetOffloadMtx)> LG(PM->TargetOffloadMtx);
-  if (PM->TargetOffloadPolicy == tgt_default) {
-    if (omp_get_num_devices() > 0) {
-      DP("Default TARGET OFFLOAD policy is now mandatory "
-         "(devices were found)\n");
-      PM->TargetOffloadPolicy = tgt_mandatory;
-    } else {
-      DP("Default TARGET OFFLOAD policy is now disabled "
-         "(no devices were found)\n");
-      PM->TargetOffloadPolicy = tgt_disabled;
-    }
-  }
-}
-
-static bool isOffloadDisabled() {
-  if (PM->TargetOffloadPolicy == tgt_default)
-    handleDefaultTargetOffload();
-  return PM->TargetOffloadPolicy == tgt_disabled;
-}
-
 // If offload is enabled, ensure that device DeviceID has been initialized,
 // global ctors have been executed, and global data has been mapped.
 //
@@ -363,7 +339,7 @@ static bool isOffloadDisabled() {
 // If DeviceID == OFFLOAD_DEVICE_DEFAULT, set DeviceID to the default device.
 // This step might be skipped if offload is disabled.
 bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
-  if (isOffloadDisabled()) {
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED) {
     DP("Offload is disabled\n");
     return true;
   }
