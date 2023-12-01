@@ -283,7 +283,7 @@ TEST(LlvmLibcStrToFloatTest, SimpleDecimalConversionExtraTypes) {
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat64AsLongDouble) {
   eisel_lemire_test<long double>(123, 0, 0x1EC00000000000, 1029);
 }
-#elif defined(SPECIAL_X86_LONG_DOUBLE)
+#elif defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
 TEST_F(LlvmLibcStrToFloatTest, EiselLemireFloat80Simple) {
   eisel_lemire_test<long double>(123, 0, 0xf600000000000000, 16389);
   eisel_lemire_test<long double>(12345678901234568192u, 0, 0xab54a98ceb1f0c00,
