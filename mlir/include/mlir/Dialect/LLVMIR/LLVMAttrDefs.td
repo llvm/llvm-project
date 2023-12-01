@@ -975,7 +975,7 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     bool contains(::llvm::StringRef feature) const;
 
     bool nullOrEmpty() const {
-      // Checks if this attribute is fasly, or the features are empty.
+      // Checks if this attribute is null, or the features are empty.
       return !bool(*this) || getFeatures().empty();
     }
 
@@ -983,11 +983,12 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     std::string getFeaturesString() const;
 
     /// Finds the target features on the parent FunctionOpInterface.
-    /// Note: This assumes the attribute is called "target_features".
+    /// Note: This assumes the attribute name matches the return value of
+    /// `getAttributeName()`.
     static TargetFeaturesAttr featuresAt(Operation* op);
 
     /// Canonical name for this attribute within MLIR.
-    static constexpr StringLiteral attributeName() {
+    static constexpr StringLiteral getAttributeName() {
       return StringLiteral("target_features");
     }
   }];

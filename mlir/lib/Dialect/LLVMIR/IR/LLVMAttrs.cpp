@@ -246,5 +246,5 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   if (!parentFunction)
     return {};
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
-      attributeName());
+      getAttributeName());
 }
