@@ -79,7 +79,7 @@ constexpr bool test() {
   test_iteration<std::extents<unsigned, D>>(std::array<int, 1>{3}, 7);
   test_iteration<std::extents<unsigned, 7>>(std::array<int, 1>{4});
   test_iteration<std::extents<unsigned, 7, 8>>(std::array<int, 2>{25, 3});
-  test_iteration<std::extents<char, D, D, D, D>>(std::array<int, 4>{1, 1, 1, 1}, 1, 1, 1, 1);
+  test_iteration<std::extents<signed char, D, D, D, D>>(std::array<int, 4>{1, 1, 1, 1}, 1, 1, 1, 1);
 
   // Check operator constraint for number of arguments
   static_assert(check_operator_constraints(

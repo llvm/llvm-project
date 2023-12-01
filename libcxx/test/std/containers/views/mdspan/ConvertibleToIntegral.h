@@ -17,7 +17,7 @@ struct IntType {
   constexpr bool operator==(const IntType& rhs) const { return val == rhs.val; }
   constexpr operator int() const noexcept { return val; }
   constexpr operator unsigned char() const { return val; }
-  constexpr operator char() const noexcept { return val; }
+  constexpr operator signed char() const noexcept { return val; }
 };
 
 // only non-const convertible
