@@ -112,7 +112,6 @@ def run_cmd(cmd, out_f, cfg):
 def run_bolt(bolt_path, bolt_args, out_f, cfg):
     p2b = os.path.basename(sys.argv[0]) == "perf2bolt"  # perf2bolt mode
     bd = os.path.basename(sys.argv[0]) == "llvm-boltdiff"  # boltdiff mode
-    hm = sys.argv[1] == "heatmap"  # heatmap mode
     cmd = ["/usr/bin/time", "-f", "%e %M", bolt_path] + bolt_args
     if p2b:
         # -ignore-build-id can occur at most once, hence remove it from cmd
@@ -121,7 +120,7 @@ def run_bolt(bolt_path, bolt_args, out_f, cfg):
         cmd += PERF2BOLT_MODE
     elif bd:
         cmd += BOLTDIFF_MODE
-    elif not cfg.NO_MINIMIZE and not hm:
+    elif not cfg.NO_MINIMIZE:
         cmd += MINIMIZE_DIFFS
     return run_cmd(cmd, out_f, cfg)
 
