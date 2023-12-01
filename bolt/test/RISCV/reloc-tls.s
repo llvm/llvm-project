@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple riscv64 -filetype obj -o %t.o %s
 // RUN: ld.lld --emit-relocs -o %t %t.o
-// RUN: llvm-bolt --print-cfg --print-only=tls_le,tls_ie -o /dev/null %t \
+// RUN: llvm-bolt --print-cfg --print-only=tls_le,tls_ie -o %t.null %t \
 // RUN:    | FileCheck %s
 
 // CHECK-LABEL: Binary Function "tls_le{{.*}}" after building cfg {

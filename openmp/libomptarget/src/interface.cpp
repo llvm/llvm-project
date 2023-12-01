@@ -11,14 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OmptCallback.h"
-#include "OmptInterface.h"
+#include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/EnvironmentVar.h"
+#include "Shared/Profile.h"
+
+#include "Utils/ExponentialBackoff.h"
 
 #include <cassert>
 #include <cstdint>
@@ -42,35 +46,21 @@ EXTERN void __tgt_register_requires(int64_t Flags) {
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
   TIMESCOPE();
-  if (PM->maybeDelayRegisterLib(Desc))
+  if (PM->delayRegisterLib(Desc))
     return;
 
-  for (auto &RTL : PM->RTLs.AllRTLs) {
-    if (RTL.register_lib) {
-      if ((*RTL.register_lib)(Desc) != OFFLOAD_SUCCESS) {
-        DP("Could not register library with %s", RTL.RTLName.c_str());
-      }
-    }
-  }
   PM->RTLs.registerLib(Desc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize all available devices without registering any image
-EXTERN void __tgt_init_all_rtls() { PM->RTLs.initAllRTLs(); }
+EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
   TIMESCOPE();
   PM->RTLs.unregisterLib(Desc);
-  for (auto &RTL : PM->RTLs.UsedRTLs) {
-    if (RTL->unregister_lib) {
-      if ((*RTL->unregister_lib)(Desc) != OFFLOAD_SUCCESS) {
-        DP("Could not register library with %s", RTL->RTLName.c_str());
-      }
-    }
-  }
 }
 
 template <typename TargetAsyncInfoTy>
@@ -333,9 +323,8 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   if (KernelArgs->Flags.NoWait)
     return targetKernel<TaskAsyncInfoWrapperTy>(
         Loc, DeviceId, NumTeams, ThreadLimit, HostPtr, KernelArgs);
-  else
-    return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
-                                     HostPtr, KernelArgs);
+  return targetKernel<AsyncInfoTy>(Loc, DeviceId, NumTeams, ThreadLimit,
+                                   HostPtr, KernelArgs);
 }
 
 /// Activates the record replay mechanism.
@@ -437,7 +426,7 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->RTLs.AllRTLs) {
+  for (auto &R : PM->pluginAdaptors()) {
     if (R.set_info_flag)
       R.set_info_flag(NewInfoLevel);
   }
@@ -465,8 +454,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // for the device operations (work/spin wait on them) or block until they are
   // completed (use device side blocking mechanism). This allows the runtime to
   // adapt itself when there are a lot of long-running target regions in-flight.
-  using namespace llvm::omp::target;
-  static thread_local ExponentialBackoff QueryCounter(
+  static thread_local utils::ExponentialBackoff QueryCounter(
       Int64Envar("OMPTARGET_QUERY_COUNT_MAX", 10),
       Int64Envar("OMPTARGET_QUERY_COUNT_THRESHOLD", 5),
       Envar<float>("OMPTARGET_QUERY_COUNT_BACKOFF_FACTOR", 0.5f));

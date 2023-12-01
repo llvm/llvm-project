@@ -294,13 +294,15 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MachineInstr &DefMI, unsigned DefIdx,
-                        const MachineInstr &UseMI,
-                        unsigned UseIdx) const override;
-  int getOperandLatency(const InstrItineraryData *ItinData,
-                        SDNode *DefNode, unsigned DefIdx,
-                        SDNode *UseNode, unsigned UseIdx) const override {
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            const MachineInstr &DefMI,
+                                            unsigned DefIdx,
+                                            const MachineInstr &UseMI,
+                                            unsigned UseIdx) const override;
+  std::optional<unsigned> getOperandLatency(const InstrItineraryData *ItinData,
+                                            SDNode *DefNode, unsigned DefIdx,
+                                            SDNode *UseNode,
+                                            unsigned UseIdx) const override {
     return PPCGenInstrInfo::getOperandLatency(ItinData, DefNode, DefIdx,
                                               UseNode, UseIdx);
   }
@@ -531,7 +533,8 @@ public:
   /// adjacent.
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            ArrayRef<const MachineOperand *> BaseOps2,
-                           unsigned NumLoads, unsigned NumBytes) const override;
+                           unsigned ClusterSize,
+                           unsigned NumBytes) const override;
 
   /// Return true if two MIs access different memory addresses and false
   /// otherwise

@@ -3544,6 +3544,10 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_ldr_zt : SME_LDR_STR_ZT_Intrinsic;
   def int_aarch64_sme_str_zt : SME_LDR_STR_ZT_Intrinsic;
 
+  //
+  //  Zero ZT0
+  //
+  def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrWriteMem]>;
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2

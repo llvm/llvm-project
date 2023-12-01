@@ -3148,6 +3148,9 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def warn_attribute_arm_sm_incompat_builtin : Warning<
+  "builtin call has undefined behaviour when called from a %0 function">,
+  InGroup<DiagGroup<"undefined-arm-streaming">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -6759,7 +6762,7 @@ def warn_floatingpoint_eq : Warning<
 
 def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "
-  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'}1">;
+  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'|'#pragma clang fp reciprocal'}1">;
 
 def warn_remainder_division_by_zero : Warning<
   "%select{remainder|division}0 by zero is undefined">,
@@ -7220,6 +7223,11 @@ def warn_arith_conv_enum_float_cxx20 : Warning<
   "%plural{2:with|4:from|:and}0 "
   "%select{enumeration|floating-point}1 type %3 is deprecated">,
   InGroup<DeprecatedEnumFloatConversion>;
+def err_arith_conv_enum_float_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "%select{floating-point|enumeration}1 type %2 "
+  "%plural{2:with|4:from|:and}0 "
+  "%select{enumeration|floating-point}1 type %3">;
 def warn_arith_conv_mixed_enum_types : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">,
@@ -7228,6 +7236,10 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
+def err_conv_mixed_enum_types_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "different enumeration types%diff{ ($ and $)|}1,2">;
+
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
   InGroup<AnonEnumEnumConversion>, DefaultIgnore;
@@ -12004,6 +12016,7 @@ def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numt
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
+def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
@@ -12018,6 +12031,9 @@ def err_hlsl_pointers_unsupported : Error<
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
+
+def err_hlsl_param_qualifier_mismatch :
+  Error<"conflicting parameter qualifier %0 on parameter %1">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

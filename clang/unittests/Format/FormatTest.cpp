@@ -6361,6 +6361,13 @@ TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
                "  int   quux      = 4;\n"
                "}",
                Style);
+  verifyFormat("auto foo = [] { return; };\n"
+               "#if FOO\n"
+               "#else\n"
+               "count = bar;\n"
+               "mbid  = bid;\n"
+               "#endif",
+               Style);
 
   // Test with a mix of #if and #else blocks.
   verifyFormat("void f1() {\n"
@@ -26644,6 +26651,20 @@ TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
 }
 
+TEST_F(FormatTest, BreakAdjacentStringLiterals) {
+  constexpr StringRef Code{
+      "return \"Code\" \"\\0\\52\\26\\55\\55\\0\" \"x013\" \"\\02\\xBA\";"};
+
+  verifyFormat("return \"Code\"\n"
+               "       \"\\0\\52\\26\\55\\55\\0\"\n"
+               "       \"x013\"\n"
+               "       \"\\02\\xBA\";",
+               Code);
+
+  auto Style = getLLVMStyle();
+  Style.BreakAdjacentStringLiterals = false;
+  verifyFormat(Code, Style);
+}
 } // namespace
 } // namespace test
 } // namespace format

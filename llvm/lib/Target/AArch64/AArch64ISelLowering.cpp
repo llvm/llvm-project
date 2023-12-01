@@ -2753,6 +2753,22 @@ AArch64TargetLowering::EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const {
   return BB;
 }
 
+MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
+                                                      MachineBasicBlock *BB,
+                                                      unsigned Opcode,
+                                                      bool Op0IsDef) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineInstrBuilder MIB;
+
+  MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opcode))
+            .addReg(MI.getOperand(0).getReg(), Op0IsDef ? RegState::Define : 0);
+  for (unsigned I = 1; I < MI.getNumOperands(); ++I)
+    MIB.add(MI.getOperand(I));
+
+  MI.eraseFromParent(); // The pseudo is gone now.
+  return BB;
+}
+
 MachineBasicBlock *
 AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                    MachineInstr &MI,
@@ -2869,8 +2885,14 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitTileLoad(AArch64::LD1_MXIPXX_V_Q, AArch64::ZAQ0, MI, BB);
   case AArch64::LDR_ZA_PSEUDO:
     return EmitFill(MI, BB);
+  case AArch64::LDR_TX_PSEUDO:
+    return EmitZTInstr(MI, BB, AArch64::LDR_TX, /*Op0IsDef=*/true);
+  case AArch64::STR_TX_PSEUDO:
+    return EmitZTInstr(MI, BB, AArch64::STR_TX, /*Op0IsDef=*/false);
   case AArch64::ZERO_M_PSEUDO:
     return EmitZero(MI, BB);
+  case AArch64::ZERO_T_PSEUDO:
+    return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   }
 }
 
@@ -7374,6 +7396,22 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   KnownBits Bits = DAG.computeKnownBits(Arg, 4);
   bool ZExtBool = (Bits.Zero & RequredZero) == RequredZero;
   return ZExtBool;
+}
+
+void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                          SDNode *Node) const {
+  // Live-in physreg copies that are glued to SMSTART are applied as
+  // implicit-def's in the InstrEmitter. Here we remove them, allowing the
+  // register allocator to pass call args in callee saved regs, without extra
+  // copies to avoid these fake clobbers of actually-preserved GPRs.
+  if (MI.getOpcode() == AArch64::MSRpstatesvcrImm1 ||
+      MI.getOpcode() == AArch64::MSRpstatePseudo)
+    for (unsigned I = MI.getNumOperands() - 1; I > 0; --I)
+      if (MachineOperand &MO = MI.getOperand(I);
+          MO.isReg() && MO.isImplicit() && MO.isDef() &&
+          (AArch64::GPR32RegClass.contains(MO.getReg()) ||
+           AArch64::GPR64RegClass.contains(MO.getReg())))
+        MI.removeOperand(I);
 }
 
 SDValue AArch64TargetLowering::changeStreamingMode(
@@ -26718,4 +26756,106 @@ bool AArch64TargetLowering::preferScalarizeSplat(SDNode *N) const {
 
 unsigned AArch64TargetLowering::getMinimumJumpTableEntries() const {
   return Subtarget->getMinimumJumpTableEntries();
+}
+
+MVT AArch64TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                         CallingConv::ID CC,
+                                                         EVT VT) const {
+  bool NonUnitFixedLengthVector =
+      VT.isFixedLengthVector() && !VT.getVectorElementCount().isScalar();
+  if (!NonUnitFixedLengthVector || !Subtarget->useSVEForFixedLengthVectors())
+    return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+
+  EVT VT1;
+  MVT RegisterVT;
+  unsigned NumIntermediates;
+  getVectorTypeBreakdownForCallingConv(Context, CC, VT, VT1, NumIntermediates,
+                                       RegisterVT);
+  return RegisterVT;
+}
+
+unsigned AArch64TargetLowering::getNumRegistersForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
+  bool NonUnitFixedLengthVector =
+      VT.isFixedLengthVector() && !VT.getVectorElementCount().isScalar();
+  if (!NonUnitFixedLengthVector || !Subtarget->useSVEForFixedLengthVectors())
+    return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
+
+  EVT VT1;
+  MVT VT2;
+  unsigned NumIntermediates;
+  return getVectorTypeBreakdownForCallingConv(Context, CC, VT, VT1,
+                                              NumIntermediates, VT2);
+}
+
+unsigned AArch64TargetLowering::getVectorTypeBreakdownForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT) const {
+  int NumRegs = TargetLowering::getVectorTypeBreakdownForCallingConv(
+      Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
+  if (!RegisterVT.isFixedLengthVector() ||
+      RegisterVT.getFixedSizeInBits() <= 128)
+    return NumRegs;
+
+  assert(Subtarget->useSVEForFixedLengthVectors() && "Unexpected mode!");
+  assert(IntermediateVT == RegisterVT && "Unexpected VT mismatch!");
+  assert(RegisterVT.getFixedSizeInBits() % 128 == 0 && "Unexpected size!");
+
+  // A size mismatch here implies either type promotion or widening and would
+  // have resulted in scalarisation if larger vectors had not be available.
+  if (RegisterVT.getSizeInBits() * NumRegs != VT.getSizeInBits()) {
+    EVT EltTy = VT.getVectorElementType();
+    EVT NewVT = EVT::getVectorVT(Context, EltTy, ElementCount::getFixed(1));
+    if (!isTypeLegal(NewVT))
+      NewVT = EltTy;
+
+    IntermediateVT = NewVT;
+    NumIntermediates = VT.getVectorNumElements();
+    RegisterVT = getRegisterType(Context, NewVT);
+    return NumIntermediates;
+  }
+
+  // SVE VLS support does not introduce a new ABI so we should use NEON sized
+  // types for vector arguments and returns.
+
+  unsigned NumSubRegs = RegisterVT.getFixedSizeInBits() / 128;
+  NumIntermediates *= NumSubRegs;
+  NumRegs *= NumSubRegs;
+
+  switch (RegisterVT.getVectorElementType().SimpleTy) {
+  default:
+    llvm_unreachable("unexpected element type for vector");
+  case MVT::i8:
+    IntermediateVT = RegisterVT = MVT::v16i8;
+    break;
+  case MVT::i16:
+    IntermediateVT = RegisterVT = MVT::v8i16;
+    break;
+  case MVT::i32:
+    IntermediateVT = RegisterVT = MVT::v4i32;
+    break;
+  case MVT::i64:
+    IntermediateVT = RegisterVT = MVT::v2i64;
+    break;
+  case MVT::f16:
+    IntermediateVT = RegisterVT = MVT::v8f16;
+    break;
+  case MVT::f32:
+    IntermediateVT = RegisterVT = MVT::v4f32;
+    break;
+  case MVT::f64:
+    IntermediateVT = RegisterVT = MVT::v2f64;
+    break;
+  case MVT::bf16:
+    IntermediateVT = RegisterVT = MVT::v8bf16;
+    break;
+  }
+
+  return NumRegs;
+}
+
+bool AArch64TargetLowering::hasInlineStackProbe(
+    const MachineFunction &MF) const {
+  return !Subtarget->isTargetWindows() &&
+         MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
 }

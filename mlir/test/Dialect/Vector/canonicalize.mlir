@@ -67,6 +67,18 @@ func.func @create_mask_transpose_to_transposed_create_mask(
 
 // -----
 
+// CHECK-LABEL: transposed_unit_dim_shape_cast_to_shape_cast
+//  CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
+func.func @transposed_unit_dim_shape_cast_to_shape_cast(%vec: vector<[4]xf32>) -> vector<1x[4]xf32> {
+  //     CHECK: vector.shape_cast %[[VEC]] : vector<[4]xf32> to vector<1x[4]xf32>
+  // CHECK-NOT: vector.transpose
+  %0 = vector.shape_cast %vec : vector<[4]xf32> to vector<[4]x1xf32>
+  %1 = vector.transpose %0, [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
+  return %1 : vector<1x[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL: extract_from_create_mask
 //  CHECK-SAME: %[[DIM0:.*]]: index, %[[DIM1:.*]]: index
 func.func @extract_from_create_mask(%dim0: index, %dim1: index) -> vector<[4]x[4]xi1> {

@@ -1503,16 +1503,22 @@ static void checkEnumArithmeticConversions(Sema &S, Expr *LHS, Expr *RHS,
   bool IsCompAssign = ACK == Sema::ACK_CompAssign;
   if ((!IsCompAssign && LEnum && R->isFloatingType()) ||
       (REnum && L->isFloatingType())) {
-    S.Diag(Loc, S.getLangOpts().CPlusPlus20
+    S.Diag(Loc, S.getLangOpts().CPlusPlus26
+                    ? diag::err_arith_conv_enum_float_cxx26
+                : S.getLangOpts().CPlusPlus20
                     ? diag::warn_arith_conv_enum_float_cxx20
                     : diag::warn_arith_conv_enum_float)
-        << LHS->getSourceRange() << RHS->getSourceRange()
-        << (int)ACK << LEnum << L << R;
+        << LHS->getSourceRange() << RHS->getSourceRange() << (int)ACK << LEnum
+        << L << R;
   } else if (!IsCompAssign && LEnum && REnum &&
              !S.Context.hasSameUnqualifiedType(L, R)) {
     unsigned DiagID;
-    if (!L->castAs<EnumType>()->getDecl()->hasNameForLinkage() ||
-        !R->castAs<EnumType>()->getDecl()->hasNameForLinkage()) {
+    // In C++ 26, usual arithmetic conversions between 2 different enum types
+    // are ill-formed.
+    if (S.getLangOpts().CPlusPlus26)
+      DiagID = diag::err_conv_mixed_enum_types_cxx26;
+    else if (!L->castAs<EnumType>()->getDecl()->hasNameForLinkage() ||
+             !R->castAs<EnumType>()->getDecl()->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
@@ -19047,12 +19053,17 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
               CodeSynthesisContexts.size())
             PendingLocalImplicitInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
-          else if (Func->isConstexpr())
+          else if (Func->isConstexpr()) {
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
             InstantiateFunctionDefinition(PointOfInstantiation, Func);
-          else {
+            if (!Func->isDefined()) {
+              PendingInstantiationsOfConstexprEntities
+                  [Func->getTemplateInstantiationPattern()->getCanonicalDecl()]
+                      .push_back(Func);
+            }
+          } else {
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));

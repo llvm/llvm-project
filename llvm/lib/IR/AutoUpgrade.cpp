@@ -632,12 +632,12 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
         .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-        .Case("ftz_bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
+        .Case("ftz.bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
         .Case("ftz.bf16x2", Intrinsic::nvvm_fma_rn_ftz_bf16x2)
         .Case("ftz.relu.bf16", Intrinsic::nvvm_fma_rn_ftz_relu_bf16)
         .Case("ftz.relu.bf16x2", Intrinsic::nvvm_fma_rn_ftz_relu_bf16x2)
-        .Case("ftz_sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
-        .Case("ftz_sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
+        .Case("ftz.sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
+        .Case("ftz.sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
         .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
         .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
         .Case("sat.bf16", Intrinsic::nvvm_fma_rn_sat_bf16)
@@ -674,8 +674,8 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
         .Case("bf16x2", Intrinsic::nvvm_fmin_bf16x2)
         .Case("ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
         .Case("ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
-        .Case("ftz.nan_bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
-        .Case("ftz.nan_bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
+        .Case("ftz.nan.bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
+        .Case("ftz.nan.bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
         .Case("ftz.nan.xorsign.abs.bf16",
               Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
         .Case("ftz.nan.xorsign.abs.bf16x2",
@@ -949,11 +949,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
 
-      if (Name.starts_with("atomic.inc") || Name.starts_with("atomic.dec")) {
-        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
-        // new declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("atomic.")) {
+        if (Name.starts_with("inc") || Name.starts_with("dec")) {
+          // These were replaced with atomicrmw uinc_wrap and udec_wrap, so
+          // there's no new declaration.
+          NewFn = nullptr;
+          return true;
+        }
+        break; // No other 'amdgcn.atomic.*'
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -963,24 +966,26 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
           {F->getReturnType(), F->getArg(1)->getType()});
         return true;
       }
+      break; // No other 'amdgcn.*'
     }
 
     break;
   }
   case 'c': {
-    if (Name.starts_with("ctlz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
-                                        F->arg_begin()->getType());
-      return true;
+    if (F->arg_size() == 1) {
+      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
+                             .StartsWith("ctlz.", Intrinsic::ctlz)
+                             .StartsWith("cttz.", Intrinsic::cttz)
+                             .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID,
+                                          F->arg_begin()->getType());
+        return true;
+      }
     }
-    if (Name.starts_with("cttz.") && F->arg_size() == 1) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::cttz,
-                                        F->arg_begin()->getType());
-      return true;
-    }
-    if (Name.equals("coro.end") && F->arg_size() == 2) {
+
+    if (F->arg_size() == 2 && Name.equals("coro.end")) {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;

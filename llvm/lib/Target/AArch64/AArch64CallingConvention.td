@@ -333,7 +333,7 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
 // The only documentation is the GHC source code, specifically the C header
 // file:
 //
-//     https://github.com/ghc/ghc/blob/master/includes/stg/MachRegs.h
+//    https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs.h
 //
 // which defines the registers for the Spineless Tagless G-Machine (STG) that
 // GHC uses to implement lazy evaluation. The generic STG machine has a set of
@@ -344,8 +344,10 @@ def CC_AArch64_DarwinPCS_ILP32_VarArg : CallingConv<[
 //
 //    https://ghc.haskell.org/trac/ghc/wiki/Commentary/Compiler/GeneratedCode
 //
-// The AArch64 register mapping is under the heading "The ARMv8/AArch64 ABI
-// register mapping".
+// The AArch64 register mapping is defined in the following header file:
+//
+//    https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs/arm64.h
+//
 
 let Entry = 1 in
 def CC_AArch64_GHC : CallingConv<[

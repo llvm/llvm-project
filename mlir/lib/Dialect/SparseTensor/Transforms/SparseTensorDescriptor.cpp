@@ -42,7 +42,7 @@ convertSparseTensorType(RankedTensorType rtp, SmallVectorImpl<Type> &fields) {
       stt,
       [&fields](Type fieldType, FieldIndex fieldIdx,
                 SparseTensorFieldKind /*fieldKind*/, Level /*lvl*/,
-                DimLevelType /*lt*/) -> bool {
+                LevelType /*lt*/) -> bool {
         assert(fieldIdx == fields.size());
         fields.push_back(fieldType);
         return true;
@@ -103,7 +103,7 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
 
 Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
     OpBuilder &builder, Location loc, Level lvl) const {
-  const Level cooStart = getCOOStart(rType.getEncoding());
+  const Level cooStart = rType.getCOOStart();
   if (lvl < cooStart)
     return getMemRefField(SparseTensorFieldKind::CrdMemRef, lvl);
 

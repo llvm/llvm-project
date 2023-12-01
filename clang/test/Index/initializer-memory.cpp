@@ -13,4 +13,4 @@ struct S {
 S data2[1000000] = {0};
 S data_empty_init2[1000000] = {};
 
-// CHECK: TOTAL = {{.*}} (0.{{.*}} MBytes)
+// CHECK: TOTAL = {{.*}} ({{0|1}}.{{.*}} MBytes)

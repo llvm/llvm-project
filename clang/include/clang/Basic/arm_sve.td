@@ -2102,9 +2102,23 @@ let TargetGuard = "sme2" in {
 }
 
 let TargetGuard = "sme2" in {
+  def SVSCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "csil",     MergeNone, "aarch64_sve_sclamp_single_x2",  [IsStreaming], []>;
+  def SVUCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "UcUsUiUl", MergeNone, "aarch64_sve_uclamp_single_x2",  [IsStreaming], []>;
+  def SVFCLAMP_X2 : SInst<"svclamp[_single_{d}_x2]",  "22dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x2",  [IsStreaming], []>;
+
+  def SVSCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "csil",     MergeNone, "aarch64_sve_sclamp_single_x4",  [IsStreaming], []>;
+  def SVUCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "UcUsUiUl", MergeNone, "aarch64_sve_uclamp_single_x4",  [IsStreaming], []>;
+  def SVFCLAMP_X4 : SInst<"svclamp[_single_{d}_x4]",  "44dd",   "hfd",      MergeNone, "aarch64_sve_fclamp_single_x4",  [IsStreaming], []>;
+}
+
+let TargetGuard = "sme2" in {
 // == ADD (vectors) ==
   def SVADD_SINGLE_X2 : SInst<"svadd[_single_{d}_x2]", "22d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x2", [IsStreaming], []>;
   def SVADD_SINGLE_X4 : SInst<"svadd[_single_{d}_x4]", "44d", "cUcsUsiUilUl", MergeNone, "aarch64_sve_add_single_x4", [IsStreaming], []>;
+
+  // 2-way and 4-way selects
+  def SVSEL_X2  : SInst<"svsel[_{d}_x2]", "2}22", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x2", [IsStreaming], []>;
+  def SVSEL_X4  : SInst<"svsel[_{d}_x4]", "4}44", "cUcsUsiUilUlbhfd", MergeNone, "aarch64_sve_sel_x4", [IsStreaming], []>;
 }
 
 let TargetGuard = "sve2p1" in {

@@ -400,6 +400,28 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   let assemblyFormat = "attr-dict";
 }
 
+def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
+def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
+def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
+  [SetMaxRegisterActionDecrease, SetMaxRegisterActionIncrease]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
+
+def NVVM_SetMaxRegisterOp : NVVM_PTXBuilder_Op<"setmaxregister"> {
+  let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
+  let assemblyFormat = "$action $regCount attr-dict";
+  let extraClassDefinition = [{        
+    std::string $cppClass::getPtx() {
+      if(getAction() == NVVM::SetMaxRegisterAction::increase)
+        return std::string("setmaxnreg.inc.sync.aligned.u32 %0;");
+      return std::string("setmaxnreg.dec.sync.aligned.u32 %0;");
+    }
+  }];
+  let hasVerifier = 1;
+}
+
 def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
 def ShflKindUp   : I32EnumAttrCase<"up", 1>;
 def ShflKindDown : I32EnumAttrCase<"down", 2>;
@@ -1397,6 +1419,15 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 //===----------------------------------------------------------------------===//
 // NVVM TMA Ops
 //===----------------------------------------------------------------------===//
+
+def NVVM_CpAsyncBulkCommitGroupOp : NVVM_PTXBuilder_Op<"cp.async.bulk.commit.group">,
+  Arguments<(ins )> {
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("cp.async.bulk.commit_group;"); }
+  }];
+}
+
 
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 

@@ -24,6 +24,12 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+static cl::opt<bool>
+    VerifyKnownBits("instcombine-verify-known-bits",
+                    cl::desc("Verify that computeKnownBits() and "
+                             "SimplifyDemandedBits() are consistent"),
+                    cl::Hidden, cl::init(false));
+
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
 /// constant that are not demanded. If so, shrink the constant and return true.
@@ -107,8 +113,8 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
 /// expression.
 /// Known.One and Known.Zero always follow the invariant that:
 ///   Known.One & Known.Zero == 0.
-/// That is, a bit can't be both 1 and 0. Note that the bits in Known.One and
-/// Known.Zero may only be accurate for those bits set in DemandedMask. Note
+/// That is, a bit can't be both 1 and 0. The bits in Known.One and Known.Zero
+/// are accurate even for bits not in DemandedMask. Note
 /// also that the bitwidth of V, DemandedMask, Known.Zero and Known.One must all
 /// be the same.
 ///
@@ -207,7 +213,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
-                                         Depth, DL, &AC, CxtI, &DT);
+                                         Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -240,7 +246,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
-                                         Depth, DL, &AC, CxtI, &DT);
+                                         Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -279,7 +285,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     assert(!LHSKnown.hasConflict() && "Bits known to be one AND zero?");
 
     Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
-                                         Depth, DL, &AC, CxtI, &DT);
+                                         Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1022,12 +1028,29 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   }
   }
 
+  if (V->getType()->isPointerTy()) {
+    Align Alignment = V->getPointerAlignment(DL);
+    Known.Zero.setLowBits(Log2(Alignment));
+  }
+
   // If the client is only demanding bits that we know, return the known
   // constant. We can't directly simplify pointers as a constant because of
   // pointer provenance.
   // TODO: We could return `(inttoptr const)` for pointers.
   if (!V->getType()->isPointerTy() && DemandedMask.isSubsetOf(Known.Zero | Known.One))
     return Constant::getIntegerValue(VTy, Known.One);
+
+  if (VerifyKnownBits) {
+    KnownBits ReferenceKnown = computeKnownBits(V, Depth, CxtI);
+    if (Known != ReferenceKnown) {
+      errs() << "Mismatched known bits for " << *V << " in "
+             << I->getFunction()->getName() << "\n";
+      errs() << "computeKnownBits(): " << ReferenceKnown << "\n";
+      errs() << "SimplifyDemandedBits(): " << Known << "\n";
+      std::abort();
+    }
+  }
+
   return nullptr;
 }
 
@@ -1051,8 +1074,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   case Instruction::And: {
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = LHSKnown & RHSKnown;
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
+                                         Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1071,8 +1095,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   case Instruction::Or: {
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = LHSKnown | RHSKnown;
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
+                                         Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1093,8 +1118,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
   case Instruction::Xor: {
     computeKnownBits(I->getOperand(1), RHSKnown, Depth + 1, CxtI);
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = LHSKnown ^ RHSKnown;
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    Known = analyzeKnownBitsFromAndXorOr(cast<Operator>(I), LHSKnown, RHSKnown,
+                                         Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
 
     // If the client is only demanding bits that we know, return the known
     // constant.
@@ -1127,7 +1153,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     Known = KnownBits::computeForAddSub(/*Add*/ true, NSW, LHSKnown, RHSKnown);
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::Sub: {
@@ -1143,7 +1169,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
     Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
-    computeKnownBitsFromAssume(I, Known, Depth, SQ.getWithInstruction(CxtI));
+    computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
   case Instruction::AShr: {
