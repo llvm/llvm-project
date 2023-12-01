@@ -1058,9 +1058,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     SourceLocation StartLoc = ConsumeAnnotationToken();
     ASTContext &Context = Actions.getASTContext();
     auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
-      uint64_t ArraySizeRawVal[] = {Str.size()};
-      llvm::APSInt ArraySize(llvm::APInt(
-          Context.getTypeSize(Context.getSizeType()), 1, ArraySizeRawVal));
+      llvm::APSInt ArraySize =
+          Context.MakeIntValue(Str.size(), Context.getSizeType());
       QualType ArrayTy = Context.getConstantArrayType(
           Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
       return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
