@@ -32,7 +32,6 @@ private:
         << Err.getMessage() << "\n";
     // Reset the VFInfo
     Info = VFInfo();
-    ScalarFuncParametersNum = 0;
   }
 
   // Data needed to load the optional IR passed to invokeParser
@@ -47,37 +46,29 @@ protected:
   ElementCount &VF = Info.Shape.VF;
   VFISAKind &ISA = Info.ISA;
   SmallVector<VFParameter, 8> &VecFuncParameters = Info.Shape.Parameters;
-  size_t ScalarFuncParametersNum = 0;
   std::string &ScalarName = Info.ScalarName;
   std::string &VectorName = Info.VectorName;
-  // Invoke the parser. We need to make sure that a function exist in
-  // the module because the parser fails if such function don't
-  // exists. Every time this method is invoked the state of the test
-  // is reset.
-  //
-  // \p MangledName -> the string the parser has to demangle.
-  //
-  // \p VectorName -> optional vector name that the method needs to
-  // use to create the function in the module if it differs from the
-  // standard mangled name.
-  //
-  // \p STy -> FunctionType string to be used for the signature of
-  // the vector function.  The correct signature is needed by the
-  // parser only for scalable functions. For the sake of testing, the
-  // generic fixed-length case can use as signature `void()`.
-  //
+
+  /// Invoke the parser. We need to make sure that a function exist in the
+  /// module because the parser fails if such function don't exists. Every time
+  /// this method is invoked the state of the test is reset.
+  ///
+  /// \p MangledName string the parser has to demangle.
+  ///
+  /// \p ScalarFTyStr FunctionType string to be used to get the signature of
+  /// the Scalar function. Used by `tryDemangleForVFABI` to check for the number
+  // of arguments on Scalable vectors, and by `matchScalarParamNum` to perform
+  /// some additional checking in the tests in this file.
   bool invokeParser(const StringRef MangledName,
-                    const StringRef SFunTy = "void()") {
+                    const StringRef ScalarFTyStr = "void()") {
     // Reset the VFInfo and the Module to be able to invoke `invokeParser`
     // multiple times in the same test.
-    reset(SFunTy);
+    reset(ScalarFTyStr);
 
     // Fake the arguments to the CallInst.
     const auto OptInfo = VFABI::tryDemangleForVFABI(MangledName, ScalarFTy);
     if (OptInfo) {
       Info = *OptInfo;
-      ScalarFuncParametersNum =
-          Info.Shape.getScalarShape(ScalarFTy).Parameters.size();
       return true;
     }
     return false;
@@ -95,10 +86,12 @@ protected:
                                     VFParamKind::GlobalPredicate;
   }
 
-  // Checks that the number of vectorized parameters matches the scalar ones.
-  // Takes into account that vectorized calls may also have a Mask.
+  // Checks that the number of vectorized parameters matches the
+  // scalar ones. This requires a correct scalar FunctionType string to be fed
+  // to the 'invokeParser'. It takes into account that vectorized calls may also
+  // have a Mask.
   bool matchScalarParamNum() {
-    return (VecFuncParameters.size() - isMasked()) == ScalarFuncParametersNum;
+    return (VecFuncParameters.size() - isMasked()) == ScalarFTy->getNumParams();
   }
 };
 } // unnamed namespace
