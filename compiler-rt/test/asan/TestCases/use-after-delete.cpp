@@ -16,21 +16,20 @@ int main() {
   // CHECK: {{0x.* is located 5 bytes inside of 10-byte region .0x.*,0x.*}}
 
   // CHECK: {{freed by thread T0 here:}}
-  // CHECK-Linux:  {{    #0 0x.* in operator delete\[\]}}
-  // CHECK-SunOS:  {{    #0 0x.* in operator delete\[\]}}
-  // CHECK-Windows:{{    #0 0x.* in operator delete\[\]}}
-  // CHECK-FreeBSD:{{    #0 0x.* in operator delete\[\]}}
-  // CHECK-Darwin: {{    #0 0x.* in .*_Zda}}
-  // CHECK-NEXT:   {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-14]]
+  // CHECK-Linux: #[[#DEL:]] {{0x.* in operator delete\[\]}}
+  // CHECK-SunOS: #[[#DEL:]] {{0x.* in operator delete\[\]}}
+  // CHECK-Windows: #[[#DEL:]] {{0x.* in operator delete\[\]}}
+  // CHECK-FreeBSD: #[[#DEL:]] {{0x.* in operator delete\[\]}}
+  // CHECK-Darwin: #[[#DEL:]] {{0x.* in .*_Zda}}
+  // CHECK-NEXT: #[[#DEL+1]] {{0x.* in main .*use-after-delete.cpp:}}[[@LINE-14]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
-  // CHECK-Linux:  {{    #0 0x.* in operator new\[\]}}
-  // CHECK-SunOS:  {{    #0 0x.* in operator new\[\]}}
-  // CHECK-Windows:{{    #0 0x.* in operator new\[\]}}
-  // CHECK-FreeBSD:{{    #0 0x.* in operator new\[\]}}
-  // CHECK-Darwin: {{    #0 0x.* in .*_Zna}}
-  // CHECK-NEXT:   {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-23]]
-
+  // CHECK-Linux: #[[#NEW:]] {{0x.* in operator new\[\]}}
+  // CHECK-SunOS: #[[#NEW:]] {{0x.* in operator new\[\]}}
+  // CHECK-Windows: #[[#NEW:]] {{0x.* in operator new\[\]}}
+  // CHECK-FreeBSD: #[[#NEW:]] {{0x.* in operator new\[\]}}
+  // CHECK-Darwin: #[[#NEW:]] {{0x.* in .*_Zna}}
+  // CHECK-NEXT: #[[#NEW+1]] {{0x.* in main .*use-after-delete.cpp:}}[[@LINE-23]]
 
   // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
   // CHECK: Global redzone:
