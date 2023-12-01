@@ -35,7 +35,7 @@ using namespace llvm::omp::target::ompt;
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
-  if (!PM->UseEventsForAtomicTransfers)
+  if (!MappingConfig::get().UseEventsForAtomicTransfers)
     return OFFLOAD_SUCCESS;
 
   void *Event = getEvent();
