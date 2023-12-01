@@ -452,8 +452,7 @@ func.func @transfer_write_2d__out_of_bounds(%vector : vector<[4]x[4]xf32>, %dest
 // CHECK: %[[C4:.*]] = arith.constant 4 : index
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[SRC_1D:.*]] = vector.broadcast %[[SRC]] : i32 to vector<[4]xi32>
-// CHECK: %[[TILE_ID:.*]] = arm_sme.get_tile_id : i32
-// CHECK: %[[TILE:.*]] = arm_sme.cast_tile_to_vector %[[TILE_ID]] : i32 to vector<[4]x[4]xi32>
+// CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[4]x[4]xi32>
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C4]] : index
 // CHECK: scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
@@ -500,8 +499,7 @@ func.func @broadcast_vec2d_from_vec1d(%arg0: vector<[8]xi16>) {
 // CHECK-LABEL:   func.func @splat_vec2d_from_i32(
 // CHECK-SAME:      %[[SRC:.*]]: i32) {
 // CHECK:   %[[BCST:.*]] = vector.broadcast %[[SRC]] : i32 to vector<[4]xi32>
-// CHECK:   %[[TILE_ID:.*]] = arm_sme.get_tile_id : i32
-// CHECK:   arm_sme.cast_tile_to_vector %[[TILE_ID]] : i32 to vector<[4]x[4]xi32>
+// CHECK:   arm_sme.get_tile : vector<[4]x[4]xi32>
 // CHECK:   %[[VSCALE:.*]] = vector.vscale
 // CHECK:   %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %{{.*}} : index
 // CHECK:   scf.for {{.*}} to %[[NUM_TILE_SLICES]] {{.*}} {

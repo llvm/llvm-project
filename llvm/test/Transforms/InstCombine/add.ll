@@ -2700,6 +2700,70 @@ define i32 @floor_sdiv(i32 %x) {
   ret i32 %r
 }
 
+define i8 @floor_sdiv_by_2(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2(
+; CHECK-NEXT:    [[RV:%.*]] = ashr i8 [[X:%.*]], 1
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 2
+  %and = and i8 %x, -127
+  %icmp = icmp eq i8 %and, -127
+  %sext = sext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
+define i8 @floor_sdiv_by_2_wrong_mask(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2_wrong_mask(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 127
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], 127
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i8
+; CHECK-NEXT:    [[RV:%.*]] = add nsw i8 [[DIV]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 2
+  %and = and i8 %x, 127
+  %icmp = icmp eq i8 %and, 127
+  %sext = sext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
+define i8 @floor_sdiv_by_2_wrong_constant(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2_wrong_constant(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -125
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], -125
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i8
+; CHECK-NEXT:    [[RV:%.*]] = add nsw i8 [[DIV]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 4
+  %and = and i8 %x, -125
+  %icmp = icmp eq i8 %and, -125
+  %sext = sext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
+define i8 @floor_sdiv_by_2_wrong_cast(i8 %x) {
+; CHECK-LABEL: @floor_sdiv_by_2_wrong_cast(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], -127
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[AND]], -127
+; CHECK-NEXT:    [[SEXT:%.*]] = zext i1 [[ICMP]] to i8
+; CHECK-NEXT:    [[RV:%.*]] = add nsw i8 [[DIV]], [[SEXT]]
+; CHECK-NEXT:    ret i8 [[RV]]
+;
+  %div = sdiv i8 %x, 2
+  %and = and i8 %x, -127
+  %icmp = icmp eq i8 %and, -127
+  %sext = zext i1 %icmp to i8
+  %rv = add nsw i8 %div, %sext
+  ret i8 %rv
+}
+
 ; vectors work too and commute is handled by complexity-based canonicalization
 
 define <2 x i32> @floor_sdiv_vec_commute(<2 x i32> %x) {

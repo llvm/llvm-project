@@ -11,25 +11,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
-
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 
-using namespace mlir;
-using namespace mlir::arm_sme;
+namespace mlir::arm_sme {
 
-unsigned mlir::arm_sme::getSMETileSliceMinNumElts(Type type) {
+unsigned getSMETileSliceMinNumElts(Type type) {
   assert(isValidSMETileElementType(type) && "invalid tile type!");
   return MinStreamingVectorLengthInBits / type.getIntOrFloatBitWidth();
 }
 
-bool mlir::arm_sme::isValidSMETileElementType(Type type) {
+bool isValidSMETileElementType(Type type) {
   return type.isInteger(8) || type.isInteger(16) || type.isInteger(32) ||
          type.isInteger(64) || type.isInteger(128) || type.isF16() ||
          type.isBF16() || type.isF32() || type.isF64() || type.isF128();
 }
 
-bool mlir::arm_sme::isValidSMETileVectorType(VectorType vType) {
+bool isValidSMETileVectorType(VectorType vType) {
   if ((vType.getRank() != 2) || !vType.allDimsScalable())
     return false;
 
@@ -37,22 +34,43 @@ bool mlir::arm_sme::isValidSMETileVectorType(VectorType vType) {
   if (!isValidSMETileElementType(elemType))
     return false;
 
-  unsigned minNumElts = arm_sme::getSMETileSliceMinNumElts(elemType);
+  unsigned minNumElts = getSMETileSliceMinNumElts(elemType);
   if (vType.getShape() != ArrayRef<int64_t>({minNumElts, minNumElts}))
     return false;
 
   return true;
 }
 
-Value mlir::arm_sme::castTileIDToI32(Value tile, Location loc,
-                                     RewriterBase &rewriter) {
-  assert((isa<arm_sme::GetTileID, arm_sme::CastVectorToTile>(
-             tile.getDefiningOp())) &&
-         "expected ArmSME GetTileID or CastVectorToTile op!");
-  unsigned tileElementWidth = tile.getType().getIntOrFloatBitWidth();
-  if (tileElementWidth < 32)
-    return rewriter.create<arith::ExtUIOp>(loc, rewriter.getI32Type(), tile);
-  if (tileElementWidth > 32)
-    return rewriter.create<arith::TruncIOp>(loc, rewriter.getI32Type(), tile);
-  return tile;
+std::optional<ArmSMETileType> getSMETileType(VectorType type) {
+  if (!isValidSMETileVectorType(type))
+    return {};
+  switch (type.getElementTypeBitWidth()) {
+  case 8:
+    return ArmSMETileType::ZAB;
+  case 16:
+    return ArmSMETileType::ZAH;
+  case 32:
+    return ArmSMETileType::ZAS;
+  case 64:
+    return ArmSMETileType::ZAD;
+  case 128:
+    return ArmSMETileType::ZAQ;
+  default:
+    llvm_unreachable("unknown SME tile type");
+  }
 }
+
+LogicalResult verifyOperationHasValidTileId(Operation *op) {
+  auto tileOp = llvm::dyn_cast<ArmSMETileOpInterface>(op);
+  if (!tileOp)
+    return success(); // Not a tile op (no need to check).
+  auto tileId = tileOp.getTileId();
+  if (!tileId)
+    return success(); // Not having a tile ID (yet) is okay.
+  if (!tileId.getType().isSignlessInteger(32))
+    return tileOp.emitOpError("tile ID should be a 32-bit signless integer");
+  // TODO: Verify value of tile ID is in range.
+  return success();
+}
+
+} // namespace mlir::arm_sme

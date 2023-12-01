@@ -76,7 +76,20 @@ def Linux : StandardSpec<"Linux"> {
 
   HeaderSpec SysMMan = HeaderSpec<
       "sys/mman.h",
-      [Macro<"MAP_ANONYMOUS">]
+      [Macro<"MAP_ANONYMOUS">],
+      [], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "mincore",
+            RetValSpec<IntType>,
+            [
+              ArgSpec<VoidPtr>,
+              ArgSpec<SizeTType>,
+              ArgSpec<UnsignedCharPtr>,
+            ]
+        >,
+      ]  // Functions
   >;
 
 

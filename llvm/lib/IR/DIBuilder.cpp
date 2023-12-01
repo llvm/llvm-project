@@ -1015,9 +1015,11 @@ Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
                                                 DIExpression *Expr,
                                                 const DILocation *DL,
                                                 Instruction *InsertBefore) {
-  return insertDbgValueIntrinsic(
+  Instruction *DVI = insertDbgValueIntrinsic(
       V, VarInfo, Expr, DL, InsertBefore ? InsertBefore->getParent() : nullptr,
       InsertBefore);
+  cast<CallInst>(DVI)->setTailCall();
+  return DVI;
 }
 
 Instruction *DIBuilder::insertDbgValueIntrinsic(Value *V,
