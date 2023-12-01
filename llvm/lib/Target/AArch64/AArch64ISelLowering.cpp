@@ -27006,3 +27006,9 @@ unsigned AArch64TargetLowering::getVectorTypeBreakdownForCallingConv(
 
   return NumRegs;
 }
+
+bool AArch64TargetLowering::hasInlineStackProbe(
+    const MachineFunction &MF) const {
+  return !Subtarget->isTargetWindows() &&
+         MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
+}

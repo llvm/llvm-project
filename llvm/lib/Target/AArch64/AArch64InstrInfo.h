@@ -383,6 +383,13 @@ public:
   bool isLegalAddressingMode(unsigned NumBytes, int64_t Offset,
                              unsigned Scale) const;
 
+  // Decrement the SP, issuing probes along the way. `TargetReg` is the new top
+  // of the stack. `FrameSetup` is passed as true, if the allocation is a part
+  // of constructing the activation frame of a function.
+  MachineBasicBlock::iterator probedStackAlloc(MachineBasicBlock::iterator MBBI,
+                                               Register TargetReg,
+                                               bool FrameSetup) const;
+
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
