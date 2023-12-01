@@ -105,7 +105,7 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
 
 // Re-link builtin bitcodes after optimization
-static cl::opt<bool> ClRelinkBuiltinBitcodePostop(
+cl::opt<bool> ClRelinkBuiltinBitcodePostop(
     "relink-builtin-bitcode-postop", cl::Optional,
     cl::desc("Re-link builtin bitcodes after optimization."), cl::init(false));
 }
