@@ -36,16 +36,16 @@ const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
                                "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
-const char *ExplicitUnalign[] = {"MOVDQU", "MOVUPS", "MOVUPD",
-                                 "PCMPESTRM", "PCMPESTRI",
-                                 "PCMPISTRM", "PCMPISTRI" };
+const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
+                                 "PCMPESTRM", "PCMPESTRI", "PCMPISTRM",
+                                 "PCMPISTRI"};
 
 const ManualMapEntry ManualMapSet[] = {
 #define ENTRY(REG, MEM, FLAGS) {#REG, #MEM, FLAGS},
 #include "X86ManualFoldTables.def"
 };
 
-const std::set<StringRef> NoFoldSet= {
+const std::set<StringRef> NoFoldSet = {
 #define NOFOLD(INSN) #INSN,
 #include "X86ManualFoldTables.def"
 };
@@ -86,7 +86,7 @@ class X86FoldTablesEmitter {
     void print(formatted_raw_ostream &OS) const {
       OS.indent(2);
       OS << "{X86::" << RegInst->TheDef->getName() << ", ";
-      OS  << "X86::" << MemInst->TheDef->getName() << ", ";
+      OS << "X86::" << MemInst->TheDef->getName() << ", ";
 
       std::string Attrs;
       if (FoldLoad)
@@ -124,9 +124,10 @@ class X86FoldTablesEmitter {
 #endif
   };
 
-  // NOTE: We check the fold tables are sorted in X86InstrFoldTables.cpp by the enum of the
-  //       instruction, which is computed in CodeGenTarget::ComputeInstrsByEnum. So we should
-  //       use the same comparator here.
+  // NOTE: We check the fold tables are sorted in X86InstrFoldTables.cpp by the
+  // enum of the instruction, which is computed in
+  // CodeGenTarget::ComputeInstrsByEnum. So we should use the same comparator
+  // here.
   // FIXME: Could we share the code with CodeGenTarget::ComputeInstrsByEnum?
   struct CompareInstrsByEnum {
     bool operator()(const CodeGenInstruction *LHS,
@@ -162,22 +163,21 @@ public:
 private:
   // Decides to which table to add the entry with the given instructions.
   // S sets the strategy of adding the TB_NO_REVERSE flag.
-  void updateTables(const CodeGenInstruction *RegInstr,
-                    const CodeGenInstruction *MemInstr, uint16_t S = 0,
+  void updateTables(const CodeGenInstruction *RegInst,
+                    const CodeGenInstruction *MemInst, uint16_t S = 0,
                     bool IsManual = false);
 
   // Generates X86FoldTableEntry with the given instructions and fill it with
   // the appropriate flags - then adds it to Table.
-  void addEntryWithFlags(FoldTable &Table, const CodeGenInstruction *RegInstr,
-                         const CodeGenInstruction *MemInstr, uint16_t S,
+  void addEntryWithFlags(FoldTable &Table, const CodeGenInstruction *RegInst,
+                         const CodeGenInstruction *MemInst, uint16_t S,
                          unsigned FoldedIdx, bool isManual);
 
   // Print the given table as a static const C++ array of type
   // X86MemoryFoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
                   formatted_raw_ostream &OS) {
-    OS << "static const X86MemoryFoldTableEntry MemoryFold" << TableName
-       << "[] = {\n";
+    OS << "static const X86MemoryFoldTableEntry " << TableName << "[] = {\n";
 
     for (auto &E : Table)
       E.second.print(OS);
@@ -388,14 +388,14 @@ public:
 } // end anonymous namespace
 
 void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
-                                             const CodeGenInstruction *RegInstr,
-                                             const CodeGenInstruction *MemInstr,
+                                             const CodeGenInstruction *RegInst,
+                                             const CodeGenInstruction *MemInst,
                                              uint16_t S, unsigned FoldedIdx,
                                              bool isManual) {
 
-  X86FoldTableEntry Result = X86FoldTableEntry(RegInstr, MemInstr);
-  Record *RegRec = RegInstr->TheDef;
-  Record *MemRec = MemInstr->TheDef;
+  X86FoldTableEntry Result = X86FoldTableEntry(RegInst, MemInst);
+  Record *RegRec = RegInst->TheDef;
+  Record *MemRec = MemInst->TheDef;
 
   Result.NoReverse = S & TB_NO_REVERSE;
   Result.NoForward = S & TB_NO_FORWARD;
@@ -403,7 +403,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Result.FoldStore = S & TB_FOLDED_STORE;
   Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
   if (isManual) {
-    Table[RegInstr] = Result;
+    Table[RegInst] = Result;
     return;
   }
 
@@ -422,8 +422,8 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
       Result.FoldStore = true;
   }
 
-  Record *RegOpRec = RegInstr->Operands[FoldedIdx].Rec;
-  Record *MemOpRec = MemInstr->Operands[FoldedIdx].Rec;
+  Record *RegOpRec = RegInst->Operands[FoldedIdx].Rec;
+  Record *MemOpRec = MemInst->Operands[FoldedIdx].Rec;
 
   // Unfolding code generates a load/store instruction according to the size of
   // the register in the register form instruction.
@@ -443,18 +443,18 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Record *BaseDef =
       DropLen ? Records.getDef(RegInstName.drop_back(DropLen)) : nullptr;
   bool IsMoveReg =
-      BaseDef ? Target.getInstruction(BaseDef).isMoveReg : RegInstr->isMoveReg;
+      BaseDef ? Target.getInstruction(BaseDef).isMoveReg : RegInst->isMoveReg;
   // A masked load can not be unfolded to a full load, otherwise it would access
   // unexpected memory. A simple store can not be unfolded.
   if (IsMoveReg && (BaseDef || Result.FoldStore))
     Result.NoReverse = true;
 
   uint8_t Enc = byteFromBitsInit(RegRec->getValueAsBitsInit("OpEncBits"));
-  if (isExplicitAlign(RegInstr)) {
+  if (isExplicitAlign(RegInst)) {
     // The instruction require explicitly aligned memory.
     BitsInit *VectSize = RegRec->getValueAsBitsInit("VectSize");
     Result.Alignment = Align(byteFromBitsInit(VectSize));
-  } else if (!Enc && !isExplicitUnalign(RegInstr) &&
+  } else if (!Enc && !isExplicitUnalign(RegInst) &&
              getMemOperandSize(MemOpRec) > 64) {
     // Instructions with XOP/VEX/EVEX encoding do not require alignment while
     // SSE packed vector instructions require a 16 byte alignment.
@@ -467,15 +467,15 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   if (RegRec->getName().contains("EXPAND"))
     Result.NoReverse = true;
 
-  Table[RegInstr] = Result;
+  Table[RegInst] = Result;
 }
 
-void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
-                                        const CodeGenInstruction *MemInstr,
+void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
+                                        const CodeGenInstruction *MemInst,
                                         uint16_t S, bool IsManual) {
 
-  Record *RegRec = RegInstr->TheDef;
-  Record *MemRec = MemInstr->TheDef;
+  Record *RegRec = RegInst->TheDef;
+  Record *MemRec = MemInst->TheDef;
   unsigned MemOutSize = MemRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned RegOutSize = RegRec->getValueAsDag("OutOperandList")->getNumArgs();
   unsigned MemInSize = MemRec->getValueAsDag("InOperandList")->getNumArgs();
@@ -484,7 +484,7 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
   // Instructions which Read-Modify-Write should be added to Table2Addr.
   if (!MemOutSize && RegOutSize == 1 && MemInSize == RegInSize) {
     // X86 would not unfold Read-Modify-Write instructions so add TB_NO_REVERSE.
-    addEntryWithFlags(Table2Addr, RegInstr, MemInstr, S | TB_NO_REVERSE, 0,
+    addEntryWithFlags(Table2Addr, RegInst, MemInst, S | TB_NO_REVERSE, 0,
                       IsManual);
     return;
   }
@@ -493,28 +493,29 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
     // Load-Folding cases.
     // If the i'th register form operand is a register and the i'th memory form
     // operand is a memory operand, add instructions to Table#i.
-    for (unsigned i = RegOutSize, e = RegInstr->Operands.size(); i < e; i++) {
-      Record *RegOpRec = RegInstr->Operands[i].Rec;
-      Record *MemOpRec = MemInstr->Operands[i].Rec;
-      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64, TAILJMPr64_REX
+    for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
+      Record *RegOpRec = RegInst->Operands[I].Rec;
+      Record *MemOpRec = MemInst->Operands[I].Rec;
+      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
+      // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
            RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
           isMemoryOperand(MemOpRec)) {
-        switch (i) {
+        switch (I) {
         case 0:
-          addEntryWithFlags(Table0, RegInstr, MemInstr, S, 0, IsManual);
+          addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
           return;
         case 1:
-          addEntryWithFlags(Table1, RegInstr, MemInstr, S, 1, IsManual);
+          addEntryWithFlags(Table1, RegInst, MemInst, S, 1, IsManual);
           return;
         case 2:
-          addEntryWithFlags(Table2, RegInstr, MemInstr, S, 2, IsManual);
+          addEntryWithFlags(Table2, RegInst, MemInst, S, 2, IsManual);
           return;
         case 3:
-          addEntryWithFlags(Table3, RegInstr, MemInstr, S, 3, IsManual);
+          addEntryWithFlags(Table3, RegInst, MemInst, S, 3, IsManual);
           return;
         case 4:
-          addEntryWithFlags(Table4, RegInstr, MemInstr, S, 4, IsManual);
+          addEntryWithFlags(Table4, RegInst, MemInst, S, 4, IsManual);
           return;
         }
       }
@@ -527,16 +528,16 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
     // For example:
     //   MOVAPSrr => (outs VR128:$dst), (ins VR128:$src)
     //   MOVAPSmr => (outs), (ins f128mem:$dst, VR128:$src)
-    Record *RegOpRec = RegInstr->Operands[RegOutSize - 1].Rec;
-    Record *MemOpRec = MemInstr->Operands[RegOutSize - 1].Rec;
+    Record *RegOpRec = RegInst->Operands[RegOutSize - 1].Rec;
+    Record *MemOpRec = MemInst->Operands[RegOutSize - 1].Rec;
     if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec) &&
         getRegOperandSize(RegOpRec) == getMemOperandSize(MemOpRec))
-      addEntryWithFlags(Table0, RegInstr, MemInstr, S, 0, IsManual);
+      addEntryWithFlags(Table0, RegInst, MemInst, S, 0, IsManual);
   }
 }
 
-void X86FoldTablesEmitter::run(raw_ostream &o) {
-  formatted_raw_ostream OS(o);
+void X86FoldTablesEmitter::run(raw_ostream &O) {
+  formatted_raw_ostream OS(O);
 
   // Holds all memory instructions
   std::vector<const CodeGenInstruction *> MemInsts;
@@ -590,7 +591,6 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
       continue;
 
     // Two forms (memory & register) of the same instruction must have the same
-    // opcode. try matching only with register form instructions with the same
     // opcode.
     std::vector<const CodeGenInstruction *> &OpcRegInsts = RegInstsIt->second;
 
@@ -598,11 +598,10 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
     if (Match != OpcRegInsts.end()) {
       const CodeGenInstruction *RegInst = *Match;
       StringRef RegInstName = RegInst->TheDef->getName();
-      if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt")) {
-        if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4))) {
+      if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt"))
+        if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4)))
           RegInst = &Target.getInstruction(RegAltRec);
-        }
-      }
+
       updateTables(RegInst, MemInst);
       OpcRegInsts.erase(Match);
     }
@@ -631,13 +630,14 @@ void X86FoldTablesEmitter::run(raw_ostream &o) {
   CheckMemFoldTable(Table3);
   CheckMemFoldTable(Table4);
 #endif
+#define PRINT_TABLE(TABLE) printTable(TABLE, #TABLE, OS);
   // Print all tables.
-  printTable(Table2Addr, "Table2Addr", OS);
-  printTable(Table0, "Table0", OS);
-  printTable(Table1, "Table1", OS);
-  printTable(Table2, "Table2", OS);
-  printTable(Table3, "Table3", OS);
-  printTable(Table4, "Table4", OS);
+  PRINT_TABLE(Table2Addr)
+  PRINT_TABLE(Table0)
+  PRINT_TABLE(Table1)
+  PRINT_TABLE(Table2)
+  PRINT_TABLE(Table3)
+  PRINT_TABLE(Table4)
 }
 
 static TableGen::Emitter::OptClass<X86FoldTablesEmitter>
