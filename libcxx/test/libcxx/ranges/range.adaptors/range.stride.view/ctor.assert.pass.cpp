@@ -18,7 +18,6 @@
 
 void stride_view_over_only_input_ranges() {
   int range[] = {1, 2, 3};
-  // Keep up to date with assertion message from the ctor.
   TEST_LIBCPP_ASSERT_FAILURE(
       [&range] { std::ranges::stride_view sv(range, 0); }(), "The value of stride must be greater than 0");
   TEST_LIBCPP_ASSERT_FAILURE(
