@@ -89,9 +89,9 @@ void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
 /// \p KnownOne the set of bits that are known to be one
 void computeKnownBitsFromRangeMetadata(const MDNode &Ranges, KnownBits &Known);
 
-/// Merge bits known from assumes into Known.
-void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
-                                unsigned Depth, const SimplifyQuery &Q);
+/// Merge bits known from context-dependent facts into Known.
+void computeKnownBitsFromContext(const Value *V, KnownBits &Known,
+                                 unsigned Depth, const SimplifyQuery &Q);
 
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
 KnownBits analyzeKnownBitsFromAndXorOr(

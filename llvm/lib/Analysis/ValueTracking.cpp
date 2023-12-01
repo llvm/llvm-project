@@ -711,7 +711,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   }
 }
 
-void llvm::computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
+void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
                                       unsigned Depth, const SimplifyQuery &Q) {
   // Use of assumptions is context-sensitive. If we don't have a context, we
   // cannot use them!
@@ -1868,11 +1868,11 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     Known.Zero.setLowBits(Log2(Alignment));
   }
 
-  // computeKnownBitsFromAssume strictly refines Known.
+  // computeKnownBitsFromContext strictly refines Known.
   // Therefore, we run them after computeKnownBitsFromOperator.
 
-  // Check whether a nearby assume intrinsic can determine some known bits.
-  computeKnownBitsFromAssume(V, Known, Depth, Q);
+  // Check whether we can determine known bits from context such as assumes.
+  computeKnownBitsFromContext(V, Known, Depth, Q);
 
   assert((Known.Zero & Known.One) == 0 && "Bits known to be one AND zero?");
 }
@@ -6338,14 +6338,14 @@ computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
   // CANNOT overflow. If this can be determined from the known bits of the
   // operands the above signedAddMayOverflow() check will have already done so.
   // The only other way to improve on the known bits is from an assumption, so
-  // call computeKnownBitsFromAssume() directly.
+  // call computeKnownBitsFromContext() directly.
   bool LHSOrRHSKnownNonNegative =
       (LHSRange.isAllNonNegative() || RHSRange.isAllNonNegative());
   bool LHSOrRHSKnownNegative =
       (LHSRange.isAllNegative() || RHSRange.isAllNegative());
   if (LHSOrRHSKnownNonNegative || LHSOrRHSKnownNegative) {
     KnownBits AddKnown(LHSRange.getBitWidth());
-    computeKnownBitsFromAssume(Add, AddKnown, /*Depth=*/0, SQ);
+    computeKnownBitsFromContext(Add, AddKnown, /*Depth=*/0, SQ);
     if ((AddKnown.isNonNegative() && LHSOrRHSKnownNonNegative) ||
         (AddKnown.isNegative() && LHSOrRHSKnownNegative))
       return OverflowResult::NeverOverflows;
