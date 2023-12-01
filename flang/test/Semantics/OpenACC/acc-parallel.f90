@@ -142,4 +142,17 @@ program openacc_parallel_validity
   end do
   !$acc end parallel
 
+  do i = 1, 100
+    !$acc parallel
+    !ERROR: CYCLE to construct outside of PARALLEL construct is not allowed
+    if (i == 10) cycle
+    !$acc end parallel
+  end do
+
+  !$acc parallel
+  do i = 1, 100
+    if (i == 10) cycle
+  end do
+  !$acc end parallel
+
 end program openacc_parallel_validity
