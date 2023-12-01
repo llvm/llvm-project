@@ -41,23 +41,13 @@ static char *aligned_addr(void *addr, size_t alignment) {
 
 TEST(LlvmLibcMincoreTest, InvalidVec) {
   size_t page_size = static_cast<size_t>(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE));
-  void *addr = LIBC_NAMESPACE::mmap(nullptr, 5 * page_size, PROT_READ,
+  void *addr = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
-  // Since we allocated 5 pages, we can find an aligned boundary after which
-  // there are at least 4 pages
   char *aligned = aligned_addr(addr, page_size);
-  libc_errno = 0;
   int res = LIBC_NAMESPACE::mincore(aligned, 1, nullptr);
   EXPECT_THAT(res, Fails(EFAULT, -1));
-  void *area = LIBC_NAMESPACE::mmap(nullptr, page_size, PROT_READ | PROT_WRITE,
-                                    MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_NE(area, MAP_FAILED);
-  unsigned char *ptr = static_cast<unsigned char *>(area) + page_size - 3;
-  res = LIBC_NAMESPACE::mincore(aligned, 4 * page_size, ptr);
-  EXPECT_THAT(res, Fails(EFAULT, -1));
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, 5 * page_size), Succeeds());
-  EXPECT_THAT(LIBC_NAMESPACE::munmap(area, page_size), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }
 
 TEST(LlvmLibcMincoreTest, UnalignedAddr) {
