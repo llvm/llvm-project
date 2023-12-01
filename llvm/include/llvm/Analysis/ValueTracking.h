@@ -94,11 +94,10 @@ void computeKnownBitsFromContext(const Value *V, KnownBits &Known,
                                  unsigned Depth, const SimplifyQuery &Q);
 
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
-KnownBits analyzeKnownBitsFromAndXorOr(
-    const Operator *I, const KnownBits &KnownLHS, const KnownBits &KnownRHS,
-    unsigned Depth, const DataLayout &DL, AssumptionCache *AC = nullptr,
-    const Instruction *CxtI = nullptr, const DominatorTree *DT = nullptr,
-    bool UseInstrInfo = true);
+KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
+                                       const KnownBits &KnownLHS,
+                                       const KnownBits &KnownRHS,
+                                       unsigned Depth, const SimplifyQuery &SQ);
 
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,

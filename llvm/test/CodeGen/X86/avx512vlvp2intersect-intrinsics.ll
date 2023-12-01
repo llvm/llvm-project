@@ -86,7 +86,7 @@ define void @test_mm256_2intersect_epi32_p(<4 x i64>* nocapture readonly %a, <4 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vmovaps (%edx), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0x02]
+; X86-NEXT:    vmovdqa (%edx), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x02]
 ; X86-NEXT:    vp2intersectd (%ecx), %ymm0, %k0 # encoding: [0x62,0xf2,0x7f,0x28,0x68,0x01]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %edx # encoding: [0xc5,0xf8,0x93,0xd0]
@@ -98,7 +98,7 @@ define void @test_mm256_2intersect_epi32_p(<4 x i64>* nocapture readonly %a, <4 
 ;
 ; X64-LABEL: test_mm256_2intersect_epi32_p:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0x07]
+; X64-NEXT:    vmovdqa (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x07]
 ; X64-NEXT:    vp2intersectd (%rsi), %ymm0, %k0 # encoding: [0x62,0xf2,0x7f,0x28,0x68,0x06]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %esi # encoding: [0xc5,0xf8,0x93,0xf0]
@@ -131,7 +131,7 @@ define void @test_mm256_2intersect_epi64_p(<4 x i64>* nocapture readonly %a, <4 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vmovaps (%esi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0x06]
+; X86-NEXT:    vmovdqa (%esi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x06]
 ; X86-NEXT:    vp2intersectq (%edx), %ymm0, %k0 # encoding: [0x62,0xf2,0xff,0x28,0x68,0x02]
 ; X86-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X86-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -148,7 +148,7 @@ define void @test_mm256_2intersect_epi64_p(<4 x i64>* nocapture readonly %a, <4 
 ;
 ; X64-LABEL: test_mm256_2intersect_epi64_p:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x28,0x07]
+; X64-NEXT:    vmovdqa (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0x07]
 ; X64-NEXT:    vp2intersectq (%rsi), %ymm0, %k0 # encoding: [0x62,0xf2,0xff,0x28,0x68,0x06]
 ; X64-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X64-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -181,7 +181,7 @@ define void @test_mm256_2intersect_epi32_b(i32* nocapture readonly %a, i32* noca
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vbroadcastss (%edx), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x18,0x02]
+; X86-NEXT:    vpbroadcastd (%edx), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x58,0x02]
 ; X86-NEXT:    vp2intersectd (%ecx){1to8}, %ymm0, %k0 # encoding: [0x62,0xf2,0x7f,0x38,0x68,0x01]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %edx # encoding: [0xc5,0xf8,0x93,0xd0]
@@ -193,7 +193,7 @@ define void @test_mm256_2intersect_epi32_b(i32* nocapture readonly %a, i32* noca
 ;
 ; X64-LABEL: test_mm256_2intersect_epi32_b:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vbroadcastss (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x18,0x07]
+; X64-NEXT:    vpbroadcastd (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x58,0x07]
 ; X64-NEXT:    vp2intersectd (%rsi){1to8}, %ymm0, %k0 # encoding: [0x62,0xf2,0x7f,0x38,0x68,0x06]
 ; X64-NEXT:    kmovw %k1, %eax # encoding: [0xc5,0xf8,0x93,0xc1]
 ; X64-NEXT:    kmovw %k0, %esi # encoding: [0xc5,0xf8,0x93,0xf0]
@@ -228,7 +228,7 @@ define void @test_mm256_2intersect_epi64_b(i64* nocapture readonly %a, i64* noca
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vbroadcastsd (%esi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x19,0x06]
+; X86-NEXT:    vpbroadcastq (%esi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x59,0x06]
 ; X86-NEXT:    vp2intersectq (%edx){1to4}, %ymm0, %k0 # encoding: [0x62,0xf2,0xff,0x38,0x68,0x02]
 ; X86-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X86-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -245,7 +245,7 @@ define void @test_mm256_2intersect_epi64_b(i64* nocapture readonly %a, i64* noca
 ;
 ; X64-LABEL: test_mm256_2intersect_epi64_b:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vbroadcastsd (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x19,0x07]
+; X64-NEXT:    vpbroadcastq (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x59,0x07]
 ; X64-NEXT:    vp2intersectq (%rsi){1to4}, %ymm0, %k0 # encoding: [0x62,0xf2,0xff,0x38,0x68,0x06]
 ; X64-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X64-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -370,7 +370,7 @@ define void @test_mm_2intersect_epi32_p(<2 x i64>* nocapture readonly %a, <2 x i
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vmovaps (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x06]
+; X86-NEXT:    vmovdqa (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x06]
 ; X86-NEXT:    vp2intersectd (%edx), %xmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x08,0x68,0x02]
 ; X86-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X86-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -386,7 +386,7 @@ define void @test_mm_2intersect_epi32_p(<2 x i64>* nocapture readonly %a, <2 x i
 ;
 ; X64-LABEL: test_mm_2intersect_epi32_p:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x07]
+; X64-NEXT:    vmovdqa (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x07]
 ; X64-NEXT:    vp2intersectd (%rsi), %xmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x08,0x68,0x06]
 ; X64-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X64-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -424,7 +424,7 @@ define void @test_mm_2intersect_epi64_p(<2 x i64>* nocapture readonly %a, <2 x i
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vmovaps (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x06]
+; X86-NEXT:    vmovdqa (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x06]
 ; X86-NEXT:    vp2intersectq (%edx), %xmm0, %k0 # encoding: [0x62,0xf2,0xff,0x08,0x68,0x02]
 ; X86-NEXT:    kshiftlw $14, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0e]
 ; X86-NEXT:    kshiftrw $14, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
@@ -440,7 +440,7 @@ define void @test_mm_2intersect_epi64_p(<2 x i64>* nocapture readonly %a, <2 x i
 ;
 ; X64-LABEL: test_mm_2intersect_epi64_p:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x28,0x07]
+; X64-NEXT:    vmovdqa (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x07]
 ; X64-NEXT:    vp2intersectq (%rsi), %xmm0, %k0 # encoding: [0x62,0xf2,0xff,0x08,0x68,0x06]
 ; X64-NEXT:    kshiftlw $14, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0e]
 ; X64-NEXT:    kshiftrw $14, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
@@ -476,7 +476,7 @@ define void @test_mm_2intersect_epi32_b(i32* nocapture readonly %a, i32* nocaptu
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vbroadcastss (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x06]
+; X86-NEXT:    vpbroadcastd (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x58,0x06]
 ; X86-NEXT:    vp2intersectd (%edx){1to4}, %xmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x18,0x68,0x02]
 ; X86-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X86-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -492,7 +492,7 @@ define void @test_mm_2intersect_epi32_b(i32* nocapture readonly %a, i32* nocaptu
 ;
 ; X64-LABEL: test_mm_2intersect_epi32_b:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vbroadcastss (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x18,0x07]
+; X64-NEXT:    vpbroadcastd (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x58,0x07]
 ; X64-NEXT:    vp2intersectd (%rsi){1to4}, %xmm0, %k0 # encoding: [0x62,0xf2,0x7f,0x18,0x68,0x06]
 ; X64-NEXT:    kshiftlw $12, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0c]
 ; X64-NEXT:    kshiftrw $12, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0c]
@@ -532,8 +532,7 @@ define void @test_mm_2intersect_epi64_b(i64* nocapture readonly %a, i64* nocaptu
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x10]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi # encoding: [0x8b,0x74,0x24,0x08]
-; X86-NEXT:    vmovddup (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0x06]
-; X86-NEXT:    # xmm0 = mem[0,0]
+; X86-NEXT:    vpbroadcastq (%esi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x59,0x06]
 ; X86-NEXT:    vp2intersectq (%edx){1to2}, %xmm0, %k0 # encoding: [0x62,0xf2,0xff,0x18,0x68,0x02]
 ; X86-NEXT:    kshiftlw $14, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0e]
 ; X86-NEXT:    kshiftrw $14, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]
@@ -549,8 +548,7 @@ define void @test_mm_2intersect_epi64_b(i64* nocapture readonly %a, i64* nocaptu
 ;
 ; X64-LABEL: test_mm_2intersect_epi64_b:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovddup (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x12,0x07]
-; X64-NEXT:    # xmm0 = mem[0,0]
+; X64-NEXT:    vpbroadcastq (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x59,0x07]
 ; X64-NEXT:    vp2intersectq (%rsi){1to2}, %xmm0, %k0 # encoding: [0x62,0xf2,0xff,0x18,0x68,0x06]
 ; X64-NEXT:    kshiftlw $14, %k0, %k2 # encoding: [0xc4,0xe3,0xf9,0x32,0xd0,0x0e]
 ; X64-NEXT:    kshiftrw $14, %k2, %k2 # encoding: [0xc4,0xe3,0xf9,0x30,0xd2,0x0e]

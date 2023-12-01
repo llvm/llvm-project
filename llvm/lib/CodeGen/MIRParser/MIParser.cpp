@@ -1175,19 +1175,10 @@ bool MIParser::parse(MachineInstr *&MI) {
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
 
-  unsigned NumExplicitOps = 0;
-  for (const auto &Operand : Operands) {
-    bool IsImplicitOp = Operand.Operand.isReg() && Operand.Operand.isImplicit();
-    if (!IsImplicitOp) {
-      if (!MCID.isVariadic() && NumExplicitOps >= MCID.getNumOperands() &&
-          !Operand.Operand.isValidExcessOperand())
-        return error(Operand.Begin, "too many operands for instruction");
-
-      ++NumExplicitOps;
-    }
-
+  // Don't check the operands make sense, let the verifier catch any
+  // improprieties.
+  for (const auto &Operand : Operands)
     MI->addOperand(MF, Operand.Operand);
-  }
 
   if (assignRegisterTies(*MI, Operands))
     return true;

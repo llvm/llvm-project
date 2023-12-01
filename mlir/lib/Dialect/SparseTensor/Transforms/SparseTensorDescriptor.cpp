@@ -103,7 +103,7 @@ void SparseTensorSpecifier::setSpecifierField(OpBuilder &builder, Location loc,
 
 Value sparse_tensor::SparseTensorDescriptor::getCrdMemRefOrView(
     OpBuilder &builder, Location loc, Level lvl) const {
-  const Level cooStart = getCOOStart(rType.getEncoding());
+  const Level cooStart = rType.getCOOStart();
   if (lvl < cooStart)
     return getMemRefField(SparseTensorFieldKind::CrdMemRef, lvl);
 
