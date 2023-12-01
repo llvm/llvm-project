@@ -25,9 +25,9 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 using ::clang::dataflow::test::getFieldValue;
+using ::testing::Contains;
 using ::testing::IsNull;
 using ::testing::NotNull;
-using ::testing::Contains;
 
 class EnvironmentTest : public ::testing::Test {
 protected:
