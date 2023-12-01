@@ -1463,7 +1463,7 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   std::optional<unsigned> DefCycle =
       ItinData->getOperandCycle(DefClass, DefIdx);
-  return DefCycle <= 1;
+  return DefCycle <= 1U;
 }
 
 bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {

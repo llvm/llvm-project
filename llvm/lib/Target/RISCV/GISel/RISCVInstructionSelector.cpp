@@ -540,6 +540,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
                       GV->hasExternalWeakLinkage());
   }
   case TargetOpcode::G_JUMP_TABLE:
+  case TargetOpcode::G_CONSTANT_POOL:
     return selectAddr(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
     Register LHS, RHS;
@@ -875,7 +876,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
                                           bool IsLocal,
                                           bool IsExternWeak) const {
   assert((MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
-          MI.getOpcode() == TargetOpcode::G_JUMP_TABLE) &&
+          MI.getOpcode() == TargetOpcode::G_JUMP_TABLE ||
+          MI.getOpcode() == TargetOpcode::G_CONSTANT_POOL) &&
          "Unexpected opcode");
 
   const MachineOperand &DispMO = MI.getOperand(1);
