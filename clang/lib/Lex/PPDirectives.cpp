@@ -3910,8 +3910,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     // source fidelity in the AST; it has no idea that there was an offset
     // involved.
     // offsets all the way to the end of the file make for an empty file.
-    const size_t &OffsetParam = Params.MaybeOffsetParam->Offset;
-    BinaryContents = BinaryContents.substr(OffsetParam);
+    BinaryContents = BinaryContents.substr(Params.MaybeOffsetParam->Offset);
   }
 
   if (Callbacks)
