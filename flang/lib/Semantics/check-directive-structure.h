@@ -79,7 +79,17 @@ public:
           break;
         }
       } else if constexpr (std::is_same_v<D, llvm::acc::Directive>) {
-        return; // OpenACC construct do not need check for unlabelled CYCLES
+        switch ((llvm::acc::Directive)currentDirective_) {
+        // exclude loop directives which do not need a check for unlabelled
+        // CYCLES
+        case llvm::acc::Directive::ACCD_loop:
+        case llvm::acc::Directive::ACCD_kernels_loop:
+        case llvm::acc::Directive::ACCD_parallel_loop:
+        case llvm::acc::Directive::ACCD_serial_loop:
+          return;
+        default:
+          break;
+        }
       }
       CheckConstructNameBranching("CYCLE");
     }
