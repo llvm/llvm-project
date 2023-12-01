@@ -34,6 +34,7 @@
 #endif
 #include <sys/mman.h>
 #include <sys/ptrace.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
@@ -378,8 +379,21 @@ private:
         Twine(strsignal(ChildSignalInfo.si_signo)));
   }
 
+  void disableCoreDumps() const {
+    struct rlimit rlim;
+
+    rlim.rlim_cur = 0;
+    setrlimit(RLIMIT_CORE, &rlim);
+  }
+
   [[noreturn]] void prepareAndRunBenchmark(int Pipe,
                                            const BenchmarkKey &Key) const {
+    // Disable core dumps in the child process as otherwise everytime we
+    // encounter an execution failure like a segmentation fault, we will create
+    // a core dump. We report the information directly rather than require the
+    // user inspect a core dump.
+    disableCoreDumps();
+
     // The following occurs within the benchmarking subprocess
     pid_t ParentPID = getppid();
 
