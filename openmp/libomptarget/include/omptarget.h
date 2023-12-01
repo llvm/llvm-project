@@ -14,7 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
-#include "Environment.h"
+#include "Shared/Environment.h"
+#include "Shared/SourceInfo.h"
 
 #include <cstdint>
 #include <deque>
@@ -22,8 +23,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <type_traits>
-
-#include <SourceInfo.h>
 
 #include "llvm/ADT/SmallVector.h"
 
