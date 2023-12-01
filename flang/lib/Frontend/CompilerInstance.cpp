@@ -156,8 +156,8 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   invoc.setFortranOpts();
   // Set the encoding to read all input files in based on user input.
   allSources->set_encoding(invoc.getFortranOpts().encoding);
-  // Create the semantics context and set semantic options.
-  invoc.setSemanticsOpts(*this->allCookedSources);
+  // Create the semantics context
+  semaContext = invoc.getSemanticsCtx(*allCookedSources);
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 
