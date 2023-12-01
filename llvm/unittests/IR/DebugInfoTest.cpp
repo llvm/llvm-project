@@ -284,6 +284,71 @@ TEST(MetadataTest, DeleteInstUsedByDPValue) {
   UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
+// Ensure that the order of dbg.value intrinsics returned by findDbgValues, and
+// their corresponding DPValue representation, are consistent.
+TEST(MetadataTest, OrderingOfDPValues) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
+      call void @llvm.dbg.value(metadata i16 %b, metadata !12, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "foo", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+    !12 = !DILocalVariable(name: "bar", scope: !6, file: !1, line: 1, type: !10)
+)");
+
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+
+  SmallVector<DbgValueInst *, 2> DVIs;
+  SmallVector<DPValue *, 2> DPVs;
+  findDbgValues(DVIs, &I, &DPVs);
+  ASSERT_EQ(DVIs.size(), 2u);
+  ASSERT_EQ(DPVs.size(), 0u);
+
+  // The correct order of dbg.values is given by their use-list, which becomes
+  // the reverse order of creation. Thus the dbg.values should come out as
+  // "bar" and then "foo".
+  DILocalVariable *Var0 = DVIs[0]->getVariable();
+  EXPECT_TRUE(Var0->getName() == "bar");
+  DILocalVariable *Var1 = DVIs[1]->getVariable();
+  EXPECT_TRUE(Var1->getName() == "foo");
+
+  // Now try again, but in DPValue form.
+  DVIs.clear();
+
+  M->convertToNewDbgValues();
+  findDbgValues(DVIs, &I, &DPVs);
+  ASSERT_EQ(DVIs.size(), 0u);
+  ASSERT_EQ(DPVs.size(), 2u);
+
+  Var0 = DPVs[0]->getVariable();
+  EXPECT_TRUE(Var0->getName() == "bar");
+  Var1 = DPVs[1]->getVariable();
+  EXPECT_TRUE(Var1->getName() == "foo");
+
+  M->convertFromNewDbgValues();
+  UseNewDbgInfoFormat = OldDbgValueMode;
+}
+
 TEST(DIBuiler, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));

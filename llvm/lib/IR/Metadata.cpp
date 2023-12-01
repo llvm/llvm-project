@@ -249,8 +249,13 @@ SmallVector<DPValue *> ReplaceableMetadataImpl::getAllDPValueUsers() {
       continue;
     DPVUsersWithID.push_back(&UseMap[Pair.first]);
   }
+  // Order DPValue users in reverse-creation order. Normal dbg.value users
+  // of MetadataAsValues are ordered by their UseList, i.e. reverse order of
+  // when they were added: we need to replicate that here. The structure of
+  // debug-info output depends on the ordering of intrinsics, thus we need
+  // to keep them consistent for comparisons sake.
   llvm::sort(DPVUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second < UserB->second;
+    return UserA->second > UserB->second;
   });
   SmallVector<DPValue *> DPVUsers;
   for (auto UserWithID : DPVUsersWithID)
