@@ -227,8 +227,7 @@ private:
       }
       if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
           (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
-           !Style.isCSharp() && Style.Language != FormatStyle::LK_Proto &&
-           Style.Language != FormatStyle::LK_TextProto)) {
+           !Style.isCSharp() && !Style.isProto())) {
         return false;
       }
       // If a && or || is found and interpreted as a binary operator, this set
@@ -678,8 +677,7 @@ private:
       } else if (CurrentToken->is(tok::r_square) && Parent &&
                  Parent->is(TT_TemplateCloser)) {
         Left->setType(TT_ArraySubscriptLSquare);
-      } else if (Style.Language == FormatStyle::LK_Proto ||
-                 Style.Language == FormatStyle::LK_TextProto) {
+      } else if (Style.isProto()) {
         // Square braces in LK_Proto can either be message field attributes:
         //
         // optional Aaa aaa = 1 [
@@ -906,8 +904,7 @@ private:
           Previous = Previous->getPreviousNonComment();
         if ((CurrentToken->is(tok::colon) &&
              (!Contexts.back().ColonIsDictLiteral || !Style.isCpp())) ||
-            Style.Language == FormatStyle::LK_Proto ||
-            Style.Language == FormatStyle::LK_TextProto) {
+            Style.isProto()) {
           OpeningBrace.setType(TT_DictLiteral);
           if (Previous->Tok.getIdentifierInfo() ||
               Previous->is(tok::string_literal)) {
@@ -1049,9 +1046,7 @@ private:
           Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
           Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
         Tok->setType(TT_ModulePartitionColon);
-      } else if (Contexts.back().ColonIsDictLiteral ||
-                 Style.Language == FormatStyle::LK_Proto ||
-                 Style.Language == FormatStyle::LK_TextProto) {
+      } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
           if (FormatToken *Previous = Tok->getPreviousNonComment())
@@ -1290,10 +1285,8 @@ private:
         Tok->SpacesRequiredBefore = 1;
       break;
     case tok::kw_operator:
-      if (Style.Language == FormatStyle::LK_TextProto ||
-          Style.Language == FormatStyle::LK_Proto) {
+      if (Style.isProto())
         break;
-      }
       while (CurrentToken &&
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
@@ -2877,9 +2870,7 @@ private:
         return prec::Conditional;
       if (NextNonComment && Current->is(TT_SelectorName) &&
           (NextNonComment->isOneOf(TT_DictLiteral, TT_JsTypeColon) ||
-           ((Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TextProto) &&
-            NextNonComment->is(tok::less)))) {
+           (Style.isProto() && NextNonComment->is(tok::less)))) {
         return prec::Assignment;
       }
       if (Current->is(TT_JsComputedPropertyName))
@@ -3740,7 +3731,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // Prefer breaking call chains (".foo") over empty "{}", "[]" or "()".
     if (Left.opensScope() && Right.closesScope())
       return 200;
-  } else if (Style.isProto()) {
+  } else if (Style.Language == FormatStyle::LK_Proto) {
     if (Right.is(tok::l_square))
       return 1;
     if (Right.is(tok::period))
@@ -4194,9 +4185,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||
-               ((Style.Language == FormatStyle::LK_Proto ||
-                 Style.Language == FormatStyle::LK_TextProto) &&
-                !Style.Cpp11BracedListStyle &&
+               (Style.isProto() && !Style.Cpp11BracedListStyle &&
                 LSquareTok.endsSequence(tok::l_square, tok::colon,
                                         TT_SelectorName));
       };
@@ -4462,8 +4451,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-  } else if (Style.Language == FormatStyle::LK_Proto ||
-             Style.Language == FormatStyle::LK_TextProto) {
+  } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
                      Keywords.kw_repeated, Keywords.kw_extend)) {
@@ -5085,8 +5073,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return true;
   } else if (Style.BreakAdjacentStringLiterals &&
              (Style.isCpp() || Style.isProto() ||
-              Style.Language == FormatStyle::LK_TableGen ||
-              Style.Language == FormatStyle::LK_TextProto)) {
+              Style.Language == FormatStyle::LK_TableGen)) {
     if (Left.isStringLiteral() && Right.isStringLiteral())
       return true;
   }
@@ -5338,9 +5325,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   // together.
   //
   // We ensure elsewhere that extensions are always on their own line.
-  if ((Style.Language == FormatStyle::LK_Proto ||
-       Style.Language == FormatStyle::LK_TextProto) &&
-      Right.is(TT_SelectorName) && Right.isNot(tok::r_square) && Right.Next) {
+  if (Style.isProto() && Right.is(TT_SelectorName) &&
+      Right.isNot(tok::r_square) && Right.Next) {
     // Keep `@submessage` together in:
     // @submessage { key: value }
     if (Left.is(tok::at))
@@ -5554,8 +5540,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   }
   if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
-    if (Style.Language == FormatStyle::LK_Proto ||
-        Style.Language == FormatStyle::LK_TextProto) {
+    if (Style.isProto()) {
       if (!Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
         return false;
       // Prevent cases like:
