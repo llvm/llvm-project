@@ -47,9 +47,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x12
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDW:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]], debug-location !11
-    ; CHECK-NEXT: DBG_VALUE [[ADDW]], $noreg, !9, !DIExpression(), debug-location !11
-    ; CHECK-NEXT: SW killed [[ADDW]], [[COPY]], 0, debug-location !12 :: (store (s32) into %ir.c)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[COPY1]], [[COPY2]], debug-location !11
+    ; CHECK-NEXT: DBG_VALUE [[ADD]], $noreg, !9, !DIExpression(), debug-location !11
+    ; CHECK-NEXT: SW killed [[ADD]], [[COPY]], 0, debug-location !12 :: (store (s32) into %ir.c)
     ; CHECK-NEXT: PseudoRET debug-location !13
     %2:gpr = COPY $x12
     %1:gpr = COPY $x11
