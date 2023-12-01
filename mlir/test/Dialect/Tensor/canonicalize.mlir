@@ -719,6 +719,71 @@ func.func @fold_pack_constant_splat(%dest : tensor<8x16x8x32xf32>) -> tensor<8x1
 
 // -----
 
+func.func @fold_padding_value_pack(%arg0: tensor<1200x500000xf32>) -> tensor<31250x1200x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<31250x1200x16x1xf32>
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<1200x500000xf32> -> tensor<31250x1200x16x1xf32>
+  return %pack : tensor<31250x1200x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack
+// CHECK-NOT:     padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_negative1(%arg0: tensor<1200x499999xf32>) -> tensor<31250x1200x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<31250x1200x16x1xf32>
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<1200x499999xf32> -> tensor<31250x1200x16x1xf32>
+  return %pack : tensor<31250x1200x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative1
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_negative2(%arg0: tensor<1200x?xf32>, %arg1: tensor<?x1200x16x1xf32>) -> tensor<?x1200x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %arg1 : tensor<1200x?xf32> -> tensor<?x1200x16x1xf32>
+  return %pack : tensor<?x1200x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative2
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_negative3(%arg0: tensor<1200x500000xf32>, %arg1: tensor<?x1200x?x1xf32>, %tile : index) -> tensor<?x1200x?x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [%tile, 1]
+    into %arg1 : tensor<1200x500000xf32> -> tensor<?x1200x?x1xf32>
+  return %pack : tensor<?x1200x?x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative3
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
+
+// -----
+
 // CHECK-LABEL: func @fold_unpack_constant_splat
 //   CHECK-NOT: tensor.unpack
 //       CHECK: arith.constant dense<1.000000e-01> : tensor<128x256xf32>
