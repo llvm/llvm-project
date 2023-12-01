@@ -499,7 +499,9 @@ define i8 @lshr_nneg(i8 %x, i8 %y) {
 ; CHECK-LABEL: @lshr_nneg(
 ; CHECK-NEXT:    [[NEG:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NEG]])
-; CHECK-NEXT:    [[SHR_NOT:%.*]] = ashr i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[X_NOT:%.*]] = xor i8 [[X]], -1
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X_NOT]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR_NOT:%.*]] = xor i8 [[SHR]], -1
 ; CHECK-NEXT:    ret i8 [[SHR_NOT]]
 ;
   %neg = icmp slt i8 %x, 0
