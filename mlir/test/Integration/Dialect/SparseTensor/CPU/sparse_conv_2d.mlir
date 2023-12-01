@@ -38,6 +38,10 @@
   map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
+#map = affine_map<(d0, d1, d2, d3) -> (d0 + d1, d3 + d2)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d3)>
+
 // An example of a 2D convolution with a sparse filter.
 module {
 
@@ -47,6 +51,21 @@ module {
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32>)
       outs (%output: tensor<6x6xi32>) -> tensor<6x6xi32>
+    return %0 : tensor<6x6xi32>
+  }
+
+  func.func @conv2d_CSR_dense_rotated(%arg0: tensor<8x8xi32, #CSR>,
+                                      %arg1: tensor<3x3xi32>) -> tensor<6x6xi32> {
+    %s = tensor.empty() : tensor<6x6xi32>
+    %0 = linalg.generic {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "reduction", "reduction", "parallel"]}
+    ins(%arg0, %arg1 : tensor<8x8xi32, #CSR>, tensor<3x3xi32>)
+    outs(%s : tensor<6x6xi32>) attrs =  {sorted = true} {
+    ^bb0(%in: i32, %in_0: i32, %out: i32):
+      %1 = arith.muli %in, %in_0 : i32
+      %2 = arith.addi %out, %1 : i32
+      linalg.yield %2 : i32
+    } -> tensor<6x6xi32>
     return %0 : tensor<6x6xi32>
   }
 
@@ -146,7 +165,9 @@ module {
     %5 = call @conv2d_all_sparse_CSC(%sparse_input_CSC, %filter)
        : (tensor<8x8xi32, #CSC>,
           tensor<3x3xi32>) -> tensor<6x6xi32, #CSC>
-
+    %6 = call @conv2d_CSR_dense_rotated(%sparse_input_CSR, %filter)
+       : (tensor<8x8xi32, #CSR>,
+          tensor<3x3xi32>) -> tensor<6x6xi32>
 
     // Verify the output.
     //
@@ -235,6 +256,20 @@ module {
     %v5 = vector.transfer_read %all_sparse_CSC[%c0, %c0], %i0
       : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v5 : vector<6x6xi32>
+
+    //
+    // Should be the same as dense output
+    // CHECK:    ( ( 0, 0, -1, -6, -1, 6 ),
+    // CHECK-SAME: ( -1, 0, 1, 0, 1, 0 ),
+    // CHECK-SAME: ( 0, -1, 1, 0, 0, 0 ),
+    // CHECK-SAME: ( -1, 0, 0, 0, 0, 0 ),
+    // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
+    // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
+    //
+    %v6 = vector.transfer_read %6[%c0, %c0], %i0
+      : tensor<6x6xi32>, vector<6x6xi32>
+    vector.print %v : vector<6x6xi32>
+
 
     // Release the resources.
     bufferization.dealloc_tensor %sparse_input_DCSR : tensor<8x8xi32, #DCSR>
