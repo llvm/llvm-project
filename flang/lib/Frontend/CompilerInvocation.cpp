@@ -1344,11 +1344,12 @@ void CompilerInvocation::setFortranOpts() {
     fortranOptions.features.WarnOnAllUsage();
 }
 
-void CompilerInvocation::setSemanticsOpts(
+std::unique_ptr<Fortran::semantics::SemanticsContext>
+CompilerInvocation::getSemanticsCtx(
     Fortran::parser::AllCookedSources &allCookedSources) {
   auto &fortranOptions = getFortranOpts();
 
-  semanticsContext = std::make_unique<semantics::SemanticsContext>(
+  auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, allCookedSources);
 
   semanticsContext->set_moduleDirectory(getModuleDir())
@@ -1372,6 +1373,8 @@ void CompilerInvocation::setSemanticsOpts(
 
   if (targetTriple.isPPC())
     semanticsContext->targetCharacteristics().set_isPPC(true);
+
+  return semanticsContext;
 }
 
 /// Set \p loweringOptions controlling lowering behavior based

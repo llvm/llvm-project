@@ -10,14 +10,15 @@
 
 #include "PluginInterface.h"
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
+#include "Shared/PluginAPI.h"
 
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "ELF.h"
 #include "omptarget.h"
-#include "omptargetplugin.h"
 #include "print_tracing.h"
 #include "trace.h"
 
@@ -495,6 +496,10 @@ GenericKernelTy::getKernelLaunchEnvironment(
   if (isCtorOrDtor() || RecordReplay.isReplaying())
     return nullptr;
 
+  if (!KernelEnvironment.Configuration.ReductionDataSize ||
+      !KernelEnvironment.Configuration.ReductionBufferLength)
+    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
+
   // TODO: Check if the kernel needs a launch environment.
   auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
                                             /*HostPtr=*/nullptr,
@@ -509,8 +514,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
-  if (KernelEnvironment.Configuration.ReductionDataSize &&
-      KernelEnvironment.Configuration.ReductionBufferLength) {
+  {
     auto AllocOrErr = GenericDevice.dataAlloc(
         KernelEnvironment.Configuration.ReductionDataSize *
             KernelEnvironment.Configuration.ReductionBufferLength,

@@ -13,7 +13,7 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 
-#include "omptargetplugin.h"
+#include "Shared/PluginAPI.h"
 
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -23,7 +23,7 @@ namespace elf {
 
 /// Return non-zero, if the given \p image is an ELF object, which
 /// e_machine matches \p target_id; return zero otherwise.
-EXTERN int32_t checkMachine(__tgt_device_image *Image, uint16_t TargetId);
+extern "C" int32_t checkMachine(__tgt_device_image *Image, uint16_t TargetId);
 
 /// Returns the symbol associated with the \p Name in the \p ELFObj. It will
 /// first search for the hash sections to identify symbols from the hash table.
@@ -34,7 +34,7 @@ getSymbol(const llvm::object::ELFObjectFile<llvm::object::ELF64LE> &ELFObj,
           llvm::StringRef Name);
 
 /// Return eflags
-EXTERN u_int16_t elf_get_eflags(const __tgt_device_image *Image);
+extern "C" u_int16_t elf_get_eflags(const __tgt_device_image *Image);
 
 
 } // namespace elf

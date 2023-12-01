@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test appears to hang with picolibc & qemu.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 // <algorithm>
 
 // template<RandomAccessIterator Iter>

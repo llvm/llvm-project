@@ -4558,9 +4558,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
     FunctionType *ParallelRegionFnTy = FunctionType::get(
         Type::getVoidTy(Ctx), {Type::getInt16Ty(Ctx), Type::getInt32Ty(Ctx)},
         false);
-    Value *WorkFnCast = BitCastInst::CreatePointerBitCastOrAddrSpaceCast(
-        WorkFn, ParallelRegionFnTy->getPointerTo(), "worker.work_fn.addr_cast",
-        StateMachineBeginBB);
 
     Instruction *IsDone =
         ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_EQ, WorkFn,
@@ -4607,7 +4604,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       Value *IsPR;
       if (I + 1 < E || !ReachedUnknownParallelRegions.empty()) {
         Instruction *CmpI = ICmpInst::Create(
-            ICmpInst::ICmp, llvm::CmpInst::ICMP_EQ, WorkFnCast, ParallelRegion,
+            ICmpInst::ICmp, llvm::CmpInst::ICMP_EQ, WorkFn, ParallelRegion,
             "worker.check_parallel_region", StateMachineIfCascadeCurrentBB);
         CmpI->setDebugLoc(DLoc);
         IsPR = CmpI;
@@ -4627,7 +4624,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!ReachedUnknownParallelRegions.empty()) {
       StateMachineIfCascadeCurrentBB->setName(
           "worker_state_machine.parallel_region.fallback.execute");
-      CallInst::Create(ParallelRegionFnTy, WorkFnCast, {ZeroArg, GTid}, "",
+      CallInst::Create(ParallelRegionFnTy, WorkFn, {ZeroArg, GTid}, "",
                        StateMachineIfCascadeCurrentBB)
           ->setDebugLoc(DLoc);
     }
