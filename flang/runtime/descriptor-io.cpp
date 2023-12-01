@@ -119,7 +119,10 @@ bool DefinedUnformattedIo(IoStatementState &io, const Descriptor &descriptor,
   // Unformatted I/O must have an external unit (or child thereof).
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   ExternalFileUnit *external{io.GetExternalFileUnit()};
-  RUNTIME_CHECK(handler, external != nullptr);
+  if (!external) { // INQUIRE(IOLENGTH=)
+    handler.SignalError(IostatNonExternalDefinedUnformattedIo);
+    return false;
+  }
   ChildIo &child{external->PushChildIo(io)};
   int unit{external->unitNumber()};
   int ioStat{IostatOk};
