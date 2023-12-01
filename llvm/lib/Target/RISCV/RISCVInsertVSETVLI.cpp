@@ -477,6 +477,18 @@ public:
     return AVLImm;
   }
 
+  void setAVL(VSETVLIInfo Info) {
+    assert(Info.isValid());
+    if (Info.isUnknown())
+      setUnknown();
+    else if (Info.hasAVLReg())
+      setAVLReg(Info.getAVLReg());
+    else {
+      assert(Info.hasAVLImm());
+      setAVLImm(Info.getAVLImm());
+    }
+  }
+
   unsigned getSEW() const { return SEW; }
   RISCVII::VLMUL getVLMUL() const { return VLMul; }
 
@@ -1054,10 +1066,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   // TODO: We can probably relax this for immediates.
   if (Demanded.VLZeroness && !Demanded.VLAny && PrevInfo.isValid() &&
       PrevInfo.hasEquallyZeroAVL(Info, *MRI) && Info.hasSameVLMAX(PrevInfo)) {
-    if (PrevInfo.hasAVLImm())
-      Info.setAVLImm(PrevInfo.getAVLImm());
-    else
-      Info.setAVLReg(PrevInfo.getAVLReg());
+    Info.setAVL(PrevInfo);
     return;
   }
 
@@ -1074,10 +1083,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
   if (DefInfo.hasSameVLMAX(Info) &&
       (DefInfo.hasAVLImm() || DefInfo.getAVLReg() == RISCV::X0)) {
-    if (DefInfo.hasAVLImm())
-      Info.setAVLImm(DefInfo.getAVLImm());
-    else
-      Info.setAVLReg(DefInfo.getAVLReg());
+    Info.setAVL(DefInfo);
     return;
   }
 }
