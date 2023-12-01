@@ -252,6 +252,7 @@ public:
                      const MachineRegisterInfo *MRI, WaitEventType E,
                      MachineInstr &MI);
 
+  void setPendingEvent(WaitEventType E) { PendingEvents |= 1 << E; }
   unsigned hasPendingEvent() const { return PendingEvents; }
   unsigned hasPendingEvent(WaitEventType E) const {
     return PendingEvents & (1 << E);
@@ -1487,6 +1488,9 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt::allZeroExceptVsCnt());
+      // Since there's no guaranteed wait on VsCnt, scratch stores might still
+      // be in flight.
+      ScoreBrackets->setPendingEvent(SCRATCH_WRITE_ACCESS);
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
