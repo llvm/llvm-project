@@ -10,6 +10,8 @@ on:
         required: false
       projects:
         required: false
+      experimental_targets:
+        required: false
   workflow_call:
     inputs:
       build_target:
@@ -18,6 +20,10 @@ on:
 
       projects:
         required: true
+        type: string
+
+      experimental_targets:
+        required: false
         type: string
 
 concurrency:
@@ -85,7 +91,7 @@ jobs:
           # This should be a no-op for non-mac OSes
           PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//12
         with:
-          cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache'
+          cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="${{ inputs.experimental_targets }}" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache'
           build_target: '${{ inputs.build_target }}'
 
       - name: Build and Test libclc
