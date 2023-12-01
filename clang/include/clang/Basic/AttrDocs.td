@@ -2515,6 +2515,12 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
+Dispatch is done via ``ifunc`` mechanism. The assembler name of the indirect
+function is the original assembler name of the multiversioned function. For
+backward compatibility, an alias to this function is currently generated
+with an ``.ifunc`` suffix. This symbol is deprecated and will be removed
+in the future.
+
 }];
 }
 

@@ -32,6 +32,7 @@
 // LINUX: @foo_inline = weak_odr ifunc i32 (), ptr @foo_inline.resolver
 // LINUX: @foo_inline2 = weak_odr ifunc i32 (), ptr @foo_inline2.resolver
 // LINUX: @foo_used_no_defn = weak_odr ifunc i32 (), ptr @foo_used_no_defn.resolver
+// LINUX: @isa_level = weak_odr ifunc i32 (i32), ptr @isa_level.resolver
 
 static int __attribute__((target_clones("sse4.2, default"))) internal(void) { return 0; }
 int use(void) { return internal(); }

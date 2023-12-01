@@ -555,7 +555,9 @@ Bug Fixes in This Version
   Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
 - Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
-- Fix linker error when using multiversioned function defined in a different TU.
+- Fix the name of the ifunc symbol emitted for multiversion functions declared with the
+  ``target_clones`` attribute. This addresses a linker error that would otherwise occur
+  when these functions are referenced from other TUs
 - Fixed an issue that a benign assertion might hit when instantiating a pack expansion
   inside a lambda. (`#61460 <https://github.com/llvm/llvm-project/issues/61460>`_)
 
