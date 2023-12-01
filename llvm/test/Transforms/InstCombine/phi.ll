@@ -1421,7 +1421,6 @@ if.end:
   ret i1  %cmp1
 }
 
-; FIXME: This is a miscompile.
 define i1 @phi_knownnonzero_eq_or_disjoint_icmp(i32 %n, i32 %s, ptr %P, i32 %val) {
 ; CHECK-LABEL: @phi_knownnonzero_eq_or_disjoint_icmp(
 ; CHECK-NEXT:  entry:
@@ -1431,7 +1430,7 @@ define i1 @phi_knownnonzero_eq_or_disjoint_icmp(i32 %n, i32 %s, ptr %P, i32 %val
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ORPHI:%.*]] = or disjoint i32 [[PHI]], [[VAL:%.*]]
+; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[PHI]], [[VAL:%.*]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[ORPHI]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
