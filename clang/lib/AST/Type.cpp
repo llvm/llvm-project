@@ -2644,6 +2644,8 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
 
   if (BaseElementType->isIncompleteType()) {
     return false;
+  } else if (!BaseElementType->isObjectType()) {
+    return false;
   } else if (const auto *RD = BaseElementType->getAsRecordDecl()) {
     return RD->canPassInRegisters();
   } else {
