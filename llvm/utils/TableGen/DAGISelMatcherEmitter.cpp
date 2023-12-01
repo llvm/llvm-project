@@ -1060,45 +1060,80 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
 
 static StringRef getOpcodeString(Matcher::KindTy Kind) {
   switch (Kind) {
-  case Matcher::Scope: return "OPC_Scope"; break;
-  case Matcher::RecordNode: return "OPC_RecordNode"; break;
-  case Matcher::RecordChild: return "OPC_RecordChild"; break;
-  case Matcher::RecordMemRef: return "OPC_RecordMemRef"; break;
-  case Matcher::CaptureGlueInput: return "OPC_CaptureGlueInput"; break;
-  case Matcher::MoveChild: return "OPC_MoveChild"; break;
-  case Matcher::MoveParent: return "OPC_MoveParent"; break;
-  case Matcher::CheckSame: return "OPC_CheckSame"; break;
-  case Matcher::CheckChildSame: return "OPC_CheckChildSame"; break;
+  case Matcher::Scope:
+    return "OPC_Scope";
+  case Matcher::RecordNode:
+    return "OPC_RecordNode";
+  case Matcher::RecordChild:
+    return "OPC_RecordChild";
+  case Matcher::RecordMemRef:
+    return "OPC_RecordMemRef";
+  case Matcher::CaptureGlueInput:
+    return "OPC_CaptureGlueInput";
+  case Matcher::MoveChild:
+    return "OPC_MoveChild";
+  case Matcher::MoveParent:
+    return "OPC_MoveParent";
+  case Matcher::CheckSame:
+    return "OPC_CheckSame";
+  case Matcher::CheckChildSame:
+    return "OPC_CheckChildSame";
   case Matcher::CheckPatternPredicate:
-    return "OPC_CheckPatternPredicate"; break;
-  case Matcher::CheckPredicate: return "OPC_CheckPredicate"; break;
-  case Matcher::CheckOpcode: return "OPC_CheckOpcode"; break;
-  case Matcher::SwitchOpcode: return "OPC_SwitchOpcode"; break;
-  case Matcher::CheckType: return "OPC_CheckType"; break;
-  case Matcher::SwitchType: return "OPC_SwitchType"; break;
-  case Matcher::CheckChildType: return "OPC_CheckChildType"; break;
-  case Matcher::CheckInteger: return "OPC_CheckInteger"; break;
-  case Matcher::CheckChildInteger: return "OPC_CheckChildInteger"; break;
-  case Matcher::CheckCondCode: return "OPC_CheckCondCode"; break;
-  case Matcher::CheckChild2CondCode: return "OPC_CheckChild2CondCode"; break;
-  case Matcher::CheckValueType: return "OPC_CheckValueType"; break;
-  case Matcher::CheckComplexPat: return "OPC_CheckComplexPat"; break;
-  case Matcher::CheckAndImm: return "OPC_CheckAndImm"; break;
-  case Matcher::CheckOrImm: return "OPC_CheckOrImm"; break;
+    return "OPC_CheckPatternPredicate";
+  case Matcher::CheckPredicate:
+    return "OPC_CheckPredicate";
+  case Matcher::CheckOpcode:
+    return "OPC_CheckOpcode";
+  case Matcher::SwitchOpcode:
+    return "OPC_SwitchOpcode";
+  case Matcher::CheckType:
+    return "OPC_CheckType";
+  case Matcher::SwitchType:
+    return "OPC_SwitchType";
+  case Matcher::CheckChildType:
+    return "OPC_CheckChildType";
+  case Matcher::CheckInteger:
+    return "OPC_CheckInteger";
+  case Matcher::CheckChildInteger:
+    return "OPC_CheckChildInteger";
+  case Matcher::CheckCondCode:
+    return "OPC_CheckCondCode";
+  case Matcher::CheckChild2CondCode:
+    return "OPC_CheckChild2CondCode";
+  case Matcher::CheckValueType:
+    return "OPC_CheckValueType";
+  case Matcher::CheckComplexPat:
+    return "OPC_CheckComplexPat";
+  case Matcher::CheckAndImm:
+    return "OPC_CheckAndImm";
+  case Matcher::CheckOrImm:
+    return "OPC_CheckOrImm";
   case Matcher::CheckFoldableChainNode:
-    return "OPC_CheckFoldableChainNode"; break;
-  case Matcher::CheckImmAllOnesV: return "OPC_CheckImmAllOnesV"; break;
-  case Matcher::CheckImmAllZerosV: return "OPC_CheckImmAllZerosV"; break;
-  case Matcher::EmitInteger: return "OPC_EmitInteger"; break;
-  case Matcher::EmitStringInteger: return "OPC_EmitStringInteger"; break;
-  case Matcher::EmitRegister: return "OPC_EmitRegister"; break;
-  case Matcher::EmitConvertToTarget: return "OPC_EmitConvertToTarget"; break;
-  case Matcher::EmitMergeInputChains: return "OPC_EmitMergeInputChains"; break;
-  case Matcher::EmitCopyToReg: return "OPC_EmitCopyToReg"; break;
-  case Matcher::EmitNode: return "OPC_EmitNode"; break;
-  case Matcher::MorphNodeTo: return "OPC_MorphNodeTo"; break;
-  case Matcher::EmitNodeXForm: return "OPC_EmitNodeXForm"; break;
-  case Matcher::CompleteMatch: return "OPC_CompleteMatch"; break;
+    return "OPC_CheckFoldableChainNode";
+  case Matcher::CheckImmAllOnesV:
+    return "OPC_CheckImmAllOnesV";
+  case Matcher::CheckImmAllZerosV:
+    return "OPC_CheckImmAllZerosV";
+  case Matcher::EmitInteger:
+    return "OPC_EmitInteger";
+  case Matcher::EmitStringInteger:
+    return "OPC_EmitStringInteger";
+  case Matcher::EmitRegister:
+    return "OPC_EmitRegister";
+  case Matcher::EmitConvertToTarget:
+    return "OPC_EmitConvertToTarget";
+  case Matcher::EmitMergeInputChains:
+    return "OPC_EmitMergeInputChains";
+  case Matcher::EmitCopyToReg:
+    return "OPC_EmitCopyToReg";
+  case Matcher::EmitNode:
+    return "OPC_EmitNode";
+  case Matcher::MorphNodeTo:
+    return "OPC_MorphNodeTo";
+  case Matcher::EmitNodeXForm:
+    return "OPC_EmitNodeXForm";
+  case Matcher::CompleteMatch:
+    return "OPC_CompleteMatch";
   }
 
   llvm_unreachable("Unhandled opcode?");
