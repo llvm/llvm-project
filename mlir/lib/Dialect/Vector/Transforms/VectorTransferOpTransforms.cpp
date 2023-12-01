@@ -260,14 +260,6 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
   opToErase.push_back(read.getOperation());
 }
 
-/// Returns a copy of `shape` without unit dims.
-static SmallVector<int64_t> getReducedShape(ArrayRef<int64_t> shape) {
-  SmallVector<int64_t> reducedShape;
-  llvm::copy_if(shape, std::back_inserter(reducedShape),
-                [](int64_t dimSize) { return dimSize != 1; });
-  return reducedShape;
-}
-
 /// Converts OpFoldResults to int64_t shape without unit dims.
 static SmallVector<int64_t> getReducedShape(ArrayRef<OpFoldResult> mixedSizes) {
   SmallVector<int64_t> reducedShape;
@@ -446,9 +438,7 @@ class TransferWriteDropUnitDimsPattern
     Value source = transferWriteOp.getSource();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor type.
-    if (!sourceType || !sourceType.hasStaticShape())
-      return failure();
-    if (sourceType.getNumElements() != vectorType.getNumElements())
+    if (!sourceType)
       return failure();
     // TODO: generalize this pattern, relax the requirements here.
     if (transferWriteOp.hasOutOfBoundsDim())
@@ -461,25 +451,39 @@ class TransferWriteDropUnitDimsPattern
       return failure();
     // Check if the reduced vector shape matches the reduced destination shape.
     // Otherwise, this case is not supported yet.
-    int vectorReducedRank = getReducedRank(vectorType.getShape());
-    if (reducedRank != vectorReducedRank)
+    auto reducedVectorType = trimNonScalableUnitDims(vectorType);
+    if (reducedRank != reducedVectorType.getRank())
       return failure();
     if (llvm::any_of(transferWriteOp.getIndices(), [](Value v) {
           return getConstantIntValue(v) != static_cast<int64_t>(0);
         }))
       return failure();
+
+    Value maskOp = transferWriteOp.getMask();
+    if (maskOp) {
+      auto createMaskOp = maskOp.getDefiningOp<vector::CreateMaskOp>();
+      if (!createMaskOp)
+        return rewriter.notifyMatchFailure(
+            transferWriteOp,
+            "unsupported mask op, only 'vector.create_mask' is "
+            "currently supported");
+      FailureOr<Value> rankReducedCreateMask =
+          createMaskDropNonScalableUnitDims(rewriter, loc, createMaskOp);
+      if (failed(rankReducedCreateMask))
+        return failure();
+      maskOp = *rankReducedCreateMask;
+    }
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
-    VectorType reducedVectorType = VectorType::get(
-        getReducedShape(vectorType.getShape()), vectorType.getElementType());
-
+    SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, reducedVectorType, vector);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        transferWriteOp, shapeCast, reducedShapeSource, zeros, identityMap);
+        transferWriteOp, Type(), shapeCast, reducedShapeSource, zeros,
+        identityMap, maskOp, rewriter.getBoolArrayAttr(inBounds));
 
     return success();
   }
