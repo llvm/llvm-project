@@ -355,6 +355,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       byte_size = form_value.Unsigned();
       break;
 
+    case DW_AT_alignment:
+      alignment = form_value.Unsigned();
+      break;
+
     case DW_AT_byte_stride:
       byte_stride = form_value.Unsigned();
       break;
@@ -1921,17 +1925,21 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             die.GetOffset(), attrs.name.GetCString());
       }
 
-      // If the byte size of the record is specified then overwrite the size
-      // that would be computed by Clang. This is only needed as LLDB's
-      // TypeSystemClang is always in C++ mode, but some compilers such as
-      // GCC and Clang give empty structs a size of 0 in C mode (in contrast to
-      // the size of 1 for empty structs that would be computed in C++ mode).
-      if (attrs.byte_size) {
+      // Setting authority byte size and alignment for empty structures.
+      //
+      // If the byte size or alignmenet of the record is specified then
+      // overwrite the ones that would be computed by Clang.
+      // This is only needed as LLDB's TypeSystemClang is always in C++ mode,
+      // but some compilers such as GCC and Clang give empty structs a size of 0
+      // in C mode (in contrast to the size of 1 for empty structs that would be
+      // computed in C++ mode).
+      if (attrs.byte_size || attrs.alignment) {
         clang::RecordDecl *record_decl =
             TypeSystemClang::GetAsRecordDecl(clang_type);
         if (record_decl) {
           ClangASTImporter::LayoutInfo layout;
-          layout.bit_size = *attrs.byte_size * 8;
+          layout.bit_size = attrs.byte_size.value_or(0) * 8;
+          layout.alignment = attrs.alignment.value_or(0) * 8;
           GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
@@ -2270,6 +2278,9 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (layout_info.bit_size == 0)
       layout_info.bit_size =
           die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+    if (layout_info.alignment == 0)
+      layout_info.alignment =
+          die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment, 0) * 8;
 
     clang::CXXRecordDecl *record_decl =
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
