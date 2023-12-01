@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -718,7 +719,7 @@ void CodeGenPassBuilder<Derived>::addISelPrepare(AddIRPass &addPass) const {
   addPass(CallBrPrepare());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  addPass(SafeStackPass());
+  addPass(SafeStackPass(&TM));
   addPass(StackProtectorPass());
 
   if (Opt.PrintISelInput)

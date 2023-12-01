@@ -35,6 +35,7 @@ FUNCTION_ANALYSIS("targetir", TargetIRAnalysis, (std::move(TM.getTargetIRAnalysi
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
 #endif
+FUNCTION_PASS("safe-stack", SafeStackPass, (TM))
 FUNCTION_PASS("mergeicmps", MergeICmpsPass, ())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass, ())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass, ())
@@ -114,7 +115,6 @@ DUMMY_FUNCTION_PASS("dwarfehprepare", DwarfEHPass, ())
 DUMMY_FUNCTION_PASS("winehprepare", WinEHPass, ())
 DUMMY_FUNCTION_PASS("wasmehprepare", WasmEHPass, ())
 DUMMY_FUNCTION_PASS("codegenprepare", CodeGenPreparePass, ())
-DUMMY_FUNCTION_PASS("safe-stack", SafeStackPass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 DUMMY_FUNCTION_PASS("atomic-expand", AtomicExpandPass, ())
 DUMMY_FUNCTION_PASS("interleaved-access", InterleavedAccessPass, ())
