@@ -211,7 +211,6 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       target->EvaluateExpression(s, exe_ctx->GetFramePtr(), valobj_sp, options);
 
   bool success = false;
-  bool error_set = false;
   if (expr_result == eExpressionCompleted) {
     if (valobj_sp)
       valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
@@ -224,48 +223,39 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
         error_ptr->Clear();
       return addr;
     }
-    if (error_ptr) {
-      error_set = true;
+    if (error_ptr)
       error_ptr->SetErrorStringWithFormat(
           "address expression \"%s\" resulted in a value whose type "
           "can't be converted to an address: %s",
           s.str().c_str(), valobj_sp->GetTypeName().GetCString());
-    }
-  } else {
-    // Since the compiler can't handle things like "main + 12" we should try to
-    // do this for now. The compiler doesn't like adding offsets to function
-    // pointer types.
-    static RegularExpression g_symbol_plus_offset_regex(
-        "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+    return {};
+  }
 
-    llvm::SmallVector<llvm::StringRef, 4> matches;
-    if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
-      uint64_t offset = 0;
-      llvm::StringRef name = matches[1];
-      llvm::StringRef sign = matches[2];
-      llvm::StringRef str_offset = matches[3];
-      if (!str_offset.getAsInteger(0, offset)) {
-        Status error;
-        addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
-        if (addr != LLDB_INVALID_ADDRESS) {
-          if (sign[0] == '+')
-            return addr + offset;
-          return addr - offset;
-        }
+  // Since the compiler can't handle things like "main + 12" we should try to
+  // do this for now. The compiler doesn't like adding offsets to function
+  // pointer types.
+  static RegularExpression g_symbol_plus_offset_regex(
+      "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+
+  llvm::SmallVector<llvm::StringRef, 4> matches;
+  if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
+    uint64_t offset = 0;
+    llvm::StringRef name = matches[1];
+    llvm::StringRef sign = matches[2];
+    llvm::StringRef str_offset = matches[3];
+    if (!str_offset.getAsInteger(0, offset)) {
+      Status error;
+      addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
+      if (addr != LLDB_INVALID_ADDRESS) {
+        if (sign[0] == '+')
+          return addr + offset;
+        return addr - offset;
       }
     }
-
-    if (error_ptr) {
-      error_set = true;
-      error_ptr->SetErrorStringWithFormat(
-          "address expression \"%s\" evaluation failed", s.str().c_str());
-    }
   }
 
-  if (error_ptr) {
-    if (!error_set)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
-  }
+  if (error_ptr)
+    error_ptr->SetErrorStringWithFormat(
+        "address expression \"%s\" evaluation failed", s.str().c_str());
   return {};
 }
