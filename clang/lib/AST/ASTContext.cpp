@@ -1628,28 +1628,22 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
 CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
   unsigned Align = Target->getCharWidth();
 
-  bool UseAlignAttrOnly = false;
-  if (unsigned AlignFromAttr = D->getMaxAlignment()) {
+  const unsigned AlignFromAttr = D->getMaxAlignment();
+  if (AlignFromAttr)
     Align = AlignFromAttr;
 
-    // __attribute__((aligned)) can increase or decrease alignment
-    // *except* on a struct or struct member, where it only increases
-    // alignment unless 'packed' is also specified.
-    //
-    // It is an error for alignas to decrease alignment, so we can
-    // ignore that possibility;  Sema should diagnose it.
-    if (isa<FieldDecl>(D)) {
-      UseAlignAttrOnly = D->hasAttr<PackedAttr>() ||
-        cast<FieldDecl>(D)->getParent()->hasAttr<PackedAttr>();
-    } else {
-      UseAlignAttrOnly = true;
-    }
-  }
-  else if (isa<FieldDecl>(D))
-      UseAlignAttrOnly =
-        D->hasAttr<PackedAttr>() ||
-        cast<FieldDecl>(D)->getParent()->hasAttr<PackedAttr>();
-
+  // __attribute__((aligned)) can increase or decrease alignment
+  // *except* on a struct or struct member, where it only increases
+  // alignment unless 'packed' is also specified.
+  //
+  // It is an error for alignas to decrease alignment, so we can
+  // ignore that possibility;  Sema should diagnose it.
+  bool UseAlignAttrOnly;
+  if (const FieldDecl *FD = dyn_cast<FieldDecl>(D))
+    UseAlignAttrOnly =
+        FD->hasAttr<PackedAttr>() || FD->getParent()->hasAttr<PackedAttr>();
+  else
+    UseAlignAttrOnly = AlignFromAttr != 0;
   // If we're using the align attribute only, just ignore everything
   // else about the declaration and its type.
   if (UseAlignAttrOnly) {
