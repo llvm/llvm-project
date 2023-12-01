@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "DeviceImage.h"
 #include "Shared/APITypes.h"
 #include "Shared/PluginAPI.h"
 #include "Shared/Requirements.h"
@@ -21,11 +22,13 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 #include <cstdint>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -86,9 +89,12 @@ struct PluginManager {
   /// RTLs identified on the host
   PluginAdaptorManagerTy RTLs;
 
-  /// Executable images and information extracted from the input images passed
-  /// to the runtime.
-  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
+  void addDeviceImage(__tgt_device_image &TgtDeviceImage) {
+    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtDeviceImage));
+  }
+
+  /// Iterate over all device images registered with this plugin.
+  auto deviceImages() { return llvm::make_pointee_range(DeviceImages); }
 
   /// Devices associated with RTLs
   llvm::SmallVector<std::unique_ptr<DeviceTy>> Devices;
@@ -157,6 +163,10 @@ private:
 
   // List of all plugin adaptors, in use or not.
   std::list<PluginAdaptorTy> PluginAdaptors;
+
+  /// Executable images and information extracted from the input images passed
+  /// to the runtime.
+  llvm::SmallVector<std::unique_ptr<DeviceImageTy>> DeviceImages;
 
   /// The user provided requirements.
   RequirementCollection Requirements;

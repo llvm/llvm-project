@@ -12,6 +12,7 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
+#include "DeviceImage.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "device.h"
@@ -131,52 +132,18 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
   }
 }
 
-static __tgt_device_image getExecutableImage(__tgt_device_image *Image) {
-  StringRef ImageStr(static_cast<char *>(Image->ImageStart),
-                     static_cast<char *>(Image->ImageEnd) -
-                         static_cast<char *>(Image->ImageStart));
-  auto BinaryOrErr =
-      object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
-  if (!BinaryOrErr) {
-    consumeError(BinaryOrErr.takeError());
-    return *Image;
-  }
-
-  void *Begin = const_cast<void *>(
-      static_cast<const void *>((*BinaryOrErr)->getImage().bytes_begin()));
-  void *End = const_cast<void *>(
-      static_cast<const void *>((*BinaryOrErr)->getImage().bytes_end()));
-
-  return {Begin, End, Image->EntriesBegin, Image->EntriesEnd};
-}
-
-static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
-  StringRef ImageStr(static_cast<char *>(Image->ImageStart),
-                     static_cast<char *>(Image->ImageEnd) -
-                         static_cast<char *>(Image->ImageStart));
-  auto BinaryOrErr =
-      object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
-  if (!BinaryOrErr) {
-    consumeError(BinaryOrErr.takeError());
-    return __tgt_image_info{};
-  }
-
-  return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
-}
-
 void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
-    PM->Images.emplace_back(getExecutableImage(&Desc->DeviceImages[i]),
-                            getImageInfo(&Desc->DeviceImages[i]));
+    PM->addDeviceImage(Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
-  for (auto &ImageAndInfo : PM->Images) {
+  for (DeviceImageTy &DI : PM->deviceImages()) {
     // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &ImageAndInfo.first;
-    __tgt_image_info *Info = &ImageAndInfo.second;
+    __tgt_device_image *Img = &DI.getExecutableImage();
+    __tgt_image_info *Info = &DI.getImageInfo();
 
     PluginAdaptorTy *FoundRTL = nullptr;
 
@@ -243,9 +210,9 @@ void PluginAdaptorManagerTy::unregisterLib(__tgt_bin_desc *Desc) {
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
-  for (auto &ImageAndInfo : PM->Images) {
+  for (DeviceImageTy &DI : PM->deviceImages()) {
     // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &ImageAndInfo.first;
+    __tgt_device_image *Img = &DI.getExecutableImage();
 
     PluginAdaptorTy *FoundRTL = NULL;
 
