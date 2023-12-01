@@ -2037,14 +2037,6 @@ def BPFPreserveAccessIndex : InheritableAttr,
   let LangOpts = [COnly];
 }
 
-def BPFPreserveStaticOffset : InheritableAttr,
-                              TargetSpecificAttr<TargetBPF>  {
-  let Spellings = [Clang<"preserve_static_offset">];
-  let Subjects = SubjectList<[Record], ErrorDiag>;
-  let Documentation = [BPFPreserveStaticOffsetDocs];
-  let LangOpts = [COnly];
-}
-
 def BTFDeclTag : InheritableAttr {
   let Spellings = [Clang<"btf_decl_tag">];
   let Args = [StringArgument<"BTFDeclTag">];
