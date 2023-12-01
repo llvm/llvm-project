@@ -19,7 +19,6 @@ define double @zext_shl_mul(ptr %a0, ptr %a1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl (%rsi), %eax
 ; X64-NEXT:    leaq (%rax,%rax,4), %rax
-; X64-NEXT:    movl %eax, %eax
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
   %ld = load i16, ptr %a1, align 2
