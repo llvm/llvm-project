@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -3805,6 +3806,8 @@ static bool paddingIsNotNeeded(PackOp op) {
   auto srcType = op.getSourceType();
   if (llvm::any_of(op.getInnerDimsPos(),
                    [&](int64_t pos) { return srcType.isDynamicDim(pos); }))
+    return false;
+  if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
     return false;
   return !PackOp::requirePaddingValue(srcType.getShape(), op.getInnerDimsPos(),
                                       op.getMixedTiles());

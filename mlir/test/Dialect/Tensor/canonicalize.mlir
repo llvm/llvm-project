@@ -768,6 +768,22 @@ func.func @fold_padding_value_pack_negative2(%arg0: tensor<1200x?xf32>, %arg1: t
 
 // -----
 
+func.func @fold_padding_value_pack_negative3(%arg0: tensor<1200x500000xf32>, %arg1: tensor<?x1200x?x1xf32>, %tile : index) -> tensor<?x1200x?x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [%tile, 1]
+    into %arg1 : tensor<1200x500000xf32> -> tensor<?x1200x?x1xf32>
+  return %pack : tensor<?x1200x?x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative3
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
+
+// -----
+
 // CHECK-LABEL: func @fold_unpack_constant_splat
 //   CHECK-NOT: tensor.unpack
 //       CHECK: arith.constant dense<1.000000e-01> : tensor<128x256xf32>
