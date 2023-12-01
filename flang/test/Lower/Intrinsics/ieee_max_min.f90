@@ -98,8 +98,8 @@ program p
       ! CHECK:           %[[V_696:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_697:[0-9]+]] = fir.load %[[V_696]] : !fir.ref<i32>
       ! CHECK:           %[[V_698:[0-9]+]] = arith.bitcast %[[V_697]] : i32 to f32
-      ! CHECK:           %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_209]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_208]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_209]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_208]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_701:[0-9]+]] = arith.ori %[[V_700]], %[[V_699]] : i1
       ! CHECK:           fir.if %[[V_701]] {
       ! CHECK:             %[[V_702:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -157,8 +157,8 @@ program p
       ! CHECK:           %[[V_696:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_697:[0-9]+]] = fir.load %[[V_696]] : !fir.ref<i32>
       ! CHECK:           %[[V_698:[0-9]+]] = arith.bitcast %[[V_697]] : i32 to f32
-      ! CHECK:           %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_274]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_273]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_274]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_273]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_701:[0-9]+]] = arith.ori %[[V_700]], %[[V_699]] : i1
       ! CHECK:           fir.if %[[V_701]] {
       ! CHECK:             %[[V_702:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -218,8 +218,8 @@ program p
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
       ! CHECK:           %[[V_701:[0-9]+]] = arith.select %[[V_697]], %[[V_335]], %[[V_700]] : f32
       ! CHECK:           %[[V_702:[0-9]+]] = arith.select %[[V_696]], %[[V_334]], %[[V_701]] : f32
-      ! CHECK:           %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_335]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_334]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_335]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_334]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_705:[0-9]+]] = arith.ori %[[V_704]], %[[V_703]] : i1
       ! CHECK:           fir.if %[[V_705]] {
       ! CHECK:             %[[V_706:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -281,8 +281,8 @@ program p
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
       ! CHECK:           %[[V_701:[0-9]+]] = arith.select %[[V_697]], %[[V_394]], %[[V_700]] : f32
       ! CHECK:           %[[V_702:[0-9]+]] = arith.select %[[V_696]], %[[V_393]], %[[V_701]] : f32
-      ! CHECK:           %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_394]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_393]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_394]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_393]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_705:[0-9]+]] = arith.ori %[[V_704]], %[[V_703]] : i1
       ! CHECK:           fir.if %[[V_705]] {
       ! CHECK:             %[[V_706:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -338,8 +338,8 @@ program p
       ! CHECK:           %[[V_696:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_697:[0-9]+]] = fir.load %[[V_696]] : !fir.ref<i32>
       ! CHECK:           %[[V_698:[0-9]+]] = arith.bitcast %[[V_697]] : i32 to f32
-      ! CHECK:           %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_455]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_454]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_455]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_454]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_701:[0-9]+]] = arith.ori %[[V_700]], %[[V_699]] : i1
       ! CHECK:           fir.if %[[V_701]] {
       ! CHECK:             %[[V_702:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -397,8 +397,8 @@ program p
       ! CHECK:           %[[V_696:[0-9]+]] = fir.coordinate_of %[[V_92]], %c2{{.*}} : (!fir.ref<!fir.array<12xi32>>, i8) -> !fir.ref<i32>
       ! CHECK:           %[[V_697:[0-9]+]] = fir.load %[[V_696]] : !fir.ref<i32>
       ! CHECK:           %[[V_698:[0-9]+]] = arith.bitcast %[[V_697]] : i32 to f32
-      ! CHECK:           %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_514]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_513]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_699:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_514]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_700:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_513]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_701:[0-9]+]] = arith.ori %[[V_700]], %[[V_699]] : i1
       ! CHECK:           fir.if %[[V_701]] {
       ! CHECK:             %[[V_702:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -458,8 +458,8 @@ program p
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
       ! CHECK:           %[[V_701:[0-9]+]] = arith.select %[[V_697]], %[[V_575]], %[[V_700]] : f32
       ! CHECK:           %[[V_702:[0-9]+]] = arith.select %[[V_696]], %[[V_574]], %[[V_701]] : f32
-      ! CHECK:           %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_575]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_574]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_575]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_574]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_705:[0-9]+]] = arith.ori %[[V_704]], %[[V_703]] : i1
       ! CHECK:           fir.if %[[V_705]] {
       ! CHECK:             %[[V_706:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
@@ -521,8 +521,8 @@ program p
       ! CHECK:           %[[V_700:[0-9]+]] = arith.bitcast %[[V_699]] : i32 to f32
       ! CHECK:           %[[V_701:[0-9]+]] = arith.select %[[V_697]], %[[V_634]], %[[V_700]] : f32
       ! CHECK:           %[[V_702:[0-9]+]] = arith.select %[[V_696]], %[[V_633]], %[[V_701]] : f32
-      ! CHECK:           %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_634]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:           %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_633]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_703:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_634]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG:       %[[V_704:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_633]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:           %[[V_705:[0-9]+]] = arith.ori %[[V_704]], %[[V_703]] : i1
       ! CHECK:           fir.if %[[V_705]] {
       ! CHECK:             %[[V_706:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32

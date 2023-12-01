@@ -36,8 +36,8 @@ program p
       ! CHECK:     %[[V_179:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_61]]) %[[V_178]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       ! CHECK:     %[[V_180:[0-9]+]] = fir.load %[[V_176]] : !fir.ref<f32>
       ! CHECK:     %[[V_181:[0-9]+]] = fir.load %[[V_179]] : !fir.ref<f32>
-      ! CHECK:     %[[V_182:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_181]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:     %[[V_183:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_182:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_181]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_183:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:     %[[V_184:[0-9]+]] = arith.ori %[[V_183]], %[[V_182]] : i1
       ! CHECK:     %[[V_185:[0-9]+]] = arith.cmpf oeq, %[[V_180]], %[[V_181]] : f32
       ! CHECK:     fir.if %[[V_184]] {
@@ -57,8 +57,8 @@ program p
       ! CHECK:     %[[V_211:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_61]]) %[[V_210]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       ! CHECK:     %[[V_212:[0-9]+]] = fir.load %[[V_208]] : !fir.ref<f32>
       ! CHECK:     %[[V_213:[0-9]+]] = fir.load %[[V_211]] : !fir.ref<f32>
-      ! CHECK:     %[[V_214:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_213]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:     %[[V_215:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_212]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_214:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_213]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_215:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_212]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:     %[[V_216:[0-9]+]] = arith.ori %[[V_215]], %[[V_214]] : i1
       ! CHECK:     %[[V_217:[0-9]+]] = arith.cmpf oge, %[[V_212]], %[[V_213]] : f32
       ! CHECK:     fir.if %[[V_216]] {
@@ -78,8 +78,8 @@ program p
       ! CHECK:     %[[V_243:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_61]]) %[[V_242]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       ! CHECK:     %[[V_244:[0-9]+]] = fir.load %[[V_240]] : !fir.ref<f32>
       ! CHECK:     %[[V_245:[0-9]+]] = fir.load %[[V_243]] : !fir.ref<f32>
-      ! CHECK:     %[[V_246:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_245]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:     %[[V_247:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_244]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_246:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_245]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_247:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_244]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:     %[[V_248:[0-9]+]] = arith.ori %[[V_247]], %[[V_246]] : i1
       ! CHECK:     %[[V_249:[0-9]+]] = arith.cmpf ogt, %[[V_244]], %[[V_245]] : f32
       ! CHECK:     fir.if %[[V_248]] {
@@ -99,8 +99,8 @@ program p
       ! CHECK:     %[[V_275:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_61]]) %[[V_274]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       ! CHECK:     %[[V_276:[0-9]+]] = fir.load %[[V_272]] : !fir.ref<f32>
       ! CHECK:     %[[V_277:[0-9]+]] = fir.load %[[V_275]] : !fir.ref<f32>
-      ! CHECK:     %[[V_278:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_277]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:     %[[V_279:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_276]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_278:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_277]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_279:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_276]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:     %[[V_280:[0-9]+]] = arith.ori %[[V_279]], %[[V_278]] : i1
       ! CHECK:     %[[V_281:[0-9]+]] = arith.cmpf ole, %[[V_276]], %[[V_277]] : f32
       ! CHECK:     fir.if %[[V_280]] {
@@ -120,8 +120,8 @@ program p
       ! CHECK:     %[[V_307:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_61]]) %[[V_306]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       ! CHECK:     %[[V_308:[0-9]+]] = fir.load %[[V_304]] : !fir.ref<f32>
       ! CHECK:     %[[V_309:[0-9]+]] = fir.load %[[V_307]] : !fir.ref<f32>
-      ! CHECK:     %[[V_310:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_309]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:     %[[V_311:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_308]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_310:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_309]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_311:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_308]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:     %[[V_312:[0-9]+]] = arith.ori %[[V_311]], %[[V_310]] : i1
       ! CHECK:     %[[V_313:[0-9]+]] = arith.cmpf olt, %[[V_308]], %[[V_309]] : f32
       ! CHECK:     fir.if %[[V_312]] {
@@ -141,8 +141,8 @@ program p
       ! CHECK:     %[[V_339:[0-9]+]] = fir.array_coor %[[V_62]](%[[V_61]]) %[[V_338]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
       ! CHECK:     %[[V_340:[0-9]+]] = fir.load %[[V_336]] : !fir.ref<f32>
       ! CHECK:     %[[V_341:[0-9]+]] = fir.load %[[V_339]] : !fir.ref<f32>
-      ! CHECK:     %[[V_342:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_341]]) <{bit = 1 : i32}> : (f32) -> i1
-      ! CHECK:     %[[V_343:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_340]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_342:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_341]]) <{bit = 1 : i32}> : (f32) -> i1
+      ! CHECK-DAG: %[[V_343:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_340]]) <{bit = 1 : i32}> : (f32) -> i1
       ! CHECK:     %[[V_344:[0-9]+]] = arith.ori %[[V_343]], %[[V_342]] : i1
       ! CHECK:     %[[V_345:[0-9]+]] = arith.cmpf une, %[[V_340]], %[[V_341]] : f32
       ! CHECK:     fir.if %[[V_344]] {

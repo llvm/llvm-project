@@ -20,12 +20,13 @@ extern "C" {
 std::int32_t RTNAME(MapException)(int32_t except) {
   Terminator terminator{__FILE__, __LINE__};
 
-  static constexpr int32_t mask = _FORTRAN_RUNTIME_IEEE_INVALID |
+  static constexpr int32_t mask{_FORTRAN_RUNTIME_IEEE_INVALID |
       _FORTRAN_RUNTIME_IEEE_DENORM | _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO |
       _FORTRAN_RUNTIME_IEEE_OVERFLOW | _FORTRAN_RUNTIME_IEEE_UNDERFLOW |
-      _FORTRAN_RUNTIME_IEEE_INEXACT;
-  if (except != (except & mask))
+      _FORTRAN_RUNTIME_IEEE_INEXACT};
+  if (except != (except & mask)) {
     terminator.Crash("Invalid exception value: %d", except);
+  }
 
   // Fortran and fenv.h values are identical; return the value.
   if constexpr (_FORTRAN_RUNTIME_IEEE_INVALID == FE_INVALID &&
@@ -33,9 +34,11 @@ std::int32_t RTNAME(MapException)(int32_t except) {
       _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO == FE_DIVBYZERO &&
       _FORTRAN_RUNTIME_IEEE_OVERFLOW == FE_OVERFLOW &&
       _FORTRAN_RUNTIME_IEEE_UNDERFLOW == FE_UNDERFLOW &&
-      _FORTRAN_RUNTIME_IEEE_INEXACT == FE_INEXACT)
-    if (except)
+      _FORTRAN_RUNTIME_IEEE_INEXACT == FE_INEXACT) {
+    if (except) {
       return except;
+    }
+  }
 
   // fenv.h calls that take exception arguments are able to process multiple
   // exceptions in one call, such as FE_OVERFLOW | FE_DIVBYZERO | FE_INVALID.
