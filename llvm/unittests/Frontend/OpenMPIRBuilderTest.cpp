@@ -2286,7 +2286,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   EXPECT_EQ(Builder.getPtrTy(), LoopBodyFuncArg->getType());
   Function *ArgFunction = dyn_cast<Function>(LoopBodyFuncArg);
   EXPECT_NE(ArgFunction, nullptr);
-  EXPECT_EQ(ArgFunction->arg_size(), 1);
+  EXPECT_EQ(ArgFunction->arg_size(), 1u);
   EXPECT_EQ(ArgFunction->getArg(0)->getType(), TripCount->getType());
   // Check that no variables except for loop counter are used in loop body
   EXPECT_EQ(Constant::getNullValue(Builder.getPtrTy()),
