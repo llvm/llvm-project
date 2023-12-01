@@ -7873,7 +7873,6 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
 static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
-  Observer.changingInstr(MI);
   MachineFunction &MF = *MI.getMF();
   const DataLayout &DL = MIRBuilder.getDataLayout();
   LLVMContext &Ctx = MF.getFunction().getContext();
@@ -7882,7 +7881,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
 
   // LstPtr is a pointer to the head of the list. Get the address
   // of the head of the list.
-  Align PtrAlignment = Align(DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx)));
+  Align PtrAlignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
   MachineMemOperand *PtrLoadMMO =
       MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
                               MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
@@ -7893,7 +7892,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   if (A > TLI.getMinStackArgumentAlignment()) {
     Register AlignAmt =
         MIRBuilder.buildConstant(PtrTyAsScalarTy, A.value() - 1).getReg(0);
-    auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, HeadOfList, AlignAmt);
+    auto AddDst = MIRBuilder.buildPtrAdd(PtrTy, VAList, AlignAmt);
     auto AndDst = MIRBuilder.buildMaskLowPtrBits(PtrTy, AddDst, Log2(A));
     VAList = AndDst.getReg(0);
   }
@@ -7903,11 +7902,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   // list.
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
-  Register IncAmt =
-      MIRBuilder
-          .buildConstant(PtrTyAsScalarTy,
-                         DL.getTypeAllocSize(getTypeForLLT(Ty, Ctx)))
-          .getReg(0);
+  auto IncAmt = MIRBuilder.buildConstant(
+      PtrTyAsScalarTy, DL.getTypeAllocSize(getTypeForLLT(Ty, Ctx)));
   auto Succ = MIRBuilder.buildPtrAdd(PtrTy, VAList, IncAmt);
 
   // Store the increment VAList to the legalized pointer
