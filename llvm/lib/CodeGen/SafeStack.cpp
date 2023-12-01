@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SafeStack.h"
 #include "SafeStackLayout.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -927,42 +926,6 @@ public:
 };
 
 } // end anonymous namespace
-
-PreservedAnalyses SafeStackPass::run(Function &F,
-                                     FunctionAnalysisManager &FAM) {
-  LLVM_DEBUG(dbgs() << "[SafeStack] Function: " << F.getName() << "\n");
-
-  if (!F.hasFnAttribute(Attribute::SafeStack)) {
-    LLVM_DEBUG(dbgs() << "[SafeStack]     safestack is not requested"
-                         " for this function\n");
-    return PreservedAnalyses::all();
-  }
-
-  if (F.isDeclaration()) {
-    LLVM_DEBUG(dbgs() << "[SafeStack]     function definition"
-                         " is not available\n");
-    return PreservedAnalyses::all();
-  }
-
-  auto *TL = TM->getSubtargetImpl(F)->getTargetLowering();
-  if (!TL)
-    report_fatal_error("TargetLowering instance is required");
-
-  auto &DL = F.getParent()->getDataLayout();
-
-  // preserve DominatorTree
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-
-  bool Changed = SafeStack(F, *TL, DL, &DTU, SE).run();
-
-  if (!Changed)
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
-  return PA;
-}
 
 char SafeStackLegacyPass::ID = 0;
 
