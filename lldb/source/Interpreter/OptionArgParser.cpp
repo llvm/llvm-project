@@ -168,7 +168,6 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
 std::optional<lldb::addr_t>
 OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
                              Status *error_ptr) {
-  bool error_set = false;
   if (s.empty()) {
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
@@ -212,6 +211,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       target->EvaluateExpression(s, exe_ctx->GetFramePtr(), valobj_sp, options);
 
   bool success = false;
+  bool error_set = false;
   if (expr_result == eExpressionCompleted) {
     if (valobj_sp)
       valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
@@ -223,16 +223,14 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       if (error_ptr)
         error_ptr->Clear();
       return addr;
-    } else {
-      if (error_ptr) {
-        error_set = true;
-        error_ptr->SetErrorStringWithFormat(
-            "address expression \"%s\" resulted in a value whose type "
-            "can't be converted to an address: %s",
-            s.str().c_str(), valobj_sp->GetTypeName().GetCString());
-      }
     }
-
+    if (error_ptr) {
+      error_set = true;
+      error_ptr->SetErrorStringWithFormat(
+          "address expression \"%s\" resulted in a value whose type "
+          "can't be converted to an address: %s",
+          s.str().c_str(), valobj_sp->GetTypeName().GetCString());
+    }
   } else {
     // Since the compiler can't handle things like "main + 12" we should try to
     // do this for now. The compiler doesn't like adding offsets to function
@@ -252,8 +250,7 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
         if (addr != LLDB_INVALID_ADDRESS) {
           if (sign[0] == '+')
             return addr + offset;
-          else
-            return addr - offset;
+          return addr - offset;
         }
       }
     }
