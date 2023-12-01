@@ -758,16 +758,39 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           all(typeInSet(0, {s8, s16, s32, s64, s128}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
+      .libcallIf([&ST](const LegalityQuery &Query) {
+        return ST.outlineAtomics() && !ST.hasLSE();
+      })
       .customIf([](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() == 128;
       })
       .clampScalar(0, s32, s64)
       .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
 
+  getActionDefinitionsBuilder({G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD,
+                               G_ATOMICRMW_AND, G_ATOMICRMW_OR,
+                               G_ATOMICRMW_XOR})
+      .libcallIf([&ST](const LegalityQuery &Query) {
+        return ST.outlineAtomics() && !ST.hasLSE();
+      })
+      .clampScalar(0, s32, s64)
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+
+  getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
+      .lowerIf([&ST](const LegalityQuery &Query) {
+        return ST.outlineAtomics() && !ST.hasLSE();
+      })
+      .clampScalar(0, s32, s64)
+      .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
+
+  // [U]Min/[U]Max RWM atomics are used in __sync_fetch_ libcalls so far.
+  // Don't outline them unless
+  // (1) high level <atomic> support approved:
+  //   http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p0493r1.pdf
+  // (2) low level libgcc and compiler-rt support implemented by:
+  //   min/max outline atomics helpers
   getActionDefinitionsBuilder(
-      {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND,
-       G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MIN, G_ATOMICRMW_MAX,
-       G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
+      {G_ATOMICRMW_MIN, G_ATOMICRMW_MAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_UMAX})
       .clampScalar(0, s32, s64)
       .legalIf(all(typeInSet(0, {s32, s64}), typeIs(1, p0)));
 

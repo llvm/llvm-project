@@ -765,6 +765,166 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   return LegalizerHelper::Legalized;
 }
 
+static RTLIB::Libcall
+getOutlineAtomicLibcall(unsigned Opc, AtomicOrdering Order, uint64_t MemSize) {
+  unsigned ModeN, ModelN;
+  switch (MemSize) {
+  case 1:
+    ModeN = 0;
+    break;
+  case 2:
+    ModeN = 1;
+    break;
+  case 4:
+    ModeN = 2;
+    break;
+  case 8:
+    ModeN = 3;
+    break;
+  case 16:
+    ModeN = 4;
+    break;
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+
+  switch (Order) {
+  case AtomicOrdering::Monotonic:
+    ModelN = 0;
+    break;
+  case AtomicOrdering::Acquire:
+    ModelN = 1;
+    break;
+  case AtomicOrdering::Release:
+    ModelN = 2;
+    break;
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    ModelN = 3;
+    break;
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+
+#define LCALLS(A, B)                                                           \
+  { A##B##_RELAX, A##B##_ACQ, A##B##_REL, A##B##_ACQ_REL }
+#define LCALL5(A)                                                              \
+  LCALLS(A, 1), LCALLS(A, 2), LCALLS(A, 4), LCALLS(A, 8), LCALLS(A, 16)
+  switch (Opc) {
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_CAS)};
+    return LC[ModeN][ModelN];
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_SWP)};
+    return LC[ModeN][ModelN];
+  }
+  case TargetOpcode::G_ATOMICRMW_ADD: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDADD)};
+    return LC[ModeN][ModelN];
+  }
+  case TargetOpcode::G_ATOMICRMW_AND: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDCLR)};
+    return LC[ModeN][ModelN];
+  }
+  case TargetOpcode::G_ATOMICRMW_OR: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDSET)};
+    return LC[ModeN][ModelN];
+  }
+  case TargetOpcode::G_ATOMICRMW_XOR: {
+    const RTLIB::Libcall LC[5][4] = {LCALL5(RTLIB::OUTLINE_ATOMIC_LDEOR)};
+    return LC[ModeN][ModelN];
+  }
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+#undef LCALLS
+#undef LCALL5
+}
+
+static LegalizerHelper::LegalizeResult
+createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
+  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  // Add all the args, except for the last which is an imm denoting 'tail'.
+  // const CallLowering::ArgInfo &Result,
+  // Operand 0 & 1 are return: 0 is old val, 1 is success, 2-4 are reg operands:
+  // 2 is ptr, 3 is expected, 4 is new
+  Type *RetTy;
+  SmallVector<Register> RetRegs;
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    Register Success;
+    LLT SuccessLLT;
+    auto [Ret, RetLLT, Mem, MemLLT, Cmp, CmpLLT, New, NewLLT] =
+        MI.getFirst4RegLLTs();
+    RetRegs.push_back(Ret);
+    RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
+    if (Opc == TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS) {
+      std::tie(Ret, RetLLT, Success, SuccessLLT, Mem, MemLLT, Cmp, CmpLLT, New,
+               NewLLT) = MI.getFirst5RegLLTs();
+      RetRegs.push_back(Success);
+      RetTy = StructType::get(
+          Ctx, {RetTy, IntegerType::get(Ctx, SuccessLLT.getSizeInBits())});
+    }
+    Args.push_back({Cmp, IntegerType::get(Ctx, CmpLLT.getSizeInBits()), 0});
+    Args.push_back({New, IntegerType::get(Ctx, NewLLT.getSizeInBits()), 0});
+    Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
+    break;
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_AND:
+  case TargetOpcode::G_ATOMICRMW_OR:
+  case TargetOpcode::G_ATOMICRMW_XOR: {
+    auto [Ret, RetLLT, Mem, MemLLT, Val, ValLLT] = MI.getFirst3RegLLTs();
+    RetRegs.push_back(Ret);
+    RetTy = IntegerType::get(Ctx, RetLLT.getSizeInBits());
+    if (Opc == TargetOpcode::G_ATOMICRMW_AND) {
+      Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
+      MIRBuilder.buildXor(Tmp, MIRBuilder.buildConstant(ValLLT, -1), Val);
+      Val = Tmp;
+    }
+    Args.push_back({Val, IntegerType::get(Ctx, ValLLT.getSizeInBits()), 0});
+    Args.push_back({Mem, PointerType::get(Ctx, MemLLT.getAddressSpace()), 0});
+    break;
+  }
+  default:
+    llvm_unreachable("unsupported opcode");
+  }
+
+  auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  auto &AtomicMI = cast<GMemOperation>(MI);
+  auto Ordering = AtomicMI.getMMO().getMergedOrdering();
+  uint64_t MemSize = AtomicMI.getMemSize();
+  RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(Opc, Ordering, MemSize);
+  const char *Name = TLI.getLibcallName(RTLibcall);
+
+  // Unsupported libcall on the target.
+  if (!Name) {
+    LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
+                      << MIRBuilder.getTII().getName(Opc) << "\n");
+    return LegalizerHelper::UnableToLegalize;
+  }
+
+  CallLowering::CallLoweringInfo Info;
+  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
+  Info.Callee = MachineOperand::CreateES(Name);
+  Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
+
+  std::copy(Args.begin(), Args.end(), std::back_inserter(Info.OrigArgs));
+  if (!CLI.lowerCall(MIRBuilder, Info))
+    return LegalizerHelper::UnableToLegalize;
+
+  return LegalizerHelper::Legalized;
+}
+
 static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
                                        Type *FromType) {
   auto ToMVT = MVT::getVT(ToType);
@@ -1016,6 +1176,18 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
         MI, MIRBuilder,
         ToSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
         FromSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx));
+    if (Status != Legalized)
+      return Status;
+    break;
+  }
+  case TargetOpcode::G_ATOMICRMW_XCHG:
+  case TargetOpcode::G_ATOMICRMW_ADD:
+  case TargetOpcode::G_ATOMICRMW_AND:
+  case TargetOpcode::G_ATOMICRMW_OR:
+  case TargetOpcode::G_ATOMICRMW_XOR:
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+  case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
+    auto Status = createAtomicLibcall(MIRBuilder, MI);
     if (Status != Legalized)
       return Status;
     break;
@@ -3793,6 +3965,17 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
+  case G_ATOMICRMW_SUB: {
+    auto Val = MI.getOperand(2).getReg();
+    LLT ValLLT = MRI.getType(Val);
+    Register Tmp = MRI.createGenericVirtualRegister(ValLLT);
+    MIRBuilder.buildSub(Tmp, MIRBuilder.buildConstant(ValLLT, 0), Val);
+    auto [Ret, Mem] = MI.getFirst2Regs();
+    auto &MMO = cast<GMemOperation>(MI).getMMO();
+    MIRBuilder.buildAtomicRMWAdd(Ret, Mem, Tmp, MMO);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 
