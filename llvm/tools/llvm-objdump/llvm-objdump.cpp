@@ -73,6 +73,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -197,6 +198,7 @@ static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
 static std::vector<std::string> DisassemblerOptions;
 static ColorOutput DisassemblyColor;
+static VisualizeJumpsMode VisualizeJumps;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -471,10 +473,9 @@ static bool getHidden(RelocationRef RelRef) {
   return false;
 }
 
-/// Get the column at which we want to start printing the instruction
-/// disassembly, taking into account anything which appears to the left of it.
-unsigned objdump::getInstStartColumn(const MCSubtargetInfo &STI) {
-  return !ShowRawInsn ? 16 : STI.getTargetTriple().isX86() ? 40 : 24;
+static int ControlFlowColumnWidth = 0;
+void objdump::setControlFlowColumnWidth(int Width) {
+  ControlFlowColumnWidth = Width;
 }
 
 unsigned EncodingColumnWidth(Triple const &Triple) {
@@ -496,6 +497,12 @@ unsigned objdump::GetColumnIndent(MCSubtargetInfo const &STI,
 
   // Address: 8 chars of address, followed by ": "
   Indent += 10;
+
+  if (Col == DisassemblyColumn::ControlFlow)
+    return Indent;
+
+  // Control-flow graph: depends on function, disabled by default.
+  Indent += ControlFlowColumnWidth;
 
   if (Col == DisassemblyColumn::Encoding)
     return Indent;
@@ -615,12 +622,20 @@ public:
             object::SectionedAddress Address, formatted_raw_ostream &OS,
             StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
             StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-            LiveVariablePrinter &LVP) {
+            LiveVariablePrinter &LVP, ControlFlowPrinter &CFP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printBetweenInsts(OS, false);
+    LVP.printBetweenInsts(OS, false, Address.Address, &CFP);
 
-    printRawData(Bytes, Address.Address, OS, STI);
+    if (LeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+
+    CFP.printInst(OS, Address.Address);
+
+    if (ShowRawInsn) {
+      OS << ' ';
+      dumpBytes(Bytes, OS);
+    }
 
     IndentToColumn(STI, OS, DisassemblyColumn::Assembly);
 
@@ -656,7 +671,7 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveVariablePrinter &LVP, ControlFlowPrinter &CFP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
     if (!MI) {
@@ -726,7 +741,7 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveVariablePrinter &LVP, ControlFlowPrinter &CFP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
 
@@ -779,7 +794,7 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveVariablePrinter &LVP, ControlFlowPrinter &CFP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
     if (LeadingAddr)
@@ -802,13 +817,16 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveVariablePrinter &LVP, ControlFlowPrinter &CFP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printBetweenInsts(OS, false);
+    LVP.printBetweenInsts(OS, false, Address.Address, &CFP);
 
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address.Address);
+
+    CFP.printInst(OS, Address.Address);
+
     if (ShowRawInsn) {
       size_t Pos = 0, End = Bytes.size();
       if (STI.checkFeatures("+thumb-mode")) {
@@ -855,13 +873,16 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveVariablePrinter &LVP, ControlFlowPrinter &CFP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printBetweenInsts(OS, false);
+    LVP.printBetweenInsts(OS, false, Address.Address, &CFP);
 
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address.Address);
+
+    CFP.printInst(OS, Address.Address);
+
     if (ShowRawInsn) {
       size_t Pos = 0, End = Bytes.size();
       for (; Pos + 4 <= End; Pos += 4)
@@ -1343,7 +1364,9 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
                           MCDisassembler *DisAsm, MCInstPrinter *IP,
                           const MCSubtargetInfo *STI, uint64_t SectionAddr,
                           uint64_t Start, uint64_t End,
-                          std::unordered_map<uint64_t, std::string> &Labels) {
+                          std::unordered_map<uint64_t, std::string> &Labels,
+                          ControlFlowPrinter &CFP,
+                          std::vector<RelocationRef> &Relocs) {
   if (MIA)
     MIA->resetState();
 
@@ -1352,6 +1375,10 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   Start += SectionAddr;
   End += SectionAddr;
   uint64_t Index = Start;
+
+  std::vector<RelocationRef>::const_iterator RelCur = Relocs.begin();
+  std::vector<RelocationRef>::const_iterator RelEnd = Relocs.end();
+
   while (Index < End) {
     // Disassemble a real instruction and record function-local branch labels.
     MCInst Inst;
@@ -1363,15 +1390,37 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
       Size = std::min<uint64_t>(ThisBytes.size(),
                                 DisAsm->suggestBytesToSkip(ThisBytes, Index));
 
+    // Check for relocations which apply to this instruction.
+    bool Relocated = false;
+    while (RelCur != RelEnd) {
+      // FIXME RelAdjustment for executables & shared objects
+      uint64_t Offset = RelCur->getOffset(); // - RelAdjustment;
+
+      if (Offset >= Index + Size)
+        break;
+
+      Relocated = true;
+      ++RelCur;
+    }
+
     if (Disassembled && MIA) {
       uint64_t Target;
       bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
-      // On PowerPC, if the address of a branch is the same as the target, it
-      // means that it's a function call. Do not mark the label for this case.
-      if (TargetKnown && (Target >= Start && Target < End) &&
-          !Labels.count(Target) &&
-          !(STI->getTargetTriple().isPPC() && Target == Index))
-        Labels[Target] = ("L" + Twine(LabelCount++)).str();
+      if (TargetKnown && (Target >= Start && Target < End)) {
+        // On PowerPC and ARM, if the address of a branch is the same as the
+        // target, it means that it's a function call. Do not mark the label for
+        // this case.
+        if (!Labels.count(Target) &&
+            !((STI->getTargetTriple().isPPC() ||
+               STI->getTargetTriple().isARM()) &&
+              Target == Index) &&
+            SymbolizeOperands) {
+          Labels[Target] = ("L" + Twine(LabelCount++)).str();
+        }
+
+        if (Target != Index && !Relocated)
+          CFP.addEdge(Index, Target);
+      }
       MIA->updateState(Inst, Index);
     } else if (!Disassembled && MIA) {
       MIA->resetState();
@@ -1460,9 +1509,10 @@ static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
       StringRef Comment;
       std::tie(Comment, Comments) = Comments.split('\n');
       // MAI.getCommentColumn() assumes that instructions are printed at the
-      // position of 8, while getInstStartColumn() returns the actual position.
+      // position of 8, while GetColumnIndent() returns the actual position.
       unsigned CommentColumn =
-          MAI.getCommentColumn() - 8 + getInstStartColumn(STI);
+          MAI.getCommentColumn() - 8 +
+          GetColumnIndent(STI, DisassemblyColumn::Assembly);
       FOS.PadToColumn(CommentColumn);
       FOS << MAI.getCommentString() << ' ' << Comment;
     }
@@ -1538,7 +1588,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   }
 
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
-  if (InlineRelocs)
+  if (InlineRelocs || VisualizeJumps)
     RelocMap = getRelocsMap(Obj);
   bool Is64Bits = Obj.getBytesInAddress() > 4;
 
@@ -2019,14 +2069,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
+      ControlFlowPrinter CFP(VisualizeJumps, *DT->SubtargetInfo);
+      if (SymbolizeOperands || VisualizeJumps) {
+        collectLocalBranchTargets(
+            Bytes, DT->InstrAnalysis.get(), DT->DisAsm.get(),
+            DT->InstPrinter.get(), PrimaryTarget.SubtargetInfo.get(),
+            SectionAddr, Index, End, AllLabels, CFP, Rels);
+      }
       if (SymbolizeOperands) {
-        collectLocalBranchTargets(Bytes, DT->InstrAnalysis.get(),
-                                  DT->DisAsm.get(), DT->InstPrinter.get(),
-                                  PrimaryTarget.SubtargetInfo.get(),
-                                  SectionAddr, Index, End, AllLabels);
         collectBBAddrMapLabels(AddrToBBAddrMap, SectionAddr, Index, End,
                                BBAddrMapLabels);
       }
+
+      CFP.finalise();
 
       if (DT->InstrAnalysis)
         DT->InstrAnalysis->resetState();
@@ -2076,7 +2131,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             uint64_t MaxOffset = End - Index;
             // For --reloc: print zero blocks patched by relocations, so that
             // relocations can be shown in the dump.
-            if (RelCur != RelEnd)
+            if (InlineRelocs && RelCur != RelEnd)
               MaxOffset = std::min(RelCur->getOffset() - RelAdjustment - Index,
                                    MaxOffset);
 
@@ -2103,12 +2158,14 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Iter1 != BBAddrMapLabels.end()) {
             for (StringRef Label : Iter1->second) {
               FOS << "<" << Label << ">:";
+              CFP.printOther(FOS, Index, true);
               LVP.printAfterOtherLine(FOS, true);
             }
           } else {
             auto Iter2 = AllLabels.find(SectionAddr + Index);
             if (Iter2 != AllLabels.end()) {
               FOS << "<" << Iter2->second << ">:";
+              CFP.printOther(FOS, Index, true);
               LVP.printAfterOtherLine(FOS, true);
             }
           }
@@ -2134,7 +2191,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               *DT->InstPrinter, Disassembled ? &Inst : nullptr,
               Bytes.slice(Index, Size),
               {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, FOS,
-              "", *DT->SubtargetInfo, &SP, Obj.getFileName(), &Rels, LVP);
+              "", *DT->SubtargetInfo, &SP, Obj.getFileName(), &Rels, LVP, CFP);
 
           DT->InstPrinter->setCommentStream(llvm::nulls());
 
@@ -2267,7 +2324,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
 
         // Hexagon does this in pretty printer
-        if (Obj.getArch() != Triple::hexagon) {
+        if (Obj.getArch() != Triple::hexagon && InlineRelocs) {
           // Print relocation for instruction and data.
           while (RelCur != RelEnd) {
             uint64_t Offset = RelCur->getOffset() - RelAdjustment;
@@ -2294,6 +2351,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 Offset += AdjustVMA;
             }
 
+            CFP.printOther(FOS, Index, false, true);
             printRelocation(FOS, Obj.getFileName(), *RelCur,
                             SectionAddr + Offset, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
@@ -3335,6 +3393,45 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
                            .Default(ColorOutput::Invalid);
     if (DisassemblyColor == ColorOutput::Invalid)
       invalidArgValue(A);
+  }
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_visualize_jumps, OBJDUMP_visualize_jumps_EQ)) {
+    if (A->getOption().matches(OBJDUMP_visualize_jumps)) {
+      // --visualize-jumps without an argument default to unicode, auto-color.
+      VisualizeJumps = (VisualizeJumpsMode)(VisualizeJumpsMode::CharsUnicode |
+                                            VisualizeJumpsMode::ColorAuto);
+    } else {
+      SmallVector<StringRef, 2> Parts;
+      StringRef(A->getValue()).split(Parts, ",");
+      VisualizeJumpsMode Color = VisualizeJumpsMode::ColorAuto;
+      VisualizeJumpsMode Chars = VisualizeJumpsMode::CharsUnicode;
+
+      for (StringRef Part : Parts) {
+        if (Part == "off") {
+          Color = VisualizeJumpsMode::Off;
+          Chars = VisualizeJumpsMode::Off;
+        } else if (Part == "nocolor") {
+          Color = VisualizeJumpsMode::Off;
+        } else if (Part == "auto") {
+          Color = VisualizeJumpsMode::ColorAuto;
+        } else if (Part == "color") {
+          Color = VisualizeJumpsMode::Color3Bit;
+        } else if (Part == "ascii") {
+          Chars = VisualizeJumpsMode::CharsASCII;
+        } else if (Part == "unicode") {
+          Chars = VisualizeJumpsMode::CharsUnicode;
+        } else {
+          reportCmdLineError("'" + Part + "' is not a valid value for '" +
+                             A->getSpelling() + "'");
+        }
+      }
+
+      if (Color == VisualizeJumpsMode::ColorAuto) {
+        Color = outs().has_colors() ? VisualizeJumpsMode::Color3Bit
+                                    : VisualizeJumpsMode::Off;
+      }
+
+      VisualizeJumps = (VisualizeJumpsMode)(Color | Chars);
+    }
   }
 
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);

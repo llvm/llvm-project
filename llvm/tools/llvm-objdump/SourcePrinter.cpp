@@ -262,12 +262,15 @@ void LiveVariablePrinter::printAfterOtherLine(formatted_raw_ostream &OS,
 /// already-active live ranges) because something has already been printed
 /// earlier on this line.
 void LiveVariablePrinter::printBetweenInsts(formatted_raw_ostream &OS,
-                                            bool MustPrint) {
+                                            bool MustPrint, uint64_t Addr,
+                                            ControlFlowPrinter *CFP) {
   bool PrintedSomething = false;
   for (unsigned ColIdx = 0, End = ActiveCols.size(); ColIdx < End; ++ColIdx) {
     if (ActiveCols[ColIdx].isActive() && ActiveCols[ColIdx].MustDrawLabel) {
       // First we need to print the live range markers for any active
       // columns to the left of this one.
+      if (CFP)
+        CFP->printOther(OS, Addr);
       OS.PadToColumn(getIndentLevel());
       for (unsigned ColIdx2 = 0; ColIdx2 < ColIdx; ++ColIdx2) {
         if (ActiveCols[ColIdx2].isActive()) {
@@ -502,6 +505,195 @@ SourcePrinter::SourcePrinter(const object::ObjectFile *Obj,
   SymbolizerOpts.DefaultArch = std::string(DefaultArch);
   Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
 }
+
+// TODO Light/dark shades? 256-color terminals?
+const raw_ostream::Colors LineColors[] = {
+  raw_ostream::RED,
+  raw_ostream::GREEN,
+  raw_ostream::YELLOW,
+  raw_ostream::BLUE,
+  raw_ostream::MAGENTA,
+  raw_ostream::CYAN,
+};
+
+void ControlFlowPrinter::addEdge(uint64_t From, uint64_t To) {
+  auto It = Targets.find(To);
+  if (It == Targets.end())
+    It = Targets.insert(std::make_pair(To, ControlFlowTarget(To, PickColor()))).first;
+  It->second.addSource(From);
+}
+
+void ControlFlowPrinter::finalise() {
+  if (!enabled()) {
+    setControlFlowColumnWidth(0);
+    return;
+  }
+
+  SmallVector<ControlFlowTarget *> SortedTargets;
+  for (auto &[Addr, Info] : Targets) {
+    SortedTargets.push_back(&Info);
+  }
+  std::sort(SortedTargets.begin(), SortedTargets.end(),
+            [](ControlFlowTarget *LHS, ControlFlowTarget *RHS) {
+              return LHS->Length() < RHS->Length();
+            });
+
+  // FIXME This is O(n^3) in the worst case, can we do better?
+  for (auto &T : SortedTargets) {
+    int Column = 0;
+    for (;; ++Column)
+      if (!std::any_of(SortedTargets.begin(), SortedTargets.end(),
+                       [T, Column](ControlFlowTarget *T2) {
+                         return T != T2 && T2->Column == Column &&
+                                T->Overlaps(*T2);
+                       }))
+        break;
+    T->Column = Column;
+    MaxColumn = std::max(MaxColumn, Column);
+
+#if 1
+    LLVM_DEBUG(
+      dbgs() << "Target: 0x" << Twine::utohexstr(T->Target) << " (" << T->Length()
+             << ") Column " << Column << ":\n";
+      for (auto Source : T->Sources)
+        dbgs() << "  Source: 0x" << Twine::utohexstr(Source) << "\n";
+    );
+#endif
+  }
+
+  setControlFlowColumnWidth(MaxColumn * 2 + 4);
+}
+
+const char *ControlFlowPrinter::getLineChar(LineChar C) const {
+  bool IsASCII =
+      (OutputMode & VisualizeJumpsMode::CharsMask) == VisualizeJumpsMode::CharsASCII;
+  switch (C) {
+  case LineChar::Horiz:
+    return IsASCII ? "-" : (const char *)u8"\u2500";
+  case LineChar::Vert:
+    return IsASCII ? "|" : (const char *)u8"\u2502";
+  case LineChar::TopCorner:
+    return IsASCII ? "/" : (const char *)u8"\u256d";
+  case LineChar::BottomCorner:
+    return IsASCII ? "\\" : (const char *)u8"\u2570";
+  case LineChar::Tee:
+    return IsASCII ? "+" : (const char *)u8"\u251c";
+  case LineChar::Arrow:
+    return ">";
+  }
+  llvm_unreachable("Unhandled LineChar enum");
+}
+
+#define C(id) getLineChar(LineChar::id)
+
+void ControlFlowPrinter::printInst(formatted_raw_ostream &OS,
+                                   uint64_t Addr) const {
+  if (!enabled())
+    return;
+
+  SmallVector<const ControlFlowTarget *, 8> Columns;
+  Columns.resize(MaxColumn + 1);
+  const ControlFlowTarget *Horizontal = nullptr;
+
+  IndentToColumn(STI, OS, DisassemblyColumn::ControlFlow);
+
+  // TODO: What happens if an instruction has both incoming and outgoing edges?
+
+  for (auto &[_, Info] : Targets) {
+    if (Info.ActiveAt(Addr)) {
+      assert(Columns[Info.Column] == nullptr);
+      Columns[Info.Column] = &Info;
+    }
+  }
+
+  auto Color = [&](raw_ostream &OS,
+                   raw_ostream::Colors Color) -> raw_ostream & {
+    if ((OutputMode & VisualizeJumpsMode::ColorMask) !=
+        VisualizeJumpsMode::Off) {
+      OS << Color;
+    }
+    return OS;
+  };
+
+  OS.PadToColumn(getIndentLevel());
+  for (int ColIdx = MaxColumn; ColIdx >= 0; --ColIdx) {
+    if (Horizontal) {
+      if (Columns[ColIdx]) {
+        // Outgoing horizontal lines are drawn "under" vertical line, because
+        // that minimises the gap in the "lower" line.
+        Color(OS, Horizontal->Color) << C(Horiz);
+        Color(OS, Columns[ColIdx]->Color) << C(Vert);
+      } else
+        Color(OS, Horizontal->Color) << C(Horiz) << C(Horiz);
+    } else if (!Columns[ColIdx])
+      OS << "  ";
+    else if (Columns[ColIdx]->HorizontalAt(Addr)) {
+      Horizontal = Columns[ColIdx];
+      if (Columns[ColIdx]->StartsAt(Addr))
+        Color(OS, Horizontal->Color) << " " << C(TopCorner);
+      else if (Columns[ColIdx]->EndsAt(Addr))
+        Color(OS, Horizontal->Color) << " " << C(BottomCorner);
+      else
+        Color(OS, Horizontal->Color) << " " << C(Tee);
+    } else if (Columns[ColIdx]->ActiveAt(Addr))
+      Color(OS, Columns[ColIdx]->Color) << " " << C(Vert);
+    else
+      OS << "  ";
+  }
+
+  if (Horizontal) {
+    if (Horizontal->TargetAt(Addr))
+      Color(OS, Horizontal->Color) << C(Horiz) << C(Arrow);
+    else
+      Color(OS, Horizontal->Color) << C(Horiz) << C(Horiz);
+  } else {
+    OS << "  ";
+  }
+
+  Color(OS, raw_ostream::RESET);
+}
+
+// TODO boolean params -> enum?
+void ControlFlowPrinter::printOther(formatted_raw_ostream &OS, uint64_t Addr,
+                                    bool BeforeInst, bool AfterInst) const {
+  if (!enabled())
+    return;
+
+  assert(!(BeforeInst && AfterInst));
+
+  SmallVector<const ControlFlowTarget *, 8> Columns;
+  Columns.resize(MaxColumn + 1);
+
+  auto Color = [&](raw_ostream &OS,
+                   raw_ostream::Colors Color) -> raw_ostream & {
+    if ((OutputMode & VisualizeJumpsMode::ColorMask) !=
+        VisualizeJumpsMode::Off) {
+      OS << Color;
+    }
+    return OS;
+  };
+
+  IndentToColumn(STI, OS, DisassemblyColumn::ControlFlow);
+
+  for (auto &[_, Info] : Targets) {
+    if (Info.ActiveAt(Addr, BeforeInst, AfterInst)) {
+      assert(Columns[Info.Column] == nullptr);
+      Columns[Info.Column] = &Info;
+    }
+  }
+
+  OS.PadToColumn(getIndentLevel());
+  for (int ColIdx = MaxColumn; ColIdx >= 0; --ColIdx) {
+    if (!Columns[ColIdx])
+      OS << "  ";
+    else
+      Color(OS, Columns[ColIdx]->Color) << " " << C(Vert);
+  }
+
+  Color(OS, raw_ostream::RESET) << "  ";
+}
+
+#undef C
 
 } // namespace objdump
 } // namespace llvm
