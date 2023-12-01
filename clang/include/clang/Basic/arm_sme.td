@@ -325,5 +325,5 @@ let TargetGuard = "sme2" in {
 //
 // Zero ZT0
 //
-  def SVZERO_ZT : Inst<"svzero_zt", "vi", "", MergeNone, "aarch64_sme_zero_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA, IsPreservesZA], [ImmCheck<0, ImmCheck0_0>]>;
+  def SVZERO_ZT : Inst<"svzero_zt", "vi", "", MergeNone, "aarch64_sme_zero_zt", [IsOverloadNone, IsStreamingCompatible, IsSharedZA], [ImmCheck<0, ImmCheck0_0>]>;
 }

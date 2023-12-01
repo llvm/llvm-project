@@ -2761,7 +2761,7 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
   MachineInstrBuilder MIB;
 
   MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opcode))
-            .addReg(MI.getOperand(0).getReg(), IsZTDest ? RegState::Define : 0);
+            .addReg(MI.getOperand(0).getReg(), Op0IsDef ? RegState::Define : 0);
   for (unsigned I = 1; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
 
@@ -2886,13 +2886,13 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::LDR_ZA_PSEUDO:
     return EmitFill(MI, BB);
   case AArch64::LDR_TX_PSEUDO:
-    return EmitZTInstr(MI, BB, AArch64::LDR_TX, /*IsZTDest=*/true);
+    return EmitZTInstr(MI, BB, AArch64::LDR_TX, /*Op0IsDef=*/true);
   case AArch64::STR_TX_PSEUDO:
-    return EmitZTInstr(MI, BB, AArch64::STR_TX, /*IsZTDest=*/false);
+    return EmitZTInstr(MI, BB, AArch64::STR_TX, /*Op0IsDef=*/false);
   case AArch64::ZERO_M_PSEUDO:
     return EmitZero(MI, BB);
   case AArch64::ZERO_T_PSEUDO:
-    return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*IsZTDest=*/true);
+    return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   }
 }
 
