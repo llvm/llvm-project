@@ -1006,12 +1006,12 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     // If sample profile and instrumented profile do not agree on symbol
     // uniqification.
     if (SampleProfileHasFUnique != ProfileHasFUnique) {
-      // If instrumented profile uses -funique-internal-linakge-symbols,
+      // If instrumented profile uses -funique-internal-linkage-symbols,
       // we need to trim the name.
       if (ProfileHasFUnique) {
         NewName = NewName.substr(0, PostfixPos);
       } else {
-        // If sample profile uses -funique-internal-linakge-symbols,
+        // If sample profile uses -funique-internal-linkage-symbols,
         // we build the map.
         std::string NStr =
             NewName.str() + getUniqueInternalLinkagePostfix(FName);

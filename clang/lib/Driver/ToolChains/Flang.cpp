@@ -9,6 +9,7 @@
 #include "Flang.h"
 #include "CommonArgs.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
@@ -673,6 +674,24 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
+
+  CodeGenOptions::FramePointerKind FPKeepKind =
+      getFramePointerKind(Args, Triple);
+
+  const char *FPKeepKindStr = nullptr;
+  switch (FPKeepKind) {
+  case CodeGenOptions::FramePointerKind::None:
+    FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    FPKeepKindStr = "-mframe-pointer=non-leaf";
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    FPKeepKindStr = "-mframe-pointer=all";
+    break;
+  }
+  assert(FPKeepKindStr && "unknown FramePointerKind");
+  CmdArgs.push_back(FPKeepKindStr);
 
   // Forward -mllvm options to the LLVM option parser. In practice, this means
   // forwarding to `-fc1` as that's where the LLVM parser is run.
