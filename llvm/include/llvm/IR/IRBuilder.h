@@ -564,12 +564,6 @@ public:
     return PointerType::get(Context, AddrSpace);
   }
 
-  /// Fetch the type representing a pointer to an 8-bit integer value.
-  [[deprecated("Pointers no longer have element types. Use getPtrTy instead.")]]
-  PointerType *getInt8PtrTy(unsigned AddrSpace = 0) {
-    return getPtrTy(AddrSpace);
-  }
-
   /// Fetch the type of an integer with size at least as big as that of a
   /// pointer in the given address space.
   IntegerType *getIntPtrTy(const DataLayout &DL, unsigned AddrSpace = 0) {
