@@ -29,7 +29,7 @@ template <class T> struct AlignedMemory {
 };
 
 size_t sizes[] = {0, 1, 23, 59, 1024, 5261};
-char values[] = {0, 1, 23, 59, 102, -1};
+uint8_t values[] = {0, 1, 23, 59, 102, 255};
 
 // Hash value should not change with different alignments.
 TEST(LlvmLibcHashTest, SanityCheck) {
