@@ -12,6 +12,7 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
+#include "DeviceImage.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "device.h"
@@ -25,6 +26,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -88,136 +90,18 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Functionality for registering Ctors/Dtors
-
-static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
-                                             __tgt_device_image *Img,
-                                             PluginAdaptorTy *RTL) {
-
-  for (int32_t I = 0; I < RTL->NumberOfDevices; ++I) {
-    DeviceTy &Device = *PM->Devices[RTL->DeviceOffset + I];
-    Device.PendingGlobalsMtx.lock();
-    Device.HasPendingGlobals = true;
-    for (__tgt_offload_entry *Entry = Img->EntriesBegin;
-         Entry != Img->EntriesEnd; ++Entry) {
-      // Globals are not callable and use a different set of flags.
-      if (Entry->size != 0)
-        continue;
-
-      if (Entry->flags & OMP_DECLARE_TARGET_CTOR) {
-        DP("Adding ctor " DPxMOD " to the pending list.\n",
-           DPxPTR(Entry->addr));
-        Device.PendingCtorsDtors[Desc].PendingCtors.push_back(Entry->addr);
-        MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
-                "removed in a future release \n",
-                Entry->name);
-      } else if (Entry->flags & OMP_DECLARE_TARGET_DTOR) {
-        // Dtors are pushed in reverse order so they are executed from end
-        // to beginning when unregistering the library!
-        DP("Adding dtor " DPxMOD " to the pending list.\n",
-           DPxPTR(Entry->addr));
-        Device.PendingCtorsDtors[Desc].PendingDtors.push_front(Entry->addr);
-        MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
-                "removed in a future release \n",
-                Entry->name);
-      }
-
-      if (Entry->flags & OMP_DECLARE_TARGET_LINK) {
-        DP("The \"link\" attribute is not yet supported!\n");
-      }
-    }
-    Device.PendingGlobalsMtx.unlock();
-  }
-}
-
-static __tgt_device_image getExecutableImage(__tgt_device_image *Image) {
-  StringRef ImageStr(static_cast<char *>(Image->ImageStart),
-                     static_cast<char *>(Image->ImageEnd) -
-                         static_cast<char *>(Image->ImageStart));
-  auto BinaryOrErr =
-      object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
-  if (!BinaryOrErr) {
-    consumeError(BinaryOrErr.takeError());
-    return *Image;
-  }
-
-  void *Begin = const_cast<void *>(
-      static_cast<const void *>((*BinaryOrErr)->getImage().bytes_begin()));
-  void *End = const_cast<void *>(
-      static_cast<const void *>((*BinaryOrErr)->getImage().bytes_end()));
-
-  return {Begin, End, Image->EntriesBegin, Image->EntriesEnd};
-}
-
-static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
-  StringRef ImageStr(static_cast<char *>(Image->ImageStart),
-                     static_cast<char *>(Image->ImageEnd) -
-                         static_cast<char *>(Image->ImageStart));
-  auto BinaryOrErr =
-      object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
-  if (!BinaryOrErr) {
-    consumeError(BinaryOrErr.takeError());
-    return __tgt_image_info{};
-  }
-
-  return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
-}
-
-void PluginAdaptorManagerTy::registerRequires(int64_t Flags) {
-  // TODO: add more elaborate check.
-  // Minimal check: only set requires flags if previous value
-  // is undefined. This ensures that only the first call to this
-  // function will set the requires flags. All subsequent calls
-  // will be checked for compatibility.
-  assert(Flags != OMP_REQ_UNDEFINED &&
-         "illegal undefined flag for requires directive!");
-  if (RequiresFlags == OMP_REQ_UNDEFINED) {
-    RequiresFlags = Flags;
-    return;
-  }
-
-  // If multiple compilation units are present enforce
-  // consistency across all of them for require clauses:
-  //  - reverse_offload
-  //  - unified_address
-  //  - unified_shared_memory
-  if ((RequiresFlags & OMP_REQ_REVERSE_OFFLOAD) !=
-      (Flags & OMP_REQ_REVERSE_OFFLOAD)) {
-    FATAL_MESSAGE0(
-        1, "'#pragma omp requires reverse_offload' not used consistently!");
-  }
-  if ((RequiresFlags & OMP_REQ_UNIFIED_ADDRESS) !=
-      (Flags & OMP_REQ_UNIFIED_ADDRESS)) {
-    FATAL_MESSAGE0(
-        1, "'#pragma omp requires unified_address' not used consistently!");
-  }
-  if ((RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) !=
-      (Flags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-    FATAL_MESSAGE0(
-        1,
-        "'#pragma omp requires unified_shared_memory' not used consistently!");
-  }
-
-  // TODO: insert any other missing checks
-
-  DP("New requires flags %" PRId64 " compatible with existing %" PRId64 "!\n",
-     Flags, RequiresFlags);
-}
-
 void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
-    PM->Images.emplace_back(getExecutableImage(&Desc->DeviceImages[i]),
-                            getImageInfo(&Desc->DeviceImages[i]));
+    PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
-  for (auto &ImageAndInfo : PM->Images) {
+  for (DeviceImageTy &DI : PM->deviceImages()) {
     // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &ImageAndInfo.first;
-    __tgt_image_info *Info = &ImageAndInfo.second;
+    __tgt_device_image *Img = &DI.getExecutableImage();
+    __tgt_image_info *Info = &DI.getImageInfo();
 
     PluginAdaptorTy *FoundRTL = nullptr;
 
@@ -263,8 +147,8 @@ void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
       PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
-      // Load ctors/dtors for static objects
-      registerGlobalCtorsDtorsForImage(Desc, Img, FoundRTL);
+      // Register all offload entries with the devices handled by the plugin.
+      R.addOffloadEntries(DI);
 
       // if an RTL was found we are done - proceed to register the next image
       break;
@@ -284,9 +168,9 @@ void PluginAdaptorManagerTy::unregisterLib(__tgt_bin_desc *Desc) {
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
-  for (auto &ImageAndInfo : PM->Images) {
+  for (DeviceImageTy &DI : PM->deviceImages()) {
     // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &ImageAndInfo.first;
+    __tgt_device_image *Img = &DI.getExecutableImage();
 
     PluginAdaptorTy *FoundRTL = NULL;
 

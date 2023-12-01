@@ -6,11 +6,7 @@ struct C {
   ~C() {}
 };
 
-#ifdef _MSC_VER
-__declspec(noinline) int hide(int x) { return x; }
-#else
 int __attribute__((noinline, optnone)) hide(int x) { return x; }
-#endif
 
 int main() {
   C *buffer = new C[42];
@@ -24,7 +20,7 @@ int main() {
   //        https://code.google.com/p/address-sanitizer/issues/detail?id=314
   // CHECK: [[ADDR]] is located {{.*}} bytes before {{(172|176)}}-byte region
   // CHECK-LABEL: allocated by thread T0 here:
-  // CHECK: #[[#NEW:]] {{.* operator new}}[]
-  // CHECK-NEXT: #[[#NEW+1]] {{.* main .*operator_array_new_with_dtor_left_oob.cpp}}:[[@LINE-12]]
+  // CHECK-NEXT: {{#0 .* operator new}}[]
+  // CHECK-NEXT: {{#1 .* main .*operator_array_new_with_dtor_left_oob.cpp}}:[[@LINE-12]]
   delete [] buffer;
 }

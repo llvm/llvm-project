@@ -22,6 +22,7 @@ add_llvm_library(omptarget
   rtl.cpp
   LegacyAPI.cpp
   PluginManager.cpp
+  DeviceImage.cpp
 
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
