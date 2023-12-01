@@ -132,8 +132,9 @@ endfunction(get_fq_dep_list_without_flag)
 # Special flags
 set(FMA_OPT_FLAG "FMA_OPT")
 set(ROUND_OPT_FLAG "ROUND_OPT")
-# SSE2 is the baseline for x86_64, so we add a negative flag to disable it if needed.
-set(DISABLE_SSE2_OPT_FLAG "DISABLE_SSE2_OPT")
+# This flag will define macros that gated away vectorization code such that
+# one can always test the fallback generic code path.
+set(PREFER_GENERIC_FLAG "PREFER_GENERIC")
 
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
@@ -144,9 +145,4 @@ endif()
 # Skip ROUND_OPT flag for targets that don't support SSE 4.2.
 if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE4_2")))
   set(SKIP_FLAG_EXPANSION_ROUND_OPT TRUE)
-endif()
-
-# Skip DISABLE_SSE2_OPT flag for targets that don't support SSE2.
-if(NOT(LIBC_TARGET_ARCHITECTURE_IS_X86 AND (LIBC_CPU_FEATURES MATCHES "SSE2")))
-  set(SKIP_FLAG_EXPANSION_DISABLE_SSE2_OPT TRUE)
 endif()
