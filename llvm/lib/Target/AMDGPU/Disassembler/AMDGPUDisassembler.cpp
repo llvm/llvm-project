@@ -507,6 +507,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address, CS);
       if (Res)
         break;
+
+      Res = tryDecodeInst(DecoderTableGFX1296, MI, DecW, Address, CS);
+      if (Res)
+        break;
     }
     // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
@@ -714,6 +718,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = convertMIMGInst(MI);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags &
+              (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE)))
+    Res = convertMIMGInst(MI);
+
   if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::EXP))
     Res = convertEXPInst(MI);
 
@@ -914,6 +922,7 @@ DecodeStatus AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
 // VADDR size. Consequently, decoded instructions always show address as if it
 // has 1 dword, which could be not really so.
 DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
+  auto TSFlags = MCII->get(MI.getOpcode()).TSFlags;
 
   int VDstIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                            AMDGPU::OpName::vdst);
@@ -922,8 +931,9 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
                                             AMDGPU::OpName::vdata);
   int VAddr0Idx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
-  int RsrcIdx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::srsrc);
+  int RsrcOpName = TSFlags & SIInstrFlags::MIMG ? AMDGPU::OpName::srsrc
+                                                : AMDGPU::OpName::rsrc;
+  int RsrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), RsrcOpName);
   int DMaskIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::dmask);
 
@@ -944,7 +954,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   }
 
   bool IsAtomic = (VDstIdx != -1);
-  bool IsGather4 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::Gather4;
+  bool IsGather4 = TSFlags & SIInstrFlags::Gather4;
+  bool IsVSample = TSFlags & SIInstrFlags::VSAMPLE;
   bool IsNSA = false;
   bool IsPartialNSA = false;
   unsigned AddrSize = Info->VAddrDwords;
@@ -961,10 +972,13 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     AddrSize =
         AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, AMDGPU::hasG16(STI));
 
+    // VSAMPLE insts that do not use vaddr3 behave the same as NSA forms.
+    // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA;
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
     if (!IsNSA) {
-      if (AddrSize > 12)
+      if (!IsVSample && AddrSize > 12)
         AddrSize = 16;
     } else {
       if (AddrSize > Info->VAddrDwords) {
@@ -1713,6 +1727,9 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
+bool AMDGPUDisassembler::isGFX12Plus() const {
+  return AMDGPU::isGFX12Plus(STI);
+}
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
