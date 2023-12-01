@@ -235,9 +235,10 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   // aggregate will result into the may-alias access descriptor, meaning all
   // subsequent accesses to direct and indirect members of that aggregate will
   // be considered may-alias too.
-  // TODO: Combine getTypeInfo() and getBaseTypeInfo() into a single function.
+  // TODO: Combine getTypeInfo() and getValidBaseTypeInfo() into a single
+  // function.
   if (isValidBaseType(QTy))
-    return getBaseTypeInfo(QTy);
+    return getValidBaseTypeInfo(QTy);
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
   if (llvm::MDNode *N = MetadataCache[Ty])
@@ -349,7 +350,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
         if (BaseRD->isEmpty())
           continue;
         llvm::MDNode *TypeNode = isValidBaseType(BaseQTy)
-                                     ? getBaseTypeInfo(BaseQTy)
+                                     ? getValidBaseTypeInfo(BaseQTy)
                                      : getTypeInfo(BaseQTy);
         if (!TypeNode)
           return BaseTypeMetadataCache[Ty] = nullptr;
@@ -373,8 +374,9 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
       if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
         continue;
       QualType FieldQTy = Field->getType();
-      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
-          getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);
+      llvm::MDNode *TypeNode = isValidBaseType(FieldQTy)
+                                   ? getValidBaseTypeInfo(FieldQTy)
+                                   : getTypeInfo(FieldQTy);
       if (!TypeNode)
         return BaseTypeMetadataCache[Ty] = nullptr;
 
@@ -411,7 +413,7 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
   return nullptr;
 }
 
-llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+llvm::MDNode *CodeGenTBAA::getValidBaseTypeInfo(QualType QTy) {
   assert(isValidBaseType(QTy) && "Must be a valid base type");
 
   const Type *Ty = Context.getCanonicalType(QTy).getTypePtr();
@@ -425,8 +427,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
   return BaseTypeMetadataCache[Ty] = TypeNode;
 }
 
-llvm::MDNode *CodeGenTBAA::maybeGetBaseTypeInfo(QualType QTy) {
-  return isValidBaseType(QTy) ? getBaseTypeInfo(QTy) : nullptr;
+llvm::MDNode *CodeGenTBAA::getBaseTypeInfo(QualType QTy) {
+  return isValidBaseType(QTy) ? getValidBaseTypeInfo(QTy) : nullptr;
 }
 
 llvm::MDNode *CodeGenTBAA::getAccessTagInfo(TBAAAccessInfo Info) {

@@ -1318,7 +1318,7 @@ llvm::MDNode *CodeGenModule::getTBAAStructInfo(QualType QTy) {
 llvm::MDNode *CodeGenModule::getTBAABaseTypeInfo(QualType QTy) {
   if (!TBAA)
     return nullptr;
-  return TBAA->maybeGetBaseTypeInfo(QTy);
+  return TBAA->getBaseTypeInfo(QTy);
 }
 
 llvm::MDNode *CodeGenModule::getTBAAAccessTagInfo(TBAAAccessInfo Info) {
