@@ -1429,6 +1429,21 @@ define i8 @replace_false_op_eq_shl_or(i8 %x) {
   ret i8 %sel
 }
 
+define i8 @replace_false_op_eq_shl_or_disjoint(i8 %x) {
+; CHECK-LABEL: @replace_false_op_eq_shl_or_disjoint(
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], 3
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X]], [[SHL]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[EQ0]], i8 -1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %eq0 = icmp eq i8 %x, -1
+  %shl = shl i8 %x, 3
+  %or = or disjoint i8 %x, %shl
+  %sel = select i1 %eq0, i8 -1, i8 %or
+  ret i8 %sel
+}
+
 ; negative test - wrong cmp predicate
 
 define i8 @replace_false_op_sgt_neg_and(i8 %x) {
@@ -1697,4 +1712,27 @@ define i8 @select_xor_cmp_unmatched_operands(i8 %0, i8 %1, i8 %c) {
   %4 = xor i8 %1, %c
   %5 = select i1 %3, i8 0, i8 %4
   ret i8 %5
+}
+
+define i8 @select_or_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_or_eq(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %or = or i8 %x, %y
+  %sel = select i1 %cmp, i8 %x, i8 %or
+  ret i8 %sel
+}
+
+; FIXME: This is a miscompile.
+define i8 @select_or_disjoint_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: @select_or_disjoint_eq(
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %cmp = icmp eq i8 %x, %y
+  %or = or disjoint i8 %x, %y
+  %sel = select i1 %cmp, i8 %x, i8 %or
+  ret i8 %sel
 }
