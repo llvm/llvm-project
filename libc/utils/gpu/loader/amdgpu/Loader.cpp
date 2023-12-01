@@ -474,7 +474,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   void *rpc_client_storage = malloc(sizeof(void *));
   void *rpc_client_host = nullptr;
   if (hsa_status_t err =
-          hsa_amd_memory_lock(&rpc_client_storage, sizeof(void *),
+          hsa_amd_memory_lock(rpc_client_storage, sizeof(void *),
                               /*agents=*/nullptr, 0, &rpc_client_host))
     handle_error(err);
 
