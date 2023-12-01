@@ -99,7 +99,7 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
   unsigned NewOpc;
   switch (MI.getOpcode()) {
   default:
-    llvm_unreachable("Expected VMERGE_VVM_<LMUL> instruction.");
+    return false;
     CASE_VMERGE_TO_VMV(MF8)
     CASE_VMERGE_TO_VMV(MF4)
     CASE_VMERGE_TO_VMV(MF2)
@@ -204,10 +204,8 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     CurrentV0Def = nullptr;
     for (MachineInstr &MI : MBB) {
-      unsigned BaseOpc = RISCV::getRVVMCOpcode(MI.getOpcode());
       Changed |= convertToUnmasked(MI, CurrentV0Def);
-      if (BaseOpc == RISCV::VMERGE_VVM)
-        Changed |= convertVMergeToVMv(MI, CurrentV0Def);
+      Changed |= convertVMergeToVMv(MI, CurrentV0Def);
 
       if (MI.definesRegister(RISCV::V0, TRI))
         CurrentV0Def = &MI;
