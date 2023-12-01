@@ -471,7 +471,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   // Pin some memory we can use to obtain the address of the rpc client.
-  void *rpc_client_storage = nullptr;
+  void **rpc_client_storage = new void *;
   void *rpc_client_host = nullptr;
   if (hsa_status_t err =
           hsa_amd_memory_lock(&rpc_client_storage, sizeof(void *),
