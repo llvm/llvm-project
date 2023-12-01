@@ -622,6 +622,9 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
+def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
+  "Enable ARMv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -692,7 +695,7 @@ def HasV9_4aOps : SubtargetFeature<
 
 def HasV9_5aOps : SubtargetFeature<
   "v9.5a", "HasV9_5aOps", "true", "Support ARM v9.5a instructions",
-  [HasV9_4aOps]>;
+  [HasV9_4aOps, FeatureCPA]>;
 
 def HasV8_0rOps : SubtargetFeature<
   "v8r", "HasV8_0rOps", "true", "Support ARM v8r instructions",
