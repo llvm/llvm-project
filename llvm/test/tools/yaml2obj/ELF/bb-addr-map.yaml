@@ -86,12 +86,13 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 2
-        Address: 0x0000000000000020
-        BBEntries:
-          - ID:            11
-            AddressOffset: 0x00000001
-            Size:          0x00000002
-            Metadata:      0x00000003
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            11
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
 
 ## 5) When specifying the description with Entries, the 'Address' field will be
 ##    zero when omitted.
@@ -99,11 +100,12 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 2
-        BBEntries:
-          - ID:            12
-            AddressOffset: 0x00000001
-            Size:          0x00000002
-            Metadata:      0x00000003
+        BBRanges:
+          - BBEntries:
+            - ID:            12
+              AddressOffset: 0x00000001
+              Size:          0x00000002
+              Metadata:      0x00000003
 
 ## 6) We can override the NumBlocks field with a value different from the
 ##    actual number of BB Entries.
@@ -111,13 +113,14 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version:   2
-        Address:   0x0000000000000020
-        NumBlocks: 2
-        BBEntries:
-          - ID:            13
-            AddressOffset: 0x00000001
-            Size:          0x00000002
-            Metadata:      0x00000003
+        BBRanges:
+          - BaseAddress:   0x0000000000000020
+            NumBlocks: 2
+            BBEntries:
+             - ID:            13
+               AddressOffset: 0x00000001
+               Size:          0x00000002
+               Metadata:      0x00000003
 
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID

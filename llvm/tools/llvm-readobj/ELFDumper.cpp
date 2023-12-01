@@ -7545,8 +7545,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP ||
-           Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP_V0;
+    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP;
   };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
       this->Obj.getSectionAndRelocations(IsMatch);
@@ -7575,7 +7574,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
                                 ": " + toString(BBAddrMapOrErr.takeError()));
       continue;
     }
-    for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
+    for (const BBAddrMap &AM : *BBAddrMapOrErr) {
       DictScope D(W, "Function");
       W.printHex("At", AM.Addr);
       SmallVector<uint32_t> FuncSymIndex =
@@ -7588,11 +7587,13 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
-
-      {
-        ListScope L(W, "BB entries");
-        for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
-          DictScope L(W);
+      ListScope BBRL(W, "BB Ranges");
+      for (const BBAddrMap::BBRangeEntry &BBR : AM.BBRanges) {
+        DictScope BBRD(W);
+        W.printHex("Base Address", BBR.BaseAddress);
+        ListScope BBEL(W, "BB Entries");
+        for (const BBAddrMap::BBEntry &BBE : BBR.BBEntries) {
+          DictScope BBED(W);
           W.printNumber("ID", BBE.ID);
           W.printHex("Offset", BBE.Offset);
           W.printHex("Size", BBE.Size);

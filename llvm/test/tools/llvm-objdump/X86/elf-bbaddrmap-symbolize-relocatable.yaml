@@ -24,17 +24,19 @@ Sections:
     Link:    .text
     Entries:
       - Version: 2
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0x1
-            Metadata:        0x1
+        BBRanges:
+          - BBEntries:
+             - ID:              0
+               AddressOffset:   0x0
+               Size:            0x1
+               Metadata:        0x1
       - Version: 2
-        BBEntries:
-          - ID:              0
-            AddressOffset:   0x0
-            Size:            0x1
-            Metadata:        0x1
+        BBRanges:
+          - BBEntries:
+            - ID:              0
+              AddressOffset:   0x0
+              Size:            0x1
+              Metadata:        0x1
   - Name:  .rela.llvm_bb_addr_map
     Type:  SHT_RELA
     Flags: [ SHF_INFO_LINK ]

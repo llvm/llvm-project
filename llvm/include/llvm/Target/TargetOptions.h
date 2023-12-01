@@ -148,7 +148,7 @@ namespace llvm {
           EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
-          EmitAddrsig(false), EmitCallSiteInfo(false),
+          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
           SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
           ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
@@ -294,9 +294,6 @@ namespace llvm {
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
-
-    /// EnableTLSDESC - This flag enables TLS Descriptors.
-    unsigned EnableTLSDESC : 1;
 
     /// This flag enables InterProcedural Register Allocation (IPRA).
     unsigned EnableIPRA : 1;
