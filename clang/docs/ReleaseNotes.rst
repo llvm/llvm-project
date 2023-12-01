@@ -1239,6 +1239,11 @@ AIX Support
   This access sequence is not used for TLS variables larger than 32KB, and is
   currently only supported on 64-bit mode.
 
+NetBSD Support
+^^^^^^^^^^^^^^
+
+- Removed support for building NetBSD/i386 6.x or older binaries.
+
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
