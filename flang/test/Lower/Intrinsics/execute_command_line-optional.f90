@@ -41,13 +41,11 @@ subroutine all_args_optional(command, isWait, exitVal, cmdVal, msg)
 ! CHECK-NEXT:    %20 = fir.embox %7 typeparams %6#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT:    %21 = fir.absent !fir.box<!fir.char<1,?>> 
 ! CHECK-NEXT:    %22 = arith.select %12, %20, %21 : !fir.box<!fir.char<1,?>>
-! CHECK-NEXT:    %23 = fir.address_of(@_QQclX76c8fd75e0e20222cfcde5fe9055bcbe) : !fir.ref<!fir.char<1,96>>
-! CHECK-NEXT:    %24 = fir.convert %13 : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
+! CHECK:         %24 = fir.convert %13 : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK-NEXT:    %25 = fir.convert %14 : (!fir.logical<4>) -> i1
 ! CHECK-NEXT:    %26 = fir.convert %17 : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:    %27 = fir.convert %19 : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:    %28 = fir.convert %22 : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-! CHECK-NEXT:    %29 = fir.convert %23 : (!fir.ref<!fir.char<1,96>>) -> !fir.ref<i8>
-! CHECK-NEXT:    %30 = fir.call @_FortranAExecuteCommandLine(%24, %25, %26, %27, %28, %29, %c14_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:         %30 = fir.call @_FortranAExecuteCommandLine(%24, %25, %26, %27, %28, %29, %c14_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:    return
 end subroutine all_args_optional

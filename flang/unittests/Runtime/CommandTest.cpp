@@ -279,8 +279,11 @@ TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
 
   RTNAME(ExecuteCommandLine)
   (command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
-
+#ifdef _WIN32
+  CheckDescriptorEqInt(exitStat.get(), 1);
+#else
   CheckDescriptorEqInt(exitStat.get(), 127);
+#endif
   CheckDescriptorEqInt(cmdStat.get(), 3);
   CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
 }
@@ -288,14 +291,19 @@ TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
 TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
   bool wait{true};
-  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No Change")};
 
+#ifdef _WIN32
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
                    command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
-      "'InvalidCommand' not found with exit status code: 127");
-
-  CheckDescriptorEqInt(exitStat.get(), 0);
+      "Invalid command quit with exit status code: 1");
+#else
+  EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
+                   command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+      "Invalid command quit with exit status code: 127");
+#endif
+  CheckDescriptorEqInt(exitStat.get(), 404);
   CheckDescriptorEqStr(cmdMsg.get(), "No Change");
 }
 

@@ -25,14 +25,12 @@ call execute_command_line(command, isWait, exitVal, cmdVal, msg)
 ! CHECK-NEXT:        %[[exitstatBox:.*]] = fir.embox %4 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK-NEXT:        %[[cmdstatBox:.*]] = fir.embox %0 : (!fir.ref<i32>) -> !fir.box<i32>
 ! CHECK-NEXT:        %[[cmdmsgBox:.*]] = fir.embox %8 : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
-! CHECK-NEXT:        %14 = fir.address_of(@_QQclX05b779b120ed6fd4f4d4144c6c9136d6) : !fir.ref<!fir.char<1,87>>
-! CHECK-NEXT:        %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none>
+! CHECK:             %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none>
 ! CHECK-NEXT:        %[[wait:.*]] = fir.convert %[[waitLoaded]] : (!fir.logical<4>) -> i1
 ! CHECK-NEXT:        %[[exitstat:.*]] = fir.convert %[[exitstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:        %[[cmdstat:.*]] = fir.convert %[[cmdstatBox]] : (!fir.box<i32>) -> !fir.box<none>
 ! CHECK-NEXT:        %[[cmdmsg:.*]] = fir.convert %[[cmdmsgBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none>
-! CHECK-NEXT:        %20 = fir.convert %14 : (!fir.ref<!fir.char<1,87>>) -> !fir.ref<i8>
-! CHECK-NEXT:        %21 = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdstat]], %[[cmdmsg]], %20, %c13_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:             %21 = fir.call @_FortranAExecuteCommandLine(%[[command]], %[[wait]], %[[exitstat]], %[[cmdstat]], %[[cmdmsg]], %20, %c13_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:        return
 end subroutine all_args
 
@@ -46,9 +44,7 @@ call execute_command_line(command)
 ! CHECK-NEXT:     %2 = fir.declare %1 typeparams %c30 {uniq_name = "_QFonly_command_default_wait_trueEcommand"} : (!fir.ref<!fir.char<1,30>>, index) -> !fir.ref<!fir.char<1,30>>
 ! CHECK-NEXT:     %3 = fir.embox %2 : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
 ! CHECK-NEXT:     %4 = fir.absent !fir.box<none>
-! CHECK-NEXT:     %5 = fir.address_of(@_QQclX05b779b120ed6fd4f4d4144c6c9136d6) : !fir.ref<!fir.char<1,87>>
-! CHECK-NEXT:     %6 = fir.convert %3 : (!fir.box<!fir.char<1,30>>) -> !fir.box<none> 
-! CHECK-NEXT:     %7 = fir.convert %5 : (!fir.ref<!fir.char<1,87>>) -> !fir.ref<i8>
-! CHECK-NEXT:     %8 = fir.call @_FortranAExecuteCommandLine(%6, %true, %4, %4, %4, %7, %c43_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none 
+! CHECK:          %6 = fir.convert %3 : (!fir.box<!fir.char<1,30>>) -> !fir.box<none> 
+! CHECK:          %8 = fir.call @_FortranAExecuteCommandLine(%6, %true, %4, %4, %4, %7, %c41_i32) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK-NEXT:     return
 end subroutine only_command_default_wait_true

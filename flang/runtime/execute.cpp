@@ -120,8 +120,8 @@ int TerminationCheck(int status, const Descriptor *command,
   if (exitStatusVal == 127 || exitStatusVal == 126) {
 #endif
     if (!cmdstat) {
-      terminator.Crash("\'%s\' not found with exit status code: %d",
-          command->OffsetElement(), exitStatusVal);
+      terminator.Crash(
+          "Invalid command quit with exit status code: %d", exitStatusVal);
     } else {
       CheckAndStoreIntToDescriptor(cmdstat, INVALID_CL_ERR, terminator);
       CopyToDescriptor(*cmdmsg, "Invalid command line", 20);
@@ -186,13 +186,13 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
-    si.cb{sizeof(si)};
+    si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
 
     // append "cmd.exe /c " to the beginning of command
     const char *cmd{command->OffsetElement()};
     const char *prefix{"cmd.exe /c "};
-    char *newCmd{(char *)malloc(strlen(prefix) + strlen(cmd) + 1)};
+    char *newCmd{(char *)malloc(std::strlen(prefix) + std::strlen(cmd) + 1)};
     if (newCmd != NULL) {
       std::strcpy(newCmd, prefix);
       std::strcat(newCmd, cmd);
@@ -200,13 +200,11 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
       terminator.Crash("Memory allocation failed for newCmd");
     }
 
-    // Convert the narrow string to a wide string
-    int sizeNeede{MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, NULL, 0)};
+    // Convert the char to wide char
+    const size_t sizeNeeded{mbstowcs(NULL, newCmd, 0) + 1};
     wchar_t *wcmd{new wchar_t[sizeNeeded]};
-    if (MultiByteToWideChar(CP_UTF8, 0, newCmd, -1, wcmd, sizeNeeded) == 0) {
-      terminator.Crash(
-          "Char to wider char conversion failed with error code: %lu.",
-          GetLastError());
+    if (std::mbstowcs(wcmd, newCmd, sizeNeeded) == static_cast<size_t>(-1)) {
+      terminator.Crash("Char to wide char failed for newCmd");
     }
     free(newCmd);
 
@@ -220,7 +218,7 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
             "CreateProcess failed with error code: %lu.", GetLastError());
       } else {
         StoreIntToDescriptor(cmdstat, (uint32_t)GetLastError(), terminator);
-        CheckAndCopyToDescriptor(*cmdmsg, "CreateProcess failed.", 21);
+        CheckAndCopyToDescriptor(cmdmsg, "CreateProcess failed.", 21);
       }
     }
     delete[] wcmd;
