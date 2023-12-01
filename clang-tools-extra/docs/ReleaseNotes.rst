@@ -402,7 +402,9 @@ Changes in existing checks
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
   detect comparison between string and empty string literals and support
-  ``length()`` method as an alternative to ``size()``.
+  ``length()`` method as an alternative to ``size()``. Resolved false positives
+  tied to negative values from size-like methods, and one triggered by size
+  checks below zero.
 
 - Improved :doc:`readability-function-size
   <clang-tidy/checks/readability/function-size>` check configuration to use
