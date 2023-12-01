@@ -105,16 +105,11 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           FPM.addPass(BPFIRPeepholePass());
           return true;
         }
-        if (PassName == "bpf-preserve-static-offset") {
-          FPM.addPass(BPFPreserveStaticOffsetPass(false));
-          return true;
-        }
         return false;
       });
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
         FunctionPassManager FPM;
-        FPM.addPass(BPFPreserveStaticOffsetPass(true));
         FPM.addPass(BPFAbstractMemberAccessPass(this));
         FPM.addPass(BPFPreserveDITypePass());
         FPM.addPass(BPFIRPeepholePass());
@@ -124,12 +119,6 @@ void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                     OptimizationLevel Level) {
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
   });
-  PB.registerScalarOptimizerLateEPCallback(
-      [=](FunctionPassManager &FPM, OptimizationLevel Level) {
-        // Run this after loop unrolling but before
-        // SimplifyCFGPass(... .sinkCommonInsts(true))
-        FPM.addPass(BPFPreserveStaticOffsetPass(false));
-      });
   PB.registerPipelineEarlySimplificationEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
         MPM.addPass(BPFAdjustOptPass());
