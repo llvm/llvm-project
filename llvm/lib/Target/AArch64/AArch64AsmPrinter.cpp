@@ -1821,9 +1821,9 @@ void AArch64AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
   //
-  // Normally, this would be handled by linker magic, but unfortunately there are
-  // a few limitations in ld64 and ld-prime's implementation of .symbol_resolver
-  // that mean we can't always use them:
+  // Normally, this would be handled by linker magic, but unfortunately there
+  // are a few limitations in ld64 and ld-prime's implementation of
+  // .symbol_resolver that mean we can't always use them:
   //
   //    *  resolvers cannot be the target of an alias
   //    *  resolvers cannot have private linkage
