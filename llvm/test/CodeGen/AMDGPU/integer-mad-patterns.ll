@@ -7014,7 +7014,7 @@ define i64 @mul_u24_add64(i32 %x, i32 %y, i64 %z) {
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %mul = call i64 @llvm.amdgcn.mul.u24.i64(i32 %x, i32 %y)
-  %add = add nuw nsw i64 %mul, %z
+  %add = add i64 %mul, %z
   ret i64 %add
 }
 
@@ -7066,7 +7066,7 @@ define i64 @mul_u24_zext_add64(i32 %x, i32 %y, i64 %z) {
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %mul = call i32 @llvm.amdgcn.mul.u24(i32 %x, i32 %y)
   %mul.zext = zext i32 %mul to i64
-  %add = add nuw nsw i64 %mul.zext, %z
+  %add = add i64 %mul.zext, %z
   ret i64 %add
 }
 
