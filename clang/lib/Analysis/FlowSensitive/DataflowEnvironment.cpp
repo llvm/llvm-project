@@ -300,6 +300,7 @@ static void insertIfFunction(const Decl &D,
 }
 
 static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  // Use getCalleeDecl instead of getMethodDecl in order to handle pointer-to-member calls.
   const auto *MethodDecl = dyn_cast_or_null<CXXMethodDecl>(C.getCalleeDecl());
   if (!MethodDecl)
     return nullptr;

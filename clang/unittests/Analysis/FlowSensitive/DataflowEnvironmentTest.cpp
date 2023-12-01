@@ -27,6 +27,7 @@ using namespace dataflow;
 using ::clang::dataflow::test::getFieldValue;
 using ::testing::IsNull;
 using ::testing::NotNull;
+using ::testing::Contains;
 
 class EnvironmentTest : public ::testing::Test {
 protected:
