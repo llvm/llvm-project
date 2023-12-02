@@ -3099,6 +3099,8 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
 
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
+  bool IsStrict = Op->getNumValues() == 2;
+
   // The regular method converting a 64-bit integer to float roughly consists of
   // 2 steps: normalization and rounding. In fact, after normalization, the
   // conversion from a 64-bit integer to a float is essentially the same as the
@@ -3126,7 +3128,7 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   // converted instead followed by negation based its sign bit.
 
   SDLoc SL(Op);
-  SDValue Src = Op.getOperand(0);
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
 
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = split64BitValue(Src, DAG);
@@ -3202,8 +3204,12 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
                       ShAmt);
   // On GCN, use LDEXP directly.
-  if (Subtarget->isGCN())
+  if (Subtarget->isGCN()) {
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_FLDEXP, SL, MVT::f32, Op.getOperand(0), FVal, ShAmt);
+
     return DAG.getNode(ISD::FLDEXP, SL, MVT::f32, FVal, ShAmt);
+  }
 
   // Otherwise, align 'ShAmt' to the exponent part and add it into the exponent
   // part directly to emulate the multiplication of 2^ShAmt. That 8-bit
