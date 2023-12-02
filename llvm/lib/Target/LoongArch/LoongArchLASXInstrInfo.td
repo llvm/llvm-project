@@ -1273,9 +1273,6 @@ defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrUimm<sra, "XVSRAI">;
 
-// XVCLZ_{B/H/W/D}
-defm : PatXr<ctlz, "XVCLZ">;
-
 // XVPCNT_{B/H/W/D}
 defm : PatXr<ctpop, "XVPCNT">;
 
@@ -1593,26 +1590,26 @@ foreach Inst = ["XVMADDWEV_Q_D", "XVMADDWOD_Q_D", "XVMADDWEV_Q_DU",
 //     (LAInst vty:$xj)>;
 foreach Inst = ["XVEXTH_H_B", "XVEXTH_HU_BU",
                 "XVMSKLTZ_B", "XVMSKGEZ_B", "XVMSKNZ_B",
-                "XVCLO_B", "VEXT2XV_H_B", "VEXT2XV_HU_BU",
+                "XVCLO_B", "XVCLZ_B", "VEXT2XV_H_B", "VEXT2XV_HU_BU",
                 "VEXT2XV_W_B", "VEXT2XV_WU_BU", "VEXT2XV_D_B",
                 "VEXT2XV_DU_BU", "XVREPLVE0_B", "XVREPLVE0_Q"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v32i8 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
 foreach Inst = ["XVEXTH_W_H", "XVEXTH_WU_HU", "XVMSKLTZ_H",
-                "XVCLO_H", "XVFCVTL_S_H", "XVFCVTH_S_H",
+                "XVCLO_H", "XVCLZ_H", "XVFCVTL_S_H", "XVFCVTH_S_H",
                 "VEXT2XV_W_H", "VEXT2XV_WU_HU", "VEXT2XV_D_H",
                 "VEXT2XV_DU_HU", "XVREPLVE0_H"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v16i16 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
 foreach Inst = ["XVEXTH_D_W", "XVEXTH_DU_WU", "XVMSKLTZ_W",
-                "XVCLO_W", "XVFFINT_S_W", "XVFFINT_S_WU",
+                "XVCLO_W", "XVCLZ_W", "XVFFINT_S_W", "XVFFINT_S_WU",
                 "XVFFINTL_D_W", "XVFFINTH_D_W",
                 "VEXT2XV_D_W", "VEXT2XV_DU_WU", "XVREPLVE0_W"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v8i32 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
 foreach Inst = ["XVEXTH_Q_D", "XVEXTH_QU_DU", "XVMSKLTZ_D",
                 "XVEXTL_Q_D", "XVEXTL_QU_DU",
-                "XVCLO_D", "XVFFINT_D_L", "XVFFINT_D_LU",
+                "XVCLO_D", "XVCLZ_D", "XVFFINT_D_L", "XVFFINT_D_LU",
                 "XVREPLVE0_D"] in
   def : Pat<(deriveLASXIntrinsic<Inst>.ret (v4i64 LASX256:$xj)),
             (!cast<LAInst>(Inst) LASX256:$xj)>;
