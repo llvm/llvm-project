@@ -4163,24 +4163,3 @@ let Predicates = [HasSVE2orSME2, HasLUT] in {
 // LUTI4 (two contiguous registers)
   defm LUTI4_Z2ZZI  : sve2_luti4_vector_vg2_index<"luti4">;
 } // End HasSVE2orSME2, HasLUT
-
-//===----------------------------------------------------------------------===//
-// Checked Pointer Arithmetic (FEAT_CPA)
-//===----------------------------------------------------------------------===//
-let Predicates = [HasSVE, HasCPA] in {
-  // Add/subtract (vectors, unpredicated)
-  def ADD_ZZZ_CPA : sve_int_bin_cons_arit_0<0b11, 0b010, "addpt", ZPR64>;
-  def SUB_ZZZ_CPA : sve_int_bin_cons_arit_0<0b11, 0b011, "subpt", ZPR64>;
-
-  // Add/subtract (vectors, predicated)
-  let DestructiveInstType = DestructiveBinaryComm in {
-    def ADD_ZPmZ_CPA : sve_int_bin_pred_arit_log<0b11, 0b00, 0b100, "addpt", ZPR64>;
-    def SUB_ZPmZ_CPA : sve_int_bin_pred_arit_log<0b11, 0b00, 0b101, "subpt", ZPR64>;
-  }
-
-  // Multiply-add vectors, writing multiplicand
-  def MAD_CPA : sve_int_mad_cpa<"madpt">;
-
-  // Multiply-add vectors, writing addend
-  def MLA_CPA : sve_int_mla_cpa<"mlapt">;
-}
