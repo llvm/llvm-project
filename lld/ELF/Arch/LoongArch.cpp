@@ -83,11 +83,9 @@ static uint32_t lo12(uint32_t val) { return val & 0xfff; }
 
 // Calculate the adjusted page delta between dest and PC.
 uint64_t elf::getLoongArchPageDelta(uint64_t dest, uint64_t pc) {
-  // Compensating all the sign-extensions is a bit complicated.
-  // Just use the same logic as bfd and mold. Note that this algorithm assumes
-  // those four instructions (pcalau12i/addi.d/lu32i.d/lu52i.d) are in the same
-  // 4K-page. This assumption is expected to be documented as a constraint in
-  // psABI in future.
+  // Compensate all the sign-extensions is a bit complicated. Just use the same
+  // logic as bfd and mold. Note that this algorithm assumes those four
+  // instructions (pcalau12i/addi.d/lu32i.d/lu52i.d) are in the same 4K-page.
   uint64_t result = getLoongArchPage(dest) - getLoongArchPage(pc);
   if (dest & 0x800)
     result += 0x1000 - 0x1'0000'0000;
