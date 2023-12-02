@@ -12,8 +12,6 @@
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
 
-#include <iostream>
-
 using namespace std::chrono_literals;
 
 void BM_atomic_wait_one_thread_one_atomic_wait(benchmark::State& state) {
@@ -92,22 +90,15 @@ void BM_atomic_wait_multi_thread_one_atomic_wait(benchmark::State& state) {
 }
 BENCHMARK(BM_atomic_wait_multi_thread_one_atomic_wait)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
 
-// hardware_destructive_interference_size not implemented yet for clang
-// alignas 128 to cover the cases for x86 and apple arm to prevent false sharing
-// from the test itself
-struct alignas(128) Atomic {
-  std::atomic<std::uint64_t> at{0};
-};
-
 void BM_atomic_wait_multi_thread_wait_different_atomics(benchmark::State& state) {
   const std::uint64_t total_loop_test_param = state.range(0);
   constexpr std::uint64_t num_atomics       = 7;
-  std::vector<Atomic> atomics(num_atomics);
+  std::vector<std::atomic<std::uint64_t>> atomics(num_atomics);
 
   auto notify_func = [&](std::stop_token st, size_t idx) {
     while (!st.stop_requested()) {
-      atomics[idx].at.fetch_add(1, std::memory_order_relaxed);
-      atomics[idx].at.notify_all();
+      atomics[idx].fetch_add(1, std::memory_order_relaxed);
+      atomics[idx].notify_all();
     }
   };
 
@@ -120,8 +111,8 @@ void BM_atomic_wait_multi_thread_wait_different_atomics(benchmark::State& state)
       start_flag.wait(old_start);
       old_start = start_flag.load();
       for (std::uint64_t i = 0; i < total_loop_test_param; ++i) {
-        auto old = atomics[idx].at.load(std::memory_order_relaxed);
-        atomics[idx].at.wait(old);
+        auto old = atomics[idx].load(std::memory_order_relaxed);
+        atomics[idx].wait(old);
       }
       done_count.fetch_add(1);
     }

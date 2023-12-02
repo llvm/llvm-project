@@ -13,8 +13,6 @@
 #include "benchmark/benchmark.h"
 #include "make_test_thread.h"
 
-#include <iostream>
-
 using namespace std::chrono_literals;
 
 struct AtomicLock {
