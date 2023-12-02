@@ -65,9 +65,9 @@ public:
                            unsigned NumRepetitions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
-  Expected<Benchmark>
-  runConfiguration(RunnableConfiguration &&RC,
-                   const std::optional<StringRef> &DumpFile) const;
+  Expected<Benchmark> runConfiguration(RunnableConfiguration &&RC,
+                                       const std::optional<StringRef> &DumpFile,
+                                       bool ErrorOnSnippetCrash = false) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {

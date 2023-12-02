@@ -545,9 +545,10 @@ BenchmarkRunner::createFunctionExecutor(
   llvm_unreachable("ExecutionMode is outside expected range");
 }
 
-Expected<Benchmark> BenchmarkRunner::runConfiguration(
-    RunnableConfiguration &&RC,
-    const std::optional<StringRef> &DumpFile) const {
+Expected<Benchmark>
+BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
+                                  const std::optional<StringRef> &DumpFile,
+                                  bool ErrorOnSnippetCrash /*= false*/) const {
   Benchmark &InstrBenchmark = RC.InstrBenchmark;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 

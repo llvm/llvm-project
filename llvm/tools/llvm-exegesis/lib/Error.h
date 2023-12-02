@@ -52,6 +52,8 @@ public:
 
   std::error_code convertToErrorCode() const override;
 
+  intptr_t GetCrashAddress() const { return SIAddress; }
+
 private:
   std::string Msg;
   intptr_t SIAddress;
