@@ -133,13 +133,13 @@ constexpr void test_iterators() {
   { // check that an empty range is partitioned
     {
       std::array<int, 0> a_arr = {};
-      int* const a = a_arr.data();
+      int* const a             = a_arr.data();
       auto ret = std::ranges::is_partitioned(Iter(a), Sent(Iter(a)), [](int i) { return i < 3; });
       assert(ret);
     }
     {
       std::array<int, 0> a_arr = {};
-      int* const a = a_arr.data();
+      int* const a             = a_arr.data();
       auto range = std::ranges::subrange(Iter(a), Sent(Iter(a)));
       auto ret = std::ranges::is_partitioned(range, [](int i) { return i < 3; });
       assert(ret);

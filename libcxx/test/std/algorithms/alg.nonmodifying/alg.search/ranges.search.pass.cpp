@@ -184,7 +184,7 @@ constexpr void test_iterators() {
     {
       int a[] = {6, 7, 8};
       std::array<int, 0> p_arr = {};
-      int* const p = p_arr.data();
+      int* const p             = p_arr.data();
       auto ret = std::ranges::search(Iter1(a), Sent1(Iter1(a + 3)), Iter2(p), Sent2(Iter2(p)));
       assert(base(ret.begin()) == a);
       assert(base(ret.end()) == a);
@@ -192,7 +192,7 @@ constexpr void test_iterators() {
     {
       int a[] = {6, 7, 8};
       std::array<int, 0> p_arr = {};
-      int* const p = p_arr.data();
+      int* const p             = p_arr.data();
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 3)));
       auto range2 = std::ranges::subrange(Iter2(p), Sent2(Iter2(p)));
       auto ret = std::ranges::search(range1, range2);
@@ -204,7 +204,7 @@ constexpr void test_iterators() {
   { // range has zero length
     {
       std::array<int, 0> a_arr = {};
-      int* const a = a_arr.data();
+      int* const a             = a_arr.data();
       int p[] = {6, 7, 8};
       auto ret = std::ranges::search(Iter1(a), Sent1(Iter1(a)), Iter2(p), Sent2(Iter2(p + 3)));
       assert(base(ret.begin()) == a);
@@ -212,7 +212,7 @@ constexpr void test_iterators() {
     }
     {
       std::array<int, 0> a_arr = {};
-      int* const a = a_arr.data();
+      int* const a             = a_arr.data();
       int p[] = {6, 7, 8};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
       auto range2 = std::ranges::subrange(Iter2(p), Sent2(Iter2(p + 3)));
