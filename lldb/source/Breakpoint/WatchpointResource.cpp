@@ -10,6 +10,8 @@
 
 #include "lldb/Breakpoint/WatchpointResource.h"
 
+#include <algorithm>
+
 using namespace lldb;
 using namespace lldb_private;
 
