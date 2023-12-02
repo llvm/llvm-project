@@ -575,10 +575,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FSHL, MVT::i32, Custom);
   setOperationAction(ISD::FSHL, MVT::i64, Custom);
 
-  if (Subtarget->isTargetWindows())
-    setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
-  else
-    setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
 
   // Constant pool entries
   setOperationAction(ISD::ConstantPool, MVT::i64, Custom);
@@ -2361,6 +2358,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CSINC)
     MAKE_CASE(AArch64ISD::THREAD_POINTER)
     MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
+    MAKE_CASE(AArch64ISD::PROBED_ALLOCA)
     MAKE_CASE(AArch64ISD::ABDS_PRED)
     MAKE_CASE(AArch64ISD::ABDU_PRED)
     MAKE_CASE(AArch64ISD::HADDS_PRED)
@@ -2728,6 +2726,22 @@ MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchRet(
 }
 
 MachineBasicBlock *
+AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
+                                              MachineBasicBlock *MBB) const {
+  MachineFunction &MF = *MBB->getParent();
+  MachineBasicBlock::iterator MBBI = MI.getIterator();
+  DebugLoc DL = MBB->findDebugLoc(MBBI);
+  const AArch64InstrInfo &TII =
+      *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
+  Register TargetReg = MI.getOperand(0).getReg();
+  MachineBasicBlock::iterator NextInst =
+      TII.probedStackAlloc(MBBI, TargetReg, false);
+
+  MI.eraseFromParent();
+  return NextInst->getParent();
+}
+
+MachineBasicBlock *
 AArch64TargetLowering::EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                     MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
@@ -2871,6 +2885,10 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
 
   case AArch64::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
+
+  case AArch64::PROBED_STACKALLOC_DYN:
+    return EmitDynamicProbedAlloc(MI, BB);
+
   case AArch64::LD1_MXIPXX_H_PSEUDO_B:
     return EmitTileLoad(AArch64::LD1_MXIPXX_H_B, AArch64::ZAB0, MI, BB);
   case AArch64::LD1_MXIPXX_H_PSEUDO_H:
@@ -14243,9 +14261,34 @@ SDValue AArch64TargetLowering::LowerATOMIC_LOAD_AND(SDValue Op,
                        AN->getMemOperand());
 }
 
-SDValue AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(
-    SDValue Op, SDValue Chain, SDValue &Size, SelectionDAG &DAG) const {
+SDValue
+AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+
   SDLoc dl(Op);
+  // Get the inputs.
+  SDNode *Node = Op.getNode();
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
+  EVT VT = Node->getValueType(0);
+
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
+          "no-stack-arg-probe")) {
+    SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
+    Chain = SP.getValue(1);
+    SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
+    if (Align)
+      SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                       DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+    Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
+    SDValue Ops[2] = {SP, Chain};
+    return DAG.getMergeValues(Ops, dl);
+  }
+
+  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
+
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Callee = DAG.getTargetExternalSymbol(Subtarget->getChkStkName(),
                                                PtrVT, 0);
@@ -14269,7 +14312,59 @@ SDValue AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(
 
   Size = DAG.getNode(ISD::SHL, dl, MVT::i64, Size,
                      DAG.getConstant(4, dl, MVT::i64));
-  return Chain;
+
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
+  Chain = SP.getValue(1);
+  SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
+  if (Align)
+    SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+  Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
+
+  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
+
+  SDValue Ops[2] = {SP, Chain};
+  return DAG.getMergeValues(Ops, dl);
+}
+
+SDValue
+AArch64TargetLowering::LowerInlineDYNAMIC_STACKALLOC(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  // Get the inputs.
+  SDNode *Node = Op.getNode();
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
+  SDLoc dl(Op);
+  EVT VT = Node->getValueType(0);
+
+  // Construct the new SP value in a GPR.
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
+  Chain = SP.getValue(1);
+  SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
+  if (Align)
+    SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
+                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
+
+  // Set the real SP to the new value with a probing loop.
+  Chain = DAG.getNode(AArch64ISD::PROBED_ALLOCA, dl, MVT::Other, Chain, SP);
+  SDValue Ops[2] = {SP, Chain};
+  return DAG.getMergeValues(Ops, dl);
+}
+
+SDValue
+AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  if (Subtarget->isTargetWindows())
+    return LowerWindowsDYNAMIC_STACKALLOC(Op, DAG);
+  else if (hasInlineStackProbe(MF))
+    return LowerInlineDYNAMIC_STACKALLOC(Op, DAG);
+  else
+    return SDValue();
 }
 
 // When x and y are extended, lower:
@@ -14321,51 +14416,6 @@ SDValue AArch64TargetLowering::LowerAVG(SDValue Op, SelectionDAG &DAG,
   tmp = DAG.getNode(ISD::AND, dl, VT, tmp, ConstantOne);
   SDValue Add = DAG.getNode(ISD::ADD, dl, VT, ShiftOpA, ShiftOpB);
   return DAG.getNode(ISD::ADD, dl, VT, Add, tmp);
-}
-
-SDValue
-AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                               SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() &&
-         "Only Windows alloca probing supported");
-  SDLoc dl(Op);
-  // Get the inputs.
-  SDNode *Node = Op.getNode();
-  SDValue Chain = Op.getOperand(0);
-  SDValue Size = Op.getOperand(1);
-  MaybeAlign Align =
-      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
-  EVT VT = Node->getValueType(0);
-
-  if (DAG.getMachineFunction().getFunction().hasFnAttribute(
-          "no-stack-arg-probe")) {
-    SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
-    Chain = SP.getValue(1);
-    SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
-    if (Align)
-      SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                       DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
-    Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
-    SDValue Ops[2] = {SP, Chain};
-    return DAG.getMergeValues(Ops, dl);
-  }
-
-  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
-
-  Chain = LowerWindowsDYNAMIC_STACKALLOC(Op, Chain, Size, DAG);
-
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, AArch64::SP, MVT::i64);
-  Chain = SP.getValue(1);
-  SP = DAG.getNode(ISD::SUB, dl, MVT::i64, SP, Size);
-  if (Align)
-    SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                     DAG.getConstant(-(uint64_t)Align->value(), dl, VT));
-  Chain = DAG.getCopyToReg(Chain, dl, AArch64::SP, SP);
-
-  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), dl);
-
-  SDValue Ops[2] = {SP, Chain};
-  return DAG.getMergeValues(Ops, dl);
 }
 
 SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,

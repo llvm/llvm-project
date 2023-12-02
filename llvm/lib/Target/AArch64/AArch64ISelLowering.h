@@ -89,6 +89,10 @@ enum NodeType : unsigned {
   ADC,
   SBC, // adc, sbc instructions
 
+  // To avoid stack clash, allocation is performed by block and each block is
+  // probed.
+  PROBED_ALLOCA,
+
   // Predicated instructions where inactive lanes produce undefined results.
   ABDS_PRED,
   ABDU_PRED,
@@ -621,6 +625,9 @@ public:
 
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
+
+  MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
+                                            MachineBasicBlock *MBB) const;
 
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
@@ -1157,10 +1164,10 @@ private:
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SDValue Chain,
-                                         SDValue &Size,
-                                         SelectionDAG &DAG) const;
+
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
