@@ -576,7 +576,7 @@ BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
   auto NewMeasurements = runMeasurements(**Executor);
 
   if (Error E = NewMeasurements.takeError()) {
-    if (!E.isA<SnippetCrash>())
+    if (!E.isA<SnippetCrash>() || ErrorOnSnippetCrash)
       return std::move(E);
     InstrBenchmark.Error = toString(std::move(E));
     return std::move(InstrBenchmark);
