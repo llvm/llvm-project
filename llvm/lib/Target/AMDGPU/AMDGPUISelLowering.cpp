@@ -421,7 +421,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::MUL, ISD::MULHU, ISD::MULHS}, MVT::i64, Expand);
   setOperationAction(
-      {ISD::UINT_TO_FP, ISD::SINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
+    {ISD::UINT_TO_FP, ISD::SINT_TO_FP, ISD::SINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
       MVT::i64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
 
@@ -442,7 +442,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                         ISD::FP_TO_UINT, ISD::MUL,     ISD::MULHU,
                         ISD::MULHS,      ISD::OR,      ISD::SHL,
                         ISD::SRA,        ISD::SRL,     ISD::ROTL,
-                        ISD::ROTR,       ISD::SUB,     ISD::SINT_TO_FP,
+                        ISD::ROTR,       ISD::SUB,     ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP,
                         ISD::UINT_TO_FP, ISD::SDIV,    ISD::UDIV,
                         ISD::SREM,       ISD::UREM,    ISD::SMUL_LOHI,
                         ISD::UMUL_LOHI,  ISD::SDIVREM, ISD::UDIVREM,

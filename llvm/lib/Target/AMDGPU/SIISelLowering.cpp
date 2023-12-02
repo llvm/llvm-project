@@ -542,8 +542,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::STRICT_SINT_TO_FP}, MVT::i16, Custom);
 
     setOperationAction(
-        {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP},
+        {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP,
+         ISD::UINT_TO_FP},
         MVT::f16, Promote);
+
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Legal);
 
     // F16 - VOP2 Actions.
     setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, MVT::f16, Expand);
