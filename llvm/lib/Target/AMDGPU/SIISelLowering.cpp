@@ -539,7 +539,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::FSIN, ISD::FROUND, ISD::FPTRUNC_ROUND},
                        MVT::f16, Custom);
 
-    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::STRICT_SINT_TO_FP}, MVT::i16, Custom);
 
     setOperationAction(
         {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP},

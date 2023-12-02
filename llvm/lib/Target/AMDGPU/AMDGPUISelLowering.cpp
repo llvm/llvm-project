@@ -1331,7 +1331,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
     return lowerFEXP(Op, DAG);
   case ISD::FEXP2:
     return lowerFEXP2(Op, DAG);
-  case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
+  case ISD::SINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
+    return LowerSINT_TO_FP(Op, DAG);
   case ISD::UINT_TO_FP: return LowerUINT_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16: return LowerFP_TO_FP16(Op, DAG);
   case ISD::FP_TO_SINT:
@@ -3281,8 +3283,8 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
 SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT DestVT = Op.getValueType();
-
-  SDValue Src = Op.getOperand(0);
+  bool IsStrict = Op.getOpcode() == ISD::STRICT_SINT_TO_FP;
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = Src.getValueType();
 
   if (SrcVT == MVT::i16) {
@@ -3292,6 +3294,8 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
     SDLoc DL(Op);
     // Promote src to i32
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32, Src);
+    if (IsStrict)
+      return DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, Op->getVTList(), Op.getOperand(0), Ext);
     return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
   }
 
