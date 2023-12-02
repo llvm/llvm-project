@@ -22,7 +22,6 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include <cstdint>
 
 using namespace mlir;
 using namespace mlir::memref;

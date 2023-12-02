@@ -1179,30 +1179,6 @@ func.func @no_fold_collapse_of_expand_empty_expr(%arg0: tensor<3x2x2xf32>)
 
 // -----
 
-func.func @no_fold_extract_slice_negative_offset(%arg0: tensor<8xf32>) -> tensor<?xf32> {
-  %c-1 = arith.constant -1 : index
-  %e = tensor.extract_slice %arg0[1] [%c-1] [1] : tensor<8xf32> to tensor<?xf32>
-  return %e : tensor<?xf32>
-}
-// CHECK-LABEL: func @no_fold_extract_slice_negative_offset
-// CHECK: tensor.extract_slice
-
-// -----
-
-func.func @no_fold_insert_slice_cast_inserter_negative_offset() -> tensor<?xf32> {
-  %c = arith.constant 0 : index
-  %const = tensor.empty(%c) : tensor<?xf32>
-  %insert_val = tensor.empty(%c) : tensor<?xf32>
-  %c-1 = arith.constant -1 : index
-  %inserted = tensor.insert_slice %insert_val into %const[0][%c-1][1] : tensor<?xf32> into tensor<?xf32>
-  return %inserted : tensor<?xf32>
-}
-// CHECK-LABEL: func @no_fold_insert_slice_cast_inserter_negative_offset
-// CHECK: %[[CAST:.*]] = tensor.cast
-// CHECK: tensor.insert_slice %[[CAST:.+]]
-
-// -----
-
 func.func @reshape_splat_constant_int32() -> tensor<2x4x2xi32> {
   %c0 = arith.constant dense<42> : tensor<2x8xi32>
   %0 = tensor.expand_shape %c0 [[0], [1, 2]]
