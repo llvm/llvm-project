@@ -553,7 +553,7 @@ define i32 @or_to_nxor_multiuse(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[NOTOR:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[AND]], [[NOTOR]]
+; CHECK-NEXT:    [[OR2:%.*]] = or disjoint i32 [[AND]], [[NOTOR]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[AND]], [[NOTOR]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], [[OR2]]
 ; CHECK-NEXT:    ret i32 [[MUL2]]
