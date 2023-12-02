@@ -24,7 +24,8 @@ MATH_MANGLE(native_sqrt)(float x)
 CONSTATTR float
 MATH_MANGLE(native_rsqrt)(float x)
 {
-    return __builtin_amdgcn_rsqf(x);
+    #pragma clang fp contract(fast)
+    return 1.0f / __builtin_sqrtf(x);
 }
 
 CONSTATTR float
