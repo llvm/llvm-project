@@ -455,7 +455,7 @@ def Mesh_GatherOp : Mesh_CollectiveCommunicationOpBase<"gather", [
   }];
 }
 
-def Mesh_ReceiveOp : Mesh_CollectiveCommunicationOpBase<"receive", [
+def Mesh_RecvOp : Mesh_CollectiveCommunicationOpBase<"recv", [
     AllShapesMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {

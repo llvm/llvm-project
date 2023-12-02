@@ -532,7 +532,7 @@ LogicalResult GatherOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // mesh.receive op
 //===----------------------------------------------------------------------===//
 
-LogicalResult ReceiveOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+LogicalResult RecvOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // TODO
   return failure();
 }
