@@ -265,9 +265,9 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           return ArgType::Invalid();
         case LengthModifier::AsWide:
         case LengthModifier::AsWideFast:
-          int s = getExplicitlyFixedSize();
-          bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
-          return clang::analyze_format_string::wToArgType(s, fast, Ctx);
+          int S = getExplicitlyFixedSize();
+          bool FAST = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+          return clang::analyze_format_string::wToArgType(S, FAST, Ctx);
       }
       llvm_unreachable("Unsupported LengthModifier Type");
 

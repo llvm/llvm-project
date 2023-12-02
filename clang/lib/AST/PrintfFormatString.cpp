@@ -560,9 +560,9 @@ ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
         return ArgType::Invalid();
       case LengthModifier::AsWide:
       case LengthModifier::AsWideFast:
-        int s = getExplicitlyFixedSize();
-        bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
-        return clang::analyze_format_string::wToArgType(s, fast, Ctx);
+        int S = getExplicitlyFixedSize();
+        bool FAST = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+        return clang::analyze_format_string::wToArgType(S, FAST, Ctx);
     }
 
   if (CS.isUIntArg())

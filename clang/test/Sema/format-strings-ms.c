@@ -101,6 +101,10 @@ void w_int_test(void) {
   scanf("%w16i", b); // expected-warning{{format specifies type 'short' but the argument has type 'int'}}
   scanf("%w32u", c);
   scanf("%w64x", d);
+
+  // unsupported size
+  printf("%w92d", a); // expected-warning{{format specifies w width integer type with invalid bit-width 92}}
+  scanf("%w0i", b); // expected-warning{{format specifies w width integer type with invalid bit-width 0}}
 }
 
 void wf_test(void) {
@@ -118,6 +122,10 @@ void wf_test(void) {
   scanf("%wf16u", b);
   scanf("%wf32o", c);
   scanf("%wf64X", d);
+
+  // unsupported size
+  printf("%wf0d", a); // expected-warning{{format specifies wf width integer type with invalid bit-width 0}}
+  scanf("%wf35u", b); // expected-warning{{format specifies wf width integer type with invalid bit-width 35}}
 }
 
 #endif

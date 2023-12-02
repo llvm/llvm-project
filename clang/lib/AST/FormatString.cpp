@@ -297,18 +297,19 @@ clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
 
       if (I == E) return false;
       int s = 0;
+      bool MSVCRT = true;
       while (unsigned(*I - '0') <= 9) {
+        MSVCRT = false;
         s = 10 * s + unsigned(*I - '0');
         ++I;
       }
 
-      // s == 0 is MSVCRT case, like l but only for c, C, s, S, or Z on windows
-      // s != 0 for b, d, i, o, u, x, or X when a size followed(like 8, 16, 32 or 64)
-      if (s != 0) {
+      // MSVCRT == true is MSVCRT case, like l but only for c, C, s, S, or Z on windows
+      // MSVCRT == false for b, d, i, o, u, x, or X when a size followed(like 8, 16, 32 or 64)
+      if (!MSVCRT) {
         std::set<int> supported_list {8, 16, 32, 64};
-        if (supported_list.count(s) == 0) {
-          return false;
-        }
+        if (supported_list.count(s) == 0)
+          FS.setExplicitlyFixedSizeValid(false);
         FS.setExplicitlyFixedSize(s);
       }
 

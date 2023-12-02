@@ -420,10 +420,12 @@ protected:
   bool UsesPositionalArg;
   unsigned argIndex;
   unsigned ExplicitlyFixedSize;
+  bool ExplicitlyFixedSizeValid;
+
 public:
   FormatSpecifier(bool isPrintf)
     : CS(isPrintf), VectorNumElts(false),
-      UsesPositionalArg(false), argIndex(0) {}
+      UsesPositionalArg(false), argIndex(0), ExplicitlyFixedSizeValid(true) {}
 
   void setLengthModifier(LengthModifier lm) {
     LM = lm;
@@ -463,8 +465,8 @@ public:
     FieldWidth = Amt;
   }
 
-  void setExplicitlyFixedSize(unsigned s) {
-    ExplicitlyFixedSize = s;
+  void setExplicitlyFixedSize(unsigned S) {
+    ExplicitlyFixedSize = S;
   }
 
   unsigned getExplicitlyFixedSize() const {
@@ -477,6 +479,14 @@ public:
                               const LangOptions &LO) const;
 
   bool hasStandardLengthModifier() const;
+
+  void setExplicitlyFixedSizeValid(bool valid) {
+    ExplicitlyFixedSizeValid = valid;
+  }
+
+  bool isExplicitlyFixedSizeSupported() const {
+    return ExplicitlyFixedSizeValid;
+  }
 
   std::optional<LengthModifier> getCorrectedLengthModifier() const;
 
