@@ -121,8 +121,8 @@ func.func @linalg_transpose_tensor_pack_fold(%arg0: tensor<56x57x1x64xf32>) -> t
     ins(%arg0 : tensor<56x57x1x64xf32>)
     outs(%0 : tensor<1x56x57x64xf32>)
     permutation = [2, 0, 1, 3]
-  %1 = tensor.empty() : tensor<1x2x56x57x32xf32>
 
+  %1 = tensor.empty() : tensor<1x2x56x57x32xf32>
   %pack = tensor.pack %transposed
     outer_dims_perm = [0, 3, 1, 2]
     inner_dims_pos = [3]
@@ -149,8 +149,8 @@ func.func @tensor_pack_linalg_transpose_fold(%arg0: tensor<56x57x1x64xf32>) -> t
     inner_tiles = [32]
     into %0 : tensor<56x57x1x64xf32> -> tensor<56x57x1x2x32xf32>
 
-   %1 = tensor.empty() : tensor<1x2x56x57x32xf32>
-    %transposed = linalg.transpose
+  %1 = tensor.empty() : tensor<1x2x56x57x32xf32>
+  %transposed = linalg.transpose
     ins(%pack : tensor<56x57x1x2x32xf32>)
     outs(%1 : tensor<1x2x56x57x32xf32>)
     permutation = [2, 3, 0, 1, 4]
