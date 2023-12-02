@@ -449,7 +449,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
       m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_notifications(), m_image_tokens(),
+      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
       m_breakpoint_site_list(), m_dynamic_checkers_up(),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
@@ -560,6 +560,7 @@ void Process::Finalize() {
   m_extended_thread_list.Destroy();
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+  m_watchpoint_resource_list.Clear();
   std::vector<Notifications> empty_notifications;
   m_notifications.swap(empty_notifications);
   m_image_tokens.clear();
@@ -1707,11 +1708,12 @@ void Process::SetDynamicCheckers(DynamicCheckerFunctions *dynamic_checkers) {
   m_dynamic_checkers_up.reset(dynamic_checkers);
 }
 
-BreakpointSiteList &Process::GetBreakpointSiteList() {
+StopPointSiteList<BreakpointSite> &Process::GetBreakpointSiteList() {
   return m_breakpoint_site_list;
 }
 
-const BreakpointSiteList &Process::GetBreakpointSiteList() const {
+const StopPointSiteList<BreakpointSite> &
+Process::GetBreakpointSiteList() const {
   return m_breakpoint_site_list;
 }
 
@@ -1759,7 +1761,7 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 lldb::break_id_t
-Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
+Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
                               bool use_hardware) {
   addr_t load_addr = LLDB_INVALID_ADDRESS;
 
@@ -1786,10 +1788,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
 
   // Reset the IsIndirect flag here, in case the location changes from pointing
   // to a indirect symbol to a regular symbol.
-  owner->SetIsIndirect(false);
+  constituent->SetIsIndirect(false);
 
-  if (owner->ShouldResolveIndirectFunctions()) {
-    Symbol *symbol = owner->GetAddress().CalculateSymbolContextSymbol();
+  if (constituent->ShouldResolveIndirectFunctions()) {
+    Symbol *symbol = constituent->GetAddress().CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
       Status error;
       Address symbol_address = symbol->GetAddress();
@@ -1799,37 +1801,37 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
-            owner->GetBreakpoint().GetID(), owner->GetID(),
+            constituent->GetBreakpoint().GetID(), constituent->GetID(),
             error.AsCString() ? error.AsCString() : "unknown error");
         return LLDB_INVALID_BREAK_ID;
       }
       Address resolved_address(load_addr);
       load_addr = resolved_address.GetOpcodeLoadAddress(&GetTarget());
-      owner->SetIsIndirect(true);
+      constituent->SetIsIndirect(true);
     } else
-      load_addr = owner->GetAddress().GetOpcodeLoadAddress(&GetTarget());
+      load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
   } else
-    load_addr = owner->GetAddress().GetOpcodeLoadAddress(&GetTarget());
+    load_addr = constituent->GetAddress().GetOpcodeLoadAddress(&GetTarget());
 
   if (load_addr != LLDB_INVALID_ADDRESS) {
     BreakpointSiteSP bp_site_sp;
 
-    // Look up this breakpoint site.  If it exists, then add this new owner,
-    // otherwise create a new breakpoint site and add it.
+    // Look up this breakpoint site.  If it exists, then add this new
+    // constituent, otherwise create a new breakpoint site and add it.
 
     bp_site_sp = m_breakpoint_site_list.FindByAddress(load_addr);
 
     if (bp_site_sp) {
-      bp_site_sp->AddOwner(owner);
-      owner->SetBreakpointSite(bp_site_sp);
+      bp_site_sp->AddConstituent(constituent);
+      constituent->SetBreakpointSite(bp_site_sp);
       return bp_site_sp->GetID();
     } else {
-      bp_site_sp.reset(new BreakpointSite(&m_breakpoint_site_list, owner,
-                                          load_addr, use_hardware));
+      bp_site_sp.reset(
+          new BreakpointSite(constituent, load_addr, use_hardware));
       if (bp_site_sp) {
         Status error = EnableBreakpointSite(bp_site_sp.get());
         if (error.Success()) {
-          owner->SetBreakpointSite(bp_site_sp);
+          constituent->SetBreakpointSite(bp_site_sp);
           return m_breakpoint_site_list.Add(bp_site_sp);
         } else {
           if (show_error || use_hardware) {
@@ -1837,7 +1839,8 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
             GetTarget().GetDebugger().GetErrorStream().Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
-                load_addr, owner->GetBreakpoint().GetID(), owner->GetID(),
+                load_addr, constituent->GetBreakpoint().GetID(),
+                constituent->GetID(),
                 error.AsCString() ? error.AsCString() : "unknown error");
           }
         }
@@ -1848,11 +1851,12 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
   return LLDB_INVALID_BREAK_ID;
 }
 
-void Process::RemoveOwnerFromBreakpointSite(lldb::user_id_t owner_id,
-                                            lldb::user_id_t owner_loc_id,
-                                            BreakpointSiteSP &bp_site_sp) {
-  uint32_t num_owners = bp_site_sp->RemoveOwner(owner_id, owner_loc_id);
-  if (num_owners == 0) {
+void Process::RemoveConstituentFromBreakpointSite(
+    lldb::user_id_t constituent_id, lldb::user_id_t constituent_loc_id,
+    BreakpointSiteSP &bp_site_sp) {
+  uint32_t num_constituents =
+      bp_site_sp->RemoveConstituent(constituent_id, constituent_loc_id);
+  if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
       DisableBreakpointSite(bp_site_sp.get());
@@ -1863,7 +1867,7 @@ void Process::RemoveOwnerFromBreakpointSite(lldb::user_id_t owner_id,
 size_t Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
                                                   uint8_t *buf) const {
   size_t bytes_removed = 0;
-  BreakpointSiteList bp_sites_in_range;
+  StopPointSiteList<BreakpointSite> bp_sites_in_range;
 
   if (m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
                                          bp_sites_in_range)) {
@@ -2284,7 +2288,7 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   // (enabled software breakpoints) any software traps (breakpoints) that we
   // may have placed in our tasks memory.
 
-  BreakpointSiteList bp_sites_in_range;
+  StopPointSiteList<BreakpointSite> bp_sites_in_range;
   if (!m_breakpoint_site_list.FindInRange(addr, addr + size, bp_sites_in_range))
     return WriteMemoryPrivate(addr, buf, size, error);
 
@@ -2552,13 +2556,13 @@ bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,
   return true;
 }
 
-Status Process::EnableWatchpoint(Watchpoint *watchpoint, bool notify) {
+Status Process::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
 }
 
-Status Process::DisableWatchpoint(Watchpoint *watchpoint, bool notify) {
+Status Process::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   Status error;
   error.SetErrorString("watchpoints are not supported");
   return error;
