@@ -46,14 +46,11 @@ define i32 @test(i32 %a, i1 %c) {
   ; PRESELECTION-NEXT: {{  $}}
   ; PRESELECTION-NEXT:   [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
   ; PRESELECTION-NEXT:   [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
-  ; PRESELECTION-NEXT:   [[TRUNC:%[0-9]+]]:gpr(s8) = G_TRUNC [[COPY1]](s32)
-  ; PRESELECTION-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:gpr(s8) = G_ASSERT_ZEXT [[TRUNC]], 1
   ; PRESELECTION-NEXT:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
   ; PRESELECTION-NEXT:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 100000
   ; PRESELECTION-NEXT:   [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:gpr(s32) = G_CONSTANT_FOLD_BARRIER [[C1]]
-  ; PRESELECTION-NEXT:   [[ANYEXT:%[0-9]+]]:gpr(s32) = G_ANYEXT [[ASSERT_ZEXT]](s8)
   ; PRESELECTION-NEXT:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
-  ; PRESELECTION-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[ANYEXT]], [[C2]]
+  ; PRESELECTION-NEXT:   [[AND:%[0-9]+]]:gpr(s32) = G_AND [[COPY1]], [[C2]]
   ; PRESELECTION-NEXT:   G_BRCOND [[AND]](s32), %bb.3
   ; PRESELECTION-NEXT:   G_BR %bb.2
   ; PRESELECTION-NEXT: {{  $}}
