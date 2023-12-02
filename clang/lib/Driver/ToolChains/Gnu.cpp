@@ -294,9 +294,7 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
 
 static bool getStaticPIE(const ArgList &Args, const ToolChain &TC) {
   bool HasStaticPIE = Args.hasArg(options::OPT_static_pie);
-  // -no-pie is an alias for -nopie. So, handling -nopie takes care of
-  // -no-pie as well.
-  if (HasStaticPIE && Args.hasArg(options::OPT_nopie)) {
+  if (HasStaticPIE && Args.hasArg(options::OPT_no_pie)) {
     const Driver &D = TC.getDriver();
     const llvm::opt::OptTable &Opts = D.getOpts();
     StringRef StaticPIEName = Opts.getOptionName(options::OPT_static_pie);
@@ -443,10 +441,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     if (!IsShared) {
-      Arg *A = Args.getLastArg(options::OPT_pie, options::OPT_no_pie,
-                               options::OPT_nopie);
-      IsPIE = A ? A->getOption().matches(options::OPT_pie)
-                : ToolChain.isPIEDefault(Args);
+      IsPIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                           ToolChain.isPIEDefault(Args));
       if (IsPIE)
         CmdArgs.push_back("-pie");
       CmdArgs.push_back("-dynamic-linker");
@@ -2101,13 +2097,16 @@ void Generic_GCC::GCCInstallationDetector::init(
   // The compatible GCC triples for this particular architecture.
   SmallVector<StringRef, 16> CandidateTripleAliases;
   SmallVector<StringRef, 16> CandidateBiarchTripleAliases;
+  // Add some triples that we want to check first.
+  CandidateTripleAliases.push_back(TargetTriple.str());
+  std::string TripleNoVendor = TargetTriple.getArchName().str() + "-" +
+                               TargetTriple.getOSAndEnvironmentName().str();
+  if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor)
+    CandidateTripleAliases.push_back(TripleNoVendor);
+
   CollectLibDirsAndTriples(TargetTriple, BiarchVariantTriple, CandidateLibDirs,
                            CandidateTripleAliases, CandidateBiarchLibDirs,
                            CandidateBiarchTripleAliases);
-
-  TripleNoVendor = TargetTriple.getArchName().str() + "-" +
-                   TargetTriple.getOSAndEnvironmentName().str();
-  StringRef TripleNoVendorRef(TripleNoVendor);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
   if (const Arg *A =
@@ -2188,13 +2187,6 @@ void Generic_GCC::GCCInstallationDetector::init(
       // Maybe filter out <libdir>/gcc and <libdir>/gcc-cross.
       bool GCCDirExists = VFS.exists(LibDir + "/gcc");
       bool GCCCrossDirExists = VFS.exists(LibDir + "/gcc-cross");
-      // Try to match the exact target triple first.
-      ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, TargetTriple.str(),
-                             false, GCCDirExists, GCCCrossDirExists);
-      // If vendor is unknown, let's try triple without vendor.
-      if (TargetTriple.getVendor() == llvm::Triple::UnknownVendor)
-        ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, TripleNoVendorRef,
-                               false, GCCDirExists, GCCCrossDirExists);
       for (StringRef Candidate : CandidateTripleAliases)
         ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
                                GCCDirExists, GCCCrossDirExists);
@@ -2941,6 +2933,7 @@ ToolChain::UnwindTableLevel
 Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   switch (getArch()) {
   case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_be:
   case llvm::Triple::ppc:
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:

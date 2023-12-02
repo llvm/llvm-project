@@ -1225,6 +1225,13 @@ rewriteInIm2Col(RewriterBase &rewriter,
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
 
+/// Convert linalg.conv_2d_nhwc_fhwc(_q) to linalg.conv_2d_nhwc_hwcf(_q) by
+/// materializing transpose.
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcOp op);
+FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
+                                       linalg::Conv2DNhwcFhwcQOp op);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a

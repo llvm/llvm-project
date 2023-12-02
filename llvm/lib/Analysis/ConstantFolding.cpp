@@ -1533,6 +1533,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
   case Intrinsic::arm_mve_vctp8:
@@ -2423,6 +2424,15 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
              "Precision lost during fp16 constfolding");
 
       return ConstantFP::get(Ty->getContext(), Val);
+    }
+
+    case Intrinsic::amdgcn_s_wqm: {
+      uint64_t Val = Op->getZExtValue();
+      Val |= (Val & 0x5555555555555555ULL) << 1 |
+             ((Val >> 1) & 0x5555555555555555ULL);
+      Val |= (Val & 0x3333333333333333ULL) << 2 |
+             ((Val >> 2) & 0x3333333333333333ULL);
+      return ConstantInt::get(Ty, Val);
     }
 
     case Intrinsic::amdgcn_s_quadmask: {

@@ -1262,6 +1262,18 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
     return false;
   }
 
+  // If we have a COPY with other uses in the loop, hoist to allow the users to
+  // also be hoisted.
+  if (MI.isCopy() && MI.getOperand(0).isReg() &&
+      MI.getOperand(0).getReg().isVirtual() && MI.getOperand(1).isReg() &&
+      MI.getOperand(1).getReg().isVirtual() &&
+      IsLoopInvariantInst(MI, CurLoop) &&
+      any_of(MRI->use_nodbg_instructions(MI.getOperand(0).getReg()),
+             [&CurLoop](MachineInstr &UseMI) {
+               return CurLoop->contains(&UseMI);
+             }))
+    return true;
+
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
   if (!isTriviallyReMaterializable(MI) &&
@@ -1410,6 +1422,11 @@ bool MachineLICMBase::EliminateCSE(
   if (MI->isImplicitDef())
     return false;
 
+  // Do not CSE normal loads because between them could be store instructions
+  // that change the loaded value
+  if (MI->mayLoad() && !MI->isDereferenceableInvariantLoad())
+    return false;
+
   if (MachineInstr *Dup = LookForDuplicate(MI, CI->second)) {
     LLVM_DEBUG(dbgs() << "CSEing " << *MI << " with " << *Dup);
 
@@ -1463,6 +1480,9 @@ bool MachineLICMBase::EliminateCSE(
 /// Return true if the given instruction will be CSE'd if it's hoisted out of
 /// the loop.
 bool MachineLICMBase::MayCSE(MachineInstr *MI) {
+  if (MI->mayLoad() && !MI->isDereferenceableInvariantLoad())
+    return false;
+
   unsigned Opcode = MI->getOpcode();
   for (auto &Map : CSEMap) {
     // Check this CSEMap's preheader dominates MI's basic block.

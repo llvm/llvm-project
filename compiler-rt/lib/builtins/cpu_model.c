@@ -1137,10 +1137,10 @@ typedef struct __ifunc_arg_t {
 #define HWCAP2_WFXT (1UL << 31)
 #endif
 #ifndef HWCAP2_EBF16
-#define HWCAP2_EBF16 (1UL << 32)
+#define HWCAP2_EBF16 (1ULL << 32)
 #endif
 #ifndef HWCAP2_SVE_EBF16
-#define HWCAP2_SVE_EBF16 (1UL << 33)
+#define HWCAP2_SVE_EBF16 (1ULL << 33)
 #endif
 
 // Detect Exynos 9810 CPU

@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple riscv64 -filetype=obj -o %t.o %s
 // RUN: ld.lld -q -o %t %t.o
-// RUN: llvm-bolt --print-cfg --print-only=_start -o /dev/null %t \
+// RUN: llvm-bolt --print-cfg --print-only=_start -o %t.null %t \
 // RUN:    | FileCheck %s
 
   .data

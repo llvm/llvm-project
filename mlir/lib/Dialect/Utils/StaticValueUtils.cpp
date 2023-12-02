@@ -262,13 +262,17 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
   return mlir::ceilDiv(*ubConstant - *lbConstant, *stepConstant);
 }
 
-LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs) {
+LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
+                                   bool onlyNonNegative) {
   bool valuesChanged = false;
   for (OpFoldResult &ofr : ofrs) {
     if (ofr.is<Attribute>())
       continue;
     Attribute attr;
     if (matchPattern(ofr.get<Value>(), m_Constant(&attr))) {
+      // Note: All ofrs have index type.
+      if (onlyNonNegative && *getConstantIntValue(attr) < 0)
+        continue;
       ofr = attr;
       valuesChanged = true;
     }

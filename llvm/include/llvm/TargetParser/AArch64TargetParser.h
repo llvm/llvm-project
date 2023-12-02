@@ -172,6 +172,7 @@ enum ArchExtKind : unsigned {
   AEK_SME_LUTv2 =     68, // FEAT_SME_LUTv2
   AEK_SMEF8F16 =      69, // FEAT_SME_F8F16
   AEK_SMEF8F32 =      70, // FEAT_SME_F8F32
+  AEK_SMEFA64 =       71, // FEAT_SME_FA64
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -293,6 +294,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme-lutv2", AArch64::AEK_SME_LUTv2, "+sme-lutv2", "-sme-lutv2", FEAT_INIT, "", 0},
     {"sme-f8f16", AArch64::AEK_SMEF8F16, "+sme-f8f16", "-sme-f8f16", FEAT_INIT, "+sme2,+fp8", 0},
     {"sme-f8f32", AArch64::AEK_SMEF8F32, "+sme-f8f32", "-sme-f8f32", FEAT_INIT, "+sme2,+fp8", 0},
+    {"sme-fa64",  AArch64::AEK_SMEFA64,  "+sme-fa64", "-sme-fa64",  FEAT_INIT, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };
@@ -586,30 +588,37 @@ inline constexpr CpuInfo CpuInfos[] = {
     {"apple-a13", ARMV8_4A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
     {"apple-a14", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
-    {"apple-a15", ARMV8_5A,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a15", ARMV8_6A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
-          AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
-    {"apple-a16", ARMV8_5A,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a16", ARMV8_6A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
-          AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-a17", ARMV8_6A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+
     {"apple-m1", ARMV8_5A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3}))},
-    {"apple-m2", ARMV8_5A,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-m2", ARMV8_6A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
-          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SHA3,
-          AArch64::AEK_BF16, AArch64::AEK_I8MM}))},
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+    {"apple-m3", ARMV8_6A,
+     (AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML}))},
+
     {"apple-s4", ARMV8_3A,
      (AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16}))},

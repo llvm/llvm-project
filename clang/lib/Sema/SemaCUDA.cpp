@@ -225,6 +225,15 @@ Sema::CUDAFunctionPreference
 Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
                              const FunctionDecl *Callee) {
   assert(Callee && "Callee must be valid.");
+
+  // Treat ctor/dtor as host device function in device var initializer to allow
+  // trivial ctor/dtor without device attr to be used. Non-trivial ctor/dtor
+  // will be diagnosed by checkAllowedCUDAInitializer.
+  if (Caller == nullptr && CurCUDATargetCtx.Kind == CTCK_InitGlobalVar &&
+      CurCUDATargetCtx.Target == CFT_Device &&
+      (isa<CXXConstructorDecl>(Callee) || isa<CXXDestructorDecl>(Callee)))
+    return CFP_HostDevice;
+
   CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller);
   CUDAFunctionTarget CalleeTarget = IdentifyCUDATarget(Callee);
 
@@ -770,22 +779,6 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
 
   NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
   NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
-}
-
-// If a trivial ctor/dtor has no host/device
-// attributes, make it implicitly host device function.
-void Sema::maybeAddCUDAHostDeviceAttrsToTrivialCtorDtor(FunctionDecl *FD) {
-  bool IsTrivialCtor = false;
-  if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
-    IsTrivialCtor = isEmptyCudaConstructor(SourceLocation(), CD);
-  bool IsTrivialDtor = false;
-  if (auto *DD = dyn_cast<CXXDestructorDecl>(FD))
-    IsTrivialDtor = isEmptyCudaDestructor(SourceLocation(), DD);
-  if ((IsTrivialCtor || IsTrivialDtor) && !FD->hasAttr<CUDAHostAttr>() &&
-      !FD->hasAttr<CUDADeviceAttr>()) {
-    FD->addAttr(CUDAHostAttr::CreateImplicit(Context));
-    FD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
-  }
 }
 
 // TODO: `__constant__` memory may be a limited resource for certain targets.

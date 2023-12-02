@@ -22,6 +22,7 @@
 #include "FormatTokenLexer.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
+#include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
 #include "TokenAnalyzer.h"
@@ -965,6 +966,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BracedInitializerIndentWidth",
                    Style.BracedInitializerIndentWidth);
     IO.mapOptional("BraceWrapping", Style.BraceWrapping);
+    IO.mapOptional("BreakAdjacentStringLiterals",
+                   Style.BreakAdjacentStringLiterals);
     IO.mapOptional("BreakAfterAttributes", Style.BreakAfterAttributes);
     IO.mapOptional("BreakAfterJavaFieldAnnotations",
                    Style.BreakAfterJavaFieldAnnotations);
@@ -1037,6 +1040,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
     IO.mapOptional("ObjCBreakBeforeNestedBlockParam",
                    Style.ObjCBreakBeforeNestedBlockParam);
+    IO.mapOptional("ObjCPropertyAttributeOrder",
+                   Style.ObjCPropertyAttributeOrder);
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
@@ -1476,6 +1481,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
+  LLVMStyle.BreakAdjacentStringLiterals = true;
   LLVMStyle.BreakAfterAttributes = FormatStyle::ABS_Leave;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
   LLVMStyle.BreakArrays = true;
@@ -3705,6 +3711,13 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
     Passes.emplace_back([&](const Environment &Env) {
       return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
+
+  if (Style.Language == FormatStyle::LK_ObjC &&
+      !Style.ObjCPropertyAttributeOrder.empty()) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return ObjCPropertyAttributeOrderFixer(Env, Expanded).process();
     });
   }
 

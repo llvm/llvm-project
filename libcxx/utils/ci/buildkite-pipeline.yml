@@ -43,10 +43,6 @@ definitions:
 
 # Define agents using YAML anchors to reduce duplication
 agents_definitions:
-  _linux_agent: &linux_agent
-    agents:
-      queue: libcxx-builders
-      os: linux
   _windows_agent: &windows_agent
     agents:
       queue: windows
@@ -101,20 +97,6 @@ environment_definitions:
 
 
 steps:
-- label: Bootstrapping build
-  command: libcxx/utils/ci/run-buildbot bootstrapping-build
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
-- label: Benchmarks
-  command: libcxx/utils/ci/run-buildbot benchmarks
-  env:
-    <<: *common_env
-  <<: *linux_agent
-  <<: *common
-
 - group: ':windows: Windows'
   steps:
   - label: Clang-cl (DLL)
@@ -227,6 +209,11 @@ steps:
     <<: *arm_agent_armv8l
     <<: *common
 
+  - label: Armv7-M picolibc
+    command: libcxx/utils/ci/run-buildbot armv7m-picolibc
+    <<: *arm_agent_aarch64
+    <<: *common
+
 - group: AIX
   steps:
   - label: AIX (32-bit)
@@ -264,13 +251,11 @@ steps:
   steps:
   - label: Android 5.0, x86 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-21-def-x86
-    soft_fail: true
     <<: *android_agent
     <<: *common
 
   - label: Android 13, x86_64 NDK
     command: libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64
-    soft_fail: true
     <<: *android_agent
     <<: *common
 

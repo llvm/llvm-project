@@ -87,6 +87,18 @@ func.func @tensor.cast_chain_invalid(%input: tensor<4x8xi32>) -> tensor<8x4xi32>
 
 // -----
 
+// CHECK-LABEL: fold_concat
+// CHECK-SAME: %[[ARG0:.*]]: tensor<1x2x?xi32>
+func.func @fold_concat(%arg0: tensor<1x2x?xi32>) -> (tensor<1x2x3xi32>, tensor<1x2x?xi32>) {
+  %0 = tensor.concat dim(2) %arg0 : (tensor<1x2x?xi32>) -> tensor<1x2x3xi32>
+  // CHECK-NEXT: %[[CAST:.*]] = tensor.cast %[[ARG0]] : tensor<1x2x?xi32> to tensor<1x2x3xi32>
+  %1 = tensor.concat dim(2) %arg0 : (tensor<1x2x?xi32>) -> tensor<1x2x?xi32>
+  // CHECK-NEXT: return %[[CAST]], %[[ARG0]] : tensor<1x2x3xi32>, tensor<1x2x?xi32>
+  return %0, %1 : tensor<1x2x3xi32>, tensor<1x2x?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract
 func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>) {
   %const_0 = arith.constant 0 : index
@@ -716,6 +728,71 @@ func.func @fold_pack_constant_splat(%dest : tensor<8x16x8x32xf32>) -> tensor<8x1
     inner_tiles = [8, 32] into %dest : tensor<64x128xf32> -> tensor<8x16x8x32xf32>
   return %0 : tensor<8x16x8x32xf32>
 }
+
+// -----
+
+func.func @fold_padding_value_pack(%arg0: tensor<1200x500000xf32>) -> tensor<31250x1200x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<31250x1200x16x1xf32>
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<1200x500000xf32> -> tensor<31250x1200x16x1xf32>
+  return %pack : tensor<31250x1200x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack
+// CHECK-NOT:     padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_negative1(%arg0: tensor<1200x499999xf32>) -> tensor<31250x1200x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = tensor.empty() : tensor<31250x1200x16x1xf32>
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<1200x499999xf32> -> tensor<31250x1200x16x1xf32>
+  return %pack : tensor<31250x1200x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative1
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_negative2(%arg0: tensor<1200x?xf32>, %arg1: tensor<?x1200x16x1xf32>) -> tensor<?x1200x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %arg1 : tensor<1200x?xf32> -> tensor<?x1200x16x1xf32>
+  return %pack : tensor<?x1200x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative2
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_negative3(%arg0: tensor<1200x500000xf32>, %arg1: tensor<?x1200x?x1xf32>, %tile : index) -> tensor<?x1200x?x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %pack = tensor.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [%tile, 1]
+    into %arg1 : tensor<1200x500000xf32> -> tensor<?x1200x?x1xf32>
+  return %pack : tensor<?x1200x?x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_negative3
+// CHECK:         tensor.pack
+// CHECK-SAME:      padding_value
 
 // -----
 
@@ -1949,3 +2026,19 @@ func.func @fold_dst_style_ops_into_unpack(%arg0 : tensor<?x?x16x64xf32>, %init :
 //       CHECK:   %[[UNPACK:.+]] = tensor.unpack %[[ARG0]]
 //  CHECK-SAME:       into %[[INIT]]
 //       CHECK:   return %[[UNPACK]]
+
+// -----
+
+// The IR in this test case in invalid. This test tests that the canonicalizer
+// does not crash.
+
+// CHECK-LABEL: func @invalid_slice_ops(
+//       CHECK:   %[[c:.*]] = arith.constant -5 : index
+//       CHECK:   tensor.extract_slice {{.*}}%[[c]]
+//       CHECK:   tensor.insert_slice {{.*}}%[[c]]
+func.func @invalid_slice_ops(%t: tensor<?xf32>, %t2: tensor<?xf32>) -> tensor<?xf32> {
+  %c = arith.constant -5 : index
+  %0 = tensor.extract_slice %t[0][%c][1] : tensor<?xf32> to tensor<?xf32>
+  %1 = tensor.insert_slice %0 into %t2[2][%c][1] : tensor<?xf32> into tensor<?xf32>
+  return %1 : tensor<?xf32>
+}

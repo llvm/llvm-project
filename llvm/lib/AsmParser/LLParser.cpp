@@ -6370,8 +6370,15 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_srem:
     return parseArithmetic(Inst, PFS, KeywordVal,
                            /*IsFP*/ false);
+  case lltok::kw_or: {
+    bool Disjoint = EatIfPresent(lltok::kw_disjoint);
+    if (parseLogical(Inst, PFS, KeywordVal))
+      return true;
+    if (Disjoint)
+      cast<PossiblyDisjointInst>(Inst)->setIsDisjoint(true);
+    return false;
+  }
   case lltok::kw_and:
-  case lltok::kw_or:
   case lltok::kw_xor:
     return parseLogical(Inst, PFS, KeywordVal);
   case lltok::kw_icmp:

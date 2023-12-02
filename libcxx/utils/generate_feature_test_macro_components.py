@@ -192,15 +192,15 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_wait",
             "values": {"c++20": 201907},
             "headers": ["atomic"],
-            "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_barrier",
             "values": {"c++20": 201907},
             "headers": ["barrier"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_bind_back",
@@ -456,8 +456,8 @@ feature_test_macros = [
             "name": "__cpp_lib_filesystem",
             "values": {"c++17": 201703},
             "headers": ["filesystem"],
-            "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY)",
-            "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_FILESYSTEM_LIBRARY)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_FILESYSTEM_LIBRARY",
         },
         {
             "name": "__cpp_lib_format",
@@ -467,7 +467,7 @@ feature_test_macros = [
                 # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
                 "c++20": 202106,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
-                # "c++26": 202311, Not implemented P2918R2 Runtime format strings II
+                # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
             # 202304 P2510R3 Formatting pointers (Implemented)
@@ -487,7 +487,6 @@ feature_test_macros = [
                 "c++20": 202311  # DR P2909R4 Fix formatting of code units as integers
             },
             "headers": [""],  # Note not in format
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_formatters",
@@ -720,15 +719,15 @@ feature_test_macros = [
             "name": "__cpp_lib_jthread",
             "values": {"c++20": 201911},
             "headers": ["stop_token", "thread"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_latch",
             "values": {"c++20": 201907},
             "headers": ["latch"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_launder",
@@ -793,8 +792,8 @@ feature_test_macros = [
             "name": "__cpp_lib_memory_resource",
             "values": {"c++17": 201603},
             "headers": ["memory_resource"],
-            "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)",
-            "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR",
         },
         {
             "name": "__cpp_lib_move_iterator_concept",
@@ -867,8 +866,8 @@ feature_test_macros = [
             "name": "__cpp_lib_polymorphic_allocator",
             "values": {"c++20": 201902},
             "headers": ["memory_resource"],
-            "test_suite_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)",
-            "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR",
+            "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR",
         },
         {
             "name": "__cpp_lib_print",
@@ -1023,8 +1022,8 @@ feature_test_macros = [
             "name": "__cpp_lib_semaphore",
             "values": {"c++20": 201907},
             "headers": ["semaphore"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
         },
         {
             "name": "__cpp_lib_shared_mutex",
@@ -1505,6 +1504,7 @@ def produce_version_header():
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

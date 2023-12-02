@@ -1456,9 +1456,8 @@ LogicalResult ExtractFromInsertTransposeChainState::handleTransposeOp() {
 
   if (!nextTransposeOp)
     return failure();
-  auto permutation = extractVector<unsigned>(nextTransposeOp.getTransp());
-  AffineMap m = inversePermutation(
-      AffineMap::getPermutationMap(permutation, extractOp.getContext()));
+  AffineMap m = inversePermutation(AffineMap::getPermutationMap(
+      nextTransposeOp.getPermutation(), extractOp.getContext()));
   extractPosition = applyPermutationMap(m, ArrayRef(extractPosition));
   return success();
 }
@@ -3755,12 +3754,8 @@ void TransferReadOp::print(OpAsmPrinter &p) {
   p << " : " << getShapedType() << ", " << getVectorType();
 }
 
-/// Infers the mask type for a transfer op given its vector type and
-/// permutation map. The mask in a transfer op operation applies to the
-/// tensor/buffer part of it and its type should match the vector shape
-/// *before* any permutation or broadcasting.
-static VectorType inferTransferOpMaskType(VectorType vecType,
-                                          AffineMap permMap) {
+VectorType mlir::vector::inferTransferOpMaskType(VectorType vecType,
+                                                 AffineMap permMap) {
   auto i1Type = IntegerType::get(permMap.getContext(), 1);
   AffineMap invPermMap = inversePermutation(compressUnusedDims(permMap));
   assert(invPermMap && "Inversed permutation map couldn't be computed");
@@ -5376,20 +5371,20 @@ LogicalResult TypeCastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
-                                Value vector, ArrayRef<int64_t> transp) {
+                                Value vector, ArrayRef<int64_t> permutation) {
   VectorType vt = llvm::cast<VectorType>(vector.getType());
   SmallVector<int64_t, 4> transposedShape(vt.getRank());
   SmallVector<bool, 4> transposedScalableDims(vt.getRank());
-  for (unsigned i = 0; i < transp.size(); ++i) {
-    transposedShape[i] = vt.getShape()[transp[i]];
-    transposedScalableDims[i] = vt.getScalableDims()[transp[i]];
+  for (unsigned i = 0; i < permutation.size(); ++i) {
+    transposedShape[i] = vt.getShape()[permutation[i]];
+    transposedScalableDims[i] = vt.getScalableDims()[permutation[i]];
   }
 
   result.addOperands(vector);
   result.addTypes(VectorType::get(transposedShape, vt.getElementType(),
                                   transposedScalableDims));
-  result.addAttribute(TransposeOp::getTranspAttrName(result.name),
-                      builder.getI64ArrayAttr(transp));
+  result.addAttribute(TransposeOp::getPermutationAttrName(result.name),
+                      builder.getDenseI64ArrayAttr(permutation));
 }
 
 OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
@@ -5401,13 +5396,12 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
 
   // Eliminate identity transpose ops. This happens when the dimensions of the
   // input vector remain in their original order after the transpose operation.
-  SmallVector<int64_t, 4> transp;
-  getTransp(transp);
+  ArrayRef<int64_t> perm = getPermutation();
 
   // Check if the permutation of the dimensions contains sequential values:
   // {0, 1, 2, ...}.
-  for (int64_t i = 0, e = transp.size(); i < e; i++) {
-    if (transp[i] != i)
+  for (int64_t i = 0, e = perm.size(); i < e; i++) {
+    if (perm[i] != i)
       return {};
   }
 
@@ -5421,20 +5415,19 @@ LogicalResult vector::TransposeOp::verify() {
   if (vectorType.getRank() != rank)
     return emitOpError("vector result rank mismatch: ") << rank;
   // Verify transposition array.
-  auto transpAttr = getTransp().getValue();
-  int64_t size = transpAttr.size();
+  ArrayRef<int64_t> perm = getPermutation();
+  int64_t size = perm.size();
   if (rank != size)
     return emitOpError("transposition length mismatch: ") << size;
   SmallVector<bool, 8> seen(rank, false);
-  for (const auto &ta : llvm::enumerate(transpAttr)) {
-    int64_t i = llvm::cast<IntegerAttr>(ta.value()).getInt();
-    if (i < 0 || i >= rank)
-      return emitOpError("transposition index out of range: ") << i;
-    if (seen[i])
-      return emitOpError("duplicate position index: ") << i;
-    seen[i] = true;
-    if (resultType.getDimSize(ta.index()) != vectorType.getDimSize(i))
-      return emitOpError("dimension size mismatch at: ") << i;
+  for (const auto &ta : llvm::enumerate(perm)) {
+    if (ta.value() < 0 || ta.value() >= rank)
+      return emitOpError("transposition index out of range: ") << ta.value();
+    if (seen[ta.value()])
+      return emitOpError("duplicate position index: ") << ta.value();
+    seen[ta.value()] = true;
+    if (resultType.getDimSize(ta.index()) != vectorType.getDimSize(ta.value()))
+      return emitOpError("dimension size mismatch at: ") << ta.value();
   }
   return success();
 }
@@ -5452,13 +5445,6 @@ public:
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    // Wrapper around vector::TransposeOp::getTransp() for cleaner code.
-    auto getPermutation = [](vector::TransposeOp transpose) {
-      SmallVector<int64_t, 4> permutation;
-      transpose.getTransp(permutation);
-      return permutation;
-    };
-
     // Composes two permutations: result[i] = permutation1[permutation2[i]].
     auto composePermutations = [](ArrayRef<int64_t> permutation1,
                                   ArrayRef<int64_t> permutation2) {
@@ -5475,12 +5461,11 @@ public:
       return failure();
 
     SmallVector<int64_t, 4> permutation = composePermutations(
-        getPermutation(parentTransposeOp), getPermutation(transposeOp));
+        parentTransposeOp.getPermutation(), transposeOp.getPermutation());
     // Replace 'transposeOp' with a new transpose operation.
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
-        parentTransposeOp.getVector(),
-        vector::getVectorSubscriptAttr(rewriter, permutation));
+        parentTransposeOp.getVector(), permutation);
     return success();
   }
 };
@@ -5539,8 +5524,7 @@ public:
 
     // Get the transpose permutation and apply it to the vector.create_mask or
     // vector.constant_mask operands.
-    SmallVector<int64_t> permutation;
-    transpOp.getTransp(permutation);
+    ArrayRef<int64_t> permutation = transpOp.getPermutation();
 
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
@@ -5564,42 +5548,48 @@ public:
   }
 };
 
-/// Folds transpose with non-scalable unit dims into a shape_cast.
-///
-/// Replace:
-///   vector.transpose %0, [1, 0] : vector<nx1x<eltty>> to
-///                                 vector<1xnxelty>
-/// with:
-///   vector.shape_cast %0 : vector<nx1x<eltty>> to vector<1xnxelty>
-///
-/// Source with leading unit dim (inverse) is also replaced. Unit dim must
-/// be fixed. Non-unit dims can be scalable.
-class FoldTransposeWithNonScalableUnitDimsToShapeCast final
-    : public OpRewritePattern<TransposeOp> {
-public:
+/// Folds transpose(shape_cast) into a new shape_cast, when the transpose just
+/// permutes a unit dim from the result of the shape_cast.
+class FoldTransposeShapeCast : public OpRewritePattern<TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TransposeOp transpOp,
                                 PatternRewriter &rewriter) const override {
-    Value input = transpOp.getVector();
-    VectorType resType = transpOp.getResultVectorType();
+    Value transposeSrc = transpOp.getVector();
+    auto shapeCastOp = transposeSrc.getDefiningOp<vector::ShapeCastOp>();
+    if (!shapeCastOp)
+      return rewriter.notifyMatchFailure(
+          transpOp, "TransposeOp source is not ShapeCastOp");
 
-    SmallVector<int64_t> permutation;
-    transpOp.getTransp(permutation);
+    auto sourceType = transpOp.getSourceVectorType();
+    auto resultType = transpOp.getResultVectorType();
 
-    if (resType.getRank() == 2 &&
-        ((resType.getShape().front() == 1 &&
-          !resType.getScalableDims().front()) ||
-         (resType.getShape().back() == 1 &&
-          !resType.getScalableDims().back())) &&
-        permutation == ArrayRef<int64_t>({1, 0})) {
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transpOp, resType,
-                                                       input);
-      return success();
+    auto filterUnitDims = [](VectorType type) {
+      return llvm::make_filter_range(
+          llvm::zip_equal(type.getShape(), type.getScalableDims()),
+          [&](auto dim) {
+            auto [size, isScalable] = dim;
+            return size != 1 || isScalable;
+          });
+    };
+
+    auto sourceWithoutUnitDims = filterUnitDims(sourceType);
+    auto resultWithoutUnitDims = filterUnitDims(resultType);
+
+    // If this transpose just permutes a unit dim, then we can fold it into the
+    // shape_cast.
+    for (auto [srcDim, resDim] :
+         llvm::zip_equal(sourceWithoutUnitDims, resultWithoutUnitDims)) {
+      if (srcDim != resDim)
+        return rewriter.notifyMatchFailure(transpOp,
+                                           "TransposeOp permutes non-unit dim");
     }
 
-    return failure();
-  }
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transpOp, resultType,
+                                                     shapeCastOp.getSource());
+
+    return success();
+  };
 };
 
 } // namespace
@@ -5607,12 +5597,8 @@ public:
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
-              TransposeFolder, FoldTransposeSplat,
-              FoldTransposeWithNonScalableUnitDimsToShapeCast>(context);
-}
-
-void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
-  populateFromInt64AttrArray(getTransp(), results);
+              TransposeFolder, FoldTransposeSplat, FoldTransposeShapeCast>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//

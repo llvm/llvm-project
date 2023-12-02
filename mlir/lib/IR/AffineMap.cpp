@@ -8,7 +8,6 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -60,8 +59,7 @@ private:
           expr, [](int64_t lhs, int64_t rhs) { return lhs * rhs; });
     case AffineExprKind::Mod:
       return constantFoldBinExpr(
-          expr,
-          [expr, this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+          expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
             if (rhs < 1) {
               hasPoison_ = true;
               return std::nullopt;
@@ -70,8 +68,7 @@ private:
           });
     case AffineExprKind::FloorDiv:
       return constantFoldBinExpr(
-          expr,
-          [expr, this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+          expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
             if (rhs == 0) {
               hasPoison_ = true;
               return std::nullopt;
@@ -80,8 +77,7 @@ private:
           });
     case AffineExprKind::CeilDiv:
       return constantFoldBinExpr(
-          expr,
-          [expr, this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
+          expr, [this](int64_t lhs, int64_t rhs) -> std::optional<int64_t> {
             if (rhs == 0) {
               hasPoison_ = true;
               return std::nullopt;
@@ -257,6 +253,12 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
   auto permutationMap = getMultiDimMapWithTargets(*m + 1, permutation, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
+}
+AffineMap AffineMap::getPermutationMap(ArrayRef<int64_t> permutation,
+                                       MLIRContext *context) {
+  SmallVector<unsigned> perm = llvm::map_to_vector(
+      permutation, [](int64_t i) { return static_cast<unsigned>(i); });
+  return AffineMap::getPermutationMap(perm, context);
 }
 
 AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,

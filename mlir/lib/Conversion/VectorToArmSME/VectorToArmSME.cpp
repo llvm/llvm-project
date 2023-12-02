@@ -44,20 +44,6 @@ static scf::ForOp getLoopOverTileSlices(PatternRewriter &rewriter, Location loc,
   return forOp;
 }
 
-/// Returns a tile of the given vector type.
-static arm_sme::CastTileToVector
-getSMETileAndCastToVector(PatternRewriter &rewriter, Location loc,
-                          VectorType type) {
-  unsigned tileElementWidth = type.getElementType().getIntOrFloatBitWidth();
-
-  // Create 'arm_sme.get_tile' op.
-  auto tileId = rewriter.create<arm_sme::GetTileID>(
-      loc, rewriter.getIntegerType(tileElementWidth));
-
-  // Create `arm_sme.cast_tile_to_vector` to cast tile ID to a vector type.
-  return rewriter.create<arm_sme::CastTileToVector>(loc, type, tileId);
-}
-
 namespace {
 
 /// Conversion pattern for vector.transfer_read.
@@ -267,8 +253,7 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
         tileSliceType, denseAttr.getSplatValue<Attribute>());
     auto constantOp1D = rewriter.create<arith::ConstantOp>(loc, denseAttr1D);
 
-    arm_sme::CastTileToVector tile =
-        getSMETileAndCastToVector(rewriter, loc, tileType);
+    auto tile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
     auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
     auto tileSliceIndex = forOp.getInductionVar();
@@ -330,8 +315,7 @@ struct BroadcastOpToArmSMELowering
     else
       return failure();
 
-    arm_sme::CastTileToVector tile =
-        getSMETileAndCastToVector(rewriter, loc, tileType);
+    auto tile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
     // Create a loop over ZA tile slices.
     auto forOp = getLoopOverTileSlices(rewriter, loc, tileElementType);
@@ -387,8 +371,7 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
     Value broadcastOp1D = rewriter.create<vector::BroadcastOp>(
         loc, tileSliceType, splatOp.getInput());
 
-    arm_sme::CastTileToVector tile =
-        getSMETileAndCastToVector(rewriter, loc, tileType);
+    auto tile = rewriter.create<arm_sme::GetTileOp>(loc, tileType);
 
     // Next, create a loop over ZA tile slices and "move" the generated 1-d
     // vector to each slice.
@@ -436,12 +419,9 @@ struct TransposeOpToArmSMELowering
     if (!tileType || !arm_sme::isValidSMETileVectorType(tileType))
       return failure();
 
-    SmallVector<int64_t> transp;
-    for (auto attr : transposeOp.getTransp())
-      transp.push_back(cast<IntegerAttr>(attr).getInt());
-
     // Bail unless this is a true 2-D matrix transpose.
-    if (transp[0] != 1 || transp[1] != 0)
+    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
+    if (permutation[0] != 1 || permutation[1] != 0)
       return failure();
 
     OpBuilder::InsertionGuard g(rewriter);
@@ -576,6 +556,116 @@ struct VectorOuterProductToArmSMELowering
   }
 };
 
+/// Lower `vector.extract` using `arm_sme.move_tile_slice_to_vector`.
+///
+/// Example:
+/// ```
+/// %el = vector.extract %tile[%row, %col]: i32 from vector<[4]x[4]xi32>
+/// ```
+/// Becomes:
+/// ```
+/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
+///            : vector<[4]xi32> from vector<[4]x[4]xi32>
+/// %el = vector.extract %slice[%col] : i32 from vector<[4]xi32>
+/// ```
+struct VectorExtractToArmSMELowering
+    : public OpRewritePattern<vector::ExtractOp> {
+  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType sourceType = extractOp.getSourceVectorType();
+    if (!arm_sme::isValidSMETileVectorType(sourceType))
+      return failure();
+
+    auto loc = extractOp.getLoc();
+    auto position = extractOp.getMixedPosition();
+
+    Value sourceVector = extractOp.getVector();
+
+    // Extract entire vector. Should be handled by folder, but just to be safe.
+    if (position.empty()) {
+      rewriter.replaceOp(extractOp, sourceVector);
+      return success();
+    }
+
+    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
+    auto moveTileSliceToVector =
+        rewriter.create<arm_sme::MoveTileSliceToVectorOp>(loc, sourceVector,
+                                                          sliceIndex);
+
+    if (position.size() == 1) {
+      // Single index case: Extracts a 1D slice.
+      rewriter.replaceOp(extractOp, moveTileSliceToVector);
+      return success();
+    }
+
+    // Two indices case: Extracts a single element.
+    assert(position.size() == 2);
+    rewriter.replaceOpWithNewOp<vector::ExtractOp>(
+        extractOp, moveTileSliceToVector, position[1]);
+
+    return success();
+  }
+};
+
+/// Lower `vector.insert` using `arm_sme.move_vector_to_tile_slice` and
+/// `arm_sme.move_tile_slice_to_vector`.
+///
+/// Example:
+/// ```
+/// %new_tile = vector.insert %el, %tile[%row, %col]
+///                     : i32 into vector<[4]x[4]xi32>
+/// ```
+/// Becomes:
+/// ```
+/// %slice = arm_sme.move_tile_slice_to_vector %tile[%row]
+///            : vector<[4]xi32> from vector<[4]x[4]xi32>
+/// %new_slice = vector.insert %el, %slice[%col] : i32 into vector<[4]xi32>
+/// %new_tile = arm_sme.move_vector_to_tile_slice %new_slice, %tile, %row
+///               : vector<[4]xi32> into vector<[4]x[4]xi32>
+/// ```
+struct VectorInsertToArmSMELowering
+    : public OpRewritePattern<vector::InsertOp> {
+  using OpRewritePattern<vector::InsertOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::InsertOp insertOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType resultType = insertOp.getResult().getType();
+
+    if (!arm_sme::isValidSMETileVectorType(resultType))
+      return failure();
+
+    auto loc = insertOp.getLoc();
+    auto position = insertOp.getMixedPosition();
+
+    Value source = insertOp.getSource();
+
+    // Overwrite entire vector with value. Should be handled by folder, but
+    // just to be safe.
+    if (position.empty()) {
+      rewriter.replaceOp(insertOp, source);
+      return success();
+    }
+
+    Value tileSlice = source;
+    Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
+    if (position.size() == 2) {
+      // Two indices case: Insert single element into tile.
+      // We need to first extract the existing slice and update the element.
+      tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+          loc, insertOp.getDest(), sliceIndex);
+      tileSlice = rewriter.create<vector::InsertOp>(loc, source, tileSlice,
+                                                    position[1]);
+    }
+
+    // Insert the slice into the destination tile.
+    rewriter.replaceOpWithNewOp<arm_sme::MoveVectorToTileSliceOp>(
+        insertOp, tileSlice, insertOp.getDest(), sliceIndex);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
@@ -584,5 +674,7 @@ void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                SplatOpToArmSMELowering, TransferReadToArmSMELowering,
                TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
                VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
-               VectorOuterProductToArmSMELowering>(&ctx);
+               VectorOuterProductToArmSMELowering,
+               VectorExtractToArmSMELowering, VectorInsertToArmSMELowering>(
+      &ctx);
 }

@@ -74,6 +74,7 @@
 ! CHECK-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fno-version-loops-for-stride
 ! CHECK-NEXT:                         Do not create unit-strided loops (default)
+! CHECK-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! CHECK-NEXT: -fopenacc               Enable OpenACC
 ! CHECK-NEXT: -fopenmp-assume-no-nested-parallelism
 ! CHECK-NEXT:                         Assert no nested parallel regions in the GPU
@@ -114,6 +115,8 @@
 ! CHECK-NEXT: -I <dir>                Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -L <dir>                Add directory to library search path
 ! CHECK-NEXT: -march=<value>          For a list of available architectures for the target use '-mcpu=help'
+! CHECK-NEXT: -mcode-object-version=<value>
+! CHECK-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
 ! CHECK-NEXT: -mcpu=<value>           For a list of available CPUs for the target use '-mcpu=help'
 ! CHECK-NEXT: -mllvm=<arg>            Alias for -mllvm
 ! CHECK-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing

@@ -1424,6 +1424,19 @@ struct FormatStyle {
   /// \version 3.8
   BraceWrappingFlags BraceWrapping;
 
+  /// Break between adjacent string literals.
+  /// \code
+  ///    true:
+  ///    return "Code"
+  ///           "\0\52\26\55\55\0"
+  ///           "x013"
+  ///           "\02\xBA";
+  ///    false:
+  ///    return "Code" "\0\52\26\55\55\0" "x013" "\02\xBA";
+  /// \endcode
+  /// \version 18
+  bool BreakAdjacentStringLiterals;
+
   /// Different ways to break after attributes.
   enum AttributeBreakingStyle : int8_t {
     /// Always break after attributes.
@@ -3021,7 +3034,9 @@ struct FormatStyle {
   bool isJson() const { return Language == LK_Json; }
   bool isJavaScript() const { return Language == LK_JavaScript; }
   bool isVerilog() const { return Language == LK_Verilog; }
-  bool isProto() const { return Language == LK_Proto; }
+  bool isProto() const {
+    return Language == LK_Proto || Language == LK_TextProto;
+  }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
@@ -3248,6 +3263,29 @@ struct FormatStyle {
   /// \endcode
   /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
+
+  /// The order in which ObjC property attributes should appear.
+  ///
+  /// Attributes in code will be sorted in the order specified. Any attributes
+  /// encountered that are not mentioned in this array will be sorted last, in
+  /// stable order. Comments between attributes will leave the attributes
+  /// untouched.
+  /// \warning
+  ///  Using this option could lead to incorrect code formatting due to
+  ///  clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code{.yaml}
+  ///   ObjCPropertyAttributeOrder: [
+  ///       class, direct,
+  ///       atomic, nonatomic,
+  ///       assign, retain, strong, copy, weak, unsafe_unretained,
+  ///       readonly, readwrite, getter, setter,
+  ///       nullable, nonnull, null_resettable, null_unspecified
+  ///   ]
+  /// \endcode
+  /// \version 18
+  std::vector<std::string> ObjCPropertyAttributeOrder;
 
   /// Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
@@ -4745,6 +4783,7 @@ struct FormatStyle {
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
+           BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&
@@ -4805,6 +4844,7 @@ struct FormatStyle {
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
+           ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            PackConstructorInitializers == R.PackConstructorInitializers &&

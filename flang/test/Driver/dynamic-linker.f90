@@ -15,6 +15,6 @@
 ! GNU-LINKER-OPTIONS-SAME: "-rpath" "/path/to/dir"
 
 ! For MSVC, adding -static does not add any additional linker options.
-! MSVC-LINKER-OPTIONS: "{{.*}}link.exe"
+! MSVC-LINKER-OPTIONS: "{{.*}}link{{(.exe)?}}"
 ! MSVC-LINKER-OPTIONS-SAME: "-dll"
 ! MSVC-LINKER-OPTIONS-SAME: "-rpath" "/path/to/dir"

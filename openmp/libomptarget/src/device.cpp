@@ -11,13 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
-#include "OmptCallback.h"
-#include "OmptInterface.h"
+#include "OffloadEntry.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/Interface.h"
+#include "PluginManager.h"
+#include "Shared/APITypes.h"
+#include "Shared/Debug.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
 
-#include "Utilities.h"
+#include "Shared/EnvironmentVar.h"
 
 #include <cassert>
 #include <climits>
@@ -34,7 +38,7 @@ using namespace llvm::omp::target::ompt;
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
-  if (!PM->UseEventsForAtomicTransfers)
+  if (!MappingConfig::get().UseEventsForAtomicTransfers)
     return OFFLOAD_SUCCESS;
 
   void *Event = getEvent();
@@ -58,9 +62,9 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(RTLInfoTy *RTL)
+DeviceTy::DeviceTy(PluginAdaptorTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
-      HasPendingGlobals(false), PendingCtorsDtors(), PendingGlobalsMtx() {}
+      PendingCtorsDtors(), PendingGlobalsMtx() {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -280,7 +284,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
              !HasCloseModifier) {
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
@@ -444,7 +448,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -528,26 +532,20 @@ int DeviceTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry, int64_t Size) {
 void DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   if (RTL->init_requires)
-    RTL->init_requires(PM->RTLs.RequiresFlags);
+    RTL->init_requires(PM->getRequirements());
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
     return;
 
   // Enables recording kernels if set.
-  llvm::omp::target::BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
+  BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
     // Enables saving the device memory kernel output post execution if set.
-    llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
-        "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
-    // Sets the maximum to pre-allocate device memory.
-    llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
-        "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
-    DP("Activating Record-Replay for Device %d with %lu GB memory\n",
-       RTLDeviceID, OMPX_DeviceMemorySize.get());
+    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
 
-    RTL->activate_record_replay(RTLDeviceID,
-                                OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
-                                nullptr, true, OMPX_ReplaySaveOutput);
+    uint64_t ReqPtrArgOffset;
+    RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
+                                  OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
   IsInit = true;
@@ -568,13 +566,8 @@ int32_t DeviceTy::initOnce() {
   return OFFLOAD_FAIL;
 }
 
-void DeviceTy::deinit() {
-  if (RTL->deinit_device)
-    RTL->deinit_device(RTLDeviceID);
-}
-
 // Load binary to device.
-__tgt_target_table *DeviceTy::loadBinary(void *Img) {
+__tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
   std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);
   return RTL->load_binary(RTLDeviceID, Img);
 }
@@ -711,8 +704,7 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                               ptrdiff_t *TgtOffsets,
-                               const KernelArgsTy &KernelArgs,
+                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
                             &KernelArgs, AsyncInfo);
@@ -817,4 +809,53 @@ bool deviceIsReady(int DeviceNum) {
   DP("Device %d is ready to use.\n", DeviceNum);
 
   return true;
+}
+
+void DeviceTy::addOffloadEntry(OffloadEntryTy &Entry) {
+  std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
+  DeviceOffloadEntries[Entry.getName()] = &Entry;
+  if (Entry.isGlobal())
+    return;
+
+  if (Entry.isCTor()) {
+    DP("Adding ctor " DPxMOD " to the pending list.\n",
+       DPxPTR(Entry.getAddress()));
+    MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
+            "removed in a future release \n",
+            Entry.getNameAsCStr());
+    PendingCtorsDtors[Entry.getBinaryDescription()].PendingCtors.push_back(
+        Entry.getAddress());
+  } else if (Entry.isDTor()) {
+    // Dtors are pushed in reverse order so they are executed from end
+    // to beginning when unregistering the library!
+    DP("Adding dtor " DPxMOD " to the pending list.\n",
+       DPxPTR(Entry.getAddress()));
+    MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
+            "removed in a future release \n",
+            Entry.getNameAsCStr());
+    PendingCtorsDtors[Entry.getBinaryDescription()].PendingDtors.push_front(
+        Entry.getAddress());
+  }
+
+  if (Entry.isLink()) {
+    MESSAGE(
+        "WARNING: The \"link\" attribute is not yet supported for entry: %s!\n",
+        Entry.getNameAsCStr());
+  }
+}
+
+void DeviceTy::dumpOffloadEntries() {
+  fprintf(stderr, "Device %i offload entries:\n", DeviceID);
+  for (auto &It : DeviceOffloadEntries) {
+    const char *Kind = "kernel";
+    if (It.second->isCTor())
+      Kind = "constructor";
+    else if (It.second->isDTor())
+      Kind = "destructor";
+    else if (It.second->isLink())
+      Kind = "link";
+    else if (It.second->isGlobal())
+      Kind = "global var.";
+    fprintf(stderr, "  %11s: %s\n", Kind, It.second->getNameAsCStr());
+  }
 }

@@ -804,7 +804,9 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();
   uint64_t ReductionDataSize =
-      DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
+      TeamsReductions.empty()
+          ? 0
+          : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
   OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
                                 C.getLangOpts().OpenMPCUDAReductionBufNum);
@@ -1837,12 +1839,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           {llvm::Constant::getNullValue(CGM.Int64Ty), WarpID});
       // Casting to actual data type.
       // MediumPtr = (CopyType*)MediumPtrAddr;
-      Address MediumPtr(
-          Bld.CreateBitCast(
-              MediumPtrVal,
-              CopyType->getPointerTo(
-                  MediumPtrVal->getType()->getPointerAddressSpace())),
-          CopyType, Align);
+      Address MediumPtr(MediumPtrVal, CopyType, Align);
 
       // elem = *elemptr
       //*MediumPtr = elem
@@ -1889,12 +1886,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           TransferMedium->getValueType(), TransferMedium,
           {llvm::Constant::getNullValue(CGM.Int64Ty), ThreadID});
       // SrcMediumVal = *SrcMediumPtr;
-      Address SrcMediumPtr(
-          Bld.CreateBitCast(
-              SrcMediumPtrVal,
-              CopyType->getPointerTo(
-                  SrcMediumPtrVal->getType()->getPointerAddressSpace())),
-          CopyType, Align);
+      Address SrcMediumPtr(SrcMediumPtrVal, CopyType, Align);
 
       // TargetElemPtr = (CopyType*)(SrcDataAddr[i]) + I
       Address TargetElemPtrPtr = Bld.CreateConstArrayGEP(LocalReduceList, Idx);
@@ -3540,6 +3532,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1200:
+      case CudaArch::GFX1201:
       case CudaArch::Generic:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:

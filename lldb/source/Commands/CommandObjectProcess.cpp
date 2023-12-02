@@ -264,9 +264,6 @@ protected:
         // PushProcessIOHandler().
         process_sp->SyncIOHandler(0, std::chrono::seconds(2));
 
-        llvm::StringRef data = stream.GetString();
-        if (!data.empty())
-          result.AppendMessage(data);
         // If we didn't have a local executable, then we wouldn't have had an
         // executable module before launch.
         if (!exe_module_sp)
@@ -282,6 +279,11 @@ protected:
               exe_module_sp->GetFileSpec().GetPath().c_str(), archname);
         }
         result.SetStatus(eReturnStatusSuccessFinishResult);
+        // This message will refer to an event that happened after the process
+        // launched.
+        llvm::StringRef data = stream.GetString();
+        if (!data.empty())
+          result.AppendMessage(data);
         result.SetDidChangeProcessState(true);
       } else {
         result.AppendError(
@@ -517,10 +519,10 @@ protected:
             BreakpointSiteSP bp_site_sp(
                 process->GetBreakpointSiteList().FindByID(bp_site_id));
             if (bp_site_sp) {
-              const size_t num_owners = bp_site_sp->GetNumberOfOwners();
+              const size_t num_owners = bp_site_sp->GetNumberOfConstituents();
               for (size_t i = 0; i < num_owners; i++) {
                 Breakpoint &bp_ref =
-                    bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
+                    bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint();
                 if (!bp_ref.IsInternal()) {
                   bp_ref.SetIgnoreCount(m_options.m_ignore);
                 }

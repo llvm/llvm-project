@@ -3148,6 +3148,9 @@ def err_attribute_bad_sve_vector_size : Error<
 def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "%0 is only supported when '-msve-vector-bits=<bits>' is specified with a "
   "value of 128, 256, 512, 1024 or 2048.">;
+def warn_attribute_arm_sm_incompat_builtin : Warning<
+  "builtin call has undefined behaviour when called from a %0 function">,
+  InGroup<DiagGroup<"undefined-arm-streaming">>;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
@@ -3177,6 +3180,10 @@ def warn_unsupported_target_attribute
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported on targets missing %1;"
             " specify an appropriate -march= or -mcpu=">;
+def err_duplicate_target_attribute
+    : Error<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
+              " tune CPU}1 '%2' in the '%select{target|target_clones|target_version}3' "
+              "attribute string; ">;
 // The err_*_attribute_argument_not_int are separate because they're used by
 // VerifyIntegerConstantExpression.
 def err_aligned_attribute_argument_not_int : Error<
@@ -6755,7 +6762,7 @@ def warn_floatingpoint_eq : Warning<
 
 def err_setting_eval_method_used_in_unsafe_context : Error <
   "%select{'#pragma clang fp eval_method'|option 'ffp-eval-method'}0 cannot be used with "
-  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'}1">;
+  "%select{option 'fapprox-func'|option 'mreassociate'|option 'freciprocal'|option 'ffp-eval-method'|'#pragma clang fp reassociate'|'#pragma clang fp reciprocal'}1">;
 
 def warn_remainder_division_by_zero : Warning<
   "%select{remainder|division}0 by zero is undefined">,
@@ -7216,6 +7223,11 @@ def warn_arith_conv_enum_float_cxx20 : Warning<
   "%plural{2:with|4:from|:and}0 "
   "%select{enumeration|floating-point}1 type %3 is deprecated">,
   InGroup<DeprecatedEnumFloatConversion>;
+def err_arith_conv_enum_float_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "%select{floating-point|enumeration}1 type %2 "
+  "%plural{2:with|4:from|:and}0 "
+  "%select{enumeration|floating-point}1 type %3">;
 def warn_arith_conv_mixed_enum_types : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">,
@@ -7224,6 +7236,10 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
+def err_conv_mixed_enum_types_cxx26 : Error<
+  "invalid %sub{select_arith_conv_kind}0 "
+  "different enumeration types%diff{ ($ and $)|}1,2">;
+
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
   InGroup<AnonEnumEnumConversion>, DefaultIgnore;
@@ -10025,6 +10041,11 @@ def err_duplicate_case_differing_expr : Error<
 def warn_case_empty_range : Warning<"empty case range specified">;
 def warn_missing_case_for_condition :
   Warning<"no case matching constant switch condition '%0'">;
+def err_loop_attr_conflict : Error<
+  "conflicting loop attribute %0">;
+def err_attribute_power_of_two_in_range : Error<
+  "%0 attribute requires an integer argument which is a constant power of two "
+  "between %1 and %2 inclusive; provided argument was %3">;
 
 def warn_def_missing_case : Warning<"%plural{"
   "1:enumeration value %1 not explicitly handled in switch|"
@@ -10962,6 +10983,8 @@ def note_omp_atomic_compare: Note<
   "expect binary operator in conditional expression|expect '<', '>' or '==' as order operator|expect comparison in a form of 'x == e', 'e == x', 'x ordop expr', or 'expr ordop x'|"
   "expect lvalue for result value|expect scalar value|expect integer value|unexpected 'else' statement|expect '==' operator|expect an assignment statement 'v = x'|"
   "expect a 'if' statement|expect no more than two statements|expect a compound statement|expect 'else' statement|expect a form 'r = x == e; if (r) ...'}0">;
+def err_omp_atomic_fail_wrong_or_no_clauses : Error<"expected a memory order clause">;
+def err_omp_atomic_fail_no_compare : Error<"expected 'compare' clause with the 'fail' modifier">;
 def err_omp_atomic_several_clauses : Error<
   "directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause">;
 def err_omp_several_mem_order_clauses : Error<
@@ -11592,7 +11615,7 @@ def err_coro_invalid_addr_of_label : Error<
   "the GNU address of label extension is not allowed in coroutines."
 >;
 def err_coroutine_return_type : Error<
-  "function returns a type %0 makred with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
+  "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
   "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
 } // end of coroutines issue category
@@ -11993,6 +12016,7 @@ def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numt
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
 def err_hlsl_attribute_param_mismatch : Error<"%0 attribute parameters do not match the previous declaration">;
+def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier %0">;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
@@ -12007,6 +12031,9 @@ def err_hlsl_pointers_unsupported : Error<
 
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
+
+def err_hlsl_param_qualifier_mismatch :
+  Error<"conflicting parameter qualifier %0 on parameter %1">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

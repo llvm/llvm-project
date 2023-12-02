@@ -407,9 +407,6 @@ static constexpr uint32_t MemCheckBypassWeights[] = {1, 127};
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
-// Likelyhood of bypassing the vectorized loop because of zero trips necessary.
-// See `emitMinimumVectorEpilogueIterCountCheck`.
-static constexpr uint32_t EpilogueMinItersBypassWeights[] = {1, 127};
 
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
@@ -3163,9 +3160,8 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton() {
       // Assume that `Count % VectorTripCount` is equally distributed.
       unsigned TripCount = UF * VF.getKnownMinValue();
       assert(TripCount > 0 && "trip count should not be zero");
-      MDBuilder MDB(ScalarLatchTerm->getContext());
-      MDNode *BranchWeights = MDB.createBranchWeights(1, TripCount - 1);
-      BI.setMetadata(LLVMContext::MD_prof, BranchWeights);
+      const uint32_t Weights[] = {1, TripCount - 1};
+      setBranchWeights(BI, Weights);
     }
   }
 
@@ -7012,38 +7008,59 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
 
       // Find the cost of vectorizing the call, if we can find a suitable
       // vector variant of the function.
-      InstructionCost MaskCost = 0;
-      VFShape Shape = VFShape::get(*CI, VF, MaskRequired);
-      bool UsesMask = MaskRequired;
-      Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-      // If we want an unmasked vector function but can't find one matching the
-      // VF, maybe we can find vector function that does use a mask and
-      // synthesize an all-true mask.
-      if (!VecFunc && !MaskRequired) {
-        Shape = VFShape::get(*CI, VF, /*HasGlobalPred=*/true);
-        VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-        // If we found one, add in the cost of creating a mask
-        if (VecFunc) {
-          UsesMask = true;
-          MaskCost = TTI.getShuffleCost(
-              TargetTransformInfo::SK_Broadcast,
-              VectorType::get(IntegerType::getInt1Ty(
-                                  VecFunc->getFunctionType()->getContext()),
-                              VF));
-        }
-      }
+      bool UsesMask = false;
+      VFInfo FuncInfo;
+      Function *VecFunc = nullptr;
+      // Search through any available variants for one we can use at this VF.
+      for (VFInfo &Info : VFDatabase::getMappings(*CI)) {
+        // Must match requested VF.
+        if (Info.Shape.VF != VF)
+          continue;
 
-      std::optional<unsigned> MaskPos = std::nullopt;
-      if (VecFunc && UsesMask) {
-        for (const VFInfo &Info : VFDatabase::getMappings(*CI))
-          if (Info.Shape == Shape) {
-            assert(Info.isMasked() && "Vector function info shape mismatch");
-            MaskPos = Info.getParamIndexForOptionalMask().value();
+        // Must take a mask argument if one is required
+        if (MaskRequired && !Info.isMasked())
+          continue;
+
+        // Check that all parameter kinds are supported
+        bool ParamsOk = true;
+        for (VFParameter Param : Info.Shape.Parameters) {
+          switch (Param.ParamKind) {
+          case VFParamKind::Vector:
+            break;
+          case VFParamKind::OMP_Uniform: {
+            Value *ScalarParam = CI->getArgOperand(Param.ParamPos);
+            // Make sure the scalar parameter in the loop is invariant.
+            if (!PSE.getSE()->isLoopInvariant(PSE.getSCEV(ScalarParam),
+                                              TheLoop))
+              ParamsOk = false;
             break;
           }
+          case VFParamKind::GlobalPredicate:
+            UsesMask = true;
+            break;
+          default:
+            ParamsOk = false;
+            break;
+          }
+        }
 
-        assert(MaskPos.has_value() && "Unable to find mask parameter index");
+        if (!ParamsOk)
+          continue;
+
+        // Found a suitable candidate, stop here.
+        VecFunc = CI->getModule()->getFunction(Info.VectorName);
+        FuncInfo = Info;
+        break;
       }
+
+      // Add in the cost of synthesizing a mask if one wasn't required.
+      InstructionCost MaskCost = 0;
+      if (VecFunc && UsesMask && !MaskRequired)
+        MaskCost = TTI.getShuffleCost(
+            TargetTransformInfo::SK_Broadcast,
+            VectorType::get(IntegerType::getInt1Ty(
+                                VecFunc->getFunctionType()->getContext()),
+                            VF));
 
       if (TLI && VecFunc && !CI->isNoBuiltin())
         VectorCost =
@@ -7068,7 +7085,8 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         Decision = CM_IntrinsicCall;
       }
 
-      setCallWideningDecision(CI, VF, Decision, VecFunc, IID, MaskPos, Cost);
+      setCallWideningDecision(CI, VF, Decision, VecFunc, IID,
+                              FuncInfo.getParamIndexForOptionalMask(), Cost);
     }
   }
 }
@@ -7763,9 +7781,9 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
   //===------------------------------------------------===//
 
   // 2. Copy and widen instructions from the old loop into the new loop.
-  BestVPlan.prepareToExecute(
-      ILV.getTripCount(), ILV.getOrCreateVectorTripCount(nullptr),
-      CanonicalIVStartValue, State, IsEpilogueVectorization);
+  BestVPlan.prepareToExecute(ILV.getTripCount(),
+                             ILV.getOrCreateVectorTripCount(nullptr),
+                             CanonicalIVStartValue, State);
 
   BestVPlan.execute(&State);
 
@@ -8079,8 +8097,19 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
-  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
-    setBranchWeights(BI, EpilogueMinItersBypassWeights);
+  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    unsigned MainLoopStep = UF * VF.getKnownMinValue();
+    unsigned EpilogueLoopStep =
+        EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
+    // We assume the remaining `Count` is equally distributed in
+    // [0, MainLoopStep)
+    // So the probability for `Count < EpilogueLoopStep` should be
+    // min(MainLoopStep, EpilogueLoopStep) / MainLoopStep
+    unsigned EstimatedSkipCount = std::min(MainLoopStep, EpilogueLoopStep);
+    const uint32_t Weights[] = {EstimatedSkipCount,
+                                MainLoopStep - EstimatedSkipCount};
+    setBranchWeights(BI, Weights);
+  }
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
 
   LoopBypassBlocks.push_back(Insert);
@@ -9441,7 +9470,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {
-      Value *NewCond = State.get(Cond, Part);
+      Value *NewCond = State.VF.isVector() ? State.get(Cond, Part)
+                                           : State.get(Cond, {Part, 0});
       VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
       Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
       Value *Iden = RdxDesc.getRecurrenceIdentity(Kind, ElementTy,
@@ -9561,13 +9591,16 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
   bool isMaskRequired = getMask();
-  if (isMaskRequired)
+  if (isMaskRequired) {
+    // Mask reversal is only neede for non-all-one (null) masks, as reverse of a
+    // null all-one mask is a null mask.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Mask = State.get(getMask(), Part);
       if (isReverse())
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
       BlockInMaskParts[Part] = Mask;
     }
+  }
 
   const auto CreateVecPtr = [&](unsigned Part, Value *Ptr) -> Value * {
     // Calculate the pointer for the specific unroll-part.

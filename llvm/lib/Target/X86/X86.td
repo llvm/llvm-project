@@ -343,6 +343,10 @@ def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true
                                           [FeatureAVX10_1, FeatureEVEX512]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
+def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
+                                        "Support PUSH2/POP2 instructions">;
+def FeaturePPX : SubtargetFeature<"ppx", "HasPPX", "true",
+                                  "Support Push-Pop Acceleration">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software

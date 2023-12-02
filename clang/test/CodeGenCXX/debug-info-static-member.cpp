@@ -1,8 +1,8 @@
-// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,NOT-MS %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,CPP11,NOT-MS %s
 // RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 -std=c++98 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,NOT-MS %s
-// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,NOT-MS %s
-// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-5 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF5 %s
-// RUN: %clangxx -target x86_64-windows-msvc -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4 %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-4 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,CPP11,NOT-MS %s
+// RUN: %clangxx -target x86_64-unknown-unknown -g -gdwarf-5 -std=c++11 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF5,CPP11 %s
+// RUN: %clangxx -target x86_64-windows-msvc -g -gdwarf-4 %s -emit-llvm -S -o - | FileCheck --check-prefixes=CHECK,DWARF4,CPP11 %s
 // PR14471
 
 // CHECK: @{{.*}}a{{.*}} = dso_local global i32 4, align 4, !dbg [[A:![0-9]+]]
@@ -74,7 +74,7 @@ int C::a = 4;
 // CHECK-NOT:                           align:
 // CHECK-NOT:                           offset:
 // CHECK-SAME:                          flags: DIFlagStaticMember
-// CHECK-NOT:                           extraData:
+// CHECK-SAME:                          extraData: i1 true
 
 // DWARF4:     ![[CONST_B_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "const_b"
 // DWARF5:     ![[CONST_B_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_variable, name: "const_b"
@@ -82,7 +82,7 @@ int C::a = 4;
 // CHECK-NOT:                            align:
 // CHECK-NOT:                            offset:
 // CHECK-SAME:                           flags: DIFlagProtected | DIFlagStaticMember
-// CHECK-NOT:                            extraData:
+// CHECK-SAME:                           extraData: float
 
 // DWARF4: ![[DECL_C:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "c"
 // DWARF5: ![[DECL_C:[0-9]+]] = !DIDerivedType(tag: DW_TAG_variable, name: "c"
@@ -97,7 +97,7 @@ int C::a = 4;
 // CHECK-NOT:                            align:
 // CHECK-NOT:                            offset:
 // CHECK-SAME:                           flags: DIFlagPublic | DIFlagStaticMember
-// CHECK-NOT:                            extraData:
+// CHECK-SAME:                           extraData: i32 18
 //
 // DWARF4: !DIDerivedType(tag: DW_TAG_member, name: "x_a"
 // DWARF5: !DIDerivedType(tag: DW_TAG_variable, name: "x_a"
@@ -154,7 +154,7 @@ struct V {
 // const_va is not emitted for MS targets.
 // NOT-MS: !DIDerivedType(tag: DW_TAG_member, name: "const_va",
 // NOT-MS-SAME:           line: [[@LINE-5]]
-// NOT-MS-NOT:            extraData:
+// NOT-MS-SAME:           extraData: i32 42
 const int V::const_va;
 
 namespace x {
@@ -171,9 +171,9 @@ int y::z;
 // CHECK:      ![[CONST_A_VAR]] = distinct !DIGlobalVariable(name: "const_a"
 // CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_A_DECL]])
 
-// CHECK:      !DIGlobalVariableExpression(var: ![[CONST_B_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
-// CHECK:      ![[CONST_B_VAR]] = distinct !DIGlobalVariable(name: "const_b"
-// CHECK-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_B_DECL]])
+// CPP11:      !DIGlobalVariableExpression(var: ![[CONST_B_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
+// CPP11:      ![[CONST_B_VAR]] = distinct !DIGlobalVariable(name: "const_b"
+// CPP11-SAME:                    isLocal: true, isDefinition: true, declaration: ![[CONST_B_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[CONST_C_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 18, DW_OP_stack_value))
 // CHECK:      ![[CONST_C_VAR]] = distinct !DIGlobalVariable(name: "const_c"

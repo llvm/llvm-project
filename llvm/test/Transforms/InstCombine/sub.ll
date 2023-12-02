@@ -1110,8 +1110,8 @@ define i32 @test57(i32 %A, i32 %B) {
 
 define i64 @test58(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], ptr %foo, i64 0, i64 42, i64 %i
   %gep2 = getelementptr inbounds [100 x [100 x i8]], ptr %foo, i64 0, i64 42, i64 %j
@@ -2578,5 +2578,51 @@ define i8 @diff_of_muls2(i8 %x, i8 %y, i8 %z) {
   %x2 = mul i8 %x, %x
   %m = mul i8 %y, %z
   %r = sub i8 %x2, %m
+  ret i8 %r
+}
+
+define i8 @sub_of_adds_2xz_multiuse(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sub_of_adds_2xz_multiuse(
+; CHECK-NEXT:    [[XZ:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[YZ:%.*]] = add i8 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    call void @use8(i8 [[XZ]])
+; CHECK-NEXT:    call void @use8(i8 [[YZ]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xz = add i8 %x, %z
+  %yz = add i8 %z, %y
+  %r = sub i8 %xz, %yz
+  call void @use8(i8 %xz)
+  call void @use8(i8 %yz)
+  ret i8 %r
+}
+
+define i8 @sub_of_adds_2xc_multiuse2_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_of_adds_2xc_multiuse2_fail(
+; CHECK-NEXT:    [[XC:%.*]] = add i8 [[X:%.*]], 10
+; CHECK-NEXT:    [[YC:%.*]] = add i8 [[Y:%.*]], 11
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[XC]], [[YC]]
+; CHECK-NEXT:    call void @use8(i8 [[XC]])
+; CHECK-NEXT:    call void @use8(i8 [[YC]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xc = add i8 %x, 10
+  %yc = add i8 %y, 11
+  %r = sub i8 %xc, %yc
+  call void @use8(i8 %xc)
+  call void @use8(i8 %yc)
+  ret i8 %r
+}
+
+define i8 @sub_of_adds_2xc(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_of_adds_2xc(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xc = add i8 %x, 10
+  %yc = add i8 %y, 8
+  %r = sub i8 %xc, %yc
   ret i8 %r
 }

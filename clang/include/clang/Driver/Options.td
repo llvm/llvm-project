@@ -1452,7 +1452,7 @@ def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;
-def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
+def e : Separate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">,
@@ -1754,6 +1754,18 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
+defm apinotes : BoolOption<"f", "apinotes",
+    LangOpts<"APINotes">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable">,
+    NegFlag<SetFalse, [], [ClangOption], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], "external API notes support">>,
+    Group<f_clang_Group>;
+defm apinotes_modules : BoolOption<"f", "apinotes-modules",
+    LangOpts<"APINotesModules">, DefaultFalse,
+    PosFlag<SetTrue, [], [ClangOption], "Enable">,
+    NegFlag<SetFalse, [], [ClangOption], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], "module-based external API notes support">>,
+    Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
@@ -3160,7 +3172,8 @@ def fno_ms_compatibility : Flag<["-"], "fno-ms-compatibility">, Group<f_Group>,
 def fno_objc_legacy_dispatch : Flag<["-"], "fno-objc-legacy-dispatch">, Group<f_Group>;
 def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>;
-def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>;
+def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>;
 defm operator_names : BoolFOption<"operator-names",
   LangOpts<"CXXOperatorNames">, Default<cplusplus.KeyPath>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -3286,6 +3299,7 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
 
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Omit the frame pointer from functions that don't need it. "
   "Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. "
   "On many targets, -O1 and higher omit the frame pointer by default. "
@@ -4709,9 +4723,9 @@ defm amdgpu_ieee : BoolOption<"m", "amdgpu-ieee",
 
 def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
   HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, FlangOption, CC1Option, FC1Option]>,
   Values<"none,4,5">,
-  NormalizedValuesScope<"TargetOptions">,
+  NormalizedValuesScope<"llvm::CodeObjectVersionKind">,
   NormalizedValues<["COV_None", "COV_4", "COV_5"]>,
   MarshallingInfoEnum<TargetOpts<"CodeObjectVersion">, "COV_4">;
 
@@ -5157,8 +5171,8 @@ def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
 def nomultidefs : Flag<["-"], "nomultidefs">;
-def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>;
-def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>, Alias<nopie>;
+def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>, Flags<[TargetSpecific]>; // OpenBSD
+def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>;
 def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
@@ -6774,10 +6788,6 @@ def new_struct_path_tbaa : Flag<["-"], "new-struct-path-tbaa">,
 def mdebug_pass : Separate<["-"], "mdebug-pass">,
   HelpText<"Enable additional debug output">,
   MarshallingInfoString<CodeGenOpts<"DebugPass">>;
-def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
-  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
-  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
-  MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
@@ -7387,6 +7397,11 @@ def pic_level : Separate<["-"], "pic-level">,
 def pic_is_pie : Flag<["-"], "pic-is-pie">,
   HelpText<"File is for a position independent executable">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
+
+def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
+  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
+  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 
 
 def dependent_lib : Joined<["--"], "dependent-lib=">,

@@ -9,6 +9,7 @@
 #include "Flang.h"
 #include "CommonArgs.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
@@ -204,6 +205,67 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
+         "can only add VS runtime library on Windows!");
+  if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
+  }
+  unsigned RTOptionID = options::OPT__SLASH_MT;
+  if (auto *rtl = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+    RTOptionID = llvm::StringSwitch<unsigned>(rtl->getValue())
+                     .Case("static", options::OPT__SLASH_MT)
+                     .Case("static_dbg", options::OPT__SLASH_MTd)
+                     .Case("dll", options::OPT__SLASH_MD)
+                     .Case("dll_dbg", options::OPT__SLASH_MDd)
+                     .Default(options::OPT__SLASH_MT);
+  }
+  switch (RTOptionID) {
+  case options::OPT__SLASH_MT:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("--dependent-lib=libcmt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
+    break;
+  case options::OPT__SLASH_MTd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("--dependent-lib=libcmtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
+    break;
+  case options::OPT__SLASH_MD:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrt");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
+    break;
+  case options::OPT__SLASH_MDd:
+    CmdArgs.push_back("-D_MT");
+    CmdArgs.push_back("-D_DEBUG");
+    CmdArgs.push_back("-D_DLL");
+    CmdArgs.push_back("--dependent-lib=msvcrtd");
+    CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
+    break;
+  }
+}
+
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
+  }
+}
+
 void Flang::addTargetOptions(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
@@ -227,6 +289,9 @@ void Flang::addTargetOptions(const ArgList &Args,
 
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddAMDGPUTargetArgs(Args, CmdArgs);
+    break;
   case llvm::Triple::riscv64:
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -265,6 +330,10 @@ void Flang::addTargetOptions(const ArgList &Args,
     } else {
       A->render(Args, CmdArgs);
     }
+  }
+
+  if (Triple.isKnownWindowsMSVCEnvironment()) {
+    processVSRuntimeLibrary(TC, Args, CmdArgs);
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.
@@ -605,6 +674,24 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
+
+  CodeGenOptions::FramePointerKind FPKeepKind =
+      getFramePointerKind(Args, Triple);
+
+  const char *FPKeepKindStr = nullptr;
+  switch (FPKeepKind) {
+  case CodeGenOptions::FramePointerKind::None:
+    FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    FPKeepKindStr = "-mframe-pointer=non-leaf";
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    FPKeepKindStr = "-mframe-pointer=all";
+    break;
+  }
+  assert(FPKeepKindStr && "unknown FramePointerKind");
+  CmdArgs.push_back(FPKeepKindStr);
 
   // Forward -mllvm options to the LLVM option parser. In practice, this means
   // forwarding to `-fc1` as that's where the LLVM parser is run.

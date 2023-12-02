@@ -199,6 +199,11 @@ def int_amdgcn_wavefrontsize :
   ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
+// Represent a relocation constant.
+def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
+  [llvm_i32_ty], [llvm_metadata_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Intrinsics
@@ -1993,12 +1998,14 @@ def int_amdgcn_alignbyte : ClangBuiltin<"__builtin_amdgcn_alignbyte">,
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_mul_i24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+// mul24 intrinsics can return i32 or i64.
+// When returning i64, they're lowered to a mul24/mulhi24 pair.
+def int_amdgcn_mul_i24 : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_mul_u24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+def int_amdgcn_mul_u24 : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
@@ -2775,12 +2782,6 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
   DefaultAttrsIntrinsic<[llvm_i32_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
-
-// Represent a relocation constant.
-def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
-  [llvm_i32_ty], [llvm_metadata_ty],
-  [IntrNoMem, IntrSpeculatable]
->;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

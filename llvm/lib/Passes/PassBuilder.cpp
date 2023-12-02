@@ -72,9 +72,12 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/TypePromotion.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -403,6 +406,32 @@ public:
     return PreservedAnalyses::all();
   }
   static StringRef name() { return "TriggerCrashPass"; }
+};
+
+// A pass for testing message reporting of -verify-each failures.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class TriggerVerifierErrorPass
+    : public PassInfoMixin<TriggerVerifierErrorPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &) {
+    // Intentionally break the Module by creating an alias without setting the
+    // aliasee.
+    auto *PtrTy = llvm::PointerType::getUnqual(M.getContext());
+    GlobalAlias::create(PtrTy, PtrTy->getAddressSpace(),
+                        GlobalValue::LinkageTypes::InternalLinkage,
+                        "__bad_alias", nullptr, &M);
+    return PreservedAnalyses::none();
+  }
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+    // Intentionally break the Function by inserting a terminator
+    // instruction in the middle of a basic block.
+    BasicBlock &BB = F.getEntryBlock();
+    new UnreachableInst(F.getContext(), BB.getTerminator());
+    return PreservedAnalyses::none();
+  }
+
+  static StringRef name() { return "TriggerVerifierErrorPass"; }
 };
 
 } // namespace
@@ -750,26 +779,6 @@ Expected<HWAddressSanitizerOptions> parseHWASanPassOptions(StringRef Params) {
     } else {
       return make_error<StringError>(
           formatv("invalid HWAddressSanitizer pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
-    }
-  }
-  return Result;
-}
-
-Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
-  EmbedBitcodeOptions Result;
-  while (!Params.empty()) {
-    StringRef ParamName;
-    std::tie(ParamName, Params) = Params.split(';');
-
-    if (ParamName == "thinlto") {
-      Result.IsThinLTO = true;
-    } else if (ParamName == "emit-summary") {
-      Result.EmitLTOSummary = true;
-    } else {
-      return make_error<StringError>(
-          formatv("invalid EmbedBitcode pass parameter '{0}' ", ParamName)
               .str(),
           inconvertibleErrorCode());
     }
