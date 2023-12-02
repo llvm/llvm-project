@@ -423,6 +423,7 @@ public:
     return getPointerWidthV(AddrSpace);
   }
 
+  ParsedTargetAttr parseTargetAttr(StringRef Features) const override;
 };
 
 // X86-32 generic target

@@ -560,11 +560,12 @@ ParsedTargetAttr TargetInfo::parseTargetAttr(StringRef Features) const {
     }
 
     // While we're here iterating check for a different target cpu.
-    if (Feature.startswith("arch=")) {
+    if (Feature.startswith("arch=") || Feature.startswith("cpu=")) {
+      auto [Key, CPU] = Feature.split("=");
       if (!Ret.CPU.empty())
-        Ret.Duplicate = "arch=";
+        Ret.Duplicate = StringRef(Key.data(), Key.size() + 1);
       else
-        Ret.CPU = Feature.split("=").second.trim();
+        Ret.CPU = CPU.trim();
     } else if (Feature.startswith("tune=")) {
       if (!Ret.Tune.empty())
         Ret.Duplicate = "tune=";

@@ -1718,6 +1718,46 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(AddlRegNames);
 }
 
+ParsedTargetAttr X86TargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+
+  for (auto &Feature : AttrFeatures) {
+    Feature = Feature.trim();
+
+    // TODO: Support the fpmath option. It will require checking
+    // overall feature validity for the function with the rest of the
+    // attributes on the function.
+    if (Feature.startswith("fpmath="))
+      continue;
+
+    if (Feature.startswith("branch-protection=")) {
+      Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.startswith("arch=")) {
+      auto [Key, CPU] = Feature.split("=");
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = StringRef(Key.data(), Key.size() + 1);
+      else
+        Ret.CPU = CPU.trim();
+    } else if (Feature.startswith("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.startswith("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else
+      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
+}
+
 ArrayRef<Builtin::Info> X86_32TargetInfo::getTargetBuiltins() const {
   return llvm::ArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
                                             Builtin::FirstTSBuiltin + 1);
