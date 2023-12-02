@@ -1350,9 +1350,6 @@ defm : PatVrVr<sra, "VSRA">;
 defm : PatShiftVrVr<sra, "VSRA">;
 defm : PatShiftVrUimm<sra, "VSRAI">;
 
-// VCLZ_{B/H/W/D}
-defm : PatVr<ctlz, "VCLZ">;
-
 // VPCNT_{B/H/W/D}
 defm : PatVr<ctpop, "VPCNT">;
 
@@ -1677,21 +1674,21 @@ foreach Inst = ["VMADDWEV_Q_D", "VMADDWOD_Q_D", "VMADDWEV_Q_DU",
 //     (LAInst vty:$vj)>;
 foreach Inst = ["VEXTH_H_B", "VEXTH_HU_BU",
                 "VMSKLTZ_B", "VMSKGEZ_B", "VMSKNZ_B",
-                "VCLO_B"] in
+                "VCLO_B", "VCLZ_B"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v16i8 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_W_H", "VEXTH_WU_HU", "VMSKLTZ_H",
-                "VCLO_H", "VFCVTL_S_H", "VFCVTH_S_H"] in
+                "VCLO_H", "VCLZ_H", "VFCVTL_S_H", "VFCVTH_S_H"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v8i16 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_D_W", "VEXTH_DU_WU", "VMSKLTZ_W",
-                "VCLO_W", "VFFINT_S_W", "VFFINT_S_WU",
+                "VCLO_W", "VCLZ_W", "VFFINT_S_W", "VFFINT_S_WU",
                 "VFFINTL_D_W", "VFFINTH_D_W"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v4i32 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 foreach Inst = ["VEXTH_Q_D", "VEXTH_QU_DU", "VMSKLTZ_D",
                 "VEXTL_Q_D", "VEXTL_QU_DU",
-                "VCLO_D", "VFFINT_D_L", "VFFINT_D_LU"] in
+                "VCLO_D", "VCLZ_D", "VFFINT_D_L", "VFFINT_D_LU"] in
   def : Pat<(deriveLSXIntrinsic<Inst>.ret (v2i64 LSX128:$vj)),
             (!cast<LAInst>(Inst) LSX128:$vj)>;
 
