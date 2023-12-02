@@ -1725,11 +1725,12 @@ define i8 @select_or_eq(i8 %x, i8 %y) {
   ret i8 %sel
 }
 
-; FIXME: This is a miscompile.
 define i8 @select_or_disjoint_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_or_disjoint_eq(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[OR]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[SEL]]
 ;
   %cmp = icmp eq i8 %x, %y
   %or = or disjoint i8 %x, %y

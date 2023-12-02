@@ -2916,10 +2916,9 @@ define i8 @replace_false_op_eq_shl_or_disjoint(i8 %x) {
   ret i8 %sel
 }
 
-; FIXME: This is a miscompile.
 define i8 @select_or_disjoint_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_or_disjoint_eq(
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
   %cmp = icmp eq i8 %x, %y
