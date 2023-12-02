@@ -16286,9 +16286,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
 
-  if (FD && FD->isConstexpr() && FD->isTemplated())
-    PerformPendingInstantiationsOfConstexprFunctions(FD);
-
   return dcl;
 }
 
