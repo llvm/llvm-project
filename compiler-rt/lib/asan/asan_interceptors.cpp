@@ -194,10 +194,10 @@ static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
   __lsan::ScopedInterceptorDisabler disabler
 #endif
 
-#define SIGNAL_INTERCEPTOR_ENTER() ENSURE_ASAN_INITED()
+#  define SIGNAL_INTERCEPTOR_ENTER() ENSURE_ASAN_INITED()
 
-#include "sanitizer_common/sanitizer_common_interceptors.inc"
-#include "sanitizer_common/sanitizer_signal_interceptors.inc"
+#  include "sanitizer_common/sanitizer_common_interceptors.inc"
+#  include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
 // Syscall interceptors don't have contexts, we don't support suppressions
 // for them.
