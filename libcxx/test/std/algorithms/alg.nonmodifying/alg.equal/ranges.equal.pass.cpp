@@ -201,20 +201,16 @@ constexpr void test_iterators() {
 
   { // check that two empty ranges work
     {
-      std::array<int, 0> a_arr = {};
-      int* const a             = a_arr.data();
-      std::array<int, 0> b_arr = {};
-      int* const b             = b_arr.data();
-      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a)), Iter2(b), Sent2(Iter2(b)));
+      std::array<int, 0> a = {};
+      std::array<int, 0> b = {};
+      auto ret = std::ranges::equal(Iter1(a.data()), Sent1(Iter1(a.data())), Iter2(b.data()), Sent2(Iter2(b.data())));
       assert(ret);
     }
     {
-      std::array<int, 0> a_arr = {};
-      int* const a             = a_arr.data();
-      std::array<int, 0> b_arr = {};
-      int* const b             = b_arr.data();
-      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
-      auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b)));
+      std::array<int, 0> a = {};
+      std::array<int, 0> b = {};
+      auto range1 = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
+      auto range2 = std::ranges::subrange(Iter2(b.data()), Sent2(Iter2(b.data())));
       auto ret = std::ranges::equal(range1, range2);
       assert(ret);
     }
@@ -222,17 +218,15 @@ constexpr void test_iterators() {
 
   { // check that it works with the first range empty
     {
-      std::array<int, 0> a_arr = {};
-      int* const a             = a_arr.data();
+      std::array<int, 0> a = {};
       int b[] = {1, 2};
-      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a)), Iter2(b), Sent2(Iter2(b + 2)));
+      auto ret = std::ranges::equal(Iter1(a.data()), Sent1(Iter1(a.data())), Iter2(b), Sent2(Iter2(b + 2)));
       assert(!ret);
     }
     {
-      std::array<int, 0> a_arr = {};
-      int* const a             = a_arr.data();
+      std::array<int, 0> a = {};
       int b[] = {1, 2};
-      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a)));
+      auto range1 = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 2)));
       auto ret = std::ranges::equal(range1, range2);
       assert(!ret);
@@ -242,17 +236,15 @@ constexpr void test_iterators() {
   { // check that it works with the second range empty
     {
       int a[] = {1, 2};
-      std::array<int, 0> b_arr = {};
-      int* const b             = b_arr.data();
-      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 2)), Iter2(b), Sent2(Iter2(b)));
+      std::array<int, 0> b = {};
+      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 2)), Iter2(b.data()), Sent2(Iter2(b.data())));
       assert(!ret);
     }
     {
       int a[] = {1, 2};
-      std::array<int, 0> b_arr = {};
-      int* const b             = b_arr.data();
+      std::array<int, 0> b = {};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 2)));
-      auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b)));
+      auto range2 = std::ranges::subrange(Iter2(b.data()), Sent2(Iter2(b.data())));
       auto ret = std::ranges::equal(range1, range2);
       assert(!ret);
     }

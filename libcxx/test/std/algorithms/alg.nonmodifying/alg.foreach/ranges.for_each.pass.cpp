@@ -99,14 +99,12 @@ constexpr void test_iterator() {
 
   { // check that an empty range works
     {
-      std::array<int, 0> a_arr = {};
-      int* const a             = a_arr.data();
-      std::ranges::for_each(Iter(a), Sent(Iter(a)), [](auto&) { assert(false); });
+      std::array<int, 0> a = {};
+      std::ranges::for_each(Iter(a.data()), Sent(Iter(a.data())), [](auto&) { assert(false); });
     }
     {
-      std::array<int, 0> a_arr = {};
-      int* const a             = a_arr.data();
-      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a)));
+      std::array<int, 0> a = {};
+      auto range = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       std::ranges::for_each(range, [](auto&) { assert(false); });
     }
   }

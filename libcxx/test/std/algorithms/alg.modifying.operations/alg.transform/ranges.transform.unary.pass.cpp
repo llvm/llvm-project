@@ -108,21 +108,19 @@ constexpr bool test_iterators() {
 
   { // first range empty
     {
-      std::array<int, 0> a_arr = {};
-      int* const a = a_arr.data();
+      std::array<int, 0> a = {};
       int b[5];
-      auto ret = std::ranges::transform(In1(a), Sent1(In1(a)), Out(b), [](int i) { return i * 2; });
-      assert(base(ret.in) == a);
+      auto ret = std::ranges::transform(In1(a.data()), Sent1(In1(a.data())), Out(b), [](int i) { return i * 2; });
+      assert(base(ret.in) == a.data());
       assert(base(ret.out) == b);
     }
 
     {
-      std::array<int, 0> a_arr = {};
-      int* const a = a_arr.data();
+      std::array<int, 0> a = {};
       int b[5];
-      auto range = std::ranges::subrange(In1(a), Sent1(In1(a)));
+      auto range = std::ranges::subrange(In1(a.data()), Sent1(In1(a.data())));
       auto ret = std::ranges::transform(range, Out(b), [](int i) { return i * 2; });
-      assert(base(ret.in) == a);
+      assert(base(ret.in) == a.data());
       assert(base(ret.out) == b);
     }
   }

@@ -27,9 +27,8 @@ template <class Iter>
 void
 test_with_iterator()
 {
-  std::array<int, 0> empty_arr = {};
-  int* const empty             = empty_arr.data();
-  std::random_shuffle(Iter(empty), Iter(empty));
+  std::array<int, 0> empty = {};
+  std::random_shuffle(Iter(empty.data()), Iter(empty.data()));
 
   const int all_elements[] = {1, 2, 3, 4};
   int shuffled[]           = {1, 2, 3, 4};

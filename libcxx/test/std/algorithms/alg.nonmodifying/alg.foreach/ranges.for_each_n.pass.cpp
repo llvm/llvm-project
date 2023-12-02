@@ -59,9 +59,8 @@ constexpr void test_iterator() {
   }
 
   { // check that an empty range works
-    std::array<int, 0> a_arr = {};
-    int* const a             = a_arr.data();
-    std::ranges::for_each_n(Iter(a), 0, [](auto&) { assert(false); });
+    std::array<int, 0> a = {};
+    std::ranges::for_each_n(Iter(a.data()), 0, [](auto&) { assert(false); });
   }
 }
 
