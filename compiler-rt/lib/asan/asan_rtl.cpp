@@ -80,7 +80,7 @@ static void SetAsanInitIsRunning(u32 val) { asan_init_is_running = val; }
 
 bool AsanInited() { return asan_inited == 1; }
 
-bool AsanInitIsRunning() { return asan_init_is_running == 1; }
+static bool AsanInitIsRunning() { return asan_init_is_running == 1; }
 
 bool replace_intrin_cached;
 
@@ -520,7 +520,17 @@ static void AsanInitInternal() {
 // Initialize as requested from some part of ASan runtime library (interceptors,
 // allocator, etc).
 void AsanInitFromRtl() {
-  AsanInitInternal();
+  CHECK(!AsanInitIsRunning());
+  if (UNLIKELY(!AsanInited()))
+    AsanInitInternal();
+}
+
+bool TryAsanInitFromRtl() {
+  if (UNLIKELY(AsanInitIsRunning()))
+    return false;
+  if (UNLIKELY(!AsanInited()))
+    AsanInitInternal();
+  return true;
 }
 
 #if ASAN_DYNAMIC
