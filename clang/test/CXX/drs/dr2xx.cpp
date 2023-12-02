@@ -5,8 +5,10 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
+// FIXME: diagnostic above is emitted only on Windows platforms
 // PR13819 -- __SIZE_TYPE__ is incompatible.
 typedef __SIZE_TYPE__ size_t;
+// cxx98-error@-1 0-1 {{'long long' is a C++11 extension}}
 
 #if __cplusplus < 201103L
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
@@ -1296,7 +1298,7 @@ namespace dr299 { // dr299: 2.8 c++11
   // cxx98-11-error@#dr299-q {{ambiguous conversion of array size expression of type 'T' to an integral or enumeration type}}
   //  cxx98-11-note@#dr299-int {{conversion to integral type 'int' declared here}}
   //  cxx98-11-note@#dr299-ushort {{conversion to integral type 'unsigned short' declared here}}
-  // since-cxx14-error@#dr299-q {{conversion from 'T' to 'unsigned long' is ambiguous}}
+  // since-cxx14-error-re@#dr299-q {{{{conversion from 'T' to 'unsigned (long|int)' is ambiguous}}}}
   //  since-cxx14-note@#dr299-int {{candidate function}}
   //  since-cxx14-note@#dr299-ushort {{candidate function}}
 }
