@@ -246,7 +246,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       // FIXME: For BUILD_VECTOR, it is temporarily set to `Legal` here, and it
       // will be `Custom` handled in the future.
       setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
@@ -276,7 +276,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
       // FIXME: Same as above.
       setOperationAction(ISD::BUILD_VECTOR, VT, Legal);
-      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Legal);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
@@ -380,7 +380,17 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerRETURNADDR(Op, DAG);
   case ISD::WRITE_REGISTER:
     return lowerWRITE_REGISTER(Op, DAG);
+  case ISD::INSERT_VECTOR_ELT:
+    return lowerINSERT_VECTOR_ELT(Op, DAG);
   }
+  return SDValue();
+}
+
+SDValue
+LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  if (isa<ConstantSDNode>(Op->getOperand(2)))
+    return Op;
   return SDValue();
 }
 
@@ -3067,6 +3077,71 @@ emitVecCondBranchPseudo(MachineInstr &MI, MachineBasicBlock *BB,
   return SinkBB;
 }
 
+static MachineBasicBlock *
+emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
+                     const LoongArchSubtarget &Subtarget) {
+  unsigned InsOp;
+  unsigned HalfSize;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case LoongArch::PseudoXVINSGR2VR_B:
+    HalfSize = 16;
+    InsOp = LoongArch::VINSGR2VR_B;
+    break;
+  case LoongArch::PseudoXVINSGR2VR_H:
+    HalfSize = 8;
+    InsOp = LoongArch::VINSGR2VR_H;
+    break;
+  }
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &LoongArch::LASX256RegClass;
+  const TargetRegisterClass *SubRC = &LoongArch::LSX128RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  // XDst = vector_insert XSrc, Elt, Idx
+  Register XDst = MI.getOperand(0).getReg();
+  Register XSrc = MI.getOperand(1).getReg();
+  Register Elt = MI.getOperand(2).getReg();
+  unsigned Idx = MI.getOperand(3).getImm();
+
+  Register ScratchReg1 = XSrc;
+  if (Idx >= HalfSize) {
+    ScratchReg1 = MRI.createVirtualRegister(RC);
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), ScratchReg1)
+        .addReg(XSrc)
+        .addReg(XSrc)
+        .addImm(1);
+  }
+
+  Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
+  Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
+  BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
+      .addReg(ScratchReg1, 0, LoongArch::sub_128);
+  BuildMI(*BB, MI, DL, TII->get(InsOp), ScratchSubReg2)
+      .addReg(ScratchSubReg1)
+      .addReg(Elt)
+      .addImm(Idx >= HalfSize ? Idx - HalfSize : Idx);
+
+  Register ScratchReg2 = XDst;
+  if (Idx >= HalfSize)
+    ScratchReg2 = MRI.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), ScratchReg2)
+      .addImm(0)
+      .addReg(ScratchSubReg2)
+      .addImm(LoongArch::sub_128);
+
+  if (Idx >= HalfSize)
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), XDst)
+        .addReg(XSrc)
+        .addReg(ScratchReg2)
+        .addImm(2);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
@@ -3122,6 +3197,9 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
   case LoongArch::PseudoXVBNZ_W:
   case LoongArch::PseudoXVBNZ_D:
     return emitVecCondBranchPseudo(MI, BB, Subtarget);
+  case LoongArch::PseudoXVINSGR2VR_B:
+  case LoongArch::PseudoXVINSGR2VR_H:
+    return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
   }
 }
 
