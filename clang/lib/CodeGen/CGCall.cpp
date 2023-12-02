@@ -5624,6 +5624,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               BundleList);
     EmitBlock(Cont);
   }
+  if (CI->getCalledFunction() && CI->getCalledFunction()->hasName() &&
+      CI->getCalledFunction()->getName().startswith("_Z4sqrt")) {
+    SetSqrtFPAccuracy(CI);
+  }
   if (callOrInvoke)
     *callOrInvoke = CI;
 
