@@ -399,6 +399,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
   highlight the const location
 
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to correctly handle
+  interger literals with suffixes in fixits.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
   detect comparison between string and empty string literals and support
