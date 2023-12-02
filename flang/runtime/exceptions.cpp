@@ -13,6 +13,10 @@
 #include "flang/Runtime/magic-numbers.h"
 #include <cfenv>
 
+#ifndef __FE_DENORM
+#define __FE_DENORM 0 // denorm is nonstandard
+#endif
+
 namespace Fortran::runtime {
 
 extern "C" {
@@ -24,7 +28,7 @@ std::int32_t RTNAME(MapException)(int32_t except) {
       _FORTRAN_RUNTIME_IEEE_DENORM | _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO |
       _FORTRAN_RUNTIME_IEEE_OVERFLOW | _FORTRAN_RUNTIME_IEEE_UNDERFLOW |
       _FORTRAN_RUNTIME_IEEE_INEXACT};
-  if (except != (except & mask)) {
+  if (except == 0 || except != (except & mask)) {
     terminator.Crash("Invalid exception value: %d", except);
   }
 
@@ -35,9 +39,7 @@ std::int32_t RTNAME(MapException)(int32_t except) {
       _FORTRAN_RUNTIME_IEEE_OVERFLOW == FE_OVERFLOW &&
       _FORTRAN_RUNTIME_IEEE_UNDERFLOW == FE_UNDERFLOW &&
       _FORTRAN_RUNTIME_IEEE_INEXACT == FE_INEXACT) {
-    if (except) {
-      return except;
-    }
+    return except;
   }
 
   // fenv.h calls that take exception arguments are able to process multiple
@@ -56,7 +58,10 @@ std::int32_t RTNAME(MapException)(int32_t except) {
   case _FORTRAN_RUNTIME_IEEE_INVALID:
     return FE_INVALID;
   case _FORTRAN_RUNTIME_IEEE_DENORM:
-    return __FE_DENORM;
+    if (__FE_DENORM) {
+      return __FE_DENORM;
+    }
+    break;
   case _FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO:
     return FE_DIVBYZERO;
   case _FORTRAN_RUNTIME_IEEE_OVERFLOW:
@@ -73,9 +78,11 @@ std::int32_t RTNAME(MapException)(int32_t except) {
 // Verify that the size of ieee_modes_type and ieee_status_type objects from
 // intrinsic module file __fortran_ieee_exceptions.f90 are large enough to
 // hold femode_t and fenv_t objects, respectively.
+#ifndef _WIN32
 static_assert(
     sizeof(femode_t) <= sizeof(int) * _FORTRAN_RUNTIME_IEEE_FEMODE_T_EXTENT,
     "increase ieee_modes_type size");
+#endif
 static_assert(
     sizeof(fenv_t) <= sizeof(int) * _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT,
     "increase ieee_status_type size");
