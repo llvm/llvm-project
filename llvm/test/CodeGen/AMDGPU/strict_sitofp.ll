@@ -141,19 +141,19 @@ define <2 x float> @s_constrained_sitofp_v2i32_to_v2f32_fpexcept_strict(<2 x i32
   ret <2 x float> %result
 }
 
-; define half @v_constrained_sitofp_i64_to_f16_fpexcept_strict(i64 %arg) #0 {
-;   %result = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
-;   ret half %result
-; }
+define half @v_constrained_sitofp_i64_to_f16_fpexcept_strict(i64 %arg) #0 {
+  %result = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret half %result
+}
 
-; define <2 x half> @v_constrained_sitofp_v2i64_to_v2f16_fpexcept_strict(<2 x i64> %arg) #0 {
-;   %result = call <2 x half> @llvm.experimental.constrained.sitofp.v2f16.v2i64(<2 x i64> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
-;   ret <2 x half> %result
-; }
+define <2 x half> @v_constrained_sitofp_v2i64_to_v2f16_fpexcept_strict(<2 x i64> %arg) #0 {
+  %result = call <2 x half> @llvm.experimental.constrained.sitofp.v2f16.v2i64(<2 x i64> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <2 x half> %result
+}
 
-; define <3 x half> @v_constrained_sitofp_v3i64_to_v3f16_fpexcept_strict(<3 x i64> %arg) #0 {
-;   %result = call <3 x half> @llvm.experimental.constrained.sitofp.v3f16.v3i64(<3 x i64> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
-;   ret <3 x half> %result
+define <3 x half> @v_constrained_sitofp_v3i64_to_v3f16_fpexcept_strict(<3 x i64> %arg) #0 {
+  %result = call <3 x half> @llvm.experimental.constrained.sitofp.v3f16.v3i64(<3 x i64> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <3 x half> %result
 }
 
 define float @v_constrained_sitofp_i64_to_f32_fpexcept_strict(i64 %arg) #0 {
