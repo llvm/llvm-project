@@ -15,6 +15,7 @@
 
 #include "Shared/APITypes.h"
 #include "Shared/PluginAPI.h"
+#include "Shared/Requirements.h"
 
 #include "device.h"
 
@@ -23,6 +24,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+#include <cstdint>
 #include <list>
 #include <mutex>
 #include <string>
@@ -66,12 +68,7 @@ struct PluginAdaptorTy {
 
 /// RTLs identified in the system.
 struct PluginAdaptorManagerTy {
-  int64_t RequiresFlags = OMP_REQ_UNDEFINED;
-
   explicit PluginAdaptorManagerTy() = default;
-
-  // Register the clauses of the requires directive.
-  void registerRequires(int64_t Flags);
 
   // Register a shared library with all (compatible) RTLs.
   void registerLib(__tgt_bin_desc *Desc);
@@ -148,12 +145,21 @@ struct PluginManager {
     return llvm::make_range(PluginAdaptors.begin(), PluginAdaptors.end());
   }
 
+  /// Return the user provided requirements.
+  int64_t getRequirements() const { return Requirements.getRequirements(); }
+
+  /// Add \p Flags to the user provided requirements.
+  void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugin adaptors, in use or not.
   std::list<PluginAdaptorTy> PluginAdaptors;
+
+  /// The user provided requirements.
+  RequirementCollection Requirements;
 };
 
 extern PluginManager *PM;

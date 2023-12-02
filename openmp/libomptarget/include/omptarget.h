@@ -101,21 +101,6 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_INDIRECT = 0x08
 };
 
-enum OpenMPOffloadingRequiresDirFlags {
-  /// flag undefined.
-  OMP_REQ_UNDEFINED               = 0x000,
-  /// no requires directive present.
-  OMP_REQ_NONE                    = 0x001,
-  /// reverse_offload clause.
-  OMP_REQ_REVERSE_OFFLOAD         = 0x002,
-  /// unified_address clause.
-  OMP_REQ_UNIFIED_ADDRESS         = 0x004,
-  /// unified_shared_memory clause.
-  OMP_REQ_UNIFIED_SHARED_MEMORY   = 0x008,
-  /// dynamic_allocators clause.
-  OMP_REQ_DYNAMIC_ALLOCATORS      = 0x010
-};
-
 enum TargetAllocTy : int32_t {
   TARGET_ALLOC_DEVICE = 0,
   TARGET_ALLOC_HOST,

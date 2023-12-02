@@ -167,47 +167,6 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
   return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
 }
 
-void PluginAdaptorManagerTy::registerRequires(int64_t Flags) {
-  // TODO: add more elaborate check.
-  // Minimal check: only set requires flags if previous value
-  // is undefined. This ensures that only the first call to this
-  // function will set the requires flags. All subsequent calls
-  // will be checked for compatibility.
-  assert(Flags != OMP_REQ_UNDEFINED &&
-         "illegal undefined flag for requires directive!");
-  if (RequiresFlags == OMP_REQ_UNDEFINED) {
-    RequiresFlags = Flags;
-    return;
-  }
-
-  // If multiple compilation units are present enforce
-  // consistency across all of them for require clauses:
-  //  - reverse_offload
-  //  - unified_address
-  //  - unified_shared_memory
-  if ((RequiresFlags & OMP_REQ_REVERSE_OFFLOAD) !=
-      (Flags & OMP_REQ_REVERSE_OFFLOAD)) {
-    FATAL_MESSAGE0(
-        1, "'#pragma omp requires reverse_offload' not used consistently!");
-  }
-  if ((RequiresFlags & OMP_REQ_UNIFIED_ADDRESS) !=
-      (Flags & OMP_REQ_UNIFIED_ADDRESS)) {
-    FATAL_MESSAGE0(
-        1, "'#pragma omp requires unified_address' not used consistently!");
-  }
-  if ((RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) !=
-      (Flags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-    FATAL_MESSAGE0(
-        1,
-        "'#pragma omp requires unified_shared_memory' not used consistently!");
-  }
-
-  // TODO: insert any other missing checks
-
-  DP("New requires flags %" PRId64 " compatible with existing %" PRId64 "!\n",
-     Flags, RequiresFlags);
-}
-
 void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
