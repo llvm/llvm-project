@@ -12,8 +12,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 
-#include <iostream>
-
 namespace mlir {
 namespace tensor {
 namespace {
