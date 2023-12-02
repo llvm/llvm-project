@@ -69,59 +69,47 @@ import clang.enumerations
 import os
 import sys
 
-if sys.version_info[0] == 3:
-    # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
-    class c_interop_string(c_char_p):
-        def __init__(self, p=None):
-            if p is None:
-                p = ""
-            if isinstance(p, str):
-                p = p.encode("utf8")
-            super(c_char_p, self).__init__(p)
 
-        def __str__(self):
-            return self.value
+# Python 3 strings are unicode, translate them to/from utf8 for C-interop.
+class c_interop_string(c_char_p):
+    def __init__(self, p=None):
+        if p is None:
+            p = ""
+        if isinstance(p, str):
+            p = p.encode("utf8")
+        super(c_char_p, self).__init__(p)
 
-        @property
-        def value(self):
-            if super(c_char_p, self).value is None:
-                return None
-            return super(c_char_p, self).value.decode("utf8")
+    def __str__(self):
+        return self.value
 
-        @classmethod
-        def from_param(cls, param):
-            if isinstance(param, str):
-                return cls(param)
-            if isinstance(param, bytes):
-                return cls(param)
-            if param is None:
-                # Support passing null to C functions expecting char arrays
-                return None
-            raise TypeError(
-                "Cannot convert '{}' to '{}'".format(type(param).__name__, cls.__name__)
-            )
+    @property
+    def value(self):
+        if super(c_char_p, self).value is None:
+            return None
+        return super(c_char_p, self).value.decode("utf8")
 
-        @staticmethod
-        def to_python_string(x, *args):
-            return x.value
+    @classmethod
+    def from_param(cls, param):
+        if isinstance(param, str):
+            return cls(param)
+        if isinstance(param, bytes):
+            return cls(param)
+        if param is None:
+            # Support passing null to C functions expecting char arrays
+            return None
+        raise TypeError(
+            "Cannot convert '{}' to '{}'".format(type(param).__name__, cls.__name__)
+        )
 
-    def b(x):
-        if isinstance(x, bytes):
-            return x
-        return x.encode("utf8")
+    @staticmethod
+    def to_python_string(x, *args):
+        return x.value
 
-elif sys.version_info[0] == 2:
-    # Python 2 strings are utf8 byte strings, no translation is needed for
-    # C-interop.
-    c_interop_string = c_char_p
 
-    def _to_python_string(x, *args):
+def b(x):
+    if isinstance(x, bytes):
         return x
-
-    c_interop_string.to_python_string = staticmethod(_to_python_string)
-
-    def b(x):
-        return x
+    return x.encode("utf8")
 
 
 # Importing ABC-s directly from collections is deprecated since Python 3.7,
