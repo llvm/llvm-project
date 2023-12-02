@@ -51,8 +51,15 @@ public:
 // CHECK:   cir.return
 // CHECK: }
 
-// @B::~B() #1 declaration
-// CHECK:   cir.func private @_ZN1BD2Ev(!cir.ptr<![[ClassB]]>)
+// @B::~B() #1 definition call into base @A::~A()
+// CHECK:  cir.func linkonce_odr @_ZN1BD2Ev{{.*}}{
+// CHECK:    cir.call @_ZN1AD2Ev(
+
+// void foo()
+// CHECK: cir.func @_Z3foov()
+// CHECK:   cir.scope {
+// CHECK:     cir.call @_ZN1BC2Ev(%0) : (!cir.ptr<!ty_22B22>) -> ()
+// CHECK:     cir.call @_ZN1BD2Ev(%0) : (!cir.ptr<!ty_22B22>) -> ()
 
 // operator delete(void*) declaration
 // CHECK:   cir.func private @_ZdlPv(!cir.ptr<!void>)

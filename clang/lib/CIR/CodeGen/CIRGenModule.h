@@ -429,6 +429,8 @@ public:
   /// are emitted lazily.
   void buildGlobal(clang::GlobalDecl D);
 
+  bool tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
+
   mlir::Type getCIRType(const clang::QualType &type);
 
   /// Set the visibility for the given global.

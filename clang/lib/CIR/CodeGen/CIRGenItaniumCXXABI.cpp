@@ -501,7 +501,8 @@ void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
   // destructor, there are no fields with a non-trivial destructor, and the body
   // of the destructor is trivial.
   if (DD && GD.getDtorType() == Dtor_Base &&
-      CIRGenType != StructorCIRGen::COMDAT)
+      CIRGenType != StructorCIRGen::COMDAT &&
+      !CGM.tryEmitBaseDestructorAsAlias(DD))
     return;
 
   // FIXME: The deleting destructor is equivalent to the selected operator

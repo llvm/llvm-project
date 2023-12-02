@@ -470,7 +470,19 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
       : BaseClass(Base), BaseIsVirtual(BaseIsVirtual) {}
 
   void Emit(CIRGenFunction &CGF, Flags flags) override {
-    llvm_unreachable("NYI");
+    const CXXRecordDecl *DerivedClass =
+        cast<CXXMethodDecl>(CGF.CurCodeDecl)->getParent();
+
+    const CXXDestructorDecl *D = BaseClass->getDestructor();
+    // We are already inside a destructor, so presumably the object being
+    // destroyed should have the expected type.
+    QualType ThisTy = D->getFunctionObjectParameterType();
+    assert(CGF.currSrcLoc && "expected source location");
+    Address Addr = CGF.getAddressOfDirectBaseInCompleteClass(
+        *CGF.currSrcLoc, CGF.LoadCXXThisAddress(), DerivedClass, BaseClass,
+        BaseIsVirtual);
+    CGF.buildCXXDestructorCall(D, Dtor_Base, BaseIsVirtual,
+                               /*Delegating=*/false, Addr, ThisTy);
   }
 };
 
@@ -960,6 +972,94 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &CGF, Address addr,
                              /*Delegating=*/false, addr, type);
 }
 
+static bool FieldHasTrivialDestructorBody(ASTContext &Context,
+                                          const FieldDecl *Field);
+
+// FIXME(cir): this should be shared with traditional codegen.
+static bool
+HasTrivialDestructorBody(ASTContext &Context,
+                         const CXXRecordDecl *BaseClassDecl,
+                         const CXXRecordDecl *MostDerivedClassDecl) {
+  // If the destructor is trivial we don't have to check anything else.
+  if (BaseClassDecl->hasTrivialDestructor())
+    return true;
+
+  if (!BaseClassDecl->getDestructor()->hasTrivialBody())
+    return false;
+
+  // Check fields.
+  for (const auto *Field : BaseClassDecl->fields())
+    if (!FieldHasTrivialDestructorBody(Context, Field))
+      return false;
+
+  // Check non-virtual bases.
+  for (const auto &I : BaseClassDecl->bases()) {
+    if (I.isVirtual())
+      continue;
+
+    const CXXRecordDecl *NonVirtualBase =
+        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+    if (!HasTrivialDestructorBody(Context, NonVirtualBase,
+                                  MostDerivedClassDecl))
+      return false;
+  }
+
+  if (BaseClassDecl == MostDerivedClassDecl) {
+    // Check virtual bases.
+    for (const auto &I : BaseClassDecl->vbases()) {
+      const CXXRecordDecl *VirtualBase =
+          cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
+      if (!HasTrivialDestructorBody(Context, VirtualBase, MostDerivedClassDecl))
+        return false;
+    }
+  }
+
+  return true;
+}
+
+// FIXME(cir): this should be shared with traditional codegen.
+static bool FieldHasTrivialDestructorBody(ASTContext &Context,
+                                          const FieldDecl *Field) {
+  QualType FieldBaseElementType = Context.getBaseElementType(Field->getType());
+
+  const RecordType *RT = FieldBaseElementType->getAs<RecordType>();
+  if (!RT)
+    return true;
+
+  CXXRecordDecl *FieldClassDecl = cast<CXXRecordDecl>(RT->getDecl());
+
+  // The destructor for an implicit anonymous union member is never invoked.
+  if (FieldClassDecl->isUnion() && FieldClassDecl->isAnonymousStructOrUnion())
+    return false;
+
+  return HasTrivialDestructorBody(Context, FieldClassDecl, FieldClassDecl);
+}
+
+/// Check whether we need to initialize any vtable pointers before calling this
+/// destructor.
+/// FIXME(cir): this should be shared with traditional codegen.
+static bool CanSkipVTablePointerInitialization(CIRGenFunction &CGF,
+                                               const CXXDestructorDecl *Dtor) {
+  const CXXRecordDecl *ClassDecl = Dtor->getParent();
+  if (!ClassDecl->isDynamicClass())
+    return true;
+
+  // For a final class, the vtable pointer is known to already point to the
+  // class's vtable.
+  if (ClassDecl->isEffectivelyFinal())
+    return true;
+
+  if (!Dtor->hasTrivialBody())
+    return false;
+
+  // Check the fields.
+  for (const auto *Field : ClassDecl->fields())
+    if (!FieldHasTrivialDestructorBody(CGF.getContext(), Field))
+      return false;
+
+  return true;
+}
+
 /// Emits the body of the current destructor.
 void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CurGD.getDecl());
@@ -1037,37 +1137,35 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
     [[fallthrough]];
 
   case Dtor_Base:
-    llvm_unreachable("NYI");
     assert(Body);
 
-    // // Enter the cleanup scopes for fields and non-virtual bases.
-    // EnterDtorCleanups(Dtor, Dtor_Base);
+    // Enter the cleanup scopes for fields and non-virtual bases.
+    EnterDtorCleanups(Dtor, Dtor_Base);
 
-    // // Initialize the vtable pointers before entering the body.
-    // if (!CanSkipVTablePointerInitialization(*this, Dtor)) {
-    //   // Insert the llvm.launder.invariant.group intrinsic before
-    //   initializing
-    //   // the vptrs to cancel any previous assumptions we might have made.
-    //   if (CGM.getCodeGenOpts().StrictVTablePointers &&
-    //       CGM.getCodeGenOpts().OptimizationLevel > 0)
-    //     CXXThisValue = Builder.CreateLaunderInvariantGroup(LoadCXXThis());
-    //   InitializeVTablePointers(Dtor->getParent());
-    // }
+    // Initialize the vtable pointers before entering the body.
+    if (!CanSkipVTablePointerInitialization(*this, Dtor)) {
+      // Insert the llvm.launder.invariant.group intrinsic before initializing
+      // the vptrs to cancel any previous assumptions we might have made.
+      if (CGM.getCodeGenOpts().StrictVTablePointers &&
+          CGM.getCodeGenOpts().OptimizationLevel > 0)
+        llvm_unreachable("NYI");
+      llvm_unreachable("NYI");
+    }
 
-    // if (isTryBody)
-    //   EmitStmt(cast<CXXTryStmt>(Body)->getTryBlock());
-    // else if (Body)
-    //   EmitStmt(Body);
-    // else {
-    //   assert(Dtor->isImplicit() && "bodyless dtor not implicit");
-    //   // nothing to do besides what's in the epilogue
-    // }
-    // // -fapple-kext must inline any call to this dtor into
-    // // the caller's body.
-    // if (getLangOpts().AppleKext)
-    //   CurFn->addFnAttr(llvm::Attribute::AlwaysInline);
+    if (isTryBody)
+      llvm_unreachable("NYI");
+    else if (Body)
+      (void)buildStmt(Body, /*useCurrentScope=*/true);
+    else {
+      assert(Dtor->isImplicit() && "bodyless dtor not implicit");
+      // nothing to do besides what's in the epilogue
+    }
+    // -fapple-kext must inline any call to this dtor into
+    // the caller's body.
+    if (getLangOpts().AppleKext)
+      llvm_unreachable("NYI");
 
-    // break;
+    break;
   }
 
   // Jump out through the epilogue cleanups.
@@ -1163,7 +1261,59 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
     return;
   }
 
-  llvm_unreachable("NYI");
+  assert(DtorType == Dtor_Base);
+  // Poison the vtable pointer if it has no virtual bases, but inherits
+  // virtual functions.
+  if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
+      SanOpts.has(SanitizerKind::Memory) && !ClassDecl->getNumVBases() &&
+      ClassDecl->isPolymorphic())
+    assert(!UnimplementedFeature::sanitizeDtor());
+
+  // Destroy non-virtual bases.
+  for (const auto &Base : ClassDecl->bases()) {
+    // Ignore virtual bases.
+    if (Base.isVirtual())
+      continue;
+
+    CXXRecordDecl *BaseClassDecl = Base.getType()->getAsCXXRecordDecl();
+
+    if (BaseClassDecl->hasTrivialDestructor()) {
+      if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
+          SanOpts.has(SanitizerKind::Memory) && !BaseClassDecl->isEmpty())
+        assert(!UnimplementedFeature::sanitizeDtor());
+    } else {
+      EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
+                                        /*BaseIsVirtual*/ false);
+    }
+  }
+
+  // Poison fields such that access after their destructors are
+  // invoked, and before the base class destructor runs, is invalid.
+  bool SanitizeFields = CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
+                        SanOpts.has(SanitizerKind::Memory);
+  assert(!UnimplementedFeature::sanitizeDtor());
+
+  // Destroy direct fields.
+  for (const auto *Field : ClassDecl->fields()) {
+    if (SanitizeFields)
+      assert(!UnimplementedFeature::sanitizeDtor());
+
+    QualType type = Field->getType();
+    QualType::DestructionKind dtorKind = type.isDestructedType();
+    if (!dtorKind)
+      continue;
+
+    // Anonymous union members do not have their destructors called.
+    const RecordType *RT = type->getAsUnionType();
+    if (RT && RT->getDecl()->isAnonymousStructOrUnion())
+      continue;
+
+    [[maybe_unused]] CleanupKind cleanupKind = getCleanupKind(dtorKind);
+    llvm_unreachable("EHStack.pushCleanup<DestroyField>(...) NYI");
+  }
+
+  if (SanitizeFields)
+    assert(!UnimplementedFeature::sanitizeDtor());
 }
 
 void CIRGenFunction::buildCXXDestructorCall(const CXXDestructorDecl *DD,

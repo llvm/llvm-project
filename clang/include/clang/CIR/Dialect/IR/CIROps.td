@@ -1801,6 +1801,14 @@ def FuncOp : CIR_Op<"func", [
     //===------------------------------------------------------------------===//
 
     bool isDeclaration();
+
+    // FIXME: should be shared with GlobalOp extra declaration.
+    bool isDeclarationForLinker() {
+      if (mlir::cir::isAvailableExternallyLinkage(getLinkage()))
+        return true;
+
+      return isDeclaration();
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;
