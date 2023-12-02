@@ -8352,16 +8352,16 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
   CmpInst::Predicate LPred =
       LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
 
-  // Can we infer anything when the two compares have matching operands?
-  bool AreSwappedOps;
-  if (areMatchingOperands(L0, L1, R0, R1, AreSwappedOps))
-    return isImpliedCondMatchingOperands(LPred, RPred, AreSwappedOps);
-
   // Can we infer anything when the 0-operands match and the 1-operands are
   // constants (not necessarily matching)?
   const APInt *LC, *RC;
   if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
     return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
+
+  // Can we infer anything when the two compares have matching operands?
+  bool AreSwappedOps;
+  if (areMatchingOperands(L0, L1, R0, R1, AreSwappedOps))
+    return isImpliedCondMatchingOperands(LPred, RPred, AreSwappedOps);
 
   // L0 = R0 = L1 + R1, L0 >=u L1 implies R0 >=u R1, L0 <u L1 implies R0 <u R1
   if (ICmpInst::isUnsigned(LPred) && ICmpInst::isUnsigned(RPred)) {
