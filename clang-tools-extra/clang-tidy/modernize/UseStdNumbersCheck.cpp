@@ -442,4 +442,9 @@ void UseStdNumbersCheck::registerPPCallbacks(
     Preprocessor *const ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
 }
+
+void UseStdNumbersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+  Options.store(Opts, "DiffThreshold", DiffThresholdString);
+}
 } // namespace clang::tidy::modernize

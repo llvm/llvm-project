@@ -33,10 +33,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
-    Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-    Options.store(Opts, "DiffThreshold", DiffThresholdString);
-  }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
