@@ -10,7 +10,6 @@
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "gtest/gtest.h"
 #include <array>
-#include <optional>
 
 using namespace llvm;
 
