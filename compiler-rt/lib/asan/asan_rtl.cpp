@@ -520,7 +520,9 @@ static void AsanInitInternal() {
 // Initialize as requested from some part of ASan runtime library (interceptors,
 // allocator, etc).
 void AsanInitFromRtl() {
-  AsanInitInternal();
+  CHECK(!AsanInitIsRunning());
+  if (UNLIKELY(!AsanInited()))
+    AsanInitInternal();
 }
 
 #if ASAN_DYNAMIC
