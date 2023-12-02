@@ -8620,7 +8620,7 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
     Result.set(E);
   } else {
     Value = &Info.CurrentCall->createTemporary(
-        E, E->getType(),
+        E, Inner->getType(),
         E->getStorageDuration() == SD_FullExpression ? ScopeKind::FullExpression
                                                      : ScopeKind::Block,
         Result);
