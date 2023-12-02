@@ -299,10 +299,8 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
 
       if (!PM->getNumUsedPlugins()) {
         llvm::SmallVector<llvm::StringRef> Archs;
-        llvm::transform(PM->Images, std::back_inserter(Archs),
-                        [](const auto &X) {
-                          return !X.second.Arch ? "empty" : X.second.Arch;
-                        });
+        llvm::transform(PM->deviceImages(), std::back_inserter(Archs),
+                        [](const auto &X) { return X.getArch("empty"); });
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
         fprintf(stderr, "Found (%s)\n", llvm::join(Archs, ",").c_str());
