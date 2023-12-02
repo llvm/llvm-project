@@ -32,6 +32,8 @@
 // CHECK: .p2align 12
 // CHECK: __hip_fatbin:
 // CHECK: .incbin "[[BUNDLE:.*hipfb]]"
+// LNX: .section .note.GNU-stack, "", @progbits
+// MSVC-NOT: .note.GNU-stack
 
 // emit objects for host side path
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" [[HOST:"x86_64-[^"]+"]]
