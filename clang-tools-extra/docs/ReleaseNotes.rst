@@ -186,6 +186,11 @@ New checks
 
   Replace ``enable_if`` with C++20 requires clauses.
 
+- New :doc:`modernize-use-digit-separator
+  <clang-tidy/checks/modernize/use-digit-separator>` check.
+
+  FIXME: add release notes.
+
 - New :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check.
 
