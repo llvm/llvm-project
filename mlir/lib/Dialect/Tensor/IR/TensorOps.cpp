@@ -1446,7 +1446,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     SmallVector<int64_t> newShape;
     operandsAndShape(resultType, dynamicExtents, newOperands, newShape);
 
-    if (hasNegativeDimension(newShape))
+    if (!hasValidSizesOffsets(newShape))
       return failure();
 
     if (newOperands.size() == tensorFromElements.getDynamicExtents().size())
@@ -1983,10 +1983,6 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  if (hasNegativeDimension(staticOffsets))
-    return {};
-  if (hasNegativeDimension(staticSizes))
-    return {};
   return ExtractSliceOp::inferCanonicalRankReducedResultType(
       desiredResultRank, sourceRankedTensorType, staticOffsets, staticSizes,
       staticStrides);
@@ -2547,17 +2543,15 @@ public:
     SmallVector<OpFoldResult> mixedStrides(insertSliceOp.getMixedStrides());
 
     // No constant operands were folded, just return;
-    if (failed(foldDynamicIndexList(mixedOffsets, /*onlyNonNegative=*/true)) &&
-        failed(foldDynamicIndexList(mixedSizes, /*onlyNonNegative=*/true)) &&
-        failed(foldDynamicIndexList(mixedStrides)))
+    if (failed(foldDynamicOffsetSizeList(mixedOffsets)) &&
+        failed(foldDynamicOffsetSizeList(mixedSizes)) &&
+        failed(foldDynamicStrideList(mixedStrides)))
       return failure();
 
     // Create the new op in canonical form.
     auto sourceType = ExtractSliceOp::inferCanonicalRankReducedResultType(
         insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
         mixedOffsets, mixedSizes, mixedStrides);
-    if (!sourceType)
-      return failure();
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
@@ -2692,7 +2686,7 @@ struct InsertSliceOpSourceCastInserter final
         newSrcShape[i] = *constInt;
       }
     }
-    if (hasNegativeDimension(newSrcShape))
+    if (!hasValidSizesOffsets(newSrcShape))
       return failure();
 
     RankedTensorType newSrcType =
