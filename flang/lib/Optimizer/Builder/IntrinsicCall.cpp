@@ -3330,17 +3330,17 @@ IntrinsicLibrary::genIchar(mlir::Type resultType,
   return builder.create<mlir::arith::ExtUIOp>(loc, resultType, code);
 }
 
-/// llvm floating point class intrinsic test values
-///   0   Signaling NaN
-///   1   Quiet NaN
-///   2   Negative infinity
-///   3   Negative normal
-///   4   Negative subnormal
-///   5   Negative zero
-///   6   Positive zero
-///   7   Positive subnormal
-///   8   Positive normal
-///   9   Positive infinity
+// llvm floating point class intrinsic test values
+//   0   Signaling NaN
+//   1   Quiet NaN
+//   2   Negative infinity
+//   3   Negative normal
+//   4   Negative subnormal
+//   5   Negative zero
+//   6   Positive zero
+//   7   Positive subnormal
+//   8   Positive normal
+//   9   Positive infinity
 static constexpr int finiteTest = 0b0111111000;
 static constexpr int nanTest = 0b0000000011;
 static constexpr int negativeTest = 0b0000111100;
