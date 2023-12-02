@@ -9,7 +9,6 @@
 #include "UseStdNumbersCheck.h"
 #include "../ClangTidyDiagnosticConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
