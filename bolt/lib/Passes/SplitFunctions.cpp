@@ -114,6 +114,16 @@ static cl::opt<double> CallScale(
     "call-scale",
     cl::desc("Call score scale coefficient (when --split-strategy=cdsplit)"),
     cl::init(0.95), cl::ReallyHidden, cl::cat(BoltOptCategory));
+
+static cl::opt<double>
+    CallPower("call-power",
+              cl::desc("Call score power (when --split-strategy=cdsplit)"),
+              cl::init(0.05), cl::ReallyHidden, cl::cat(BoltOptCategory));
+
+static cl::opt<double>
+    JumpPower("jump-power",
+              cl::desc("Jump score power (when --split-strategy=cdsplit)"),
+              cl::init(0.15), cl::ReallyHidden, cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
@@ -193,6 +203,13 @@ private:
   struct CallInfo {
     size_t Length;
     size_t Count;
+  };
+
+  struct SplitScore {
+    size_t SplitIndex;
+    size_t HotSizeReduction = 0;
+    double LocalScore = 0;
+    double CoverCallScore = 0;
   };
 
   // Auxiliary variables used by the algorithm.
@@ -340,8 +357,9 @@ private:
       // We only care about new addresses of blocks in hot/warm.
       if (BB->getFragmentNum() == FragmentNum::cold())
         break;
+      const size_t NewSize = BB->getOutputSize();
       BB->setOutputStartAddress(CurrentAddr);
-      CurrentAddr += BB->getOutputSize();
+      CurrentAddr += NewSize;
       BB->setOutputEndAddress(CurrentAddr);
       if (BB->getLayoutIndex() == SplitIndex) {
         NewHotEndAddr = CurrentAddr;
@@ -402,13 +420,192 @@ private:
     return CoverCalls;
   }
 
+  /// Compute the edge score of a call edge.
+  double computeCallScore(uint64_t CallCount, size_t CallLength) {
+    // Increase call lengths by 1 to avoid raising 0 to a negative power.
+    return opts::CallScale * static_cast<double>(CallCount) /
+           std::pow(static_cast<double>(CallLength + 1), opts::CallPower);
+  }
+
+  /// Compute the edge score of a jump (branch) edge.
+  double computeJumpScore(uint64_t JumpCount, size_t JumpLength) {
+    // Increase jump lengths by 1 to avoid raising 0 to a negative power.
+    return static_cast<double>(JumpCount) /
+           std::pow(static_cast<double>(JumpLength + 1), opts::JumpPower);
+  }
+
+  /// Compute sum of scores over jumps within \p BlockOrder given \p SplitIndex.
+  /// Increament Score.LocalScore in place by the sum.
+  void computeJumpScore(const BasicBlockOrder &BlockOrder,
+                        const size_t SplitIndex, SplitScore &Score) {
+
+    for (const BinaryBasicBlock *SrcBB : BlockOrder) {
+      if (SrcBB->getKnownExecutionCount() == 0)
+        continue;
+
+      const size_t SrcBBEndAddr = SrcBB->getOutputAddressRange().second;
+
+      for (const auto Pair : zip(SrcBB->successors(), SrcBB->branch_info())) {
+        const BinaryBasicBlock *DstBB = std::get<0>(Pair);
+        const BinaryBasicBlock::BinaryBranchInfo &Branch = std::get<1>(Pair);
+        const size_t JumpCount = Branch.Count;
+
+        if (JumpCount == 0)
+          continue;
+
+        const size_t DstBBStartAddr = DstBB->getOutputAddressRange().first;
+        const size_t NewJumpLength =
+            AbsoluteDifference(SrcBBEndAddr, DstBBStartAddr);
+        Score.LocalScore += computeJumpScore(JumpCount, NewJumpLength);
+      }
+    }
+  }
+
+  /// Compute sum of scores over calls originated in the current function
+  /// given \p SplitIndex. Increament Score.LocalScore in place by the sum.
+  void computeLocalCallScore(const BasicBlockOrder &BlockOrder,
+                             const size_t SplitIndex, SplitScore &Score) {
+    if (opts::CallScale == 0)
+      return;
+
+    // Global index of the last block in the current function.
+    // This is later used to determine whether a call originated in the current
+    // function is to a function that comes after the current function.
+    const size_t LastGlobalIndex = GlobalIndices[BlockOrder.back()];
+
+    // The length of calls originated in the input function can increase /
+    // decrease depending on the splitting decision.
+    for (const BinaryBasicBlock *SrcBB : BlockOrder) {
+      const size_t CallCount = SrcBB->getKnownExecutionCount();
+      // If SrcBB does not call any functions, skip it.
+      if (CallCount == 0)
+        continue;
+
+      // Obtain an estimate on the end address of the src basic block
+      // after splitting at SplitIndex.
+      const size_t SrcBBEndAddr = SrcBB->getOutputAddressRange().second;
+
+      for (const BinaryBasicBlock *DstBB : Callees[GlobalIndices[SrcBB]]) {
+        // Obtain an estimate on the start address of the dst basic block
+        // after splitting at SplitIndex. If DstBB is in a function before
+        // the current function, then its start address remains unchanged.
+        size_t DstBBStartAddr = BBOffsets[DstBB];
+        // If DstBB is in a function after the current function, then its
+        // start address should be adjusted based on the reduction in hot size.
+        if (GlobalIndices[DstBB] > LastGlobalIndex) {
+          assert(DstBBStartAddr >= Score.HotSizeReduction);
+          DstBBStartAddr -= Score.HotSizeReduction;
+        }
+        const size_t NewCallLength =
+            AbsoluteDifference(SrcBBEndAddr, DstBBStartAddr);
+        Score.LocalScore += computeCallScore(CallCount, NewCallLength);
+      }
+    }
+  }
+
+  /// Compute sum of splitting scores for cover calls of the input function.
+  /// Increament Score.CoverCallScore in place by the sum.
+  void computeCoverCallScore(const BasicBlockOrder &BlockOrder,
+                             const size_t SplitIndex,
+                             const std::vector<CallInfo> &CoverCalls,
+                             SplitScore &Score) {
+    if (opts::CallScale == 0)
+      return;
+
+    for (const CallInfo CI : CoverCalls) {
+      assert(CI.Length >= Score.HotSizeReduction &&
+             "Length of cover calls must exceed reduced size of hot fragment.");
+      // Compute the new length of the call, which is shorter than the original
+      // one by the size of the splitted fragment minus the total size increase.
+      const size_t NewCallLength = CI.Length - Score.HotSizeReduction;
+      Score.CoverCallScore += computeCallScore(CI.Count, NewCallLength);
+    }
+  }
+
+  /// Compute the split score of splitting a function at a given index.
+  /// The split score consists of local score and cover score. Cover call score
+  /// is expensive to compute. As a result, we pass in a \p ReferenceScore and
+  /// compute cover score only when the local score exceeds that in the
+  /// ReferenceScore or that the size reduction of the hot fragment is larger
+  /// than that achieved by the split index of the ReferenceScore. This function
+  /// returns \p Score of SplitScore type. It contains the local score and cover
+  /// score (if computed) of the current splitting index. For easier book
+  /// keeping and comparison, it also stores the split index and the resulting
+  /// reduction in hot fragment size.
+  SplitScore computeSplitScore(const BinaryFunction &BF,
+                               const BasicBlockOrder &BlockOrder,
+                               const size_t SplitIndex,
+                               const std::vector<CallInfo> &CoverCalls,
+                               const SplitScore &ReferenceScore) {
+    // Populate BinaryBasicBlock::OutputAddressRange with estimated
+    // new start and end addresses after hot-warm splitting at SplitIndex.
+    size_t OldHotEnd;
+    size_t NewHotEnd;
+    std::tie(OldHotEnd, NewHotEnd) =
+        estimatePostSplitBBAddress(BlockOrder, SplitIndex);
+
+    SplitScore Score;
+    Score.SplitIndex = SplitIndex;
+
+    // It's not worth splitting if OldHotEnd < NewHotEnd.
+    if (OldHotEnd < NewHotEnd)
+      return Score;
+
+    // Hot fragment size reduction due to splitting.
+    Score.HotSizeReduction = OldHotEnd - NewHotEnd;
+
+    // First part of LocalScore is the sum over call edges originated in the
+    // input function. These edges can get shorter or longer depending on
+    // SplitIndex. Score.LocalScore is increamented in place.
+    computeLocalCallScore(BlockOrder, SplitIndex, Score);
+
+    // Second part of LocalScore is the sum over jump edges with src basic block
+    // and dst basic block in the current function. Score.LocalScore is
+    // increamented in place.
+    computeJumpScore(BlockOrder, SplitIndex, Score);
+
+    // There is no need to compute CoverCallScore if we have already found
+    // another split index with a bigger LocalScore and bigger HotSizeReduction.
+    if (Score.LocalScore <= ReferenceScore.LocalScore &&
+        Score.HotSizeReduction <= ReferenceScore.HotSizeReduction)
+      return Score;
+
+    // Compute CoverCallScore and store in Score in place.
+    computeCoverCallScore(BlockOrder, SplitIndex, CoverCalls, Score);
+    return Score;
+  }
+
   /// Find the best index for splitting. The returned value is the index of the
   /// last hot basic block. Hence, "no splitting" is equivalent to returning the
   /// value which is one less than the size of the function.
   size_t findSplitIndex(const BinaryFunction &BF,
                         const BasicBlockOrder &BlockOrder) {
-    // Placeholder: hot-warm split after entry block.
-    return 0;
+    // Find all function calls that can be shortened if we move blocks of the
+    // current function to warm/cold
+    const std::vector<CallInfo> CoverCalls = extractCoverCalls(BF);
+
+    // Try all possible split indices (blocks with Index <= SplitIndex are in
+    // hot) and find the one maximizing the splitting score.
+    SplitScore BestScore;
+    double BestScoreSum = -1.0;
+    SplitScore ReferenceScore;
+    for (size_t Index = 0; Index < BlockOrder.size(); Index++) {
+      const BinaryBasicBlock *LastHotBB = BlockOrder[Index];
+      // No need to keep cold blocks in the hot section.
+      if (LastHotBB->getFragmentNum() == FragmentNum::cold())
+        break;
+      const SplitScore Score =
+          computeSplitScore(BF, BlockOrder, Index, CoverCalls, ReferenceScore);
+      double ScoreSum = Score.LocalScore + Score.CoverCallScore;
+      if (ScoreSum > BestScoreSum) {
+        BestScoreSum = ScoreSum;
+        BestScore = Score;
+      }
+      if (Score.LocalScore > ReferenceScore.LocalScore)
+        ReferenceScore = Score;
+    }
+
+    return BestScore.SplitIndex;
   }
 };
 
