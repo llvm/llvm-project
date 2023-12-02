@@ -54,6 +54,7 @@ FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass, ())
 FUNCTION_PASS("tlshoist", TLSVariableHoistPass, ())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass, ())
 FUNCTION_PASS("verify", VerifierPass, ())
+FUNCTION_PASS("win-eh-prepare", WinEHPreparePass, ())
 #undef FUNCTION_PASS
 
 #ifndef LOOP_PASS
@@ -131,7 +132,6 @@ DUMMY_FUNCTION_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass, ())
 DUMMY_FUNCTION_PASS("sjljehprepare", SjLjEHPreparePass, ())
 DUMMY_FUNCTION_PASS("stack-protector", StackProtectorPass, ())
 DUMMY_FUNCTION_PASS("wasmehprepare", WasmEHPass, ())
-DUMMY_FUNCTION_PASS("winehprepare", WinEHPass, ())
 #undef DUMMY_FUNCTION_PASS
 
 #ifndef DUMMY_MODULE_PASS
