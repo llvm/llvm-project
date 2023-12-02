@@ -256,7 +256,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
-      setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
+      setOperationAction(ISD::CTPOP, VT, Legal);
     }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -286,7 +286,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
-      setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
+      setOperationAction(ISD::CTPOP, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -2827,15 +2827,6 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lasx_xvsrai_d:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<6>(N, 2, DAG));
-  case Intrinsic::loongarch_lsx_vclz_b:
-  case Intrinsic::loongarch_lsx_vclz_h:
-  case Intrinsic::loongarch_lsx_vclz_w:
-  case Intrinsic::loongarch_lsx_vclz_d:
-  case Intrinsic::loongarch_lasx_xvclz_b:
-  case Intrinsic::loongarch_lasx_xvclz_h:
-  case Intrinsic::loongarch_lasx_xvclz_w:
-  case Intrinsic::loongarch_lasx_xvclz_d:
-    return DAG.getNode(ISD::CTLZ, DL, N->getValueType(0), N->getOperand(1));
   case Intrinsic::loongarch_lsx_vpcnt_b:
   case Intrinsic::loongarch_lsx_vpcnt_h:
   case Intrinsic::loongarch_lsx_vpcnt_w:
