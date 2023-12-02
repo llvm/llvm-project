@@ -5546,7 +5546,7 @@ void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
     addr_t addr = wp_res_sp->GetLoadAddress();
     size_t size = wp_res_sp->GetByteSize();
     GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
-    m_gdb_comm.SendGDBStoppointTypePacket(type, true, addr, size,
+    m_gdb_comm.SendGDBStoppointTypePacket(type, enable, addr, size,
                                           GetInterruptTimeout());
   }
 }
