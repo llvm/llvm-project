@@ -147,11 +147,11 @@ namespace utils {
 
     inline bool exists(std::string const& path) {
 #ifdef _WIN32
-        struct ::_stat tmp;
-        return ::_stat(path.c_str(), &tmp) == 0;
+      struct ::_stat tmp;
+      return ::_stat(path.c_str(), &tmp) == 0;
 #else
-        struct ::stat tmp;
-        return ::stat(path.c_str(), &tmp) == 0;
+      struct ::stat tmp;
+      return ::stat(path.c_str(), &tmp) == 0;
 #endif
     }
 } // end namespace utils
@@ -238,12 +238,10 @@ struct scoped_test_env
     std::string create_file(fs::path filename_path, std::uintmax_t size = 0) {
         std::string filename = sanitize_path(filename_path.string());
 
-        if (size >
-            static_cast<typename std::make_unsigned<utils::off64_t>::type>(
-                (std::numeric_limits<utils::off64_t>::max)())) {
-            fprintf(stderr, "create_file(%s, %ju) too large\n",
-                    filename.c_str(), size);
-            abort();
+        if (size > static_cast<typename std::make_unsigned<utils::off64_t>::type>(
+                       (std::numeric_limits<utils::off64_t>::max)())) {
+          fprintf(stderr, "create_file(%s, %ju) too large\n", filename.c_str(), size);
+          abort();
         }
 
 #if defined(_WIN32) || defined(__MVS__)
@@ -265,10 +263,9 @@ struct scoped_test_env
 #endif
 
         if (utils::ftruncate64(fd, static_cast<utils::off64_t>(size)) == -1) {
-            fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(),
-                    size, strerror(errno));
-            fclose(file);
-            abort();
+          fprintf(stderr, "ftruncate %s %ju failed: %s\n", filename.c_str(), size, strerror(errno));
+          fclose(file);
+          abort();
         }
 
         fclose(file);
