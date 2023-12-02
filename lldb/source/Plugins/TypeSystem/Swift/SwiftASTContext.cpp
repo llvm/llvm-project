@@ -5675,7 +5675,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::OpenedArchetype:
@@ -5829,7 +5828,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinPackIndex:    
   case swift::TypeKind::BuiltinTuple:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Pack:
   case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
@@ -6326,7 +6324,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -6432,7 +6429,6 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -6575,7 +6571,6 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -6807,7 +6802,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -7001,7 +6995,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -7159,7 +7152,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
@@ -7474,7 +7466,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinRawUnsafeContinuation:
     case swift::TypeKind::Error:
     case swift::TypeKind::InOut:
-    case swift::TypeKind::Inverse:
     case swift::TypeKind::Module:
     case swift::TypeKind::BuiltinPackIndex:
     case swift::TypeKind::Pack:
@@ -7865,7 +7856,6 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
-  case swift::TypeKind::Inverse:
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
