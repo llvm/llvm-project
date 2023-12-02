@@ -446,24 +446,23 @@ LogicalResult LoopPipelinerInternal::createKernel(
   // We create a mapping between original values and the associated loop
   // returned values that will be needed by the epilogue.
   llvm::SmallVector<Value> yieldOperands;
-  for (OpOperand &yielOperand :
+  for (OpOperand &yieldOperand :
        forOp.getBody()->getTerminator()->getOpOperands()) {
-    Value source = mapping.lookupOrDefault(yielOperand.get());
-    // When we don't peel the epilogue the yield value is used outside the loop
-    // we need to make sure we return the version from numStages - defStage.
+    Value source = mapping.lookupOrDefault(yieldOperand.get());
+    // When we don't peel the epilogue and the yield value is used outside the
+    // loop we need to make sure we return the version from numStages -
+    // defStage.
     if (!peelEpilogue &&
-        !forOp.getResult(yielOperand.getOperandNumber()).use_empty()) {
-      auto [def, distance] = getDefiningOpAndDistance(yielOperand.get());
+        !forOp.getResult(yieldOperand.getOperandNumber()).use_empty()) {
+      Operation *def = getDefiningOpAndDistance(yieldOperand.get()).first;
       if (def) {
         auto defStage = stages.find(def);
-        if (defStage != stages.end()) {
+        if (defStage != stages.end() && defStage->second < maxStage) {
           Value pred = predicates[defStage->second];
-          if (pred) {
-            source = rewriter.create<arith::SelectOp>(
-                pred.getLoc(), pred, source,
-                newForOp.getBody()
-                    ->getArguments()[yielOperand.getOperandNumber() + 1]);
-          }
+          source = rewriter.create<arith::SelectOp>(
+              pred.getLoc(), pred, source,
+              newForOp.getBody()
+                  ->getArguments()[yieldOperand.getOperandNumber() + 1]);
         }
       }
     }
