@@ -16,7 +16,6 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 
 #include <asm/prctl.h>
-#include <linux/auxvec.h>
 #include <linux/elf.h>
 #include <stdint.h>
 #include <sys/mman.h>
@@ -39,8 +38,6 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #else
 #error "mmap and mmap2 syscalls not available."
 #endif
-
-AppProperties app;
 
 static ThreadAttributes main_thread_attrib;
 
@@ -145,12 +142,6 @@ static void call_fini_array_callbacks() {
 
 using LIBC_NAMESPACE::app;
 
-// TODO: Would be nice to use the aux entry structure from elf.h when available.
-struct AuxEntry {
-  uint64_t type;
-  uint64_t value;
-};
-
 extern "C" void _start() {
   // This TU is compiled with -fno-omit-frame-pointer. Hence, the previous value
   // of the base pointer is pushed on to the stack. So, we step over it (the
@@ -193,9 +184,11 @@ extern "C" void _start() {
   // denoted by an AT_NULL entry.
   Elf64_Phdr *program_hdr_table = nullptr;
   uintptr_t program_hdr_count = 0;
-  for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
-       aux_entry->type != AT_NULL; ++aux_entry) {
-    switch (aux_entry->type) {
+  app.auxv_ptr = reinterpret_cast<const LIBC_NAMESPACE::AuxEntryType *>(
+      env_end_marker + 1);
+  for (const LIBC_NAMESPACE::AuxEntryType *aux_entry = app.auxv_ptr;
+       aux_entry->id != AT_NULL; ++aux_entry) {
+    switch (aux_entry->id) {
     case AT_PHDR:
       program_hdr_table = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
       break;

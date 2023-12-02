@@ -166,6 +166,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
 
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed

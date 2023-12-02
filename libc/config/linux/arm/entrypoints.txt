@@ -92,6 +92,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+
+    # sys/auxv.h entrypoints
+    libc.src.sys.auxv.getauxval
+
+    # sys/prctl.h entrypoints
+    libc.src.sys.prctl.prctl
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

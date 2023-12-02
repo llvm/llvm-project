@@ -402,6 +402,8 @@ add_entrypoint_object(
   DEPENDS
     libc.include.unistd
     libc.src.errno.errno
+    libc.config.linux.app_h
+    libc.src.sys.auxv.getauxval
 )
 
 add_entrypoint_object(

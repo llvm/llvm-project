@@ -8,10 +8,10 @@
 
 #include "src/unistd/sysconf.h"
 
+#include "config/linux/app.h"
 #include "src/__support/common.h"
-
 #include "src/errno/libc_errno.h"
-#include <linux/param.h> // For EXEC_PAGESIZE.
+#include "src/sys/auxv/getauxval.h"
 #include <unistd.h>
 
 namespace LIBC_NAMESPACE {
@@ -19,8 +19,11 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   long ret = 0;
   if (name == _SC_PAGESIZE) {
-    // TODO: get this information from the auxvector.
-    return EXEC_PAGESIZE;
+    if (app.page_size)
+      return app.page_size;
+    int errno_backup = libc_errno;
+    ret = static_cast<long>(getauxval(AT_PAGESZ));
+    libc_errno = errno_backup;
   }
   // TODO: Complete the rest of the sysconf options.
   if (ret < 0) {

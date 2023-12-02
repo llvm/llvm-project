@@ -9,8 +9,10 @@
 #ifndef LLVM_LIBC_CONFIG_LINUX_APP_H
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
+#include <linux/auxvec.h>
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE {
@@ -18,21 +20,21 @@ namespace LIBC_NAMESPACE {
 // Data structure to capture properties of the linux/ELF TLS image.
 struct TLSImage {
   // The load address of the TLS.
-  uintptr_t address;
+  uintptr_t address = 0;
 
   // The byte size of the TLS image consisting of both initialized and
   // uninitialized memory. In ELF executables, it is size of .tdata + size of
   // .tbss. Put in another way, it is the memsz field of the PT_TLS header.
-  uintptr_t size;
+  uintptr_t size = 0;
 
   // The byte size of initialized memory in the TLS image. In ELF exectubles,
   // this is the size of .tdata. Put in another way, it is the filesz of the
   // PT_TLS header.
-  uintptr_t init_size;
+  uintptr_t init_size = 0;
 
   // The alignment of the TLS layout. It assumed that the alignment
   // value is a power of 2.
-  uintptr_t align;
+  uintptr_t align = 0;
 };
 
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                     \
@@ -49,10 +51,18 @@ typedef uintptr_t ArgcType;
 typedef uintptr_t ArgVEntryType;
 
 typedef uintptr_t EnvironType;
-typedef uintptr_t AuxEntryType;
 #else
 #error "argc and argv types are not defined for the target platform."
 #endif
+
+// According the manpage associated to /proc/<pid>/auxv:
+// ... The format is one unsigned long ID plus one unsigned long
+// value for each entry ...
+// https://man7.org/linux/man-pages/man5/proc.5.html
+struct AuxEntryType {
+  unsigned long id;
+  unsigned long value;
+};
 
 struct Args {
   ArgcType argc;
@@ -69,18 +79,21 @@ struct Args {
 // Data structure which captures properties of a linux application.
 struct AppProperties {
   // Page size used for the application.
-  uintptr_t page_size;
+  uintptr_t page_size = 0;
 
-  Args *args;
+  Args *args = nullptr;
 
   // The properties of an application's TLS image.
-  TLSImage tls;
+  TLSImage tls{};
 
   // Environment data.
-  EnvironType *env_ptr;
+  EnvironType *env_ptr = nullptr;
+
+  // Auxiliary vector data.
+  const AuxEntryType *auxv_ptr = nullptr;
 };
 
-extern AppProperties app;
+LIBC_INLINE_VAR AppProperties app{};
 
 // The descriptor of a thread's TLS area.
 struct TLSDescriptor {

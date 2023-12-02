@@ -13,7 +13,6 @@
 #include "src/stdlib/exit.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
-#include <linux/auxvec.h>
 #include <linux/elf.h>
 #include <stdint.h>
 #include <sys/mman.h>
@@ -31,8 +30,6 @@ static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap;
 #else
 #error "mmap and mmap2 syscalls not available."
 #endif
-
-AppProperties app;
 
 static ThreadAttributes main_thread_attrib;
 
@@ -116,12 +113,6 @@ static void call_fini_array_callbacks() {
 
 using LIBC_NAMESPACE::app;
 
-// TODO: Would be nice to use the aux entry structure from elf.h when available.
-struct AuxEntry {
-  LIBC_NAMESPACE::AuxEntryType type;
-  LIBC_NAMESPACE::AuxEntryType value;
-};
-
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                     \
     defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
     defined(LIBC_TARGET_ARCH_IS_RISCV64)
@@ -158,9 +149,11 @@ __attribute__((noinline)) static void do_start() {
   // denoted by an AT_NULL entry.
   PgrHdrTableType *program_hdr_table = nullptr;
   uintptr_t program_hdr_count;
-  for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
-       aux_entry->type != AT_NULL; ++aux_entry) {
-    switch (aux_entry->type) {
+  app.auxv_ptr = reinterpret_cast<const LIBC_NAMESPACE::AuxEntryType *>(
+      env_end_marker + 1);
+  for (const LIBC_NAMESPACE::AuxEntryType *aux_entry = app.auxv_ptr;
+       aux_entry->id != AT_NULL; ++aux_entry) {
+    switch (aux_entry->id) {
     case AT_PHDR:
       program_hdr_table = reinterpret_cast<PgrHdrTableType *>(aux_entry->value);
       break;
