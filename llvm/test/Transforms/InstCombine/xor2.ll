@@ -36,7 +36,7 @@ define i1 @test1(i32 %A) {
 define i32 @test2(i32 %t1) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[OVM:%.*]] = and i32 [[T1:%.*]], 32
-; CHECK-NEXT:    [[OV1101:%.*]] = or i32 [[OVM]], 8
+; CHECK-NEXT:    [[OV1101:%.*]] = or disjoint i32 [[OVM]], 8
 ; CHECK-NEXT:    ret i32 [[OV1101]]
 ;
   %ovm = and i32 %t1, 32
@@ -48,7 +48,7 @@ define i32 @test2(i32 %t1) {
 define i32 @test3(i32 %t1) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[OVM:%.*]] = and i32 [[T1:%.*]], 32
-; CHECK-NEXT:    [[OV1101:%.*]] = or i32 [[OVM]], 8
+; CHECK-NEXT:    [[OV1101:%.*]] = or disjoint i32 [[OVM]], 8
 ; CHECK-NEXT:    ret i32 [[OV1101]]
 ;
   %ovm = or i32 %t1, 145
