@@ -699,6 +699,23 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
 
 // -----
 
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_out_of_bounds
+func.func @speculate_tensor_dim_known_rank_known_dim_out_of_bounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %alloc = memref.alloc(%c22) {alignment = 64 : i64} : memref<?xi1>
+  %4 = tensor.empty(%c22, %c22, %c22) : tensor<?x?x?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = memref.dim %alloc, %c22 : memref<?xi1>
+  }
+  spirv.Return
+}
+// CHECK: memref.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
 func.func @no_speculate_divui(
 // CHECK-LABEL: @no_speculate_divui(
     %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
