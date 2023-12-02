@@ -1240,6 +1240,8 @@ public:
     return AMDGPU::IsaInfo::getMaxNumSGPRs(this, WavesPerEU, Addressable);
   }
 
+  unsigned getMaxNumSGPRs(unsigned Occupancy) const;
+
   /// \returns Reserved number of SGPRs. This is common
   /// utility function called by MachineFunction and
   /// Function variants of getReservedNumSGPRs.

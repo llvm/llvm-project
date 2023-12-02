@@ -47,6 +47,39 @@ unsigned GCNRegPressure::getRegKind(Register Reg,
              : (STI->getRegSizeInBits(*RC) == 32 ? VGPR32 : VGPR_TUPLE);
 }
 
+GCNRegPressure::ExcessMask
+GCNRegPressure::exceed(const GCNRegPressure &RHS) const {
+  ExcessMask ResMask = 0;
+  if (Value[SGPR32] > RHS.Value[SGPR32])
+    ResMask |= 1ul << SGPR32;
+  if (Value[VGPR32] > RHS.Value[VGPR32])
+    ResMask |= 1ul << VGPR32;
+  if (Value[AGPR32] > RHS.Value[AGPR32])
+    ResMask |= 1ul << AGPR32;
+  return ResMask;
+}
+
+GCNRegPressure::ExcessMask
+GCNRegPressure::getRegExcessMask(Register Reg, const MachineRegisterInfo &MRI) {
+  assert(Reg.isVirtual());
+  const auto RC = MRI.getRegClass(Reg);
+  auto STI = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+  return STI->isSGPRClass(RC)
+             ? (1ul << SGPR32)
+             : STI->isVGPRClass(RC)
+                   ? (1ul << VGPR32)
+                   : STI->isAGPRClass(RC) ? (1ul << AGPR32) : 0;
+}
+
+GCNRegPressure GCNRegPressure::getMaxPressure(unsigned Occupancy,
+                                              const GCNSubtarget &ST) {
+  GCNRegPressure RP;
+  RP.Value[SGPR32] = ST.getMaxNumSGPRs(Occupancy);
+  RP.Value[VGPR32] = ST.getMaxNumVGPRs(Occupancy);
+  RP.Value[AGPR32] = RP.Value[VGPR32];
+  return RP;
+}
+
 void GCNRegPressure::inc(unsigned Reg,
                          LaneBitmask PrevMask,
                          LaneBitmask NewMask,
@@ -239,6 +272,25 @@ GCNRPTracker::LiveRegSet llvm::getLiveRegs(SlotIndex SI,
   return LiveRegs;
 }
 
+LaneBitmask GCNRPTracker::decIfAlive(Register Reg) {
+  auto I = LiveRegs.find(Reg);
+  if (I == LiveRegs.end())
+    return LaneBitmask::getNone();
+  LaneBitmask PrevMask = I->second;
+  CurPressure.dec(Reg, PrevMask, *MRI);
+  LiveRegs.erase(I);
+  return PrevMask;
+}
+
+LaneBitmask GCNRPTracker::dec(Register Reg) {
+  auto I = LiveRegs.find(Reg);
+  assert(I != LiveRegs.end());
+  LaneBitmask PrevMask = I->second;
+  CurPressure.dec(Reg, PrevMask, *MRI);
+  LiveRegs.erase(I);
+  return PrevMask;
+}
+
 void GCNRPTracker::reset(const MachineInstr &MI,
                          const LiveRegSet *LiveRegsCopy,
                          bool After) {
@@ -339,7 +391,7 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
 bool GCNDownwardRPTracker::advanceBeforeNext() {
   assert(MRI && "call reset first");
   if (!LastTrackedMI)
-    return NextMI == MBBEnd;
+    return NextMI != MBBEnd;
 
   assert(NextMI == MBBEnd || !NextMI->isDebugInstr());
 
@@ -387,7 +439,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
 
   LastTrackedMI = nullptr;
 
-  return NextMI == MBBEnd;
+  return NextMI != MBBEnd;
 }
 
 void GCNDownwardRPTracker::advanceToNext() {
@@ -488,6 +540,21 @@ Printable llvm::print(const GCNRPTracker::LiveRegSet &LiveRegs,
            << PrintLaneMask(It->second);
     }
     OS << '\n';
+  });
+}
+
+// Print register kind in front of register number, i.e. S64%2, V%1. For 32-bit
+// registers size is omitted.
+Printable llvm::printGCNRegShort(Register Reg, const MachineRegisterInfo &MRI) {
+  return Printable([&, Reg](raw_ostream &OS) {
+    assert(Reg.isVirtual());
+    const auto RC = MRI.getRegClass(Reg);
+    auto STI = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    OS << (STI->isSGPRClass(RC) ? 'S' : STI->isAGPRClass(RC) ? 'A' : 'V');
+    unsigned BitSize = STI->getRegSizeInBits(*RC);
+    if (BitSize != 32)
+      OS << BitSize;
+    OS << printReg(Reg, nullptr, 0, &MRI);
   });
 }
 

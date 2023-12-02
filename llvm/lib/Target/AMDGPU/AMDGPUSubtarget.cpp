@@ -648,6 +648,42 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 
 bool GCNSubtarget::useAA() const { return UseAA; }
 
+// This is a temp function to match getOccupancyWithNumSGPRs boundaires
+unsigned GCNSubtarget::getMaxNumSGPRs(unsigned Occupancy) const {
+  assert(Occupancy >= 1 && Occupancy <= 10);
+  const unsigned MaxNumSGPRs = getTotalNumSGPRs();
+
+  if (getGeneration() >= AMDGPUSubtarget::GFX10)
+    return MaxNumSGPRs;
+
+  if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    switch (Occupancy) {
+    case 10:
+      return 80;
+    case 9:
+      return 88;
+    case 8:
+      return 100;
+    default:
+      return MaxNumSGPRs;
+    }
+  }
+  switch (Occupancy) {
+  case 10:
+    return 48;
+  case 9:
+    return 56;
+  case 8:
+    return 64;
+  case 7:
+    return 72;
+  case 6:
+    return 80;
+  default:
+    return MaxNumSGPRs;
+  }
+}
+
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)
     return getMaxWavesPerEU();

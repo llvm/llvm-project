@@ -23,6 +23,7 @@ class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class GCNSubtarget;
 class GCNSchedStage;
+class SinkTrivallyRematInstr;
 
 enum class GCNSchedStageID : unsigned {
   OccInitialSchedule = 0,
@@ -232,6 +233,12 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
   std::unique_ptr<GCNSchedStage> createSchedStage(GCNSchedStageID SchedStageID);
 
+  MachineBasicBlock *getRegionMBB(unsigned Idx) const {
+    return Regions[Idx].first->getParent();
+  }
+
+  unsigned findFirstRegionInMBB(MachineBasicBlock *MBB) const;
+
 public:
   GCNScheduleDAGMILive(MachineSchedContext *C,
                        std::unique_ptr<MachineSchedStrategy> S);
@@ -239,6 +246,8 @@ public:
   void schedule() override;
 
   void finalizeSchedule() override;
+
+  bool isValid() const;
 };
 
 // GCNSchedStrategy applies multiple scheduling stages to a function.
@@ -387,6 +396,17 @@ private:
   // instructions. Returns true if we were able to sink instruction(s).
   bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
                                const TargetInstrInfo *TII);
+
+  SmallVector<std::pair<SlotIndex, unsigned>> RgnEnd;
+
+  DenseMap<MachineBasicBlock *, GCNRegPressure> getMBBPressure() const;
+
+  unsigned findContainingRegion(MachineInstr &MI) const;
+
+  void updateSourceRegionBoundaries(const DenseSet<Register> &SinkRegs,
+                                    const SinkTrivallyRematInstr &STR);
+  void updateTargetRegionBoundaries(const DenseSet<Register> &SinkRegs,
+                                    const SinkTrivallyRematInstr &STR);
 
 public:
   bool initGCNSchedStage() override;

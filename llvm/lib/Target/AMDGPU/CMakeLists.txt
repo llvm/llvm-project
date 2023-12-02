@@ -113,6 +113,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNRegPressure.cpp
   GCNRewritePartialRegUses.cpp
   GCNSchedStrategy.cpp
+  GCNSinkTRInstr.cpp
   GCNVOPDUtils.cpp
   R600AsmPrinter.cpp
   R600ClauseMergePass.cpp

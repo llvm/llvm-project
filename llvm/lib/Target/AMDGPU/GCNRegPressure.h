@@ -70,6 +70,14 @@ struct GCNRegPressure {
            LaneBitmask NewMask,
            const MachineRegisterInfo &MRI);
 
+  void dec(unsigned Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI) {
+    inc(Reg, Mask, LaneBitmask::getNone(), MRI);
+  }
+
+  void dec(unsigned Reg, const MachineRegisterInfo &MRI) {
+    dec(Reg, MRI.getMaxLaneMaskForVReg(Reg), MRI);
+  }
+
   bool higherOccupancy(const GCNSubtarget &ST, const GCNRegPressure& O) const {
     return getOccupancy(ST) > O.getOccupancy(ST);
   }
@@ -85,12 +93,24 @@ struct GCNRegPressure {
     return !(*this == O);
   }
 
+  typedef unsigned ExcessMask;
+  // Return mask denoting kinds of registers where this RP is higher that RHS.
+  ExcessMask exceed(const GCNRegPressure &RHS) const;
+
+  static unsigned getRegKind(Register Reg, const MachineRegisterInfo &MRI);
+
+  // Return mask to test if the Reg is of the kind where excess happend.
+  static ExcessMask getRegExcessMask(Register Reg,
+                                     const MachineRegisterInfo &MRI);
+
+  // Return pressure with the maximum number of registers for a given Occupancy.
+  static GCNRegPressure getMaxPressure(unsigned Occupancy,
+                                       const GCNSubtarget &ST);
+
   void dump() const;
 
 private:
   unsigned Value[TOTAL_KINDS];
-
-  static unsigned getRegKind(Register Reg, const MachineRegisterInfo &MRI);
 
   friend GCNRegPressure max(const GCNRegPressure &P1,
                             const GCNRegPressure &P2);
@@ -127,6 +147,16 @@ public:
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
   void clearMaxPressure() { MaxPressure.clear(); }
+
+  LaneBitmask getLiveMask(Register Reg) const { return LiveRegs.lookup(Reg); }
+
+  // If the Reg is live decrement register for current pressure and
+  // erase it from live regs. Return register lanemask if the reg was live
+  // and empty lanemask otherwise.
+  LaneBitmask decIfAlive(Register Reg);
+
+  // Same as previous but the Reg has to be alive.
+  LaneBitmask dec(Register Reg);
 
   GCNRegPressure getPressure() const { return CurPressure; }
 
@@ -304,6 +334,8 @@ Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
                 const MachineRegisterInfo &MRI);
+
+Printable printGCNRegShort(Register Reg, const MachineRegisterInfo &MRI);
 
 Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                          const GCNRPTracker::LiveRegSet &TrackedL,

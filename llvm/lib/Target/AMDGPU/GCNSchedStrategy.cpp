@@ -25,10 +25,13 @@
 
 #include "GCNSchedStrategy.h"
 #include "AMDGPUIGroupLP.h"
+#include "GCNSinkTRInstr.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
 #define DEBUG_TYPE "machine-scheduler"
+
+#define EXPENSIVE_CHECKS
 
 using namespace llvm;
 
@@ -751,17 +754,178 @@ bool ClusteredLowOccStage::initGCNSchedStage() {
   return true;
 }
 
+DenseMap<MachineBasicBlock *, GCNRegPressure>
+PreRARematStage::getMBBPressure() const {
+  DenseMap<MachineBasicBlock *, GCNRegPressure> MBBPressure;
+  MachineBasicBlock *LastSeenMBB = nullptr;
+  GCNRegPressure *CurMBBRP;
+  for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
+    auto *MBB = DAG.Regions[I].first->getParent();
+    if (MBB != LastSeenMBB) {
+      CurMBBRP = &MBBPressure[MBB];
+      LastSeenMBB = MBB;
+    }
+    *CurMBBRP = max(*CurMBBRP, DAG.Pressure[I]);
+  }
+  return MBBPressure;
+}
+
+static auto LessIndexFirst =
+    [](const std::pair<SlotIndex, unsigned> &A,
+       const std::pair<SlotIndex, unsigned> &B) -> bool {
+  return A.first < B.first;
+};
+
+// This should be called before the instructions are erased from the old place.
+void PreRARematStage::updateSourceRegionBoundaries(
+    const DenseSet<Register> &SinkRegs, const SinkTrivallyRematInstr &STR) {
+  auto &SII = *DAG.LIS->getSlotIndexes();
+  SmallVector<SlotIndex> DefSI;
+  for (Register Reg : SinkRegs)
+    DefSI.push_back(SII.getInstructionIndex(*STR.getDefInstr(Reg)));
+  sort(DefSI);
+  for (auto DefI = DefSI.begin(), E = DefSI.end(); DefI != E;) {
+    auto R = std::upper_bound(RgnEnd.begin(), RgnEnd.end(),
+                              std::make_pair(*DefI, 0u), LessIndexFirst);
+    if (R == RgnEnd.end() ||
+        &*DAG.Regions[R->second].first != SII.getInstructionFromIndex(*DefI)) {
+      ++DefI;
+      continue;
+    }
+    auto &Rgn = DAG.Regions[R->second];
+    do {
+      ++Rgn.first;
+      ++DefI;
+      if (Rgn.first == Rgn.second || DefI == E)
+        break;
+    } while (&*Rgn.first == SII.getInstructionFromIndex(*DefI));
+  }
+}
+
+// This should be called after the instructions are inserted in the new place.
+void PreRARematStage::updateTargetRegionBoundaries(
+    const DenseSet<Register> &SinkRegs, const SinkTrivallyRematInstr &STR) {
+  auto &SII = *DAG.LIS->getSlotIndexes();
+  DenseSet<MachineInstr *> Visited;
+  for (Register Reg : SinkRegs) {
+    auto *UserMI = STR.getUserInstr(Reg);
+    if (!Visited.insert(UserMI).second)
+      continue; // One instruction can use more than one sinked reg.
+
+    auto UserSI = SII.getInstructionIndex(*UserMI);
+    auto R = std::upper_bound(RgnEnd.begin(), RgnEnd.end(),
+                              std::make_pair(UserSI, 0u), LessIndexFirst);
+    if (R == RgnEnd.end() || &*DAG.Regions[R->second].first != UserMI)
+      continue;
+
+    unsigned NumInstrInserted = count_if(UserMI->uses(), [&](auto &Op) {
+      return Op.isReg() && SinkRegs.contains(Op.getReg());
+    });
+#ifndef NDEBUG
+    auto DefinesSinkableReg = [&](MachineInstr &DefMI, MachineInstr &UserMI) {
+      auto &Op0 = DefMI.getOperand(0);
+      return Op0.isReg() && Op0.isDef() && SinkRegs.contains(Op0.getReg()) &&
+             UserMI.readsRegister(Op0.getReg());
+    };
+#endif
+    auto &F = DAG.Regions[R->second].first;
+    auto B = UserMI->getParent()->begin();
+    while (F != B && NumInstrInserted > 0) {
+      --F, --NumInstrInserted;
+      assert(DefinesSinkableReg(*F, *UserMI));
+    }
+    assert(NumInstrInserted == 0);
+  }
+}
+
+unsigned
+GCNScheduleDAGMILive::findFirstRegionInMBB(MachineBasicBlock *MBB) const {
+  unsigned Idx = Regions.size() - 1;
+  for (; (int)Idx >= 0; --Idx)
+    if (MBB == getRegionMBB(Idx))
+      break;
+  return Idx;
+}
+
+unsigned PreRARematStage::findContainingRegion(MachineInstr &MI) const {
+  auto &SII = *DAG.LIS->getSlotIndexes();
+  auto SI = SII.getInstructionIndex(MI);
+  auto R = std::upper_bound(RgnEnd.begin(), RgnEnd.end(),
+                            std::make_pair(SI, 0u), LessIndexFirst);
+  if (R == RgnEnd.end())
+    return -1;
+  unsigned Idx = R->second;
+  auto &Rgn = DAG.Regions[Idx];
+  auto F = skipDebugInstructionsForward(Rgn.first, Rgn.second);
+  return SI >= SII.getInstructionIndex(*F) ? Idx : -1;
+}
+
+#ifndef NDEBUG
+LLVM_DUMP_METHOD
+bool GCNScheduleDAGMILive::isValid() const {
+  unsigned CalcMinOcc = std::numeric_limits<unsigned>::max();
+  bool Result = true;
+  for (unsigned RI = 0, RE = Regions.size(); RI != RE; ++RI) {
+    auto &Rgn = Regions[RI];
+#ifdef EXPENSIVE_CHECKS
+    GCNDownwardRPTracker RPT(*LIS);
+    RPT.reset(*Rgn.first);
+    auto &LISLR = RPT.getLiveRegs();
+    auto &DAGLR = LiveIns[RI];
+    if (!isEqual(LISLR, DAGLR)) {
+      dbgs() << "Liveins mismatch at bb." << Rgn.first->getParent()->getNumber()
+             << ", region:\n  " << *Rgn.first << "  " << *std::prev(Rgn.second)
+             << reportMismatch(LISLR, DAGLR, TRI);
+      Result = false;
+    }
+    RPT.advance(Rgn.second);
+    auto LISRP = RPT.moveMaxPressure();
+    auto &DAGRP = Pressure[RI];
+    if (DAGRP != LISRP) {
+      dbgs() << "RP mismatch at bb." << Rgn.first->getParent()->getNumber()
+             << ", region:\n  " << *Rgn.first << "  " << *std::prev(Rgn.second)
+             << "DAG RP: " << print(DAGRP, &ST)
+             << "LIS RP: " << print(LISRP, &ST);
+      Result = false;
+    }
+#endif
+    unsigned RgnOcc = Pressure[RI].getOccupancy(ST);
+    if (RgnOcc < MinOccupancy) {
+      dbgs() << "Occupancy " << RgnOcc << " is less than minimal "
+             << MinOccupancy << ", region:\n  " << *Rgn.first << "  "
+             << *std::prev(Rgn.second);
+      Result = false;
+    }
+    bool IsMinOcc = RgnOcc == MinOccupancy;
+    if (RegionsWithMinOcc[RI] != IsMinOcc) {
+      dbgs() << "Incorrect RegionsWithMinOcc = " << IsMinOcc << ", region:\n  "
+             << *Rgn.first << "  " << *std::prev(Rgn.second);
+      Result = false;
+    }
+    CalcMinOcc = std::min(CalcMinOcc, RgnOcc);
+  }
+  if (CalcMinOcc != MinOccupancy) {
+    dbgs() << "Incorrect MinOccupancy = " << MinOccupancy << ", should be "
+           << CalcMinOcc << '\n';
+    Result = false;
+  }
+  return Result;
+}
+#endif
+
 bool PreRARematStage::initGCNSchedStage() {
   if (!GCNSchedStage::initGCNSchedStage())
     return false;
 
-  if (DAG.RegionsWithMinOcc.none() || DAG.Regions.size() == 1)
+  if (DAG.MinOccupancy == DAG.MFI.getMaxWavesPerEU())
+    return false; // Nothing to improve.
+
+  if (DAG.Regions.size() == 1)
     return false;
 
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   // Check maximum occupancy
-  if (ST.computeOccupancy(MF.getFunction(), MFI.getLDSSize()) ==
-      DAG.MinOccupancy)
+  unsigned MaxOcc = ST.computeOccupancy(MF.getFunction(), MFI.getLDSSize());
+  if (MaxOcc == DAG.MinOccupancy)
     return false;
 
   // FIXME: This pass will invalidate cached MBBLiveIns for regions
@@ -770,9 +934,88 @@ bool PreRARematStage::initGCNSchedStage() {
   // need to be fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
-  collectRematerializableInstructions();
-  if (RematerializableInsts.empty() || !sinkTriviallyRematInsts(ST, TII))
+  auto MBBPressure = getMBBPressure();
+  SinkTrivallyRematInstr STR(DAG.MF, DAG.LIS, MBBPressure);
+
+  DenseSet<Register> Regs;
+  unsigned NewOcc = STR.collectSinkableRegs(Regs, DAG.MinOccupancy, MaxOcc);
+  if (NewOcc <= DAG.MinOccupancy)
     return false;
+
+  auto &SII = *DAG.LIS->getSlotIndexes();
+  for (unsigned RI = 0, RE = DAG.Regions.size(); RI != RE; ++RI) {
+    auto &Rgn = DAG.Regions[RI];
+    auto L = skipDebugInstructionsBackward(std::prev(Rgn.second), Rgn.first);
+    RgnEnd.emplace_back(SII.getInstructionIndex(*L).getDeadSlot(), RI);
+  }
+  sort(RgnEnd, LessIndexFirst);
+
+  // Update live-ins, update pressure for regions where regs are live-through.
+  auto UpdateRgnLiveInsAndPressure = [&](Register Reg, unsigned RgnIdx) {
+    auto &LiveIns = DAG.LiveIns[RgnIdx];
+    auto I = LiveIns.find(Reg);
+    if (I != LiveIns.end()) {
+      // Pressure in regions requiring pressure calculation will be overwritten
+      // later so don't bother checking because dec is cheap.
+      DAG.Pressure[RgnIdx].dec(Reg, I->second, DAG.MRI);
+      LiveIns.erase(I);
+    }
+  };
+  DenseSet<unsigned> RecalcPressureRgnIdx;
+  for (Register Reg : Regs) {
+    MachineInstr *DefMI = STR.getDefInstr(Reg);
+    unsigned SrcRgnIdx = findContainingRegion(*DefMI);
+    if ((int)SrcRgnIdx != -1)
+      RecalcPressureRgnIdx.insert(SrcRgnIdx);
+
+    // Update regions after source region if any.
+    // Note: regions are stored from bottom to top.
+    MachineBasicBlock *SrcMBB = DefMI->getParent();
+    for (unsigned Idx = (int)SrcRgnIdx == -1 ? SrcRgnIdx - 1
+                                             : DAG.findFirstRegionInMBB(SrcMBB);
+         (int)Idx >= 0 && SrcMBB == DAG.getRegionMBB(Idx); --Idx) {
+      UpdateRgnLiveInsAndPressure(Reg, Idx);
+    }
+
+    MachineInstr *UserMI = STR.getUserInstr(Reg);
+    unsigned TgtRgnIdx = findContainingRegion(*UserMI);
+    if ((int)TgtRgnIdx != -1)
+      RecalcPressureRgnIdx.insert(TgtRgnIdx);
+    MachineBasicBlock *TgtMBB =
+        (int)TgtRgnIdx != -1 ? UserMI->getParent() : nullptr;
+    STR.forEveryMBBRegIsLiveIn(Reg, [&](MachineBasicBlock *MBB) {
+      int LastIdx = MBB != TgtMBB ? 0 : TgtRgnIdx;
+      for (unsigned Idx = DAG.findFirstRegionInMBB(MBB);
+           (int)Idx >= LastIdx && MBB == DAG.getRegionMBB(Idx); --Idx) {
+        UpdateRgnLiveInsAndPressure(Reg, Idx);
+      }
+    });
+  }
+
+  updateSourceRegionBoundaries(Regs, STR);
+
+  STR.sinkTriviallyRematInstrs(Regs);
+
+  updateTargetRegionBoundaries(Regs, STR);
+
+  // Update pressure. TODO: pressure could be cached in STR.collectSinkableRegs.
+  for (unsigned RI : RecalcPressureRgnIdx) {
+    auto &Rgn = DAG.Regions[RI];
+    GCNDownwardRPTracker RPT(*DAG.LIS);
+    RPT.advance(Rgn.first, Rgn.second, &DAG.LiveIns[RI]);
+    DAG.Pressure[RI] = RPT.moveMaxPressure();
+  }
+
+  // Update RegionsWithMinOcc flags.
+  for (unsigned RI = 0, RE = DAG.Regions.size(); RI != RE; ++RI) {
+    DAG.RegionsWithMinOcc[RI] = DAG.Pressure[RI].getOccupancy(ST) == NewOcc;
+  }
+
+  DAG.MinOccupancy = NewOcc;
+  SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  MFI.increaseOccupancy(MF, NewOcc);
+
+  assert(DAG.isValid());
 
   LLVM_DEBUG(
       dbgs() << "Retrying function scheduling with improved occupancy of "
