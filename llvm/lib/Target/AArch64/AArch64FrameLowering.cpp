@@ -501,7 +501,7 @@ MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
       static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   const AArch64TargetLowering *TLI =
       MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
+  [[maybe_unused]] MachineFrameInfo &MFI = MF.getFrameInfo();
   DebugLoc DL = I->getDebugLoc();
   unsigned Opc = I->getOpcode();
   bool IsDestroy = Opc == TII->getCallFrameDestroyOpcode();
