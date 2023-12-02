@@ -4110,7 +4110,7 @@ std::optional<unsigned> ARMBaseInstrInfo::getOperandLatency(
     return std::nullopt;
 
   UseCycle = *DefCycle - *UseCycle + 1;
-  if (UseCycle > 0) {
+  if (UseCycle > 0u) {
     if (LdmBypass) {
       // It's a variable_ops instruction so we can't use DefIdx here. Just use
       // first def operand.
