@@ -17,8 +17,6 @@ namespace func {
 class FuncOp;
 }
 
-class RewritePatternSet;
-
 namespace mesh {
 
 //===----------------------------------------------------------------------===//

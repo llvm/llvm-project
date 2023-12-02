@@ -31,6 +31,8 @@ void populateSimplificationPatterns(RewritePatternSet &patterns) {
       patterns, Partial::Max);
   populateAllReduceEndomorphismSimplificationPatterns<arith::MaxUIOp>(
       patterns, Partial::Max);
+
+  // TODO: add simplifications for all-gather and other collectives.
 }
 
 } // namespace mesh
