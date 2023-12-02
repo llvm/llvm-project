@@ -39,7 +39,7 @@ using namespace llvm::omp::target::ompt;
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
   TIMESCOPE();
-  PM->RTLs.registerRequires(Flags);
+  PM->addRequirements(Flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,18 +49,18 @@ EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
   if (PM->delayRegisterLib(Desc))
     return;
 
-  PM->RTLs.registerLib(Desc);
+  PM->registerLib(Desc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Initialize all available devices without registering any image
-EXTERN void __tgt_init_all_rtls() { PM->RTLs.initAllRTLs(); }
+EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
   TIMESCOPE();
-  PM->RTLs.unregisterLib(Desc);
+  PM->unregisterLib(Desc);
 }
 
 template <typename TargetAsyncInfoTy>
@@ -426,7 +426,7 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-  for (auto &R : PM->RTLs.AllRTLs) {
+  for (auto &R : PM->pluginAdaptors()) {
     if (R.set_info_flag)
       R.set_info_flag(NewInfoLevel);
   }
@@ -454,7 +454,6 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // for the device operations (work/spin wait on them) or block until they are
   // completed (use device side blocking mechanism). This allows the runtime to
   // adapt itself when there are a lot of long-running target regions in-flight.
-  using namespace llvm::omp::target;
   static thread_local utils::ExponentialBackoff QueryCounter(
       Int64Envar("OMPTARGET_QUERY_COUNT_MAX", 10),
       Int64Envar("OMPTARGET_QUERY_COUNT_THRESHOLD", 5),

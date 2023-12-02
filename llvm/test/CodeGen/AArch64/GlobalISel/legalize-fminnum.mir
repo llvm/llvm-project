@@ -130,6 +130,16 @@ alignment:       4
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
+    ; CHECK-LABEL: name: v3s32_widen
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY1]](<2 x s64>)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(<4 x s32>) = G_FMINNUM [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: $q0 = COPY [[FMINNUM]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %2:_(<2 x s64>) = COPY $q0
     %3:_(<4 x s32>) = G_BITCAST %2:_(<2 x s64>)
     %4:_(s32), %5:_(s32), %6:_(s32), %7:_(s32) = G_UNMERGE_VALUES %3:_(<4 x s32>)

@@ -13,30 +13,50 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "DeviceImage.h"
 #include "Shared/APITypes.h"
 #include "Shared/PluginAPI.h"
+#include "Shared/Requirements.h"
 
 #include "device.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+#include <cstdint>
 #include <list>
+#include <memory>
 #include <mutex>
+#include <string>
 
 struct PluginAdaptorTy {
-  int32_t Idx = -1;             // RTL index, index is the number of devices
-                                // of other RTLs that were registered before,
-                                // i.e. the OpenMP index of the first device
-                                // to be registered with this RTL.
-  int32_t NumberOfDevices = -1; // Number of devices this RTL deals with.
+  PluginAdaptorTy(const std::string &Name);
 
+  bool isUsed() const { return DeviceOffset >= 0; }
+
+  /// Return the number of devices available to this plugin.
+  int32_t getNumDevices() const { return NumberOfDevices; }
+
+  /// Add all offload entries described by \p DI to the devices managed by this
+  /// plugin.
+  void addOffloadEntries(DeviceImageTy &DI);
+
+  /// RTL index, index is the number of devices of other RTLs that were
+  /// registered before, i.e. the OpenMP index of the first device to be
+  /// registered with this RTL.
+  int32_t DeviceOffset = -1;
+
+  /// Number of devices this RTL deals with.
+  int32_t NumberOfDevices = -1;
+
+  /// Name of the shared object file representing the plugin.
+  std::string Name;
+
+  /// Access to the shared object file representing the plugin.
   std::unique_ptr<llvm::sys::DynamicLibrary> LibraryHandler;
-
-#ifdef OMPTARGET_DEBUG
-  std::string RTLName;
-#endif
 
 #define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
   using NAME##_ty = decltype(__tgt_rtl_##NAME);                                \
@@ -44,9 +64,6 @@ struct PluginAdaptorTy {
 
 #include "Shared/PluginAPI.inc"
 #undef PLUGIN_API_HANDLE
-
-  // Are there images associated with this RTL.
-  bool IsUsed = false;
 
   llvm::DenseSet<const __tgt_device_image *> UsedImages;
 
@@ -56,27 +73,11 @@ struct PluginAdaptorTy {
   std::mutex Mtx;
 };
 
-/// RTLs identified in the system.
-struct PluginAdaptorManagerTy {
-  // List of the detected runtime libraries.
-  std::list<PluginAdaptorTy> AllRTLs;
+/// Struct for the data required to handle plugins
+struct PluginManager {
+  PluginManager() {}
 
-  // Array of pointers to the detected runtime libraries that have compatible
-  // binaries.
-  llvm::SmallVector<PluginAdaptorTy *> UsedRTLs;
-
-  int64_t RequiresFlags = OMP_REQ_UNDEFINED;
-
-  explicit PluginAdaptorManagerTy() = default;
-
-  // Register the clauses of the requires directive.
-  void registerRequires(int64_t Flags);
-
-  // Initialize RTL if it has not been initialized
-  void initRTLonce(PluginAdaptorTy &RTL);
-
-  // Initialize all RTLs
-  void initAllRTLs();
+  void init();
 
   // Register a shared library with all (compatible) RTLs.
   void registerLib(__tgt_bin_desc *Desc);
@@ -84,24 +85,12 @@ struct PluginAdaptorManagerTy {
   // Unregister a shared library from all RTLs.
   void unregisterLib(__tgt_bin_desc *Desc);
 
-  // not thread-safe, called from global constructor (i.e. once)
-  void loadRTLs();
+  void addDeviceImage(__tgt_bin_desc &TgtBinDesc, __tgt_device_image &TgtDeviceImage) {
+    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
+  }
 
-private:
-  static bool attemptLoadRTL(const std::string &RTLName, PluginAdaptorTy &RTL);
-};
-
-/// Struct for the data required to handle plugins
-struct PluginManager {
-  PluginManager(bool UseEventsForAtomicTransfers)
-      : UseEventsForAtomicTransfers(UseEventsForAtomicTransfers) {}
-
-  /// RTLs identified on the host
-  PluginAdaptorManagerTy RTLs;
-
-  /// Executable images and information extracted from the input images passed
-  /// to the runtime.
-  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
+  /// Iterate over all device images registered with this plugin.
+  auto deviceImages() { return llvm::make_pointee_range(DeviceImages); }
 
   /// Devices associated with RTLs
   llvm::SmallVector<std::unique_ptr<DeviceTy>> Devices;
@@ -116,14 +105,6 @@ struct PluginManager {
   /// Map from ptrs on the host to an entry in the Translation Table
   HostPtrToTableMapTy HostPtrToTableMap;
   std::mutex TblMapMtx; ///< For HostPtrToTableMap
-
-  // Store target policy (disabled, mandatory, default)
-  kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
-  std::mutex TargetOffloadMtx; ///< For TargetOffloadPolicy
-
-  /// Flag to indicate if we use events to ensure the atomicity of
-  /// map clauses or not. Can be modified with an environment variable.
-  const bool UseEventsForAtomicTransfers;
 
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a
@@ -143,9 +124,48 @@ struct PluginManager {
     DelayedBinDesc.clear();
   }
 
+  int getNumDevices() {
+    std::lock_guard<decltype(RTLsMtx)> Lock(RTLsMtx);
+    return Devices.size();
+  }
+
+  int getNumUsedPlugins() const {
+    int NCI = 0;
+    for (auto &P : PluginAdaptors)
+      NCI += P.isUsed();
+    return NCI;
+  }
+
+  // Initialize \p Plugin if it has not been initialized.
+  void initPlugin(PluginAdaptorTy &Plugin);
+
+  // Initialize all plugins.
+  void initAllPlugins();
+
+  /// Iterator range for all plugin adaptors (in use or not, but always valid).
+  auto pluginAdaptors() {
+    return llvm::make_range(PluginAdaptors.begin(), PluginAdaptors.end());
+  }
+
+  /// Return the user provided requirements.
+  int64_t getRequirements() const { return Requirements.getRequirements(); }
+
+  /// Add \p Flags to the user provided requirements.
+  void addRequirements(int64_t Flags) { Requirements.addRequirements(Flags); }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
+
+  // List of all plugin adaptors, in use or not.
+  std::list<PluginAdaptorTy> PluginAdaptors;
+
+  /// Executable images and information extracted from the input images passed
+  /// to the runtime.
+  llvm::SmallVector<std::unique_ptr<DeviceImageTy>> DeviceImages;
+
+  /// The user provided requirements.
+  RequirementCollection Requirements;
 };
 
 extern PluginManager *PM;
