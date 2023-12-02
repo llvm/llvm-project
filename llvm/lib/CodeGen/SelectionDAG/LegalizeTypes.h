@@ -707,6 +707,7 @@ private:
   SDValue PromoteFloatRes_UNDEF(SDNode *N);
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
   SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
+  SDValue PromoteFloatRes_STRICT_XINT_TO_FP(SDNode *N);
   SDValue PromoteFloatRes_VECREDUCE(SDNode *N);
   SDValue PromoteFloatRes_VECREDUCE_SEQ(SDNode *N);
 

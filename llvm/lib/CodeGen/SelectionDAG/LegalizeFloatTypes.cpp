@@ -2444,6 +2444,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP: R = PromoteFloatRes_XINT_TO_FP(N); break;
+    case ISD::STRICT_SINT_TO_FP: R = PromoteFloatRes_STRICT_XINT_TO_FP(N); break;
     case ISD::UNDEF:      R = PromoteFloatRes_UNDEF(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::VECREDUCE_FADD:
@@ -2717,6 +2718,23 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_XINT_TO_FP(SDNode *N) {
       ISD::FP_EXTEND, DL, NVT,
       DAG.getNode(ISD::FP_ROUND, DL, VT, NV,
                   DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)));
+}
+
+// Construct a SDNode that transforms the SINT or UINT operand to the promoted
+// float type.
+SDValue DAGTypeLegalizer::PromoteFloatRes_STRICT_XINT_TO_FP(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDVTList NVTs = DAG.getVTList(NVT, MVT::Other);
+
+  SDValue NV = DAG.getNode(N->getOpcode(), DL, NVTs, N->getOperand(0), N->getOperand(1));
+
+  // Round the value to the desired precision (that of the source type).
+  SDValue Rounded = DAG.getNode(ISD::STRICT_FP_ROUND, DL, N->getVTList(), NV.getValue(1), NV,
+                                DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  return DAG.getNode(
+    ISD::STRICT_FP_EXTEND, DL, NVTs, Rounded.getValue(1), Rounded.getValue(0));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
