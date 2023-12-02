@@ -694,7 +694,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_sqrt
-; GCN-NATIVE: call fast float @_Z11native_sqrtf(float %tmp)
+; GCN-NATIVE: call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_use_native_sqrt(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -704,7 +704,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_dont_use_native_sqrt_fast_f64
-; GCN: call fast double @_Z4sqrtd(double %tmp)
+; GCN: call fast double @llvm.sqrt.f64(double %tmp)
 define amdgpu_kernel void @test_dont_use_native_sqrt_fast_f64(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load double, ptr addrspace(1) %a, align 8
@@ -836,7 +836,6 @@ entry:
 }
 
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
-; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
