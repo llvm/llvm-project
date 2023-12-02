@@ -1143,7 +1143,7 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
   >;
 
   def : GCNPat <
-    (f16 (sint_to_fp i32:$src)),
+    (f16 (any_sint_to_fp i32:$src)),
     (cvt_f16_f32_inst_e64 SRCMODS.NONE, (V_CVT_F32_I32_e32 VSrc_b32:$src))
   >;
 

@@ -4,7 +4,10 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx803 < %s | FileCheck -check-prefixes=GCN,GFX89,GFX8 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX89,GFX9 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX10 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11,GFX1100 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1150 -amdgpu-enable-delay-alu=0 < %s | FileCheck -check-prefixes=GCN,GFX1011,GFX11,GFX1150 %s
+
+
 
 define half @v_constrained_sitofp_i16_to_f16_fpexcept_strict(i16 %arg) #0 {
   %result = call half @llvm.experimental.constrained.sitofp.f16.i16(i16 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -88,7 +91,7 @@ define float @v_constrained_sitofp_i32_to_f32_fpexcept_strict(i32 %arg) #0 {
   ret float %result
 }
 
-define <2 x float> @v_constrained_sitofp_v2i32_to_v2f32_fpexcept_strict(<2 x i32> %arg) #0 {
+define <2 x float> @v_constrained_sitofp_v2i32_to_v2f32_fpexcept_strict(a<2 x i32> %arg) #0 {
   %result = call <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x float> %result
 }
@@ -125,10 +128,25 @@ declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, meta
 declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32>, metadata, metadata) #1
 declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i32(<3 x i32>, metadata, metadata) #1
 
+define half @s_constrained_sitofp_i32_to_f16_fpexcept_strict(i32 inreg %arg) #0 {
+  %result = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret half %result
+}
 
+define float @s_constrained_sitofp_i32_to_f32_fpexcept_strict(i32 inreg %arg) #0 {
+  %result = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret half %result
+}
 
+define <2 x half> @s_constrained_sitofp_v2i32_to_v2f16_fpexcept_strict(<2 x i32> inreg %arg) #0 {
+  %result = call <2 x half> @llvm.experimental.constrained.sitofp.v2f16.v2i32(<2 x i32> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <2 x half> %result
+}
 
-
+define <2 x float> @s_constrained_sitofp_v2i32_to_v2f32_fpexcept_strict(<2 x i32> inreg %arg) #0 {
+  %result = call <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32> %arg, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <2 x float> %result
+}
 
 attributes #0 = { strictfp }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
