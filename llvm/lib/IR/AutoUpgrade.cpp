@@ -704,11 +704,11 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
-  // Quickly eliminate it, if it's not a candidate.
   StringRef Name = F->getName();
-  if (Name.size() <= 7 || !Name.starts_with("llvm."))
+
+  // Quickly eliminate it, if it's not a candidate.
+  if (!Name.consume_front("llvm.") || Name.empty())
     return false;
-  Name = Name.substr(5); // Strip off "llvm."
 
   switch (Name[0]) {
   default: break;
