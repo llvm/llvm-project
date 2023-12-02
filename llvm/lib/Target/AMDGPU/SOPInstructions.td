@@ -413,7 +413,7 @@ class SOP1_F32_Inst<string opName, SDPatternOperator Op, ValueType vt0=f32,
 
 let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE],
     SchedRW = [WriteSFPU], isReMaterializable = 1 in {
-  def S_CVT_F32_I32 : SOP1_F32_Inst<"s_cvt_f32_i32", sint_to_fp, f32, i32>;
+  def S_CVT_F32_I32 : SOP1_F32_Inst<"s_cvt_f32_i32", sint_to_fp, f32, i32>; // xxx - any
   def S_CVT_F32_U32 : SOP1_F32_Inst<"s_cvt_f32_u32", uint_to_fp, f32, i32>;
 
   let mayRaiseFPException = 1 in {
