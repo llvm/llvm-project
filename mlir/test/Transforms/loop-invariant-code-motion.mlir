@@ -709,10 +709,10 @@ func.func @speculate_tensor_dim_known_rank_known_dim_out_of_bounds() {
   scf.for %arg4 = %c0 to %c22 step %c1 {
     %dim = memref.dim %alloc, %c22 : memref<?xi1>
   }
-  spirv.Return
+  return
 }
-// CHECK: memref.dim
-// CHECK-NEXT: scf.for
+// CHECK: scf.for
+// CHECK-NEXT: memref.dim
 
 // -----
 
