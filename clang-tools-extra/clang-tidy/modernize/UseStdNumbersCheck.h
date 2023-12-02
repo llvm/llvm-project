@@ -37,6 +37,9 @@ public:
     Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
     Options.store(Opts, "DiffThreshold", DiffThresholdString);
   }
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
 
 private:
   utils::IncludeInserter IncludeInserter;

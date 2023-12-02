@@ -66,16 +66,16 @@ void foo(){
     // CHECK-FIXES-IMPRECISE: static constexpr double Phi2 = std::numbers::phi;
 
     static constexpr double Pi3 = 3.1415926L;
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:35: warning: prefer 'std::numbers::pi' to this literal, differs by '5.36e-08' [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: static constexpr double Pi3 = std::numbers::pi;
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:35: warning: prefer 'std::numbers::pi_v<long double>' to this literal, differs by '5.36e-08' [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: static constexpr double Pi3 = std::numbers::pi_v<long double>;
 
     static constexpr double Euler3 = 2.7182818L;
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:38: warning: prefer 'std::numbers::e' to this literal, differs by '2.85e-08' [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: static constexpr double Euler3 = std::numbers::e;
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:38: warning: prefer 'std::numbers::e_v<long double>' to this literal, differs by '2.85e-08' [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: static constexpr double Euler3 = std::numbers::e_v<long double>;
 
     static constexpr double Phi3 = 1.6180339L;
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:36: warning: prefer 'std::numbers::phi' to this literal, differs by '8.87e-08' [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: static constexpr double Phi3 = std::numbers::phi;
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:36: warning: prefer 'std::numbers::phi_v<long double>' to this literal, differs by '8.87e-08' [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: static constexpr double Phi3 = std::numbers::phi_v<long double>;
 
     static constexpr long double Pi4 = 3.1415926L;
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:40: warning: prefer 'std::numbers::pi_v<long double>' to this literal, differs by '5.36e-08' [modernize-use-std-numbers]
@@ -94,8 +94,8 @@ void foo(){
     // CHECK-FIXES-ALL: static constexpr my_double Euler5 = std::numbers::e;
 
     static constexpr my_float Euler6 = 2.7182818;
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:40: warning: prefer 'std::numbers::e_v<float>' to this literal, differs by '2.85e-08' [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: static constexpr my_float Euler6 = std::numbers::e_v<float>;
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:40: warning: prefer 'std::numbers::e' to this literal, differs by '2.85e-08' [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: static constexpr my_float Euler6 = std::numbers::e;
 
     static constexpr int NotEuler7 = 2.7182818;
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:38: warning: prefer 'std::numbers::e' to this literal, differs by '2.85e-08' [modernize-use-std-numbers]
@@ -183,16 +183,16 @@ void foo(){
     // CHECK-FIXES-ALL: auto log2e = std::numbers::log2e;
 
     floatSink(log2(Euler));
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e_v<float>' to this formula [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: floatSink(std::numbers::log2e_v<float>);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e' to this formula [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: floatSink(std::numbers::log2e);
 
     floatSink(static_cast<float>(log2(Euler)));
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e_v<float>' to this formula [modernize-use-std-numbers]
     // CHECK-FIXES-ALL: floatSink(std::numbers::log2e_v<float>);
 
     floatSink(1.4426950);
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e_v<float>' to this literal, differs by '4.09e-08' [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: floatSink(std::numbers::log2e_v<float>);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e' to this literal, differs by '4.09e-08' [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: floatSink(std::numbers::log2e);
 
     floatSink(static_cast<float>(1.4426950));
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e_v<float>' to this literal, differs by '4.09e-08' [modernize-use-std-numbers]
@@ -217,8 +217,8 @@ void foo(){
     // CHECK-FIXES-ALL: floatSink(std::numbers::log2e_v<float>);
 
     floatSink(static_cast<double>(1.4426950F));
-    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e_v<float>' to this literal, differs by '1.93e-08' [modernize-use-std-numbers]
-    // CHECK-FIXES-ALL: floatSink(std::numbers::log2e_v<float>);
+    // CHECK-MESSAGES-ALL: :[[@LINE-1]]:15: warning: prefer 'std::numbers::log2e' to this literal, differs by '1.93e-08' [modernize-use-std-numbers]
+    // CHECK-FIXES-ALL: floatSink(std::numbers::log2e);
 
     floatSink(static_cast<int>(1.4426950F));
     // CHECK-MESSAGES-ALL: :[[@LINE-1]]:32: warning: prefer 'std::numbers::log2e_v<float>' to this literal, differs by '1.93e-08' [modernize-use-std-numbers]

@@ -315,18 +315,14 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
       Matches.matchPhi(),
   };
 
-  // Using 'TK_IgnoreUnlessSpelledInSource' here instead of at the check level
-  // to figure out what the type is that the matched constants are used as.
   Finder->addMatcher(
-      expr(traverse(TK_IgnoreUnlessSpelledInSource,
-                    expr(anyOfExhaustive(ConstantMatchers))),
-           unless(hasParent(expr(
-               anyOf(implicitCastExpr(hasImplicitDestinationType(isFloating())),
-                     explicitCastExpr(hasDestinationType(isFloating())))))),
-           hasType(qualType(hasCanonicalTypeUnqualified(
-               anyOf(qualType(asString("float")).bind("float"),
-                     qualType(asString("double")),
-                     qualType(asString("long double")).bind("long double")))))),
+      expr(
+          anyOfExhaustive(ConstantMatchers),
+          unless(hasParent(explicitCastExpr(hasDestinationType(isFloating())))),
+          hasType(qualType(hasCanonicalTypeUnqualified(
+              anyOf(qualType(asString("float")).bind("float"),
+                    qualType(asString("double")),
+                    qualType(asString("long double")).bind("long double")))))),
       this);
 }
 
