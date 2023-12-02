@@ -48,19 +48,7 @@ extern void ompt::connectLibrary();
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
 
-  bool UseEventsForAtomicTransfers = true;
-  if (const char *ForceAtomicMap = getenv("LIBOMPTARGET_MAP_FORCE_ATOMIC")) {
-    std::string ForceAtomicMapStr(ForceAtomicMap);
-    if (ForceAtomicMapStr == "false" || ForceAtomicMapStr == "FALSE")
-      UseEventsForAtomicTransfers = false;
-    else if (ForceAtomicMapStr != "true" && ForceAtomicMapStr != "TRUE")
-      fprintf(stderr,
-              "Warning: 'LIBOMPTARGET_MAP_FORCE_ATOMIC' accepts only "
-              "'true'/'TRUE' or 'false'/'FALSE' as options, '%s' ignored\n",
-              ForceAtomicMap);
-  }
-
-  PM = new PluginManager(UseEventsForAtomicTransfers);
+  PM = new PluginManager();
 
 #ifdef OMPT_SUPPORT
   // Initialize OMPT first
