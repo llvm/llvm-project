@@ -33,14 +33,6 @@ struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
-
 ///
 struct PendingCtorDtorListsTy {
   std::list<void *> PendingCtors;
