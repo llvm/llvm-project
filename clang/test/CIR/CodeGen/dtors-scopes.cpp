@@ -22,7 +22,13 @@ void dtor1() {
 // CHECK:     cir.call @_ZN1CD2Ev(%4) : (!cir.ptr<!ty_22C22>) -> ()
 // CHECK:   }
 
-// DTOR_BODY: cir.func private @_ZN1CD2Ev(!cir.ptr<!ty_22C22>)
+// DTOR_BODY: cir.func linkonce_odr @_ZN1CD2Ev{{.*}}{
+// DTOR_BODY:   %2 = cir.get_global @printf
+// DTOR_BODY:   %3 = cir.get_global @".str2"
+// DTOR_BODY:   %4 = cir.cast(array_to_ptrdecay, %3
+// DTOR_BODY:   %5 = cir.call @printf(%4)
+// DTOR_BODY:   cir.return
+
 // DTOR_BODY: cir.func linkonce_odr @_ZN1CD1Ev(%arg0: !cir.ptr<!ty_22C22>
 
 // DTOR_BODY:   cir.call @_ZN1CD2Ev
