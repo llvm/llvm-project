@@ -1701,7 +1701,7 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
           CopyMI->removeOperand(i - 1);
       } else {
         assert(MO.isImm() &&
-               (CopyMI->getOpcode() == TargetOpcode::SUBREG_TO_REG));
+               CopyMI->getOpcode() == TargetOpcode::SUBREG_TO_REG);
         CopyMI->removeOperand(i-1);
       }
     }
