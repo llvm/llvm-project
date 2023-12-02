@@ -56,6 +56,7 @@ def CallSiteLoc : Builtin_LocationAttr<"CallSiteLoc"> {
                                         "ArrayRef<Location>":$frames)>
   ];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.call_site_loc";
 }
 
 //===----------------------------------------------------------------------===//
@@ -98,6 +99,7 @@ def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
     }]>
   ];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.file_line_loc";
 }
 
 //===----------------------------------------------------------------------===//
@@ -137,6 +139,7 @@ def FusedLoc : Builtin_LocationAttr<"FusedLoc"> {
       return get(locs, Attribute(), context);
     }
   }];
+  let attrName = "builtin.fused_loc";
 }
 
 //===----------------------------------------------------------------------===//
@@ -174,6 +177,7 @@ def NameLoc : Builtin_LocationAttr<"NameLoc"> {
     }]>
   ];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.name_loc";
 }
 
 //===----------------------------------------------------------------------===//
@@ -239,6 +243,7 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
     }
   }];
   let skipDefaultBuilders = 1;
+  let attrName = "builtin.opaque_loc";
 }
 
 //===----------------------------------------------------------------------===//
@@ -268,6 +273,7 @@ def UnknownLoc : Builtin_LocationAttr<"UnknownLoc"> {
   let extraClassDeclaration = [{
     static UnknownLoc get(MLIRContext *context);
   }];
+  let attrName = "builtin.unknown_loc";
 }
 
 #endif // BUILTIN_LOCATION_ATTRIBUTES_TD
