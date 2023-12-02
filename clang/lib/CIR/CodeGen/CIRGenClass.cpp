@@ -1005,8 +1005,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
     llvm_unreachable("NYI");
 
   // Enter the epilogue cleanups.
-  llvm_unreachable("NYI");
-  // RunCleanupsScope DtorEpilogue(*this);
+  RunCleanupsScope DtorEpilogue(*this);
 
   // If this is the complete variant, just invoke the base variant;
   // the epilogue will destruct the virtual bases.  But we can't do
@@ -1020,20 +1019,19 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:
-    llvm_unreachable("NYI");
-    // assert((Body || getTarget().getCXXABI().isMicrosoft()) &&
-    //        "can't emit a dtor without a body for non-Microsoft ABIs");
+    assert((Body || getTarget().getCXXABI().isMicrosoft()) &&
+           "can't emit a dtor without a body for non-Microsoft ABIs");
 
-    // // Enter the cleanup scopes for virtual bases.
-    // EnterDtorCleanups(Dtor, Dtor_Complete);
+    // Enter the cleanup scopes for virtual bases.
+    EnterDtorCleanups(Dtor, Dtor_Complete);
 
-    // if (!isTryBody) {
-    //   QualType ThisTy = Dtor->getThisObjectType();
-    //   EmitCXXDestructorCall(Dtor, Dtor_Base, /*ForVirtualBase=*/false,
-    //                         /*Delegating=*/false, LoadCXXThisAddress(),
-    //                         ThisTy);
-    //   break;
-    // }
+    if (!isTryBody) {
+      QualType ThisTy = Dtor->getFunctionObjectParameterType();
+      buildCXXDestructorCall(Dtor, Dtor_Base, /*ForVirtualBase=*/false,
+                             /*Delegating=*/false, LoadCXXThisAddress(),
+                             ThisTy);
+      break;
+    }
 
     // Fallthrough: act like we're in the base variant.
     [[fallthrough]];
@@ -1073,8 +1071,7 @@ void CIRGenFunction::buildDestructorBody(FunctionArgList &Args) {
   }
 
   // Jump out through the epilogue cleanups.
-  llvm_unreachable("NYI");
-  // DtorEpilogue.ForceCleanup();
+  DtorEpilogue.ForceCleanup();
 
   // Exit the try if applicable.
   if (isTryBody)
@@ -1128,6 +1125,41 @@ void CIRGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
         EHStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
       }
     }
+    return;
+  }
+
+  const CXXRecordDecl *ClassDecl = DD->getParent();
+
+  // Unions have no bases and do not call field destructors.
+  if (ClassDecl->isUnion())
+    return;
+
+  // The complete-destructor phase just destructs all the virtual bases.
+  if (DtorType == Dtor_Complete) {
+    // Poison the vtable pointer such that access after the base
+    // and member destructors are invoked is invalid.
+    if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
+        SanOpts.has(SanitizerKind::Memory) && ClassDecl->getNumVBases() &&
+        ClassDecl->isPolymorphic())
+      assert(!UnimplementedFeature::sanitizeDtor());
+
+    // We push them in the forward order so that they'll be popped in
+    // the reverse order.
+    for (const auto &Base : ClassDecl->vbases()) {
+      auto *BaseClassDecl =
+          cast<CXXRecordDecl>(Base.getType()->castAs<RecordType>()->getDecl());
+
+      if (BaseClassDecl->hasTrivialDestructor()) {
+        // Under SanitizeMemoryUseAfterDtor, poison the trivial base class
+        // memory. For non-trival base classes the same is done in the class
+        // destructor.
+        assert(!UnimplementedFeature::sanitizeDtor());
+      } else {
+        EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
+                                          /*BaseIsVirtual*/ true);
+      }
+    }
+
     return;
   }
 
