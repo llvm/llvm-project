@@ -109,7 +109,7 @@ private:
 };
 
 // Define Objective-C instance variable records.
-struct ObjCIVarRecord : public Record {
+class ObjCIVarRecord : public Record {
 public:
   ObjCIVarRecord(StringRef Name, RecordLinkage Linkage)
       : Record({Name, Linkage, SymbolFlags::Data}) {}
