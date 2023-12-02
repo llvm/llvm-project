@@ -171,7 +171,7 @@ define i8 @test13a(i8 %A) {
 define i32 @test14(i32 %A) {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[A:%.*]], -19760
-; CHECK-NEXT:    [[C:%.*]] = or i32 [[B]], 19744
+; CHECK-NEXT:    [[C:%.*]] = or disjoint i32 [[B]], 19744
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = lshr i32 %A, 4
@@ -660,7 +660,7 @@ define i8 @test39(i32 %a0) {
 ; CHECK-NEXT:    [[I51:%.*]] = xor i8 [[I50]], [[I5]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr exact i8 [[I5]], 3
 ; CHECK-NEXT:    [[I54:%.*]] = and i8 [[TMP0]], 16
-; CHECK-NEXT:    [[I551:%.*]] = or i8 [[I54]], [[I51]]
+; CHECK-NEXT:    [[I551:%.*]] = or disjoint i8 [[I54]], [[I51]]
 ; CHECK-NEXT:    ret i8 [[I551]]
 ;
 entry:
@@ -1041,7 +1041,7 @@ define i32 @test56(i32 %x) {
 ; CHECK-LABEL: @test56(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -16
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 7
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], 7
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr2 = lshr i32 %x, 1
@@ -1054,7 +1054,7 @@ define i32 @test57(i32 %x) {
 ; CHECK-LABEL: @test57(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -16
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 7
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], 7
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr = ashr i32 %x, 1
@@ -1091,7 +1091,7 @@ define i32 @test59(i32 %x) {
 ; CHECK-LABEL: @test59(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -4
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 2
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL]], 2
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr = ashr i32 %x, 4
@@ -1915,7 +1915,7 @@ define <2 x i32> @lshr_mul_negpow2_5(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr_mul_negpow2_5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> zeroinitializer, [[X:%.*]]
 ; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[TMP1]], <i32 65527, i32 65527>
-; CHECK-NEXT:    [[B:%.*]] = or <2 x i32> [[A]], <i32 8, i32 8>
+; CHECK-NEXT:    [[B:%.*]] = or disjoint <2 x i32> [[A]], <i32 8, i32 8>
 ; CHECK-NEXT:    ret <2 x i32> [[B]]
 ;
   %a = mul <2 x i32> %x, <i32 -65536, i32 -65536>

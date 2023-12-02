@@ -271,7 +271,7 @@ define i8 @mismatched_shifts(i8 %x) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = or disjoint i8 [[SHIFT]], [[SHIFT2]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x

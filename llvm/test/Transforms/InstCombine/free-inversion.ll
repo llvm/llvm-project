@@ -526,7 +526,7 @@ define i8 @lshr_not_nneg(i8 %x, i8 %y) {
 define i8 @lshr_not_nneg2(i8 %x) {
 ; CHECK-LABEL: @lshr_not_nneg2(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHR_NOT1:%.*]] = or i8 [[SHR]], -128
+; CHECK-NEXT:    [[SHR_NOT1:%.*]] = or disjoint i8 [[SHR]], -128
 ; CHECK-NEXT:    ret i8 [[SHR_NOT1]]
 ;
   %x.not = xor i8 %x, -1
