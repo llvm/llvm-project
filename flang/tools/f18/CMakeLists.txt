@@ -61,9 +61,9 @@ if (NOT CMAKE_CROSSCOMPILING)
 
     add_custom_command(OUTPUT ${base}.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
-      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
+      DEPENDS flang ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
     )
     add_custom_command(OUTPUT ${base}.f18.mod
       DEPENDS ${base}.mod
@@ -75,7 +75,7 @@ endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
-# This flang shell script will only work in a POSIX shell.
+# The flang-to-gfortan shell script will only work in a POSIX shell.
 if (NOT WIN32)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc.in

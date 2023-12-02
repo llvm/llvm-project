@@ -65,8 +65,8 @@ See [Preprocessing.md](Preprocessing.md).
 **Entry point:** `parser::Parsing::Prescan`
 
 **Commands:** 
- - `flang-new -fc1 -E src.f90` dumps the cooked character stream
- - `flang-new -fc1 -fdebug-dump-provenance src.f90` dumps provenance
+ - `flang -fc1 -E src.f90` dumps the cooked character stream
+ - `flang -fc1 -fdebug-dump-provenance src.f90` dumps provenance
    information
 
 ## Parsing
@@ -80,10 +80,10 @@ representing a syntactically correct program, rooted at the program unit.  See:
 **Entry point:** `parser::Parsing::Parse`
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-parse-tree-no-sema src.f90` dumps the parse tree
-  - `flang-new -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
-  - `flang-new -fc1 -fdebug-dump-parsing-log src.f90` runs an instrumented parse and dumps the log
-  - `flang-new -fc1 -fdebug-measure-parse-tree src.f90` measures the parse tree
+  - `flang -fc1 -fdebug-dump-parse-tree-no-sema src.f90` dumps the parse tree
+  - `flang -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
+  - `flang -fc1 -fdebug-dump-parsing-log src.f90` runs an instrumented parse and dumps the log
+  - `flang -fc1 -fdebug-measure-parse-tree src.f90` measures the parse tree
 
 ## Semantic processing
 

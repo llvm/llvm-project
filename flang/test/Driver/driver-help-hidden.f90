@@ -1,17 +1,17 @@
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
 ! RUN: %flang --help-hidden 2>&1 | FileCheck %s
 ! RUN: not %flang  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG
 
 !----------------------------------------
-! FLANG FRONTEND DRIVER (flang-new -fc1)
+! FLANG FRONTEND DRIVER (flang -fc1)
 !----------------------------------------
 ! RUN: not %flang_fc1 --help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
 ! RUN: not %flang_fc1  -help-hidden 2>&1 | FileCheck %s --check-prefix=ERROR-FLANG-FC1
 
-! CHECK:USAGE: flang-new
+! CHECK:USAGE: flang
 ! CHECK-EMPTY:
 ! CHECK-NEXT: DRIVER OPTIONS:
 ! CHECK-NEXT:  --driver-mode=<value> Set the driver mode to either 'gcc', 'g++', 'cpp', 'cl' or 'flang'

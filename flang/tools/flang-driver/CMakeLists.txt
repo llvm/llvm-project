@@ -11,7 +11,7 @@ set( LLVM_LINK_COMPONENTS
   TargetParser
 )
 
-add_flang_tool(flang-new
+add_flang_tool(flang
   driver.cpp
   fc1_main.cpp
 
@@ -24,23 +24,33 @@ add_flang_tool(flang-new
   Fortran_main
 )
 
-target_link_libraries(flang-new
+target_link_libraries(flang
   PRIVATE
   flangFrontend
   flangFrontendTool
 )
 
-clang_target_link_libraries(flang-new
+clang_target_link_libraries(flang
   PRIVATE
   clangDriver
   clangBasic
 )
 
-option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
-
-# Enable support for plugins, which need access to symbols from flang-new
-if(FLANG_PLUGIN_SUPPORT)
-  export_executable_symbols_for_plugins(flang-new)
+if(WIN32 AND NOT CYGWIN)
+  # Prevent versioning if the buildhost is targeting for Win32.
+else()
+  set_target_properties(flang PROPERTIES VERSION ${FLANG_EXECUTABLE_VERSION})
 endif()
 
-install(TARGETS flang-new DESTINATION "${CMAKE_INSTALL_BINDIR}")
+option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
+
+# Enable support for plugins, which need access to symbols from flang
+if(FLANG_PLUGIN_SUPPORT)
+  export_executable_symbols_for_plugins(flang)
+endif()
+
+install(TARGETS flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+# Keep "flang-new" as a symlink for backwards compatiblity. Remove once "flang"
+# is a widely adopted name.
+add_flang_symlink(flang-new flang)

@@ -121,10 +121,10 @@ if config.flang_standalone_build:
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
-    ToolSubst("%flang", command=FindTool("flang-new"), unresolved="fatal"),
+    ToolSubst("%flang", command=FindTool("flang"), unresolved="fatal"),
     ToolSubst(
         "%flang_fc1",
-        command=FindTool("flang-new"),
+        command=FindTool("flang"),
         extra_args=["-fc1"],
         unresolved="fatal",
     ),
