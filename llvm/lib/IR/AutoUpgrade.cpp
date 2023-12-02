@@ -949,11 +949,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
 
-      if (Name.starts_with("atomic.inc") || Name.starts_with("atomic.dec")) {
-        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
-        // new declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("atomic.")) {
+        if (Name.starts_with("inc") || Name.starts_with("dec")) {
+          // These were replaced with atomicrmw uinc_wrap and udec_wrap, so
+          // there's no new declaration.
+          NewFn = nullptr;
+          return true;
+        }
+        break; // No other 'amdgcn.atomic.*'
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -963,6 +966,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
           {F->getReturnType(), F->getArg(1)->getType()});
         return true;
       }
+      break; // No other 'amdgcn.*'
     }
 
     break;
