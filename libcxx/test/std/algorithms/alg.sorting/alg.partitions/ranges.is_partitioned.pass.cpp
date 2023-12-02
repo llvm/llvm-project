@@ -138,7 +138,7 @@ constexpr void test_iterators() {
     }
     {
       std::array<int, 0> a = {};
-      auto range = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       auto ret = std::ranges::is_partitioned(range, [](int i) { return i < 3; });
       assert(ret);
     }

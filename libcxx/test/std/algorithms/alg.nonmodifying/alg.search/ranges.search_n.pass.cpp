@@ -172,13 +172,13 @@ constexpr void test_iterators() {
   { // range has zero length
     {
       std::array<int, 0> a = {};
-      auto ret = std::ranges::search_n(Iter(a.data()), Sent(Iter(a.data())), 1, 1);
+      auto ret             = std::ranges::search_n(Iter(a.data()), Sent(Iter(a.data())), 1, 1);
       assert(base(ret.begin()) == a.data());
       assert(base(ret.end()) == a.data());
     }
     {
       std::array<int, 0> a = {};
-      auto range = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       auto ret = std::ranges::search_n(range, 1, 1);
       assert(base(ret.begin()) == a.data());
       assert(base(ret.end()) == a.data());

@@ -104,7 +104,7 @@ constexpr void test_iterator() {
     }
     {
       std::array<int, 0> a = {};
-      auto range = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       std::ranges::for_each(range, [](auto&) { assert(false); });
     }
   }

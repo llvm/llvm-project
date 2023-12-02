@@ -111,12 +111,12 @@ constexpr void test_iterators() {
   { // check that an empty range works
     {
       std::array<int, 0> a = {};
-      auto ret = std::ranges::is_sorted_until(Iter(a.data()), Sent(Iter(a.data())));
+      auto ret             = std::ranges::is_sorted_until(Iter(a.data()), Sent(Iter(a.data())));
       assert(base(ret) == a.data());
     }
     {
       std::array<int, 0> a = {};
-      auto range = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
+      auto range           = std::ranges::subrange(Iter(a.data()), Sent(Iter(a.data())));
       auto ret = std::ranges::is_sorted_until(range);
       assert(base(ret) == a.data());
     }
