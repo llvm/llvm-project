@@ -27,11 +27,11 @@ namespace MachO {
 // triple.
 class RecordsSlice {
 public:
-  RecordsSlice(const llvm::Triple &T) : TargetTriple(T), Target(T) {}
+  RecordsSlice(const llvm::Triple &T) : TargetTriple(T), TAPITarget(T) {}
   /// Get target triple.
   const llvm::Triple &getTriple() const { return TargetTriple; }
   /// Get TAPI converted target.
-  const Target &getTarget() const { return Target; }
+  const Target &getTarget() const { return TAPITarget; }
 
   /// Add unspecified record to slice.
   ///
@@ -156,7 +156,7 @@ public:
 private:
   const llvm::Triple TargetTriple;
   // Hold tapi converted triple to avoid unecessary casts.
-  const Target Target;
+  const Target TAPITarget;
 
   /// BumpPtrAllocator to store generated/copied strings.
   llvm::BumpPtrAllocator StringAllocator;
