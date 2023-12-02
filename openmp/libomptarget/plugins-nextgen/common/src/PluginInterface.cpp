@@ -526,6 +526,12 @@ GenericKernelTy::getKernelLaunchEnvironment(
     AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
   }
 
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
+       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
+       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
+       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
+       sizeof(KernelLaunchEnvironmentTy));
+
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);

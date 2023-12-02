@@ -27,10 +27,6 @@
 #include <mutex>
 #include <string>
 
-// Forward declarations.
-struct DeviceTy;
-struct __tgt_bin_desc;
-
 struct PluginAdaptorTy {
   PluginAdaptorTy(const std::string &Name);
 
@@ -110,10 +106,6 @@ struct PluginManager {
   /// Map from ptrs on the host to an entry in the Translation Table
   HostPtrToTableMapTy HostPtrToTableMap;
   std::mutex TblMapMtx; ///< For HostPtrToTableMap
-
-  // Store target policy (disabled, mandatory, default)
-  kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
-  std::mutex TargetOffloadMtx; ///< For TargetOffloadPolicy
 
   // Work around for plugins that call dlopen on shared libraries that call
   // tgt_register_lib during their initialisation. Stash the pointers in a

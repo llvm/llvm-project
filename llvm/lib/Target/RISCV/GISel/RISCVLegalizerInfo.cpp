@@ -242,7 +242,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .widenScalarToNextPow2(0);
   }
 
-  getActionDefinitionsBuilder(G_ABS).lower();
+  auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
+  if (ST.hasStdExtZbb())
+    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
+  AbsActions.lower();
 
   auto &MinMaxActions =
       getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
@@ -356,6 +359,8 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   default:
     // No idea what to do.
     return false;
+  case TargetOpcode::G_ABS:
+    return Helper.lowerAbsToMaxNeg(MI);
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:

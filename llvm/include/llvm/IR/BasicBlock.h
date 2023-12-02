@@ -536,6 +536,9 @@ private:
   void spliceDebugInfo(BasicBlock::iterator ToIt, BasicBlock *FromBB,
                        BasicBlock::iterator FromBeginIt,
                        BasicBlock::iterator FromEndIt);
+  void spliceDebugInfoImpl(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                           BasicBlock::iterator FromBeginIt,
+                           BasicBlock::iterator FromEndIt);
 
 public:
   /// Returns a pointer to the symbol table if one exists.
