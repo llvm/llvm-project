@@ -704,9 +704,9 @@ definition is located in a different section, the behavior is undefined.
 LLVM allows an explicit code model to be specified for globals. If the
 target supports it, it will emit globals in the code model specified,
 overriding the code model used to compile the translation unit.
-The allowed values are "tiny", ..., "large". This may be extended in
-the future to specify global data layout that doesn't cleanly fit into
-a specific code model.
+The allowed values are "tiny", "small", "kernel", "medium", "large".
+This may be extended in the future to specify global data layout that
+doesn't cleanly fit into a specific code model.
 
 By default, global initializers are optimized by assuming that global
 variables defined within the module are not modified from their
