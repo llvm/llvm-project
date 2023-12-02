@@ -5,6 +5,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// To run this test, build libcxx and cxx-benchmarks targets
+// cd third-party/benchmark/tools
+// ./compare.py filters ../../../build/libcxx/benchmarks/atomic_wait_vs_mutex_lock.libcxx.out BM_atomic_wait BM_mutex
+
 #include <atomic>
 #include <mutex>
 #include <numeric>
@@ -39,13 +43,14 @@ struct AtomicLock {
   }
 };
 
-using LockState = std::atomic<bool>;
-using Lock      = AtomicLock;
+// using LockState = std::atomic<bool>;
+// using Lock      = AtomicLock;
 
 // using LockState = std::mutex;
 // using Lock = std::unique_lock<std::mutex>;
 
-void BM_multi_thread_lock_unlock(benchmark::State& state) {
+template <class LockState, class Lock>
+void test_multi_thread_lock_unlock(benchmark::State& state) {
   std::uint64_t total_loop_test_param = state.range(0);
   constexpr auto num_threads          = 15;
   std::vector<std::jthread> threads;
@@ -61,9 +66,12 @@ void BM_multi_thread_lock_unlock(benchmark::State& state) {
     while (!st.stop_requested()) {
       start_flag.wait(old_start);
       old_start = start_flag.load();
+
+      // main things under test: locking and unlocking in the loop
       for (std::uint64_t i = 0; i < total_loop_test_param; ++i) {
         Lock l{lock_state};
       }
+
       done_count.fetch_add(1);
     }
   };
@@ -89,6 +97,13 @@ void BM_multi_thread_lock_unlock(benchmark::State& state) {
     t.join();
   }
 }
-BENCHMARK(BM_multi_thread_lock_unlock)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
+
+void BM_atomic_wait(benchmark::State& state) { test_multi_thread_lock_unlock<std::atomic<bool>, AtomicLock>(state); }
+BENCHMARK(BM_atomic_wait)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
+
+void BM_mutex(benchmark::State& state) {
+  test_multi_thread_lock_unlock<std::mutex, std::unique_lock<std::mutex>>(state);
+}
+BENCHMARK(BM_mutex)->RangeMultiplier(2)->Range(1 << 10, 1 << 20);
 
 BENCHMARK_MAIN();
