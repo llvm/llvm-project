@@ -195,7 +195,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE}).legalFor({p0});
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
+      .legalFor({p0});
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
@@ -283,7 +284,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_IS_FPCLASS)
       .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
 
-  getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf(typeIsScalarFPArith(0, ST))
+      .lowerFor({s32, s64});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
