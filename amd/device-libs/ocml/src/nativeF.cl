@@ -11,8 +11,8 @@
 CONSTATTR float
 MATH_MANGLE(native_recip)(float x)
 {
-    // FIXME: Should use IR fdiv with arcp set.
-    return __builtin_amdgcn_rcpf(x);
+    #pragma clang fp reciprocal(on)
+    return 1.0f / x;
 }
 
 CONSTATTR float

@@ -12,5 +12,6 @@
 CONSTATTR half
 MATH_MANGLE(native_rcp)(half x)
 {
+    #pragma clang fp reciprocal(on)
     return 1.0h / x;
 }
