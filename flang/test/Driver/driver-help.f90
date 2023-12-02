@@ -64,6 +64,7 @@
 ! HELP-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fno-version-loops-for-stride
 ! HELP-NEXT:                         Do not create unit-strided loops (default)
+! HELP-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! HELP-NEXT: -fopenacc               Enable OpenACC
 ! HELP-NEXT: -fopenmp-target-debug   Enable debugging in the OpenMP offloading device RTL
 ! HELP-NEXT: -fopenmp-targets=<value>
@@ -238,6 +239,7 @@
 ! HELP-FC1-NEXT:                         Specify code object ABI version. Defaults to 4. (AMDGPU only)
 ! HELP-FC1-NEXT: -menable-no-infs        Allow optimization to assume there are no infinities.
 ! HELP-FC1-NEXT: -menable-no-nans        Allow optimization to assume there are no NaNs.
+! HELP-FC1-NEXT: -mframe-pointer=<value> Specify which frame pointers to retain.
 ! HELP-FC1-NEXT: -mllvm <value>          Additional arguments to forward to LLVM's option processing
 ! HELP-FC1-NEXT: -mmlir <value>          Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>       Put MODULE files in <dir>
