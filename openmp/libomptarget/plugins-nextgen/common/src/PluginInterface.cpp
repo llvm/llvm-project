@@ -1800,9 +1800,11 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
   return Compatible;
 }
 
-bool __tgt_rtl_exists_valid_binary_for_RTL(
-    std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *Images,
-    std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *ValidImages) {
+bool __tgt_rtl_exists_valid_binary_for_RTL(void *VImages, void *VValidImages) {
+  std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *Images =
+    (std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *) VImages;
+  std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *ValidImages =
+    (std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *) VValidImages;
 
   bool IsValidImageAvailable = false;
   std::list<std::pair<__tgt_device_image, __tgt_image_info> *> InvalidImages;

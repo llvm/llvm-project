@@ -158,7 +158,7 @@ struct DeviceTy {
 
   // calls to RTL
   int32_t initOnce();
-  __tgt_target_table *loadBinary(void *Img);
+  __tgt_target_table *loadBinary(__tgt_device_image *Img);
 
   // device memory allocation/deallocation routines
   /// Allocates \p Size bytes on the device, host or shared memory space
@@ -200,7 +200,7 @@ struct DeviceTy {
 
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                       ptrdiff_t *TgtOffsets, const KernelArgsTy &KernelArgs,
+                       ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                        AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return

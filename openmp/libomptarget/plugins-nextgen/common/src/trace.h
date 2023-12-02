@@ -430,7 +430,7 @@ static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId,
                                                             const void *ptr,
                                                             int64_t size);
 int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId,
-                                                const void *ptr, int64_t size) {
+                                                void *ptr, int64_t size) {
   auto t = detail::log<int32_t>(__func__, DeviceId, ptr, size);
   int32_t r = __tgt_rtl_query_coarse_grain_mem_region_impl(DeviceId, ptr, size);
   t.res(r);

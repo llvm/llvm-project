@@ -18,7 +18,7 @@
 #include "private.h"
 #include "rtl.h"
 
-#include "Shared/Utils.h"
+#include "Shared/EnvironmentVar.h"
 
 #include <cassert>
 #include <climits>
@@ -36,7 +36,7 @@ using namespace ompt;
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
   // First, check if the user disabled atomic map transfer/malloc/dealloc.
-  if (!PM->UseEventsForAtomicTransfers)
+  if (!MappingConfig::get().UseEventsForAtomicTransfers)
     return OFFLOAD_SUCCESS;
 
   void *Event = getEvent();
@@ -584,15 +584,14 @@ void DeviceTy::init() {
   setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   // Enables recording kernels if set.
-  llvm::omp::target::BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
+  BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
   if (OMPX_RecordKernel) {
     // Enables saving the device memory kernel output post execution if set.
-    llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
-        "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
+    BoolEnvar OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT", false);
 
     uint64_t ReqPtrArgOffset;
-    RTL->activate_record_replay(RTLDeviceID, 0, nullptr, true,
-                                OMPX_ReplaySaveOutput, ReqPtrArgOffset);
+    RTL->initialize_record_replay(RTLDeviceID, 0, nullptr, true,
+                                  OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
   IsInit = true;
@@ -614,7 +613,7 @@ int32_t DeviceTy::initOnce() {
 }
 
 // Load binary to device.
-__tgt_target_table *DeviceTy::loadBinary(void *Img) {
+__tgt_target_table *DeviceTy::loadBinary(__tgt_device_image *Img) {
   std::lock_guard<decltype(RTL->Mtx)> LG(RTL->Mtx);
   return RTL->load_binary(RTLDeviceID, Img);
 }
@@ -786,8 +785,7 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                               ptrdiff_t *TgtOffsets,
-                               const KernelArgsTy &KernelArgs,
+                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
   if (ForceSynchronousTargetRegions || !RTL->launch_kernel ||
 #ifdef OMPT_SUPPORT

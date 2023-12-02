@@ -19,7 +19,9 @@
 
 #include "Shared/APITypes.h"
 
+#ifdef __cplusplus
 extern "C" {
+#endif
 
 // Return the number of available physical processors to execute teams
 // supported by the RTL. AMD calls these CUs.  Nvidia calls the SMs.
@@ -234,6 +236,46 @@ int32_t __tgt_rtl_data_notify_unmapped(int32_t ID, void *HstPtr);
 // Set the global device identifier offset, such that the plugin may determine a
 // unique device number.
 int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset);
-}
 
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfoPtr);
+
+int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
+                                           void *VAddr, bool isRecord,
+                                           bool SaveOutput,
+                                           uint64_t &ReqPtrArgOffset);
+
+bool __tgt_rtl_requested_prepopulate_gpu_page_table();
+
+#if 1
+bool __tgt_rtl_exists_valid_binary_for_RTL(void*, void *);
+#endif
+bool __tgt_rtl_is_system_supporting_managed_memory();
+
+int32_t __tgt_rtl_launch_kernel_sync(int32_t, void *, void **, ptrdiff_t *,
+                                     KernelArgsTy *);
+
+int __tgt_rtl_set_coarse_grain_mem_region(int32_t, void *, int64_t);
+
+int __tgt_rtl_prepopulate_page_table(int32_t, void *, int64_t);
+
+int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t, void *, int64_t);
+
+
+int32_t __tgt_rtl_enable_access_to_all_agents(void *, int32_t);
+
+int32_t __tgt_rtl_enable_access_to_all_agents_ty(void *, int32_t);
+
+int32_t __tgt_rtl_release_async_info(int32_t, __tgt_async_info *);
+
+int32_t __tgt_rtl_activate_record_replay(int32_t, uint64_t, void *, bool,
+                                         bool, uint64_t &);
+
+void __tgt_rtl_set_up_env(void);
+
+#ifdef __cplusplus
+}
+#endif
 #endif // OMPTARGET_SHARED_PLUGIN_API_H

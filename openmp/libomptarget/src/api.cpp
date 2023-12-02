@@ -41,13 +41,11 @@ EXTERN int ompx_get_team_procs(int device_num) {
 
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
-  PM->RTLsMtx.lock();
-  size_t DevicesSize = PM->Devices.size();
-  PM->RTLsMtx.unlock();
+  size_t NumDevices = PM->getNumDevices();
 
-  DP("Call to omp_get_num_devices returning %zd\n", DevicesSize);
+  DP("Call to omp_get_num_devices returning %zd\n", NumDevices);
 
-  return DevicesSize;
+  return NumDevices;
 }
 
 EXTERN int omp_get_device_num(void) {
@@ -143,10 +141,8 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
     return true;
   }
 
-  PM->RTLsMtx.lock();
-  size_t DevicesSize = PM->Devices.size();
-  PM->RTLsMtx.unlock();
-  if (DevicesSize <= (size_t)DeviceNum) {
+  size_t NumDevices = PM->getNumDevices();
+  if (NumDevices <= (size_t)DeviceNum) {
     DP("Call to omp_target_is_present with invalid device ID, returning "
        "false\n");
     return false;
@@ -600,18 +596,14 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  size_t NumDevices = omp_get_initial_device();
+  if (DeviceNum == NumDevices) {
     REPORT("Device %d is initial device, returning Ptr " DPxMOD ".\n",
            DeviceNum, DPxPTR(Ptr));
     return const_cast<void *>(Ptr);
   }
 
-  int DevicesSize = omp_get_initial_device();
-  {
-    std::lock_guard<std::mutex> LG(PM->RTLsMtx);
-    DevicesSize = PM->Devices.size();
-  }
-  if (DevicesSize <= DeviceNum) {
+  if (NumDevices <= DeviceNum) {
     DP("DeviceNum %d is invalid, returning nullptr.\n", DeviceNum);
     return nullptr;
   }

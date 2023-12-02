@@ -13,13 +13,13 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/OffloadArch/OffloadArch.h"
 
-#include "OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
 
+#include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "Shared/Utils.h"
 
@@ -45,40 +45,21 @@ static const char *RTLNames[] = {
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
 };
 
-static char *ProfileTraceFile = nullptr;
-
 #ifdef OMPT_SUPPORT
 extern void ompt::connectLibrary();
-extern OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 #endif
 
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
 
-  bool UseEventsForAtomicTransfers = true;
-  if (const char *ForceAtomicMap = getenv("LIBOMPTARGET_MAP_FORCE_ATOMIC")) {
-    std::string ForceAtomicMapStr(ForceAtomicMap);
-    if (ForceAtomicMapStr == "false" || ForceAtomicMapStr == "FALSE")
-      UseEventsForAtomicTransfers = false;
-    else if (ForceAtomicMapStr != "true" && ForceAtomicMapStr != "TRUE")
-      fprintf(stderr,
-              "Warning: 'LIBOMPTARGET_MAP_FORCE_ATOMIC' accepts only "
-              "'true'/'TRUE' or 'false'/'FALSE' as options, '%s' ignored\n",
-              ForceAtomicMap);
-  }
-
-  PM = new PluginManager(UseEventsForAtomicTransfers);
-
-  ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
-  // TODO: add a configuration option for time granularity
-  if (ProfileTraceFile)
-    timeTraceProfilerInitialize(500 /* us */, "libomptarget");
+  PM = new PluginManager();
 
 #ifdef OMPT_SUPPORT
   // Initialize OMPT first
   ompt::connectLibrary();
 #endif
 
+  Profiler::get();
   PM->RTLs.loadRTLs();
   PM->registerDelayedLibraries();
 }
@@ -86,14 +67,6 @@ __attribute__((constructor(101))) void init() {
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
   delete PM;
-
-  if (ProfileTraceFile) {
-    // TODO: add env var for file output
-    if (auto E = timeTraceProfilerWrite(ProfileTraceFile, "-"))
-      fprintf(stderr, "Error writing out the time trace\n");
-
-    timeTraceProfilerCleanup();
-  }
 }
 
 void PluginAdaptorManagerTy::loadRTLs() {
@@ -152,63 +125,21 @@ bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAd
 
   DP("Successfully loaded library '%s'!\n", Name);
 
-  // Remove plugin on failure to call optional init_plugin
-  *((void **)&RTL.init_plugin) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_plugin");
-  if (RTL.init_plugin) {
-    int32_t Rc = RTL.init_plugin();
-    if (Rc != OFFLOAD_SUCCESS) {
-      DP("Unable to initialize library '%s': %u!\n", Name, Rc);
-      return false;
-    }
+#define PLUGIN_API_HANDLE(NAME, MANDATORY)                                     \
+  *((void **)&RTL.NAME) =                                                      \
+      DynLibrary->getAddressOfSymbol(GETNAME(__tgt_rtl_##NAME));               \
+  if (MANDATORY && !RTL.NAME) {                                                \
+    DP("Invalid plugin as necessary interface is not found %s\n", #NAME);      \
+    return false;                                                              \
   }
 
-  bool ValidPlugin = true;
+#include "Shared/PluginAPI.inc"
+#undef PLUGIN_API_HANDLE
 
-  if (!(*((void **)&RTL.is_valid_binary) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.exists_valid_binary_for_RTL) =
-            DynLibrary->getAddressOfSymbol(
-                "__tgt_rtl_exists_valid_binary_for_RTL")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.number_of_devices) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.number_of_team_procs) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.init_device) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.load_binary) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_load_binary")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_alloc) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_alloc")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_submit) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_retrieve) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.data_delete) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_data_delete")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.launch_kernel) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.launch_kernel_sync) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel_sync")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.set_up_env) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_set_up_env")))
-    ValidPlugin = false;
-
-  // Invalid plugin
-  if (!ValidPlugin) {
-    DP("Invalid plugin as necessary interface is not found.\n");
+  // Remove plugin on failure to call optional init_plugin
+  int32_t Rc = RTL.init_plugin();
+  if (Rc != OFFLOAD_SUCCESS) {
+    DP("Unable to initialize library '%s': %u!\n", Name, Rc);
     return false;
   }
 
@@ -224,88 +155,6 @@ bool PluginAdaptorManagerTy::attemptLoadRTL(const std::string &RTLName, PluginAd
 #endif
 
   DP("Registering RTL %s supporting %d devices!\n", Name, RTL.NumberOfDevices);
-
-  // Optional functions
-  *((void **)&RTL.is_valid_binary_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-  *((void **)&RTL.init_requires) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
-  *((void **)&RTL.data_submit_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
-  *((void **)&RTL.data_retrieve_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
-  *((void **)&RTL.synchronize) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
-  *((void **)&RTL.query_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_async");
-  *((void **)&RTL.data_exchange) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
-  *((void **)&RTL.data_exchange_async) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
-  *((void **)&RTL.is_data_exchangable) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
-  *((void **)&RTL.supports_empty_images) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
-  *((void **)&RTL.set_info_flag) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_info_flag");
-  *((void **)&RTL.print_device_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_print_device_info");
-  *((void **)&RTL.create_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_create_event");
-  *((void **)&RTL.record_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_record_event");
-  *((void **)&RTL.wait_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_wait_event");
-  *((void **)&RTL.sync_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
-  *((void **)&RTL.destroy_event) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
-  *((void **)&RTL.set_coarse_grain_mem_region) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_coarse_grain_mem_region");
-  *((void **)&RTL.query_coarse_grain_mem_region) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_query_coarse_grain_mem_region");
-  *((void **)&RTL.prepopulate_page_table) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_prepopulate_page_table");
-  *((void **)&RTL.enable_access_to_all_agents) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_enable_access_to_all_agents");
-  *((void **)&RTL.release_async_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
-  *((void **)&RTL.init_async_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_async_info");
-  *((void **)&RTL.init_device_info) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device_info");
-  *((void **)&RTL.data_lock) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_lock");
-  *((void **)&RTL.data_unlock) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_unlock");
-  *((void **)&RTL.data_notify_mapped) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_mapped");
-  *((void **)&RTL.data_notify_unmapped) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
-  *((void **)&RTL.has_apu_device) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_has_apu_device");
-  *((void **)&RTL.has_USM_capable_dGPU) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_has_USM_capable_dGPU");
-  *((void **)&RTL.are_allocations_for_maps_on_apus_disabled) =
-      DynLibrary->getAddressOfSymbol(
-          "__tgt_rtl_are_allocations_for_maps_on_apus_disabled");
-  *((void **)&RTL.requested_prepopulate_gpu_page_table) =
-      DynLibrary->getAddressOfSymbol(
-          "__tgt_rtl_requested_prepopulate_gpu_page_table");
-  *((void **)&RTL.is_no_maps_check) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_no_maps_check");
-  *((void **)&RTL.is_fine_grained_memory_enabled) =
-      DynLibrary->getAddressOfSymbol(
-          "__tgt_rtl_is_fine_grained_memory_enabled");
-  *((void **)&RTL.is_system_supporting_managed_memory) =
-      DynLibrary->getAddressOfSymbol(
-          "__tgt_rtl_is_system_supporting_managed_memory");
-  *((void **)&RTL.set_device_offset) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_device_offset");
-
-  // Record Replay RTL
-  *((void **)&RTL.activate_record_replay) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_initialize_record_replay");
 
   RTL.LibraryHandler = std::move(DynLibrary);
 
@@ -572,11 +421,6 @@ void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
 
 void PluginAdaptorManagerTy::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");
-
-  // Flush in-process OMPT trace records and shut down helper threads
-  // before unloading the library.
-  OMPT_TRACING_IF_ENABLED(
-      llvm::omp::target::ompt::TraceRecordManager.shutdownHelperThreads(););
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
