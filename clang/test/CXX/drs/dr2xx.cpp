@@ -25,7 +25,7 @@ namespace dr200 { // dr200: dup 214
 
 // dr201 FIXME: write codegen test
 
-namespace dr202 { // dr202: yes
+namespace dr202 { // dr202: 3.1
   template<typename T> T f();
   template<int (*g)()> struct X {
     int arr[fold(g == &f<int>) ? 1 : -1];
@@ -58,7 +58,7 @@ namespace dr207 { // dr207: yes
 
 // dr208 FIXME: write codegen test
 
-namespace dr209 { // dr209: yes
+namespace dr209 { // dr209: 3.2
   class A {
     void f(); // expected-note {{here}}
   };
@@ -108,7 +108,7 @@ namespace dr214 { // dr214: yes
   }
 }
 
-namespace dr215 { // dr215: yes
+namespace dr215 { // dr215: 2.9
   template<typename T> class X {
     friend void T::foo();
     int n;
@@ -198,7 +198,7 @@ namespace dr218 { // dr218: yes
 // dr219: na
 // dr220: na
 
-namespace dr221 { // dr221: yes
+namespace dr221 { // dr221: 3.6
   struct A { // expected-note 2-4{{candidate}}
     A &operator=(int&); // expected-note 2{{candidate}}
     A &operator+=(int&);
@@ -404,13 +404,13 @@ namespace dr228 { // dr228: yes
   };
 }
 
-namespace dr229 { // dr229: yes
+namespace dr229 { // dr229: 2.9
   template<typename T> void f();
   template<typename T> void f<T*>() {} // expected-error {{function template partial specialization}}
   template<> void f<int>() {}
 }
 
-namespace dr230 { // dr230: yes
+namespace dr230 { // dr230: 3.0
   struct S {
     S() { f(); } // expected-warning {{call to pure virtual member function}}
     virtual void f() = 0; // expected-note {{declared here}}
@@ -430,7 +430,7 @@ namespace dr231 { // dr231: yes
 // dr234: na
 // dr235: na
 
-namespace dr236 { // dr236: yes
+namespace dr236 { // dr236: 3.2
   void *p = int();
 #if __cplusplus < 201103L
   // expected-warning@-2 {{null pointer}}
@@ -586,7 +586,7 @@ namespace dr245 { // dr245: yes
   };
 }
 
-namespace dr246 { // dr246: yes
+namespace dr246 { // dr246: 3.2
   struct S {
     S() try { // expected-note {{try block}}
       throw 0;
@@ -642,7 +642,7 @@ namespace dr250 { // dr250: yes
   FPtr gp = &g<>;
 }
 
-namespace dr252 { // dr252: yes
+namespace dr252 { // dr252: 3.1
   struct A {
     void operator delete(void*); // expected-note {{found}}
   };
@@ -682,7 +682,7 @@ namespace dr252 { // dr252: yes
   G::~G() {}
 }
 
-namespace dr254 { // dr254: yes
+namespace dr254 { // dr254: 2.9
   template<typename T> struct A {
     typedef typename T::type type; // ok even if this is a typedef-name, because
                                    // it's not an elaborated-type-specifier
@@ -704,7 +704,7 @@ void f(S *p) { delete p; }
 
 // dr256: dup 624
 
-namespace dr257 { // dr257: yes
+namespace dr257 { // dr257: 3.4
   struct A { A(int); }; // expected-note {{here}}
   struct B : virtual A {
     B() {}
@@ -719,7 +719,7 @@ namespace dr257 { // dr257: yes
   };
 }
 
-namespace dr258 { // dr258: yes
+namespace dr258 { // dr258: 2.8
   struct A {
     void f(const int);
     template<typename> void g(int);
@@ -818,7 +818,7 @@ namespace dr262 { // dr262: yes
   int m = f(0, 0);
 }
 
-namespace dr263 { // dr263: yes
+namespace dr263 { // dr263: 3.3
   struct X {};
   struct Y {
 #if __cplusplus < 201103L
@@ -921,13 +921,13 @@ namespace dr275 { // dr275: no
 
 // dr276: na
 
-namespace dr277 { // dr277: yes
+namespace dr277 { // dr277: 3.1
   typedef int *intp;
   int *p = intp();
   int a[fold(intp() ? -1 : 1)];
 }
 
-namespace dr280 { // dr280: yes
+namespace dr280 { // dr280: 2.9
   typedef void f0();
   typedef void f1(int);
   typedef void f2(int, int);
@@ -1030,7 +1030,7 @@ namespace dr285 { // dr285: yes
   template<> void f<int>(int, int) {} // expected-error {{ambiguous}}
 }
 
-namespace dr286 { // dr286: yes
+namespace dr286 { // dr286: 2.8
   template<class T> struct A {
     class C {
       template<class T2> struct B {}; // expected-note {{here}}
@@ -1111,7 +1111,7 @@ namespace dr296 { // dr296: yes
   };
 }
 
-namespace dr298 { // dr298: yes
+namespace dr298 { // dr298: 3.1
   struct A {
     typedef int type;
     A();
@@ -1142,7 +1142,7 @@ namespace dr298 { // dr298: yes
   G::~F() {} // ok
 }
 
-namespace dr299 { // dr299: yes c++11
+namespace dr299 { // dr299: 2.8 c++11
   struct S {
     operator int();
   };
