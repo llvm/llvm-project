@@ -831,9 +831,6 @@ private:
   /// is the instantiation location.
   SmallVector<serialization::DeclID, 64> PendingInstantiations;
 
-  llvm::DenseMap<serialization::DeclID, std::set<serialization::DeclID>>
-      PendingInstantiationsOfConstexprEntities;
-
   //@}
 
   /// \name DiagnosticsEngine-relevant special data
@@ -2117,9 +2114,6 @@ public:
   void ReadPendingInstantiations(
                   SmallVectorImpl<std::pair<ValueDecl *,
                                             SourceLocation>> &Pending) override;
-
-  virtual void ReadPendingInstantiationsOfConstexprEntity(
-      const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) override;
 
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>

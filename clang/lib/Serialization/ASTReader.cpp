@@ -3757,19 +3757,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
-    case PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES:
-      if (Record.size() % 2 != 0)
-        return llvm::createStringError(
-            std::errc::illegal_byte_sequence,
-            "Invalid PENDING_INSTANTIATIONS_OF_CONSTEXPR_ENTITIES block");
-
-      for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
-        DeclID Key = getGlobalDeclID(F, Record[I++]);
-        DeclID Value = getGlobalDeclID(F, Record[I++]);
-        PendingInstantiationsOfConstexprEntities[Key].insert(Value);
-      }
-      break;
-
     case SEMA_DECL_REFS:
       if (Record.size() != 3)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
@@ -8776,20 +8763,6 @@ void ASTReader::ReadPendingInstantiations(
     Pending.push_back(std::make_pair(D, Loc));
   }
   PendingInstantiations.clear();
-}
-
-void ASTReader::ReadPendingInstantiationsOfConstexprEntity(
-    const NamedDecl *D, llvm::SmallSetVector<NamedDecl *, 4> &Decls) {
-  for (auto *Redecl : D->redecls()) {
-    if (!Redecl->isFromASTFile())
-      continue;
-    DeclID Id = Redecl->getGlobalID();
-    auto It = PendingInstantiationsOfConstexprEntities.find(Id);
-    if (It == PendingInstantiationsOfConstexprEntities.end())
-      continue;
-    for (DeclID InstantiationId : It->second)
-      Decls.insert(cast<NamedDecl>(GetDecl(InstantiationId)));
-  }
 }
 
 void ASTReader::ReadLateParsedTemplates(

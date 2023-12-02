@@ -19123,17 +19123,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
               CodeSynthesisContexts.size())
             PendingLocalImplicitInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
-          else if (Func->isConstexpr()) {
+          else if (Func->isConstexpr())
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
             InstantiateFunctionDefinition(PointOfInstantiation, Func);
-            if (!Func->isDefined()) {
-              PendingInstantiationsOfConstexprEntities
-                  [Func->getTemplateInstantiationPattern()->getCanonicalDecl()]
-                      .push_back(Func);
-            }
-          } else {
+          else {
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(
                 std::make_pair(Func, PointOfInstantiation));
