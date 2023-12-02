@@ -9271,6 +9271,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
               ? new VPInstruction(Instruction::Select, {Cond, Red, PhiR}, FMFs)
               : new VPInstruction(Instruction::Select, {Cond, Red, PhiR});
       Result->insertBefore(&*Builder.getInsertPoint());
+      Red->replaceUsesWithIf(
+          Result->getVPSingleValue(),
+          [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
       if (PreferPredicatedReductionSelect ||
           TTI.preferPredicatedReductionSelect(
               PhiR->getRecurrenceDescriptor().getOpcode(), PhiTy,
