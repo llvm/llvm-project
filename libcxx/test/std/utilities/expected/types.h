@@ -211,7 +211,7 @@ static_assert(!std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<
 //                |
 //                |             +- `please_dont_overwrite_me`
 //                |             |
-//    /---int---\ |  /----------^-------\
+//    /---int---\ |  /----------^-------\                                    //
 //    00 00 00 00 01 01 01 01 01 01 01 01
 //                   \--v---/
 //                      |
@@ -229,7 +229,7 @@ static_assert(!std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<
 //    +- bool
 //    |                                +- please_dont_overwrite_me
 //    |  +- "has value" flag           |
-//    |  |                    /--------^---------\
+//    |  |                    /--------^---------\                           //
 //    00 00 00 00 00 00 00 00 01 01 01 01 01 01 01 00
 //          \---padding-----/                      |
 //                                                 +- `CheckForInvalidWrites`
