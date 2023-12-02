@@ -10,16 +10,16 @@
 
 // Check reserve(0) with old mangling shrinks for compatibility if it exists.
 #if !defined(_LIBCPP_ABI_DO_NOT_RETAIN_SHRINKING_RESERVE)
-#define _LIBCPP_ENABLE_RESERVE_SHRINKING_ABI
-#include <string>
-#include <cassert>
+#  define _LIBCPP_ENABLE_RESERVE_SHRINKING_ABI
+#  include <string>
+#  include <cassert>
 
-#include "test_macros.h"
-#include "min_allocator.h"
+#  include "test_macros.h"
+#  include "min_allocator.h"
 
 bool test() {
   std::string l = "Long string so that allocation definitely, for sure, absolutely happens. Probably.";
-  const char *c = l.c_str();
+  const char* c = l.c_str();
 
   assert(l.__invariants());
 
