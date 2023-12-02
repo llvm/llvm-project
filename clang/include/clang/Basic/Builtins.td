@@ -968,6 +968,11 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_within_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking, Consteval];
   let Prototype = "bool(void*)";
+
+def ClearPadding : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_clear_padding"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(void*)";
 }
 
 // GCC exception builtins
