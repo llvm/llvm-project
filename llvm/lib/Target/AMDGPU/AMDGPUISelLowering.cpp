@@ -3234,10 +3234,26 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
   SDLoc SL(Op);
-  SDValue Src = Op.getOperand(0);
+  bool IsStrict = Op->getNumValues() == 2;
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
 
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = split64BitValue(Src, DAG);
+
+  if (IsStrict) {
+    SDVTList VTs = Op->getVTList();
+    SDValue CvtHi = DAG.getNode(Signed ? ISD::STRICT_SINT_TO_FP : ISD::STRICT_UINT_TO_FP,
+                                SL, VTs, Op.getOperand(0), Hi);
+
+    SDValue CvtLo = DAG.getNode(ISD::STRICT_UINT_TO_FP, SL, VTs, CvtHi.getValue(1), Lo);
+
+    SDValue LdExp = DAG.getNode(ISD::STRICT_FLDEXP, SL, VTs,
+                                CvtLo.getValue(1),
+                                CvtHi,
+                                DAG.getConstant(32, SL, MVT::i32));
+    // TODO: Should this propagate fast-math-flags?
+    return DAG.getNode(ISD::STRICT_FADD, SL, VTs, LdExp.getValue(1), LdExp, CvtLo);
+  }
 
   SDValue CvtHi = DAG.getNode(Signed ? ISD::SINT_TO_FP : ISD::UINT_TO_FP,
                               SL, MVT::f64, Hi);
