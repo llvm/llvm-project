@@ -123,3 +123,9 @@ add_subdirectory(tools)
 
 # Add tests.
 add_subdirectory(test)
+
+# Add unit tests if GMock/GTest is present
+if (EXISTS ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest AND EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest)
+  add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
+  add_subdirectory(unittests)
+endif()
