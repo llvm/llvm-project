@@ -58,6 +58,7 @@ MODULE_PASS("dfsan", DataFlowSanitizerPass())
 MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
 MODULE_PASS("dxil-upgrade", DXILUpgradePass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
+MODULE_PASS("embed-bitcode", EmbedBitcodePass())
 MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
 MODULE_PASS("function-import", FunctionImportPass())
@@ -147,10 +148,6 @@ MODULE_PASS_WITH_PARAMS(
     "asan", "AddressSanitizerPass",
     [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },
     parseASanPassOptions, "kernel")
-MODULE_PASS_WITH_PARAMS(
-    "embed-bitcode", "EmbedBitcodePass",
-    [](EmbedBitcodeOptions Opts) { return EmbedBitcodePass(Opts); },
-    parseEmbedBitcodePassOptions, "thinlto;emit-summary")
 MODULE_PASS_WITH_PARAMS(
     "globaldce", "GlobalDCEPass",
     [](bool InLTOPostLink) { return GlobalDCEPass(InLTOPostLink); },
