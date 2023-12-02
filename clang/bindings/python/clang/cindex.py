@@ -190,7 +190,7 @@ class TranslationUnitSaveError(Exception):
 ### Structures and Utility Classes ###
 
 
-class CachedProperty(object):
+class CachedProperty:
     """Decorator that lazy-loads the value of a property.
 
     The first time the property is accessed, the original property function is
@@ -380,7 +380,7 @@ class SourceRange(Structure):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
-class Diagnostic(object):
+class Diagnostic:
     """
     A Diagnostic is a single instance of a Clang diagnostic. It includes the
     diagnostic severity, the message, the location the diagnostic occurred, as
@@ -421,7 +421,7 @@ class Diagnostic(object):
 
     @property
     def ranges(self):
-        class RangeIterator(object):
+        class RangeIterator:
             def __init__(self, diag):
                 self.diag = diag
 
@@ -437,7 +437,7 @@ class Diagnostic(object):
 
     @property
     def fixits(self):
-        class FixItIterator(object):
+        class FixItIterator:
             def __init__(self, diag):
                 self.diag = diag
 
@@ -456,7 +456,7 @@ class Diagnostic(object):
 
     @property
     def children(self):
-        class ChildDiagnosticsIterator(object):
+        class ChildDiagnosticsIterator:
             def __init__(self, diag):
                 self.diag_set = conf.lib.clang_getChildDiagnostics(diag)
 
@@ -520,7 +520,7 @@ class Diagnostic(object):
         return self.ptr
 
 
-class FixIt(object):
+class FixIt:
     """
     A FixIt represents a transformation to be applied to the source to
     "fix-it". The fix-it should be applied by replacing the given source range
@@ -535,7 +535,7 @@ class FixIt(object):
         return "<FixIt range %r, value %r>" % (self.range, self.value)
 
 
-class TokenGroup(object):
+class TokenGroup:
     """Helper class to facilitate token management.
 
     Tokens are allocated from libclang in chunks. They must be disposed of as a
@@ -591,7 +591,7 @@ class TokenGroup(object):
             yield token
 
 
-class TokenKind(object):
+class TokenKind:
     """Describes a specific type of a Token."""
 
     _value_map = {}  # int -> TokenKind
@@ -630,7 +630,7 @@ class TokenKind(object):
 
 
 ### Cursor Kinds ###
-class BaseEnumeration(object):
+class BaseEnumeration:
     """
     Common base class for named enumerations held in sync with Index.h values.
 
@@ -2047,7 +2047,7 @@ class Cursor(Structure):
         return res
 
 
-class StorageClass(object):
+class StorageClass:
     """
     Describes the storage class of a declaration
     """
@@ -2596,7 +2596,7 @@ class Type(Structure):
 # a void*.
 
 
-class ClangObject(object):
+class ClangObject:
     """
     A helper for Clang objects. This class helps act as an intermediary for
     the ctypes library and the Clang CIndex library.
@@ -2644,8 +2644,8 @@ SpellingCache = {
 }
 
 
-class CompletionChunk(object):
-    class Kind(object):
+class CompletionChunk:
+    class Kind:
         def __init__(self, name):
             self.name = name
 
@@ -2735,7 +2735,7 @@ completionChunkKindMap = {
 
 
 class CompletionString(ClangObject):
-    class Availability(object):
+    class Availability:
         def __init__(self, name):
             self.name = name
 
@@ -2837,7 +2837,7 @@ class CodeCompletionResults(ClangObject):
 
     @property
     def diagnostics(self):
-        class DiagnosticsItr(object):
+        class DiagnosticsItr:
             def __init__(self, ccr):
                 self.ccr = ccr
 
@@ -3147,7 +3147,7 @@ class TranslationUnit(ClangObject):
         Return an iterable (and indexable) object containing the diagnostics.
         """
 
-        class DiagIterator(object):
+        class DiagIterator:
             def __init__(self, tu):
                 self.tu = tu
 
@@ -3316,7 +3316,7 @@ class File(ClangObject):
         return res
 
 
-class FileInclusion(object):
+class FileInclusion:
     """
     The FileInclusion class represents the inclusion of one source file by
     another via a '#include' directive or as the input file for the translation
@@ -3365,7 +3365,7 @@ class CompilationDatabaseError(Exception):
         Exception.__init__(self, "Error %d: %s" % (enumeration, message))
 
 
-class CompileCommand(object):
+class CompileCommand:
     """Represents the compile command used to build a file"""
 
     def __init__(self, cmd, ccmds):
@@ -3397,7 +3397,7 @@ class CompileCommand(object):
             yield conf.lib.clang_CompileCommand_getArg(self.cmd, i)
 
 
-class CompileCommands(object):
+class CompileCommands:
     """
     CompileCommands is an iterable object containing all CompileCommand
     that can be used for building a specific file.
@@ -3853,7 +3853,7 @@ def register_functions(lib, ignore_errors):
         register(f)
 
 
-class Config(object):
+class Config:
     library_path = None
     library_file = None
     compatibility_check = True
