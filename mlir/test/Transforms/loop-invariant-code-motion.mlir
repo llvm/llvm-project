@@ -699,8 +699,8 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
 
 // -----
 
-// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_out_of_bounds
-func.func @speculate_tensor_dim_known_rank_known_dim_out_of_bounds() {
+// CHECK-LABEL: @no_speculate_tensor_dim_known_rank_known_dim_out_of_bounds
+func.func @no_speculate_tensor_dim_known_rank_known_dim_out_of_bounds() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c22 = arith.constant 22 : index
