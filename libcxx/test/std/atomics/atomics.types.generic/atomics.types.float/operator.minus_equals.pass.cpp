@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: LIBCXX-AIX-FIXME
 // UNSUPPORTED: !non-lockfree-atomics
-// Hangs with msan.
-// UNSUPPORTED: msan
 
 // floating-point-type operator-=(floating-point-type) volatile noexcept;
 // floating-point-type operator-=(floating-point-type) noexcept;
@@ -98,7 +95,8 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  test<long double>();
+  // https://github.com/llvm/llvm-project/issues/47978
+  // test<long double>();
 
   return 0;
 }
