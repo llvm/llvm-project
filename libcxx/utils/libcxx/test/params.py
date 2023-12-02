@@ -48,7 +48,6 @@ _warningFlags = [
     # These warnings should be enabled in order to support the MSVC
     # team using the test suite; They enable the warnings below and
     # expect the test suite to be clean.
-    "-Wzero-length-array",
     "-Wsign-compare",
     "-Wunused-variable",
     "-Wunused-parameter",
