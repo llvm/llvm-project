@@ -421,7 +421,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::MUL, ISD::MULHU, ISD::MULHS}, MVT::i64, Expand);
   setOperationAction(
-    {ISD::UINT_TO_FP, ISD::SINT_TO_FP, ISD::SINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
+    {ISD::UINT_TO_FP, ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
       MVT::i64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
 
@@ -3205,8 +3205,10 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                       ShAmt);
   // On GCN, use LDEXP directly.
   if (Subtarget->isGCN()) {
-    if (IsStrict)
-      return DAG.getNode(ISD::STRICT_FLDEXP, SL, MVT::f32, Op.getOperand(0), FVal, ShAmt);
+    if (IsStrict) {
+      return DAG.getNode(ISD::STRICT_FLDEXP, SL, Op->getVTList(),
+                         Op.getOperand(0), FVal, ShAmt);
+    }
 
     return DAG.getNode(ISD::FLDEXP, SL, MVT::f32, FVal, ShAmt);
   }
@@ -3270,7 +3272,8 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (Subtarget->has16BitInsts() && DestVT == MVT::f16) {
     SDLoc DL(Op);
 
-    SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
+    SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, {MVT::f32, MVT::Other},
+                                    Src);
     SDValue FPRoundFlag =
         DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
     SDValue FPRound =
@@ -3311,13 +3314,23 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
 
   if (Subtarget->has16BitInsts() && DestVT == MVT::f16) {
     SDLoc DL(Op);
-    SDValue Src = Op.getOperand(0);
+    SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
+
+    SDValue FPRoundFlag =
+      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true);
+
+    if (IsStrict) {
+      SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, DAG.getVTList(MVT::f32, MVT::Other),
+                                      Op.getOperand(0), Src);
+      SDValue FPRound =
+        DAG.getNode(ISD::STRICT_FP_ROUND, DL, Op->getVTList(), IntToFp32.getValue(1),
+                    IntToFp32, FPRoundFlag);
+      return FPRound;
+    }
 
     SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag =
-        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
     SDValue FPRound =
-        DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
+      DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
 
     return FPRound;
   }
