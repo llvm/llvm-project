@@ -16,6 +16,7 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "PluginManager.h"
+#include "Shared/EnvironmentVar.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -128,6 +129,9 @@ static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
 
 /// Map global data and execute pending ctors
 static int initLibrary(DeviceTy &Device) {
+  if (Device.HasMappedGlobalData)
+    return OFFLOAD_SUCCESS;
+
   /*
    * Map global data
    */
@@ -276,7 +280,12 @@ static int initLibrary(DeviceTy &Device) {
     if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
   }
-  Device.HasPendingGlobals = false;
+  Device.HasMappedGlobalData = true;
+
+  static Int32Envar DumpOffloadEntries =
+      Int32Envar("OMPTARGET_DUMP_OFFLOAD_ENTRIES", -1);
+  if (DumpOffloadEntries.get() == DeviceId)
+    Device.dumpOffloadEntries();
 
   return OFFLOAD_SUCCESS;
 }
@@ -374,7 +383,7 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   {
     std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
         Device.PendingGlobalsMtx);
-    if (Device.HasPendingGlobals && initLibrary(Device) != OFFLOAD_SUCCESS) {
+    if (initLibrary(Device) != OFFLOAD_SUCCESS) {
       REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
       handleTargetOutcome(false, Loc);
       return true;

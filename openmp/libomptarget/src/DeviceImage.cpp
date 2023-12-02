@@ -10,14 +10,27 @@
 
 #include "DeviceImage.h"
 
+#include "OffloadEntry.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
 
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 
-DeviceImageTy::DeviceImageTy(__tgt_device_image &TgtDeviceImage)
-    : Image(TgtDeviceImage) {
+__tgt_bin_desc *OffloadEntryTy::getBinaryDescription() const {
+  return &DeviceImage.getBinaryDesc();
+}
+
+DeviceImageTy::DeviceImageTy(__tgt_bin_desc &BinaryDesc,
+                             __tgt_device_image &TgtDeviceImage)
+    : BinaryDesc(&BinaryDesc), Image(TgtDeviceImage) {
+
+  for (__tgt_offload_entry &Entry :
+       llvm::make_range(Image.EntriesBegin, Image.EntriesEnd))
+    OffloadEntries.emplace_back(std::make_unique<OffloadEntryTy>(*this, Entry));
+
   llvm::StringRef ImageStr(
       static_cast<char *>(Image.ImageStart),
       llvm::omp::target::getPtrDiff(Image.ImageEnd, Image.ImageStart));

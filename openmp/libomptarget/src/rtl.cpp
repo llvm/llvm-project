@@ -26,6 +26,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -89,55 +90,12 @@ static void registerImageIntoTranslationTable(TranslationTable &TT,
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Functionality for registering Ctors/Dtors
-
-static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
-                                             __tgt_device_image *Img,
-                                             PluginAdaptorTy *RTL) {
-
-  for (int32_t I = 0; I < RTL->NumberOfDevices; ++I) {
-    DeviceTy &Device = *PM->Devices[RTL->DeviceOffset + I];
-    Device.PendingGlobalsMtx.lock();
-    Device.HasPendingGlobals = true;
-    for (__tgt_offload_entry *Entry = Img->EntriesBegin;
-         Entry != Img->EntriesEnd; ++Entry) {
-      // Globals are not callable and use a different set of flags.
-      if (Entry->size != 0)
-        continue;
-
-      if (Entry->flags & OMP_DECLARE_TARGET_CTOR) {
-        DP("Adding ctor " DPxMOD " to the pending list.\n",
-           DPxPTR(Entry->addr));
-        Device.PendingCtorsDtors[Desc].PendingCtors.push_back(Entry->addr);
-        MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
-                "removed in a future release \n",
-                Entry->name);
-      } else if (Entry->flags & OMP_DECLARE_TARGET_DTOR) {
-        // Dtors are pushed in reverse order so they are executed from end
-        // to beginning when unregistering the library!
-        DP("Adding dtor " DPxMOD " to the pending list.\n",
-           DPxPTR(Entry->addr));
-        Device.PendingCtorsDtors[Desc].PendingDtors.push_front(Entry->addr);
-        MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
-                "removed in a future release \n",
-                Entry->name);
-      }
-
-      if (Entry->flags & OMP_DECLARE_TARGET_LINK) {
-        DP("The \"link\" attribute is not yet supported!\n");
-      }
-    }
-    Device.PendingGlobalsMtx.unlock();
-  }
-}
-
 void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
   // Extract the exectuable image and extra information if availible.
   for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
-    PM->addDeviceImage(Desc->DeviceImages[i]);
+    PM->addDeviceImage(*Desc, Desc->DeviceImages[i]);
 
   // Register the images with the RTLs that understand them, if any.
   for (DeviceImageTy &DI : PM->deviceImages()) {
@@ -189,8 +147,8 @@ void PluginAdaptorManagerTy::registerLib(__tgt_bin_desc *Desc) {
       PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
-      // Load ctors/dtors for static objects
-      registerGlobalCtorsDtorsForImage(Desc, Img, FoundRTL);
+      // Register all offload entries with the devices handled by the plugin.
+      R.addOffloadEntries(DI);
 
       // if an RTL was found we are done - proceed to register the next image
       break;
