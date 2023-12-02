@@ -82,7 +82,6 @@ struct LexEmbedParametersResult {
   SourceLocation StartLoc;
   SourceLocation EndLoc;
   int UnrecognizedParams;
-  bool Successful;
 
   size_t PrefixTokenCount() const {
     if (MaybePrefixParam)

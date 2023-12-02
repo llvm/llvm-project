@@ -1733,9 +1733,9 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
-  LexEmbedParametersResult LexEmbedParameters(Token &Current,
-                                              bool InHasEmbed = false,
-                                              bool DiagnoseUnknown = true);
+  /// Lex the parameters for an #embed directive, returns nullopt on error.
+  std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
+                                                             bool ForHasEmbed);
 
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
@@ -2317,7 +2317,13 @@ public:
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found. Returns the range of the skipped tokens.
-  SourceRange DiscardUntilEndOfDirective();
+  SourceRange DiscardUntilEndOfDirective() {
+    Token Tmp;
+    return DiscardUntilEndOfDirective(Tmp);
+  }
+
+  /// Same as above except retains the token that was found.
+  SourceRange DiscardUntilEndOfDirective(Token &Tok);
 
   /// Returns true if the preprocessor has seen a use of
   /// __DATE__ or __TIME__ in the file so far.
@@ -2553,8 +2559,7 @@ private:
   ///
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
   DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
-                                                  bool CheckForEoD = true,
-                                                  bool Parenthesized = false);
+                                                  bool CheckForEoD = true);
 
   /// Evaluate an integer constant expression that may occur after a
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
@@ -2562,8 +2567,7 @@ private:
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
   DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
                                                   Token &Tok,
-                                                  bool CheckForEoD = true,
-                                                  bool Parenthesized = false);
+                                                  bool CheckForEoD = true);
 
   /// Process a '__has_embed("path" [, ...])' expression.
   ///

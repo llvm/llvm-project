@@ -1312,15 +1312,16 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   SourceLocation FilenameLoc = Tok.getLocation();
   Token FilenameTok = Tok;
 
-  LexEmbedParametersResult Params = this->LexEmbedParameters(Tok, true, false);
-  if (!Params.Successful) {
-    if (Tok.isNot(tok::eod))
-      this->DiscardUntilEndOfDirective();
+  std::optional<LexEmbedParametersResult> Params =
+      this->LexEmbedParameters(Tok, /*ForHasEmbed=*/true);
+  assert(Params || Tok.is(tok::eod) &&
+                       "expected success or to be at the end of the directive");
+
+  if (!Params)
     return EmbedResult::NotFound;
-  }
-  if (Params.UnrecognizedParams > 0) {
+
+  if (Params->UnrecognizedParams > 0)
     return EmbedResult::NotFound;
-  }
 
   if (!Tok.is(tok::r_paren)) {
     Diag(this->getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
@@ -1350,15 +1351,15 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     return EmbedResult::NotFound;
   }
   size_t FileSize = MaybeFileEntry->getSize();
-  if (Params.MaybeLimitParam) {
-    if (FileSize > Params.MaybeLimitParam->Limit) {
-      FileSize = Params.MaybeLimitParam->Limit;
+  if (Params->MaybeLimitParam) {
+    if (FileSize > Params->MaybeLimitParam->Limit) {
+      FileSize = Params->MaybeLimitParam->Limit;
     }
   }
   if (FileSize == 0) {
     return EmbedResult::Empty;
   }
-  if (Params.MaybeOffsetParam && Params.MaybeOffsetParam->Offset >= FileSize) {
+  if (Params->MaybeOffsetParam && Params->MaybeOffsetParam->Offset >= FileSize) {
     return EmbedResult::Empty;
   }
   return EmbedResult::Found;
