@@ -912,6 +912,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       unsigned OldResSizeInBits = OldResTy->getScalarSizeInBits();
       assert(OldResTy->isIntegerTy() && "only integer types supported");
       assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
+      (void)OldResSizeInBits;
 
       auto *NewResTy = IntegerType::get(Ctx, NewResSizeInBits);
 
