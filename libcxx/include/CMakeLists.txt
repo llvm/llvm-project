@@ -855,6 +855,7 @@ set(files
   __utility/piecewise_construct.h
   __utility/priority_tag.h
   __utility/rel_ops.h
+  __utility/shared_resource.h
   __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h

@@ -2063,6 +2063,7 @@ module std_private_utility_piecewise_construct    [system] { header "__utility/p
 module std_private_utility_priority_tag           [system] { header "__utility/priority_tag.h" }
 module std_private_utility_rel_ops                [system] { header "__utility/rel_ops.h" }
 module std_private_utility_small_buffer           [system] { header "__utility/small_buffer.h" }
+module std_private_utility_shared_resource        [system] { header "__utility/shared_resource.h" }
 module std_private_utility_swap                   [system] {
   header "__utility/swap.h"
   export std_private_type_traits_is_swappable

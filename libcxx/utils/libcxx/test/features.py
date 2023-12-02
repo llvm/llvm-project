@@ -567,6 +567,15 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
+    # Tests that require the shared_resource in the built library
+    Feature(
+        name="availability-shared_resource-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            # TODO(ldionne) Please provide the correct value.
+            "(stdlib=apple-libc++ && target={{.+}}-apple-macosx{{(10.13|10.14|10.15|11.0|12.0|13.0)(.0)?}})",
+            cfg.available_features,
+        ),
+    ),
     # Tests that require 64-bit architecture
     Feature(
         name="32-bit-pointer",

@@ -139,6 +139,12 @@
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 1
 #  define _LIBCPP_AVAILABILITY_TZDB
 
+    // This controls the availability of the shared resource code.
+    // This is used in syncstream to synchronize write operations,
+    // but the code is generic and can be used for similar purposes.
+// #   define _LIBCPP_AVAILABILITY_HAS_NO_SHARED_RESOURCE
+#   define _LIBCPP_AVAILABILITY_SHARED_RESOURCE
+
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
 // iostreams by providing a single strong definition in the shared library.
@@ -251,6 +257,9 @@
 
 #  define _LIBCPP_AVAILABILITY_HAS_TZDB 0
 #  define _LIBCPP_AVAILABILITY_TZDB __attribute__((unavailable))
+
+#   define _LIBCPP_AVAILABILITY_HAS_NO_SHARED_RESOURCE
+#   define _LIBCPP_AVAILABILITY_SHARED_RESOURCE __attribute__((unavailable))
 
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 120000)   || \
       (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 150000) || \
