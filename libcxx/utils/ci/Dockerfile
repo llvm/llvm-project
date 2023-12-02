@@ -294,6 +294,10 @@ CMD /opt/android/container-setup.sh && buildkite-agent start
 #
 FROM builder-base AS actions-builder
 
+# Install 'act' for running github actions locally. This provides an alternative to the run-buildbot script
+# while still providing reproducability.
+RUN curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+
 WORKDIR /home/runner
 USER runner
 
