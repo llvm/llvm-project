@@ -36,16 +36,16 @@ struct HWAsanInterceptorContext {
   const char *interceptor_name;
 };
 
-#  define ACCESS_MEMORY_RANGE(ctx, offset, size, access)                    \
+#  define ACCESS_MEMORY_RANGE(offset, size, access)                         \
     do {                                                                    \
       __hwasan::CheckAddressSized<ErrorAction::Abort, access>((uptr)offset, \
                                                               size);        \
     } while (0)
 
-#  define HWASAN_READ_RANGE(ctx, offset, size) \
-    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Load)
-#  define HWASAN_WRITE_RANGE(ctx, offset, size) \
-    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Store)
+#  define HWASAN_READ_RANGE(offset, size) \
+    ACCESS_MEMORY_RANGE(offset, size, AccessType::Load)
+#  define HWASAN_WRITE_RANGE(offset, size) \
+    ACCESS_MEMORY_RANGE(offset, size, AccessType::Store)
 
 #  if !SANITIZER_APPLE
 #    define HWASAN_INTERCEPT_FUNC(name)                                        \
@@ -91,10 +91,10 @@ struct HWAsanInterceptorContext {
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #    define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
-      HWASAN_WRITE_RANGE(ctx, ptr, size)
+      HWASAN_WRITE_RANGE(ptr, size)
 
 #    define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
-      HWASAN_READ_RANGE(ctx, ptr, size)
+      HWASAN_READ_RANGE(ptr, size)
 
 #    define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
       HWAsanInterceptorContext _ctx = {#func};       \
