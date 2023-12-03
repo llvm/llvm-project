@@ -52,7 +52,11 @@ void test() {
     e.transform_error(return_unexpected<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
     // expected-error-re@*:* {{static assertion failed {{.*}}[expected.object.general] A program that instantiates the definition of template expected<T, E> for {{.*}} is ill-formed.}}
+#if defined(TEST_COMPILER_CLANG) && defined(_MSC_VER)
+    // expected-error-re@*:* {{union member {{.*}} has reference type {{.*}}, which is a Microsoft extension}}
+#else
     // expected-error-re@*:* {{union member {{.*}} has reference type {{.*}}}}
+#endif
 
     e.transform_error(return_no_object<int&>); // expected-error-re@*:* {{static assertion failed {{.*}}The result of {{.*}} must be a valid template argument for unexpected}}
     // expected-error-re@*:* 0-1 {{{{(excess elements in struct initializer|no matching constructor for initialization of)}}{{.*}}}}
