@@ -567,7 +567,7 @@ static void test_write_min_time()
     scoped_test_env env;
     const path p = env.create_file("file", 42);
     const file_time_type old_time = last_write_time(p);
-    file_time_type new_time = (file_time_type::min)();
+    file_time_type new_time       = (file_time_type::min)();
 
     std::error_code ec = GetTestEC();
     last_write_time(p, new_time, ec);
@@ -601,7 +601,7 @@ static void test_write_max_time() {
   scoped_test_env env;
   const path p = env.create_file("file", 42);
   const file_time_type old_time = last_write_time(p);
-  file_time_type new_time = (file_time_type::max)();
+  file_time_type new_time       = (file_time_type::max)();
 
   std::error_code ec = GetTestEC();
   last_write_time(p, new_time, ec);
