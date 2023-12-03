@@ -74,10 +74,8 @@ struct HWAsanInterceptorContext {
 
 #  if HWASAN_WITH_INTERCEPTORS
 
-#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) \
-      ACCESS_MEMORY_RANGE((uptr)p, (uptr)s, AccessType::Load)
-#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) \
-      ACCESS_MEMORY_RANGE((uptr)p, (uptr)s, AccessType::Store)
+#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) HWASAN_READ_RANGE(p, s)
+#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) HWASAN_WRITE_RANGE(p, s)
 #    define COMMON_SYSCALL_POST_READ_RANGE(p, s) \
       do {                                       \
         (void)(p);                               \
