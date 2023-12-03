@@ -905,8 +905,32 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       // type. Skip those here, after incrementing NumProcessedRecipes. Also
       // skip casts which do not need to be handled explicitly here, as
       // redundant casts will be removed during recipe simplification.
-      if (isa<VPReplicateRecipe, VPWidenCastRecipe>(&R))
+      if (isa<VPReplicateRecipe, VPWidenCastRecipe>(&R)) {
+#ifndef NDEBUG
+        // If any of the operands is a live-in and not used by VPWidenRecipe or
+        // VPWidenSelectRecipe, but in MinBWs, make sure it is counted as
+        // processed as well. When MinBWs is currently constructed, there is no
+        // information about whether recipes are widened or replicated and in
+        // case they are reciplicated the operands are not truncated. Counting
+        // them them here ensures we do not miss any recipes in MinBWs.
+        // TODO: Remove once the analysis is done on VPlan.
+        for (VPValue *Op : R.operands()) {
+          if (!Op->isLiveIn())
+            continue;
+          auto *UV = dyn_cast_or_null<Instruction>(Op->getUnderlyingValue());
+          if (UV && MinBWs.contains(UV) && !ProcessedTruncs.contains(Op) &&
+              all_of(Op->users(), [](VPUser *U) {
+                return !isa<VPWidenRecipe, VPWidenSelectRecipe>(U);
+              })) {
+            // Add an entry to ProcessedTruncs to avoid counting the same
+            // operand multiple times.
+            ProcessedTruncs[Op] = nullptr;
+            NumProcessedRecipes += 1;
+          }
+        }
+#endif
         continue;
+      }
 
       Type *OldResTy = TypeInfo.inferScalarType(ResultVPV);
       unsigned OldResSizeInBits = OldResTy->getScalarSizeInBits();

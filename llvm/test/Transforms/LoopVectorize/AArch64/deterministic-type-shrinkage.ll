@@ -383,3 +383,37 @@ loop:
 exit:
   ret void
 }
+
+; Test case for #74231.
+define void @replicate_operands_in_with_operands_in_minbws(ptr %dst, ptr noalias %src.1, ptr noalias %src.2, i32 %x) {
+entry:
+  %sub = sub i32 %x, 10
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.src.1 = getelementptr inbounds i32, ptr %src.1, i64 %iv
+  %l = load i32, ptr %gep.src.1
+  %c.1 = icmp eq i32 %l, 10
+  br i1 %c.1, label %loop.latch, label %if.then
+
+if.then:
+  %gep.src.2 = getelementptr inbounds i16, ptr %src.2, i64 %iv
+  %l.2 = load i16, ptr %gep.src.2
+  %c.2 = icmp ule i16 %l.2, 99
+  %conv = zext i16 %l.2 to i32
+  %sel = select i1 %c.2, i32 %sub, i32 %conv
+  %add = add i32 %conv, %sel
+  %trunc = trunc i32 %add to i16
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i16 %trunc, ptr %gep.dst, align 2
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %tobool.not = icmp eq i64 %iv.next, 1000
+  br i1 %tobool.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}
