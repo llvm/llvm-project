@@ -3831,17 +3831,14 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
                                          SDValue &Lo, SDValue &Hi) {
   if (N->isAtomic()) {
-    // It's typical to have larger CAS than atomic load instructions.
     SDLoc dl(N);
     EVT VT = N->getMemoryVT();
-    SDVTList VTs = DAG.getVTList(VT, MVT::i1, MVT::Other);
-    SDValue Zero = DAG.getConstant(0, dl, VT);
-    SDValue Swap = DAG.getAtomicCmpSwap(
-        ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, dl,
-        VT, VTs, N->getOperand(0),
-        N->getOperand(1), Zero, Zero, N->getMemOperand());
-    ReplaceValueWith(SDValue(N, 0), Swap.getValue(0));
-    ReplaceValueWith(SDValue(N, 1), Swap.getValue(2));
+    // We may support larger values in atomic_load than in a normal load
+    // (without splitting), so switch over if needed.
+    SDValue New = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, VT, VT, N->getOperand(0),
+                                N->getOperand(1), N->getMemOperand());
+    ReplaceValueWith(SDValue(N, 0), New.getValue(0));
+    ReplaceValueWith(SDValue(N, 1), New.getValue(1));
     return;
   }
 
@@ -5399,14 +5396,13 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
   if (N->isAtomic()) {
-    // It's typical to have larger CAS than atomic store instructions.
+    // We may support larger values in atomic_store than in a normal store
+    // (without splitting), so switch over if needed.
     SDLoc dl(N);
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 N->getMemoryVT(),
-                                 N->getOperand(0), N->getOperand(2),
-                                 N->getOperand(1),
-                                 N->getMemOperand());
-    return Swap.getValue(1);
+    SDValue New =
+        DAG.getAtomic(ISD::ATOMIC_STORE, dl, N->getMemoryVT(), N->getOperand(0),
+                      N->getOperand(1), N->getOperand(2), N->getMemOperand());
+    return New.getValue(0);
   }
   if (ISD::isNormalStore(N))
     return ExpandOp_NormalStore(N, OpNo);

@@ -515,6 +515,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.is64Bit())
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
 
+  if (Subtarget.is64Bit() && Subtarget.hasAVX()) {
+    // All CPUs supporting AVX will atomically load/store aligned 128-bit
+    // values, so we can emit [V]MOVAPS/[V]MOVDQA.
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::i128, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
+  }
+
   if (Subtarget.canUseCMPXCHG16B())
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
 
@@ -30101,12 +30108,16 @@ TargetLoweringBase::AtomicExpansionKind
 X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   Type *MemType = SI->getValueOperand()->getType();
 
-  bool NoImplicitFloatOps =
-      SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
-  if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-      (Subtarget.hasSSE1() || Subtarget.hasX87()))
-    return AtomicExpansionKind::None;
+  if (!SI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
+      !Subtarget.useSoftFloat()) {
+    if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
+        (Subtarget.hasSSE1() || Subtarget.hasX87()))
+      return AtomicExpansionKind::None;
+
+    if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
+        Subtarget.hasAVX())
+      return AtomicExpansionKind::None;
+  }
 
   return needsCmpXchgNb(MemType) ? AtomicExpansionKind::Expand
                                  : AtomicExpansionKind::None;
@@ -30121,12 +30132,16 @@ X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   // If this a 64 bit atomic load on a 32-bit target and SSE2 is enabled, we
   // can use movq to do the load. If we have X87 we can load into an 80-bit
   // X87 register and store it to a stack temporary.
-  bool NoImplicitFloatOps =
-      LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat);
-  if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
-      !Subtarget.useSoftFloat() && !NoImplicitFloatOps &&
-      (Subtarget.hasSSE1() || Subtarget.hasX87()))
-    return AtomicExpansionKind::None;
+  if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
+      !Subtarget.useSoftFloat()) {
+    if (MemType->getPrimitiveSizeInBits() == 64 && !Subtarget.is64Bit() &&
+        (Subtarget.hasSSE1() || Subtarget.hasX87()))
+      return AtomicExpansionKind::None;
+
+    if (MemType->getPrimitiveSizeInBits() == 128 && Subtarget.is64Bit() &&
+        Subtarget.hasAVX())
+      return AtomicExpansionKind::None;
+  }
 
   return needsCmpXchgNb(MemType) ? AtomicExpansionKind::CmpXChg
                                  : AtomicExpansionKind::None;
@@ -31277,14 +31292,23 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
   if (!IsSeqCst && IsTypeLegal)
     return Op;
 
-  if (VT == MVT::i64 && !IsTypeLegal) {
+  if (!IsTypeLegal && !Subtarget.useSoftFloat() &&
+      !DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat)) {
+    SDValue Chain;
+    // For illegal i128 atomic_store, when AVX is enabled, we can simply emit a
+    // vector store.
+    if (VT == MVT::i128) {
+      if (Subtarget.is64Bit() && Subtarget.hasAVX()) {
+        SDValue VecVal = DAG.getBitcast(MVT::v2i64, Node->getVal());
+        Chain = DAG.getStore(Node->getChain(), dl, VecVal, Node->getBasePtr(),
+                             Node->getMemOperand());
+      }
+    }
+
     // For illegal i64 atomic_stores, we can try to use MOVQ or MOVLPS if SSE
     // is enabled.
-    bool NoImplicitFloatOps =
-        DAG.getMachineFunction().getFunction().hasFnAttribute(
-            Attribute::NoImplicitFloat);
-    if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
-      SDValue Chain;
+    if (VT == MVT::i64) {
       if (Subtarget.hasSSE1()) {
         SDValue SclToVec =
             DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Node->getVal());
@@ -31316,15 +31340,15 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
             DAG.getMemIntrinsicNode(X86ISD::FIST, dl, DAG.getVTList(MVT::Other),
                                     StoreOps, MVT::i64, Node->getMemOperand());
       }
+    }
 
-      if (Chain) {
-        // If this is a sequentially consistent store, also emit an appropriate
-        // barrier.
-        if (IsSeqCst)
-          Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
+    if (Chain) {
+      // If this is a sequentially consistent store, also emit an appropriate
+      // barrier.
+      if (IsSeqCst)
+        Chain = emitLockedStackOp(DAG, Subtarget, Chain, dl);
 
-        return Chain;
-      }
+      return Chain;
     }
   }
 
@@ -32877,12 +32901,30 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::ATOMIC_LOAD: {
-    assert(N->getValueType(0) == MVT::i64 && "Unexpected VT!");
+    assert(
+        (N->getValueType(0) == MVT::i64 || N->getValueType(0) == MVT::i128) &&
+        "Unexpected VT!");
     bool NoImplicitFloatOps =
         DAG.getMachineFunction().getFunction().hasFnAttribute(
             Attribute::NoImplicitFloat);
     if (!Subtarget.useSoftFloat() && !NoImplicitFloatOps) {
       auto *Node = cast<AtomicSDNode>(N);
+
+      if (N->getValueType(0) == MVT::i128) {
+        if (Subtarget.is64Bit() && Subtarget.hasAVX()) {
+          SDValue Ld = DAG.getLoad(MVT::v2i64, dl, Node->getChain(),
+                                   Node->getBasePtr(), Node->getMemOperand());
+          SDValue ResL = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+                                     DAG.getIntPtrConstant(0, dl));
+          SDValue ResH = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Ld,
+                                     DAG.getIntPtrConstant(1, dl));
+          Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, N->getValueType(0),
+                                        {ResL, ResH}));
+          Results.push_back(Ld.getValue(1));
+          return;
+        }
+        break;
+      }
       if (Subtarget.hasSSE1()) {
         // Use a VZEXT_LOAD which will be selected as MOVQ or XORPS+MOVLPS.
         // Then extract the lower 64-bits.
