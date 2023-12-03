@@ -39,7 +39,6 @@
 #include <functional>
 #include <set>
 #include <string>
-#include <unordered_map>
 
 using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 
