@@ -11,7 +11,7 @@ namespace dr300 { // dr300: yes
   void h() { f(g); }
 }
 
-namespace dr301 { // dr301: yes
+namespace dr301 { // dr301: 3.5
   // see also dr38
   struct S;
   template<typename T> void operator+(T, T);
@@ -42,7 +42,7 @@ namespace dr301 { // dr301: yes
   template<typename T> class S::operator&<T*> {}; // expected-error +{{}}
 }
 
-namespace dr302 { // dr302: yes
+namespace dr302 { // dr302: 3.0
   struct A { A(); ~A(); };
 #if __cplusplus < 201103L
   struct B { // expected-error {{implicit default constructor for 'dr302::B' must explicitly initialize the const member 'n'}}
@@ -70,7 +70,7 @@ namespace dr302 { // dr302: yes
 
 // dr303: na
 
-namespace dr304 { // dr304: yes
+namespace dr304 { // dr304: 2.9
   typedef int &a;
   int n = a(); // expected-error {{requires an initializer}}
 
@@ -154,7 +154,7 @@ namespace dr306 { // dr306: dup 39
 
 // dr307: na
 
-namespace dr308 { // dr308: yes
+namespace dr308 { // dr308: 3.7
   // This is mostly an ABI library issue.
   struct A {};
   struct B : A {};
@@ -182,7 +182,7 @@ namespace dr308 { // dr308: yes
 
 // dr309: dup 485
 
-namespace dr311 { // dr311: yes
+namespace dr311 { // dr311: 3.0
   namespace X { namespace Y {} }
   namespace X::Y {}
 #if __cplusplus <= 201402L
@@ -317,7 +317,7 @@ namespace dr321 { // dr321: dup 557
   bool x = i == j;
 }
 
-namespace dr322 { // dr322: yes
+namespace dr322 { // dr322: 2.8
   struct A {
     template<typename T> operator T&();
   } a;
@@ -327,7 +327,7 @@ namespace dr322 { // dr322: yes
 
 // dr323: no
 
-namespace dr324 { // dr324: yes
+namespace dr324 { // dr324: 3.6
   struct S { int n : 1; } s; // expected-note 3{{bit-field is declared here}}
   int &a = s.n; // expected-error {{non-const reference cannot bind to bit-field}}
   int *b = &s.n; // expected-error {{address of bit-field}}
@@ -340,7 +340,7 @@ namespace dr324 { // dr324: yes
   int *i = &++s.n; // expected-error {{address of bit-field}}
 }
 
-namespace dr326 { // dr326: yes
+namespace dr326 { // dr326: 3.1
   struct S {};
   int test[__is_trivially_constructible(S, const S&) ? 1 : -1];
 }
@@ -457,7 +457,7 @@ namespace dr330 { // dr330: 7
   }
 }
 
-namespace dr331 { // dr331: yes
+namespace dr331 { // dr331: 11
   struct A {
     A(volatile A&); // expected-note 2{{candidate}}
   } const a, b(a); // expected-error 2{{no matching constructor}}
@@ -535,7 +535,7 @@ namespace dr337 { // dr337: yes
   struct B { virtual ~B() = 0; };
 }
 
-namespace dr339 { // dr339: yes
+namespace dr339 { // dr339: 2.8
   template <int I> struct A { static const int value = I; };
 
   char xxx(int);
@@ -675,7 +675,7 @@ namespace dr349 { // dr349: no
 
 // dr351: na
 
-namespace dr352 { // dr352: yes
+namespace dr352 { // dr352: 2.8
   namespace example1 {
     namespace A {
       enum E {};
@@ -963,7 +963,7 @@ namespace dr367 { // dr367: yes
 #endif
 }
 
-namespace dr368 { // dr368: yes
+namespace dr368 { // dr368: 3.6
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
   template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'X'}}
@@ -1079,7 +1079,8 @@ namespace dr373 { // dr373: 5
   using namespace A::B; // expected-error {{expected namespace name}}
 }
 
-namespace dr374 { // dr374: yes
+namespace dr374 { // dr374: 7
+                  // NB 2.9 c++11
   namespace N {
     template<typename T> void f();
     template<typename T> struct A { void f(); };
@@ -1161,7 +1162,7 @@ namespace dr384 { // dr384: yes
   }
 }
 
-namespace dr385 { // dr385: yes
+namespace dr385 { // dr385: 2.8
   struct A { protected: void f(); };
   struct B : A { using A::f; };
   struct C : A { void g(B b) { b.f(); } };
@@ -1173,7 +1174,7 @@ namespace dr385 { // dr385: yes
   int i(E e) { return e.n; } // expected-error {{protected member}}
 }
 
-namespace dr387 { // dr387: yes
+namespace dr387 { // dr387: 2.8
   namespace old {
     template<typename T> class number {
       number(int); // expected-note 2{{here}}
@@ -1316,7 +1317,7 @@ namespace dr389 { // dr389: no
   }
 }
 
-namespace dr390 { // dr390: yes
+namespace dr390 { // dr390: 3.3
   template<typename T>
   struct A {
     A() { f(); } // expected-warning {{call to pure virt}}
@@ -1330,7 +1331,7 @@ namespace dr390 { // dr390: yes
   } b;
 }
 
-namespace dr391 { // dr391: yes c++11
+namespace dr391 { // dr391: 2.8 c++11
   // FIXME: Should this apply to C++98 too?
   class A { A(const A&); }; // expected-note 0-1{{here}}
   A fa();
@@ -1357,7 +1358,7 @@ namespace dr391 { // dr391: yes c++11
 // dr392 FIXME write codegen test
 // dr394: na
 
-namespace dr395 { // dr395: yes
+namespace dr395 { // dr395: 3.0
   struct S {
     template <typename T, int N>(&operator T())[N]; // expected-error {{cannot specify any part of a return type}}
     template <typename T, int N> operator(T (&)[N])(); // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error +{{}}
