@@ -226,4 +226,105 @@ TEST(ShapedTypeTest, RankedTensorTypeBuilder) {
   }
 }
 
+TEST(ShapedTypeTest, VectorDims) {
+  MLIRContext context;
+  Type f32 = FloatType::getF32(&context);
+
+  SmallVector<VectorDim> dims{VectorDim::getFixed(2), VectorDim::getScalable(4),
+                              VectorDim::getFixed(8), VectorDim::getScalable(9),
+                              VectorDim::getFixed(1)};
+  VectorType vectorType = VectorType::get(f32, dims);
+
+  // Directly check values
+  {
+    auto dim0 = vectorType.getDim(0);
+    ASSERT_EQ(dim0.getMinSize(), 2);
+    ASSERT_TRUE(dim0.isFixed());
+
+    auto dim1 = vectorType.getDim(1);
+    ASSERT_EQ(dim1.getMinSize(), 4);
+    ASSERT_TRUE(dim1.isScalable());
+
+    auto dim2 = vectorType.getDim(2);
+    ASSERT_EQ(dim2.getMinSize(), 8);
+    ASSERT_TRUE(dim2.isFixed());
+
+    auto dim3 = vectorType.getDim(3);
+    ASSERT_EQ(dim3.getMinSize(), 9);
+    ASSERT_TRUE(dim3.isScalable());
+
+    auto dim4 = vectorType.getDim(4);
+    ASSERT_EQ(dim4.getMinSize(), 1);
+    ASSERT_TRUE(dim4.isFixed());
+  }
+
+  // Test indexing via getDim(idx)
+  {
+    for (unsigned i = 0; i < dims.size(); i++)
+      ASSERT_EQ(vectorType.getDim(i), dims[i]);
+  }
+
+  // Test using VectorDims::Iterator in for-each loop
+  {
+    unsigned i = 0;
+    for (VectorDim dim : vectorType.getDims())
+      ASSERT_EQ(dim, dims[i++]);
+    ASSERT_EQ(i, vectorType.getRank());
+  }
+
+  // Test using VectorDims::Iterator in LLVM iterator helper
+  {
+    for (auto [dim, expectedDim] :
+         llvm::zip_equal(vectorType.getDims(), dims)) {
+      ASSERT_EQ(dim, expectedDim);
+    }
+  }
+
+  // Test dropFront()
+  {
+    auto vectorDims = vectorType.getDims();
+    auto newDims = vectorDims.dropFront();
+
+    ASSERT_EQ(newDims.size(), vectorDims.size() - 1);
+    for (unsigned i = 0; i < newDims.size(); i++)
+      ASSERT_EQ(newDims[i], vectorDims[i + 1]);
+  }
+
+  // Test dropBack()
+  {
+    auto vectorDims = vectorType.getDims();
+    auto newDims = vectorDims.dropBack();
+
+    ASSERT_EQ(newDims.size(), vectorDims.size() - 1);
+    for (unsigned i = 0; i < newDims.size(); i++)
+      ASSERT_EQ(newDims[i], vectorDims[i]);
+  }
+
+  // Test front()
+  { ASSERT_EQ(vectorType.getDims().front(), VectorDim::getFixed(2)); }
+
+  // Test back()
+  { ASSERT_EQ(vectorType.getDims().back(), VectorDim::getFixed(1)); }
+
+  // Test dropWhile.
+  {
+    SmallVector<VectorDim> dims{
+        VectorDim::getFixed(1), VectorDim::getFixed(1), VectorDim::getFixed(1),
+        VectorDim::getScalable(1), VectorDim::getScalable(4)};
+
+    VectorType vectorTypeWithLeadingUnitDims = VectorType::get(f32, dims);
+    ASSERT_EQ(vectorTypeWithLeadingUnitDims.getDims().size(),
+              unsigned(vectorTypeWithLeadingUnitDims.getRank()));
+
+    // Drop leading unit dims.
+    auto withoutLeadingUnitDims =
+        vectorTypeWithLeadingUnitDims.getDims().dropWhile(
+            [](VectorDim dim) { return dim == VectorDim::getFixed(1); });
+
+    SmallVector<VectorDim> expectedDims{VectorDim::getScalable(1),
+                                        VectorDim::getScalable(4)};
+    ASSERT_EQ(withoutLeadingUnitDims, expectedDims);
+  }
+}
+
 } // namespace

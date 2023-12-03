@@ -1114,12 +1114,35 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
         scalableDims = isScalableVec;
       }
       return $_get(elementType.getContext(), shape, elementType, scalableDims);
+    }]>,
+    TypeBuilderWithInferredContext<(ins "Type":$elementType, "ArrayRef<VectorDim>": $shape), [{
+      SmallVector<int64_t> sizes;
+      SmallVector<bool> scalableDims;
+      for (VectorDim dim : shape) {
+        sizes.push_back(dim.getMinSize());
+        scalableDims.push_back(dim.isScalable());
+      }
+      return get(sizes, elementType, scalableDims);
+    }]>,
+    TypeBuilderWithInferredContext<(ins "Type":$elementType, "VectorDims": $shape), [{
+      return get(shape.getSizes(), elementType, shape.getScalableDims());
     }]>
   ];
   let extraClassDeclaration = [{
     /// This is a builder type that keeps local references to arguments.
     /// Arguments that are passed into the builder must outlive the builder.
     class Builder;
+
+    /// Returns the value of the specified dimension (including scalability).
+    VectorDim getDim(unsigned idx) const {
+      assert(idx < getRank() && "invalid dim index for vector type");
+      return getDims()[idx];
+    }
+
+    /// Returns the dimensions of this vector type (including scalability).
+    VectorDims getDims() const {
+      return VectorDims(getShape(), getScalableDims());
+    }
 
     /// Returns true if the given type can be used as an element of a vector
     /// type. In particular, vectors can consist of integer, index, or float
