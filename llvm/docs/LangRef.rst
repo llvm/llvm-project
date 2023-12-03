@@ -326,6 +326,7 @@ added in the future:
        floating-point parameters are supported.
     -  On *AArch64* only up to 4 32-bit floating-point parameters,
        4 64-bit floating-point parameters, and 10 bit type parameters
+       are supported.
     -  *RISCV64* only supports up to 11 bit type parameters, 4
        32-bit floating-point parameters, and 4 64-bit floating-point
        parameters.
