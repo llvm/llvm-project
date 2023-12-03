@@ -59,7 +59,7 @@ namespace dr3 { // dr3: yes
   // expected-note@#dr3-f-T {{implicit instantiation first required here}}
 }
 
-namespace dr4 { // dr4: yes
+namespace dr4 { // dr4: 2.8
   extern "C" {
     static void dr4_f(int) {}
     static void dr4_f(float) {}
@@ -89,12 +89,11 @@ namespace dr7 { // dr7: 3.4
   class B : virtual private A {}; // #dr7-B
   class C : public B {} c; // #dr7-C
   // expected-error@#dr7-C {{inherited virtual base class 'A' has private destructor}}
-  // expected-note@#dr7-C {{in implicit default constructor for 'dr7::C' first required here}}
-  // expected-note@#dr7-B {{declared private here}}
-
+  //   expected-note@#dr7-C {{in implicit default constructor for 'dr7::C' first required here}}
+  //   expected-note@#dr7-B {{declared private here}}
   // expected-error@#dr7-C {{inherited virtual base class 'A' has private destructor}}
-  // expected-note@#dr7-C {{in implicit destructor for 'dr7::C' first required here}}
-  // expected-note@#dr7-B {{declared private here}}
+  //   expected-note@#dr7-C {{in implicit destructor for 'dr7::C' first required here}}
+  //   expected-note@#dr7-B {{declared private here}}
   class VeryDerivedC : public B, virtual public A {} vdc;
 
   class X { ~X(); }; // #dr7-X
@@ -237,11 +236,10 @@ namespace dr16 { // dr16: 2.8
       // expected-note@#dr16-A-f-decl {{member is declared here}}
       A::f(); // #dr16-A-f-call
       // expected-error@#dr16-A-f-call {{'A' is a private member of 'dr16::A'}}
-      // expected-note@#dr16-B {{constrained by implicitly private inheritance here}}
-      // expected-note@#dr16-A {{member is declared here}}
-
+      //   expected-note@#dr16-B {{constrained by implicitly private inheritance here}}
+      //   expected-note@#dr16-A {{member is declared here}}
       // expected-error@#dr16-A-f-call {{cannot cast 'dr16::C' to its private base class 'dr16::A'}}
-      // expected-note@#dr16-B {{implicitly declared private here}}
+      //   expected-note@#dr16-B {{implicitly declared private here}}
     }
   };
 }
@@ -361,9 +359,9 @@ namespace dr26 { // dr26: yes
     // FIXME: In C++98, we diagnose this twice.
     B(const B &, B = B());
     // cxx98-14-error@-1 {{recursive evaluation of default argument}}
-    // cxx98-14-note@-2 {{default argument used here}}
+    //   cxx98-14-note@-2 {{default argument used here}}
     // cxx98-error@-3 {{recursive evaluation of default argument}}
-    // cxx98-note@-4 {{default argument used here}}
+    //   cxx98-note@-4 {{default argument used here}}
   };
   struct C {
     static C &f();
@@ -512,7 +510,7 @@ namespace dr33 { // dr33: 9
 // dr34: na
 // dr35: dup 178
 
-namespace dr36 { // dr36: yes
+namespace dr36 { // dr36: 2.8
 namespace example1 {
   namespace A {
     int i;
@@ -788,23 +786,20 @@ namespace dr49 { // dr49: 2.8
   A<&k> a;
   A<p> b; // #dr49-b
   // cxx98-error@#dr49-b {{non-type template argument referring to object 'p' with internal linkage is a C++11 extension}}
-  // cxx98-note@#dr49-p {{non-type template argument refers to object here}}
-
+  //   cxx98-note@#dr49-p {{non-type template argument refers to object here}}
   // cxx98-14-error@#dr49-b {{non-type template argument for template parameter of pointer type 'int *' must have its address taken}}
-  // cxx98-14-note@#dr49-A {{template parameter is declared here}}
+  //   cxx98-14-note@#dr49-A {{template parameter is declared here}}
   int *q = &k; // #dr49-q
   A<q> c; // #dr49-c
   // cxx98-error@#dr49-c {{non-type template argument for template parameter of pointer type 'int *' must have its address taken}}
-  // cxx98-note@#dr49-A {{template parameter is declared here}}
-
+  //   cxx98-note@#dr49-A {{template parameter is declared here}}
   // cxx11-14-error@#dr49-c {{non-type template argument of type 'int *' is not a constant expression}}
-  // cxx11-14-note@#dr49-c {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
-  // cxx11-14-note@#dr49-q {{declared here}}
-  // cxx11-14-note@#dr49-A {{template parameter is declared here}}
-
+  //   cxx11-14-note@#dr49-c {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
+  //   cxx11-14-note@#dr49-q {{declared here}}
+  //   cxx11-14-note@#dr49-A {{template parameter is declared here}}
   // since-cxx17-error@#dr49-c {{non-type template argument is not a constant expression}}
-  // since-cxx17-note@#dr49-c {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
-  // since-cxx17-note@#dr49-q {{declared here}}
+  //   since-cxx17-note@#dr49-c {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
+  //   since-cxx17-note@#dr49-q {{declared here}}
 }
 
 namespace dr50 { // dr50: yes
@@ -835,11 +830,10 @@ namespace dr52 { // dr52: 2.8
   int k = b.A::n; // #dr52-k
   // FIXME: This first diagnostic is very strangely worded, and seems to be bogus.
   // expected-error@#dr52-k {{'A' is a private member of 'dr52::A'}}
-  // expected-note@#dr52-B {{constrained by private inheritance here}}
-  // expected-note@#dr52-A {{member is declared here}}
-
+  //   expected-note@#dr52-B {{constrained by private inheritance here}}
+  //   expected-note@#dr52-A {{member is declared here}}
   // expected-error@#dr52-k {{cannot cast 'struct B' to its private base class 'dr52::A'}}
-  // expected-note@#dr52-B {{declared private here}}
+  //   expected-note@#dr52-B {{declared private here}}
 }
 
 namespace dr53 { // dr53: yes
@@ -1171,8 +1165,7 @@ namespace dr76 { // dr76: yes
   const volatile int n = 1;
   int arr[n]; // #dr76-vla
   // expected-error@#dr76-vla {{variable length arrays in C++ are a Clang extension}}
-  // expected-note@#dr76-vla {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
-
+  //   expected-note@#dr76-vla {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
   // expected-error@#dr76-vla {{variable length array declaration not allowed at file scope}}
 }
 
@@ -1346,8 +1339,7 @@ namespace dr92 { // dr92: 4 c++17
   // since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (*p)() throw(int) = &f; // #dr92-p
   // since-cxx17-error@#dr92-p {{ISO C++17 does not allow dynamic exception specifications}}
-  // since-cxx17-note@#dr92-p {{use 'noexcept(false)' instead}}
-
+  //   since-cxx17-note@#dr92-p {{use 'noexcept(false)' instead}}
   // cxx98-14-error@#dr92-p {{target exception specification is not superset of source}}
   // since-cxx17-warning@#dr92-p {{target exception specification is not superset of source}}
   void (*q)() throw(int);
@@ -1363,11 +1355,11 @@ namespace dr92 { // dr92: 4 c++17
     g(f);
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
     // since-cxx17-error@-2 {{no matching function for call to 'g'}}
-    // since-cxx17-note@#dr92-g {{candidate function not viable: no known conversion from 'void () throw(int, float)' to 'void (*)() throw()' for 1st argument}}
+    //   since-cxx17-note@#dr92-g {{candidate function not viable: no known conversion from 'void () throw(int, float)' to 'void (*)() throw()' for 1st argument}}
     g(q);
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
     // since-cxx17-error@-2 {{no matching function for call to 'g'}}
-    // since-cxx17-note@#dr92-g {{candidate function not viable: no known conversion from 'void (*)() throw(int)' to 'void (*)() throw()' for 1st argument}}
+    //   since-cxx17-note@#dr92-g {{candidate function not viable: no known conversion from 'void (*)() throw(int)' to 'void (*)() throw()' for 1st argument}}
   }
 
   // Prior to C++17, this is OK because the exception specification is not

@@ -15,7 +15,6 @@
 #include "llvm/Support/Regex.h"
 #include <cstdint>
 #include <fstream>
-#include <list>
 #include <map>
 #include <vector>
 

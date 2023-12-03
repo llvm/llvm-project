@@ -160,7 +160,7 @@ define i32 @test21(i32 %t1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T1:%.*]], -2
 ; CHECK-NEXT:    [[T3:%.*]] = add i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T1]], 1
-; CHECK-NEXT:    [[T6:%.*]] = or i32 [[T5]], [[T3]]
+; CHECK-NEXT:    [[T6:%.*]] = or disjoint i32 [[T5]], [[T3]]
 ; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t1.mask1 = add i32 %t1, 2
@@ -388,7 +388,7 @@ define <2 x i1> @test29vec(<2 x ptr> %A, <2 x ptr> %B) {
 define i32 @test30(i32 %A) {
 ; CHECK-LABEL: @test30(
 ; CHECK-NEXT:    [[D:%.*]] = and i32 [[A:%.*]], -58312
-; CHECK-NEXT:    [[E:%.*]] = or i32 [[D]], 32962
+; CHECK-NEXT:    [[E:%.*]] = or disjoint i32 [[D]], 32962
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %B = or i32 %A, 32962   ; 0b1000_0000_1100_0010
@@ -401,7 +401,7 @@ define i32 @test30(i32 %A) {
 define <2 x i32> @test30vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test30vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 -58312, i32 -58312>
-; CHECK-NEXT:    [[E:%.*]] = or <2 x i32> [[TMP1]], <i32 32962, i32 32962>
+; CHECK-NEXT:    [[E:%.*]] = or disjoint <2 x i32> [[TMP1]], <i32 32962, i32 32962>
 ; CHECK-NEXT:    ret <2 x i32> [[E]]
 ;
   %B = or <2 x i32> %A, <i32 32962, i32 32962>
@@ -415,7 +415,7 @@ define <2 x i32> @test30vec(<2 x i32> %A) {
 define i64 @test31(i64 %A) {
 ; CHECK-LABEL: @test31(
 ; CHECK-NEXT:    [[E:%.*]] = and i64 [[A:%.*]], 4294908984
-; CHECK-NEXT:    [[F:%.*]] = or i64 [[E]], 32962
+; CHECK-NEXT:    [[F:%.*]] = or disjoint i64 [[E]], 32962
 ; CHECK-NEXT:    ret i64 [[F]]
 ;
   %B = or i64 %A, 194
@@ -431,7 +431,7 @@ define i64 @test31(i64 %A) {
 define <2 x i64> @test31vec(<2 x i64> %A) {
 ; CHECK-LABEL: @test31vec(
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i64> [[A:%.*]], <i64 4294908984, i64 4294908984>
-; CHECK-NEXT:    [[F:%.*]] = or <2 x i64> [[E]], <i64 32962, i64 32962>
+; CHECK-NEXT:    [[F:%.*]] = or disjoint <2 x i64> [[E]], <i64 32962, i64 32962>
 ; CHECK-NEXT:    ret <2 x i64> [[F]]
 ;
   %B = or <2 x i64> %A, <i64 194, i64 194>
@@ -1519,7 +1519,7 @@ define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
 ; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p1, 7
@@ -1537,7 +1537,7 @@ define i32 @mul_no_common_bits_const_op_uses(i32 %p) {
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P:%.*]], 7
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[X]], 24
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[M]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p, 7

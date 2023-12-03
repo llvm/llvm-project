@@ -12,8 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
+#include "OffloadPolicy.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "PluginManager.h"
+#include "Shared/EnvironmentVar.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -126,6 +129,9 @@ static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
 
 /// Map global data and execute pending ctors
 static int initLibrary(DeviceTy &Device) {
+  if (Device.HasMappedGlobalData)
+    return OFFLOAD_SUCCESS;
+
   /*
    * Map global data
    */
@@ -274,23 +280,24 @@ static int initLibrary(DeviceTy &Device) {
     if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
   }
-  Device.HasPendingGlobals = false;
+  Device.HasMappedGlobalData = true;
+
+  static Int32Envar DumpOffloadEntries =
+      Int32Envar("OMPTARGET_DUMP_OFFLOAD_ENTRIES", -1);
+  if (DumpOffloadEntries.get() == DeviceId)
+    Device.dumpOffloadEntries();
 
   return OFFLOAD_SUCCESS;
 }
 
 void handleTargetOutcome(bool Success, ident_t *Loc) {
-  switch (PM->TargetOffloadPolicy) {
-  case tgt_disabled:
+  switch (OffloadPolicy::get(*PM).Kind) {
+  case OffloadPolicy::DISABLED:
     if (Success) {
       FATAL_MESSAGE0(1, "expected no offloading while offloading is disabled");
     }
     break;
-  case tgt_default:
-    FATAL_MESSAGE0(1, "default offloading policy must be switched to "
-                      "mandatory or disabled");
-    break;
-  case tgt_mandatory:
+  case OffloadPolicy::MANDATORY:
     if (!Success) {
       if (getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE)
         for (auto &Device : PM->Devices)
@@ -299,12 +306,10 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
         FAILURE_MESSAGE("Consult https://openmp.llvm.org/design/Runtimes.html "
                         "for debugging options.\n");
 
-      if (PM->RTLs.UsedRTLs.empty()) {
+      if (!PM->getNumUsedPlugins()) {
         llvm::SmallVector<llvm::StringRef> Archs;
-        llvm::transform(PM->Images, std::back_inserter(Archs),
-                        [](const auto &X) {
-                          return !X.second.Arch ? "empty" : X.second.Arch;
-                        });
+        llvm::transform(PM->deviceImages(), std::back_inserter(Archs),
+                        [](const auto &X) { return X.getArch("empty"); });
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
         fprintf(stderr, "Found (%s)\n", llvm::join(Archs, ",").c_str());
@@ -328,27 +333,6 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
   }
 }
 
-static void handleDefaultTargetOffload() {
-  std::lock_guard<decltype(PM->TargetOffloadMtx)> LG(PM->TargetOffloadMtx);
-  if (PM->TargetOffloadPolicy == tgt_default) {
-    if (omp_get_num_devices() > 0) {
-      DP("Default TARGET OFFLOAD policy is now mandatory "
-         "(devices were found)\n");
-      PM->TargetOffloadPolicy = tgt_mandatory;
-    } else {
-      DP("Default TARGET OFFLOAD policy is now disabled "
-         "(no devices were found)\n");
-      PM->TargetOffloadPolicy = tgt_disabled;
-    }
-  }
-}
-
-static bool isOffloadDisabled() {
-  if (PM->TargetOffloadPolicy == tgt_default)
-    handleDefaultTargetOffload();
-  return PM->TargetOffloadPolicy == tgt_disabled;
-}
-
 // If offload is enabled, ensure that device DeviceID has been initialized,
 // global ctors have been executed, and global data has been mapped.
 //
@@ -362,7 +346,7 @@ static bool isOffloadDisabled() {
 // If DeviceID == OFFLOAD_DEVICE_DEFAULT, set DeviceID to the default device.
 // This step might be skipped if offload is disabled.
 bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
-  if (isOffloadDisabled()) {
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED) {
     DP("Offload is disabled\n");
     return true;
   }
@@ -399,7 +383,7 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   {
     std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
         Device.PendingGlobalsMtx);
-    if (Device.HasPendingGlobals && initLibrary(Device) != OFFLOAD_SUCCESS) {
+    if (initLibrary(Device) != OFFLOAD_SUCCESS) {
       REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
       handleTargetOutcome(false, Loc);
       return true;
@@ -1732,9 +1716,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
                        bool IsRecord, bool SaveOutput,
                        uint64_t &ReqPtrArgOffset) {
-  return Device.RTL->activate_record_replay(Device.DeviceID, MemorySize, VAddr,
-                                            IsRecord, SaveOutput,
-                                            ReqPtrArgOffset);
+  return Device.RTL->initialize_record_replay(Device.DeviceID, MemorySize,
+                                              VAddr, IsRecord, SaveOutput,
+                                              ReqPtrArgOffset);
 }
 
 /// Executes a kernel using pre-recorded information for loading to
