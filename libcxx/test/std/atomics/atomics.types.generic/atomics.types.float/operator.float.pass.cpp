@@ -28,7 +28,7 @@ void test_impl() {
 
   // operator float
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     T r = a;
     assert(r == T(3.1));
   }
