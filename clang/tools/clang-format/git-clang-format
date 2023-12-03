@@ -157,6 +157,8 @@ def main():
   else:
     if len(commits) > 2:
       die('at most two commits allowed; %d given' % len(commits))
+  if len(commits) < 2 and opts.diff_from_common_commit:
+    die('--diff_from_common_commit is only allowed when two commits are given')
   opts.binary=os.path.abspath(opts.binary)
   changed_lines = compute_diff_and_extract_lines(commits,
                                                  files,
