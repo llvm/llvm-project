@@ -3395,7 +3395,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // or (mul X, Y), X --> add (mul X, Y), X --> mul X, (Y + 1)
   if (match(&I,
             m_c_Or(m_OneUse(m_Mul(m_Value(X), m_Value(Y))), m_Deferred(X))) &&
-      haveNoCommonBitsSet(Op0, Op1, DL)) {
+      cast<PossiblyDisjointInst>(I).isDisjoint()) {
     Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
     return BinaryOperator::CreateMul(X, IncrementY);
   }
