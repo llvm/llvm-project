@@ -699,15 +699,46 @@ func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
 
 // -----
 
-// CHECK-LABEL: @no_speculate_tensor_dim_known_rank_known_dim_out_of_bounds
-func.func @no_speculate_tensor_dim_known_rank_known_dim_out_of_bounds() {
+// CHECK-LABEL: @speculate_memref_dim_known_rank_known_dim_inbounds
+func.func @speculate_memref_dim_known_rank_known_dim_inbounds() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c22 = arith.constant 22 : index
-  %alloc = memref.alloc(%c22) {alignment = 64 : i64} : memref<?xi1>
-  %4 = tensor.empty(%c22, %c22, %c22) : tensor<?x?x?xi1>
+  %alloc = memref.alloc(%c22) : memref<?xi1>
   scf.for %arg4 = %c0 to %c22 step %c1 {
-    %dim = memref.dim %alloc, %c22 : memref<?xi1>
+    %dim = memref.dim %alloc, %c0 : memref<?xi1>
+  }
+  return
+}
+// CHECK: memref.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_inbounds
+func.func @speculate_tensor_dim_known_rank_known_dim_inbounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %t = tensor.empty(%c22, %c22) : tensor<?x?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = tensor.dim %t, %c1 : tensor<?x?xi1>
+  }
+  return
+}
+// CHECK: tensor.dim
+// CHECK-NEXT: scf.for
+
+// -----
+
+// CHECK-LABEL: @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds
+func.func @no_speculate_memref_dim_known_rank_known_dim_out_of_bounds() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c22 = arith.constant 22 : index
+  %alloc = memref.alloc(%c22) : memref<?xi1>
+  scf.for %arg4 = %c0 to %c22 step %c1 {
+    %dim = memref.dim %alloc, %c1 : memref<?xi1>
   }
   return
 }
