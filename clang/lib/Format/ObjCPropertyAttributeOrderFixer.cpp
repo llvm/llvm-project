@@ -15,8 +15,6 @@
 
 #include "ObjCPropertyAttributeOrderFixer.h"
 
-#include "llvm/ADT/Sequence.h"
-
 #include <algorithm>
 
 namespace clang {
@@ -25,11 +23,10 @@ namespace format {
 ObjCPropertyAttributeOrderFixer::ObjCPropertyAttributeOrderFixer(
     const Environment &Env, const FormatStyle &Style)
     : TokenAnalyzer(Env, Style) {
-
   // Create an "order priority" map to use to sort properties.
-  unsigned index = 0;
+  unsigned Index = 0;
   for (const auto &Property : Style.ObjCPropertyAttributeOrder)
-    SortOrderMap[Property] = index++;
+    SortOrderMap[Property] = Index++;
 }
 
 struct ObjCPropertyEntry {
@@ -37,14 +34,9 @@ struct ObjCPropertyEntry {
   StringRef Value;     // eg, the "foo" of the attribute "getter=foo"
 };
 
-static bool isObjCPropertyAttribute(const FormatToken *Tok) {
-  // Most attributes look like identifiers, but `class` is a keyword.
-  return Tok->isOneOf(tok::identifier, tok::kw_class);
-}
-
 void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
     const SourceManager &SourceMgr, tooling::Replacements &Fixes,
-    const FormatToken *BeginTok, const FormatToken *EndTok) const {
+    const FormatToken *BeginTok, const FormatToken *EndTok) {
   assert(BeginTok);
   assert(EndTok);
   assert(EndTok->Previous);
@@ -53,8 +45,16 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
   if (BeginTok == EndTok || BeginTok->Next == EndTok)
     return;
 
+  // Use a set to sort attributes and remove duplicates.
+  std::set<unsigned> Ordinals;
+
+  // Create a "remapping index" on how to reorder the attributes.
+  SmallVector<int> Indices;
+
   // Collect the attributes.
-  SmallVector<ObjCPropertyEntry, 8> PropertyAttributes;
+  SmallVector<ObjCPropertyEntry> PropertyAttributes;
+  bool HasDuplicates = false;
+  int Index = 0;
   for (auto Tok = BeginTok; Tok != EndTok; Tok = Tok->Next) {
     assert(Tok);
     if (Tok->is(tok::comma)) {
@@ -62,13 +62,14 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
       continue;
     }
 
-    if (!isObjCPropertyAttribute(Tok)) {
+    // Most attributes look like identifiers, but `class` is a keyword.
+    if (!Tok->isOneOf(tok::identifier, tok::kw_class)) {
       // If we hit any other kind of token, just bail.
       return;
     }
 
-    // Memoize the attribute. (Note that 'class' is a legal attribute!)
-    PropertyAttributes.push_back({Tok->TokenText, StringRef{}});
+    const StringRef Attribute{Tok->TokenText};
+    StringRef Value;
 
     // Also handle `getter=getFoo` attributes.
     // (Note: no check needed against `EndTok`, since its type is not
@@ -82,49 +83,66 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
         return;
       }
       Tok = Tok->Next;
-      PropertyAttributes.back().Value = Tok->TokenText;
+      Value = Tok->TokenText;
     }
+
+    auto It = SortOrderMap.find(Attribute);
+    if (It == SortOrderMap.end())
+      It = SortOrderMap.insert({Attribute, SortOrderMap.size()}).first;
+
+    // Sort the indices based on the priority stored in 'SortOrderMap'.
+    const auto Ordinal = It->second;
+    if (!Ordinals.insert(Ordinal).second) {
+      HasDuplicates = true;
+      continue;
+    }
+
+    if (Ordinal >= Indices.size())
+      Indices.resize(Ordinal + 1);
+    Indices[Ordinal] = Index++;
+
+    // Memoize the attribute.
+    PropertyAttributes.push_back({Attribute, Value});
   }
 
-  // There's nothing to do unless there's more than one attribute.
-  if (PropertyAttributes.size() < 2)
-    return;
+  if (!HasDuplicates) {
+    // There's nothing to do unless there's more than one attribute.
+    if (PropertyAttributes.size() < 2)
+      return;
 
-  // Create a "remapping index" on how to reorder the attributes.
-  SmallVector<unsigned, 8> Indices =
-      llvm::to_vector<8>(llvm::seq<unsigned>(0, PropertyAttributes.size()));
+    int PrevIndex = -1;
+    bool IsSorted = true;
+    for (const auto Ordinal : Ordinals) {
+      const auto Index = Indices[Ordinal];
+      if (Index < PrevIndex) {
+        IsSorted = false;
+        break;
+      }
+      assert(Index > PrevIndex);
+      PrevIndex = Index;
+    }
 
-  // Sort the indices based on the priority stored in 'SortOrderMap'; use Max
-  // for missing values.
-  const auto SortOrderMax = Style.ObjCPropertyAttributeOrder.size();
-  auto SortIndex = [&](const StringRef &Needle) -> unsigned {
-    auto I = SortOrderMap.find(Needle);
-    return (I == SortOrderMap.end()) ? SortOrderMax : I->getValue();
-  };
-  llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-    return SortIndex(PropertyAttributes[LHSI].Attribute) <
-           SortIndex(PropertyAttributes[RHSI].Attribute);
-  });
-
-  // If the property order is already correct, then no fix-up is needed.
-  if (llvm::is_sorted(Indices))
-    return;
+    // If the property order is already correct, then no fix-up is needed.
+    if (IsSorted)
+      return;
+  }
 
   // Generate the replacement text.
   std::string NewText;
-  const auto AppendAttribute = [&](const ObjCPropertyEntry &PropertyEntry) {
+  bool IsFirst = true;
+  for (const auto Ordinal : Ordinals) {
+    if (IsFirst)
+      IsFirst = false;
+    else
+      NewText += ", ";
+
+    const auto &PropertyEntry = PropertyAttributes[Indices[Ordinal]];
     NewText += PropertyEntry.Attribute;
 
-    if (!PropertyEntry.Value.empty()) {
-      NewText += "=";
-      NewText += PropertyEntry.Value;
+    if (const auto Value = PropertyEntry.Value; !Value.empty()) {
+      NewText += '=';
+      NewText += Value;
     }
-  };
-
-  AppendAttribute(PropertyAttributes[Indices[0]]);
-  for (unsigned Index : llvm::drop_begin(Indices)) {
-    NewText += ", ";
-    AppendAttribute(PropertyAttributes[Index]);
   }
 
   auto Range = CharSourceRange::getCharRange(
@@ -139,7 +157,7 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
 
 void ObjCPropertyAttributeOrderFixer::analyzeObjCPropertyDecl(
     const SourceManager &SourceMgr, const AdditionalKeywords &Keywords,
-    tooling::Replacements &Fixes, const FormatToken *Tok) const {
+    tooling::Replacements &Fixes, const FormatToken *Tok) {
   assert(Tok);
 
   // Expect `property` to be the very next token or else just bail early.

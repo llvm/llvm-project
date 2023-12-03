@@ -171,18 +171,18 @@ TEST_F(ObjCPropertyAttributeOrderFixerTest, HandlesDuplicatedAttributes) {
   Style.ObjCPropertyAttributeOrder = {"a", "b", "c"};
 
   // Just a dup and nothing else.
-  verifyFormat("@property(a, a) int p;", Style);
+  verifyFormat("@property(a) int p;", "@property(a, a) int p;", Style);
 
   // A dup and something else.
-  verifyFormat("@property(a, a, b) int p;", "@property(a, b, a) int p;", Style);
+  verifyFormat("@property(a, b) int p;", "@property(a, b, a) int p;", Style);
 
   // Duplicates using `=`: stable-sort irrespective of their value.
-  verifyFormat("@property(a=A, a=A, b=X, b=Y) int p;",
+  verifyFormat("@property(a=A, b=X) int p;",
                "@property(a=A, b=X, a=A, b=Y) int p;", Style);
-  verifyFormat("@property(a=A, a=A, b=Y, b=X) int p;",
+  verifyFormat("@property(a=A, b=Y) int p;",
                "@property(a=A, b=Y, a=A, b=X) int p;", Style);
-  verifyFormat("@property(a, a=A, b=B, b) int p;",
-               "@property(a, b=B, a=A, b) int p;", Style);
+  verifyFormat("@property(a, b=B) int p;", "@property(a, b=B, a=A, b) int p;",
+               Style);
 }
 
 TEST_F(ObjCPropertyAttributeOrderFixerTest, SortsInPPDirective) {
