@@ -39,6 +39,14 @@ public:
   using MachOJITDylibDepInfoMap =
       std::vector<std::pair<ExecutorAddr, MachOJITDylibDepInfo>>;
 
+  // Used internally by MachOPlatform, but made public to enable serialization.
+  enum class MachOExecutorSymbolFlags : uint8_t {
+    None = 0,
+    Weak = 1U << 0,
+    Callable = 1U << 1,
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
+  };
+
   /// Try to create a MachOPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
   ///
@@ -164,6 +172,12 @@ private:
       bool Finalized = false;
     };
 
+    struct SymbolTablePair {
+      jitlink::Symbol *OriginalSym = nullptr;
+      jitlink::Symbol *NameSym = nullptr;
+    };
+    using JITSymTabVector = SmallVector<SymbolTablePair>;
+
     Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
@@ -183,7 +197,6 @@ private:
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
     std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
-
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
                                          bool InBootstrapPhase);
 
@@ -191,8 +204,15 @@ private:
     Error populateObjCRuntimeObject(jitlink::LinkGraph &G,
                                     MaterializationResponsibility &MR);
 
+    Error prepareSymbolTableRegistration(jitlink::LinkGraph &G,
+                                         JITSymTabVector &JITSymTabInfo);
+    Error addSymbolTableRegistration(jitlink::LinkGraph &G,
+                                     JITSymTabVector &JITSymTabInfo,
+                                     bool InBootstrapPhase);
+
     std::mutex PluginMutex;
     MachOPlatform &MP;
+    ExecutorAddr HeaderAddr;
 
     // FIXME: ObjCImageInfos and HeaderAddrs need to be cleared when
     // JITDylibs are removed.
@@ -208,8 +228,13 @@ private:
   using PushInitializersSendResultFn =
       unique_function<void(Expected<MachOJITDylibDepInfoMap>)>;
   using SendSymbolAddressFn = unique_function<void(Expected<ExecutorAddr>)>;
+  using PushSymbolsInSendResultFn = unique_function<void(Error)>;
 
   static bool supportedTarget(const Triple &TT);
+
+  static jitlink::Edge::Kind getPointerEdgeKind(jitlink::LinkGraph &G);
+
+  static MachOExecutorSymbolFlags flagsForSymbol(jitlink::Symbol &Sym);
 
   MachOPlatform(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
                 JITDylib &PlatformJD,
@@ -229,9 +254,12 @@ private:
   void rt_pushInitializers(PushInitializersSendResultFn SendResult,
                            ExecutorAddr JDHeaderAddr);
 
-  // Handle requests for symbol addresses from the ORC runtime.
-  void rt_lookupSymbol(SendSymbolAddressFn SendResult, ExecutorAddr Handle,
-                       StringRef SymbolName);
+  // Request that that the given symbols be materialized. The bool element of
+  // each pair indicates whether the symbol must be initialized, or whether it
+  // is optional. If any required symbol is not found then the pushSymbols
+  // function will return an error.
+  void rt_pushSymbols(PushSymbolsInSendResultFn SendResult, ExecutorAddr Handle,
+                      const std::vector<std::pair<StringRef, bool>> &Symbols);
 
   // Call the ORC runtime to create a pthread key.
   Expected<uint64_t> createPThreadKey();
@@ -260,6 +288,10 @@ private:
       ES.intern("___orc_rt_macho_register_jitdylib")};
   RuntimeFunction DeregisterJITDylib{
       ES.intern("___orc_rt_macho_deregister_jitdylib")};
+  RuntimeFunction RegisterObjectSymbolTable{
+      ES.intern("___orc_rt_macho_register_object_symbol_table")};
+  RuntimeFunction DeregisterObjectSymbolTable{
+      ES.intern("___orc_rt_macho_deregister_object_symbol_table")};
   RuntimeFunction RegisterObjectPlatformSections{
       ES.intern("___orc_rt_macho_register_object_platform_sections")};
   RuntimeFunction DeregisterObjectPlatformSections{
