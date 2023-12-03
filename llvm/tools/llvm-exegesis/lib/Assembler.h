@@ -51,7 +51,7 @@ public:
   void addInstructions(ArrayRef<MCInst> Insts, const DebugLoc &DL = DebugLoc());
 
   void addReturn(const ExegesisTarget &ET, bool SubprocessCleanup,
-                 const DebugLoc &DL = DebugLoc());
+                 bool UseDummyPerfCounters, const DebugLoc &DL = DebugLoc());
 
   MachineFunction &MF;
   MachineBasicBlock *const MBB;
@@ -93,8 +93,8 @@ Error assembleToStream(const ExegesisTarget &ET,
                        ArrayRef<unsigned> LiveIns,
                        ArrayRef<RegisterValue> RegisterInitialValues,
                        const FillFunction &Fill, raw_pwrite_stream &AsmStreamm,
-                       const BenchmarkKey &Key,
-                       bool GenerateMemoryInstructions);
+                       const BenchmarkKey &Key, bool GenerateMemoryInstructions,
+                       bool UseDummyPerfCounters);
 
 // Creates an ObjectFile in the format understood by the host.
 // Note: the resulting object keeps a copy of Buffer so it can be discarded once

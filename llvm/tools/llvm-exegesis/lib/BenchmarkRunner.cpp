@@ -264,6 +264,32 @@ private:
     return FD;
   }
 
+  Error sendSyncMessageThroughSocket(int SocketFd) const {
+    char ToSend = 'a';
+
+    ssize_t BytesWritten = write(SocketFd, &ToSend, sizeof(char));
+
+    if (BytesWritten < 0)
+      return make_error<Failure>(
+          "Failed to write synchronization message to socket: " +
+          Twine(strerror(errno)));
+
+    return Error::success();
+  }
+
+  Error recieveSyncMessageFromSocket(int SocketFD) const {
+    char Buffer = 'b';
+
+    ssize_t BytesRecieved = read(SocketFD, &Buffer, sizeof(char));
+
+    if (BytesRecieved < 0)
+      return make_error<Failure>(
+          "Failed to read synchronization message from socket: " +
+          Twine(strerror(errno)));
+
+    return Error::success();
+  }
+
   Error createSubProcessAndRunBenchmark(
       StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues) const {
     int PipeFiles[2];
@@ -316,8 +342,9 @@ private:
     close(PipeFiles[0]);
 
     // Make sure to attach to the process (and wait for the sigstop to be
-    // delivered and for the process to continue) before we write to the counter
-    // file descriptor. Attaching to the process before writing to the socket
+    // delivered and for the process to continue) before we write the counter
+    // file descriptor or dummy synchronization message.
+    // Attaching to the process before writing to the socket
     // ensures that the subprocess at most has blocked on the read call. If we
     // attach afterwards, the subprocess might exit before we get to the attach
     // call due to effects like scheduler contention, introducing transient
@@ -337,12 +364,20 @@ private:
           "Failed to continue execution of the child process: " +
           Twine(strerror(errno)));
 
-    int CounterFileDescriptor = Counter->getFileDescriptor();
-    Error SendError =
-        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
+    if (!State.usingDummyPerfCounters()) {
+      int CounterFileDescriptor = Counter->getFileDescriptor();
+      Error SendError =
+          sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
 
-    if (SendError)
-      return SendError;
+      if (SendError)
+        return SendError;
+
+    } else {
+      Error SendError = sendSyncMessageThroughSocket(PipeFiles[1]);
+
+      if (SendError)
+        return SendError;
+    }
 
     int ChildStatus;
     if (wait(&ChildStatus) == -1) {
@@ -383,13 +418,23 @@ private:
     // The following occurs within the benchmarking subprocess
     pid_t ParentPID = getppid();
 
-    Expected<int> CounterFileDescriptorOrError =
-        getFileDescriptorFromSocket(Pipe);
+    int CounterFileDescriptor = 0;
 
-    if (!CounterFileDescriptorOrError)
-      exit(ChildProcessExitCodeE::CounterFDReadFailed);
+    if (!State.usingDummyPerfCounters()) {
+      Expected<int> CounterFileDescriptorOrError =
+          getFileDescriptorFromSocket(Pipe);
 
-    int CounterFileDescriptor = *CounterFileDescriptorOrError;
+      if (!CounterFileDescriptorOrError)
+        exit(ChildProcessExitCodeE::CounterFDReadFailed);
+
+      CounterFileDescriptor = *CounterFileDescriptorOrError;
+
+    } else {
+      Error PossibleRecvError = recieveSyncMessageFromSocket(Pipe);
+
+      if (PossibleRecvError)
+        exit(ChildProcessExitCodeE::CounterFDReadFailed);
+    }
 
 // Glibc versions greater than 2.35 automatically call rseq during
 // initialization. Unmapping the region that glibc sets up for this causes
@@ -458,7 +503,8 @@ Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
           BC.Key.RegisterInitialValues,
           Repetitor.Repeat(Instructions, MinInstructions, LoopBodySize,
                            GenerateMemoryInstructions),
-          OS, BC.Key, GenerateMemoryInstructions)) {
+          OS, BC.Key, GenerateMemoryInstructions,
+          State.usingDummyPerfCounters())) {
     return std::move(E);
   }
   return Buffer;

@@ -48,7 +48,8 @@ static const Align kFunctionAlignment(4096);
 static bool generateSnippetSetupCode(
     const ExegesisTarget &ET, const MCSubtargetInfo *const MSI,
     ArrayRef<RegisterValue> RegisterInitialValues, BasicBlockFiller &BBF,
-    const BenchmarkKey &Key, bool GenerateMemoryInstructions) {
+    const BenchmarkKey &Key, bool GenerateMemoryInstructions,
+    bool UseDummyPerfCounters) {
   bool IsSnippetSetupComplete = true;
   if (GenerateMemoryInstructions) {
     BBF.addInstructions(ET.generateMemoryInitialSetup());
@@ -80,7 +81,8 @@ static bool generateSnippetSetupCode(
   }
   if (GenerateMemoryInstructions) {
 #ifdef HAVE_LIBPFM
-    BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
+    if (!UseDummyPerfCounters)
+      BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
 #endif // HAVE_LIBPFM
     for (const RegisterValue &RV : RegisterInitialValues) {
       // Load in the stack register now as we're done using it elsewhere
@@ -170,11 +172,14 @@ void BasicBlockFiller::addInstructions(ArrayRef<MCInst> Insts,
 }
 
 void BasicBlockFiller::addReturn(const ExegesisTarget &ET,
-                                 bool SubprocessCleanup, const DebugLoc &DL) {
+                                 bool SubprocessCleanup,
+                                 bool UseDummyPerfCounters,
+                                 const DebugLoc &DL) {
   // Insert cleanup code
   if (SubprocessCleanup) {
 #ifdef HAVE_LIBPFM
-    addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_DISABLE, false));
+    if (!UseDummyPerfCounters)
+      addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_DISABLE, false));
 #endif // HAVE_LIBPFM
 #ifdef __linux__
     addInstructions(ET.generateExitSyscall(0));
@@ -234,8 +239,8 @@ Error assembleToStream(const ExegesisTarget &ET,
                        ArrayRef<unsigned> LiveIns,
                        ArrayRef<RegisterValue> RegisterInitialValues,
                        const FillFunction &Fill, raw_pwrite_stream &AsmStream,
-                       const BenchmarkKey &Key,
-                       bool GenerateMemoryInstructions) {
+                       const BenchmarkKey &Key, bool GenerateMemoryInstructions,
+                       bool UseDummyPerfCounters) {
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
@@ -284,7 +289,7 @@ Error assembleToStream(const ExegesisTarget &ET,
 
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
       ET, TM->getMCSubtargetInfo(), RegisterInitialValues, Entry, Key,
-      GenerateMemoryInstructions);
+      GenerateMemoryInstructions, UseDummyPerfCounters);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.

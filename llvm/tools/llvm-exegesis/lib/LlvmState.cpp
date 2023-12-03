@@ -76,14 +76,16 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
   const PfmCountersInfo &PCI = UseDummyPerfCounters
                                    ? ET->getDummyPfmCounters()
                                    : ET->getPfmCounters(CpuName);
-  return LLVMState(std::move(TM), ET, &PCI);
+  return LLVMState(std::move(TM), ET, &PCI, UseDummyPerfCounters);
 }
 
 LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
-                     const ExegesisTarget *ET, const PfmCountersInfo *PCI)
+                     const ExegesisTarget *ET, const PfmCountersInfo *PCI,
+                     bool UseDummyPerfCounters_)
     : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)), PfmCounters(PCI),
       OpcodeNameToOpcodeIdxMapping(createOpcodeNameToOpcodeIdxMapping()),
-      RegNameToRegNoMapping(createRegNameToRegNoMapping()) {
+      RegNameToRegNoMapping(createRegNameToRegNoMapping()),
+      UseDummyPerfCounters(UseDummyPerfCounters_) {
   BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
   for (const unsigned Reg : TheExegesisTarget->getUnavailableRegisters())
     ReservedRegs.set(Reg);
