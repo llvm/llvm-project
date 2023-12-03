@@ -314,8 +314,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     //    e.g. (A & C1)^(B & C2) -> (A & C1)|(B & C2) iff C1&C2 == 0
     if (DemandedMask.isSubsetOf(RHSKnown.Zero | LHSKnown.Zero)) {
       Instruction *Or =
-        BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1),
-                                 I->getName());
+          BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1));
+      Or->takeName(I);
       return InsertNewInstWith(Or, I->getIterator());
     }
 
