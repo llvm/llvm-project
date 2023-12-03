@@ -5968,7 +5968,8 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
   return true;
 }
 
-const Value *llvm::getUnderlyingObjectLookThrough(const Value *V, unsigned MaxLookup) {
+const Value *llvm::getUnderlyingObjectLookThrough(const Value *V,
+                                                  unsigned MaxLookup) {
   V = getUnderlyingObject(V, MaxLookup);
 
   const PHINode *PN = dyn_cast<PHINode>(V);
