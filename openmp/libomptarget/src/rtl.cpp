@@ -14,6 +14,7 @@
 #include "llvm/OffloadArch/OffloadArch.h"
 
 #include "DeviceImage.h"
+#include "OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "device.h"
@@ -37,6 +38,7 @@ using namespace llvm::omp::target;
 
 #ifdef OMPT_SUPPORT
 extern void ompt::connectLibrary();
+extern OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 #endif
 
 __attribute__((constructor(101))) void init() {
@@ -57,5 +59,14 @@ __attribute__((constructor(101))) void init() {
 
 __attribute__((destructor(101))) void deinit() {
   DP("Deinit target library!\n");
+
   delete PM;
+}
+
+// HACK: These depricated device stubs still needs host versions for fallback
+// FIXME: Deprecate upstream, change test cases to use malloc & free directly
+extern "C" char *global_allocate(uint32_t sz) { return (char *)malloc(sz); }
+extern "C" int global_free(void *ptr) {
+  free(ptr);
+  return 0;
 }

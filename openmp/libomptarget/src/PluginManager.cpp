@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OmptTracing.h"
+#include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 
 using namespace llvm;
@@ -230,6 +232,11 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   DP("Unloading target library!\n");
+
+  // Flush in-process OMPT trace records and shut down helper threads
+  // before unloading the library.
+  OMPT_TRACING_IF_ENABLED(
+      llvm::omp::target::ompt::TraceRecordManager.shutdownHelperThreads(););
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
