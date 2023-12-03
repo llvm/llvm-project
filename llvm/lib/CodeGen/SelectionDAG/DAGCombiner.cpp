@@ -21006,20 +21006,18 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
                               &IsFast) ||
       !IsFast)
     return SDValue();
-  EVT PtrVT = Ptr.getValueType();
 
-  SDValue Offset =
-      DAG.getNode(ISD::MUL, DL, PtrVT, DAG.getZExtOrTrunc(Idx, DL, PtrVT),
-                  DAG.getConstant(EltVT.getSizeInBits() / 8, DL, PtrVT));
-  SDValue NewPtr = DAG.getNode(ISD::ADD, DL, PtrVT, Ptr, Offset);
   MachinePointerInfo PointerInfo(ST->getAddressSpace());
 
   // If the offset is a known constant then try to recover the pointer
   // info
+  SDValue NewPtr;
   if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
     unsigned COffset = CIdx->getSExtValue() * EltVT.getSizeInBits() / 8;
     NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(COffset), DL);
     PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
+  } else {
+    NewPtr = TLI.getVectorElementPointer(DAG, Ptr, Value.getValueType(), Idx);
   }
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
