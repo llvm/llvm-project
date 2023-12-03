@@ -404,9 +404,17 @@ private:
 #endif // GLIBC_INITS_RSEQ
 
     size_t FunctionDataCopySize = this->Function.FunctionBytes.size();
+    void *MapAddress = NULL;
+    int MapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
+
+    if (Key.SnippetAddress != 0) {
+      MapAddress = reinterpret_cast<void *>(Key.SnippetAddress);
+      MapFlags |= MAP_FIXED_NOREPLACE;
+    }
+
     char *FunctionDataCopy =
-        (char *)mmap(NULL, FunctionDataCopySize, PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+        (char *)mmap(MapAddress, FunctionDataCopySize, PROT_READ | PROT_WRITE,
+                     MapFlags, 0, 0);
     if ((intptr_t)FunctionDataCopy == -1)
       exit(ChildProcessExitCodeE::FunctionDataMappingFailed);
 

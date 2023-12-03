@@ -131,6 +131,12 @@ public:
       Result->Key.MemoryMappings.push_back(std::move(MemMap));
       return;
     }
+    if (CommentText.consume_front("SNIPPET-ADDRESS")) {
+      // LLVM-EXEGESIS-SNIPPET-ADDRESS <address>
+      Result->Key.SnippetAddress =
+          std::stol(CommentText.trim().str(), nullptr, 16);
+      return;
+    }
   }
 
   unsigned numInvalidComments() const { return InvalidComments; }

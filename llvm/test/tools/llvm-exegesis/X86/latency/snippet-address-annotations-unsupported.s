@@ -4,6 +4,6 @@
 
 # CHECK: llvm-exegesis error: Memory and snippet address annotations are only supported in subprocess execution mode
 
-# LLVM-EXEGESIS-MEM-DEF test1 4096 ff
+# LLVM-EXEGESIS-SNIPPET-ADDRESS 10000
 
 movq $0, %rax
