@@ -423,7 +423,30 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     MLIRCAPIInterfaces
 
     # Dialects
+    MLIRCAPIAMDGPU
+    MLIRCAPIArith
+    MLIRCAPIAsync
+    MLIRCAPIControlFlow
     MLIRCAPIFunc
+    MLIRCAPIGPU
+    MLIRCAPILLVM
+    MLIRCAPILinalg
+    MLIRCAPIMLProgram
+    MLIRCAPIMath
+    MLIRCAPIMemRef
+    MLIRCAPINVGPU
+    MLIRCAPINVVM
+    MLIRCAPIOpenMP
+    MLIRCAPIPDL
+    MLIRCAPIQuant
+    MLIRCAPIROCDL
+    MLIRCAPISCF
+    MLIRCAPIShape
+    MLIRCAPISparseTensor
+    MLIRCAPITensor
+    MLIRCAPITransformDialect
+    MLIRCAPIVector
+    MLIRCAPIRemainingDialects
 )
 
 # This extension exposes an API to register all dialects, extensions, and passes

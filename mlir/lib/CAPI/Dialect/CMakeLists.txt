@@ -224,3 +224,14 @@ add_mlir_upstream_c_api_library(MLIRCAPIVector
   MLIRCAPIIR
   MLIRVectorDialect
 )
+
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+
+add_mlir_upstream_c_api_library(MLIRCAPIRemainingDialects
+  RemainingDialects.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  ${dialect_libs}
+)
