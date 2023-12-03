@@ -117,16 +117,16 @@ bool ConvertToTimeSpec(TimeSpec& ts, file_time_type ft) {
   auto secs = duration_cast<Sec>(ft.time_since_epoch());
   auto nsecs = duration_cast<NanoSec>(ft.time_since_epoch() - secs);
   if (nsecs.count() < 0) {
-    if (Sec::min().count() > SecLim::min()) {
+    if ((Sec::min)().count() > (SecLim::min)()) {
       secs += Sec(1);
       nsecs -= Sec(1);
     } else {
       nsecs = NanoSec(0);
     }
   }
-  if (SecLim::max() < secs.count() || SecLim::min() > secs.count())
+  if ((SecLim::max)() < secs.count() || (SecLim::min)() > secs.count())
     return false;
-  if (NSecLim::max() < nsecs.count() || NSecLim::min() > nsecs.count())
+  if ((NSecLim::max)() < nsecs.count() || (NSecLim::min)() > nsecs.count())
     return false;
   ts.tv_sec = secs.count();
   ts.tv_nsec = nsecs.count();
@@ -221,7 +221,7 @@ static const bool SupportsNegativeTimes = [] {
 static const bool SupportsMaxTime = [] {
   using namespace std::chrono;
   TimeSpec max_ts = {};
-  if (!ConvertToTimeSpec(max_ts, file_time_type::max()))
+  if (!ConvertToTimeSpec(max_ts, (file_time_type::max)()))
     return false;
 
   std::error_code ec;
@@ -230,7 +230,7 @@ static const bool SupportsMaxTime = [] {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
     old_write_time = LastWriteTime(file);
-    file_time_type tp = file_time_type::max();
+    file_time_type tp = (file_time_type::max)();
     fs::last_write_time(file, tp, ec);
     new_write_time = LastWriteTime(file);
   }
@@ -240,7 +240,7 @@ static const bool SupportsMaxTime = [] {
 static const bool SupportsMinTime = [] {
   using namespace std::chrono;
   TimeSpec min_ts = {};
-  if (!ConvertToTimeSpec(min_ts, file_time_type::min()))
+  if (!ConvertToTimeSpec(min_ts, (file_time_type::min)()))
     return false;
   std::error_code ec;
   TimeSpec old_write_time, new_write_time;
@@ -248,7 +248,7 @@ static const bool SupportsMinTime = [] {
     scoped_test_env env;
     const path file = env.create_file("file", 42);
     old_write_time = LastWriteTime(file);
-    file_time_type tp = file_time_type::min();
+    file_time_type tp = (file_time_type::min)();
     fs::last_write_time(file, tp, ec);
     new_write_time = LastWriteTime(file);
   }
@@ -291,12 +291,12 @@ static const bool WorkaroundStatTruncatesToSeconds = [] {
 
 static const bool SupportsMinRoundTrip = [] {
   TimeSpec ts = {};
-  if (!ConvertToTimeSpec(ts, file_time_type::min()))
+  if (!ConvertToTimeSpec(ts, (file_time_type::min)()))
     return false;
   file_time_type min_val = {};
   if (!ConvertFromTimeSpec(min_val, ts))
     return false;
-  return min_val == file_time_type::min();
+  return min_val == (file_time_type::min)();
 }();
 
 } // end namespace
@@ -325,7 +325,7 @@ static bool CompareTime(TimeSpec t1, file_time_type t2) {
 }
 
 static bool CompareTime(file_time_type t1, file_time_type t2) {
-  auto min_secs = duration_cast<Sec>(file_time_type::min().time_since_epoch());
+  auto min_secs = duration_cast<Sec>((file_time_type::min)().time_since_epoch());
   bool IsMin =
       t1.time_since_epoch() < min_secs || t2.time_since_epoch() < min_secs;
 
@@ -358,9 +358,9 @@ inline bool TimeIsRepresentableByFilesystem(file_time_type tp) {
     return false;
   else if (tp.time_since_epoch().count() < 0 && !SupportsNegativeTimes)
     return false;
-  else if (tp == file_time_type::max() && !SupportsMaxTime)
+  else if (tp == (file_time_type::max)() && !SupportsMaxTime)
     return false;
-  else if (tp == file_time_type::min() && !SupportsMinTime)
+  else if (tp == (file_time_type::min)() && !SupportsMinTime)
     return false;
   return true;
 }
@@ -396,7 +396,7 @@ static void read_last_write_time_static_env_test()
 {
     static_test_env static_env;
     using C = file_time_type::clock;
-    file_time_type min = file_time_type::min();
+    file_time_type min = (file_time_type::min)();
     // Sleep a little to make sure that static_env.File created above is
     // strictly older than C::now() even with a coarser clock granularity
     // in C::now(). (GetSystemTimeAsFileTime on windows has a fairly coarse
@@ -567,7 +567,7 @@ static void test_write_min_time()
     scoped_test_env env;
     const path p = env.create_file("file", 42);
     const file_time_type old_time = last_write_time(p);
-    file_time_type new_time = file_time_type::min();
+    file_time_type new_time = (file_time_type::min)();
 
     std::error_code ec = GetTestEC();
     last_write_time(p, new_time, ec);
@@ -578,7 +578,7 @@ static void test_write_min_time()
         assert(CompareTime(tt, new_time));
 
         last_write_time(p, old_time);
-        new_time = file_time_type::min() + SubSec(1);
+        new_time = (file_time_type::min)() + SubSec(1);
 
         ec = GetTestEC();
         last_write_time(p, new_time, ec);
@@ -601,7 +601,7 @@ static void test_write_max_time() {
   scoped_test_env env;
   const path p = env.create_file("file", 42);
   const file_time_type old_time = last_write_time(p);
-  file_time_type new_time = file_time_type::max();
+  file_time_type new_time = (file_time_type::max)();
 
   std::error_code ec = GetTestEC();
   last_write_time(p, new_time, ec);
@@ -621,7 +621,7 @@ static void test_value_on_failure()
     static_test_env static_env;
     const path p = static_env.DNE;
     std::error_code ec = GetTestEC();
-    assert(last_write_time(p, ec) == file_time_type::min());
+    assert(last_write_time(p, ec) == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 }
 
@@ -636,7 +636,7 @@ static void test_exists_fails()
     permissions(dir, perms::none);
 
     std::error_code ec = GetTestEC();
-    assert(last_write_time(file, ec) == file_time_type::min());
+    assert(last_write_time(file, ec) == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::permission_denied));
 
     ExceptionChecker Checker(file, std::errc::permission_denied,

@@ -108,7 +108,7 @@ static void error_reporting() {
     assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ec = GetTestEC();
-    assert(ent.last_write_time(ec) == file_time_type::min());
+    assert(ent.last_write_time(ec) == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ExceptionChecker Checker(static_env.DNE,
@@ -122,7 +122,7 @@ static void error_reporting() {
 
     std::error_code ec = GetTestEC();
     file_time_type expect_bad = last_write_time(static_env.BadSymlink, ec);
-    assert(expect_bad == file_time_type::min());
+    assert(expect_bad == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::no_such_file_or_directory));
 
     ec = GetTestEC();
@@ -154,7 +154,7 @@ static void error_reporting() {
     assert(ErrorIs(ec, std::errc::permission_denied));
 
     ec = GetTestEC();
-    assert(ent.last_write_time(ec) == file_time_type::min());
+    assert(ent.last_write_time(ec) == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::permission_denied));
 
     ExceptionChecker Checker(file, std::errc::permission_denied,
@@ -180,7 +180,7 @@ static void error_reporting() {
     assert(ErrorIs(ec, std::errc::permission_denied));
 
     ec = GetTestEC();
-    assert(ent.last_write_time(ec) == file_time_type::min());
+    assert(ent.last_write_time(ec) == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::permission_denied));
 
     ExceptionChecker Checker(sym_in_dir, std::errc::permission_denied,
@@ -206,7 +206,7 @@ static void error_reporting() {
     assert(!ec);
 
     ec = GetTestEC();
-    assert(ent.last_write_time(ec) == file_time_type::min());
+    assert(ent.last_write_time(ec) == (file_time_type::min)());
     assert(ErrorIs(ec, std::errc::permission_denied));
 
     ExceptionChecker Checker(sym_out_of_dir, std::errc::permission_denied,

@@ -316,7 +316,7 @@ static void access_cache_after_refresh_fails() {
 
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_symlink, false);
-    CHECK_ACCESS(last_write_time, file_time_type::min());
+    CHECK_ACCESS(last_write_time, (file_time_type::min)());
     CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
   permissions(dir, old_perms);
@@ -333,7 +333,7 @@ static void access_cache_after_refresh_fails() {
 
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_symlink, false);
-    CHECK_ACCESS(last_write_time, file_time_type::min());
+    CHECK_ACCESS(last_write_time, (file_time_type::min)());
     CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
   permissions(dir, old_perms);
@@ -351,7 +351,7 @@ static void access_cache_after_refresh_fails() {
 
     CHECK_ACCESS(exists, false);
     CHECK_ACCESS(is_regular_file, false);
-    CHECK_ACCESS(last_write_time, file_time_type::min());
+    CHECK_ACCESS(last_write_time, (file_time_type::min)());
     CHECK_ACCESS(hard_link_count, std::uintmax_t(-1));
   }
 #undef CHECK_ACCESS
