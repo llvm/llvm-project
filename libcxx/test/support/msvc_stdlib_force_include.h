@@ -18,6 +18,15 @@
 
     // Avoid assertion dialogs.
     #define _CRT_SECURE_INVALID_PARAMETER(EXPR) ::abort()
+
+    // Declare POSIX function names. (By default, Clang -fno-ms-compatibility causes them to be omitted.)
+    #define _CRT_DECLARE_NONSTDC_NAMES 1
+
+    // Silence warnings about POSIX function names.
+    #define _CRT_NONSTDC_NO_WARNINGS 1
+
+    // Avoid Windows.h macroizing min() and max().
+    #define NOMINMAX 1
 #endif // _LIBCXX_IN_DEVCRT
 
 #include <crtdbg.h>
