@@ -42,6 +42,39 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 /// on a 2D slice. Otherwise, returns a failure.
 FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 
+/// Return true if `vectorType` is a contiguous slice of `memrefType`.
+///
+/// Only the N = vectorType.getRank() trailing dims of `memrefType` are
+/// checked (the other dims are not relevant). Note that for `vectorType` to be
+/// a contiguous slice of `memrefType`, the trailing dims of the latter have
+/// to be contiguous - this is checked by looking at the corresponding strides.
+///
+/// There might be some restriction on the leading dim of `VectorType`:
+///
+/// Case 1. If all the trailing dims of `vectorType` match the trailing dims
+///         of `memrefType` then the leading dim of `vectorType` can be
+///         arbitrary.
+///
+///        Ex. 1.1 contiguous slice, perfect match
+///          vector<4x3x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 1.2 contiguous slice, the leading dim does not match (2 != 4)
+///          vector<2x3x2xi32> from memref<5x4x3x2xi32>
+///
+/// Case 2. If an "internal" dim of `vectorType` does not match the
+///         corresponding trailing dim in `memrefType` then the remaining
+///         leading dims of `vectorType` have to be 1 (the first non-matching
+///         dim can be arbitrary).
+///
+///        Ex. 2.1 non-contiguous slice, 2 != 3 and the leading dim != <1>
+///          vector<2x2x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 2.2  contiguous slice, 2 != 3 and the leading dim == <1>
+///          vector<1x2x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 2.3. contiguous slice, 2 != 3 and the leading dims == <1x1>
+///          vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
+///        Ex. 2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
+///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

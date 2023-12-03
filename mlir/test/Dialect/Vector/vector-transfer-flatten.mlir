@@ -41,7 +41,7 @@ func.func @transfer_read_dims_mismatch_contiguous(
 
 // -----
 
-func.func @transfer_read_dims_mismatch_contiguous(
+func.func @transfer_read_dims_mismatch_non_contiguous(
     %arg : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<2x1x2x2xi8> {
     %c0 = arith.constant 0 : index
     %cst = arith.constant 0 : i8
@@ -50,6 +50,7 @@ func.func @transfer_read_dims_mismatch_contiguous(
     return %v : vector<2x1x2x2xi8>
 }
 
+// CHECK-LABEL: func.func @transfer_read_dims_mismatch_non_contiguous
 // CHECK-NOT: memref.collapse_shape
 // CHECK-NOT: vector.shape_cast
 
@@ -100,6 +101,7 @@ func.func @transfer_write_dims_mismatch_non_contiguous(
     return
 }
 
+// CHECK-LABEL: func.func @transfer_write_dims_mismatch_non_contiguous
 // CHECK-NOT: memref.collapse_shape
 // CHECK-NOT: vector.shape_cast
 
@@ -110,6 +112,7 @@ func.func @transfer_write_0d(%arg : memref<i8>, %vec : vector<i8>) {
       return
 }
 
+// CHECK-LABEL: func.func @transfer_write_0d
 // CHECK-NOT: memref.collapse_shape
 // CHECK-NOT: vector.shape_cast
 
@@ -121,6 +124,7 @@ func.func @transfer_read_0d(%arg : memref<i8>) -> vector<i8> {
       return %0 : vector<i8>
 }
 
+// CHECK-LABEL: func.func @transfer_read_0d
 // CHECK-NOT: memref.collapse_shape
 // CHECK-NOT: vector.shape_cast
 
