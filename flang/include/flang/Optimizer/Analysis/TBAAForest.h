@@ -84,7 +84,7 @@ public:
     return getFuncTree(func.getSymNameAttr());
   }
   inline const TBAATree &operator[](mlir::LLVM::LLVMFuncOp func) {
-    // the external name conversion pass may rename some functinos. Their old
+    // the external name conversion pass may rename some functions. Their old
     // name must be used so that we add to the tbaa tree added in the FIR pass
     mlir::Attribute attr = func->getAttr(getInternalFuncNameAttrName());
     if (attr) {
