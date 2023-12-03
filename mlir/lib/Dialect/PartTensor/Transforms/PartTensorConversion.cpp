@@ -142,6 +142,25 @@ public:
   }
 };
 
+class PartTensorUpdateSliceConverter
+    : public OpConversionPattern<UpdateSliceOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(UpdateSliceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto sparseTensor = adaptor.getSparseTensor();
+    (void)sparseTensor;
+    createFuncCall(rewriter, loc, "updateSlice", {},
+                   {adaptor.getInPartTensor(), adaptor.getPartSpec(),
+                    adaptor.getSparseTensor()},
+                   mlir::sparse_tensor::EmitCInterface::On);
+    rewriter.replaceOp(op, adaptor.getInPartTensor());
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -172,4 +191,7 @@ void mlir::populatePartTensorConversionPatterns(TypeConverter &typeConverter,
 
   patterns.add<PartTensorSetSliceConverter>(typeConverter,
                                             patterns.getContext());
+
+  patterns.add<PartTensorUpdateSliceConverter>(typeConverter,
+                                               patterns.getContext());
 }

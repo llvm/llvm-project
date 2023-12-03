@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_PARTITION_IR_PARTITION_H
 #define MLIR_DIALECT_PARTITION_IR_PARTITION_H
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -21,6 +22,13 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include <optional>
+
+namespace mlir {
+namespace arith {
+enum class AtomicRMWKind : uint64_t;
+class AtomicRMWKindAttr;
+} // namespace arith
+} // namespace mlir
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/PartTensor/IR/PartTensorAttrDefs.h.inc"

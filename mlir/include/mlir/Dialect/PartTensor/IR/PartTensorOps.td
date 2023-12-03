@@ -31,6 +31,7 @@
 #ifndef PARTTENSOR_OPS
 #define PARTTENSOR_OPS
 
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/PartTensor/IR/PartTensorBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -79,6 +80,22 @@ def PartTensor_GetPartitionsOp : PartTensor_Op<"get_partitions", [Pure]>,
          // let assemblyFormat = " $in_part_tensor `,` $part_spec `,` $sparse_tensor attr-dict `:` type($in_part_tensor) `,` type($part_spec) `->` type($result_part_tensor)";
          let assemblyFormat = " $in_part_tensor `,` $part_spec `,` $sparse_tensor attr-dict `:` type($in_part_tensor) `,` type($part_spec) `,` type($sparse_tensor) `->` type($result_part_tensor)";
          }
+
+def PartTensor_UpdateSliceOp : PartTensor_Op<"update_slice">,
+  Arguments<(ins AnyTensor:$in_part_tensor,
+    AnyStridedMemRefOfRank<1>:$part_spec, AnyTensor:$sparse_tensor,
+    AtomicRMWKindAttr:$update_op)>,
+  Results<(outs AnyTensor:$result_part_tensor)> {
+    let summary = "update slice";
+    let description = [{
+        This operation will take tuples and output one tensor
+    }];
+    let assemblyFormat = [{
+        $in_part_tensor `,` $part_spec `,` $sparse_tensor `,` $update_op
+        attr-dict `:` type($in_part_tensor) `,` type($part_spec) `,`
+        type($sparse_tensor) `->` type($result_part_tensor)
+      }];
+  }
 
 def PartTensor_GetNumPartitionsOp : PartTensor_Op<"get_num_partitions">,
 	Arguments<(ins AnyTensor:$tensor)>,
