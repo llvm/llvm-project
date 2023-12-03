@@ -6,32 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
+#include <numeric>
+
 #include "UseDigitSeparatorCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
+namespace {
+  std::vector<std::basic_string<char>> splitString3Symbols(const std::basic_string<char> &String) {
+    std::vector<std::basic_string<char>> Result;
+    std::basic_string<char> ReversedString(String.rbegin(), String.rend());
+
+    for (size_t I = 0; I < ReversedString.size(); I += 3) {
+      Result.push_back(ReversedString.substr(I, 3));
+    }
+
+    std::reverse(Result.begin(), Result.end());
+
+    return Result;
+  }
+} // namespace
+
 namespace clang::tidy::modernize {
 
 void UseDigitSeparatorCheck::registerMatchers(MatchFinder *Finder) {
-  // FIXME: Add matchers.
-//  Finder->addMatcher(functionDecl().bind("x"), this);
   Finder->addMatcher(integerLiteral().bind("integerLiteral"), this);
 }
 
 void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
-  // FIXME: Add callback implementation.
-//  const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-//  if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().startswith("awesome_"))
-//    return;
-//  diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
-//      << MatchedDecl
-//      << FixItHint::CreateInsertion(MatchedDecl->getLocation(), "awesome_");
-//  diag(MatchedDecl->getLocation(), "insert 'awesome'", DiagnosticIDs::Note);
   const auto *MatchedInteger = Result.Nodes.getNodeAs<IntegerLiteral>("integerLiteral");
   const auto IntegerValue = MatchedInteger->getValue();
-  diag(MatchedInteger->getLocation(), "integer warning %0") << toString(IntegerValue, 10, true)
+  const auto IntegerString = splitString3Symbols(toString(IntegerValue, 10, true));
+  const auto FinalString = std::accumulate(IntegerString.begin(), IntegerString.end(), std::string(""), [](std::basic_string<char> S1, std::basic_string<char> S2) {return S1 + "\'" + S2;}).erase(0, 1);
+  diag(MatchedInteger->getLocation(), "integer warning %0") << FinalString
         << FixItHint::CreateInsertion(MatchedInteger->getLocation(), "this is integer");
   diag(MatchedInteger->getLocation(), "integer", DiagnosticIDs::Note);
 }
