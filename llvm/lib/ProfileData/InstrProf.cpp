@@ -343,8 +343,8 @@ static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto IRPGOName = lookupPGONameFromMetadata(PGONameMetadata))
-    return *IRPGOName;
+  if (auto IRPGOFuncName = lookupPGONameFromMetadata(PGONameMetadata))
+    return *IRPGOFuncName;
 
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
@@ -358,36 +358,31 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
-static std::string getPGOObjectName(const GlobalObject &GO, bool InLTO,
-                                    MDNode *PGONameMetadata) {
+// This is similar to `getIRPGOFuncName` except that this function calls
+// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
+// 'getIRPGONameForGlobalObject'. See the difference between two callees in the
+// comments of `getIRPGONameForGlobalObject`.
+std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   if (!InLTO) {
-    auto FileName = getStrippedSourceFileName(GO);
-    return getPGOFuncName(GO.getName(), GO.getLinkage(), FileName);
+    auto FileName = getStrippedSourceFileName(F);
+    return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto PGOName = lookupPGONameFromMetadata(PGONameMetadata))
-    return *PGOName;
+  if (auto PGOFuncName = lookupPGONameFromMetadata(getPGOFuncNameMetadata(F)))
+    return *PGOFuncName;
 
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
-  return getPGOFuncName(GO.getName(), GlobalValue::ExternalLinkage, "");
-}
-
-// This is similar to `getIRPGOFuncName` except that this function calls
-// 'getPGOObjectcName' to get a name and `getIRPGOFuncName` calls
-// 'getIRPGONameForGlobalObject'. See the difference between two callees in the
-// comments of `getIRPGONameForGlobalObject`.
-std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
-  return getPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
+  return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
 }
 
 std::string getPGOName(const GlobalVariable &V, bool InLTO) {
   // PGONameMetadata should be set by compiler at profile use time
   // and read by symtab creation to look up symbols corresponding to
   // a MD5 hash.
-  return getPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
+  return getIRPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
 }
 
 // See getIRPGOFuncName() for a discription of the format.

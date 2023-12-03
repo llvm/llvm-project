@@ -1101,12 +1101,6 @@ static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
   return ConstantExpr::getBitCast(GV, Int8PtrTy);
 }
 
-/// Get the name of a profiling variable for a particular variable.
-static std::string getVarName(GlobalVariable *GV, StringRef Prefix) {
-  StringRef Name = getPGOName(*GV);
-  return (Prefix + Name).str();
-}
-
 void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
   assert(!DebugInfoCorrelate &&
          "Value profiling is not supported with lightweight instrumentation");
@@ -1143,7 +1137,7 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
 
   // Used by INSTR_PROF_VTABLE_DATA MACRO
   Constant *VTableAddr = getVTableAddrForProfData(GV);
-  StringRef PGOVTableName = getPGOName(*GV);
+  const std::string PGOVTableName = getPGOName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
   uint32_t VTableSizeVal =
@@ -1154,10 +1148,10 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
 #include "llvm/ProfileData/InstrProfData.inc"
   };
 
+  std::string VarName = getInstrProfVTableVarPrefix().str() + PGOVTableName;
   auto *Data =
       new GlobalVariable(*M, DataTy, false /* constant */, Linkage,
-                         ConstantStruct::get(DataTy, DataVals),
-                         getVarName(GV, getInstrProfVTableVarPrefix()));
+                         ConstantStruct::get(DataTy, DataVals), VarName);
 
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_vtab, TT.getObjectFormat()));

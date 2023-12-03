@@ -2,207 +2,95 @@
 ; RUN: opt < %s -passes=pgo-instr-gen -enable-vtable-value-profiling -S | FileCheck %s --check-prefix=GEN
 ; RUN: opt < %s -passes=pgo-instr-gen,instrprof -enable-vtable-value-profiling -S | FileCheck %s --check-prefix=LOWER
 
+source_filename = "vtable_local.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; The test IR is generated based on the following C++ program.
+; Base1 has external linkage and Base2 has local linkage.
 ; class Derived uses multiple inheritance so its virtual table
 ; global variable contains two vtables. func1 is loaded from
 ; the vtable compatible with class Base1, and func2 is loaded
 ; from the vtable compatible with class Base2.
+
 ; class Base1 {
 ; public:
-;    virtual int func1(int a, int b) ;
+;   virtual int func1(int a) ;
 ; };
 ;
+; namespace {
 ; class Base2 {
 ; public:
-;    virtual int func2(int a, int b);
+;   __attribute__((noinline)) virtual int func2(int a) {
+;     return a;
+;   }
 ; };
-;
-; class Derived : public Base1, public Base2 {
-; public:
-;    Derived(int c) : v(c) {}
-; private:
-;    int v;
-; };
-;
-; Derived* createType(int c);
-; int func(int a, int b, int c) {
-;    Derived* d = createType(c);
-;
-;    return d->func2(a, b) + d->func1(b, a);
 ; }
 
-$_ZTV7Derived = comdat any
-
-@_ZTV7Derived = constant { [3 x ptr], [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI7Derived, ptr @_ZN5Base15func1Eii], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr @_ZTI7Derived, ptr @_ZN5Base25func2Eii] }, comdat, align 8, !type !0, !type !1, !type !2, !type !3, !type !4, !type !5, !type !6, !type !7, !type !8
-@_ZTVN10__cxxabiv121__vmi_class_type_infoE = external global [0 x ptr]
-@_ZTS7Derived = constant [9 x i8] c"7Derived\00", align 1
-@_ZTI5Base1 = external constant ptr
-@_ZTI5Base2 = external constant ptr
-@_ZTI7Derived =  constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), ptr @_ZTS7Derived, i32 0, i32 2, ptr @_ZTI5Base1, i64 2, ptr @_ZTI5Base2, i64 2050 }, align 8
-@_ZTV5Base1 = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base1, ptr @_ZN5Base15func1Eii] }, align 8, !type !0, !type !1
-@_ZTV5Base2 = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base2, ptr @_ZN5Base25func2Eii] }, align 8, !type !9, !type !4
-@llvm.compiler.used = appending global [2 x ptr] [ptr @_ZTV5Base1, ptr @_ZTV5Base2], section "llvm.metadata"
-
-declare ptr @_Z10createTypei(i32)
-declare i32 @_ZN5Base15func1Eii(ptr, i32, i32)
-declare i32 @_ZN5Base25func2Eii(ptr, i32, i32)
-declare i1 @llvm.public.type.test(ptr, metadata)
-declare void @llvm.assume(i1 noundef)
-
-;.
-; GEN: @[[_ZTV7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr], [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI7Derived, ptr @_ZN5Base15func1Eii], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr @_ZTI7Derived, ptr @_ZN5Base25func2Eii] }, comdat, align 8, !type !0, !type !1, !type !2, !type !3, !type !4, !type !5, !type !6, !type !7, !type !8
-; GEN: @[[_ZTVN10__CXXABIV121__VMI_CLASS_TYPE_INFOE:[a-zA-Z0-9_$"\\.-]+]] = external global [0 x ptr]
-; GEN: @[[_ZTS7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant [9 x i8] c"7Derived\00", align 1
-; GEN: @[[_ZTI5BASE1:[a-zA-Z0-9_$"\\.-]+]] = external constant ptr
-; GEN: @[[_ZTI5BASE2:[a-zA-Z0-9_$"\\.-]+]] = external constant ptr
-; GEN: @[[_ZTI7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), ptr @_ZTS7Derived, i32 0, i32 2, ptr @_ZTI5Base1, i64 2, ptr @_ZTI5Base2, i64 2050 }, align 8
-; GEN: @[[_ZTV5BASE1:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base1, ptr @_ZN5Base15func1Eii] }, align 8, !type !0, !type !1
-; GEN: @[[_ZTV5BASE2:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base2, ptr @_ZN5Base25func2Eii] }, align 8, !type !9, !type !4
-; GEN: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @_ZTV5Base1, ptr @_ZTV5Base2], section "llvm.metadata"
-; GEN: @[[__LLVM_PROFILE_RAW_VERSION:[a-zA-Z0-9_$"\\.-]+]] = hidden constant i64 72057594037927946, comdat
-; GEN: @[[__PROFN_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private constant [27 x i8] c"test_vtable_value_profiling"
-;.
-; LOWER: @[[_ZTV7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr], [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI7Derived, ptr @_ZN5Base15func1Eii], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr @_ZTI7Derived, ptr @_ZN5Base25func2Eii] }, comdat, align 8, !type !0, !type !1, !type !2, !type !3, !type !4, !type !5, !type !6, !type !7, !type !8
-; LOWER: @[[_ZTVN10__CXXABIV121__VMI_CLASS_TYPE_INFOE:[a-zA-Z0-9_$"\\.-]+]] = external global [0 x ptr]
-; LOWER: @[[_ZTS7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant [9 x i8] c"7Derived\00", align 1
-; LOWER: @[[_ZTI5BASE1:[a-zA-Z0-9_$"\\.-]+]] = external constant ptr
-; LOWER: @[[_ZTI5BASE2:[a-zA-Z0-9_$"\\.-]+]] = external constant ptr
-; LOWER: @[[_ZTI7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = constant { ptr, ptr, i32, i32, ptr, i64, ptr, i64 } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv121__vmi_class_type_infoE, i64 2), ptr @_ZTS7Derived, i32 0, i32 2, ptr @_ZTI5Base1, i64 2, ptr @_ZTI5Base2, i64 2050 }, align 8
-; LOWER: @[[_ZTV5BASE1:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base1, ptr @_ZN5Base15func1Eii] }, align 8, !type !0, !type !1
-; LOWER: @[[_ZTV5BASE2:[a-zA-Z0-9_$"\\.-]+]] = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI5Base2, ptr @_ZN5Base25func2Eii] }, align 8, !type !9, !type !4
-; LOWER: @[[__LLVM_PROFILE_RAW_VERSION:[a-zA-Z0-9_$"\\.-]+]] = hidden constant i64 72057594037927946, comdat
-; LOWER: @[[__PROFC_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8
-; LOWER: @[[__PROFVP_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global [4 x i64] zeroinitializer, section "__llvm_prf_vals", comdat($__profc_test_vtable_value_profiling), align 8
-; LOWER: @[[__PROFD_TEST_VTABLE_VALUE_PROFILING:[a-zA-Z0-9_$"\\.-]+]] = private global { i64, i64, i64, i64, ptr, ptr, i32, [3 x i16], i32 } { i64 1593873508557585901, i64 567090795815895039, i64 sub (i64 ptrtoint (ptr @__profc_test_vtable_value_profiling to i64), i64 ptrtoint (ptr @__profd_test_vtable_value_profiling to i64)), i64 0, ptr @test_vtable_value_profiling.local, ptr @__profvp_test_vtable_value_profiling, i32 1, [3 x i16] [i16 2, i16 0, i16 2], i32 0 }, section "__llvm_prf_data", comdat($__profc_test_vtable_value_profiling), align 8
-; LOWER: @[[__PROFVT__ZTV7DERIVED:[a-zA-Z0-9_$"\\.-]+]] = global { i64, ptr, i32 } { i64 -4576307468236080025, ptr @_ZTV7Derived, i32 48 }, section "__llvm_prf_vtab", comdat, align 8
-; LOWER: @[[__PROFVT__ZTV5BASE1:[a-zA-Z0-9_$"\\.-]+]] = global { i64, ptr, i32 } { i64 3215870116411581797, ptr @_ZTV5Base1, i32 24 }, section "__llvm_prf_vtab", comdat, align 8
-; LOWER: @[[__PROFVT__ZTV5BASE2:[a-zA-Z0-9_$"\\.-]+]] = global { i64, ptr, i32 } { i64 8378219803387680050, ptr @_ZTV5Base2, i32 24 }, section "__llvm_prf_vtab", comdat, align 8
-; LOWER: @[[__LLVM_PRF_VNODES:[a-zA-Z0-9_$"\\.-]+]] = private global [10 x { i64, i64, ptr }] zeroinitializer, section "__llvm_prf_vnds", align 8
-; LOWER: @[[__LLVM_PRF_NM:[a-zA-Z0-9_$"\\.-]+]] = private constant [37 x i8] c"\1B#x\DA+I-.\89/+IL\CAI\8D/K\CC)M\8D/(\CAO\CB\CC\C9\CCK\07\00\9Ea\0BC", section "__llvm_prf_names", align 1
-; LOWER: @[[__LLVM_PRF_VNM:[a-zA-Z0-9_$"\\.-]+]] = private constant [34 x i8] c"\22 x\DA\8B\8F\0A\093wI-\CA,KMa\8C\07rL\9D\12\8BS\0D\11L#\00\C3\A2\0A\E9", section "__llvm_prf_vtabnames", align 1
-; LOWER: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [3 x ptr] [ptr @_ZTV5Base1, ptr @_ZTV5Base2, ptr @__profd_test_vtable_value_profiling], section "llvm.metadata"
-; LOWER: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [6 x ptr] [ptr @__profvt__ZTV7Derived, ptr @__profvt__ZTV5Base1, ptr @__profvt__ZTV5Base2, ptr @__llvm_prf_vnodes, ptr @__llvm_prf_nm, ptr @__llvm_prf_vnm], section "llvm.metadata"
-; LOWER: @[[TEST_VTABLE_VALUE_PROFILING_LOCAL:[a-zA-Z0-9_$"\\.-]+]] = private alias i32 (i32, i32, i32), ptr @test_vtable_value_profiling
-;.
-define i32 @test_vtable_value_profiling(i32 %a, i32 %b, i32 %c) {
-; GEN-LABEL: define i32 @test_vtable_value_profiling(
-; GEN-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
-; GEN-NEXT:  entry:
-; GEN-NEXT:    call void @llvm.instrprof.increment(ptr @__profn_test_vtable_value_profiling, i64 567090795815895039, i32 1, i32 0)
-; GEN-NEXT:    [[CALL:%.*]] = tail call ptr @_Z10createTypei(i32 [[C]])
-; GEN-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
-; GEN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[ADD_PTR]], align 8
-; GEN-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[VTABLE]] to i64
-; GEN-NEXT:    call void @llvm.instrprof.value.profile(ptr @__profn_test_vtable_value_profiling, i64 567090795815895039, i64 [[TMP0]], i32 2, i32 0)
-; GEN-NEXT:    [[TMP1:%.*]] = tail call i1 @llvm.public.type.test(ptr [[VTABLE]], metadata !"_ZTS5Base2")
-; GEN-NEXT:    tail call void @llvm.assume(i1 [[TMP1]])
-; GEN-NEXT:    [[VFUNC:%.*]] = load ptr, ptr [[VTABLE]], align 8
-; GEN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[VFUNC]] to i64
-; GEN-NEXT:    call void @llvm.instrprof.value.profile(ptr @__profn_test_vtable_value_profiling, i64 567090795815895039, i64 [[TMP2]], i32 0, i32 0)
-; GEN-NEXT:    [[CALL1:%.*]] = tail call i32 [[VFUNC]](ptr [[ADD_PTR]], i32 [[A]], i32 [[B]])
-; GEN-NEXT:    [[VTABLE2:%.*]] = load ptr, ptr [[CALL]], align 8
-; GEN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE2]] to i64
-; GEN-NEXT:    call void @llvm.instrprof.value.profile(ptr @__profn_test_vtable_value_profiling, i64 567090795815895039, i64 [[TMP3]], i32 2, i32 1)
-; GEN-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.public.type.test(ptr [[VTABLE2]], metadata !"_ZTS5Base1")
-; GEN-NEXT:    tail call void @llvm.assume(i1 [[TMP4]])
-; GEN-NEXT:    [[VFUNC2:%.*]] = load ptr, ptr [[VTABLE2]], align 8
-; GEN-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[VFUNC2]] to i64
-; GEN-NEXT:    call void @llvm.instrprof.value.profile(ptr @__profn_test_vtable_value_profiling, i64 567090795815895039, i64 [[TMP5]], i32 0, i32 1)
-; GEN-NEXT:    [[CALL4:%.*]] = tail call i32 [[VFUNC2]](ptr [[CALL]], i32 [[B]], i32 [[A]])
-; GEN-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL4]], [[CALL1]]
-; GEN-NEXT:    ret i32 [[ADD]]
+; class Derived : public Base1, public Base2 {
+; public:
+;   Derived(int c) : v(c) {}
+; private:
+;   int v;
+; };
 ;
-; LOWER-LABEL: define i32 @test_vtable_value_profiling(
-; LOWER-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
-; LOWER-NEXT:  entry:
-; LOWER-NEXT:    [[PGOCOUNT:%.*]] = load i64, ptr @__profc_test_vtable_value_profiling, align 8
-; LOWER-NEXT:    [[TMP0:%.*]] = add i64 [[PGOCOUNT]], 1
-; LOWER-NEXT:    store i64 [[TMP0]], ptr @__profc_test_vtable_value_profiling, align 8
-; LOWER-NEXT:    [[CALL:%.*]] = tail call ptr @_Z10createTypei(i32 [[C]])
-; LOWER-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
-; LOWER-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[ADD_PTR]], align 8
-; LOWER-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[VTABLE]] to i64
-; LOWER-NEXT:    call void @__llvm_profile_instrument_target(i64 [[TMP1]], ptr @__profd_test_vtable_value_profiling, i32 2)
-; LOWER-NEXT:    [[TMP2:%.*]] = tail call i1 @llvm.public.type.test(ptr [[VTABLE]], metadata !"_ZTS5Base2")
-; LOWER-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
-; LOWER-NEXT:    [[VFUNC:%.*]] = load ptr, ptr [[VTABLE]], align 8
-; LOWER-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VFUNC]] to i64
-; LOWER-NEXT:    call void @__llvm_profile_instrument_target(i64 [[TMP3]], ptr @__profd_test_vtable_value_profiling, i32 0)
-; LOWER-NEXT:    [[CALL1:%.*]] = tail call i32 [[VFUNC]](ptr [[ADD_PTR]], i32 [[A]], i32 [[B]])
-; LOWER-NEXT:    [[VTABLE2:%.*]] = load ptr, ptr [[CALL]], align 8
-; LOWER-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE2]] to i64
-; LOWER-NEXT:    call void @__llvm_profile_instrument_target(i64 [[TMP4]], ptr @__profd_test_vtable_value_profiling, i32 3)
-; LOWER-NEXT:    [[TMP5:%.*]] = tail call i1 @llvm.public.type.test(ptr [[VTABLE2]], metadata !"_ZTS5Base1")
-; LOWER-NEXT:    tail call void @llvm.assume(i1 [[TMP5]])
-; LOWER-NEXT:    [[VFUNC2:%.*]] = load ptr, ptr [[VTABLE2]], align 8
-; LOWER-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[VFUNC2]] to i64
-; LOWER-NEXT:    call void @__llvm_profile_instrument_target(i64 [[TMP6]], ptr @__profd_test_vtable_value_profiling, i32 1)
-; LOWER-NEXT:    [[CALL4:%.*]] = tail call i32 [[VFUNC2]](ptr [[CALL]], i32 [[B]], i32 [[A]])
-; LOWER-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL4]], [[CALL1]]
-; LOWER-NEXT:    ret i32 [[ADD]]
-;
+; Derived* createType();
+
+; int func(int a) {
+;   Derived* d = createType();
+;   return d->func2(a) + d->func1(a);
+; }
+
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@_ZTV7Derived = constant { [3 x ptr], [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base15func1Ei], [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZN12_GLOBAL__N_15Base25func2Ei] }, !type !0, !type !3, !type !6, !type !8, !type !10
+@_ZTV5Base1 = available_externally constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN5Base15func1Ei] }, !type !0
+@_ZTVN12_GLOBAL__N_15Base2E = internal constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZN12_GLOBAL__N_15Base25func2Ei] }, !type !11, !type !8; !vcall_visibility !12
+@llvm.compiler.used = appending global [1 x ptr] [ptr @_ZTV5Base1], section "llvm.metadata"
+
+; GEN: __llvm_profile_raw_version = comdat any
+; GEN: __llvm_profile_raw_version = hidden constant i64 72057594037927946, comdat
+; GEN: __profn__Z4funci = private constant [8 x i8] c"_Z4funci"
+
+; LOWER: $__profvt__ZTV7Derived = comdat nodeduplicate
+; LOWER: $"__profvt_vtable_local.ll;_ZTVN12_GLOBAL__N_15Base2E" = comdat nodeduplicate
+; LOWER: @__profvt__ZTV7Derived = global { i64, ptr, i32 } { i64 -4576307468236080025, ptr @_ZTV7Derived, i32 48 }, section "__llvm_prf_vtab", comdat, align 8
+; LOWER: @"__profvt_vtable_local.ll;_ZTVN12_GLOBAL__N_15Base2E" = internal global { i64, ptr, i32 } { i64 1419990121885302679, ptr @_ZTVN12_GLOBAL__N_15Base2E, i32 24 }, section "__llvm_prf_vtab", comdat, align 8
+; LOWER: @__llvm_prf_vnm = private constant [64 x i8] c"7>x\DA\8B\8F\0A\093wI-\CA,KMa,+IL\CAI\8D\CF\C9ON\CC\D1\CB\C9\B1\8E\07J\FA\19\1A\C5\BB\FB\F8;9\FA\C4\C7\FB\C5\1B\9A:%\16\A7\1A\B9\02\00\19:\12o", section "__llvm_prf_vtabnames", align 1
+; LOWER: @llvm.used = appending global [5 x ptr] [ptr @__profvt__ZTV7Derived, ptr @"__profvt_vtable_local.ll;_ZTVN12_GLOBAL__N_15Base2E", ptr @__llvm_prf_vnodes, ptr @__llvm_prf_nm, ptr @__llvm_prf_vnm], section "llvm.metadata"
+
+define i32 @_Z4funci(i32 %a) {
 entry:
-  %call = tail call ptr @_Z10createTypei(i32 %c)
-  ; The first indirect call is 'func2' so func ptr is
-  ; loaded from vtable compatible with Base2.
+  %call = call ptr @_Z10createTypev()
   %add.ptr = getelementptr inbounds i8, ptr %call, i64 8
-  %vtable = load ptr, ptr %add.ptr, align 8
-  %0 = tail call i1 @llvm.public.type.test(ptr %vtable, metadata !"_ZTS5Base2")
-  tail call void @llvm.assume(i1 %0)
-  %vfunc = load ptr, ptr %vtable, align 8
-  %call1 = tail call i32 %vfunc(ptr %add.ptr, i32 %a, i32 %b)
-  ; The second indirect call is 'func1' so func ptr is
-  ; loaded from vtable compatible with Base1.
-  %vtable2 = load ptr, ptr %call, align 8
-  %1 = tail call i1 @llvm.public.type.test(ptr %vtable2, metadata !"_ZTS5Base1")
-  tail call void @llvm.assume(i1 %1)
-  %vfunc2 = load ptr, ptr %vtable2, align 8
-  %call4 = tail call i32 %vfunc2(ptr %call, i32 %b, i32 %a)
-  %add = add nsw i32 %call4, %call1
+  %vtable = load ptr, ptr %add.ptr
+; GEN: [[P1:%[0-9]+]] = ptrtoint ptr %vtable to i64
+; GEN: call void @llvm.instrprof.value.profile(ptr @__profn__Z4funci, i64 [[CFGHash:[0-9]+]], i64 [[P1]], i32 2, i32 0)
+; LOWER: [[P1:%[0-9]+]] = ptrtoint ptr %vtable to i64
+; LOWER: call void @__llvm_profile_instrument_target(i64 [[P1]], ptr @__profd__Z4funci, i32 2)
+  %vfunc1 = load ptr, ptr %vtable
+  %call1 = call i32 %vfunc1(ptr %add.ptr, i32 %a)
+  %vtable2 = load ptr, ptr %call
+; GEN: [[P2:%[0-9]+]] = ptrtoint ptr %vtable2 to i64
+; GEN: call void @llvm.instrprof.value.profile(ptr @__profn__Z4funci, i64 [[CFGHash]], i64 [[P2]], i32 2, i32 1)
+; LOWER: [[P2:%[0-9]+]] = ptrtoint ptr %vtable2 to i64
+; LOWER: call void @__llvm_profile_instrument_target(i64 [[P2]], ptr @__profd__Z4funci, i32 3)
+  %vfunc2 = load ptr, ptr %vtable2
+  %call4 = call i32 %vfunc2(ptr %call, i32 %a)
+  %add = add nsw i32 %call1, %call4
   ret i32 %add
 }
 
+declare ptr @_Z10createTypev()
+declare i32 @_ZN12_GLOBAL__N_15Base25func2Ei(ptr %this, i32 %a)
+declare i32 @_ZN5Base15func1Ei(ptr, i32)
+
 !0 = !{i64 16, !"_ZTS5Base1"}
-!1 = !{i64 16, !"_ZTSM5Base1FiiiE.virtual"}
-!2 = !{i64 40, !"_ZTSM5Base1FiiiE.virtual"}
-!3 = !{i64 40, !"_ZTS5Base2"}
-!4 = !{i64 16, !"_ZTSM5Base2FiiiE.virtual"}
-!5 = !{i64 40, !"_ZTSM5Base2FiiiE.virtual"}
-!6 = !{i64 16, !"_ZTS7Derived"}
-!7 = !{i64 16, !"_ZTSM7DerivedFiiiE.virtual"}
-!8 = !{i64 40, !"_ZTSM7DerivedFiiiE.virtual"}
-!9 = !{i64 16, !"_ZTS5Base2"}
-;.
-; GEN: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; GEN: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; GEN: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-;.
-; LOWER: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; LOWER: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; LOWER: attributes #[[ATTR2:[0-9]+]] = { nounwind }
-;.
-; GEN: [[META0:![0-9]+]] = !{i64 16, !"_ZTS5Base1"}
-; GEN: [[META1:![0-9]+]] = !{i64 16, !"_ZTSM5Base1FiiiE.virtual"}
-; GEN: [[META2:![0-9]+]] = !{i64 40, !"_ZTSM5Base1FiiiE.virtual"}
-; GEN: [[META3:![0-9]+]] = !{i64 40, !"_ZTS5Base2"}
-; GEN: [[META4:![0-9]+]] = !{i64 16, !"_ZTSM5Base2FiiiE.virtual"}
-; GEN: [[META5:![0-9]+]] = !{i64 40, !"_ZTSM5Base2FiiiE.virtual"}
-; GEN: [[META6:![0-9]+]] = !{i64 16, !"_ZTS7Derived"}
-; GEN: [[META7:![0-9]+]] = !{i64 16, !"_ZTSM7DerivedFiiiE.virtual"}
-; GEN: [[META8:![0-9]+]] = !{i64 40, !"_ZTSM7DerivedFiiiE.virtual"}
-; GEN: [[META9:![0-9]+]] = !{i64 16, !"_ZTS5Base2"}
-;.
-; LOWER: [[META0:![0-9]+]] = !{i64 16, !"_ZTS5Base1"}
-; LOWER: [[META1:![0-9]+]] = !{i64 16, !"_ZTSM5Base1FiiiE.virtual"}
-; LOWER: [[META2:![0-9]+]] = !{i64 40, !"_ZTSM5Base1FiiiE.virtual"}
-; LOWER: [[META3:![0-9]+]] = !{i64 40, !"_ZTS5Base2"}
-; LOWER: [[META4:![0-9]+]] = !{i64 16, !"_ZTSM5Base2FiiiE.virtual"}
-; LOWER: [[META5:![0-9]+]] = !{i64 40, !"_ZTSM5Base2FiiiE.virtual"}
-; LOWER: [[META6:![0-9]+]] = !{i64 16, !"_ZTS7Derived"}
-; LOWER: [[META7:![0-9]+]] = !{i64 16, !"_ZTSM7DerivedFiiiE.virtual"}
-; LOWER: [[META8:![0-9]+]] = !{i64 40, !"_ZTSM7DerivedFiiiE.virtual"}
-; LOWER: [[META9:![0-9]+]] = !{i64 16, !"_ZTS5Base2"}
-;.
+!3 = !{i64 16, !"_ZTS7Derived"}
+!6 = !{i64 40, !7}
+!7 = distinct !{}
+!8 = !{i64 16, !9}
+!9 = distinct !{}
+!10 = !{i64 40, !9}
+!11 = !{i64 16, !7}

@@ -55,26 +55,16 @@ RUN: printf '\3\3\3\3\0\0\0\0' >> %t.profraw
 // #include "llvm/ProfileData/InstrProfData.inc"
 // };
 
-// NameRef
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t.profraw
-// FuncHash
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
-// RelativeCounterPtr
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t.profraw
-// bit map ptr
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-// function pointer
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-// Values
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
-//  Num Counters, one vp kind
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
-// Two vp kind
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 
-// NameRef
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t.profraw
-// FuncHash
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\xc8\xff\3\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw

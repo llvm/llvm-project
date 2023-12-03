@@ -10,8 +10,6 @@ fi
 
 OUTDIR=$(dirname $(realpath -s $0))
 
-echo "Outdir is $OUTDIR"
-
 cat > ${OUTDIR}/vtable_prof.cc << EOF
 #include <cstdlib>
 #include <cstdio>
@@ -36,9 +34,9 @@ class Derived1 : public Base {
     }
 };
 
+namespace {
 class Derived2 : public Base {
     public:
-    
     __attribute__((noinline))
     int func1(int a, int b) override {
         return a - b;
@@ -49,6 +47,7 @@ class Derived2 : public Base {
         return a * (a - b);
     }
 };
+}  // namespace
 
 __attribute__((noinline)) Base* createType(int a) {
     Base* base = nullptr;

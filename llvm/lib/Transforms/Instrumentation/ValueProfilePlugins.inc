@@ -103,11 +103,14 @@ public:
     std::vector<Instruction *> Result = findVTableAddrs(F);
     for (Instruction* I : Result) {
       Instruction* InsertPt = I->getNextNonDebugInstruction();
-      // When finding an insertion point, keep PHI, landing pad and catch pad before vp intrinsics.
-      while(InsertPt && (dyn_cast<PHINode>(InsertPt) || dyn_cast<LandingPadInst>(InsertPt) || dyn_cast<CatchPadInst>(InsertPt)))
+      // When finding an insertion point, keep PHI and EH pad instructions
+      // before vp intrinsics. This is similar to
+      // `BasicBlock::getFirstInsertionPt`.
+      while (InsertPt && (dyn_cast<PHINode>(InsertPt) || InsertPt->isEHPad()))
         InsertPt = InsertPt->getNextNonDebugInstruction();
-      // FIXME: Set InsertPt to the end of basic block if
-      // InsertPt is the last instruction.
+      // Skip instrumentating the value if InsertPt is the last instruction.
+      // FIXME: Set InsertPt to the end of basic block to instrument the value
+      // if InsertPt is the last instruction.
       if (InsertPt == nullptr)
         continue;
 
