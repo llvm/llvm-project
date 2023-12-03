@@ -14828,7 +14828,7 @@ define void @load_i16_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm13[0],xmm0[1],xmm13[2,3,4,5],xmm0[6],xmm13[7]
 ; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm12, %ymm7
 ; AVX512DQ-SLOW-NEXT:    vpblendd {{.*#+}} ymm13 = ymm12[0,1],ymm8[2,3],ymm12[4,5],ymm8[6,7]
-; AVX512DQ-SLOW-NEXT:    vmovdqu %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-SLOW-NEXT:    vmovdqu64 %ymm16, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-SLOW-NEXT:    vpermq {{.*#+}} ymm14 = ymm12[0,1,0,1]
 ; AVX512DQ-SLOW-NEXT:    vmovdqu %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-SLOW-NEXT:    vpblendw {{.*#+}} ymm13 = ymm13[0,1,2],ymm14[3],ymm13[4,5,6,7,8,9,10],ymm14[11],ymm13[12,13,14,15]
@@ -15583,7 +15583,7 @@ define void @load_i16_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm12
 ; AVX512DQ-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm12[0],xmm0[1],xmm12[2,3,4,5],xmm0[6],xmm12[7]
 ; AVX512DQ-FAST-NEXT:    vpblendd {{.*#+}} ymm12 = ymm4[0],ymm15[1],ymm4[2,3],ymm15[4],ymm4[5,6,7]
-; AVX512DQ-FAST-NEXT:    vmovdqa64 %ymm4, %ymm17
+; AVX512DQ-FAST-NEXT:    vmovdqa64 %ymm16, %ymm17
 ; AVX512DQ-FAST-NEXT:    vmovdqa %ymm15, %ymm13
 ; AVX512DQ-FAST-NEXT:    vextracti128 $1, %ymm12, %xmm14
 ; AVX512DQ-FAST-NEXT:    vpblendw {{.*#+}} xmm12 = xmm12[0],xmm14[1],xmm12[2,3,4,5],xmm14[6],xmm12[7]
