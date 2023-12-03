@@ -1515,8 +1515,8 @@ define i32 @mul_no_common_bits_commute2(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @mul_no_common_bits_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
 ; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[Y]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p1, 7
