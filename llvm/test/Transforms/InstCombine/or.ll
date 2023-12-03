@@ -1511,6 +1511,27 @@ define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
   ret <2 x i12> %r
 }
 
+define i32 @mul_no_common_bits_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_no_common_bits_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, %y
+  %r = or disjoint i32 %m, %x
+  ret i32 %r
+}
+
+define i32 @mul_no_common_bits_const_op_disjoint(i32 %x, i32 %y) {
+; CHECK-LABEL: @mul_no_common_bits_const_op_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X:%.*]], 25
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 24
+  %r = or disjoint i32 %m, %x
+  ret i32 %r
+}
+
 ; negative test - extra use requires extra instructions
 
 define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
