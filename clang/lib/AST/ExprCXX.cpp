@@ -1681,6 +1681,8 @@ SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
       AssociatedDecl(AssociatedDecl), Arguments(ArgPack.pack_begin()),
       NumArguments(ArgPack.pack_size()), Index(Index), NameLoc(NameLoc) {
   assert(AssociatedDecl != nullptr);
+  assert(NumArguments == ArgPack.pack_size() &&
+         "number of arguments in a pack exceeded implementation limit");
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
