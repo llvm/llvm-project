@@ -6269,10 +6269,10 @@ bool CombinerHelper::tryCombineSelectLogical(GSelect *Select,
       GXor *Xor = cast<GXor>(CondDef);
       auto IConstant =
           getIConstantVRegValWithLookThrough(Xor->getRHSReg(), MRI);
-      if (IConstant && IConstant->Value == 1) {
-        // transform: select (xor Cond0, 1), X, Y
+      if (IConstant && IConstant->Value == -1) {
+        // transform: select (xor Cond0, -1), X, Y
         // to:        select Cond0 Y, X
-        // a xor 1 reads like not a.
+        // a xor -1 reads like not a.
         MatchInfo = [=](MachineIRBuilder &B) {
           B.setInstrAndDebugLoc(*Select);
           B.buildSelect(DstReg, Xor->getLHSReg(), Select->getFalseReg(),

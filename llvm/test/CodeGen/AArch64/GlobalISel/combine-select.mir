@@ -365,11 +365,11 @@ body:             |
     $w0 = COPY %ext(s32)
 ...
 ---
-name:            xor_cond
+name:            xor_cond_failed
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2
-    ; CHECK-LABEL: name: xor_cond
+    ; CHECK-LABEL: name: xor_cond_failed
     ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
@@ -378,7 +378,9 @@ body:             |
     ; CHECK-NEXT: %x:_(s1) = G_TRUNC [[COPY]](s64)
     ; CHECK-NEXT: %t:_(s1) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: %f:_(s1) = G_TRUNC [[COPY2]](s64)
-    ; CHECK-NEXT: %sel:_(s1) = G_SELECT %x(s1), %f, %t
+    ; CHECK-NEXT: %one:_(s1) = G_CONSTANT i1 true
+    ; CHECK-NEXT: %cond:_(s1) = G_XOR %x, %one
+    ; CHECK-NEXT: %sel:_(s1) = G_SELECT %cond(s1), %t, %f
     ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %sel(s1)
     ; CHECK-NEXT: $w0 = COPY %ext(s32)
     %0:_(s64) = COPY $x0
