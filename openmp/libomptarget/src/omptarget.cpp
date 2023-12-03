@@ -16,6 +16,7 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "PluginManager.h"
+#include "Shared/EnvironmentVar.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -129,6 +130,9 @@ static uint64_t getPartialStructRequiredAlignment(void *HstPtrBase) {
 
 /// Map global data and execute pending ctors
 static int initLibrary(DeviceTy &Device) {
+  if (Device.HasMappedGlobalData)
+    return OFFLOAD_SUCCESS;
+
   /*
    * Map global data
    */
@@ -277,7 +281,12 @@ static int initLibrary(DeviceTy &Device) {
     if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
       return OFFLOAD_FAIL;
   }
-  Device.HasPendingGlobals = false;
+  Device.HasMappedGlobalData = true;
+
+  static Int32Envar DumpOffloadEntries =
+      Int32Envar("OMPTARGET_DUMP_OFFLOAD_ENTRIES", -1);
+  if (DumpOffloadEntries.get() == DeviceId)
+    Device.dumpOffloadEntries();
 
   /*
    * Determine whether all regions should run in synchronous mode
@@ -311,10 +320,8 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
 
       if (!PM->getNumUsedPlugins()) {
         llvm::SmallVector<llvm::StringRef> Archs;
-        llvm::transform(PM->Images, std::back_inserter(Archs),
-                        [](const auto &X) {
-                          return !X.second.Arch ? "empty" : X.second.Arch;
-                        });
+        llvm::transform(PM->deviceImages(), std::back_inserter(Archs),
+                        [](const auto &X) { return X.getArch("empty"); });
         FAILURE_MESSAGE(
             "No images found compatible with the installed hardware. ");
         fprintf(stderr, "Found (%s)\n", llvm::join(Archs, ",").c_str());
@@ -388,7 +395,7 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   {
     std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
         Device.PendingGlobalsMtx);
-    if (Device.HasPendingGlobals && initLibrary(Device) != OFFLOAD_SUCCESS) {
+    if (initLibrary(Device) != OFFLOAD_SUCCESS) {
       REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
       handleTargetOutcome(false, Loc);
       return true;

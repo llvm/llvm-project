@@ -248,6 +248,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
       setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
                          Legal);
@@ -255,7 +256,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
-      setOperationAction(ISD::CTPOP, VT, Legal);
+      setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
     }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -277,6 +278,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
       setOperationAction({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN}, VT,
                          Legal);
@@ -284,7 +286,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                          VT, Legal);
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
-      setOperationAction(ISD::CTPOP, VT, Legal);
+      setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -381,7 +383,15 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   }
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  // TODO: custom shuffle.
   return SDValue();
 }
 
@@ -2817,6 +2827,15 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
   case Intrinsic::loongarch_lasx_xvsrai_d:
     return DAG.getNode(ISD::SRA, DL, N->getValueType(0), N->getOperand(1),
                        lowerVectorSplatImm<6>(N, 2, DAG));
+  case Intrinsic::loongarch_lsx_vclz_b:
+  case Intrinsic::loongarch_lsx_vclz_h:
+  case Intrinsic::loongarch_lsx_vclz_w:
+  case Intrinsic::loongarch_lsx_vclz_d:
+  case Intrinsic::loongarch_lasx_xvclz_b:
+  case Intrinsic::loongarch_lasx_xvclz_h:
+  case Intrinsic::loongarch_lasx_xvclz_w:
+  case Intrinsic::loongarch_lasx_xvclz_d:
+    return DAG.getNode(ISD::CTLZ, DL, N->getValueType(0), N->getOperand(1));
   case Intrinsic::loongarch_lsx_vpcnt_b:
   case Intrinsic::loongarch_lsx_vpcnt_h:
   case Intrinsic::loongarch_lsx_vpcnt_w:

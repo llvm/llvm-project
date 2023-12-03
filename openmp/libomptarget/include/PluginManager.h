@@ -13,6 +13,7 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "DeviceImage.h"
 #include "Shared/APITypes.h"
 #include "Shared/PluginAPI.h"
 #include "Shared/Requirements.h"
@@ -21,11 +22,13 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DynamicLibrary.h"
 
 #include <cstdint>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <string>
 
@@ -36,6 +39,10 @@ struct PluginAdaptorTy {
 
   /// Return the number of devices available to this plugin.
   int32_t getNumDevices() const { return NumberOfDevices; }
+
+  /// Add all offload entries described by \p DI to the devices managed by this
+  /// plugin.
+  void addOffloadEntries(DeviceImageTy &DI);
 
   /// RTL index, index is the number of devices of other RTLs that were
   /// registered before, i.e. the OpenMP index of the first device to be
@@ -66,29 +73,24 @@ struct PluginAdaptorTy {
   std::mutex Mtx;
 };
 
-/// RTLs identified in the system.
-struct PluginAdaptorManagerTy {
-  explicit PluginAdaptorManagerTy() = default;
-
-  // Register a shared library with all (compatible) RTLs.
-  void registerLib(__tgt_bin_desc *Desc);
-
-  // Unregister a shared library from all RTLs.
-  void unregisterLib(__tgt_bin_desc *Desc);
-};
-
 /// Struct for the data required to handle plugins
 struct PluginManager {
   PluginManager() {}
 
   void init();
 
-  /// RTLs identified on the host
-  PluginAdaptorManagerTy RTLs;
+  // Register a shared library with all (compatible) RTLs.
+  void registerLib(__tgt_bin_desc *Desc);
 
-  /// Executable images and information extracted from the input images passed
-  /// to the runtime.
-  std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
+  // Unregister a shared library from all RTLs.
+  void unregisterLib(__tgt_bin_desc *Desc);
+
+  void addDeviceImage(__tgt_bin_desc &TgtBinDesc, __tgt_device_image &TgtDeviceImage) {
+    DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
+  }
+
+  /// Iterate over all device images registered with this plugin.
+  auto deviceImages() { return llvm::make_pointee_range(DeviceImages); }
 
   /// Devices associated with RTLs
   std::vector<std::unique_ptr<DeviceTy>> Devices;
@@ -157,6 +159,10 @@ private:
 
   // List of all plugin adaptors, in use or not.
   std::list<PluginAdaptorTy> PluginAdaptors;
+
+  /// Executable images and information extracted from the input images passed
+  /// to the runtime.
+  llvm::SmallVector<std::unique_ptr<DeviceImageTy>> DeviceImages;
 
   /// The user provided requirements.
   RequirementCollection Requirements;

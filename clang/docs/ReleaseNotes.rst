@@ -860,11 +860,6 @@ Bug Fixes to C++ Support
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
-- Clang now immediately instantiates function template specializations
-  at the end of the definition of the corresponding function template
-  when the definition appears after the first point of instantiation.
-  (`#73232 <https://github.com/llvm/llvm-project/issues/73232>`_)
-
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -1042,6 +1037,8 @@ clang-format
 - Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 - Change ``BreakAfterAttributes`` from ``Never`` to ``Leave`` in LLVM style.
 - Add ``BreakAdjacentStringLiterals`` option.
+- Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
+  attributes (like ``nonatomic, strong, nullable``).
 
 libclang
 --------

@@ -74,9 +74,9 @@ static void CheckUnwind() {
 static int asan_inited = 0;
 static int asan_init_is_running = 0;
 
-void SetAsanInited(u32 val) { asan_inited = val; }
+static void SetAsanInited(u32 val) { asan_inited = val; }
 
-void SetAsanInitIsRunning(u32 val) { asan_init_is_running = val; }
+static void SetAsanInitIsRunning(u32 val) { asan_init_is_running = val; }
 
 bool AsanInited() { return asan_inited == 1; }
 

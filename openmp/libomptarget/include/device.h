@@ -19,14 +19,19 @@
 #include <cstring>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 
 #include "ExclusiveAccess.h"
+#include "OffloadEntry.h"
 #include "omptarget.h"
 #include "rtl.h"
 
 #include "OpenMP/Mapping.h"
+
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 
 // Forward declarations.
 struct PluginAdaptorTy;
@@ -51,7 +56,7 @@ struct DeviceTy {
 
   bool IsInit;
   std::once_flag InitFlag;
-  bool HasPendingGlobals;
+  bool HasMappedGlobalData = false;
 
   /// Host data to device map type with a wrapper key indirection that allows
   /// concurrent modification of the entries without invalidating the underlying
@@ -233,12 +238,21 @@ struct DeviceTy {
   int32_t getTeamProcs() { return TeamProcs; }
   /// }
 
+  /// Register \p Entry as an offload entry that is avalable on this device.
+  void addOffloadEntry(OffloadEntryTy &Entry);
+
+  /// Print all offload entries to stderr.
+  void dumpOffloadEntries();
+
 private:
   // Call to RTL
   void init(); // To be called only via DeviceTy::initOnce()
 
   /// Deinitialize the device (and plugin).
   void deinit();
+
+  /// All offload entries available on this device.
+  llvm::DenseMap<llvm::StringRef, OffloadEntryTy *> DeviceOffloadEntries;
 };
 
 extern bool deviceIsReady(int DeviceNum);
