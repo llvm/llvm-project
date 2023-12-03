@@ -39,38 +39,39 @@ define signext i32 @ctz_dereferencing_pointer(i64* %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lw s1, 0(a0)
+; RV32I-NEXT:    lw s2, 0(a0)
 ; RV32I-NEXT:    lw s4, 4(a0)
-; RV32I-NEXT:    neg a0, s1
-; RV32I-NEXT:    and a0, s1, a0
+; RV32I-NEXT:    neg a0, s2
+; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s0, a1, 1329
-; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    addi s1, a1, 1329
+; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3@plt
-; RV32I-NEXT:    srli a0, a0, 27
-; RV32I-NEXT:    lui a1, %hi(.LCPI0_0)
-; RV32I-NEXT:    addi s3, a1, %lo(.LCPI0_0)
-; RV32I-NEXT:    add s2, s3, a0
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    lui a0, %hi(.LCPI0_0)
+; RV32I-NEXT:    addi s3, a0, %lo(.LCPI0_0)
 ; RV32I-NEXT:    neg a0, s4
 ; RV32I-NEXT:    and a0, s4, a0
-; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    mv a1, s1
 ; RV32I-NEXT:    call __mulsi3@plt
-; RV32I-NEXT:    bnez s4, .LBB0_2
+; RV32I-NEXT:    bnez s4, .LBB0_3
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    li a0, 32
-; RV32I-NEXT:    lbu a1, 0(s2)
-; RV32I-NEXT:    beqz s1, .LBB0_3
-; RV32I-NEXT:    j .LBB0_4
+; RV32I-NEXT:    beqz s2, .LBB0_4
 ; RV32I-NEXT:  .LBB0_2:
+; RV32I-NEXT:    srli s0, s0, 27
+; RV32I-NEXT:    add s0, s3, s0
+; RV32I-NEXT:    lbu a0, 0(s0)
+; RV32I-NEXT:    j .LBB0_5
+; RV32I-NEXT:  .LBB0_3:
 ; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    add a0, s3, a0
 ; RV32I-NEXT:    lbu a0, 0(a0)
-; RV32I-NEXT:    lbu a1, 0(s2)
-; RV32I-NEXT:    bnez s1, .LBB0_4
-; RV32I-NEXT:  .LBB0_3: # %entry
-; RV32I-NEXT:    addi a1, a0, 32
+; RV32I-NEXT:    bnez s2, .LBB0_2
 ; RV32I-NEXT:  .LBB0_4: # %entry
-; RV32I-NEXT:    andi a0, a1, 63
+; RV32I-NEXT:    addi a0, a0, 32
+; RV32I-NEXT:  .LBB0_5: # %entry
+; RV32I-NEXT:    andi a0, a0, 63
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -501,38 +502,39 @@ define signext i32 @ctz4(i64 %b) nounwind {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s1, a1
+; RV32I-NEXT:    mv s2, a1
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    and a0, s0, a0
 ; RV32I-NEXT:    lui a1, 30667
-; RV32I-NEXT:    addi s2, a1, 1329
-; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    addi s3, a1, 1329
+; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3@plt
-; RV32I-NEXT:    srli a0, a0, 27
-; RV32I-NEXT:    lui a1, %hi(.LCPI6_0)
-; RV32I-NEXT:    addi s4, a1, %lo(.LCPI6_0)
-; RV32I-NEXT:    add s3, s4, a0
-; RV32I-NEXT:    neg a0, s1
-; RV32I-NEXT:    and a0, s1, a0
-; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    lui a0, %hi(.LCPI6_0)
+; RV32I-NEXT:    addi s4, a0, %lo(.LCPI6_0)
+; RV32I-NEXT:    neg a0, s2
+; RV32I-NEXT:    and a0, s2, a0
+; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3@plt
-; RV32I-NEXT:    bnez s1, .LBB6_2
+; RV32I-NEXT:    bnez s2, .LBB6_3
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    li a0, 32
-; RV32I-NEXT:    lbu a1, 0(s3)
-; RV32I-NEXT:    beqz s0, .LBB6_3
-; RV32I-NEXT:    j .LBB6_4
+; RV32I-NEXT:    beqz s0, .LBB6_4
 ; RV32I-NEXT:  .LBB6_2:
+; RV32I-NEXT:    srli s1, s1, 27
+; RV32I-NEXT:    add s1, s4, s1
+; RV32I-NEXT:    lbu a0, 0(s1)
+; RV32I-NEXT:    j .LBB6_5
+; RV32I-NEXT:  .LBB6_3:
 ; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    add a0, s4, a0
 ; RV32I-NEXT:    lbu a0, 0(a0)
-; RV32I-NEXT:    lbu a1, 0(s3)
-; RV32I-NEXT:    bnez s0, .LBB6_4
-; RV32I-NEXT:  .LBB6_3: # %entry
-; RV32I-NEXT:    addi a1, a0, 32
+; RV32I-NEXT:    bnez s0, .LBB6_2
 ; RV32I-NEXT:  .LBB6_4: # %entry
-; RV32I-NEXT:    andi a0, a1, 63
+; RV32I-NEXT:    addi a0, a0, 32
+; RV32I-NEXT:  .LBB6_5: # %entry
+; RV32I-NEXT:    andi a0, a0, 63
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload

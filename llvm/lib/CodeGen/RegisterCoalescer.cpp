@@ -1292,8 +1292,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     IsDefCopy = true;
     return false;
   }
-  if (!TII->isAsCheapAsAMove(*DefMI))
-    return false;
 
   SmallVector<Register, 8> NewRegs;
   LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
@@ -1344,10 +1342,14 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
              "Only expect to deal with virtual or physical registers");
     }
   }
-
+  bool CheapAsAMove = true;
+  // Remat is beneficial if CopyMI is the only use of SrcReg, even though
+  // instruction is not as cheap as a move.
+  if (DefMI->getParent() == CopyMI->getParent() && MRI->hasOneNonDBGUse(SrcReg))
+    CheapAsAMove = false;
   LiveRangeEdit::Remat RM(ValNo);
   RM.OrigMI = DefMI;
-  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx, true))
+  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx, CheapAsAMove))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();

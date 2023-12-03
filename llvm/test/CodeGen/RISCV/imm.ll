@@ -3539,9 +3539,9 @@ define i64 @li_rori_1() {
 ;
 ; RV32-REMAT-LABEL: li_rori_1:
 ; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    li a0, -1
 ; RV32-REMAT-NEXT:    lui a1, 1048567
 ; RV32-REMAT-NEXT:    addi a1, a1, 2047
-; RV32-REMAT-NEXT:    li a0, -1
 ; RV32-REMAT-NEXT:    ret
 ;
 ; RV64-REMAT-LABEL: li_rori_1:
@@ -3596,9 +3596,9 @@ define i64 @li_rori_2() {
 ;
 ; RV32-REMAT-LABEL: li_rori_2:
 ; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    li a0, -6
 ; RV32-REMAT-NEXT:    lui a1, 720896
 ; RV32-REMAT-NEXT:    addi a1, a1, -1
-; RV32-REMAT-NEXT:    li a0, -6
 ; RV32-REMAT-NEXT:    ret
 ;
 ; RV64-REMAT-LABEL: li_rori_2:
