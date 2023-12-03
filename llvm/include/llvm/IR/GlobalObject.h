@@ -18,7 +18,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
 
@@ -63,9 +62,6 @@ protected:
 private:
   static const unsigned AlignmentBits = LastAlignmentBit + 1;
   static const unsigned AlignmentMask = (1 << AlignmentBits) - 1;
-  static const unsigned CodeModelBits = LastCodeModelBit - LastAlignmentBit;
-  static const unsigned CodeModelMask = (1 << CodeModelBits) - 1;
-  static const unsigned CodeModelShift = AlignmentBits;
   static const unsigned GlobalObjectMask = (1 << GlobalObjectBits) - 1;
 
 public:
@@ -128,28 +124,6 @@ public:
   /// Setting the section to the empty string tells LLVM to choose an
   /// appropriate default object file section.
   void setSection(StringRef S);
-
-  /// Get the custom code model raw value of this global.
-  ///
-  unsigned getCodeModelRaw() const {
-    unsigned Data = getGlobalValueSubClassData();
-    return (Data >> CodeModelShift) & CodeModelMask;
-  }
-
-  /// Get the custom code model of this global if it has one.
-  ///
-  /// If this global does not have a custom code model, the empty instance
-  /// will be returned.
-  std::optional<CodeModel::Model> getCodeModel() const {
-    unsigned CodeModelData = getCodeModelRaw();
-    if (CodeModelData > 0)
-      return static_cast<CodeModel::Model>(CodeModelData - 1);
-    return {};
-  }
-
-  /// Change the code model for this global.
-  ///
-  void setCodeModel(CodeModel::Model CM);
 
   bool hasComdat() const { return getComdat() != nullptr; }
   const Comdat *getComdat() const { return ObjComdat; }
