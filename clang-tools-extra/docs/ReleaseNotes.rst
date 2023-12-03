@@ -401,7 +401,7 @@ Changes in existing checks
 
 - Improved :doc:`readability-container-contains
   <clang-tidy/checks/readability/container-contains>` to correctly handle
-  interger literals with suffixes in fixits.
+  interger literals with suffixes in fix-its.
 
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
