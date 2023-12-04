@@ -745,12 +745,22 @@ void OmpStructureChecker::Enter(const parser::OmpEndLoopDirective &x) {
   // 2.7.1 end-do -> END DO [nowait-clause]
   // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
   case llvm::omp::Directive::OMPD_do:
+    PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_end_do);
+    break;
   case llvm::omp::Directive::OMPD_do_simd:
-    SetClauseSets(dir.v);
+    PushContextAndClauseSets(
+        dir.source, llvm::omp::Directive::OMPD_end_do_simd);
     break;
   default:
     // no clauses are allowed
     break;
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OmpEndLoopDirective &x) {
+  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
+      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
+    dirContext_.pop_back();
   }
 }
 
@@ -2218,7 +2228,6 @@ CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
 CHECK_SIMPLE_CLAUSE(Mergeable, OMPC_mergeable)
 CHECK_SIMPLE_CLAUSE(Nogroup, OMPC_nogroup)
 CHECK_SIMPLE_CLAUSE(Notinbranch, OMPC_notinbranch)
-CHECK_SIMPLE_CLAUSE(Nowait, OMPC_nowait)
 CHECK_SIMPLE_CLAUSE(Partial, OMPC_partial)
 CHECK_SIMPLE_CLAUSE(ProcBind, OMPC_proc_bind)
 CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
@@ -2454,6 +2463,19 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_private);
   CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
   CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_private);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_nowait);
+  if (llvm::omp::noWaitClauseNotAllowedSet.test(GetContext().directive)) {
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not allowed on the OMP %s directive,"
+        " use it on OMP END %s directive "_err_en_US,
+        parser::ToUpperCaseLetters(
+            getClauseName(llvm::omp::Clause::OMPC_nowait).str()),
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+  }
 }
 
 bool OmpStructureChecker::IsDataRefTypeParamInquiry(
@@ -2830,6 +2852,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   GetSymbolsInObjectList(x.v, currSymbols);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_copyprivate);
+  if (GetContext().directive == llvm::omp::Directive::OMPD_single) {
+    context_.Say(GetContext().clauseSource,
+        "%s clause is not allowed on the OMP %s directive,"
+        " use it on OMP END %s directive "_err_en_US,
+        parser::ToUpperCaseLetters(
+            getClauseName(llvm::omp::Clause::OMPC_copyprivate).str()),
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()),
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
