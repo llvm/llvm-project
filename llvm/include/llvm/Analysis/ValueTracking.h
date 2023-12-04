@@ -1002,10 +1002,18 @@ bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
                                       const Instruction *CtxI = nullptr,
                                       const DominatorTree *DT = nullptr,
                                       unsigned Depth = 0);
+
+/// Returns true if V cannot be poison, but may be undef.
 bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                const Instruction *CtxI = nullptr,
                                const DominatorTree *DT = nullptr,
                                unsigned Depth = 0);
+
+/// Returns true if V cannot be undef, but may be poison.
+bool isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC = nullptr,
+                              const Instruction *CtxI = nullptr,
+                              const DominatorTree *DT = nullptr,
+                              unsigned Depth = 0);
 
 /// Return true if undefined behavior would provable be executed on the path to
 /// OnPathTo if Root produced a posion result.  Note that this doesn't say
