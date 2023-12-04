@@ -95,9 +95,9 @@ entry:
 define <16 x i8> @rshrn_v16i16_8(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    raddhn v0.8b, v0.8h, v2.8h
-; CHECK-NEXT:    raddhn2 v0.16b, v1.8h, v2.8h
+; CHECK-NEXT:    urshr v1.8h, v1.8h, #8
+; CHECK-NEXT:    urshr v0.8h, v0.8h, #8
+; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %b = add <16 x i16> %a, <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>
@@ -109,11 +109,8 @@ entry:
 define <16 x i8> @rshrn_v16i16_9(<16 x i16> %a) {
 ; CHECK-LABEL: rshrn_v16i16_9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.8h, #1, lsl #8
-; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
-; CHECK-NEXT:    add v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    ushr v1.8h, v1.8h, #9
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #9
+; CHECK-NEXT:    urshr v1.8h, v1.8h, #9
+; CHECK-NEXT:    urshr v0.8h, v0.8h, #9
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
@@ -321,9 +318,9 @@ entry:
 define <8 x i16> @rshrn_v8i32_16(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    raddhn v0.4h, v0.4s, v2.4s
-; CHECK-NEXT:    raddhn2 v0.8h, v1.4s, v2.4s
+; CHECK-NEXT:    urshr v1.4s, v1.4s, #16
+; CHECK-NEXT:    urshr v0.4s, v0.4s, #16
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
   %b = add <8 x i32> %a, <i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768, i32 32768>
@@ -335,11 +332,8 @@ entry:
 define <8 x i16> @rshrn_v8i32_17(<8 x i32> %a) {
 ; CHECK-LABEL: rshrn_v8i32_17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4s, #1, lsl #16
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    ushr v1.4s, v1.4s, #17
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #17
+; CHECK-NEXT:    urshr v1.4s, v1.4s, #17
+; CHECK-NEXT:    urshr v0.4s, v0.4s, #17
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
@@ -868,9 +862,7 @@ entry:
 define void @rshrn_v2i32_4(<2 x i32> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v2i32_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2s, #8
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #4
+; CHECK-NEXT:    urshr v0.2s, v0.2s, #4
 ; CHECK-NEXT:    mov w8, v0.s[1]
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    strh w9, [x0]
