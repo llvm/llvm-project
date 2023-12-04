@@ -147,7 +147,8 @@ public:
             Files.makeAbsolutePath(FixAbsoluteFilePath);
             tooling::Replacement R(FixAbsoluteFilePath, Repl.getOffset(),
                                    Repl.getLength(), Repl.getReplacementText());
-            Replacements &Replacements = FileReplacements[R.getFilePath()];
+            auto &Entry = FileReplacements[R.getFilePath()];
+            Replacements &Replacements = Entry.Replacements;
             llvm::Error Err = Replacements.add(R);
             if (Err) {
               // FIXME: Implement better conflict handling.
@@ -174,6 +175,7 @@ public:
             }
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
             FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
+            Entry.BuildDir = Error.BuildDirectory;
           }
         }
       }
@@ -189,9 +191,12 @@ public:
 
   void finish() {
     if (TotalFixes > 0) {
-      Rewriter Rewrite(SourceMgr, LangOpts);
+      bool AnyNotWritten = false;
       for (const auto &FileAndReplacements : FileReplacements) {
+        Rewriter Rewrite(SourceMgr, LangOpts);
         StringRef File = FileAndReplacements.first();
+        Files.getVirtualFileSystem().setCurrentWorkingDirectory(
+            FileAndReplacements.second.BuildDir);
         llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
             SourceMgr.getFileManager().getBufferForFile(File);
         if (!Buffer) {
@@ -208,8 +213,8 @@ public:
           continue;
         }
         llvm::Expected<tooling::Replacements> Replacements =
-            format::cleanupAroundReplacements(Code, FileAndReplacements.second,
-                                              *Style);
+            format::cleanupAroundReplacements(
+                Code, FileAndReplacements.second.Replacements, *Style);
         if (!Replacements) {
           llvm::errs() << llvm::toString(Replacements.takeError()) << "\n";
           continue;
@@ -226,16 +231,10 @@ public:
         if (!tooling::applyAllReplacements(Replacements.get(), Rewrite)) {
           llvm::errs() << "Can't apply replacements for file " << File << "\n";
         }
+        AnyNotWritten &= Rewrite.overwriteChangedFiles();
       }
 
-      auto BuildDir = Context.getCurrentBuildDirectory();
-      if (!BuildDir.empty())
-        Rewrite.getSourceMgr()
-            .getFileManager()
-            .getVirtualFileSystem()
-            .setCurrentWorkingDirectory(BuildDir);
-
-      if (Rewrite.overwriteChangedFiles()) {
+      if (AnyNotWritten) {
         llvm::errs() << "clang-tidy failed to apply suggested fixes.\n";
       } else {
         llvm::errs() << "clang-tidy applied " << AppliedFixes << " of "
@@ -297,13 +296,18 @@ private:
     return CharSourceRange::getCharRange(BeginLoc, EndLoc);
   }
 
+  struct ReplacementsWithBuildDir {
+    StringRef BuildDir;
+    Replacements Replacements;
+  };
+
   FileManager Files;
   LangOptions LangOpts; // FIXME: use langopts from each original file
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticConsumer *DiagPrinter;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
-  llvm::StringMap<Replacements> FileReplacements;
+  llvm::StringMap<ReplacementsWithBuildDir> FileReplacements;
   ClangTidyContext &Context;
   FixBehaviour ApplyFixes;
   unsigned TotalFixes = 0U;
