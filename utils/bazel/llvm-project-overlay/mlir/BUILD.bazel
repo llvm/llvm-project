@@ -3237,6 +3237,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":MeshIncGen",
         ":Support",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
