@@ -81,19 +81,21 @@ enum : uint64_t {
   MTBUF = 1 << 18,
   SMRD = 1 << 19,
   MIMG = 1 << 20,
-  EXP = 1 << 21,
-  FLAT = 1 << 22,
-  DS = 1 << 23,
+  VIMAGE = 1 << 21,
+  VSAMPLE = 1 << 22,
+  EXP = 1 << 23,
+  FLAT = 1 << 24,
+  DS = 1 << 25,
 
   // Pseudo instruction formats.
-  VGPRSpill = 1 << 24,
-  SGPRSpill = 1 << 25,
+  VGPRSpill = 1 << 26,
+  SGPRSpill = 1 << 27,
 
   // LDSDIR instruction format.
-  LDSDIR = 1 << 26,
+  LDSDIR = 1 << 28,
 
   // VINTERP instruction format.
-  VINTERP = 1 << 27,
+  VINTERP = 1 << 29,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -354,7 +356,47 @@ enum CPol {
   SC0 = GLC,
   SC1 = SCC,
   NT = SLC,
-  ALL = GLC | SLC | DLC | SCC
+  ALL_pregfx12 = GLC | SLC | DLC | SCC,
+  SWZ_pregfx12 = 8,
+
+  // Below are GFX12+ cache policy bits
+
+  // Temporal hint
+  TH = 0x7,      // All TH bits
+  TH_RT = 0,     // regular
+  TH_NT = 1,     // non-temporal
+  TH_HT = 2,     // high-temporal
+  TH_LU = 3,     // last use
+  TH_RT_WB = 3,  // regular (CU, SE), high-temporal with write-back (MALL)
+  TH_NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
+  TH_RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
+  TH_NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
+  TH_NT_WB = 7,  // non-temporal (CU, SE), high-temporal with write-back (MALL)
+  TH_BYPASS = 3, // only to be used with scope = 3
+
+  TH_RESERVED = 7, // unused value for load insts
+
+  // Bits of TH for atomics
+  TH_ATOMIC_RETURN = GLC, // Returning vs non-returning
+  TH_ATOMIC_NT = SLC,     // Non-temporal vs regular
+  TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
+
+  // Scope
+  SCOPE = 0x3 << 3, // All Scope bits
+  SCOPE_CU = 0 << 3,
+  SCOPE_SE = 1 << 3,
+  SCOPE_DEV = 2 << 3,
+  SCOPE_SYS = 3 << 3,
+
+  SWZ = 1 << 6, // Swizzle bit
+
+  ALL = TH | SCOPE,
+
+  // Helper bits
+  TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
 };
 
 } // namespace CPol

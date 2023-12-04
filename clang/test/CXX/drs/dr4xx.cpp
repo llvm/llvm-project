@@ -18,7 +18,7 @@ namespace dr400 { // dr400: yes
   struct E : A, B { struct a b; }; // expected-error {{found in multiple base classes}}
 }
 
-namespace dr401 { // dr401: yes
+namespace dr401 { // dr401: 2.8
   template<class T, class U = typename T::type> class A : public T {}; // expected-error {{protected}} expected-error 2{{private}}
 
   class B {
@@ -114,7 +114,7 @@ namespace dr405 { // dr405: yes
   void testE(E::S es) { f(es); } // expected-error {{undeclared identifier}}
 }
 
-namespace dr406 { // dr406: yes
+namespace dr406 { // dr406: 2.9
   typedef struct {
     static int n; // expected-error {{static data member 'n' not allowed in anonymous struct}}
   } A;
@@ -360,7 +360,7 @@ void use() {
 } // namespace example3
 } // namespace dr418
 
-namespace dr420 { // dr420: yes
+namespace dr420 { // dr420: 9
   template<typename T> struct ptr {
     T *operator->() const;
     T &operator*() const;
@@ -496,7 +496,7 @@ namespace dr428 { // dr428: yes
   }
 }
 
-namespace dr429 { // dr429: yes c++11
+namespace dr429 { // dr429: 2.8 c++11
   // FIXME: This rule is obviously intended to apply to C++98 as well.
   struct A {
     static void *operator new(size_t, size_t);
@@ -552,7 +552,7 @@ namespace dr431 { // dr431: yes
   }
 }
 
-namespace dr432 { // dr432: yes
+namespace dr432 { // dr432: 3.0
   template<typename T> struct A {};
   template<typename T> struct B : A<B> {}; // expected-error {{requires template arguments}} expected-note {{declared}}
   template<typename T> struct C : A<C<T> > {};
@@ -636,14 +636,14 @@ namespace dr444 { // dr444: yes
   }
 }
 
-namespace dr445 { // dr445: yes
+namespace dr445 { // dr445: 3.2
   class A { void f(); }; // expected-note {{private}}
   struct B {
     friend void A::f(); // expected-error {{private}}
   };
 }
 
-namespace dr446 { // dr446: yes
+namespace dr446 { // dr446: 2.8
   struct C;
   struct A {
     A();
@@ -695,7 +695,7 @@ namespace dr447 { // dr447: yes
   }
 }
 
-namespace dr448 { // dr448: yes
+namespace dr448 { // dr448: 2.8
   template<typename T = int> void f(int); // expected-error 0-1{{extension}} expected-note {{no known conversion}}
   template<typename T> void g(T t) {
     f<T>(t); // expected-error {{neither visible in the template definition nor found by argument-dependent lookup}}
@@ -908,7 +908,7 @@ namespace dr470 { // dr470: yes
   template struct C<char>;
 }
 
-namespace dr471 { // dr471: yes
+namespace dr471 { // dr471: 2.8
   struct A { int n; };
   struct B : private virtual A {};
   struct C : protected virtual A {};
@@ -924,7 +924,7 @@ namespace dr471 { // dr471: yes
   struct H : B, G { int f() { return n; } }; // expected-error {{private}}
 }
 
-namespace dr474 { // dr474: yes
+namespace dr474 { // dr474: 3.4
   namespace N {
     struct S {
       void f();
@@ -960,7 +960,7 @@ namespace dr478 { // dr478: yes
   void f(A a[10]); // expected-error {{array of abstract class type}}
 }
 
-namespace dr479 { // dr479: yes
+namespace dr479 { // dr479: 2.8
   struct S {
     S();
   private:
@@ -1016,7 +1016,7 @@ namespace dr480 { // dr480: yes
   D &k = static_cast<D&>(j); // expected-error {{virtual base}}
 }
 
-namespace dr481 { // dr481: yes
+namespace dr481 { // dr481: 2.8
   template<class T, T U> class A { T *x; };
   T *x; // expected-error {{unknown type}}
 
@@ -1194,7 +1194,7 @@ namespace dr488 { // dr488: yes c++11
 
 // dr489: na
 
-namespace dr490 { // dr490: yes
+namespace dr490 { // dr490: 2.8
   template<typename T> struct X {};
 
   struct A {
