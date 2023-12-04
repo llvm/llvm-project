@@ -23,7 +23,7 @@ define { i64, i64 } @mul_full_64_variant0(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
 ; CHECK-NEXT:    [[U1H:%.*]] = lshr i64 [[U1]], 32
 ; CHECK-NEXT:    [[U2:%.*]] = add i64 [[U0H]], [[T3]]
-; CHECK-NEXT:    [[LO:%.*]] = or i64 [[U1LS]], [[T0L]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[U1LS]], [[T0L]]
 ; CHECK-NEXT:    [[HI:%.*]] = add i64 [[U2]], [[U1H]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i64, i64 } undef, i64 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i64, i64 } [[RES_LO]], i64 [[HI]], 1
@@ -151,7 +151,7 @@ define i64 @mul_full_64_variant2(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-NEXT:    store i64 [[ADD17]], ptr [[RHI:%.*]], align 8
 ; CHECK-NEXT:    [[CONV24:%.*]] = shl i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[CONV26:%.*]] = and i64 [[MUL7]], 4294967295
-; CHECK-NEXT:    [[ADD27:%.*]] = or i64 [[CONV24]], [[CONV26]]
+; CHECK-NEXT:    [[ADD27:%.*]] = or disjoint i64 [[CONV24]], [[CONV26]]
 ; CHECK-NEXT:    ret i64 [[ADD27]]
 ;
   %conv = and i64 %a, 4294967295
@@ -177,6 +177,7 @@ define i64 @mul_full_64_variant2(i64 %a, i64 %b, ptr nocapture %rhi) {
   ret i64 %add27
 }
 
+; Negative test case for mul_fold function: MUL7 is used in more than one place
 define i64 @mul_full_64_variant3(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-LABEL: @mul_full_64_variant3(
 ; CHECK-NEXT:    [[CONV:%.*]] = and i64 [[A:%.*]], 4294967295
@@ -196,7 +197,9 @@ define i64 @mul_full_64_variant3(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[ADD10]], [[SHR_I]]
 ; CHECK-NEXT:    store i64 [[ADD17]], ptr [[RHI:%.*]], align 8
-; CHECK-NEXT:    [[ADD19:%.*]] = mul i64 [[A]], [[B]]
+; CHECK-NEXT:    [[ADD18:%.*]] = add i64 [[MUL6]], [[MUL5]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADD18]], 32
+; CHECK-NEXT:    [[ADD19:%.*]] = add i64 [[SHL]], [[MUL7]]
 ; CHECK-NEXT:    ret i64 [[ADD19]]
 ;
   %conv = and i64 %a, 4294967295
@@ -242,7 +245,7 @@ define { i32, i32 } @mul_full_32(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i32 [[U1]], 16
 ; CHECK-NEXT:    [[U1H:%.*]] = lshr i32 [[U1]], 16
 ; CHECK-NEXT:    [[U2:%.*]] = add i32 [[U0H]], [[T3]]
-; CHECK-NEXT:    [[LO:%.*]] = or i32 [[U1LS]], [[T0L]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i32 [[U1LS]], [[T0L]]
 ; CHECK-NEXT:    [[HI:%.*]] = add i32 [[U2]], [[U1H]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i32, i32 } undef, i32 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i32, i32 } [[RES_LO]], i32 [[HI]], 1
@@ -308,7 +311,7 @@ define { i64, i64 } @mul_full_64_variant0_1() {
 ; CHECK-NEXT:    [[HI:%.*]] = add i64 [[U2]], [[U1H]]
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
 ; CHECK-NEXT:    [[T0L:%.*]] = and i64 [[T0]], 4294967295
-; CHECK-NEXT:    [[LO:%.*]] = or i64 [[U1LS]], [[T0L]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[U1LS]], [[T0L]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i64, i64 } undef, i64 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i64, i64 } [[RES_LO]], i64 [[HI]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[RES]]
@@ -366,7 +369,7 @@ define { i64, i64 } @mul_full_64_variant0_2() {
 ; CHECK-NEXT:    [[HI:%.*]] = add i64 [[U1H]], [[U2]]
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
 ; CHECK-NEXT:    [[T0L:%.*]] = and i64 [[T0]], 4294967295
-; CHECK-NEXT:    [[LO:%.*]] = or i64 [[T0L]], [[U1LS]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[T0L]], [[U1LS]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i64, i64 } undef, i64 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i64, i64 } [[RES_LO]], i64 [[HI]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[RES]]
@@ -463,7 +466,7 @@ define i64 @mullo(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[U0:%.*]] = add i64 [[T0H]], [[T1]]
 ; CHECK-NEXT:    [[U1:%.*]] = add i64 [[U0]], [[T2]]
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
-; CHECK-NEXT:    [[LO:%.*]] = or i64 [[U1LS]], [[T0L]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[U1LS]], [[T0L]]
 ; CHECK-NEXT:    ret i64 [[LO]]
 ;
   %xl = and i64 %x, 4294967295
@@ -530,7 +533,7 @@ define i64 @mullo_duplicate(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[U0:%.*]] = add i64 [[T0H]], [[T1]]
 ; CHECK-NEXT:    [[U1:%.*]] = add i64 [[U0]], [[T2]]
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
-; CHECK-NEXT:    [[LO:%.*]] = or i64 [[U1LS]], [[T0L]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[U1LS]], [[T0L]]
 ; CHECK-NEXT:    ret i64 [[LO]]
 ;
   %duplicated_mul = mul i64 %x, %y
@@ -581,7 +584,7 @@ define { i64, i64 } @mul_full_64_duplicate(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
 ; CHECK-NEXT:    [[U1H:%.*]] = lshr i64 [[U1]], 32
 ; CHECK-NEXT:    [[U2:%.*]] = add i64 [[U0H]], [[T3]]
-; CHECK-NEXT:    [[LO:%.*]] = or i64 [[U1LS]], [[T0L]]
+; CHECK-NEXT:    [[LO:%.*]] = or disjoint i64 [[U1LS]], [[T0L]]
 ; CHECK-NEXT:    [[HI:%.*]] = add i64 [[U2]], [[U1H]]
 ; CHECK-NEXT:    [[RES_LO:%.*]] = insertvalue { i64, i64 } undef, i64 [[LO]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { i64, i64 } [[RES_LO]], i64 [[HI]], 1

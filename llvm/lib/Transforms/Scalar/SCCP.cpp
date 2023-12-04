@@ -48,7 +48,6 @@
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include <cassert>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
