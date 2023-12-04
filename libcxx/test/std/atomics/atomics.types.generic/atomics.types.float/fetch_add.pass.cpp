@@ -10,6 +10,9 @@
 // XFAIL: !has-64-bit-atomics
 // UNSUPPORTED: !non-lockfree-atomics
 
+// https://github.com/llvm/llvm-project/issues/72893
+// XFAIL: target={{x86_64-.*}} && tsan
+
 // floating-point-type fetch_add(floating-point-type,
 //                               memory_order = memory_order::seq_cst) volatile noexcept;
 // floating-point-type fetch_add(floating-point-type,
