@@ -16,7 +16,6 @@
 #include <cstdint>
 #include <fstream>
 #include <map>
-#include <vector>
 
 using namespace llvm;
 using namespace sampleprof;
