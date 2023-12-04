@@ -139,7 +139,7 @@ SmallVector<int64_t>
 getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
                      llvm::function_ref<bool(Attribute, Attribute)> compare);
 
-/// Helper function to check whether the passed in `sizes` or `values` are
+/// Helper function to check whether the passed in `sizes` or `offsets` are
 /// valid. This can be used to re-check whether dimensions are still valid
 /// after constant folding the dynamic dimensions.
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets);
@@ -157,7 +157,7 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
                                    bool onlyNonNegative = false,
                                    bool onlyNonZero = false);
 
-/// Returns "success" when any of the elements in `OffsetsOrSizes` is a
+/// Returns "success" when any of the elements in `offsetsOrSizes` is a
 /// constant value. In that case the value is replaced by an attribute. Returns
 /// "failure" when no folding happened. Invalid values are not folded to avoid
 /// canonicalization crashes.
