@@ -1058,6 +1058,7 @@ extern "C" const int ** __ctype_toupper_loc();
 const ctype<char>::mask*
 ctype<char>::classic_table() noexcept
 {
+  // clang-format off
     static constexpr const ctype<char>::mask builtin_table[table_size] = {
         cntrl,                          cntrl,
         cntrl,                          cntrl,
@@ -1132,6 +1133,7 @@ ctype<char>::classic_table() noexcept
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
+  // clang-format on
     return builtin_table;
 }
 #else
