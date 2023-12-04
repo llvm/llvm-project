@@ -22,6 +22,7 @@
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
+#include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
 #include "GlobalHandler.h"

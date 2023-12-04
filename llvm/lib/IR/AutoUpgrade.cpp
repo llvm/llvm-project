@@ -632,12 +632,12 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
     return StringSwitch<Intrinsic::ID>(Name)
         .Case("bf16", Intrinsic::nvvm_fma_rn_bf16)
         .Case("bf16x2", Intrinsic::nvvm_fma_rn_bf16x2)
-        .Case("ftz_bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
+        .Case("ftz.bf16", Intrinsic::nvvm_fma_rn_ftz_bf16)
         .Case("ftz.bf16x2", Intrinsic::nvvm_fma_rn_ftz_bf16x2)
         .Case("ftz.relu.bf16", Intrinsic::nvvm_fma_rn_ftz_relu_bf16)
         .Case("ftz.relu.bf16x2", Intrinsic::nvvm_fma_rn_ftz_relu_bf16x2)
-        .Case("ftz_sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
-        .Case("ftz_sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
+        .Case("ftz.sat.bf16", Intrinsic::nvvm_fma_rn_ftz_sat_bf16)
+        .Case("ftz.sat.bf16x2", Intrinsic::nvvm_fma_rn_ftz_sat_bf16x2)
         .Case("relu.bf16", Intrinsic::nvvm_fma_rn_relu_bf16)
         .Case("relu.bf16x2", Intrinsic::nvvm_fma_rn_relu_bf16x2)
         .Case("sat.bf16", Intrinsic::nvvm_fma_rn_sat_bf16)
@@ -674,8 +674,8 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
         .Case("bf16x2", Intrinsic::nvvm_fmin_bf16x2)
         .Case("ftz.bf16", Intrinsic::nvvm_fmin_ftz_bf16)
         .Case("ftz.bf16x2", Intrinsic::nvvm_fmin_ftz_bf16x2)
-        .Case("ftz.nan_bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
-        .Case("ftz.nan_bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
+        .Case("ftz.nan.bf16", Intrinsic::nvvm_fmin_ftz_nan_bf16)
+        .Case("ftz.nan.bf16x2", Intrinsic::nvvm_fmin_ftz_nan_bf16x2)
         .Case("ftz.nan.xorsign.abs.bf16",
               Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_bf16)
         .Case("ftz.nan.xorsign.abs.bf16x2",
@@ -704,11 +704,11 @@ static Intrinsic::ID ShouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
-  // Quickly eliminate it, if it's not a candidate.
   StringRef Name = F->getName();
-  if (Name.size() <= 7 || !Name.starts_with("llvm."))
+
+  // Quickly eliminate it, if it's not a candidate.
+  if (!Name.consume_front("llvm.") || Name.empty())
     return false;
-  Name = Name.substr(5); // Strip off "llvm."
 
   switch (Name[0]) {
   default: break;
@@ -949,11 +949,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
 
-      if (Name.starts_with("atomic.inc") || Name.starts_with("atomic.dec")) {
-        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
-        // new declaration.
-        NewFn = nullptr;
-        return true;
+      if (Name.consume_front("atomic.")) {
+        if (Name.starts_with("inc") || Name.starts_with("dec")) {
+          // These were replaced with atomicrmw uinc_wrap and udec_wrap, so
+          // there's no new declaration.
+          NewFn = nullptr;
+          return true;
+        }
+        break; // No other 'amdgcn.atomic.*'
       }
 
       if (Name.starts_with("ldexp.")) {
@@ -963,6 +966,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
           {F->getReturnType(), F->getArg(1)->getType()});
         return true;
       }
+      break; // No other 'amdgcn.*'
     }
 
     break;

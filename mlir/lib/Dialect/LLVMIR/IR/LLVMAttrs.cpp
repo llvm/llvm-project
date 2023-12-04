@@ -17,10 +17,22 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::LLVM;
+
+/// Parses DWARF expression arguments with respect to the DWARF operation
+/// opcode. Some DWARF expression operations have a specific number of operands
+/// and may appear in a textual form.
+static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                                        SmallVector<uint64_t> &args);
+
+/// Prints DWARF expression arguments with respect to the specific DWARF
+/// operation. Some operands are printed in their textual form.
+static LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
+                                        ArrayRef<uint64_t> args);
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
@@ -43,8 +55,8 @@ void LLVMDialect::registerAttributes() {
 
 bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DIFileAttr, DILabelAttr,
-                   DILexicalBlockAttr, DILexicalBlockFileAttr,
+                   DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+                   DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
                    DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
                    DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
                    DISubroutineTypeAttr>(attr);
@@ -108,4 +120,67 @@ bool MemoryEffectsAttr::isReadWrite() {
   if (this->getOther() != ModRefInfo::ModRef)
     return false;
   return true;
+}
+
+//===----------------------------------------------------------------------===//
+// DIExpression
+//===----------------------------------------------------------------------===//
+
+DIExpressionAttr DIExpressionAttr::get(MLIRContext *context) {
+  return get(context, ArrayRef<DIExpressionElemAttr>({}));
+}
+
+LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                                 SmallVector<uint64_t> &args) {
+  auto operandParser = [&]() -> LogicalResult {
+    uint64_t operand = 0;
+    if (!args.empty() && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
+      // Attempt to parse a keyword.
+      StringRef keyword;
+      if (succeeded(parser.parseOptionalKeyword(&keyword))) {
+        operand = llvm::dwarf::getAttributeEncoding(keyword);
+        if (operand == 0) {
+          // The keyword is invalid.
+          return parser.emitError(parser.getCurrentLocation())
+                 << "encountered unknown attribute encoding \"" << keyword
+                 << "\"";
+        }
+      }
+    }
+
+    // operand should be non-zero if a keyword was parsed. Otherwise, the
+    // operand MUST be an integer.
+    if (operand == 0) {
+      // Parse the next operand as an integer.
+      if (parser.parseInteger(operand)) {
+        return parser.emitError(parser.getCurrentLocation())
+               << "expected integer operand";
+      }
+    }
+
+    args.push_back(operand);
+    return success();
+  };
+
+  // Parse operands as a comma-separated list.
+  return parser.parseCommaSeparatedList(operandParser);
+}
+
+LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
+                                 ArrayRef<uint64_t> args) {
+  size_t i = 0;
+  llvm::interleaveComma(args, printer, [&](uint64_t operand) {
+    if (i > 0 && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
+      if (const StringRef keyword =
+              llvm::dwarf::AttributeEncodingString(operand);
+          !keyword.empty()) {
+        printer << keyword;
+        return;
+      }
+    }
+    // All operands are expected to be printed as integers.
+    printer << operand;
+    i++;
+  });
+  return success();
 }

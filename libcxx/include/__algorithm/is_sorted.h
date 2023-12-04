@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 is_sorted(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
@@ -32,7 +32,7 @@ is_sorted(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 
 template<class _ForwardIterator>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 is_sorted(_ForwardIterator __first, _ForwardIterator __last)
 {

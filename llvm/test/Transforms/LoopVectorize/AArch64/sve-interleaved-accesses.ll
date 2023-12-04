@@ -39,7 +39,7 @@ define void @test_array_load2_store2(i32 %C, i32 %D) #1 {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.experimental.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <vscale x 4 x i32> [[TMP1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw <vscale x 4 x i32> [[TMP2]], [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 [[TMP3]]
@@ -718,7 +718,7 @@ define void @mixed_load2_store2(i32* noalias nocapture readonly %A, i32* noalias
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.experimental.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[OFFSET_IDX]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <vscale x 4 x i32> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.experimental.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[WIDE_VEC]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC2]], 0

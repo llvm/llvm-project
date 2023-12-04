@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "device.h"
+#include "OffloadEntry.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "PluginManager.h"
+#include "Shared/APITypes.h"
+#include "Shared/Debug.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
@@ -61,7 +64,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 
 DeviceTy::DeviceTy(PluginAdaptorTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
-      HasPendingGlobals(false), PendingCtorsDtors(), PendingGlobalsMtx() {}
+      PendingCtorsDtors(), PendingGlobalsMtx() {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -281,7 +284,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
              !HasCloseModifier) {
     // If unified shared memory is active, implicitly mapped variables that are
     // not privatized use host address. Any explicitly mapped variables also use
@@ -445,7 +448,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
          LR.TPR.getEntry()->dynRefCountToStr().c_str(), DynRefCountAction,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
-  } else if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+  } else if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -529,7 +532,7 @@ int DeviceTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry, int64_t Size) {
 void DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   if (RTL->init_requires)
-    RTL->init_requires(PM->RTLs.RequiresFlags);
+    RTL->init_requires(PM->getRequirements());
   int32_t Ret = RTL->init_device(RTLDeviceID);
   if (Ret != OFFLOAD_SUCCESS)
     return;
@@ -806,4 +809,53 @@ bool deviceIsReady(int DeviceNum) {
   DP("Device %d is ready to use.\n", DeviceNum);
 
   return true;
+}
+
+void DeviceTy::addOffloadEntry(OffloadEntryTy &Entry) {
+  std::lock_guard<decltype(PendingGlobalsMtx)> Lock(PendingGlobalsMtx);
+  DeviceOffloadEntries[Entry.getName()] = &Entry;
+  if (Entry.isGlobal())
+    return;
+
+  if (Entry.isCTor()) {
+    DP("Adding ctor " DPxMOD " to the pending list.\n",
+       DPxPTR(Entry.getAddress()));
+    MESSAGE("WARNING: Calling deprecated constructor for entry %s will be "
+            "removed in a future release \n",
+            Entry.getNameAsCStr());
+    PendingCtorsDtors[Entry.getBinaryDescription()].PendingCtors.push_back(
+        Entry.getAddress());
+  } else if (Entry.isDTor()) {
+    // Dtors are pushed in reverse order so they are executed from end
+    // to beginning when unregistering the library!
+    DP("Adding dtor " DPxMOD " to the pending list.\n",
+       DPxPTR(Entry.getAddress()));
+    MESSAGE("WARNING: Calling deprecated destructor for entry %s will be "
+            "removed in a future release \n",
+            Entry.getNameAsCStr());
+    PendingCtorsDtors[Entry.getBinaryDescription()].PendingDtors.push_front(
+        Entry.getAddress());
+  }
+
+  if (Entry.isLink()) {
+    MESSAGE(
+        "WARNING: The \"link\" attribute is not yet supported for entry: %s!\n",
+        Entry.getNameAsCStr());
+  }
+}
+
+void DeviceTy::dumpOffloadEntries() {
+  fprintf(stderr, "Device %i offload entries:\n", DeviceID);
+  for (auto &It : DeviceOffloadEntries) {
+    const char *Kind = "kernel";
+    if (It.second->isCTor())
+      Kind = "constructor";
+    else if (It.second->isDTor())
+      Kind = "destructor";
+    else if (It.second->isLink())
+      Kind = "link";
+    else if (It.second->isGlobal())
+      Kind = "global var.";
+    fprintf(stderr, "  %11s: %s\n", Kind, It.second->getNameAsCStr());
+  }
 }

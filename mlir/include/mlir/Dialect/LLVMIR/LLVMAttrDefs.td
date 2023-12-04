@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -261,15 +262,34 @@ def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"", "Tag"
 >;
 
+def LLVM_DIOperationEncodingParameter : LLVM_DIParameter<
+  "operation encoding", /*default=*/"", "OperationEncoding"
+>;
+
 //===----------------------------------------------------------------------===//
 // DIExpressionAttr
 //===----------------------------------------------------------------------===//
 
-// TODO: Implement custom printer/parser for elements so that operators are
-// dumped in textual form.
-def LLVM_DIExpressionAttr : ArrayOfAttr<LLVM_Dialect, "DIExpression",
-                                        "di_expr", "uint64_t"> {
-  let assemblyFormat = "`<` `[` (`]` `>`) : ($value^ `]` `>`)?";
+def LLVM_DIExpressionElemAttr : LLVM_Attr<"DIExpressionElem",
+                                          "di_expression_elem"> {
+  let parameters = (ins
+    LLVM_DIOperationEncodingParameter:$opcode,
+    OptionalArrayRefParameter<"uint64_t">:$arguments);
+  let assemblyFormat = [{
+    `` $opcode ( `(` custom<ExpressionArg>(ref($opcode), $arguments)^ `)` ) : (``)?
+  }];
+}
+
+def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
+  let parameters = (ins
+    OptionalArrayRefParameter<"DIExpressionElemAttr">:$operations
+  );
+  let builders = [
+    AttrBuilder<(ins)>
+  ];
+  let constBuilderCall =
+            "::mlir::LLVM::DIExpressionAttr::get($_builder.getContext(), $0)";
+  let assemblyFormat = "`<` ( `[` $operations^ `]` ) : (``)? `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -372,6 +392,39 @@ def LLVM_DIFileAttr : LLVM_Attr<"DIFile", "di_file", /*traits=*/[], "DIScopeAttr
     }]>
   ];
   let assemblyFormat = "`<` $name `in` $directory `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGlobalVariableExpressionAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGlobalVariableExpressionAttr
+    : LLVM_Attr<"DIGlobalVariableExpression", "di_global_variable_expression"> {
+  let parameters = (ins
+    "DIGlobalVariableAttr":$var,
+    OptionalParameter<"DIExpressionAttr">:$expr
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let constBuilderCall = "$0";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGlobalVariableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
+                                      /*traits=*/[], "DINodeAttr"> {
+  let parameters = (ins
+    "DIScopeAttr":$scope,
+    "StringAttr":$name,
+    "StringAttr":$linkageName,
+    "DIFileAttr":$file,
+    "unsigned":$line,
+    "DITypeAttr":$type,
+    OptionalParameter<"bool">:$isLocalToUnit,
+    OptionalParameter<"bool">:$isDefined,
+    OptionalParameter<"unsigned">:$alignInBits);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//
