@@ -64,6 +64,7 @@
 ! CHECK-NEXT:                         Select Windows run-time library
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
+! CHECK-NEXT: -fno-fortran-main       Don't link in Fortran main
 ! CHECK-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! CHECK-NEXT: -fno-lto                Disable LTO mode (default)
 ! CHECK-NEXT: -fno-ppc-native-vector-element-order
