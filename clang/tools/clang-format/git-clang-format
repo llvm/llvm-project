@@ -153,7 +153,10 @@ def main():
   else:
     if len(commits) > 2:
       die('at most two commits allowed; %d given' % len(commits))
-  opts.binary=os.path.abspath(opts.binary)
+
+  if os.path.dirname(opts.binary):
+    opts.binary = os.path.abspath(opts.binary)
+
   changed_lines = compute_diff_and_extract_lines(commits, files, opts.staged)
   if opts.verbose >= 1:
     ignored_files = set(changed_lines)
