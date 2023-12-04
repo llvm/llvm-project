@@ -31,7 +31,7 @@
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 svuint16_t test_svsqrshr_u16_u32_x4(svuint32x2_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshr,_u16_u32_x2,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshr,_n,_u16,_u32_x2,)(zn, 16);
 }
 
 // CHECK-LABEL: @test_svsqrshr_s16_s32_x4(
@@ -49,7 +49,7 @@ svuint16_t test_svsqrshr_u16_u32_x4(svuint32x2_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 svint16_t test_svsqrshr_s16_s32_x4(svint32x2_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshr,_s16_s32_x2,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshr,_n,_s16,_s32_x2,)(zn, 16);
 }
 
 // CHECK-LABEL: @test_svsqrshr_u8_u32_x4(
@@ -71,7 +71,7 @@ svint16_t test_svsqrshr_s16_s32_x4(svint32x2_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
 //
 svuint8_t test_svsqrshr_u8_u32_x4(svuint32x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshr,_u8_u32_x4,,,)(zn, 8);
+  return SVE_ACLE_FUNC(svqrshr,_n,_u8,_u32_x4,)(zn, 8);
 }
 
 // CHECK-LABEL: @test_svsqrshr_s8_s32_x4(
@@ -93,7 +93,7 @@ svuint8_t test_svsqrshr_u8_u32_x4(svuint32x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
 //
 svint8_t test_svsqrshr_s8_s32_x4(svint32x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshr,_s8_s32_x4,,,)(zn, 8);
+  return SVE_ACLE_FUNC(svqrshr,_n,_s8,_s32_x4,)(zn, 8);
 }
 
 // CHECK-LABEL: @test_svsqrshr_u16_u64_x4(
@@ -115,7 +115,7 @@ svint8_t test_svsqrshr_s8_s32_x4(svint32x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
 svuint16_t test_svsqrshr_u16_u64_x4(svuint64x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshr,_u16_u64_x4,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshr,_n,_u16,_u64_x4,)(zn, 16);
 }
 
 // CHECK-LABEL: @test_svsqrshr_s16_s64_x4(
@@ -137,7 +137,7 @@ svuint16_t test_svsqrshr_u16_u64_x4(svuint64x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
 svint16_t test_svsqrshr_s16_s64_x4(svint64x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshr,_s16_s64_x4,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshr,_n,_s16,_s64_x4,)(zn, 16);
 }
 
 // SVQRSHRN
@@ -161,7 +161,7 @@ svint16_t test_svsqrshr_s16_s64_x4(svint64x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
 //
 svuint8_t test_svsqrshrn_u8_u32_x4(svuint32x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshrn,_u8_u32_x4,,,)(zn, 8);
+  return SVE_ACLE_FUNC(svqrshrn,_n,_u8,_u32_x4,)(zn, 8);
 }
 
 // CHECK-LABEL: @test_svsqrshrn_s8_s32_x4(
@@ -183,7 +183,7 @@ svuint8_t test_svsqrshrn_u8_u32_x4(svuint32x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
 //
 svint8_t test_svsqrshrn_s8_s32_x4(svint32x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshrn,_s8_s32_x4,,,)(zn, 8);
+  return SVE_ACLE_FUNC(svqrshrn,_n,_s8,_s32_x4,)(zn, 8);
 }
 
 // CHECK-LABEL: @test_svsqrshrn_u16_u64_x4(
@@ -205,7 +205,7 @@ svint8_t test_svsqrshrn_s8_s32_x4(svint32x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
 svuint16_t test_svsqrshrn_u16_u64_x4(svuint64x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshrn,_u16_u64_x4,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshrn,_n,_u16,_u64_x4,)(zn, 16);
 }
 
 // CHECK-LABEL: @test_svsqrshrn_s16_s64_x4(
@@ -227,7 +227,7 @@ svuint16_t test_svsqrshrn_u16_u64_x4(svuint64x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
 svint16_t test_svsqrshrn_s16_s64_x4(svint64x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshrn,_s16_s64_x4,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshrn,_n,_s16,_s64_x4,)(zn, 16);
 }
 
 // SVSQRSHRU
@@ -247,7 +247,7 @@ svint16_t test_svsqrshrn_s16_s64_x4(svint64x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
 //
 svuint16_t test_svsvqrshru_u16_s32_x2(svint32x2_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshru,_u16_s32_x2,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshru,_n,_u16,_s32_x2,)(zn, 16);
 }
 
 // CHECK-LABEL: @test_svsqrshru_u8_s32_x4(
@@ -269,7 +269,7 @@ svuint16_t test_svsvqrshru_u16_s32_x2(svint32x2_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
 //
 svuint8_t test_svsqrshru_u8_s32_x4(svint32x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshru,_u8_s32_x4,,,)(zn, 8);
+  return SVE_ACLE_FUNC(svqrshru,_n,_u8,_s32_x4,)(zn, 8);
 }
 
 // CHECK-LABEL: @test_svsqrshru_u16_s64_x4(
@@ -291,7 +291,7 @@ svuint8_t test_svsqrshru_u8_s32_x4(svint32x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
 svuint16_t test_svsqrshru_u16_s64_x4(svint64x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshru,_u16_s64_x4,,,)(zn, 16);
+  return SVE_ACLE_FUNC(svqrshru,_n,_u16,_s64_x4,)(zn, 16);
 }
 
 // SQRSHRUN x 4
@@ -315,7 +315,7 @@ svuint16_t test_svsqrshru_u16_s64_x4(svint64x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP4]]
 //
 svuint8_t test_svsqrshrun_u8_s32_x4(svint32x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshrun,_u8_s32_x4,,,)(zn, 32);
+  return SVE_ACLE_FUNC(svqrshrun,_n,_u8,_s32_x4,)(zn, 32);
 }
 
 // CHECK-LABEL: @test_svsqrshrun_u16_s64_x4(
@@ -337,5 +337,5 @@ svuint8_t test_svsqrshrun_u8_s32_x4(svint32x4_t zn) __arm_streaming {
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP4]]
 //
 svuint16_t test_svsqrshrun_u16_s64_x4(svint64x4_t zn) __arm_streaming {
-  return SVE_ACLE_FUNC(svqrshrun,_u16_s64_x4,,,)(zn, 64);
+  return SVE_ACLE_FUNC(svqrshrun,_n,_u16,_s64_x4,)(zn, 64);
 }
