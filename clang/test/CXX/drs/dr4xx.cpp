@@ -1263,7 +1263,6 @@ namespace dr483 { // dr483: yes
     int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
     int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
     // cxx98-error@-1 {{'long long' is a C++11 extension}}
-    // endill-note@-2 {{expanded from macro '__LONG_LONG_MAX__'}}
   }
   namespace cstdint {
     int check1[__PTRDIFF_WIDTH__ >= 16 ? 1 : -1];
