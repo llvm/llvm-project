@@ -59,13 +59,14 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     Radix = 16;
     GroupSize = 4;
     Prefix = "0x";
-  } else if (OriginalLiteralString.starts_with("0") && OriginalLiteralString != "0") {
+  } else if (OriginalLiteralString.starts_with("0") &&
+             OriginalLiteralString != "0") {
     Radix = 8;
     GroupSize = 3;
     Prefix = "0";
   } else {
-      Radix = 10;
-      GroupSize = 3;
+    Radix = 10;
+    GroupSize = 3;
   }
 
   // Get formatting literal text
