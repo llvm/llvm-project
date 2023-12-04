@@ -102,7 +102,9 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       attr.getSourceLanguage(), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
-      /*Flags=*/"", /*RV=*/0);
+      /*Flags=*/"", /*RV=*/0, /*SplitName=*/{},
+      static_cast<llvm::DICompileUnit::DebugEmissionKind>(
+          attr.getEmissionKind()));
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on
