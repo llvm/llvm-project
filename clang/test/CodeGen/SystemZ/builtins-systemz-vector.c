@@ -362,13 +362,13 @@ void test_integer(void) {
   len = __builtin_s390_vtm(vuc, vuc);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vsc = __builtin_s390_vceqbs(vsc, vsc, &cc);
+  vsc = __builtin_s390_vceqbs(vuc, vuc, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vceqhs(vss, vss, &cc);
+  vss = __builtin_s390_vceqhs(vus, vus, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vceqfs(vsi, vsi, &cc);
+  vsi = __builtin_s390_vceqfs(vui, vui, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vceqgs(vsl, vsl, &cc);
+  vsl = __builtin_s390_vceqgs(vul, vul, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
   vsc = __builtin_s390_vchbs(vsc, vsc, &cc);
