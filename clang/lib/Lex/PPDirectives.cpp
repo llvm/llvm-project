@@ -3676,6 +3676,16 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     return Prefix->getName().str();
   };
 
+  // C23 6.10p5: In all aspects, a preprocessor standard parameter specified by
+  // this document as an identifier pp_param and an identifier of the form
+  // __pp_param__ shall behave the same when used as a preprocessor parameter,
+  // except for the spelling.
+  auto NormalizeParameterName = [](StringRef Name) {
+    if (Name.size() > 4 && Name.startswith("__") && Name.endswith("__"))
+      return Name.substr(2, Name.size() - 4);
+    return Name;
+  };
+
   auto LexParenthesizedIntegerExpr = [&]() -> std::optional<size_t> {
     // we have a limit parameter and its internals are processed using
     // evaluation rules from #if.
@@ -3779,7 +3789,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     std::optional<std::string> ParamName = LexPPParameterName();
     if (!ParamName)
       return std::nullopt;
-    const std::string &Parameter = *ParamName;
+    StringRef Parameter = NormalizeParameterName(*ParamName);
 
     // Lex the parameters (dependent on the parameter type we want!).
     //
