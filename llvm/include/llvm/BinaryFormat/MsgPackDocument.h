@@ -424,7 +424,7 @@ public:
   /// map entry, a nil node otherwise.
   ///
   /// The default for Merger is to disallow any conflict.
-  bool readFromBlob(
+  Error readFromBlob(
       StringRef Blob, bool Multi,
       function_ref<int(DocNode *DestNode, DocNode SrcNode, DocNode MapKey)>
           Merger = [](DocNode *DestNode, DocNode SrcNode, DocNode MapKey) {
