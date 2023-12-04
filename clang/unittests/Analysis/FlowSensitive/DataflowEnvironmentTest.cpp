@@ -25,6 +25,7 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 using ::clang::dataflow::test::getFieldValue;
+using ::testing::Contains;
 using ::testing::IsNull;
 using ::testing::NotNull;
 
@@ -309,6 +310,56 @@ TEST_F(EnvironmentTest, InitGlobalVarsConstructor) {
   Environment Env(DAContext, *Ctor);
   Env.initialize();
   EXPECT_THAT(Env.getValue(*Var), NotNull());
+}
+
+// Pointers to Members are a tricky case of accessor calls, complicated further
+// when using templates where the pointer to the member is a template argument.
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest,
+       ModelMemberForAccessorUsingMethodPointerThroughTemplate) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct S {
+        int accessor() {return member;}
+
+        int member = 0;
+      };
+
+      template <auto method>
+      int Target(S* S) {
+        return (S->*method)();
+      }
+
+     // We want to analyze the instantiation of Target for the accessor.
+     int Instantiator () {S S; return Target<&S::accessor>(&S); }
+  )cc";
+
+  auto Unit =
+      // C++17 for the simplifying use of auto in the template declaration.
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results = match(
+      decl(anyOf(functionDecl(hasName("Target"), isTemplateInstantiation())
+                     .bind("target"),
+                 fieldDecl(hasName("member")).bind("member"),
+                 recordDecl(hasName("S")).bind("struct"))),
+      Context);
+  const auto *Fun = selectFirst<FunctionDecl>("target", Results);
+  const auto *Struct = selectFirst<RecordDecl>("struct", Results);
+  const auto *Member = selectFirst<FieldDecl>("member", Results);
+  ASSERT_THAT(Fun, NotNull());
+  ASSERT_THAT(Struct, NotNull());
+  ASSERT_THAT(Member, NotNull());
+
+  // Verify that `member` is modeled for `S` when we analyze
+  // `Target<&S::accessor>`.
+  Environment Env(DAContext, *Fun);
+  EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
+              Contains(Member));
 }
 
 TEST_F(EnvironmentTest, RefreshRecordValue) {
