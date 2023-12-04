@@ -651,7 +651,7 @@ Bug Fixes in This Version
 - Fixed false positive error emitted by clang when performing qualified name
   lookup and the current class instantiation has dependent bases.
   Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
-- Fix a ``clang-17`` regression where a templated friend with constraints is not 
+- Fix a ``clang-17`` regression where a templated friend with constraints is not
   properly applied when its parameters reference an enclosing non-template class.
   Fixes (`#71595 <https://github.com/llvm/llvm-project/issues/71595>`_)
 
