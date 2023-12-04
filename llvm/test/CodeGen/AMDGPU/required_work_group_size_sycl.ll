@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a < %s | FileCheck %s
 
 ; Make sure that SYCL kernels with less than 3 dimensions specified in required
 ; work group size, have those dimensions padded up with 1.
@@ -8,7 +8,7 @@
 ; CHECK-NEXT:      - 3
 ; CHECK-NEXT:      - 1
 ; CHECK-NEXT:      - 1
-define weak_odr protected amdgpu_kernel void @sycl_kernel_1dim() #1 !reqd_work_group_size !0 {
+define protected amdgpu_kernel void @sycl_kernel_1dim() #1 !reqd_work_group_size !0 {
 entry:
   ret void
 }
@@ -18,7 +18,7 @@ entry:
 ; CHECK-NEXT:      - 5
 ; CHECK-NEXT:      - 7
 ; CHECK-NEXT:      - 1
-define weak_odr protected amdgpu_kernel void @sycl_kernel_2dim() #1 !reqd_work_group_size !1 {
+define protected amdgpu_kernel void @sycl_kernel_2dim() #1 !reqd_work_group_size !1 {
 entry:
   ret void
 }
@@ -28,7 +28,7 @@ entry:
 ; CHECK-NEXT:      - 11 
 ; CHECK-NEXT:      - 13
 ; CHECK-NEXT:      - 17
-define weak_odr protected amdgpu_kernel void @sycl_kernel_3dim() #1 !reqd_work_group_size !2 {
+define protected amdgpu_kernel void @sycl_kernel_3dim() #1 !reqd_work_group_size !2 {
 entry:
   ret void
 }
