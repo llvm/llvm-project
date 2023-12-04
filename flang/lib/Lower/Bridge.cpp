@@ -82,12 +82,12 @@ struct IncrementLoopInfo {
   explicit IncrementLoopInfo(Fortran::semantics::Symbol &sym, const T &lower,
                              const T &upper, const std::optional<T> &step,
                              bool isUnordered = false)
-      : loopVariableSym{sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
+      : loopVariableSym{&sym}, lowerExpr{Fortran::semantics::GetExpr(lower)},
         upperExpr{Fortran::semantics::GetExpr(upper)},
         stepExpr{Fortran::semantics::GetExpr(step)}, isUnordered{isUnordered} {}
 
   IncrementLoopInfo(IncrementLoopInfo &&) = default;
-  IncrementLoopInfo &operator=(IncrementLoopInfo &&x) { return x; }
+  IncrementLoopInfo &operator=(IncrementLoopInfo &&x) = default;
 
   bool isStructured() const { return !headerBlock; }
 
@@ -102,7 +102,7 @@ struct IncrementLoopInfo {
   }
 
   // Data members common to both structured and unstructured loops.
-  const Fortran::semantics::Symbol &loopVariableSym;
+  const Fortran::semantics::Symbol *loopVariableSym;
   const Fortran::lower::SomeExpr *lowerExpr;
   const Fortran::lower::SomeExpr *upperExpr;
   const Fortran::lower::SomeExpr *stepExpr;
@@ -1737,7 +1737,7 @@ private:
           bounds->step);
       if (unstructuredContext) {
         maybeStartBlock(preheaderBlock);
-        info.hasRealControl = info.loopVariableSym.GetType()->IsNumeric(
+        info.hasRealControl = info.loopVariableSym->GetType()->IsNumeric(
             Fortran::common::TypeCategory::Real);
         info.headerBlock = headerBlock;
         info.bodyBlock = bodyBlock;
@@ -1827,7 +1827,7 @@ private:
     mlir::Location loc = toLocation();
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       info.loopVariable =
-          genLoopVariableAddress(loc, info.loopVariableSym, info.isUnordered);
+          genLoopVariableAddress(loc, *info.loopVariableSym, info.isUnordered);
       mlir::Value lowerValue = genControlValue(info.lowerExpr, info);
       mlir::Value upperValue = genControlValue(info.upperExpr, info);
       bool isConst = true;

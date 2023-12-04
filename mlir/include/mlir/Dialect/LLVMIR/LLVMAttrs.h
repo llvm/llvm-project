@@ -16,6 +16,9 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/TableGen/Constraint.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/TableGen/Record.h"
 #include <optional>
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.h.inc"
