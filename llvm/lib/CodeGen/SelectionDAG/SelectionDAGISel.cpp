@@ -2641,7 +2641,7 @@ MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
   unsigned ResNumResults = Res->getNumValues();
   // Move the glue if needed.
   if ((EmitNodeInfo & OPFL_GlueOutput) && OldGlueResultNo != -1 &&
-      (unsigned)OldGlueResultNo != ResNumResults-1)
+      static_cast<unsigned>(OldGlueResultNo) != ResNumResults - 1)
     ReplaceUses(SDValue(Node, OldGlueResultNo),
                 SDValue(Res, ResNumResults - 1));
 
@@ -2650,7 +2650,7 @@ MorphNode(SDNode *Node, unsigned TargetOpc, SDVTList VTList,
 
   // Move the chain reference if needed.
   if ((EmitNodeInfo & OPFL_Chain) && OldChainResultNo != -1 &&
-      (unsigned)OldChainResultNo != ResNumResults-1)
+      static_cast<unsigned>(OldChainResultNo) != ResNumResults - 1)
     ReplaceUses(SDValue(Node, OldChainResultNo),
                 SDValue(Res, ResNumResults - 1));
 
@@ -2707,15 +2707,17 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckOpcode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
             SDNode *N) {
   uint16_t Opc = MatcherTable[MatcherIndex++];
-  Opc |= (unsigned short)MatcherTable[MatcherIndex++] << 8;
+  Opc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
   return N->getOpcode() == Opc;
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckType(const unsigned char *MatcherTable, unsigned &MatcherIndex, SDValue N,
           const TargetLowering *TLI, const DataLayout &DL) {
-  MVT::SimpleValueType VT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
-  if (N.getValueType() == VT) return true;
+  MVT::SimpleValueType VT =
+      static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
+  if (N.getValueType() == VT)
+    return true;
 
   // Handle the case when VT is iPTR.
   return VT == MVT::iPTR && N.getValueType() == TLI->getPointerTy(DL);
@@ -2735,7 +2737,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckCondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
               SDValue N) {
   return cast<CondCodeSDNode>(N)->get() ==
-      (ISD::CondCode)MatcherTable[MatcherIndex++];
+         static_cast<ISD::CondCode>(MatcherTable[MatcherIndex++]);
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
@@ -2749,7 +2751,8 @@ CheckChild2CondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckValueType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
                SDValue N, const TargetLowering *TLI, const DataLayout &DL) {
-  MVT::SimpleValueType VT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+  MVT::SimpleValueType VT =
+      static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
   if (cast<VTSDNode>(N)->getVT() == VT)
     return true;
 
@@ -3101,7 +3104,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       // Get the opcode, add the index to the table.
       uint16_t Opc = MatcherTable[Idx++];
-      Opc |= (unsigned short)MatcherTable[Idx++] << 8;
+      Opc |= static_cast<uint16_t>(MatcherTable[Idx++]) << 8;
       if (Opc >= OpcodeOffset.size())
         OpcodeOffset.resize((Opc+1)*2);
       OpcodeOffset[Opc] = Idx;
@@ -3118,7 +3121,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 #ifndef NDEBUG
     unsigned CurrentOpcodeIndex = MatcherIndex;
 #endif
-    BuiltinOpcodes Opcode = (BuiltinOpcodes)MatcherTable[MatcherIndex++];
+    BuiltinOpcodes Opcode =
+        static_cast<BuiltinOpcodes>(MatcherTable[MatcherIndex++]);
     switch (Opcode) {
     case OPC_Scope: {
       // Okay, the semantics of this operation are that we should push a scope
@@ -3327,7 +3331,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         if (CaseSize == 0) break;
 
         uint16_t Opc = MatcherTable[MatcherIndex++];
-        Opc |= (unsigned short)MatcherTable[MatcherIndex++] << 8;
+        Opc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
 
         // If the opcode matches, then we will execute this case.
         if (CurNodeOpcode == Opc)
@@ -3357,7 +3361,8 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           CaseSize = GetVBR(CaseSize, MatcherTable, MatcherIndex);
         if (CaseSize == 0) break;
 
-        MVT CaseVT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+        MVT CaseVT =
+            static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
         if (CaseVT == MVT::iPTR)
           CaseVT = TLI->getPointerTy(CurDAG->getDataLayout());
 
@@ -3474,7 +3479,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
         VT = MVT::i64;
         break;
       default:
-        VT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+        VT = static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
         break;
       }
       int64_t Val = MatcherTable[MatcherIndex++];
@@ -3488,7 +3493,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     }
     case OPC_EmitRegister: {
       MVT::SimpleValueType VT =
-        (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+          static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
       unsigned RegNo = MatcherTable[MatcherIndex++];
       RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
                               CurDAG->getRegister(RegNo, VT), nullptr));
@@ -3499,7 +3504,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       // values are stored in two bytes in the matcher table (just like
       // opcodes).
       MVT::SimpleValueType VT =
-        (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+          static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
       unsigned RegNo = MatcherTable[MatcherIndex++];
       RegNo |= MatcherTable[MatcherIndex++] << 8;
       RecordedNodes.push_back(std::pair<SDValue, SDNode*>(
@@ -3645,7 +3650,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_EmitNode0:    case OPC_EmitNode1:    case OPC_EmitNode2:
     case OPC_MorphNodeTo0: case OPC_MorphNodeTo1: case OPC_MorphNodeTo2: {
       uint16_t TargetOpc = MatcherTable[MatcherIndex++];
-      TargetOpc |= (unsigned short)MatcherTable[MatcherIndex++] << 8;
+      TargetOpc |= static_cast<uint16_t>(MatcherTable[MatcherIndex++]) << 8;
       unsigned EmitNodeInfo = MatcherTable[MatcherIndex++];
       // Get the result VT list.
       unsigned NumVTs;
@@ -3660,7 +3665,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       SmallVector<EVT, 4> VTs;
       for (unsigned i = 0; i != NumVTs; ++i) {
         MVT::SimpleValueType VT =
-          (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
+            static_cast<MVT::SimpleValueType>(MatcherTable[MatcherIndex++]);
         if (VT == MVT::iPTR)
           VT = TLI->getPointerTy(CurDAG->getDataLayout()).SimpleTy;
         VTs.push_back(VT);
