@@ -635,10 +635,8 @@ INTERCEPTOR_STRTO_BASE(long long, __isoc23_strtoll)
 INTERCEPTOR(int, atoi, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atoi);
-#if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
+  if (SANITIZER_APPLE && UNLIKELY(!AsanInited()))
     return REAL(atoi)(nptr);
-#  endif
   ENSURE_ASAN_INITED();
   if (!flags()->replace_str) {
     return REAL(atoi)(nptr);
@@ -657,10 +655,8 @@ INTERCEPTOR(int, atoi, const char *nptr) {
 INTERCEPTOR(long, atol, const char *nptr) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, atol);
-#if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
+  if (SANITIZER_APPLE && UNLIKELY(!AsanInited()))
     return REAL(atol)(nptr);
-#  endif
   ENSURE_ASAN_INITED();
   if (!flags()->replace_str) {
     return REAL(atol)(nptr);
@@ -696,10 +692,8 @@ static void AtCxaAtexit(void *unused) {
 #if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
-#if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
+  if (SANITIZER_APPLE && UNLIKELY(!AsanInited()))
     return REAL(__cxa_atexit)(func, arg, dso_handle);
-#    endif
   ENSURE_ASAN_INITED();
 #if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler disabler;
