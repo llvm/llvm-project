@@ -186,7 +186,7 @@ static MergeSyntheticSection *createMergeSynthetic(StringRef name,
 // new synthetic sections at the location of the first input section
 // that it replaces. It then finalizes each synthetic section in order
 // to compute an output offset for each piece of each input section.
-void OutputSection::finalizeInputSections() {
+void OutputSection::finalizeInputSections(LinkerScript *script) {
   std::vector<MergeSyntheticSection *> mergeSections;
   for (SectionCommand *cmd : commands) {
     auto *isd = dyn_cast<InputSectionDescription>(cmd);
@@ -226,6 +226,8 @@ void OutputSection::finalizeInputSections() {
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
         isd->sections.push_back(syn);
+        if (script)
+          script->copySpillList(syn, ms);
       }
       (*i)->addSection(ms);
     }

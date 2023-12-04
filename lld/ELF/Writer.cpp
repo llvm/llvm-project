@@ -1419,6 +1419,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   for (;;) {
     bool changed = target->needsThunks ? tc.createThunks(pass, outputSections)
                                        : target->relaxOnce(pass);
+    bool spilled = script->spillSections();
+    changed |= spilled;
     ++pass;
 
     // With Thunk Size much smaller than branch range we expect to
@@ -1464,6 +1466,12 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
                     " does not converge");
         break;
       }
+    } else if (spilled) {
+      // Spilling can change relative section order, so recompute anything that
+      // depends on it.
+      for (Partition &part : partitions)
+        finalizeSynthetic(part.armExidx.get());
+      resolveShfLinkOrder();
     }
   }
   if (!config->relocatable)
@@ -1483,6 +1491,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
              osec->name + " is not a multiple of alignment (" +
              Twine(osec->addralign) + ")");
     }
+
+  // Sizes are no longer allowed to grow, so all allowable spills have been
+  // taken. Remove any leftover potential spills.
+  script->eraseSpillSections();
 }
 
 // If Input Sections have been shrunk (basic block sections) then

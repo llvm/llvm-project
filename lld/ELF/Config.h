@@ -237,6 +237,7 @@ struct Config {
   bool emitLLVM;
   bool emitRelocs;
   bool enableNewDtags;
+  bool enableNonContiguousRegions;
   bool executeOnly;
   bool exportDynamic;
   bool fixCortexA53Errata843419;

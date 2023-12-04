@@ -10,6 +10,7 @@
 #define LLD_ELF_LINKER_SCRIPT_H
 
 #include "Config.h"
+#include "InputSection.h"
 #include "Writer.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Strings.h"
@@ -287,7 +288,8 @@ class LinkerScript final {
 
   SmallVector<InputSectionBase *, 0>
   computeInputSections(const InputSectionDescription *,
-                       ArrayRef<InputSectionBase *>);
+                       ArrayRef<InputSectionBase *>,
+                       const OutputSection &outCmd);
 
   SmallVector<InputSectionBase *, 0> createInputSectionList(OutputSection &cmd);
 
@@ -312,6 +314,15 @@ class LinkerScript final {
 
   uint64_t dot;
 
+  // List of potential spill locations (SpillInputSection) for an input
+  // section.
+  struct SpillList {
+    // Never nullptr.
+    SpillInputSection *head;
+    SpillInputSection *tail;
+  };
+  llvm::DenseMap<InputSectionBase *, SpillList> spillLists;
+
 public:
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
@@ -325,6 +336,7 @@ public:
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
   void diagnoseMissingSGSectionAddress() const;
+  void copySpillList(InputSectionBase *dst, InputSectionBase *src);
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
@@ -333,6 +345,8 @@ public:
 
   bool shouldKeep(InputSectionBase *s);
   const Defined *assignAddresses();
+  bool spillSections();
+  void eraseSpillSections();
   void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();
