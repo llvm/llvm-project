@@ -250,9 +250,9 @@ module {
     llvm.return
   }
 
+  // CHECK-LABEL: @frame_pointer_roundtrip()
+  // CHECK-SAME: attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
   llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">} {
-    // CHECK: @frame_pointer_roundtrip()
-    // CHECK-SAME: attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
     llvm.return
   }
 }

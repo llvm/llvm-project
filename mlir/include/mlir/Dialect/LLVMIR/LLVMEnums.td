@@ -664,7 +664,7 @@ def ModRefInfoEnum : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
-// FramePointerAttr
+// FramePointerKind
 //===----------------------------------------------------------------------===//
 
 def FramePointerKindNone
