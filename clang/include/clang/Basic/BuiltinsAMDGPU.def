@@ -503,6 +503,10 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_fp8_bf8_w64, "V4fiV2iV4fs", 
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 // OpenCL
+// OpenCL printf has the following signature
+//     int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)));
+// The "__constant" address space corresponds to number 4 in LLVM IR for AMDGPU.
+// Following entry makes sure printf is recognized as builtin for OCL inputs.
 LANGBUILTIN(printf, "icC*4.", "fp:0:", ALL_OCL_LANGUAGES)
 
 #undef BUILTIN

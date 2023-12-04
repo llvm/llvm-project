@@ -46,6 +46,9 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg,
     return Builder.CreateBitCast(Arg, Int64Ty);
   }
 
+  // The cast is necessary for the hostcall case 
+  // for the argument to be compatible with device lib 
+  // functions.
   if (!IsBuffered && isa<PointerType>(Ty)) {
     return Builder.CreatePtrToInt(Arg, Int64Ty);
   }
@@ -228,7 +231,7 @@ static void locateCStringsAndVectors(SparseBitVector<8> &BV,
       return;
     auto Spec = Str.slice(SpecPos, SpecEnd + 1);
 
-    if ((Spec.find_first_of("v")) != StringRef::npos)
+    if ((Spec.find("v")) != StringRef::npos)
       OV.set(ArgIdx);
 
     ArgIdx += Spec.count('*');
