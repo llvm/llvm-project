@@ -77,12 +77,26 @@ void t12(void) {
 void t13(void) {
   int array[256] = { 0 };
   const char b = 'a';
-  int val = array[b]; // expected-warning{{array subscript is of type 'char'}}
+  int val = array[b]; // no warning for char with known positive value
 }
 
 void t14(void) {
+  int array[256] = { 0 };
+  constexpr char b = 'a';
+  int val = array[b]; // no warning for char with known positive value
+}
+
+void t15(void) {
   int array[256] = { 0 }; // expected-note {{array 'array' declared here}}
   const char b = -1;
+  // expected-warning@+2 {{array subscript is of type 'char'}}
+  // expected-warning@+1 {{array index -1 is before the beginning of the array}}
+  int val = array[b];
+}
+
+void t16(void) {
+  int array[256] = { 0 }; // expected-note {{array 'array' declared here}}
+  constexpr char b = -1;
   // expected-warning@+2 {{array subscript is of type 'char'}}
   // expected-warning@+1 {{array index -1 is before the beginning of the array}}
   int val = array[b];

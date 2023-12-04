@@ -25,8 +25,6 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <vector>
-
 namespace llvm {
 
 struct Session {

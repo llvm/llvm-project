@@ -651,6 +651,8 @@ Bug Fixes in This Version
 - Fixed false positive error emitted by clang when performing qualified name
   lookup and the current class instantiation has dependent bases.
   Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
+- Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
+  Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
