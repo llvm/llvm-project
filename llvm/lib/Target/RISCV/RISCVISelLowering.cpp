@@ -16869,10 +16869,9 @@ static const MCPhysReg ArgVRM4s[] = {RISCV::V8M4, RISCV::V12M4, RISCV::V16M4,
 static const MCPhysReg ArgVRM8s[] = {RISCV::V8M8, RISCV::V16M8};
 
 ArrayRef<MCPhysReg> RISCV::getArgGPRs() {
-  static const MCPhysReg ArgGPRs[] = {
-    RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13,
-    RISCV::X14, RISCV::X15, RISCV::X16, RISCV::X17
-  };
+  static const MCPhysReg ArgGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
+                                      RISCV::X13, RISCV::X14, RISCV::X15,
+                                      RISCV::X16, RISCV::X17};
 
   return ArrayRef(ArgGPRs);
 }
