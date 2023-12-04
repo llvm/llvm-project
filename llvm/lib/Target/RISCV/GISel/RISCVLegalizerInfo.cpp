@@ -23,6 +23,7 @@
 
 using namespace llvm;
 using namespace LegalityPredicates;
+using namespace LegalizeMutations;
 
 // Is this type supported by scalar FP arithmetic operations given the current
 // subtarget.
@@ -99,7 +100,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
-  getActionDefinitionsBuilder({G_ROTL, G_ROTR}).lower();
+  auto &RotateActions = getActionDefinitionsBuilder({G_ROTL, G_ROTR});
+  if (ST.hasStdExtZbb()) {
+    RotateActions.legalFor({{s32, sXLen}, {sXLen, sXLen}});
+    // Widen s32 rotate amount to s64 so SDAG patterns will match.
+    if (ST.is64Bit())
+      RotateActions.widenScalarIf(all(typeIs(0, s32), typeIs(1, s32)),
+                                  changeTo(1, sXLen));
+  }
+  RotateActions.lower();
 
   getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
 
