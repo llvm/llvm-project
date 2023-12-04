@@ -2271,7 +2271,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             }
 
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                          SectionAddr + RelOffset, Is64Bits);
+                            SectionAddr + RelOffset, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
