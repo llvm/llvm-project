@@ -326,6 +326,41 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// Coexecute Construct
+//===----------------------------------------------------------------------===//
+
+def CoexecuteOp : OpenMP_Op<"coexecute"> {
+  let summary = "coexecute directive";
+  let description = [{
+    The coexecute construct specifies that the teams from the teams directive
+    this is nested in shall cooperate to execute the computation in this region.
+    There is no implicit barrier at the end as specified in the standard.
+
+    TODO
+    We should probably change the defaut behaviour to have a barrier unless
+    nowait is specified, see below snippet.
+
+    ```
+    !$omp target teams
+        !$omp coexecute
+                tmp = matmul(x, y)
+        !$omp end coexecute
+        a = tmp(0, 0) ! there is no implicit barrier! the matmul hasnt completed!
+    !$omp end target teams coexecute
+    ```
+
+  }];
+
+  let arguments = (ins UnitAttr:$nowait);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(`nowait` $nowait) $region attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.8.2 Single Construct
 //===----------------------------------------------------------------------===//
 
