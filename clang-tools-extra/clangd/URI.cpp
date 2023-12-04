@@ -191,7 +191,9 @@ llvm::Expected<URI> URI::parse(llvm::StringRef OrigUri) {
     Uri = Uri.substr(Pos);
   }
   U.Body = percentDecode(Uri);
-  if (U.scheme() == "file" && clang::clangd::isWindowsPath(U.Body)) {
+  if (U.scheme() == "file" &&
+      (clang::clangd::isWindowsPath(U.Body.substr(Pos + 1)) ||
+       (clang::clangd::isWindowsPath(U.Body.substr(Pos))))) {
     Pos = U.Body.find(":");
     U.Body.at(Pos - 1) = std::toupper(U.Body.at(Pos - 1));
   }
