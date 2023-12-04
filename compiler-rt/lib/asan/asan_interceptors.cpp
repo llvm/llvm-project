@@ -96,14 +96,16 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   ASAN_WRITE_RANGE(ctx, ptr, size)
 #define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
   ASAN_READ_RANGE(ctx, ptr, size)
-#  define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)    \
-    ASAN_INTERCEPTOR_ENTER(ctx, func);                \
-    do {                                              \
-      if (AsanInitIsRunning())                        \
-        return REAL(func)(__VA_ARGS__);               \
-      if (SANITIZER_APPLE && UNLIKELY(!AsanInited())) \
-        return REAL(func)(__VA_ARGS__);               \
-      ENSURE_ASAN_INITED();                           \
+#  define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+    ASAN_INTERCEPTOR_ENTER(ctx, func);             \
+    do {                                           \
+      if constexpr (SANITIZER_APPLE) {             \
+        if (UNLIKELY(!AsanInited()))               \
+          return REAL(func)(__VA_ARGS__);          \
+      } else {                                     \
+        if (!TryAsanInitFromRtl())                 \
+          return REAL(func)(__VA_ARGS__);          \
+      }                                            \
     } while (false)
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
   do {                                            \
@@ -534,16 +536,16 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
-#if SANITIZER_APPLE
-  if (UNLIKELY(!AsanInited()))
-    return REAL(strcpy)(to, from);
-#endif
-  // strcpy is called from malloc_default_purgeable_zone()
-  // in __asan::ReplaceSystemAlloc() on Mac.
-  if (AsanInitIsRunning()) {
-    return REAL(strcpy)(to, from);
+  if constexpr (SANITIZER_APPLE) {
+    // strcpy is called from malloc_default_purgeable_zone()
+    // in __asan::ReplaceSystemAlloc() on Mac.
+    if (UNLIKELY(!AsanInited()))
+      return REAL(strcpy)(to, from);
+  } else {
+    if (!TryAsanInitFromRtl())
+      return REAL(strcpy)(to, from);
   }
-  ENSURE_ASAN_INITED();
+
   if (flags()->replace_str) {
     uptr from_size = internal_strlen(from) + 1;
     CHECK_RANGES_OVERLAP("strcpy", to, from_size, from, from_size);
