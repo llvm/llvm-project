@@ -608,16 +608,17 @@ class FlattenContiguousRowMajorTransferReadPattern
       //      memref<1x86xi32>, vector<2xi32>
       // one would get the following offset:
       //    %offset = %arg0 * 43
-      AffineExpr offsetE, idx;
-      bindSymbols(rewriter.getContext(), offsetE, idx);
+      AffineExpr offsetExpr, idxExpr;
+      bindSymbols(rewriter.getContext(), offsetExpr, idxExpr);
 
       int64_t outputRank = transferReadOp.getIndices().size();
       OpFoldResult offset =
           rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+
       for (int64_t i = firstDimToCollapse; i < outputRank; ++i) {
         int64_t dim = dyn_cast<ShapedType>(source.getType()).getDimSize(i);
         offset = affine::makeComposedFoldedAffineApply(
-            rewriter, loc, offsetE + dim * idx,
+            rewriter, loc, offsetExpr + dim * idxExpr,
             {offset, transferReadOp.getIndices()[i]});
       }
       if (offset.is<Value>()) {
