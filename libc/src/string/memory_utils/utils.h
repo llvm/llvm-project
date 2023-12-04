@@ -341,9 +341,9 @@ void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
 }
 
 // Same as align_p1_to_next_boundary above but with a single pointer instead.
-template <size_t SIZE, typename T1>
-LIBC_INLINE void align_to_next_boundary(T1 *&p1, size_t &count) {
-  CPtr dummy;
+template <size_t SIZE, typename T>
+LIBC_INLINE void align_to_next_boundary(T *&p1, size_t &count) {
+  const T *dummy = p1;
   align_p1_to_next_boundary<SIZE>(p1, dummy, count);
 }
 
