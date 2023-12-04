@@ -7,13 +7,13 @@ fdiv.s f1, f2, f3
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
-# CHECK-NEXT: Total Cycles:      94
+# CHECK-NEXT: Total Cycles:      67
 # CHECK-NEXT: Total uOps:        2
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.02
-# CHECK-NEXT: IPC:               0.02
-# CHECK-NEXT: Block RThroughput: 93.0
+# CHECK-NEXT: uOps Per Cycle:    0.03
+# CHECK-NEXT: IPC:               0.03
+# CHECK-NEXT: Block RThroughput: 65.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -24,8 +24,8 @@ fdiv.s f1, f2, f3
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      66    66.00                       div	a0, a1, a2
-# CHECK-NEXT:  1      27    27.00                       fdiv.s	ft1, ft2, ft3
+# CHECK-NEXT:  1      66    65.00                       div	a0, a1, a2
+# CHECK-NEXT:  1      27    26.00                       fdiv.s	ft1, ft2, ft3
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv
@@ -39,19 +39,19 @@ fdiv.s f1, f2, f3
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 26.00  65.00   -     93.00   -      -      -      -
+# CHECK-NEXT: 26.00  65.00   -     2.00    -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
-# CHECK-NEXT:  -     65.00   -     66.00   -      -      -      -     div	a0, a1, a2
-# CHECK-NEXT: 26.00   -      -     27.00   -      -      -      -     fdiv.s	ft1, ft2, ft3
+# CHECK-NEXT:  -     65.00   -     1.00    -      -      -      -     div	a0, a1, a2
+# CHECK-NEXT: 26.00   -      -     1.00    -      -      -      -     fdiv.s	ft1, ft2, ft3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456
 
 # CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeE   div	a0, a1, a2
-# CHECK-NEXT: Truncated display due to cycle limit
+# CHECK-NEXT: [0,1]     .    .    .    .    .    .    .    .   DeeeeeeeeeeeeeeeeeeeeeeeeeeE   fdiv.s	ft1, ft2, ft3
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
