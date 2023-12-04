@@ -1,8 +1,3 @@
-// Test case for scanning input of GCC output as multilib config
-// Skip this test on Windows, we can't create a dummy GCC to output
-// multilib config, ExecuteAndWait only execute *.exe file.
-// UNSUPPORTED: system-windows
-
 // RUN: %clang %s \
 // RUN:   -target riscv64-unknown-elf \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \

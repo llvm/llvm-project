@@ -1717,13 +1717,13 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 }
 
 /// Extend the multi-lib re-use selection mechanism for RISC-V.
-/// This funciton will try to re-use multi-lib if they are compatible.
+/// This function will try to re-use multi-lib if they are compatible.
 /// Definition of compatible:
 ///   - ABI must be the same.
 ///   - multi-lib is a subset of current arch, e.g. multi-lib=march=rv32im
 ///     is a subset of march=rv32imc.
 ///   - march that contains atomic extension can't reuse multi-lib that
-///     doesn't has atomic, vice versa. e.g. multi-lib=march=rv32im and
+///     doesn't have atomic, vice versa. e.g. multi-lib=march=rv32im and
 ///     march=rv32ima are not compatible, because software and hardware
 ///     atomic operation can't work together correctly.
 static bool
@@ -1734,21 +1734,20 @@ RISCVMultilibSelect(const MultilibSet &RISCVMultilibSet, StringRef Arch,
   if (RISCVMultilibSet.select(Flags, SelectedMultilibs))
     return true;
 
-  llvm::StringMap<bool> FlagSet;
   Multilib::flags_list NewFlags;
   std::vector<MultilibBuilder> NewMultilibs;
 
-  auto ParseResult = llvm::RISCVISAInfo::parseArchString(
-      Arch, /*EnableExperimentalExtension=*/true,
-      /*ExperimentalExtensionVersionCheck=*/false);
+  llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> ParseResult =
+      llvm::RISCVISAInfo::parseArchString(
+          Arch, /*EnableExperimentalExtension=*/true,
+          /*ExperimentalExtensionVersionCheck=*/false);
   if (!ParseResult) {
-    // Ignore any error here, we assume it will handled in another place.
+    // Ignore any error here, we assume it will be handled in another place.
     consumeError(ParseResult.takeError());
     return false;
   }
-  auto &ISAInfo = *ParseResult;
 
-  auto CurrentExts = ISAInfo->getExtensions();
+  auto &ISAInfo = *ParseResult;
 
   addMultilibFlag(ISAInfo->getXLen() == 32, "-m32", NewFlags);
   addMultilibFlag(ISAInfo->getXLen() == 64, "-m64", NewFlags);
@@ -1762,7 +1761,7 @@ RISCVMultilibSelect(const MultilibSet &RISCVMultilibSet, StringRef Arch,
   }
 
   llvm::StringSet<> AllArchExts;
-  // Reconstruct multi-lib list, and break march option into seperated
+  // Reconstruct multi-lib list, and break march option into separated
   // extension. e.g. march=rv32im -> +i +m
   for (auto M : RISCVMultilibSet) {
     bool Skip = false;
@@ -1777,21 +1776,23 @@ RISCVMultilibSelect(const MultilibSet &RISCVMultilibSet, StringRef Arch,
       }
 
       // Break down -march into individual extension.
-      auto MLConfigParseResult = llvm::RISCVISAInfo::parseArchString(
-          Flag.drop_front(7), /*EnableExperimentalExtension=*/true,
-          /*ExperimentalExtensionVersionCheck=*/false);
+      llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> MLConfigParseResult =
+          llvm::RISCVISAInfo::parseArchString(
+              Flag.drop_front(7), /*EnableExperimentalExtension=*/true,
+              /*ExperimentalExtensionVersionCheck=*/false);
       if (!MLConfigParseResult) {
         // Ignore any error here, we assume it will handled in another place.
         llvm::consumeError(MLConfigParseResult.takeError());
 
-        // We might got parsing error if rv32e in the list, we could just skip
+        // We might get parsing error if rv32e in the list, we could just skip
         // that and process the rest of multi-lib configs.
         Skip = true;
         continue;
       }
       auto &MLConfigISAInfo = *MLConfigParseResult;
 
-      auto MLConfigArchExts = MLConfigISAInfo->getExtensions();
+      const llvm::RISCVISAInfo::OrderedExtensionMap &MLConfigArchExts =
+          MLConfigISAInfo->getExtensions();
       for (auto MLConfigArchExt : MLConfigArchExts) {
         auto ExtName = MLConfigArchExt.first;
         NewMultilib.flag(Twine("-", ExtName).str());
