@@ -47,6 +47,7 @@ static_library("modernize") {
     "UseNoexceptCheck.cpp",
     "UseNullptrCheck.cpp",
     "UseOverrideCheck.cpp",
+    "UseStartsEndsWithCheck.cpp",
     "UseStdPrintCheck.cpp",
     "UseTrailingReturnTypeCheck.cpp",
     "UseTransparentFunctorsCheck.cpp",
