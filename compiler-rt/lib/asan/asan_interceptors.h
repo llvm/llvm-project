@@ -24,11 +24,6 @@ namespace __asan {
 void InitializeAsanInterceptors();
 void InitializePlatformInterceptors();
 
-#define ENSURE_ASAN_INITED() \
-  do {                       \
-    AsanInitFromRtl();       \
-  } while (0)
-
 }  // namespace __asan
 
 // There is no general interception at all on Fuchsia.
