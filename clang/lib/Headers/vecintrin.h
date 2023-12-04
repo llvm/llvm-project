@@ -1543,7 +1543,7 @@ vec_load_len(const double *__ptr, unsigned int __len) {
 #if __ARCH__ >= 12
 static inline __ATTRS_ai __vector unsigned char
 vec_load_len_r(const unsigned char *__ptr, unsigned int __len) {
-  return (__vector unsigned char)__builtin_s390_vlrl(__len, __ptr);
+  return (__vector unsigned char)__builtin_s390_vlrlr(__len, __ptr);
 }
 #endif
 
@@ -1617,7 +1617,7 @@ vec_store_len(__vector double __vec, double *__ptr,
 static inline __ATTRS_ai void
 vec_store_len_r(__vector unsigned char __vec, unsigned char *__ptr,
                 unsigned int __len) {
-  __builtin_s390_vstrl((__vector signed char)__vec, __len, __ptr);
+  __builtin_s390_vstrlr((__vector signed char)__vec, __len, __ptr);
 }
 #endif
 

@@ -253,8 +253,8 @@ TARGET_BUILTIN(__builtin_s390_vfsqdb, "V2dV2d", "nc", "vector")
 TARGET_BUILTIN(__builtin_s390_vftcidb, "V2SLLiV2dIii*", "nc", "vector")
 
 // Vector-enhancements facility 1 intrinsics.
-TARGET_BUILTIN(__builtin_s390_vlrl, "V16ScUivC*", "", "vector-enhancements-1")
-TARGET_BUILTIN(__builtin_s390_vstrl, "vV16ScUiv*", "", "vector-enhancements-1")
+TARGET_BUILTIN(__builtin_s390_vlrlr, "V16ScUivC*", "", "vector-enhancements-1")
+TARGET_BUILTIN(__builtin_s390_vstrlr, "vV16ScUiv*", "", "vector-enhancements-1")
 TARGET_BUILTIN(__builtin_s390_vbperm, "V2ULLiV16UcV16Uc", "nc", "vector-enhancements-1")
 TARGET_BUILTIN(__builtin_s390_vmslg, "V16UcV2ULLiV2ULLiV16UcIi", "nc", "vector-enhancements-1")
 TARGET_BUILTIN(__builtin_s390_vfmaxdb, "V2dV2dV2dIi", "nc", "vector-enhancements-1")
