@@ -12114,6 +12114,24 @@ public:
 
 }
 
+static void DiagnoseInvisibleNamespace(const TypoCorrection &Corrected,
+                                       Sema &S) {
+  auto *ND = cast<NamespaceDecl>(Corrected.getFoundDecl());
+  Module *M = ND->getOwningModule();
+  assert(M && "hidden namespace definition not in a module?");
+
+  if (M->isExplicitGlobalModule())
+    S.Diag(Corrected.getCorrectionRange().getBegin(),
+           diag::err_module_unimported_use_header)
+        << (int)Sema::MissingImportKind::Declaration << Corrected.getFoundDecl()
+        << /*Header Name*/ false;
+  else
+    S.Diag(Corrected.getCorrectionRange().getBegin(),
+           diag::err_module_unimported_use)
+        << (int)Sema::MissingImportKind::Declaration << Corrected.getFoundDecl()
+        << M->getTopLevelModuleName();
+}
+
 static bool TryNamespaceTypoCorrection(Sema &S, LookupResult &R, Scope *Sc,
                                        CXXScopeSpec &SS,
                                        SourceLocation IdentLoc,
@@ -12123,7 +12141,16 @@ static bool TryNamespaceTypoCorrection(Sema &S, LookupResult &R, Scope *Sc,
   if (TypoCorrection Corrected =
           S.CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), Sc, &SS, CCC,
                         Sema::CTK_ErrorRecovery)) {
-    if (DeclContext *DC = S.computeDeclContext(SS, false)) {
+    // Generally we find it is confusing more than helpful to diagnose the
+    // invisible namespace.
+    // See https://github.com/llvm/llvm-project/issues/73893.
+    //
+    // However, we should diagnose when the users are trying to using an
+    // invisible namespace. So we handle the case specially here.
+    if (isa_and_nonnull<NamespaceDecl>(Corrected.getFoundDecl()) &&
+        Corrected.requiresImport()) {
+      DiagnoseInvisibleNamespace(Corrected, S);
+    } else if (DeclContext *DC = S.computeDeclContext(SS, false)) {
       std::string CorrectedStr(Corrected.getAsString(S.getLangOpts()));
       bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
                               Ident->getName().equals(CorrectedStr);

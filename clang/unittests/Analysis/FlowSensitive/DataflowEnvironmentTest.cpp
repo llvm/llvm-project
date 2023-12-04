@@ -96,6 +96,7 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   // Verify that the struct and the field (`R`) with first appearance of the
   // type is created successfully.
   Environment Env(DAContext, *Fun);
+  Env.initialize();
   auto &SLoc = cast<RecordStorageLocation>(Env.createObject(Ty));
   PointerValue *PV = cast_or_null<PointerValue>(getFieldValue(&SLoc, *R, Env));
   EXPECT_THAT(PV, NotNull());
@@ -175,6 +176,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
+  Env.initialize();
   EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
@@ -225,6 +227,7 @@ TEST_F(EnvironmentTest, IncludeFieldsFromDefaultInitializers) {
   // Verify that the `X` field of `S` is populated when analyzing the
   // constructor, even though it is not referenced directly in the constructor.
   Environment Env(DAContext, *Constructor);
+  Env.initialize();
   auto &Loc = cast<RecordStorageLocation>(Env.createObject(QTy));
   EXPECT_THAT(getFieldValue(&Loc, *XDecl, Env), NotNull());
 }
@@ -268,6 +271,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
+  Env.initialize();
   const auto *GlobalLoc =
       cast<RecordStorageLocation>(Env.getStorageLocation(*GlobalDecl));
   auto *BarVal = getFieldValue(GlobalLoc, *BarDecl, Env);
@@ -303,6 +307,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsConstructor) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Ctor);
+  Env.initialize();
   EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
