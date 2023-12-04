@@ -224,10 +224,10 @@ __inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle,
     typedef typename iterator_traits<_BidirectionalIterator>::difference_type difference_type;
     difference_type __len1 = _IterOps<_AlgPolicy>::distance(__first, __middle);
     difference_type __len2 = _IterOps<_AlgPolicy>::distance(__middle, __last);
-    difference_type __buf_size = _VSTD::min(__len1, __len2);
+    difference_type __buf_size = std::min(__len1, __len2);
 // TODO: Remove the use of std::get_temporary_buffer
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    pair<value_type*, ptrdiff_t> __buf = _VSTD::get_temporary_buffer<value_type>(__buf_size);
+    pair<value_type*, ptrdiff_t> __buf = std::get_temporary_buffer<value_type>(__buf_size);
 _LIBCPP_SUPPRESS_DEPRECATED_POP
     unique_ptr<value_type, __return_temporary_buffer> __h(__buf.first);
     return std::__inplace_merge<_AlgPolicy>(

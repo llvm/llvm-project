@@ -134,10 +134,10 @@ binomial_distribution<_IntType>::param_type::param_type(result_type __t, double 
     if (0 < __p_ && __p_ < 1)
     {
         __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-        __pr_ = _VSTD::exp(std::__libcpp_lgamma(__t_ + 1.) -
+        __pr_ = std::exp(std::__libcpp_lgamma(__t_ + 1.) -
                            std::__libcpp_lgamma(__r0_ + 1.) -
-                           std::__libcpp_lgamma(__t_ - __r0_ + 1.) + __r0_ * _VSTD::log(__p_) +
-                           (__t_ - __r0_) * _VSTD::log(1 - __p_));
+                           std::__libcpp_lgamma(__t_ - __r0_ + 1.) + __r0_ * std::log(__p_) +
+                           (__t_ - __r0_) * std::log(1 - __p_));
         __odds_ratio_ = __p_ / (1 - __p_);
     }
 }

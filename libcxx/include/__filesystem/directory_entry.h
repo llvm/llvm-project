@@ -316,7 +316,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI
   void __assign_iter_entry(_Path&& __p, __cached_data __dt) {
-    __p_ = _VSTD::move(__p);
+    __p_ = std::move(__p);
     __data_ = __dt;
   }
 
@@ -502,7 +502,7 @@ private:
 class __dir_element_proxy {
 public:
   inline _LIBCPP_HIDE_FROM_ABI directory_entry operator*() {
-    return _VSTD::move(__elem_);
+    return std::move(__elem_);
   }
 
 private:
@@ -510,7 +510,7 @@ private:
   friend class recursive_directory_iterator;
   _LIBCPP_HIDE_FROM_ABI explicit __dir_element_proxy(directory_entry const& __e) : __elem_(__e) {}
   _LIBCPP_HIDE_FROM_ABI __dir_element_proxy(__dir_element_proxy&& __o)
-      : __elem_(_VSTD::move(__o.__elem_)) {}
+      : __elem_(std::move(__o.__elem_)) {}
   directory_entry __elem_;
 };
 

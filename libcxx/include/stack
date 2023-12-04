@@ -183,15 +183,15 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     stack(stack&& __q)
         _NOEXCEPT_(is_nothrow_move_constructible<container_type>::value)
-        : c(_VSTD::move(__q.c)) {}
+        : c(std::move(__q.c)) {}
 
     _LIBCPP_HIDE_FROM_ABI
     stack& operator=(stack&& __q)
         _NOEXCEPT_(is_nothrow_move_assignable<container_type>::value)
-        {c = _VSTD::move(__q.c); return *this;}
+        {c = std::move(__q.c); return *this;}
 
     _LIBCPP_HIDE_FROM_ABI
-    explicit stack(container_type&& __c) : c(_VSTD::move(__c)) {}
+    explicit stack(container_type&& __c) : c(std::move(__c)) {}
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_HIDE_FROM_ABI
@@ -217,12 +217,12 @@ public:
         _LIBCPP_HIDE_FROM_ABI
         stack(container_type&& __c, const _Alloc& __a,
               __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
-            : c(_VSTD::move(__c), __a) {}
+            : c(std::move(__c), __a) {}
     template <class _Alloc>
         _LIBCPP_HIDE_FROM_ABI
         stack(stack&& __s, const _Alloc& __a,
               __enable_if_t<uses_allocator<container_type, _Alloc>::value>* = 0)
-            : c(_VSTD::move(__s.c), __a) {}
+            : c(std::move(__s.c), __a) {}
 #endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER >= 23
@@ -264,7 +264,7 @@ public:
     void push(const value_type& __v) {c.push_back(__v);}
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
-    void push(value_type&& __v) {c.push_back(_VSTD::move(__v));}
+    void push(value_type&& __v) {c.push_back(std::move(__v));}
 
 #if _LIBCPP_STD_VER >= 23
     template <_ContainerCompatibleRange<_Tp> _Range>
@@ -284,10 +284,10 @@ public:
         _LIBCPP_HIDE_FROM_ABI
 #if _LIBCPP_STD_VER >= 17
         decltype(auto) emplace(_Args&&... __args)
-        { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+        { return c.emplace_back(std::forward<_Args>(__args)...);}
 #else
         void      emplace(_Args&&... __args)
-        {        c.emplace_back(_VSTD::forward<_Args>(__args)...);}
+        {        c.emplace_back(std::forward<_Args>(__args)...);}
 #endif
 #endif // _LIBCPP_CXX03_LANG
 
@@ -298,7 +298,7 @@ public:
     void swap(stack& __s)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value)
     {
-        using _VSTD::swap;
+        using std::swap;
         swap(c, __s.c);
     }
 
