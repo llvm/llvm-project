@@ -49,13 +49,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI directory_entry(directory_entry const&) = default;
   _LIBCPP_HIDE_FROM_ABI directory_entry(directory_entry&&) noexcept = default;
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   explicit directory_entry(_Path const& __p) : __p_(__p) {
     error_code __ec;
     __refresh(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   directory_entry(_Path const& __p, error_code& __ec) : __p_(__p) {
     __refresh(&__ec);
   }
@@ -65,183 +65,183 @@ public:
   _LIBCPP_HIDE_FROM_ABI directory_entry& operator=(directory_entry const&) = default;
   _LIBCPP_HIDE_FROM_ABI directory_entry& operator=(directory_entry&&) noexcept = default;
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void assign(_Path const& __p) {
     __p_ = __p;
     error_code __ec;
     __refresh(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void assign(_Path const& __p, error_code& __ec) {
     __p_ = __p;
     __refresh(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void replace_filename(_Path const& __p) {
     __p_.replace_filename(__p);
     error_code __ec;
     __refresh(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void replace_filename(_Path const& __p, error_code& __ec) {
     __p_ = __p_.parent_path() / __p;
     __refresh(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void refresh() { __refresh(); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void refresh(error_code& __ec) noexcept { __refresh(&__ec); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   _Path const& path() const noexcept { return __p_; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   operator const _Path&() const noexcept { return __p_; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool exists() const { return filesystem::exists(file_status{__get_ft()}); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool exists(error_code& __ec) const noexcept {
     return filesystem::exists(file_status{__get_ft(&__ec)});
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_block_file() const { return __get_ft() == file_type::block; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_block_file(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::block;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_character_file() const { return __get_ft() == file_type::character; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_character_file(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::character;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_directory() const { return __get_ft() == file_type::directory; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_directory(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::directory;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_fifo() const { return __get_ft() == file_type::fifo; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_fifo(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::fifo;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_other() const { return filesystem::is_other(file_status{__get_ft()}); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_other(error_code& __ec) const noexcept {
     return filesystem::is_other(file_status{__get_ft(&__ec)});
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_regular_file() const { return __get_ft() == file_type::regular; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_regular_file(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::regular;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_socket() const { return __get_ft() == file_type::socket; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_socket(error_code& __ec) const noexcept {
     return __get_ft(&__ec) == file_type::socket;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_symlink() const { return __get_sym_ft() == file_type::symlink; }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool is_symlink(error_code& __ec) const noexcept {
     return __get_sym_ft(&__ec) == file_type::symlink;
   }
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   uintmax_t file_size() const { return __get_size(); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   uintmax_t file_size(error_code& __ec) const noexcept {
     return __get_size(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   uintmax_t hard_link_count() const { return __get_nlink(); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   uintmax_t hard_link_count(error_code& __ec) const noexcept {
     return __get_nlink(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_time_type last_write_time() const { return __get_write_time(); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_time_type last_write_time(error_code& __ec) const noexcept {
     return __get_write_time(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_status status() const { return __get_status(); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_status status(error_code& __ec) const noexcept {
     return __get_status(&__ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_status symlink_status() const { return __get_symlink_status(); }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_status symlink_status(error_code& __ec) const noexcept {
     return __get_symlink_status(&__ec);
   }
 
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator==(directory_entry const& __rhs) const noexcept {
     return __p_ == __rhs.__p_;
   }
 
 #if _LIBCPP_STD_VER <= 17
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator!=(directory_entry const& __rhs) const noexcept {
     return __p_ != __rhs.__p_;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator<(directory_entry const& __rhs) const noexcept {
     return __p_ < __rhs.__p_;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator<=(directory_entry const& __rhs) const noexcept {
     return __p_ <= __rhs.__p_;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator>(directory_entry const& __rhs) const noexcept {
     return __p_ > __rhs.__p_;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   bool operator>=(directory_entry const& __rhs) const noexcept {
     return __p_ >= __rhs.__p_;
   }
@@ -256,7 +256,7 @@ public:
 #endif // _LIBCPP_STD_VER <= 17
 
   template <class _CharT, class _Traits>
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const directory_entry& __d) {
     return __os << __d.path();
   }
@@ -284,10 +284,10 @@ private:
     file_type __type_;
     _CacheType __cache_type_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __cached_data() noexcept { __reset(); }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __reset() {
       __cache_type_ = _Empty;
       __type_ = file_type::none;
@@ -297,7 +297,7 @@ private:
     }
   };
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   static __cached_data __create_iter_result(file_type __ft) {
     __cached_data __data;
     __data.__type_ = __ft;
@@ -314,7 +314,7 @@ private:
     return __data;
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void __assign_iter_entry(_Path&& __p, __cached_data __dt) {
     __p_ = _VSTD::move(__p);
     __data_ = __dt;
@@ -322,7 +322,7 @@ private:
 
   _LIBCPP_EXPORTED_FROM_ABI error_code __do_refresh() noexcept;
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   static bool __is_dne_error(error_code const& __ec) {
     if (!__ec)
       return true;
@@ -335,7 +335,7 @@ private:
     }
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void __handle_error(const char* __msg, error_code* __dest_ec,
                       error_code const& __ec, bool __allow_dne = false) const {
     if (__dest_ec) {
@@ -346,13 +346,13 @@ private:
       __throw_filesystem_error(__msg, __p_, __ec);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   void __refresh(error_code* __ec = nullptr) {
     __handle_error("in directory_entry::refresh", __ec, __do_refresh(),
                    /*allow_dne*/ true);
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_type __get_sym_ft(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -375,7 +375,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_type __get_ft(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -396,7 +396,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_status __get_status(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -411,7 +411,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_status __get_symlink_status(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -427,7 +427,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   uintmax_t __get_size(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -452,7 +452,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   uintmax_t __get_nlink(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -471,7 +471,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_HIDE_FROM_ABI
   file_time_type __get_write_time(error_code* __ec = nullptr) const {
     switch (__data_.__cache_type_) {
     case _Empty:
@@ -501,7 +501,7 @@ private:
 
 class __dir_element_proxy {
 public:
-  inline _LIBCPP_INLINE_VISIBILITY directory_entry operator*() {
+  inline _LIBCPP_HIDE_FROM_ABI directory_entry operator*() {
     return _VSTD::move(__elem_);
   }
 

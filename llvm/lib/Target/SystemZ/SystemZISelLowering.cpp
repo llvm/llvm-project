@@ -385,16 +385,12 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Custom);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
 
-      // Detect shifts by a scalar amount and convert them into
+      // Detect shifts/rotates by a scalar amount and convert them into
       // V*_BY_SCALAR.
       setOperationAction(ISD::SHL, VT, Custom);
       setOperationAction(ISD::SRA, VT, Custom);
       setOperationAction(ISD::SRL, VT, Custom);
-
-      // At present ROTL isn't matched by DAGCombiner.  ROTR should be
-      // converted into ROTL.
-      setOperationAction(ISD::ROTL, VT, Expand);
-      setOperationAction(ISD::ROTR, VT, Expand);
+      setOperationAction(ISD::ROTL, VT, Custom);
 
       // Map SETCCs onto one of VCE, VCH or VCHL, swapping the operands
       // and inverting the result as necessary.
@@ -5979,6 +5975,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRL_BY_SCALAR);
   case ISD::SRA:
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
+  case ISD::ROTL:
+    return lowerShift(Op, DAG, SystemZISD::VROTL_BY_SCALAR);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
   case ISD::GET_ROUNDING:
@@ -6143,6 +6141,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(VSHL_BY_SCALAR);
     OPCODE(VSRL_BY_SCALAR);
     OPCODE(VSRA_BY_SCALAR);
+    OPCODE(VROTL_BY_SCALAR);
     OPCODE(VSUM);
     OPCODE(VICMPE);
     OPCODE(VICMPH);
