@@ -1020,7 +1020,7 @@ define i8 @negation_of_increment_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 define i8 @negation_of_increment_via_or_with_no_common_bits_set_extrause(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negation_of_increment_via_or_with_no_common_bits_set_extrause(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = or i8 [[T0]], 1
+; CHECK-NEXT:    [[T1:%.*]] = or disjoint i8 [[T0]], 1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
 ; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i8 [[T2]]
@@ -1082,7 +1082,7 @@ define i8 @add_via_or_with_no_common_bits_set_extrause(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 2
-; CHECK-NEXT:    [[T2:%.*]] = or i8 [[T1]], 3
+; CHECK-NEXT:    [[T2:%.*]] = or disjoint i8 [[T1]], 3
 ; CHECK-NEXT:    call void @use8(i8 [[T2]])
 ; CHECK-NEXT:    [[T3:%.*]] = sub i8 [[X:%.*]], [[T2]]
 ; CHECK-NEXT:    ret i8 [[T3]]

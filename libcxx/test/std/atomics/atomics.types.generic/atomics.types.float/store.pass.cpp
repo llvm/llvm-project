@@ -41,7 +41,7 @@ void test_impl() {
 
   // store
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     a.store(T(1.2), std::memory_order::relaxed);
     assert(a.load() == T(1.2));
   }

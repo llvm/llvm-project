@@ -9,8 +9,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 
-#include <vector>
-
 namespace llvm {
 
 struct Align;

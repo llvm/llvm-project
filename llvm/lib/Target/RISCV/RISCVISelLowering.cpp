@@ -17694,15 +17694,14 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     // Offset of the first variable argument from stack pointer, and size of
     // the vararg save area. For now, the varargs save area is either zero or
     // large enough to hold a0-a7.
-    int VaArgOffset, VarArgsSaveSize;
+    int VaArgOffset;
+    int VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
 
     // If all registers are allocated, then all varargs must be passed on the
     // stack and we don't need to save any argregs.
-    if (ArgRegs.size() == Idx) {
+    if (VarArgsSaveSize == 0) {
       VaArgOffset = CCInfo.getStackSize();
-      VarArgsSaveSize = 0;
     } else {
-      VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
       VaArgOffset = -VarArgsSaveSize;
     }
 
