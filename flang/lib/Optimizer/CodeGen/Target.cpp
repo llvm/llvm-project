@@ -261,9 +261,20 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       // <2 x t>   vector of 2 eleTy
       marshal.emplace_back(fir::VectorType::get(2, eleTy), AT{});
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // FIXME: In case of SSE register exhaustion, the ABI here may be
+      // incorrect since LLVM may pass the real via register and the imaginary
+      // part via the stack while the ABI it should be all in register or all
+      // in memory. Register occupancy must be analyzed here.
       // two distinct double arguments
       marshal.emplace_back(eleTy, AT{});
       marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::x87DoubleExtended()) {
+      // Use a type that will be translated into LLVM as:
+      // { x86_fp80, x86_fp80 }  struct of 2 fp128, byval, align 16
+      marshal.emplace_back(
+          fir::ReferenceType::get(mlir::TupleType::get(
+              eleTy.getContext(), mlir::TypeRange{eleTy, eleTy})),
+          AT{/*align=*/16, /*byval=*/true});
     } else if (sem == &llvm::APFloat::IEEEquad()) {
       // Use a type that will be translated into LLVM as:
       // { fp128, fp128 }   struct of 2 fp128, byval, align 16
@@ -287,6 +298,11 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
     } else if (sem == &llvm::APFloat::IEEEdouble()) {
       // Use a type that will be translated into LLVM as:
       // { double, double }   struct of 2 double
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
+                           AT{});
+    } else if (sem == &llvm::APFloat::x87DoubleExtended()) {
+      // { x86_fp80, x86_fp80 }
       marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
                                                 mlir::TypeRange{eleTy, eleTy}),
                            AT{});
