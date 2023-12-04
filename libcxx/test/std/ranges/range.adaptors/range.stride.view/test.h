@@ -253,4 +253,34 @@ struct SizedInputIterator {
   }
 };
 
+// TODO: Cleanup
+struct SizedForwardIterator {
+  using iterator_concept = std::forward_iterator_tag;
+  using value_type       = int;
+  using difference_type  = std::intptr_t;
+
+  int* __v_;
+
+  constexpr SizedForwardIterator() { __v_ = nullptr; }
+  constexpr SizedForwardIterator(int* v) { __v_ = v; }
+  constexpr SizedForwardIterator(const SizedInputIterator& sii) { __v_ = sii.__v_; }
+
+  constexpr int operator*() const { return *__v_; }
+  constexpr SizedForwardIterator& operator++() {
+    __v_++;
+    return *this;
+  }
+  constexpr SizedForwardIterator operator++(int) {
+    auto nv = __v_;
+    nv++;
+    return SizedForwardIterator(nv);
+  }
+  friend constexpr bool operator==(const SizedForwardIterator& left, const SizedForwardIterator& right) {
+    return left.__v_ == right.__v_;
+  }
+  friend constexpr difference_type operator-(const SizedForwardIterator& left, const SizedForwardIterator& right) {
+    return left.__v_ - right.__v_;
+  }
+};
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_STRIDE_TYPES_H
