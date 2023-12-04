@@ -20,7 +20,7 @@
 // in this shared library, so that they can be overridden by programs
 // that define non-weak copies of the functions.
 
-static void* operator_new_impl(std::size_t size) noexcept {
+static void* operator_new_impl(std::size_t size) {
   if (size == 0)
     size = 1;
   void* p;
@@ -87,7 +87,7 @@ _LIBCPP_WEAK void operator delete[](void* ptr, size_t) noexcept { ::operator del
 
 #  if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
 
-static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignment) noexcept {
+static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignment) {
   if (size == 0)
     size = 1;
   if (static_cast<size_t>(alignment) < sizeof(void*))
