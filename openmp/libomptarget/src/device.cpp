@@ -22,6 +22,7 @@
 #include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
+#include "llvm/Support/Error.h"
 
 #include <cassert>
 #include <climits>
@@ -62,8 +63,8 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(PluginAdaptorTy *RTL)
-    : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
+DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+    : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
       PendingCtorsDtors(), PendingGlobalsMtx() {}
 
 DeviceTy::~DeviceTy() {
@@ -528,14 +529,21 @@ int DeviceTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry, int64_t Size) {
   return Ret;
 }
 
-/// Init device, should not be called directly.
-void DeviceTy::init() {
+llvm::Error DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
+  int32_t Ret = 0;
   if (RTL->init_requires)
-    RTL->init_requires(PM->getRequirements());
-  int32_t Ret = RTL->init_device(RTLDeviceID);
+    Ret = RTL->init_requires(PM->getRequirements());
   if (Ret != OFFLOAD_SUCCESS)
-    return;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to initialize requirements for device %d\n", DeviceID);
+
+  Ret = RTL->init_device(RTLDeviceID);
+  if (Ret != OFFLOAD_SUCCESS)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to initialize device %d\n",
+                                   DeviceID);
 
   // Enables recording kernels if set.
   BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
@@ -548,22 +556,7 @@ void DeviceTy::init() {
                                   OMPX_ReplaySaveOutput, ReqPtrArgOffset);
   }
 
-  IsInit = true;
-}
-
-/// Thread-safe method to initialize the device only once.
-int32_t DeviceTy::initOnce() {
-  std::call_once(InitFlag, &DeviceTy::init, this);
-
-  // At this point, if IsInit is true, then either this thread or some other
-  // thread in the past successfully initialized the device, so we can return
-  // OFFLOAD_SUCCESS. If this thread executed init() via call_once() and it
-  // failed, return OFFLOAD_FAIL. If call_once did not invoke init(), it means
-  // that some other thread already attempted to execute init() and if IsInit
-  // is still false, return OFFLOAD_FAIL.
-  if (IsInit)
-    return OFFLOAD_SUCCESS;
-  return OFFLOAD_FAIL;
+  return llvm::Error::success();
 }
 
 // Load binary to device.
