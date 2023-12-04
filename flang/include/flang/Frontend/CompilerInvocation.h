@@ -98,6 +98,7 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool warnAsErr = false;
 
+  // Executable name
   const char *argv0;
 
   /// This flag controls the unparsing and is used to decide whether to print
