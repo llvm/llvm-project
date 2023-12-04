@@ -6565,45 +6565,45 @@ vec_rl(__vector unsigned long long __a, __vector unsigned long long __b) {
 static inline __ATTRS_o_ai __vector signed char
 vec_rli(__vector signed char __a, unsigned long __b) {
   return (__vector signed char)__builtin_s390_verllb(
-    (__vector unsigned char)__a, (int)__b);
+    (__vector unsigned char)__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector unsigned char
 vec_rli(__vector unsigned char __a, unsigned long __b) {
-  return __builtin_s390_verllb(__a, (int)__b);
+  return __builtin_s390_verllb(__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector signed short
 vec_rli(__vector signed short __a, unsigned long __b) {
   return (__vector signed short)__builtin_s390_verllh(
-    (__vector unsigned short)__a, (int)__b);
+    (__vector unsigned short)__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector unsigned short
 vec_rli(__vector unsigned short __a, unsigned long __b) {
-  return __builtin_s390_verllh(__a, (int)__b);
+  return __builtin_s390_verllh(__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector signed int
 vec_rli(__vector signed int __a, unsigned long __b) {
   return (__vector signed int)__builtin_s390_verllf(
-    (__vector unsigned int)__a, (int)__b);
+    (__vector unsigned int)__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector unsigned int
 vec_rli(__vector unsigned int __a, unsigned long __b) {
-  return __builtin_s390_verllf(__a, (int)__b);
+  return __builtin_s390_verllf(__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector signed long long
 vec_rli(__vector signed long long __a, unsigned long __b) {
   return (__vector signed long long)__builtin_s390_verllg(
-    (__vector unsigned long long)__a, (int)__b);
+    (__vector unsigned long long)__a, (unsigned char)__b);
 }
 
 static inline __ATTRS_o_ai __vector unsigned long long
 vec_rli(__vector unsigned long long __a, unsigned long __b) {
-  return __builtin_s390_verllg(__a, (int)__b);
+  return __builtin_s390_verllg(__a, (unsigned char)__b);
 }
 
 /*-- vec_rl_mask ------------------------------------------------------------*/

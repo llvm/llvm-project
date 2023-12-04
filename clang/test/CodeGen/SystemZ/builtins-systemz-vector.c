@@ -23,6 +23,7 @@ volatile vec_ulong vul;
 volatile vec_double vd;
 
 volatile unsigned int len;
+volatile unsigned char amt;
 const void * volatile cptr;
 void * volatile ptr;
 int cc;
@@ -184,23 +185,23 @@ void test_integer(void) {
   vul = __builtin_s390_verimg(vul, vul, vul, 255);
   // CHECK: call <2 x i64> @llvm.s390.verimg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 255)
 
-  vuc = __builtin_s390_verllb(vuc, len);
-  // CHECK: call <16 x i8> @llvm.s390.verllb(<16 x i8> %{{.*}}, i32 %{{.*}})
-  vus = __builtin_s390_verllh(vus, len);
-  // CHECK: call <8 x i16> @llvm.s390.verllh(<8 x i16> %{{.*}}, i32 %{{.*}})
-  vui = __builtin_s390_verllf(vui, len);
-  // CHECK: call <4 x i32> @llvm.s390.verllf(<4 x i32> %{{.*}}, i32 %{{.*}})
-  vul = __builtin_s390_verllg(vul, len);
-  // CHECK: call <2 x i64> @llvm.s390.verllg(<2 x i64> %{{.*}}, i32 %{{.*}})
+  vuc = __builtin_s390_verllb(vuc, amt);
+  // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  vus = __builtin_s390_verllh(vus, amt);
+  // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  vui = __builtin_s390_verllf(vui, amt);
+  // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
+  vul = __builtin_s390_verllg(vul, amt);
+  // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
   vuc = __builtin_s390_verllvb(vuc, vuc);
-  // CHECK: call <16 x i8> @llvm.s390.verllvb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   vus = __builtin_s390_verllvh(vus, vus);
-  // CHECK: call <8 x i16> @llvm.s390.verllvh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vui = __builtin_s390_verllvf(vui, vui);
-  // CHECK: call <4 x i32> @llvm.s390.verllvf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
+  // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vul = __builtin_s390_verllvg(vul, vul);
-  // CHECK: call <2 x i64> @llvm.s390.verllvg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
   vus = __builtin_s390_vgfmb(vuc, vuc);
   // CHECK: call <8 x i16> @llvm.s390.vgfmb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
