@@ -548,7 +548,8 @@ public:
 
       val = POW10_SPLIT_2[p];
 #endif
-      const int32_t shift_amount = SHIFT_CONST + (-exponent - IDX_SIZE * idx);
+      const int32_t shift_amount =
+          SHIFT_CONST + (-exponent - static_cast<int>(IDX_SIZE) * idx);
       uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
       return digits;

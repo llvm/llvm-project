@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_TUPLE
 #define _LIBCPP_TUPLE
 
+// clang-format off
+
 /*
     tuple synopsis
 
@@ -200,6 +202,8 @@ template <class... Types>
 }  // std
 
 */
+
+// clang-format on
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__compare/common_comparison_category.h>
