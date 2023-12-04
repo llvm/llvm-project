@@ -1294,6 +1294,10 @@ defm : PatVrUimm5<umin, "VMINI">;
 // VMUL_{B/H/W/D}
 defm : PatVrVr<mul, "VMUL">;
 
+// VMUH_{B/H/W/D}[U]
+defm : PatVrVr<mulhs, "VMUH">;
+defm : PatVrVrU<mulhu, "VMUH">;
+
 // VMADD_{B/H/W/D}
 defm : PatVrVrVr<muladd, "VMADD">;
 // VMSUB_{B/H/W/D}
