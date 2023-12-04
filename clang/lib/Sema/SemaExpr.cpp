@@ -3914,7 +3914,7 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
 
   bool ValueIsPositive = ValueAPS.isStrictlyPositive();
   if (!ValueIsPositive || ValueAPS.getActiveBits() > 31) {
-    Diag(E->getExprLoc(), diag::err_pragma_loop_invalid_argument_value)
+    Diag(E->getExprLoc(), diag::err_requires_positive_value)
         << toString(ValueAPS, 10) << ValueIsPositive;
     return true;
   }

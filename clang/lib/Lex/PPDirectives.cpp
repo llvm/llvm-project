@@ -41,6 +41,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/AlignOf.h"
@@ -3701,8 +3702,11 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     LexNonComment(CurTok);
     if (LimitEvalResult.Value) {
       const llvm::APSInt &Result = *LimitEvalResult.Value;
-      if (Result.getBitWidth() > 64)
-        Diag(CurTok, diag::warn_pp_expr_overflow);
+      if (Result.isNegative()) {
+        Diag(CurTok, diag::err_requires_positive_value)
+            << toString(Result, 10) << /*positive*/ 0;
+        return std::nullopt;
+      }
       return Result.getLimitedValue();
     }
     return std::nullopt;
@@ -3946,7 +3950,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     // FIXME: just like with the clang::offset() and if_empty() parameters,
     // this loses source fidelity in the AST; it has no idea there was a limit
     // involved.
-    BinaryContents = BinaryContents.drop_back(Params->MaybeLimitParam->Limit);
+    BinaryContents = BinaryContents.substr(0, Params->MaybeLimitParam->Limit);
   }
 
   if (Params->MaybeOffsetParam) {
