@@ -254,14 +254,14 @@ void Symbol::GetDescription(Stream *s, lldb::DescriptionLevel level,
                 m_addr_range.GetBaseAddress().GetOffset());
   }
   if (ConstString demangled = m_mangled.GetDemangledName()) {
-    s->Printf(", name=\"");
+    s->PutCString(", name=\"");
     s->PutCStringColorHighlighted(demangled.GetStringRef(), pattern);
-    s->Printf("\"");
+    s->PutCString("\"");
   }
   if (ConstString mangled_name = m_mangled.GetMangledName()) {
-    s->Printf(", mangled=\"");
+    s->PutCString(", mangled=\"");
     s->PutCStringColorHighlighted(mangled_name.GetStringRef(), pattern);
-    s->Printf("\"");
+    s->PutCString("\"");
   }
 }
 
