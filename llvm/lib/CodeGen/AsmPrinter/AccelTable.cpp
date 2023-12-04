@@ -59,7 +59,10 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
                         return *A < *B;
                       });
     E.second.Values.erase(
-        std::unique(E.second.Values.begin(), E.second.Values.end()),
+        std::unique(E.second.Values.begin(), E.second.Values.end(),
+                    [](const AccelTableData *A, const AccelTableData *B) {
+                      return *A == *B;
+                    }),
         E.second.Values.end());
   }
 
