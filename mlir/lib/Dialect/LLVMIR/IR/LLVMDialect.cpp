@@ -1219,8 +1219,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
 
   // Parse the function arguments.
-  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren))
     return failure();
 
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
@@ -1231,6 +1230,9 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
         parser.parseRParen().failed())
       return failure();
   }
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
 
   // Parse the trailing type list and resolve the operands.
   return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
