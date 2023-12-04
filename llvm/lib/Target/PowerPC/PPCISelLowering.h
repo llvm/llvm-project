@@ -475,6 +475,9 @@ namespace llvm {
     /// XXMFACC = This corresponds to the xxmfacc instruction.
     XXMFACC,
 
+    /// VSX_CMPSEL = VSX compare gt/ge/eq instruction with selection.
+    VSX_CMPSEL,
+
     // Constrained conversion from floating point to int
     STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCTIWZ,

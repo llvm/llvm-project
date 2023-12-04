@@ -1830,6 +1830,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LXVRZX:          return "PPCISD::LXVRZX";
   case PPCISD::STORE_COND:
     return "PPCISD::STORE_COND";
+  case PPCISD::VSX_CMPSEL:
+    return "PPCISD::VSX_CMPSEL";
   }
   return nullptr;
 }
@@ -15560,6 +15562,65 @@ static bool isStoreConditional(SDValue Intrin, unsigned &StoreWidth) {
   return true;
 }
 
+// Use VSX compare gt/ge/eq instruction to implement select_cc
+static SDValue combineFloatSelectCC(SDValue Op, const PPCSubtarget &Subtarget,
+                                    SelectionDAG &DAG) {
+  EVT VT = Op.getValueType();
+
+  // Use subtraction based lowering if it is finite-math.
+  if (DAG.getTarget().Options.NoInfsFPMath || Op->getFlags().hasNoInfs())
+    return SDValue();
+
+  // Vector comparison is already implemented in isel.
+  if (VT.isVector() || !VT.isFloatingPoint() ||
+      (VT == MVT::f128 && !Subtarget.hasP10Vector()) || !Subtarget.hasVSX())
+    return SDValue();
+  SDValue TrueVal = Op.getOperand(2), FalseVal = Op.getOperand(3);
+  SDValue Cond1 = Op.getOperand(0), Cond2 = Op.getOperand(1);
+  SDLoc DL(Op);
+  unsigned CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+
+  // Recognize the form after legalizer if cond code is illegal.
+  if (VT != Cond1.getValueType()) {
+    if (!isNullConstant(Cond2) || CC != ISD::SETNE ||
+        Cond1.getOpcode() != ISD::AND)
+      return SDValue();
+    Cond1 = Cond1.getOperand(0);
+    Cond2 = Cond1.getOperand(1);
+    if (Cond1.getOpcode() != ISD::SETCC || Cond2.getOpcode() != ISD::SETCC ||
+        Cond1.getOperand(0) != Cond2.getOperand(0) ||
+        Cond1.getOperand(1) != Cond2.getOperand(1))
+      return SDValue();
+    CC = cast<CondCodeSDNode>(Cond1.getOperand(2))->get() &
+         cast<CondCodeSDNode>(Cond2.getOperand(2))->get();
+    Cond1 = Cond1.getOperand(0);
+    Cond2 = Cond1.getOperand(1);
+  }
+
+  // The instruction is ordered. Treat it as ordered if we don't care order.
+  if (CC & ISD::SETUO)
+    return SDValue();
+  if (CC & ISD::SETFALSE2)
+    CC &= ISD::SETO;
+
+  // Use min/max instructions if available.
+  if (((Cond1 == TrueVal && Cond2 == FalseVal) ||
+       (Cond1 == FalseVal && Cond2 == TrueVal)) &&
+      (CC == ISD::SETOLT || CC == ISD::SETOGT))
+    return SDValue();
+
+  bool Inverse = false;
+  if (CC == ISD::SETOLT || CC == ISD::SETOLE || CC == ISD::SETONE) {
+    CC = (~CC) & ISD::SETO;
+    Inverse = true;
+  }
+  if (CC == ISD::SETOGE || CC == ISD::SETOGT || CC == ISD::SETOEQ)
+    return DAG.getNode(PPCISD::VSX_CMPSEL, DL, VT, Inverse ? Cond2 : Cond1,
+                       Inverse ? Cond1 : Cond2, TrueVal, FalseVal,
+                       DAG.getCondCode((ISD::CondCode)CC));
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -15629,6 +15690,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       return CSCC;
     [[fallthrough]];
   case ISD::SELECT_CC:
+    if (SDValue V = combineFloatSelectCC(SDValue(N, 0), Subtarget, DCI.DAG))
+      return V;
     return DAGCombineTruncBoolExt(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:

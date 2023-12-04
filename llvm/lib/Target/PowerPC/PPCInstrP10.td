@@ -2067,6 +2067,19 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
             (v1i128 (VSRAQ v1i128:$VRA,
                      (XXPERMDI (COPY_TO_REGCLASS $VRB, VSRC),
                                (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
+
+def : Pat<(f128 (PPCvsx_cmpsel f128:$lhs, f128:$rhs, f128:$tval, f128:$fval, SETOEQ)),
+          (COPY_TO_REGCLASS (XXSEL (COPY_TO_REGCLASS $tval, VSRC),
+                                   (COPY_TO_REGCLASS $fval, VSRC),
+                                   (XSCMPEQQP $lhs, $rhs)), VSFRC)>;
+def : Pat<(f128 (PPCvsx_cmpsel f128:$lhs, f128:$rhs, f128:$tval, f128:$fval, SETOGE)),
+          (COPY_TO_REGCLASS (XXSEL (COPY_TO_REGCLASS $tval, VSRC),
+                                   (COPY_TO_REGCLASS $fval, VSRC),
+                                   (XSCMPGEQP $lhs, $rhs)), VSFRC)>;
+def : Pat<(f128 (PPCvsx_cmpsel f128:$lhs, f128:$rhs, f128:$tval, f128:$fval, SETOGT)),
+          (COPY_TO_REGCLASS (XXSEL (COPY_TO_REGCLASS $tval, VSRC),
+                                   (COPY_TO_REGCLASS $fval, VSRC),
+                                   (XSCMPGTQP $lhs, $rhs)), VSFRC)>;
 }
 
 class xxevalPattern <dag pattern, bits<8> imm> :
