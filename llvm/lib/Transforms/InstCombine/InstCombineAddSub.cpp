@@ -1415,8 +1415,10 @@ static Instruction *foldBoxMultiply(BinaryOperator &I) {
   // ResLo = (CrossSum << HalfBits) + (YLo * XLo)
   Value *XLo, *YLo;
   Value *CrossSum;
+  // Require one-use on the multiply to avoid increasing the number of
+  // multiplications.
   if (!match(&I, m_c_Add(m_Shl(m_Value(CrossSum), m_SpecificInt(HalfBits)),
-                         m_Mul(m_Value(YLo), m_Value(XLo)))))
+                         m_OneUse(m_Mul(m_Value(YLo), m_Value(XLo))))))
     return nullptr;
 
   // XLo = X & HalfMask
