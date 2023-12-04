@@ -24,6 +24,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_REVERSE_ITERATION
   LLVM_INCLUDE_DXIL_TESTS
   LLVM_TOOL_LLVM_DRIVER_BUILD
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
 
 configure_lit_site_cfg(
