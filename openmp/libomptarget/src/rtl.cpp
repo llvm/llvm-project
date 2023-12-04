@@ -51,7 +51,6 @@ __attribute__((constructor(101))) void init() {
   PM->init();
 
   Profiler::get();
-  PM->registerDelayedLibraries();
 }
 
 __attribute__((destructor(101))) void deinit() {
