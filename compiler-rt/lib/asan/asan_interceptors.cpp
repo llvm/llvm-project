@@ -558,9 +558,8 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!TryAsanInitFromRtl()))
     return internal_strdup(s);
-  ENSURE_ASAN_INITED();
   uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
@@ -577,9 +576,8 @@ INTERCEPTOR(char*, strdup, const char *s) {
 INTERCEPTOR(char*, __strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
-  if (UNLIKELY(!AsanInited()))
+  if (UNLIKELY(!TryAsanInitFromRtl()))
     return internal_strdup(s);
-  ENSURE_ASAN_INITED();
   uptr length = internal_strlen(s);
   if (flags()->replace_str) {
     ASAN_READ_RANGE(ctx, s, length + 1);
