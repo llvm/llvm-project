@@ -263,17 +263,15 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
     // Now that we've updated that use of the pointer, look for other uses of
     // the pointer to update.
     Visited.insert(J);
-    if (auto UJ = dyn_cast<User>(J))
-      for (auto &U : UJ->uses()) {
+    if (isa<GetElementPtrInst>(J) || isa<PHINode>(J))
+      for (auto &U : J->uses()) {
         if (U->getType()->isPointerTy()) {
-          if (isa<GetElementPtrInst>(J) || isa<PHINode>(J)) {
-            Instruction *K = cast<Instruction>(U.getUser());
-            StoreInst *SI = dyn_cast<StoreInst>(K);
-            if (SI && SI->getPointerOperandIndex() != U.getOperandNo())
-              continue;
-            if (!Visited.count(K))
-              WorkList.push_back(K);
-          }
+          Instruction *K = cast<Instruction>(U.getUser());
+          StoreInst *SI = dyn_cast<StoreInst>(K);
+          if (SI && SI->getPointerOperandIndex() != U.getOperandNo())
+            continue;
+          if (!Visited.count(K))
+            WorkList.push_back(K);
         }
       }
   }
