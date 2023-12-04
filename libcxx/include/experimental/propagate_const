@@ -207,8 +207,8 @@ private:
 
 public:
 
-  template <class _Up> friend _LIBCPP_CONSTEXPR const _Up& experimental::get_underlying(const propagate_const<_Up>& __pu) _NOEXCEPT;
-  template <class _Up> friend _LIBCPP_CONSTEXPR _Up& experimental::get_underlying(propagate_const<_Up>& __pu) _NOEXCEPT;
+  template <class _Up> friend _LIBCPP_CONSTEXPR const _Up& experimental::fundamentals_v2::get_underlying(const propagate_const<_Up>& __pu) _NOEXCEPT;
+  template <class _Up> friend _LIBCPP_CONSTEXPR _Up& experimental::fundamentals_v2::get_underlying(propagate_const<_Up>& __pu) _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR propagate_const() = default;
 
