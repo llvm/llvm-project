@@ -491,28 +491,6 @@ class TransferWriteDropUnitDimsPattern
 
 } // namespace
 
-/// Return true if the memref type has its inner dimension matching the given
-/// shape. Otherwise return false.
-static int64_t hasMatchingInnerContigousShape(MemRefType memrefType,
-                                              ArrayRef<int64_t> targetShape) {
-  auto shape = memrefType.getShape();
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (!succeeded(getStridesAndOffset(memrefType, strides, offset)))
-    return false;
-  if (strides.back() != 1)
-    return false;
-  strides.pop_back();
-  int64_t flatDim = 1;
-  for (auto [targetDim, memrefDim, memrefStride] :
-       llvm::reverse(llvm::zip(targetShape, shape, strides))) {
-    flatDim *= memrefDim;
-    if (flatDim != memrefStride || targetDim != memrefDim)
-      return false;
-  }
-  return true;
-}
-
 /// Creates a memref.collapse_shape collapsing all inner dimensions of the
 /// input starting at `firstDimToCollapse`.
 static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
@@ -572,9 +550,7 @@ class FlattenContiguousRowMajorTransferReadPattern
     if (vectorType.getRank() <= 1)
       // Already 0D/1D, nothing to do.
       return failure();
-    if (!hasMatchingInnerContigousShape(
-            sourceType,
-            vectorType.getShape().take_back(vectorType.getRank() - 1)))
+    if (!vector::isContiguousSlice(sourceType, vectorType))
       return failure();
     int64_t firstContiguousInnerDim =
         sourceType.getRank() - vectorType.getRank();
@@ -632,9 +608,7 @@ class FlattenContiguousRowMajorTransferWritePattern
     if (vectorType.getRank() <= 1)
       // Already 0D/1D, nothing to do.
       return failure();
-    if (!hasMatchingInnerContigousShape(
-            sourceType,
-            vectorType.getShape().take_back(vectorType.getRank() - 1)))
+    if (!vector::isContiguousSlice(sourceType, vectorType))
       return failure();
     int64_t firstContiguousInnerDim =
         sourceType.getRank() - vectorType.getRank();

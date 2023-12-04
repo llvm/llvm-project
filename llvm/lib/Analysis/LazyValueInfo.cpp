@@ -880,7 +880,7 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
   Value *Cond = SI->getCondition();
   // If the value is undef, a different value may be chosen in
   // the select condition.
-  if (isGuaranteedNotToBeUndefOrPoison(Cond, AC)) {
+  if (isGuaranteedNotToBeUndef(Cond, AC)) {
     TrueVal = intersect(TrueVal,
                         getValueFromCondition(SI->getTrueValue(), Cond, true));
     FalseVal = intersect(
@@ -1719,7 +1719,7 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
     if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
       // If the value is undef, a different value may be chosen in
       // the select condition and at use.
-      if (!isGuaranteedNotToBeUndefOrPoison(SI->getCondition(), AC))
+      if (!isGuaranteedNotToBeUndef(SI->getCondition(), AC))
         break;
       if (CurrU->getOperandNo() == 1)
         CondVal = getValueFromCondition(V, SI->getCondition(), true);

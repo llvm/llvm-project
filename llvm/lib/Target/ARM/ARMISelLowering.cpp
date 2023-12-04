@@ -1981,7 +1981,7 @@ Sched::Preference ARMTargetLowering::getSchedulingPreference(SDNode *N) const {
   if (MCID.getNumDefs() == 0)
     return Sched::RegPressure;
   if (!Itins->isEmpty() &&
-      Itins->getOperandCycle(MCID.getSchedClass(), 0) > 2)
+      Itins->getOperandCycle(MCID.getSchedClass(), 0) > 2U)
     return Sched::ILP;
 
   return Sched::RegPressure;
