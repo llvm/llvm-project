@@ -3017,11 +3017,7 @@ CGOpenMPRuntimeGPU::getParameterAddress(CodeGenFunction &CGF,
   QualType TargetTy = TargetParam->getType();
   llvm::Value *TargetAddr = CGF.EmitLoadOfScalar(LocalAddr, /*Volatile=*/false,
                                                  TargetTy, SourceLocation());
-  // First cast to generic.
-  TargetAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      TargetAddr,
-      llvm::PointerType::get(CGF.getLLVMContext(), /*AddrSpace=*/0));
-  // Cast from generic to native address space.
+  // Cast to native address space.
   TargetAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       TargetAddr,
       llvm::PointerType::get(CGF.getLLVMContext(), NativePointeeAddrSpace));
@@ -3048,11 +3044,8 @@ void CGOpenMPRuntimeGPU::emitOutlinedFunctionCall(
       TargetArgs.emplace_back(NativeArg);
       continue;
     }
-    llvm::Value *TargetArg = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-        NativeArg,
-        llvm::PointerType::get(CGF.getLLVMContext(), /*AddrSpace*/ 0));
     TargetArgs.emplace_back(
-        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(TargetArg, TargetType));
+        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(NativeArg, TargetType));
   }
   CGOpenMPRuntime::emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, TargetArgs);
 }
