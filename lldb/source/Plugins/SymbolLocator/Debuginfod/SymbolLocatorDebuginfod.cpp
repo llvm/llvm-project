@@ -116,6 +116,8 @@ static std::optional<FileSpec> GetFileForModule(
     const ModuleSpec &module_spec,
     std::function<llvm::Expected<std::string>(llvm::object::BuildIDRef)>
         PullFromServer) {
+  if (!ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup())
+    return {};
   const UUID &module_uuid = module_spec.GetUUID();
   if (module_uuid.IsValid() && llvm::canUseDebuginfod()) {
     llvm::object::BuildID build_id(module_uuid.GetBytes());
