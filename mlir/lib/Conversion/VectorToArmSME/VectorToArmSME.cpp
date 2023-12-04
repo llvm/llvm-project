@@ -666,15 +666,75 @@ struct VectorInsertToArmSMELowering
   }
 };
 
+/// Lowers `vector.print` of a tile into a loop over the rows of the tile,
+/// extracting them via `arm_sme.move_tile_slice_to_vector`, then printing with
+/// a 1D `vector.print`.
+///
+///  BEFORE:
+///  ```mlir
+///  vector.print %tile : vector<[4]x[4]xf32>
+///  ```
+///  AFTER:
+///  ```mlir
+///  %c0 = arith.constant 0 : index
+///  %c1 = arith.constant 1 : index
+///  %c4 = arith.constant 4 : index
+///  %vscale = vector.vscale
+///  %svl_s = arith.muli %c4, %vscale : index
+///  scf.for %i = %c0 to %svl_s step %c1 {
+///    %tile_slice = arm_sme.move_tile_slice_to_vector %tile[%i]
+///                     : vector<[4]xf32> from vector<[4]x[4]xf32>
+///    vector.print %tile_slice : vector<[4]xf32>
+///  }
+///  ```
+struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
+  using OpRewritePattern<vector::PrintOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::PrintOp printOp,
+                                PatternRewriter &rewriter) const override {
+    if (!printOp.getSource())
+      return failure();
+
+    VectorType vectorType = dyn_cast<VectorType>(printOp.getPrintType());
+    if (!vectorType || !arm_sme::isValidSMETileVectorType(vectorType))
+      return failure();
+
+    auto loc = printOp.getLoc();
+
+    // Create a loop over the rows of the tile.
+    auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
+    auto minTileRows =
+        rewriter.create<arith::ConstantIndexOp>(loc, vectorType.getDimSize(0));
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto upperBound = rewriter.create<arith::MulIOp>(loc, minTileRows, vscale);
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    {
+      // Loop body.
+      rewriter.setInsertionPointToStart(forOp.getBody());
+      // Extract the current row from the tile.
+      Value rowIndex = forOp.getInductionVar();
+      auto tileSlice = rewriter.create<arm_sme::MoveTileSliceToVectorOp>(
+          loc, printOp.getSource(), rowIndex);
+      // Print the row with a 1D vector.print.
+      rewriter.create<vector::PrintOp>(loc, tileSlice,
+                                       printOp.getPunctuation());
+    }
+
+    rewriter.eraseOp(printOp);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
-               SplatOpToArmSMELowering, TransferReadToArmSMELowering,
-               TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
-               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
-               VectorOuterProductToArmSMELowering,
-               VectorExtractToArmSMELowering, VectorInsertToArmSMELowering>(
-      &ctx);
+  patterns
+      .add<BroadcastOpToArmSMELowering, ConstantOpToArmSMELowering,
+           SplatOpToArmSMELowering, TransferReadToArmSMELowering,
+           TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
+           VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
+           VectorOuterProductToArmSMELowering, VectorExtractToArmSMELowering,
+           VectorInsertToArmSMELowering, VectorPrintToArmSMELowering>(&ctx);
 }

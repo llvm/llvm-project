@@ -94,7 +94,7 @@ struct _LIBCPP_TEMPLATE_VIS integer_sequence
     static_assert( is_integral<_Tp>::value,
                   "std::integer_sequence can only be instantiated with an integral type" );
     static
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     size_t
     size() noexcept { return sizeof...(_Ip); }

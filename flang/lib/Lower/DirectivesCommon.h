@@ -651,7 +651,7 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
     if (dim == 0) // First stride is the element size.
       byteStride = dimInfo.getByteStride();
     mlir::Value bound = builder.create<BoundsOp>(
-        loc, boundTy, lb, ub, mlir::Value(), byteStride, true, baseLb);
+        loc, boundTy, lb, ub, dimInfo.getExtent(), byteStride, true, baseLb);
     // Compute the stride for the next dimension.
     byteStride = builder.create<mlir::arith::MulIOp>(loc, byteStride,
                                                      dimInfo.getExtent());
@@ -815,9 +815,21 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
             }
           }
         }
+
+        extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
+        if (mlir::isa<fir::UndefOp>(extent.getDefiningOp())) {
+          extent = zero;
+          if (ubound && lbound) {
+            mlir::Value diff =
+                builder.create<mlir::arith::SubIOp>(loc, ubound, lbound);
+            extent = builder.create<mlir::arith::AddIOp>(loc, diff, one);
+          }
+          if (!ubound)
+            ubound = lbound;
+        }
+
         if (!ubound) {
           // ub = extent - 1
-          extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
           ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
         }
       }

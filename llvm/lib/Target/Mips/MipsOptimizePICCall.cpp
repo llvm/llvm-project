@@ -37,7 +37,6 @@
 #include "llvm/Support/RecyclingAllocator.h"
 #include <cassert>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
