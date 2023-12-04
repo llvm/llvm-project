@@ -68,9 +68,36 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
       else
         FieldLocs.insert({Field, &createStorageLocation(
                                      Field->getType().getNonReferenceType())});
-    return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
+
+    RecordStorageLocation::SyntheticFieldMap SyntheticFields;
+    for (const auto &Entry : getSyntheticFields(Type))
+      SyntheticFields.insert(
+          {Entry.getKey(),
+           &createStorageLocation(Entry.getValue().getNonReferenceType())});
+
+    return createRecordStorageLocation(Type, std::move(FieldLocs),
+                                       std::move(SyntheticFields));
   }
   return arena().create<ScalarStorageLocation>(Type);
+}
+
+// Returns the keys for a given `StringMap`.
+// Can't use `StringSet` as the return type as it doesn't support `operator==`.
+template <typename T>
+static llvm::DenseSet<llvm::StringRef> getKeys(const llvm::StringMap<T> &Map) {
+  return llvm::DenseSet<llvm::StringRef>(Map.keys().begin(), Map.keys().end());
+}
+
+RecordStorageLocation &DataflowAnalysisContext::createRecordStorageLocation(
+    QualType Type, RecordStorageLocation::FieldToLoc FieldLocs,
+    RecordStorageLocation::SyntheticFieldMap SyntheticFields) {
+  assert(Type->isRecordType());
+  assert(containsSameFields(getModeledFields(Type), FieldLocs));
+  assert(getKeys(getSyntheticFields(Type)) == getKeys(SyntheticFields));
+
+  RecordStorageLocationCreated = true;
+  return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs),
+                                               std::move(SyntheticFields));
 }
 
 StorageLocation &
@@ -366,4 +393,15 @@ clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
   FieldSet Fields;
   getFieldsFromClassHierarchy(Type, Fields);
   return Fields;
+}
+
+bool clang::dataflow::containsSameFields(
+    const clang::dataflow::FieldSet &Fields,
+    const clang::dataflow::RecordStorageLocation::FieldToLoc &FieldLocs) {
+  if (Fields.size() != FieldLocs.size())
+    return false;
+  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
+    if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
+      return false;
+  return true;
 }

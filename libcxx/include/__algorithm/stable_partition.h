@@ -315,7 +315,7 @@ _ForwardIterator __stable_partition(
 }
 
 template <class _ForwardIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _ForwardIterator
 stable_partition(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {

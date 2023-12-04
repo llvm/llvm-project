@@ -764,7 +764,7 @@ define i32 @test29(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP_2:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP_7:%.*]] = and i32 [[X]], 63
 ; CHECK-NEXT:    [[TMP_9:%.*]] = and i32 [[TMP_2]], -64
-; CHECK-NEXT:    [[TMP_10:%.*]] = or i32 [[TMP_7]], [[TMP_9]]
+; CHECK-NEXT:    [[TMP_10:%.*]] = or disjoint i32 [[TMP_7]], [[TMP_9]]
 ; CHECK-NEXT:    ret i32 [[TMP_10]]
 ;
   %tmp.2 = sub i32 %x, %y
@@ -1499,7 +1499,7 @@ define i8 @add_like_or_n1(i8 %x) {
 define i8 @add_like_or_t2_extrause(i8 %x) {
 ; CHECK-LABEL: @add_like_or_t2_extrause(
 ; CHECK-NEXT:    [[I0:%.*]] = shl i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[I1:%.*]] = or i8 [[I0]], 15
+; CHECK-NEXT:    [[I1:%.*]] = or disjoint i8 [[I0]], 15
 ; CHECK-NEXT:    call void @use(i8 [[I1]])
 ; CHECK-NEXT:    [[R:%.*]] = add i8 [[I0]], 57
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -2361,7 +2361,7 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i64 [[Y:%.*]] to i128
 ; CHECK-NEXT:    [[ZZ:%.*]] = zext i64 [[Z:%.*]] to i128
 ; CHECK-NEXT:    [[SHY:%.*]] = shl nuw i128 [[ZY]], 64
-; CHECK-NEXT:    [[XY:%.*]] = or i128 [[SHY]], [[ZX]]
+; CHECK-NEXT:    [[XY:%.*]] = or disjoint i128 [[SHY]], [[ZX]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
 ; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[SUB]], 64
