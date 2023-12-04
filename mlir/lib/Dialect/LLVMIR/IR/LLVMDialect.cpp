@@ -2539,6 +2539,20 @@ LogicalResult LLVM::ConstantOp::verify() {
   if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
+  if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
+    const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
+    unsigned floatWidth = APFloat::getSizeInBits(sem);
+    if (auto floatTy = dyn_cast<FloatType>(getType())) {
+      if (floatTy.getWidth() != floatWidth) {
+        return emitOpError() << "expected float type of width " << floatWidth;
+      }
+    }
+    // See the comment for getLLVMConstant for more details about why 8-bit
+    // floats can be represented by integers.
+    if (getType().isa<IntegerType>() && !getType().isInteger(floatWidth)) {
+      return emitOpError() << "expected integer type of width " << floatWidth;
+    }
+  }
   return success();
 }
 

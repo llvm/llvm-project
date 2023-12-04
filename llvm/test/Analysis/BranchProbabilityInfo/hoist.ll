@@ -1,10 +1,10 @@
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: no_hoist
-; CHECK: edge entry -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> if.then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge if.end -> if.end4 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge if.end -> if.then3 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %if.end probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %if.then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %if.end -> %if.end4 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %if.end -> %if.then3 probability is 0x40000000 / 0x80000000 = 50.00%
 define dso_local void @no_hoist(i64 %arg1, i64 %arg2) local_unnamed_addr #0 {
 entry:
   %and = and i64 %arg1, 1152921504606846976
@@ -29,10 +29,10 @@ if.end4:                                          ; preds = %if.then3, %if.end
 }
 
 ; CHECK-LABEL: hoist
-; CHECK: edge entry -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge entry -> if.then probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge if.end -> if.end4 probability is 0x40000000 / 0x80000000 = 50.00%
-; CHECK: edge if.end -> if.then3 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %if.end probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %entry -> %if.then probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %if.end -> %if.end4 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge %if.end -> %if.then3 probability is 0x40000000 / 0x80000000 = 50.00%
 define dso_local void @hoist(i64 %arg1, i64 %arg2) local_unnamed_addr #0 {
 entry:
   %const = bitcast i64 1152921504606846976 to i64

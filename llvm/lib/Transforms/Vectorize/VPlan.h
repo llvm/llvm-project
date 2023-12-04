@@ -275,10 +275,6 @@ struct VPTransformState {
            I->second[Part];
   }
 
-  bool hasAnyVectorValue(VPValue *Def) const {
-    return Data.PerPartOutput.contains(Def);
-  }
-
   bool hasScalarValue(VPValue *Def, VPIteration Instance) {
     auto I = Data.PerPartScalars.find(Def);
     if (I == Data.PerPartScalars.end())
