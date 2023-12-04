@@ -1323,8 +1323,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
-          if (!(isPPC && ((Target == 0 && isXCOFF) ||
-                  (Target == Index && !isXCOFF))))
+          if (!(isPPC &&
+                ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
             Labels[Target] = ("L" + Twine(LabelCount++)).str();
         }
         MIA->updateState(Inst, Index);
