@@ -700,19 +700,19 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 }
 
 // Generate the path to look for intrinsic modules
-static std::string getIntrinsicDir() {
+static std::string getIntrinsicDir(const char *argv) {
   // TODO: Find a system independent API
   llvm::SmallString<128> driverPath;
-  driverPath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
 }
 
 // Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir() {
+static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
   llvm::sys::path::remove_filename(includePath);
   includePath.append("/../include/flang/OpenMP/");
   return std::string(includePath);
@@ -1216,6 +1216,8 @@ bool CompilerInvocation::createFromArgs(
     }
   }
 
+  res.setArgv0(argv0);
+
   return success;
 }
 
@@ -1258,7 +1260,8 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   // Add the location of omp_lib.h to the search directories. Currently this is
   // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(getOpenMPHeadersDir());
+  fortranOptions.searchDirectories.emplace_back(
+      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1323,7 +1326,8 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
   //  Add the default intrinsic module directory
-  fortranOptions.intrinsicModuleDirectories.emplace_back(getIntrinsicDir());
+  fortranOptions.intrinsicModuleDirectories.emplace_back(
+      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
