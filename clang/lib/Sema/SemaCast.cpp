@@ -2080,6 +2080,10 @@ void Sema::CheckStrictAliasing(Expr const *E, QualType DstTy, bool IsLValueCast,
                                SourceRange Range) {
   assert(Diags.getDiagnosticOptions().StrictAliasing);
 
+  auto *TBAA = getASTConsumer().getTypeAliasing();
+  if (!TBAA)
+    return;
+
   if (Diags.isIgnored(diag::warn_strict_aliasing, Range.getBegin()))
     return;
 
@@ -2141,8 +2145,7 @@ void Sema::CheckStrictAliasing(Expr const *E, QualType DstTy, bool IsLValueCast,
   if (SrcTy->isFunctionType())
     return; // From Fn type, meaningless.
 
-  auto Aliasing =
-      getASTConsumer().getTypeAliasing()->getAliasingKind(DstTy, SrcTy);
+  auto Aliasing = TBAA->getAliasingKind(DstTy, SrcTy);
 
   if (Aliasing != ASTConsumer::TypeAliasing::AliasingKind::Ok &&
       (Diag(Range.getBegin(), diag::warn_strict_aliasing)
