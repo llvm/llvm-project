@@ -3946,19 +3946,22 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
   }
   StringRef BinaryContents = MaybeFile->getBuffer();
 
-  if (Params->MaybeLimitParam) {
-    // FIXME: just like with the clang::offset() and if_empty() parameters,
-    // this loses source fidelity in the AST; it has no idea there was a limit
-    // involved.
-    BinaryContents = BinaryContents.substr(0, Params->MaybeLimitParam->Limit);
-  }
-
+  // The order is important between 'offset' and 'limit'; we want to offset
+  // first and then limit second; otherwise we may reduce the notional resource
+  // size to something too small to offset into.
   if (Params->MaybeOffsetParam) {
     // FIXME: just like with the limit() and if_empty() parameters, this loses
     // source fidelity in the AST; it has no idea that there was an offset
     // involved.
     // offsets all the way to the end of the file make for an empty file.
     BinaryContents = BinaryContents.substr(Params->MaybeOffsetParam->Offset);
+  }
+
+  if (Params->MaybeLimitParam) {
+    // FIXME: just like with the clang::offset() and if_empty() parameters,
+    // this loses source fidelity in the AST; it has no idea there was a limit
+    // involved.
+    BinaryContents = BinaryContents.substr(0, Params->MaybeLimitParam->Limit);
   }
 
   if (Callbacks)
