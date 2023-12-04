@@ -1614,6 +1614,7 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_za_new"),
     StringLiteral("vscale_range"),
+    StringLiteral("frame_pointer"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
