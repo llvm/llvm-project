@@ -1292,6 +1292,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   // So far only supports PowerPC and X86.
   if (!STI->getTargetTriple().isPPC() && !STI->getTargetTriple().isX86())
     return;
+  const bool isXCOFF = STI->getTargetTriple().isOSBinFormatXCOFF();
+  const bool isPPC = STI->getTargetTriple().isPPC();
 
   if (MIA)
     MIA->resetState();
@@ -1312,18 +1314,22 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
       Size = std::min<uint64_t>(ThisBytes.size(),
                                 DisAsm->suggestBytesToSkip(ThisBytes, Index));
 
-    if (Disassembled && MIA) {
-      uint64_t Target;
-      bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
-      // On PowerPC, if the address of a branch is the same as the target, it
-      // means that it's a function call. Do not mark the label for this case.
-      if (TargetKnown && (Target >= Start && Target < End) &&
-          !Labels.count(Target) &&
-          !(STI->getTargetTriple().isPPC() && Target == Index))
-        Labels[Target] = ("L" + Twine(LabelCount++)).str();
-      MIA->updateState(Inst, Index);
-    } else if (!Disassembled && MIA) {
-      MIA->resetState();
+    if (MIA) {
+      if (Disassembled) {
+        uint64_t Target;
+        bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
+        if (TargetKnown && (Target >= Start && Target < End) &&
+            !Labels.count(Target)) {
+          // On PowerPC and AIX, a function call is encoded as a branch to 0.
+          // On other PowerPC platforms (ELF), a function call is encoded as
+          // a branch to self. Do not add a label for these cases.
+          if (!(isPPC && ((Target == 0 && isXCOFF) ||
+                  (Target == Index && !isXCOFF))))
+            Labels[Target] = ("L" + Twine(LabelCount++)).str();
+        }
+        MIA->updateState(Inst, Index);
+      } else
+        MIA->resetState();
     }
     Index += Size;
   }
@@ -1487,7 +1493,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   }
 
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
-  if (InlineRelocs)
+  if (InlineRelocs || Obj.isXCOFF())
     RelocMap = getRelocsMap(Obj);
   bool Is64Bits = Obj.getBytesInAddress() > 4;
 
@@ -1979,6 +1985,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         DT->InstrAnalysis->resetState();
 
       while (Index < End) {
+        uint64_t RelOffset;
+
         // ARM and AArch64 ELF binaries can interleave data and text in the
         // same section. We rely on the markers introduced to understand what
         // we need to dump. If the data marker is within a function, it is
@@ -2012,6 +2020,29 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               break;
           }
         }
+
+        auto findRel = [&]() {
+          // Hexagon handles relocs in pretty printer
+          if (Obj.getArch() == Triple::hexagon)
+            return false;
+          while (RelCur != RelEnd) {
+            RelOffset = RelCur->getOffset() - RelAdjustment;
+            // If this relocation is hidden, skip it.
+            if (getHidden(*RelCur) || SectionAddr + RelOffset < StartAddress) {
+              ++RelCur;
+              continue;
+            }
+
+            // Stop when RelCur's offset is past the disassembled
+            // instruction/data.
+            if (RelOffset >= Index + Size)
+              return false;
+            if (RelOffset >= Index)
+              return true;
+            ++RelCur;
+          }
+          return false;
+        };
 
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
@@ -2081,17 +2112,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
           DT->InstPrinter->setCommentStream(llvm::nulls());
 
-          // If disassembly has failed, avoid analysing invalid/incomplete
-          // instruction information. Otherwise, try to resolve the target
-          // address (jump target or memory operand address) and print it on the
+          // If disassembly succeeds, we try to resolve the target address
+          // (jump target or memory operand address) and print it to the
           // right of the instruction.
+          //
+          // Otherwise, we don't print anything else so that we avoid
+          // analyzing invalid or incomplete instruction information.
           if (Disassembled && DT->InstrAnalysis) {
-            // Branch targets are printed just after the instructions.
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
             bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
                 Inst, SectionAddr + Index, Size, Target);
-            if (!PrintTarget)
+
+            if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
                           Inst, DT->SubtargetInfo.get(), SectionAddr + Index,
@@ -2105,6 +2138,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   *TargetOS << "0x" << Twine::utohexstr(Target);
                 }
               }
+            }
+
             if (PrintTarget) {
               // In a relocatable object, the target's section must reside in
               // the same section as the call instruction or it is accessed
@@ -2114,7 +2149,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               // In that case, locate the section(s) containing the target
               // address and find the symbol in one of those, if possible.
               //
-              // N.B. We don't walk the relocations in the relocatable case yet.
+              // N.B. Except for XCOFF, we don't walk the relocations in the
+              // relocatable case yet.
               std::vector<const SectionSymbolsTy *> TargetSectionSymbols;
               if (!Obj.isRelocatableObject()) {
                 auto It = llvm::partition_point(
@@ -2160,9 +2196,11 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   break;
               }
 
+              // Branch targets are printed just after the instructions.
               // Print the labels corresponding to the target if there's any.
               bool BBAddrMapLabelAvailable = BBAddrMapLabels.count(Target);
               bool LabelAvailable = AllLabels.count(Target);
+
               if (TargetSym != nullptr) {
                 uint64_t TargetAddress = TargetSym->Addr;
                 uint64_t Disp = Target - TargetAddress;
@@ -2170,9 +2208,21 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                                                   : TargetSym->Name.str();
 
                 *TargetOS << " <";
-                if (!Disp) {
-                  // Always Print the binary symbol precisely corresponding to
-                  // the target address.
+                // On XCOFF, we use relocations, even without -r, so we
+                // can print the correct name for an extern function call.
+                if (Obj.isXCOFF() && findRel()) {
+                  SmallString<32> Val;
+
+                  // If we have a valid relocation, try to print the
+                  // corresponding symbol name. Multiple relocations on the
+                  // same instruction are not handled.
+                  if (!getRelocationValueString(*RelCur, Val))
+                    *TargetOS << Val;
+                  else
+                    *TargetOS << TargetName;
+                  if (Disp)
+                    *TargetOS << "+0x" << Twine::utohexstr(Disp);
+                } else if (!Disp) {
                   *TargetOS << TargetName;
                 } else if (BBAddrMapLabelAvailable) {
                   *TargetOS << BBAddrMapLabels[Target].front();
@@ -2209,36 +2259,19 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         if (BTF)
           printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
 
-        // Hexagon does this in pretty printer
-        if (Obj.getArch() != Triple::hexagon) {
-          // Print relocation for instruction and data.
-          while (RelCur != RelEnd) {
-            uint64_t Offset = RelCur->getOffset() - RelAdjustment;
-            // If this relocation is hidden, skip it.
-            if (getHidden(*RelCur) || SectionAddr + Offset < StartAddress) {
-              ++RelCur;
-              continue;
-            }
-
-            // Stop when RelCur's offset is past the disassembled
-            // instruction/data. Note that it's possible the disassembled data
-            // is not the complete data: we might see the relocation printed in
-            // the middle of the data, but this matches the binutils objdump
-            // output.
-            if (Offset >= Index + Size)
-              break;
-
+        if (InlineRelocs) {
+          while (findRel()) {
             // When --adjust-vma is used, update the address printed.
             if (RelCur->getSymbol() != Obj.symbol_end()) {
               Expected<section_iterator> SymSI =
                   RelCur->getSymbol()->getSection();
               if (SymSI && *SymSI != Obj.section_end() &&
                   shouldAdjustVA(**SymSI))
-                Offset += AdjustVMA;
+                RelOffset += AdjustVMA;
             }
 
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + Offset, Is64Bits);
+                          SectionAddr + RelOffset, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
