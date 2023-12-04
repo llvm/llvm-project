@@ -1042,6 +1042,19 @@ void BitcodeFile::parse() {
       sym = ctx.symtab.addUndefined(symName, this, false);
       if (objSym.isWeak())
         sym->deferUndefined = true;
+      // If one LTO object file references (i.e. has an undefined reference to)
+      // a symbol with an __imp_ prefix, the LTO compilation itself sees it
+      // as unprefixed but with a dllimport attribute instead, and doesn't
+      // understand the relation to a concrete IR symbol with the __imp_ prefix.
+      //
+      // For such cases, mark the symbol as used in a regular object (i.e. the
+      // symbol must be retained) so that the linker can associate the
+      // references in the end. If the symbol is defined in an import library
+      // or in a regular object file, this has no effect, but if it is defined
+      // in another LTO object file, this makes sure it is kept, to fulfill
+      // the reference when linking the output of the LTO compilation.
+      if (symName.starts_with("__imp_"))
+        sym->isUsedInRegularObj = true;
     } else if (objSym.isCommon()) {
       sym = ctx.symtab.addCommon(this, symName, objSym.getCommonSize());
     } else if (objSym.isWeak() && objSym.isIndirect()) {
@@ -1063,12 +1076,6 @@ void BitcodeFile::parse() {
     } else {
       sym = ctx.symtab.addRegular(this, symName, nullptr, fakeSC, 0,
                                   objSym.isWeak());
-      // Model all symbols with the __imp_ prefix as having external
-      // references. If one LTO object defines a __imp_<foo> symbol, and
-      // another LTO object refers to <foo> with dllimport, make sure the
-      // __imp_ symbol is kept.
-      if (symName.starts_with("__imp_"))
-        sym->isUsedInRegularObj = true;
     }
     symbols.push_back(sym);
     if (objSym.isUsed())
