@@ -2559,7 +2559,8 @@ LogicalResult LLVM::ConstantOp::verify() {
   }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
     if (!getType().isa<VectorType>() && !getType().isa<LLVM::LLVMArrayType>() &&
-        !getType().isa<LLVM::LLVMFixedVectorType>() && !getType().isa<LLVM::LLVMScalableVectorType>())
+        !getType().isa<LLVM::LLVMFixedVectorType>() &&
+        !getType().isa<LLVM::LLVMScalableVectorType>())
       return emitOpError() << "expected vector or array type";
   }
   return success();
