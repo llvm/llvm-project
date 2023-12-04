@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <array>
-#include <string>
 
 #include "SnippetRepetitor.h"
 #include "Target.h"
