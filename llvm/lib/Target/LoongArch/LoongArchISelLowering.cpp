@@ -257,6 +257,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
+      setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
     }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -287,6 +288,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VT, Legal);
       setOperationAction({ISD::SHL, ISD::SRA, ISD::SRL}, VT, Legal);
       setOperationAction({ISD::CTPOP, ISD::CTLZ}, VT, Legal);
+      setOperationAction({ISD::MULHS, ISD::MULHU}, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
