@@ -24,8 +24,6 @@ void test_ldr_str_zt(const void *const_base, void *base) __arm_streaming_compati
   svldr_zt(1, const_base); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
   svstr_zt(1, base);       // expected-error {{argument value 1 is outside the valid range [0, 0]}}
 }
-// REQUIRES: aarch64-registered-target
-#include <arm_sme_draft_spec_subject_to_change.h>
 
 void test_svluti2_lane_zt_x4(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
   // Test Reg Offset

@@ -327,7 +327,7 @@ public:
   }
 
   template <unsigned BaseReg, unsigned Max>
-  bool ImmToTile(SDValue N, SDValue &Imm) {
+  bool ImmToReg(SDValue N, SDValue &Imm) {
     if (auto *CI = dyn_cast<ConstantSDNode>(N)) {
       uint64_t C = CI->getZExtValue();
 
@@ -1875,7 +1875,7 @@ void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
       return;
 
   SDValue ZtValue;
-  if (!ImmToTile<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
+  if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
   SDValue Ops[] = {ZtValue, Node->getOperand(3), Node->getOperand(4)};
   SDLoc DL(Node);

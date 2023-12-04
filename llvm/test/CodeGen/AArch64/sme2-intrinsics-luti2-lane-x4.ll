@@ -12,55 +12,55 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16
     ret {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} %res
 }
 
-define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @luti2_i16(<vscale x 8 x i16> %x) {
+define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @luti2_i16(<vscale x 16 x i8> %x) {
 ; CHECK-LABEL: luti2_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    luti2 { z0.h - z3.h }, zt0, z0[3]
 ; CHECK-NEXT:    ret
-    %res = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8i16(i32 0, <vscale x 8 x i16> %x, i32 3)
+    %res = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> %x, i32 3)
     ret {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} %res
 }
 
-define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @luti2_i32(<vscale x 4 x i32> %x) {
+define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @luti2_i32(<vscale x 16 x i8> %x) {
 ; CHECK-LABEL: luti2_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    luti2 { z0.s - z3.s }, zt0, z0[3]
 ; CHECK-NEXT:    ret
-    %res = call {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4i32(i32 0, <vscale x 4 x i32> %x, i32 3)
+    %res = call {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4i32(i32 0, <vscale x 16 x i8> %x, i32 3)
     ret {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>}%res
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @luti2_f16(<vscale x 8 x half> %x) {
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @luti2_f16(<vscale x 16 x i8> %x) {
 ; CHECK-LABEL: luti2_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    luti2 { z0.h - z3.h }, zt0, z0[3]
 ; CHECK-NEXT:    ret
-    %res = call {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8f16(i32 0, <vscale x 8 x half> %x, i32 3)
+    %res = call {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8f16(i32 0, <vscale x 16 x i8> %x, i32 3)
     ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @luti2_bf16(<vscale x 8 x bfloat> %x) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @luti2_bf16(<vscale x 16 x i8> %x) {
 ; CHECK-LABEL: luti2_bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    luti2 { z0.h - z3.h }, zt0, z0[3]
 ; CHECK-NEXT:    ret
-    %res = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8bf16(i32 0, <vscale x 8 x bfloat> %x, i32 3)
+    %res = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8bf16(i32 0, <vscale x 16 x i8> %x, i32 3)
     ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @luti2_f32(<vscale x 4 x float> %x) {
+define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @luti2_f32(<vscale x 16 x i8> %x) {
 ; CHECK-LABEL: luti2_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    luti2 { z0.s - z3.s }, zt0, z0[3]
 ; CHECK-NEXT:    ret
-    %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4f32(i32 0, <vscale x 4 x float> %x, i32 3)
+    %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4f32(i32 0, <vscale x 16 x i8> %x, i32 3)
     ret {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>}%res
 }
 
 
 declare {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32, <vscale x 16 x i8>, i32)
-declare {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8i16(i32, <vscale x 8 x i16>, i32)
-declare {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4i32(i32, <vscale x 4 x i32>, i32)
-declare {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8f16(i32, <vscale x 8 x half>, i32)
-declare {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8bf16(i32, <vscale x 8 x bfloat>, i32)
-declare {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4f32(i32, <vscale x 4 x float>, i32)
+declare {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8i16(i32, <vscale x 16 x i8>, i32)
+declare {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4i32(i32, <vscale x 16 x i8>, i32)
+declare {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8f16(i32, <vscale x 16 x i8>, i32)
+declare {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv8bf16(i32, <vscale x 16 x i8>, i32)
+declare {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.luti2.lane.zt.x4.nxv4f32(i32, <vscale x 16 x i8>, i32)
