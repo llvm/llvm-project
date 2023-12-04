@@ -61,7 +61,6 @@ namespace {
 
 class WinEHPrepareImpl {
 public:
-  static char ID; // Pass identification, replacement for typeid.
   WinEHPrepareImpl(bool DemoteCatchSwitchPHIOnly)
       : DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
 
