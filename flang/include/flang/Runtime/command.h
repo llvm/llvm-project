@@ -55,6 +55,11 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
     const Descriptor *value = nullptr, const Descriptor *length = nullptr,
     bool trim_name = true, const Descriptor *errmsg = nullptr,
     const char *sourceFile = nullptr, int line = 0);
+
+// Calls std::system()
+void RTNAME(System)(const Descriptor *command = nullptr,
+    const Descriptor *exitstat = nullptr, const char *sourceFile = nullptr,
+    int line = 0);
 }
 } // namespace Fortran::runtime
 

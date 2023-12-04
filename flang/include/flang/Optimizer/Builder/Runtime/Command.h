@@ -53,5 +53,10 @@ mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
                               mlir::Value length, mlir::Value trimName,
                               mlir::Value errmsg);
 
+/// Generate a call to System runtime function which implements
+/// the non-standard System GNU extension.
+void genSystem(fir::FirOpBuilder &, mlir::Location, mlir::Value command,
+               mlir::Value exitstat);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H

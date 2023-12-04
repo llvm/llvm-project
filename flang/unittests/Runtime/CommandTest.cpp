@@ -46,6 +46,17 @@ static OwningPtr<Descriptor> EmptyIntDescriptor() {
   return descriptor;
 }
 
+template <int kind = sizeof(std::int64_t)>
+static OwningPtr<Descriptor> IntDescriptor(const int &value) {
+  OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
+      kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
+  if (descriptor->Allocate() != 0) {
+    return nullptr;
+  }
+  std::memcpy(descriptor->OffsetElement<int>(), &value, sizeof(int));
+  return descriptor;
+}
+
 class CommandFixture : public ::testing::Test {
 protected:
   CommandFixture(int argc, const char *argv[]) {
@@ -226,6 +237,36 @@ TEST_F(ZeroArguments, GetCommandArgument) {
 }
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
+
+TEST_F(ZeroArguments, SystemValidCommandExitStat) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+
+  RTNAME(System)(command.get(), exitStat.get());
+  CheckDescriptorEqInt(exitStat.get(), 0);
+}
+
+TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+
+  RTNAME(System)(command.get(), exitStat.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt(exitStat.get(), 1);
+#else
+  CheckDescriptorEqInt(exitStat.get(), 127);
+#endif
+}
+
+TEST_F(ZeroArguments, SystemValidCommandOptionalExitStat) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  EXPECT_NO_FATAL_FAILURE(RTNAME(System)(command.get(), nullptr));
+}
+
+TEST_F(ZeroArguments, SystemInvalidCommandOptionalExitStat) {
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  EXPECT_NO_FATAL_FAILURE(RTNAME(System)(command.get(), nullptr));
+}
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {

@@ -1387,6 +1387,11 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"get", DefaultInt, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"system",
+        {{"command", DefaultChar, Rank::scalar},
+            {"exitstat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
         {{"count", AnyInt, Rank::scalar, Optionality::optional,
              common::Intent::Out},
@@ -1885,7 +1890,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   int elementalRank{0};
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
-    if (const ActualArgument *arg{actualForDummy[j]}) {
+    if (const ActualArgument * arg{actualForDummy[j]}) {
       bool isAssumedRank{IsAssumedRank(*arg)};
       if (isAssumedRank && d.rank != Rank::anyOrAssumedRank &&
           d.rank != Rank::arrayOrAssumedRank) {
@@ -2222,7 +2227,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case Rank::locReduced:
     case Rank::scalarIfDim:
       if (dummy[*dimArg].optionality == Optionality::required) {
-        if (const Symbol *whole{
+        if (const Symbol *
+            whole{
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
           if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
             if (context.languageFeatures().ShouldWarn(
@@ -2300,7 +2306,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // Rearrange the actual arguments into dummy argument order.
   ActualArguments rearranged(dummies);
   for (std::size_t j{0}; j < dummies; ++j) {
-    if (ActualArgument *arg{actualForDummy[j]}) {
+    if (ActualArgument * arg{actualForDummy[j]}) {
       rearranged[j] = std::move(*arg);
     }
   }
@@ -2937,7 +2943,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     ok &= CheckForCoindexedObject(context, call.arguments[3], name, "errmsg");
     if (call.arguments[0] && call.arguments[1]) {
       for (int j{0}; j < 2; ++j) {
-        if (const Symbol *last{GetLastSymbol(call.arguments[j])};
+        if (const Symbol * last{GetLastSymbol(call.arguments[j])};
             last && !IsAllocatable(last->GetUltimate())) {
           context.messages().Say(call.arguments[j]->sourceLocation(),
               "Argument #%d to MOVE_ALLOC must be allocatable"_err_en_US,
@@ -2957,7 +2963,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     const auto &arg{call.arguments[0]};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
-        if (const Symbol *symbol{UnwrapWholeSymbolDataRef(*expr)}) {
+        if (const Symbol * symbol{UnwrapWholeSymbolDataRef(*expr)}) {
           ok = symbol->attrs().test(semantics::Attr::OPTIONAL);
         }
       }
