@@ -14,7 +14,6 @@
 #include "llvm/OffloadArch/OffloadArch.h"
 
 #include "DeviceImage.h"
-#include "OmptTracing.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
 #include "device.h"
@@ -38,7 +37,6 @@ using namespace llvm::omp::target;
 
 #ifdef OMPT_SUPPORT
 extern void ompt::connectLibrary();
-extern OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 #endif
 
 __attribute__((constructor(101))) void init() {
