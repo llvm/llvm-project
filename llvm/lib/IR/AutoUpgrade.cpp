@@ -782,16 +782,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       return true;
     }
     if (Name.starts_with("arm.neon.vclz")) {
-      Type* args[2] = {
-        F->arg_begin()->getType(),
-        Type::getInt1Ty(F->getContext())
-      };
-      // Can't use Intrinsic::getDeclaration here as it adds a ".i1" to
-      // the end of the name. Change name from llvm.arm.neon.vclz.* to
-      //  llvm.ctlz.*
-      FunctionType* fType = FunctionType::get(F->getReturnType(), args, false);
-      NewFn = Function::Create(fType, F->getLinkage(), F->getAddressSpace(),
-                               "llvm.ctlz." + Name.substr(14), F->getParent());
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz,
+                                        F->arg_begin()->getType());
       return true;
     }
     if (Name.starts_with("arm.neon.vcnt")) {
