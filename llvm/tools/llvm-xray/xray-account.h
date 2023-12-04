@@ -14,7 +14,6 @@
 #define LLVM_TOOLS_LLVM_XRAY_XRAY_ACCOUNT_H
 
 #include <utility>
-#include <vector>
 
 #include "func-id-helper.h"
 #include "llvm/ADT/Bitfields.h"
