@@ -666,3 +666,72 @@ body: |
     EXP_DONE 0, %49:vgpr_32, undef %51:vgpr_32, undef %53:vgpr_32, undef %55:vgpr_32, -1, 0, 1, implicit $exec
     S_ENDPGM 0
 ...
+---
+name: early_clobber_def_used_on_rhs
+registers:
+  - { id: 0, class: vgpr_32 }
+body: |
+  ; RPU-LABEL: name: early_clobber_def_used_on_rhs
+  ; RPU: bb.0:
+  ; RPU-NEXT:   Live-in:  %0:0000000000000003
+  ; RPU-NEXT:   mis LIS:
+  ; RPU-NEXT:     %0:L0000000000000003 isn't found in LIS reported set
+  ; RPU-NEXT:   SGPR  VGPR
+  ; RPU-NEXT:   0     1
+  ; RPU-NEXT:   0     1      dead %3:vgpr_32 = COPY $vgpr0
+  ; RPU-NEXT:   0     1
+  ; RPU-NEXT:   0     2      early-clobber %2:vgpr_32 = COPY %0:vgpr_32
+  ; RPU-NEXT:   0     1
+  ; RPU-NEXT:   0     1      S_NOP 0, implicit %2:vgpr_32
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT: bb.1:
+  ; RPU-NEXT:   Live-in:
+  ; RPU-NEXT:   SGPR  VGPR
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT:   0     0      dead %1:vgpr_32 = COPY $vgpr0
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT:   0     0      dead %0:vgpr_32 = COPY $vgpr0
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT:   0     0
+  ;
+  ; RPD-LABEL: name: early_clobber_def_used_on_rhs
+  ; RPD: bb.0:
+  ; RPD-NEXT:   Live-in:
+  ; RPD-NEXT:   SGPR  VGPR
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   0     1      dead %3:vgpr_32 = COPY $vgpr0
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   0     1      early-clobber %2:vgpr_32 = COPY %0:vgpr_32
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   0     0      S_NOP 0, implicit %2:vgpr_32
+  ; RPD-NEXT:   0     -1
+  ; RPD-NEXT:   Live-out:
+  ; RPD-NEXT:   mis LIS:
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT: bb.1:
+  ; RPD-NEXT:   Live-in:
+  ; RPD-NEXT:   SGPR  VGPR
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   0     1      dead %1:vgpr_32 = COPY $vgpr0
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   0     1      dead %0:vgpr_32 = COPY $vgpr0
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   Live-out:
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT:   0     0
+  bb.0:
+    liveins: $vgpr0
+    %0 = COPY $vgpr0
+    early-clobber %0 = COPY %0
+    S_NOP 0, implicit %0
+  bb.1:
+    liveins: $vgpr0
+    %0 = COPY $vgpr0
+    %0 = COPY $vgpr0 ; Force isSSA = false
+...
