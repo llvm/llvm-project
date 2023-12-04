@@ -12,6 +12,7 @@
 #include "UseDigitSeparatorCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -38,21 +39,33 @@ void UseDigitSeparatorCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *MatchedInteger = Result.Nodes.getNodeAs<IntegerLiteral>("integerLiteral");
-  const auto IntegerValue = MatchedInteger->getValue();
-  const auto IntegerString =
+  const ASTContext &Context = *Result.Context;
+  const SourceManager &Source = Context.getSourceManager();
+  const IntegerLiteral *MatchedInteger = Result.Nodes.getNodeAs<IntegerLiteral>("integerLiteral");
+
+  // Get original literal source text
+  const StringRef OriginalLiteralString = Lexer::getSourceText(CharSourceRange::getTokenRange(MatchedInteger->getSourceRange()), Source, Context.getLangOpts());
+
+  // Get formatting literal text
+  const llvm::APInt IntegerValue = MatchedInteger->getValue();
+  const std::vector<std::string> SplittedIntegerLiteral =
       splitString3Symbols(toString(IntegerValue, 10, true));
-  const auto FinalString =
-      std::accumulate(IntegerString.begin(), IntegerString.end(),
+  const std::string FormatedLiteralString =
+      std::accumulate(SplittedIntegerLiteral.begin(),
+                      SplittedIntegerLiteral.end(),
                       std::string(""),
                       [](std::basic_string<char> S1,
                          std::basic_string<char> S2) { return S1 + "\'" + S2; })
           .erase(0, 1);
-  diag(MatchedInteger->getLocation(), "integer warning %0")
-      << FinalString
-      << FixItHint::CreateInsertion(MatchedInteger->getLocation(),
-                                    "this is integer");
-  diag(MatchedInteger->getLocation(), "integer", DiagnosticIDs::Note);
+
+  // Compare the original and formatted representation of a literal
+  if (OriginalLiteralString != FormatedLiteralString) {
+    diag(MatchedInteger->getLocation(), "integer warning %0 %1")
+        << FormatedLiteralString << OriginalLiteralString
+        << FixItHint::CreateInsertion(MatchedInteger->getLocation(),
+                                      "this is integer");
+    diag(MatchedInteger->getLocation(), "integer", DiagnosticIDs::Note);
+  }
 }
 
 } // namespace clang::tidy::modernize
