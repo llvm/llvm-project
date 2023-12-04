@@ -70,3 +70,12 @@ const unsigned char sixth_buffer[] = {
 #embed <jk.txt> clang::offset(0xFFFF'FFFF'FFFF'FFFF'1)
 };
 // expected-error@-2 {{integer literal is too large to be represented in any integer type}}
+
+// Ensure we diagnose duplicate parameters even if they're the same value.
+const unsigned char a[] = {
+#embed <jk.txt> clang::offset(1) prefix() clang::offset(1)
+// expected-error@-1 {{cannot specify parameter 'clang::offset' twice in the same '#embed' directive}}
+,
+#embed <jk.txt> clang::offset(1) if_empty() clang::offset(2)
+// expected-error@-1 {{cannot specify parameter 'clang::offset' twice in the same '#embed' directive}}
+};

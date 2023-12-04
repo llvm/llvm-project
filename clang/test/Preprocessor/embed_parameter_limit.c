@@ -78,3 +78,12 @@ const unsigned char sixth_buffer[] = {
 // Note: the preprocessor will continue with the truncated value, so the parser
 // will treat this case and the previous one identically in terms of what
 // contents are retained from the embedded resource (which is the entire file).
+
+// Ensure we diagnose duplicate parameters even if they're the same value.
+const unsigned char a[] = {
+#embed <jk.txt> limit(1) prefix() limit(1)
+// expected-error@-1 {{cannot specify parameter 'limit' twice in the same '#embed' directive}}
+,
+#embed <jk.txt> limit(1) if_empty() limit(2)
+// expected-error@-1 {{cannot specify parameter 'limit' twice in the same '#embed' directive}}
+};

@@ -432,6 +432,8 @@ def ext_pp_has_embed : ExtWarn<
 def warn_compat_pp_has_embed : Warning<
   "'__has_embed' is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
+def err_pp_embed_dup_params : Error<
+  "cannot specify parameter '%0' twice in the same '#embed' directive">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
