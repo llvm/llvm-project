@@ -299,6 +299,15 @@ void error_fseek_0(void) {
   fclose(F);
 }
 
+void error_fflush(void) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  fclose(F);
+  fflush(F);    // expected-warning {{Stream might be already closed}}
+  fflush(NULL); // no-warning
+}
+
 void error_indeterminate(void) {
   FILE *F = fopen("file", "r+");
   if (!F)

@@ -61,6 +61,7 @@ void clearerr(FILE *stream);
 int feof(FILE *stream);
 int ferror(FILE *stream);
 int fileno(FILE *stream);
+int fflush(FILE *stream);
 
 size_t strlen(const char *);
 

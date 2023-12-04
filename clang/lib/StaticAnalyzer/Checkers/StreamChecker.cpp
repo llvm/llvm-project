@@ -266,6 +266,7 @@ private:
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{{"ftell"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFtell, 0}},
+      {{{"fflush"}, 1}, {&StreamChecker::preFflush, nullptr, 0}},
       {{{"rewind"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalRewind, 0}},
       {{{"fgetpos"}, 2},
@@ -359,6 +360,9 @@ private:
   void evalSetFeofFerror(const FnDescription *Desc, const CallEvent &Call,
                          CheckerContext &C,
                          const StreamErrorState &ErrorKind) const;
+
+  void preFflush(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C) const;
 
   /// Check that the stream (in StreamVal) is not NULL.
   /// If it can only be NULL a fatal error is emitted and nullptr returned.
@@ -1189,6 +1193,18 @@ void StreamChecker::evalSetFeofFerror(const FnDescription *Desc,
   State = State->set<StreamMap>(
       StreamSym, StreamState::getOpened(SS->LastOperation, ErrorKind));
   C.addTransition(State);
+}
+
+void StreamChecker::preFflush(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C) const {
+  // Skip if the stream is NULL/nullptr, which means flush all streams.
+  if (!Call.getArgExpr(Desc->StreamArgNo)
+           ->isNullPointerConstant(C.getASTContext(),
+                                   Expr::NPC_ValueDependentIsNotNull)) {
+    ProgramStateRef State = C.getState();
+    if (State = ensureStreamOpened(getStreamArg(Desc, Call), C, State))
+      C.addTransition(State);
+  }
 }
 
 ProgramStateRef
