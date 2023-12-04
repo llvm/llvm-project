@@ -149,6 +149,8 @@ if(LLVM_ENABLE_PIC)
     MLIRSparseTensorEnums
     MLIRSparseTensorRuntime
     )
+  target_link_options(mlir_c_runner_utils PRIVATE
+    "-Wl,--unresolved-symbols=ignore-in-object-files")
   set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
   target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
