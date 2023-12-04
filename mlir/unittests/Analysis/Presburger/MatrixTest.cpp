@@ -365,6 +365,9 @@ TEST(MatrixTest, gramSchmidt) {
   gs = mat.gramSchmidt();
 
   // The integers involved are too big to construct the actual matrix.
+  // but we can check that the result is linearly independent.
+  ASSERT_FALSE(mat.determinant(nullptr) == 0);
+
   for (unsigned i = 0; i < 4u; i++)
     for (unsigned j = i + 1; j < 4u; j++)
       EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
