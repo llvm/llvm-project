@@ -31,6 +31,14 @@ llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
 
 // -----
 
+llvm.func @integer_with_float_type() -> f32 {
+  // expected-error @+1 {{expected integer constant to have integer type}}
+  %0 = llvm.mlir.constant(1 : index) : f32
+  llvm.return %0 : f32
+}
+
+// -----
+
 llvm.func @incompatible_float_attribute_type() -> f32 {
   // expected-error @below{{expected float type of width 64}}
   %cst = llvm.mlir.constant(1.0 : f64) : f32
