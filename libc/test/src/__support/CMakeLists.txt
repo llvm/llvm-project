@@ -181,12 +181,4 @@ add_subdirectory(File)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
-
-list(FIND TARGET_ENTRYPOINT_NAME_LIST hsearch hsearch_index)
-list(FIND TARGET_ENTRYPOINT_NAME_LIST hsearch_r hsearch_r_index)
-
-if (${hsearch_index} EQUAL -1 AND ${hsearch_r_index} EQUAL -1)
-  message(STATUS "Skipping HashTable tests since hsearch and hsearch_r are not built.")
-else()
-  add_subdirectory(HashTable)
-endif()
+add_subdirectory(HashTable)
