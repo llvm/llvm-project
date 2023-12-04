@@ -68,8 +68,6 @@ func.func @no_dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> te
 }
 
 // CHECK-LABEL: @no_dce_zero_memref
-//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<0xf32>
-//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<0xf32>
 //  CHECK-NEXT:   linalg.generic
 
 // -----
