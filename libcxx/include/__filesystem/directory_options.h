@@ -27,45 +27,45 @@ enum class directory_options : unsigned char {
   skip_permission_denied = 2
 };
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator&(directory_options __lhs,
                                              directory_options __rhs) {
   return static_cast<directory_options>(static_cast<unsigned char>(__lhs) &
                                         static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator|(directory_options __lhs,
                                              directory_options __rhs) {
   return static_cast<directory_options>(static_cast<unsigned char>(__lhs) |
                                         static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator^(directory_options __lhs,
                                              directory_options __rhs) {
   return static_cast<directory_options>(static_cast<unsigned char>(__lhs) ^
                                         static_cast<unsigned char>(__rhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline constexpr directory_options operator~(directory_options __lhs) {
   return static_cast<directory_options>(~static_cast<unsigned char>(__lhs));
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline directory_options& operator&=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs & __rhs;
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline directory_options& operator|=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs | __rhs;
 }
 
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 inline directory_options& operator^=(directory_options& __lhs,
                                      directory_options __rhs) {
   return __lhs = __lhs ^ __rhs;

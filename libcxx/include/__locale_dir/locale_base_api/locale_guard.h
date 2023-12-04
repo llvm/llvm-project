@@ -21,9 +21,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_LOCALE__L_EXTENSIONS)
 struct __libcpp_locale_guard {
-  _LIBCPP_INLINE_VISIBILITY __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
+  _LIBCPP_HIDE_FROM_ABI __libcpp_locale_guard(locale_t& __loc) : __old_loc_(uselocale(__loc)) {}
 
-  _LIBCPP_INLINE_VISIBILITY ~__libcpp_locale_guard() {
+  _LIBCPP_HIDE_FROM_ABI ~__libcpp_locale_guard() {
     if (__old_loc_)
       uselocale(__old_loc_);
   }
