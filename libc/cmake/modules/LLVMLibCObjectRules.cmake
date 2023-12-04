@@ -43,8 +43,8 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fno-rtti")
     list(APPEND compile_options "-Wall")
     list(APPEND compile_options "-Wextra")
-    # -DLLVM_LIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
-    if(NOT LLVM_LIBC_WNO_ERROR)
+    # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
+    if(NOT LIBC_WNO_ERROR)
       list(APPEND compile_options "-Werror")
     endif()
     list(APPEND compile_options "-Wconversion")
