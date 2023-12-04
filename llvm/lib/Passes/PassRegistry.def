@@ -523,6 +523,12 @@ FUNCTION_PASS_WITH_PARAMS(
     "sroa", "SROAPass",
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
     parseSROAOptions, "preserve-cfg;modify-cfg")
+FUNCTION_PASS_WITH_PARAMS(
+    "win-eh-prepare", "WinEHPreparePass",
+    [](bool DemoteCatchSwitchPHIOnly) {
+      return WinEHPreparePass(DemoteCatchSwitchPHIOnly);
+    },
+    parseWinEHPrepareOptions, "demote-catchswitch-only")
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS

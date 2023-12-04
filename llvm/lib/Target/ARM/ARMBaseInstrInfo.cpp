@@ -4473,7 +4473,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
         ItinData->getOperandCycle(DefMCID.getSchedClass(), DefIdx);
     int Adj = Subtarget.getPreISelOperandLatencyAdjustment();
     int Threshold = 1 + Adj;
-    return !Latency || Latency <= Threshold ? 1 : *Latency - Adj;
+    return !Latency || Latency <= (unsigned)Threshold ? 1 : *Latency - Adj;
   }
 
   const MCInstrDesc &UseMCID = get(UseNode->getMachineOpcode());
@@ -4490,7 +4490,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   if (!Latency)
     return std::nullopt;
 
-  if (Latency > 1 &&
+  if (Latency > 1U &&
       (Subtarget.isCortexA8() || Subtarget.isLikeA9() ||
        Subtarget.isCortexA7())) {
     // FIXME: Shifter op hack: no shift (i.e. [r +/- r]) or [r + r << 2]
@@ -4519,7 +4519,7 @@ ARMBaseInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
       break;
     }
     }
-  } else if (DefIdx == 0 && Latency > 2 && Subtarget.isSwift()) {
+  } else if (DefIdx == 0 && Latency > 2U && Subtarget.isSwift()) {
     // FIXME: Properly handle all of the latency adjustments for address
     // writeback.
     switch (DefMCID.getOpcode()) {
@@ -4836,7 +4836,7 @@ bool ARMBaseInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
     unsigned DefClass = DefMI.getDesc().getSchedClass();
     std::optional<unsigned> DefCycle =
         ItinData->getOperandCycle(DefClass, DefIdx);
-    return DefCycle <= 2;
+    return DefCycle <= 2U;
   }
   return false;
 }

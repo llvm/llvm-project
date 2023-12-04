@@ -35,7 +35,6 @@
 #include "llvm/Support/GenericDomTree.h"
 #include <algorithm>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 

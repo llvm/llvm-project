@@ -59,7 +59,7 @@ namespace dr3 { // dr3: yes
   // expected-note@#dr3-f-T {{implicit instantiation first required here}}
 }
 
-namespace dr4 { // dr4: yes
+namespace dr4 { // dr4: 2.8
   extern "C" {
     static void dr4_f(int) {}
     static void dr4_f(float) {}
@@ -510,7 +510,7 @@ namespace dr33 { // dr33: 9
 // dr34: na
 // dr35: dup 178
 
-namespace dr36 { // dr36: yes
+namespace dr36 { // dr36: 2.8
 namespace example1 {
   namespace A {
     int i;
