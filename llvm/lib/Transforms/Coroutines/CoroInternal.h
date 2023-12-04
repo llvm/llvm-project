@@ -33,6 +33,10 @@ void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 void salvageDebugInfo(
     SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool IsEntryPoint);
+/// See overload.
+void salvageDebugInfo(
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap, DPValue *DPV,
+    bool OptimizeFrame, bool UseEntryValue);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -240,10 +244,13 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     return nullptr;
   }
 
-  Instruction *getInsertPtAfterFramePtr() const {
-    if (auto *I = dyn_cast<Instruction>(FramePtr))
-      return I->getNextNode();
-    return &cast<Argument>(FramePtr)->getParent()->getEntryBlock().front();
+  BasicBlock::iterator getInsertPtAfterFramePtr() const {
+    if (auto *I = dyn_cast<Instruction>(FramePtr)) {
+      BasicBlock::iterator It = std::next(I->getIterator());
+      It.setHeadBit(true); // Copy pre-RemoveDIs behaviour.
+      return It;
+    }
+    return cast<Argument>(FramePtr)->getParent()->getEntryBlock().begin();
   }
 
   /// Allocate memory according to the rules of the active lowering.
