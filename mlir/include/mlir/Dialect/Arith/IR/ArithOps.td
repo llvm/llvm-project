@@ -200,6 +200,12 @@ def Arith_AddIOp : Arith_TotalIntBinaryOp<"addi", [Commutative]> {
     a vector whose element type is integer, or a tensor of integers. It has no 
     standard attributes.
 
+    The operands are interpreted as unsigned bitvectors. The result is represented by 
+    a bitvector containing the mathematical value of the addition modulo 2^n, where 
+    `n` is the bitwidth. Because `arith` integers use a two's complement 
+    representation, this operation is applicable on both signed and unsigned 
+    integer operands.
+
     Example:
 
     ```mlir
@@ -276,6 +282,17 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
   let summary = [{
     Integer subtraction operation.
   }];
+  let description = [{    
+    The `subi` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar type, 
+    a vector whose element type is integer, or a tensor of integers. It has no 
+    standard attributes.
+
+    The operands are interpreted as unsigned bitvectors. The result is represented by a 
+    bitvector containing the mathematical value of the subtraction modulo 2^n, where `n` 
+    is the bitwidth. Because `arith` integers use a two's complement representation, this 
+    operation is applicable on both signed and unsigned integer operands.
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -287,6 +304,17 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
   let summary = [{
     Integer multiplication operation.
+  }];
+  let description = [{
+    The `muli` operation takes two operands and returns one result, each of
+    these is required to be the same type. This type may be an integer scalar type, 
+    a vector whose element type is integer, or a tensor of integers. It has no 
+    standard attributes.
+
+    The operands are interpreted as unsigned bitvectors. The result is represented by a 
+    bitvector containing the mathematical value of the multiplication modulo 2^n, where `n` 
+    is the bitwidth. Because `arith` integers use a two's complement representation, this 
+    operation is applicable on both signed and unsigned integer operands.
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
