@@ -34,7 +34,9 @@ LIBC_INLINE double as_double(uint64_t x) { return cpp::bit_cast<double>(x); }
 
 LIBC_INLINE uint32_t top12_bits(float x) { return as_uint32_bits(x) >> 20; }
 
-LIBC_INLINE uint32_t top12_bits(double x) { return as_uint64_bits(x) >> 52; }
+LIBC_INLINE uint32_t top12_bits(double x) {
+  return static_cast<uint32_t>(as_uint64_bits(x) >> 52);
+}
 
 // Values to trigger underflow and overflow.
 template <typename T> struct XFlowValues;

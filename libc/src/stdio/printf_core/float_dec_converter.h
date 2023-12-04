@@ -537,7 +537,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
   }
 
   if (exponent < MANT_WIDTH) {
-    const uint32_t blocks = (precision / BLOCK_SIZE) + 1;
+    const uint32_t blocks = static_cast<uint32_t>(precision / BLOCK_SIZE) + 1;
     uint32_t i = 0;
     // if all the blocks we should write are zero
     if (blocks <= float_converter.zero_blocks_after_point()) {
@@ -561,7 +561,8 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         RET_IF_RESULT_NEGATIVE(float_writer.write_middle_block(digits));
       } else {
 
-        const uint32_t maximum = precision - BLOCK_SIZE * i;
+        const uint32_t maximum =
+            static_cast<uint32_t>(precision - BLOCK_SIZE * i);
         uint32_t last_digit = 0;
         for (uint32_t k = 0; k < BLOCK_SIZE - maximum; ++k) {
           last_digit = digits % 10;
@@ -646,7 +647,8 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   const size_t block_width = IntegerToString<intmax_t>(digits).size();
 
-  final_exponent = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
+  final_exponent = static_cast<int>(cur_block * BLOCK_SIZE) +
+                   static_cast<int>(block_width - 1);
   int positive_exponent = final_exponent < 0 ? -final_exponent : final_exponent;
 
   size_t exponent_width = IntegerToString<intmax_t>(positive_exponent).size();
@@ -819,7 +821,8 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   size_t trailing_zeroes = 0;
   size_t trailing_nines = 0;
 
-  base_10_exp = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
+  base_10_exp = static_cast<int>(cur_block * BLOCK_SIZE) +
+                static_cast<int>(block_width - 1);
 
   // If the first block is not also the last block
   if (block_width <= exp_precision + 1) {
@@ -864,7 +867,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
              (cur_last_digit == 9 || cur_last_digit == 0)) {
         // If the next digit is not the same as the previous one, then there are
         // no more contiguous trailing digits.
-        if ((copy_of_digits % 10) != cur_last_digit) {
+        if (static_cast<int>(copy_of_digits % 10) != cur_last_digit) {
           break;
         }
         if (cur_last_digit == 9) {

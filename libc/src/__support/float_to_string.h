@@ -136,12 +136,12 @@ LIBC_INLINE constexpr uint32_t log10_pow2(const uint64_t e) {
   // us the floor, whereas counting the digits of the power of 2 gives us the
   // ceiling. With a similar loop I checked the maximum valid value and found
   // 42039.
-  return (e * 0x13441350fbdll) >> 42;
+  return static_cast<uint32_t>((e * 0x13441350fbdll) >> 42);
 }
 
 // Same as above, but with different constants.
 LIBC_INLINE constexpr uint32_t log2_pow5(const uint64_t e) {
-  return (e * 0x12934f0979bll) >> 39;
+  return static_cast<uint32_t>((e * 0x12934f0979bll) >> 39);
 }
 
 // Returns 1 + floor(log_10(2^e). This could technically be off by 1 if any
@@ -157,9 +157,10 @@ LIBC_INLINE constexpr uint32_t ceil_log10_pow2(const uint32_t e) {
 LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
                                               const uint32_t mantissa_width) {
   //+8 to round up when dividing by 9
-  return (ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width + 1) +
-          (BLOCK_SIZE - 1)) /
-         BLOCK_SIZE;
+  return static_cast<uint32_t>((ceil_log10_pow2(idx) +
+                                ceil_log10_pow2(mantissa_width + 1) +
+                                (BLOCK_SIZE - 1)) /
+                               BLOCK_SIZE);
   // return (ceil_log10_pow2(16 * idx + mantissa_width) + 8) / 9;
 }
 
@@ -488,7 +489,8 @@ public:
 
       val = POW10_SPLIT[POW10_OFFSET[idx] + block_index];
 #endif
-      const uint32_t shift_amount = SHIFT_CONST + (IDX_SIZE * idx) - exponent;
+      const uint32_t shift_amount =
+          static_cast<uint32_t>(SHIFT_CONST + (IDX_SIZE * idx) - exponent);
       const uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, (int32_t)(shift_amount));
       return digits;
@@ -549,7 +551,7 @@ public:
       val = POW10_SPLIT_2[p];
 #endif
       const int32_t shift_amount =
-          SHIFT_CONST + (-exponent - static_cast<int>(IDX_SIZE) * idx);
+          static_cast<int32_t>(SHIFT_CONST + (-exponent - IDX_SIZE * idx));
       uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
       return digits;
@@ -747,7 +749,8 @@ FloatToString<long double>::get_negative_block(int block_index) {
                                                        block_index + 1);
     }
 #endif
-    const int32_t shift_amount = SHIFT_CONST + (-exponent - IDX_SIZE * idx);
+    const int32_t shift_amount =
+        SHIFT_CONST + (-exponent - static_cast<int>(IDX_SIZE * idx));
     BlockInt digits = internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
     return digits;
   } else {
