@@ -18,7 +18,7 @@ define void @basic(ptr %p, i32 %k) #0 {
 ; CHECK:       for.body.peel2:
 ; CHECK-NEXT:    [[INCDEC_PTR_PEEL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    store i32 1, ptr [[INCDEC_PTR_PEEL]], align 4
-; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp ugt i32 [[K]], 2
+; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp sgt i32 [[K]], 2
 ; CHECK-NEXT:    br i1 [[CMP_PEEL5]], label [[FOR_BODY_PEEL7:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.peel7:
 ; CHECK-NEXT:    [[INCDEC_PTR_PEEL3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
@@ -32,7 +32,7 @@ define void @basic(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[P_ADDR_04]], i64 1
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[K]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -78,7 +78,7 @@ define i32 @output(ptr %p, i32 %k) #0 {
 ; CHECK:       for.body.peel2:
 ; CHECK-NEXT:    [[INCDEC_PTR_PEEL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    store i32 1, ptr [[INCDEC_PTR_PEEL]], align 4
-; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp ugt i32 [[K]], 2
+; CHECK-NEXT:    [[CMP_PEEL5:%.*]] = icmp sgt i32 [[K]], 2
 ; CHECK-NEXT:    br i1 [[CMP_PEEL5]], label [[FOR_BODY_PEEL7:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.peel7:
 ; CHECK-NEXT:    [[INCDEC_PTR_PEEL3:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 2
@@ -92,7 +92,7 @@ define i32 @output(ptr %p, i32 %k) #0 {
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[P_ADDR_04]], i64 1
 ; CHECK-NEXT:    store i32 [[I_05]], ptr [[P_ADDR_04]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_05]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[K]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[K]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[FOR_BODY_PEEL]] ], [ 2, [[FOR_BODY_PEEL2]] ], [ 3, [[FOR_BODY_PEEL7]] ], [ [[INC]], [[FOR_BODY]] ]
