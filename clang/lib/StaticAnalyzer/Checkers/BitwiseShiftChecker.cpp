@@ -172,18 +172,24 @@ BugReportPtr BitwiseShiftValidator::checkOvershift() {
 
   const SVal Right = Ctx.getSVal(operandExpr(OperandSide::Right));
 
-  std::string RightOpStr = "";
+  std::string RightOpStr = "", LowerBoundStr = "";
   if (auto ConcreteRight = Right.getAs<nonloc::ConcreteInt>())
     RightOpStr = formatv(" '{0}'", ConcreteRight->getValue());
+  else {
+    SValBuilder &SVB = Ctx.getSValBuilder();
+    if (const llvm::APSInt *MinRight = SVB.getMinValue(FoldedState, Right)) {
+      LowerBoundStr = formatv(" >= {0},", MinRight->getExtValue());
+    }
+  }
 
   std::string ShortMsg = formatv(
       "{0} shift{1}{2} overflows the capacity of '{3}'",
       isLeftShift() ? "Left" : "Right", RightOpStr.empty() ? "" : " by",
       RightOpStr, LHSTy.getAsString());
-  std::string Msg =
-      formatv("The result of {0} shift is undefined because the right "
-              "operand{1} is not smaller than {2}, the capacity of '{3}'",
-              shiftDir(), RightOpStr, LHSBitWidth, LHSTy.getAsString());
+  std::string Msg = formatv(
+      "The result of {0} shift is undefined because the right "
+      "operand{1} is{2} not smaller than {3}, the capacity of '{4}'",
+      shiftDir(), RightOpStr, LowerBoundStr, LHSBitWidth, LHSTy.getAsString());
   return createBugReport(ShortMsg, Msg);
 }
 

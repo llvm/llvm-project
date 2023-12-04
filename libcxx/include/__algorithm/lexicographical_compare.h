@@ -37,7 +37,7 @@ __lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
                         _InputIterator2 __first2, _InputIterator2 __last2, _Compare __comp)
@@ -47,7 +47,7 @@ lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
 
 template <class _InputIterator1, class _InputIterator2>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 lexicographical_compare(_InputIterator1 __first1, _InputIterator1 __last1,
                         _InputIterator2 __first2, _InputIterator2 __last2)
