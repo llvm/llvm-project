@@ -943,6 +943,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__EGPR__");
   if (HasPush2Pop2)
     Builder.defineMacro("__PUSH2POP2__");
+  if (HasPPX)
+    Builder.defineMacro("__PPX__");
   if (HasNDD)
     Builder.defineMacro("__NDD__");
   if (HasCCMP)
