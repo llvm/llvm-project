@@ -51,27 +51,29 @@ bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
   if (GV->isThreadLocal())
     return false;
 
-  // Allowing large metadata sections in the presence of an explicit section is
-  // useful, even if GCC does not allow them. However, we should properly mark
-  // well-known section name prefixes as small/large, because otherwise the
-  // output section may have the wrong section flags and the linker will lay it
-  // out in an unexpected way.
+  // We should properly mark well-known section name prefixes as small/large,
+  // because otherwise the output section may have the wrong section flags and
+  // the linker will lay it out in an unexpected way.
   StringRef Name = GV->getSection();
-  auto IsPrefix = [&](StringRef Prefix) {
-    StringRef S = Name;
-    return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
-  };
-  if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
-    return false;
-  if (IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata"))
-    return true;
+  if (!Name.empty()) {
+    auto IsPrefix = [&](StringRef Prefix) {
+      StringRef S = Name;
+      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
+    };
+    if (IsPrefix(".bss") || IsPrefix(".data") || IsPrefix(".rodata"))
+      return false;
+    if (IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata"))
+      return true;
+  }
 
-  if (getCodeModel() != CodeModel::Medium && getCodeModel() != CodeModel::Large)
-    return false;
+  if (getCodeModel() == CodeModel::Medium ||
+      getCodeModel() == CodeModel::Large) {
+    const DataLayout &DL = GV->getParent()->getDataLayout();
+    uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+    return Size == 0 || Size > LargeDataThreshold;
+  }
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
-  uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
-  return Size == 0 || Size > LargeDataThreshold;
+  return false;
 }
 
 bool TargetMachine::isPositionIndependent() const {
