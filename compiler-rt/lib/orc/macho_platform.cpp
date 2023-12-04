@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "macho_platform.h"
+#include "bitmask_enum.h"
 #include "common.h"
 #include "debug.h"
 #include "error.h"
@@ -34,7 +35,7 @@ using namespace __orc_rt::macho;
 
 // Declare function tags for functions in the JIT process.
 ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_push_initializers_tag)
-ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_symbol_lookup_tag)
+ORC_RT_JIT_DISPATCH_TAG(__orc_rt_macho_push_symbols_tag)
 
 struct objc_image_info;
 struct mach_header;
@@ -148,6 +149,16 @@ struct TLVDescriptor {
 };
 
 class MachOPlatformRuntimeState {
+public:
+  // Used internally by MachOPlatformRuntimeState, but made public to enable
+  // serialization.
+  enum class MachOExecutorSymbolFlags : uint8_t {
+    None = 0,
+    Weak = 1U << 0,
+    Callable = 1U << 1,
+    ORC_RT_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Callable)
+  };
+
 private:
   struct AtExitEntry {
     void (*Func)(void *);
@@ -256,11 +267,17 @@ private:
       IntervalMap<char *, UnwindSections, IntervalCoalescing::Disabled>;
 
   struct JITDylibState {
+
+    using SymbolTableMap =
+        std::unordered_map<std::string_view,
+                           std::pair<ExecutorAddr, MachOExecutorSymbolFlags>>;
+
     std::string Name;
     void *Header = nullptr;
     bool Sealed = false;
     size_t LinkedAgainstRefCount = 0;
     size_t DlRefCount = 0;
+    SymbolTableMap SymbolTable;
     std::vector<JITDylibState *> Deps;
     AtExitsVector AtExits;
     const objc_image_info *ObjCImageInfo = nullptr;
@@ -296,6 +313,14 @@ public:
   Error deregisterJITDylib(void *Header);
   Error registerThreadDataSection(span<const char> ThreadDataSection);
   Error deregisterThreadDataSection(span<const char> ThreadDataSection);
+  Error registerObjectSymbolTable(
+      ExecutorAddr HeaderAddr,
+      const std::vector<std::tuple<ExecutorAddr, ExecutorAddr,
+                                   MachOExecutorSymbolFlags>> &Entries);
+  Error deregisterObjectSymbolTable(
+      ExecutorAddr HeaderAddr,
+      const std::vector<std::tuple<ExecutorAddr, ExecutorAddr,
+                                   MachOExecutorSymbolFlags>> &Entries);
   Error registerObjectPlatformSections(
       ExecutorAddr HeaderAddr, std::optional<UnwindSectionInfo> UnwindSections,
       std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs);
@@ -306,7 +331,7 @@ public:
   const char *dlerror();
   void *dlopen(std::string_view Name, int Mode);
   int dlclose(void *DSOHandle);
-  void *dlsym(void *DSOHandle, std::string_view Symbol);
+  void *dlsym(void *DSOHandle, const char *Symbol);
 
   int registerAtExit(void (*F)(void *), void *Arg, void *DSOHandle);
   void runAtExits(std::unique_lock<std::mutex> &JDStatesLock,
@@ -321,8 +346,42 @@ private:
   JITDylibState *getJITDylibStateByHeader(void *DSOHandle);
   JITDylibState *getJITDylibStateByName(std::string_view Path);
 
-  Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
-                                                std::string_view Symbol);
+  /// Requests materialization of the given symbols. For each pair, the bool
+  /// element indicates whether the symbol is required (true) or weakly
+  /// referenced (false).
+  Error requestPushSymbols(JITDylibState &JDS,
+                           span<std::pair<std::string_view, bool>> Symbols);
+
+  /// Visits the symbol table for the JITDylib associated with DSOHandle.
+  /// Visitor should be callable as
+  ///
+  ///   void (size_t,
+  ///         std::optional<std::pair<ExecutorAddr, MachOExecutorSymbolFlags>>)
+  ///
+  /// The visitor function will be called for each element of the Symbols, but
+  /// in an arbitrary order. The first argument of the callback will indicate
+  /// the index of the result. The second argument will be std::nullopt (if the
+  /// symbol at the given index was not present in the symbol table), or a
+  /// pair containing the symbol's address and flags.
+  ///
+  /// This function will remove all elements of Symbols that are found, leaving
+  /// only the symbols that were not. This allows it to dovetail with
+  /// requestPushSymbols, enabling the following idiom:
+  ///
+  /// ...
+  /// visitSymbolAddrs(DSO, Symbols);
+  /// if (!Symbols.empty()) {
+  ///   requestPushSymbols(DSO, Symbols);
+  ///   visitSymbolAddrs(DSO, Symbols);
+  ///   for (auto &Sym : Symbols) {
+  ///     -- handle symbols that were not found --
+  ///   }
+  /// }
+  ///
+  template <typename VisitorFn>
+  void visitSymbolAddrs(JITDylibState &JDS,
+                        std::vector<std::pair<std::string_view, bool>> &Symbols,
+                        VisitorFn &&Visit);
 
   bool lookupUnwindSections(void *Addr, unw_dynamic_unwind_sections &Info);
 
@@ -365,6 +424,47 @@ private:
   std::mutex ThreadDataSectionsMutex;
   std::map<const char *, size_t> ThreadDataSections;
 };
+
+} // anonymous namespace
+
+namespace __orc_rt {
+
+class SPSMachOExecutorSymbolFlags;
+
+template <>
+class SPSSerializationTraits<
+    SPSMachOExecutorSymbolFlags,
+    MachOPlatformRuntimeState::MachOExecutorSymbolFlags> {
+private:
+  using UT = std::underlying_type_t<
+      MachOPlatformRuntimeState::MachOExecutorSymbolFlags>;
+
+public:
+  static size_t
+  size(const MachOPlatformRuntimeState::MachOExecutorSymbolFlags &SF) {
+    return sizeof(UT);
+  }
+
+  static bool
+  serialize(SPSOutputBuffer &OB,
+            const MachOPlatformRuntimeState::MachOExecutorSymbolFlags &SF) {
+    return SPSArgList<UT>::serialize(OB, static_cast<UT>(SF));
+  }
+
+  static bool
+  deserialize(SPSInputBuffer &IB,
+              MachOPlatformRuntimeState::MachOExecutorSymbolFlags &SF) {
+    UT Tmp;
+    if (!SPSArgList<UT>::deserialize(IB, Tmp))
+      return false;
+    SF = static_cast<MachOPlatformRuntimeState::MachOExecutorSymbolFlags>(Tmp);
+    return true;
+  }
+};
+
+} // namespace __orc_rt
+
+namespace {
 
 MachOPlatformRuntimeState *MachOPlatformRuntimeState::MOPS = nullptr;
 
@@ -489,6 +589,48 @@ Error MachOPlatformRuntimeState::deregisterThreadDataSection(
     return make_error<StringError>("Attempt to deregister unknown thread data "
                                    "section");
   ThreadDataSections.erase(I);
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::registerObjectSymbolTable(
+    ExecutorAddr HeaderAddr,
+    const std::vector<std::tuple<ExecutorAddr, ExecutorAddr,
+                                 MachOExecutorSymbolFlags>> &Entries) {
+
+  std::lock_guard<std::mutex> Lock(JDStatesMutex);
+  auto *JDS = getJITDylibStateByHeader(HeaderAddr.toPtr<void *>());
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "Could not register object platform sections for "
+                 "unrecognized header "
+              << HeaderAddr.toPtr<void *>();
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  for (auto &[NameAddr, SymAddr, Flags] : Entries)
+    JDS->SymbolTable[NameAddr.toPtr<const char *>()] = {SymAddr, Flags};
+
+  return Error::success();
+}
+
+Error MachOPlatformRuntimeState::deregisterObjectSymbolTable(
+    ExecutorAddr HeaderAddr,
+    const std::vector<std::tuple<ExecutorAddr, ExecutorAddr,
+                                 MachOExecutorSymbolFlags>> &Entries) {
+
+  std::lock_guard<std::mutex> Lock(JDStatesMutex);
+  auto *JDS = getJITDylibStateByHeader(HeaderAddr.toPtr<void *>());
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "Could not register object platform sections for "
+                 "unrecognized header "
+              << HeaderAddr.toPtr<void *>();
+    return make_error<StringError>(ErrStream.str());
+  }
+
+  for (auto &[NameAddr, SymAddr, Flags] : Entries)
+    JDS->SymbolTable.erase(NameAddr.toPtr<const char *>());
+
   return Error::success();
 }
 
@@ -687,15 +829,51 @@ int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
   return 0;
 }
 
-void *MachOPlatformRuntimeState::dlsym(void *DSOHandle,
-                                       std::string_view Symbol) {
-  auto Addr = lookupSymbolInJITDylib(DSOHandle, Symbol);
-  if (!Addr) {
-    DLFcnError = toString(Addr.takeError());
-    return 0;
+void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, const char *Symbol) {
+  std::lock_guard<std::mutex> Lock(JDStatesMutex);
+  auto *JDS = getJITDylibStateByHeader(DSOHandle);
+  if (!JDS) {
+    std::ostringstream ErrStream;
+    ErrStream << "In call to dlsym, unrecognized header address " << DSOHandle;
+    DLFcnError = ErrStream.str();
+    return nullptr;
   }
 
-  return Addr->toPtr<void *>();
+  std::string MangledName("_");
+  MangledName += Symbol;
+  std::vector<std::pair<std::string_view, bool>> Symbols;
+  Symbols.push_back({MangledName, false});
+
+  ExecutorAddr Result;
+  using ElemResult =
+      std::optional<std::pair<ExecutorAddr, MachOExecutorSymbolFlags>>;
+
+  // Try to resolve the symbol in the local symbol tables.
+  visitSymbolAddrs(*JDS, Symbols, [&](size_t Idx, ElemResult E) {
+    if (E)
+      Result = E->first;
+  });
+
+  // Return early if we found it.
+  if (Symbols.empty())
+    return Result.toPtr<void *>();
+
+  // Otherwise call back to the controller to try to request that the symbol
+  // be materialized.
+  if (auto Err = requestPushSymbols(*JDS, {Symbols.data(), Symbols.size()})) {
+    DLFcnError = toString(std::move(Err));
+    return nullptr;
+  }
+
+  // Try another local resolution.
+  visitSymbolAddrs(*JDS, Symbols, [&](size_t Idx, ElemResult E) {
+    if (E)
+      Result = E->first;
+  });
+
+  // At this point Result has either been set (if we found the symbol) or is
+  // still null (if we didn't). Either way it's the right value.
+  return Result.toPtr<void *>();
 }
 
 int MachOPlatformRuntimeState::registerAtExit(void (*F)(void *), void *Arg,
@@ -774,17 +952,35 @@ MachOPlatformRuntimeState::getJITDylibStateByName(std::string_view Name) {
   return nullptr;
 }
 
-Expected<ExecutorAddr>
-MachOPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
-                                                  std::string_view Sym) {
-  Expected<ExecutorAddr> Result((ExecutorAddr()));
-  if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
-          SPSExecutorAddr, SPSString)>::call(&__orc_rt_macho_symbol_lookup_tag,
-                                             Result,
-                                             ExecutorAddr::fromPtr(DSOHandle),
-                                             Sym))
+Error MachOPlatformRuntimeState::requestPushSymbols(
+    JITDylibState &JDS, span<std::pair<std::string_view, bool>> Symbols) {
+  Error OpErr = Error::success();
+  if (auto Err = WrapperFunction<SPSError(
+          SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>)>::
+          call(&__orc_rt_macho_push_symbols_tag, OpErr,
+               ExecutorAddr::fromPtr(JDS.Header), Symbols)) {
+    cantFail(std::move(OpErr));
     return std::move(Err);
-  return Result;
+  }
+  return OpErr;
+}
+
+template <typename VisitorFn>
+void MachOPlatformRuntimeState::visitSymbolAddrs(
+    JITDylibState &JDS, std::vector<std::pair<std::string_view, bool>> &Symbols,
+    VisitorFn &&Visit) {
+
+  std::vector<std::pair<std::string_view, bool>> RemainingSymbols;
+
+  for (size_t Idx = 0; Idx != Symbols.size(); ++Idx) {
+    auto I = JDS.SymbolTable.find(Symbols[Idx].first);
+    if (I != JDS.SymbolTable.end())
+      Visit(Idx, I->second);
+    else
+      RemainingSymbols.push_back(Symbols[Idx]);
+  }
+
+  Symbols = std::move(RemainingSymbols);
 }
 
 // eh-frame registration functions.
@@ -1189,6 +1385,38 @@ __orc_rt_macho_register_object_platform_sections(char *ArgData,
                return MachOPlatformRuntimeState::get()
                    .registerObjectPlatformSections(HeaderAddr, std::move(USI),
                                                    std::move(Secs));
+             })
+          .release();
+}
+
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+__orc_rt_macho_register_object_symbol_table(char *ArgData, size_t ArgSize) {
+  using SymtabContainer = std::vector<
+      std::tuple<ExecutorAddr, ExecutorAddr,
+                 MachOPlatformRuntimeState::MachOExecutorSymbolFlags>>;
+  return WrapperFunction<SPSError(
+      SPSExecutorAddr, SPSSequence<SPSTuple<SPSExecutorAddr, SPSExecutorAddr,
+                                            SPSMachOExecutorSymbolFlags>>)>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr HeaderAddr, SymtabContainer &Symbols) {
+               return MachOPlatformRuntimeState::get()
+                   .registerObjectSymbolTable(HeaderAddr, Symbols);
+             })
+          .release();
+}
+
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
+__orc_rt_macho_deregister_object_symbol_table(char *ArgData, size_t ArgSize) {
+  using SymtabContainer = std::vector<
+      std::tuple<ExecutorAddr, ExecutorAddr,
+                 MachOPlatformRuntimeState::MachOExecutorSymbolFlags>>;
+  return WrapperFunction<SPSError(
+      SPSExecutorAddr, SPSSequence<SPSTuple<SPSExecutorAddr, SPSExecutorAddr,
+                                            SPSMachOExecutorSymbolFlags>>)>::
+      handle(ArgData, ArgSize,
+             [](ExecutorAddr HeaderAddr, SymtabContainer &Symbols) {
+               return MachOPlatformRuntimeState::get()
+                   .deregisterObjectSymbolTable(HeaderAddr, Symbols);
              })
           .release();
 }

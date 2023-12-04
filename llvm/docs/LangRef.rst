@@ -317,13 +317,16 @@ added in the future:
     not be used lightly but only for specific situations such as an
     alternative to the *register pinning* performance technique often
     used when implementing functional programming languages. At the
-    moment only X86 supports this convention and it has the following
-    limitations:
+    moment only X86 and AArch64 support this convention. The following
+    limitations exist:
 
-    -  On *X86-32* only supports up to 4 bit type parameters. No
+    -  On *X86-32* only up to 4 bit type parameters are supported. No
        floating-point types are supported.
-    -  On *X86-64* only supports up to 10 bit type parameters and 6
-       floating-point parameters.
+    -  On *X86-64* only up to 10 bit type parameters and 6
+       floating-point parameters are supported.
+    -  On *AArch64* only up to 4 32-bit floating-point parameters,
+       4 64-bit floating-point parameters, and 10 bit type parameters
+       are supported.
 
     This calling convention supports `tail call
     optimization <CodeGenerator.html#tail-call-optimization>`_ but requires
@@ -362,8 +365,9 @@ added in the future:
 
     - On X86-64 the callee preserves all general purpose registers, except for
       R11 and return registers, if any. R11 can be used as a scratch register.
-      Floating-point registers (XMMs/YMMs) are not preserved and need to be
-      saved by the caller.
+      The treatment of floating-point registers (XMMs/YMMs) matches the OS's C
+      calling convention: on most platforms, they are not preserved and need to
+      be saved by the caller, but on Windows, xmm6-xmm15 are preserved.
 
     - On AArch64 the callee preserve all general purpose registers, except X0-X8
       and X16-X18.

@@ -42,7 +42,7 @@ void test_impl() {
 
   // fetch_add
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     std::same_as<T> decltype(auto) r = a.fetch_add(T(1.2), std::memory_order::relaxed);
     assert(r == T(3.1));
     assert(a.load() == T(3.1) + T(1.2));
@@ -78,7 +78,7 @@ void test_impl() {
       return res;
     };
 
-    assert(at.load() == times(1.234, number_of_threads * loop));
+    assert(at.load() == times(T(1.234), number_of_threads * loop));
   }
 #endif
 

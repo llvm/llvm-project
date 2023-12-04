@@ -74,6 +74,7 @@
 ! CHECK-NEXT: -fno-stack-arrays       Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fno-version-loops-for-stride
 ! CHECK-NEXT:                         Do not create unit-strided loops (default)
+! CHECK-NEXT: -fomit-frame-pointer    Omit the frame pointer from functions that don't need it. Some stack unwinding cases, such as profilers and sanitizers, may prefer specifying -fno-omit-frame-pointer. On many targets, -O1 and higher omit the frame pointer by default. -m[no-]omit-leaf-frame-pointer takes precedence for leaf functions
 ! CHECK-NEXT: -fopenacc               Enable OpenACC
 ! CHECK-NEXT: -fopenmp-assume-no-nested-parallelism
 ! CHECK-NEXT:                         Assert no nested parallel regions in the GPU
