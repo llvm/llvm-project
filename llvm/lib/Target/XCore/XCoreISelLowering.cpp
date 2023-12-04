@@ -213,7 +213,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN: return LowerINTRINSIC_WO_CHAIN(Op, DAG);
-  case ISD::ATOMIC_FENCE:       return LowerATOMIC_FENCE(Op, DAG);
+  case ISD::ATOMIC_FENCE:
+    return LowerATOMIC_FENCE(Op, DAG);
   default:
     llvm_unreachable("unimplemented operand");
   }
