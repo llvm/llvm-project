@@ -38,9 +38,8 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
         QualType Injected =
             cast<InjectedClassNameType>(ICNT)->getInjectedSpecializationType();
 
-        if (Ty == Injected->getCanonicalTypeInternal().getTypePtr()) {
+        if (Ty == Injected->getCanonicalTypeInternal().getTypePtr())
           return Record;
-        }
       }
     }
   }
