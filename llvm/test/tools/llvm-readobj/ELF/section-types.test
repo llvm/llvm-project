@@ -43,6 +43,8 @@
 # LLVM: Type: SHT_ANDROID_RELA
 # LLVM: Name: android_relr
 # LLVM: Type: SHT_ANDROID_RELR
+# LLVM: Name: aarch64_auth_relr
+# LLVM: Type: SHT_AARCH64_AUTH_RELR
 # LLVM: Name: llvm_odrtab
 # LLVM: Type: SHT_LLVM_ODRTAB
 # LLVM: Name: linker_options
@@ -113,6 +115,7 @@
 # GNU-NEXT: android_rel             ANDROID_REL
 # GNU-NEXT: android_rela            ANDROID_RELA
 # GNU-NEXT: android_relr            ANDROID_RELR
+# GNU-NEXT: aarch64_auth_relr       AARCH64_AUTH_RELR
 # GNU-NEXT: llvm_odrtab             LLVM_ODRTAB
 # GNU-NEXT: linker_options          LLVM_LINKER_OPTIONS
 # GNU-NEXT: llvm_call_graph_profile LLVM_CALL_GRAPH_PROFILE
@@ -191,6 +194,8 @@ Sections:
     Type: SHT_ANDROID_RELA
   - Name: android_relr
     Type: SHT_ANDROID_RELR
+  - Name: aarch64_auth_relr
+    Type: SHT_AARCH64_AUTH_RELR
   - Name: llvm_odrtab
     Type: SHT_LLVM_ODRTAB
   - Name: linker_options
