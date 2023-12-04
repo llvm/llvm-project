@@ -15948,7 +15948,7 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       break;
     case Intrinsic::riscv_vsetvli:
     case Intrinsic::riscv_vsetvlimax:
-      // Assume that VL output is >= 65536.
+      // Assume that VL output is <= 65536.
       // TODO: Take SEW and LMUL into account.
       if (BitWidth > 17)
         Known.Zero.setBitsFrom(17);
