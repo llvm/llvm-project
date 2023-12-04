@@ -189,6 +189,7 @@ add_header_library(
     integer_utils.h
   DEPENDS
     .bit
+    .math_extras
     .number_pair
     libc.src.__support.common
     libc.src.__support.CPP.type_traits

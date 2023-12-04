@@ -31,8 +31,8 @@ static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 
 /// Prints DWARF expression arguments with respect to the specific DWARF
 /// operation. Some operands are printed in their textual form.
-static LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
-                                        ArrayRef<uint64_t> args);
+static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
+                               ArrayRef<uint64_t> args);
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
@@ -166,8 +166,8 @@ LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
   return parser.parseCommaSeparatedList(operandParser);
 }
 
-LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
-                                 ArrayRef<uint64_t> args) {
+void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
+                        ArrayRef<uint64_t> args) {
   size_t i = 0;
   llvm::interleaveComma(args, printer, [&](uint64_t operand) {
     if (i > 0 && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
@@ -182,5 +182,4 @@ LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
     printer << operand;
     i++;
   });
-  return success();
 }
