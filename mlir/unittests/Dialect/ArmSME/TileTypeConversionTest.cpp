@@ -24,11 +24,11 @@ protected:
 };
 
 TEST_F(ArmSMETest, TestTileTypeConversion) {
-  LLVMTypeConverter llvmConverer(&context);
-  LLVMTypeConverter llvmConvererWithArmSMEConversion(&context);
+  LLVMTypeConverter llvmConverter(&context);
+  LLVMTypeConverter llvmConverterWithArmSMEConversion(&context);
 
   RewritePatternSet patterns(&context);
-  populateArmSMEToLLVMConversionPatterns(llvmConvererWithArmSMEConversion,
+  populateArmSMEToLLVMConversionPatterns(llvmConverterWithArmSMEConversion,
                                          patterns);
 
   Type i32 = IntegerType::get(&context, 32);
@@ -37,14 +37,14 @@ TEST_F(ArmSMETest, TestTileTypeConversion) {
   // An unmodified LLVMTypeConverer should fail to convert an ArmSME tile type.
   {
     SmallVector<Type> convertedType;
-    ASSERT_TRUE(failed(llvmConverer.convertType(smeTileType, convertedType)));
+    ASSERT_TRUE(failed(llvmConverter.convertType(smeTileType, convertedType)));
   }
 
   // An updated LLVMTypeConverer should return the ArmSME tile vector type
   // unchanged.
   {
     SmallVector<Type> convertedType;
-    ASSERT_TRUE(succeeded(llvmConvererWithArmSMEConversion.convertType(
+    ASSERT_TRUE(succeeded(llvmConverterWithArmSMEConversion.convertType(
         smeTileType, convertedType)));
     ASSERT_EQ(ArrayRef<Type>(convertedType), ArrayRef<Type>{smeTileType});
   }
