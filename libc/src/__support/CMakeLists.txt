@@ -190,6 +190,7 @@ add_header_library(
   DEPENDS
     .bit
     .number_pair
+    .math_extras
     libc.src.__support.common
     libc.src.__support.CPP.type_traits
 )
