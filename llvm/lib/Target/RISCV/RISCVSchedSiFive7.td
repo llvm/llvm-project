@@ -213,12 +213,12 @@ let SchedModel = SiFive7Model in {
 let BufferSize = 0 in {
 def SiFive7PipeA       : ProcResource<1>;
 def SiFive7PipeB       : ProcResource<1>;
+def SiFive7IDiv        : ProcResource<1>; // Int Division
+def SiFive7FDiv        : ProcResource<1>; // FP Division/Sqrt
 def SiFive7PipeV       : ProcResource<1>;
 }
 
 let BufferSize = 1 in {
-def SiFive7IDiv        : ProcResource<1> { let Super = SiFive7PipeB; } // Int Division
-def SiFive7FDiv        : ProcResource<1> { let Super = SiFive7PipeB; } // FP Division/Sqrt
 def SiFive7VA          : ProcResource<1> { let Super = SiFive7PipeV; } // Arithmetic sequencer
 def SiFive7VL          : ProcResource<1> { let Super = SiFive7PipeV; } // Load sequencer
 def SiFive7VS          : ProcResource<1> { let Super = SiFive7PipeV; } // Store sequencer
