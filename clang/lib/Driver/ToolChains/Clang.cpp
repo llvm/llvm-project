@@ -2881,7 +2881,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fcx_limited_range: {
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Limited);
       Range = LangOptions::ComplexRangeKind::CX_Limited;
-      std::string ComplexRangeStr = RenderComplexRangeOption("cx_limited");
+      std::string ComplexRangeStr = RenderComplexRangeOption("limited");
       if (!ComplexRangeStr.empty())
         CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
@@ -2892,7 +2892,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fcx_fortran_rules: {
       EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Fortran);
       Range = LangOptions::ComplexRangeKind::CX_Fortran;
-      std::string ComplexRangeStr = RenderComplexRangeOption("cx_fortran");
+      std::string ComplexRangeStr = RenderComplexRangeOption("fortran");
       if (!ComplexRangeStr.empty())
         CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
@@ -3169,7 +3169,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       SeenUnsafeMathModeOption = true;
       // ffast-math enables fortran rules for complex multiplication and
       // division.
-      std::string ComplexRangeStr = RenderComplexRangeOption("cx_fortran");
+      std::string ComplexRangeStr = RenderComplexRangeOption("limited");
       if (!ComplexRangeStr.empty())
         CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;

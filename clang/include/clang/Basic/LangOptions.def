@@ -221,8 +221,6 @@ BENIGN_LANGOPT(AllowRecip        , 1, 0, "Permit Floating Point reciprocal")
 BENIGN_LANGOPT(ApproxFunc        , 1, 0, "Permit Floating Point approximation")
 
 ENUM_LANGOPT(ComplexRange, ComplexRangeKind, 2, CX_Full, "Enable use of range reduction for complex arithmetics.")
-LANGOPT(CxLimitedRange, 1, 0, "Enable use of algebraic expansions of complex arithmetics.")
-LANGOPT(CxFortranRules, 1, 0, "Enable use of range reduction for complex arithmetics.")
 
 BENIGN_LANGOPT(ObjCGCBitmapPrint , 1, 0, "printing of GC's bitmap layout for __weak/__strong ivars")
 

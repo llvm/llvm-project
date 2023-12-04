@@ -2,17 +2,18 @@
 // RUN: -o - | FileCheck %s --check-prefix=FULL
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -complex-range=cx_limited -o - | FileCheck %s --check-prefix=LMTD
+// RUN: -complex-range=limited -o - | FileCheck %s --check-prefix=LMTD
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -fno-cx-limited-range -o - | FileCheck %s --check-prefix=FULL
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -complex-range=cx_fortran -o - | FileCheck %s --check-prefix=FRTRN
+// RUN: -complex-range=fortran -o - | FileCheck %s --check-prefix=FRTRN
 
+// Fast math
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
-// RUN: -ffast-math -complex-range=cx_fortran -emit-llvm -o - %s \
-// RUN: | FileCheck %s --check-prefix=FRTRN
+// RUN: -ffast-math -complex-range=limited -emit-llvm -o - %s \
+// RUN: | FileCheck %s --check-prefix=LMTD-FAST
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -fno-cx-fortran-rules -o - | FileCheck %s --check-prefix=FULL
@@ -63,6 +64,18 @@ _Complex float div(_Complex float a, _Complex float b) {
   // FRTRN-NEXT: phi {{.*}}float
   // FRTRN-NEXT: phi {{.*}}float
 
+  // LMTD-FAST: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fadd {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fadd {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fsub {{.*}} float
+  // LMTD-FAST-NEXT: fdiv {{.*}} float
+  // LMTD-FAST-NEXT: fdiv {{.*}} float
+
   return a / b;
 }
 
@@ -83,6 +96,13 @@ _Complex float mul(_Complex float a, _Complex float b) {
   // FRTRN-NEXT: fmul {{.*}}float
   // FRTRN-NEXT: fmul {{.*}}float
   // FRTRN-NEXT: fadd {{.*}}float
+
+  // LMTD-FAST: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fsub {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fmul {{.*}} float
+  // LMTD-FAST-NEXT: fadd {{.*}} float
 
   return a * b;
 }

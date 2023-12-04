@@ -897,7 +897,7 @@ static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
   return Call;
 }
 
-// EmitRangeReductionDiv - Implements the Smith's algorithm.
+// EmitRangeReductionDiv - Implements Smith's algorithm for complex division.
 // SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
 ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
                                                         llvm::Value *LHSi,
