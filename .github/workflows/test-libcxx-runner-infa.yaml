@@ -1,0 +1,35 @@
+# A sanity check for the libc++ github actions runners. It simply attempts to schedule a job on each runner and
+# then prints some info about each runner.
+#
+# The runner sets are currently:
+#   - libcxx-runners-8-set
+#   - libcxx-runners-32-set
+
+# FIXME: Write this workflow
+name: Actions Infrastructure Sanity Check for Libc++
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+        runner_set:
+            description: 'Runner set to test'
+            type: choice
+            options:
+            - 'libcxx-runners-8-set'
+            - 'libcxx-runners-32-set'
+            default: 'libcxx-runners-8-set'
+jobs:
+  build:
+    if: github.actor == 'EricWF' && github.repository == 'llvm/llvm-project'
+    runs-on: ${{ github.event.inputs.runner_set }}
+    steps:
+    - name: Display the environment
+      run: echo "This job is running on ${{ runner.os }} with ${{ runner.cpu }} CPUs"
+    - name: Dump runner context
+      env:
+          RUNNER_CONTEXT: ${{ toJson(runner) }}
+      run: echo "$RUNNER_CONTEXT"
+
