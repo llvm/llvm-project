@@ -199,10 +199,8 @@ void f5() {
   // expected-error@-1 {{constexpr initializer evaluates to -81 which is not exactly representable in type 'const unsigned char'}}
   };
 
-  // FIXME Shouldn't be diagnosed if char_8t is supported.
   constexpr unsigned char V56[] = {
       u8"\xAF",
-  // expected-error@-1 {{constexpr initializer evaluates to -81 which is not exactly representable in type 'const unsigned char'}}
   };
   constexpr struct S6 V57 = {299};
   // expected-error@-1 {{constexpr initializer evaluates to 299 which is not exactly representable in type 'unsigned char'}}
@@ -254,12 +252,16 @@ void f5() {
 constexpr char string[] = "test""ing this out\xFF";
 constexpr unsigned char ustring[] = "test""ing this out\xFF";
 // expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
-constexpr char wstring[] = u8"test"u8"ing this out\xFF";
-constexpr unsigned char wustring[] = u8"test"u8"ing this out\xFF";
-// expected-error@-1 {{constexpr initializer evaluates to -1 which is not exactly representable in type 'const unsigned char'}}
+constexpr char u8string[] = u8"test"u8"ing this out\xFF";
+// expected-error@-1 {{constexpr initializer evaluates to 255 which is not exactly representable in type 'const char'}}
+constexpr unsigned char u8ustring[] = u8"test"u8"ing this out\xFF";
+constexpr unsigned short uustring[] = u"test"u"ing this out\xFF";
+constexpr unsigned int Ustring[] = U"test"U"ing this out\xFF";
 
 constexpr int i = (12);
 constexpr int j = (i);
+constexpr unsigned jneg = (-i);
+// expected-error@-1 {{constexpr initializer evaluates to -12 which is not exactly representable in type 'unsigned int'}}
 
 // Check that initializer for pointer constexpr variable should be null.
 constexpr int V80 = 3;

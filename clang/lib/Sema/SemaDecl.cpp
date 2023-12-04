@@ -14392,12 +14392,12 @@ static bool CheckC23ConstexprInitStringLiteral(const StringLiteral *SE,
   uint32_t BitWidth = SemaRef.Context.getTypeSize(CharType);
   bool isUnsigned = CharType->isUnsignedIntegerType();
   llvm::APSInt Value(BitWidth, isUnsigned);
-  const StringRef S = SE->getBytes();
   for (unsigned I = 0, N = SE->getLength(); I != N; ++I) {
-    Value = S[I];
-    if (Value != S[I]) {
+    int64_t C = SE->getCodeUnitS(I, SemaRef.Context.getCharWidth());
+    Value = C;
+    if (Value != C) {
       SemaRef.Diag(Loc, diag::err_c23_constexpr_init_not_representable)
-          << S[I] << CharType;
+          << C << CharType;
       return true;
     }
   }
