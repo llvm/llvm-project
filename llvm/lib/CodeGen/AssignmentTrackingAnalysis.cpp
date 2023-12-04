@@ -2296,8 +2296,11 @@ removeRedundantDbgLocsUsingBackwardScan(const BasicBlock *BB,
           getAggregate(FnVarLocs.getVariable(RIt->VariableID));
       uint64_t SizeInBits = Aggr.first->getSizeInBits().value_or(0);
 
-      if (SizeInBits == 0) {
+      const uint64_t MaxSize = std::numeric_limits<unsigned>::max() - 63;
+      if (SizeInBits == 0 || SizeInBits > MaxSize) {
         // If the size is unknown (0) then keep this location def to be safe.
+        // Do the same for defs of very large variables, which can't be
+        // represented with a BitVector.
         NewDefsReversed.push_back(*RIt);
         continue;
       }
