@@ -177,6 +177,17 @@ public:
   }
 
   bool SelectRoundingVLShr(SDValue N, SDValue &Res1, SDValue &Res2) {
+    if (N.getOpcode() == AArch64ISD::URSHR_I) {
+      EVT VT = N.getValueType();
+      unsigned ShtAmt = N->getConstantOperandVal(1);
+      if (ShtAmt >= VT.getScalarSizeInBits() / 2)
+        return false;
+
+      Res1 = N.getOperand(0);
+      Res2 = CurDAG->getTargetConstant(ShtAmt, SDLoc(N), MVT::i32);
+      return true;
+    }
+
     if (N.getOpcode() != AArch64ISD::VLSHR)
       return false;
     SDValue Op = N->getOperand(0);
