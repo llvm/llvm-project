@@ -2144,15 +2144,15 @@ void Sema::CheckStrictAliasing(Expr const *E, QualType DstTy, bool IsLValueCast,
   auto Aliasing =
       getASTConsumer().getTypeAliasing()->getAliasingKind(DstTy, SrcTy);
 
-  if (Aliasing != ASTConsumer::TypeAliasing::AK_Ok &&
+  if (Aliasing != ASTConsumer::TypeAliasing::AliasingKind::Ok &&
       (Diag(Range.getBegin(), diag::warn_strict_aliasing)
        << IsLValueCast
-       << (Aliasing == ASTConsumer::TypeAliasing::AK_ToIncomplete)
-       << (Aliasing == ASTConsumer::TypeAliasing::AK_KnownDisjoint &&
+       << (Aliasing == ASTConsumer::TypeAliasing::AliasingKind::ToIncomplete)
+       << (Aliasing == ASTConsumer::TypeAliasing::AliasingKind::KnownDisjoint &&
            Diags.getDiagnosticOptions().StrictAliasing >= 2)
        << Range))
     Diag(Range.getBegin(),
-         Aliasing == ASTConsumer::TypeAliasing::AK_ToIncomplete
+         Aliasing == ASTConsumer::TypeAliasing::AliasingKind::ToIncomplete
              ? diag::note_incomplete_aliasing
              : diag::note_incompatible_aliasing)
         << DstTy << SrcTy;

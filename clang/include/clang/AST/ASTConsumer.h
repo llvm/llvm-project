@@ -47,11 +47,11 @@ public:
     virtual ~TypeAliasing(){};
 
   public:
-    enum AliasingKind {
-      AK_Ok,            // Alias sets are compatible.
-      AK_ToIncomplete,  // Converting to an incomplete type
-      AK_KnownDisjoint, // The alias sets are known to be disjoint.
-      AK_MaybeDisjoint, // The alias sets might be disjoint.
+    enum class AliasingKind {
+      Ok,            // Alias sets are compatible.
+      ToIncomplete,  // Converting to an incomplete type
+      KnownDisjoint, // The alias sets are known to be disjoint.
+      MaybeDisjoint, // The alias sets might be disjoint.
     };
 
     // Return aliasing kind of reinterpreting the representation of a Src type

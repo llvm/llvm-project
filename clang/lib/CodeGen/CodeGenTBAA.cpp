@@ -504,7 +504,7 @@ CodeGenTBAA::AliasingKind CodeGenTBAA::getAliasingKind(QualType &Dst,
                                                        QualType &Src) {
   assert(!Src->isVoidType() && !Dst->isVoidType());
   if (TypeHasMayAlias(Src) || TypeHasMayAlias(Dst))
-    return AK_Ok;
+    return AliasingKind::Ok;
 
   Src = QualType{Src->getBaseElementTypeUnsafe(), 0};
   Dst = QualType{Dst->getBaseElementTypeUnsafe(), 0};
@@ -519,12 +519,12 @@ CodeGenTBAA::AliasingKind CodeGenTBAA::getAliasingKind(QualType &Dst,
   if (!SrcDecl) {
     SrcTBAA = getTypeInfo(Src);
     if (!SrcTBAA || SrcTBAA == AnyTBAA)
-      return AK_Ok;
+      return AliasingKind::Ok;
   }
   if (!DstDecl) {
     DstTBAA = getTypeInfo(Dst);
     if (!DstTBAA || DstTBAA == AnyTBAA)
-      return AK_Ok;
+      return AliasingKind::Ok;
   }
 
   auto IsAncestor = [](const llvm::MDNode *Ancestor,
@@ -547,8 +547,8 @@ CodeGenTBAA::AliasingKind CodeGenTBAA::getAliasingKind(QualType &Dst,
 
     if (SrcTBAA == DstTBAA || IsAncestor(SrcTBAA, DstTBAA) ||
         IsAncestor(DstTBAA, SrcTBAA))
-      return AK_Ok;
-    return AK_KnownDisjoint;
+      return AliasingKind::Ok;
+    return AliasingKind::KnownDisjoint;
   }
 
   // Is InnerTy (recursively) a field(s) or base of Outer at offset zero? Or is
@@ -617,18 +617,18 @@ CodeGenTBAA::AliasingKind CodeGenTBAA::getAliasingKind(QualType &Dst,
     const RecordDecl *SrcDef = SrcDecl->getDefinition();
     if (!SrcDef || Contains(SrcDef, Dst, DstTBAA, Contains))
       // From incomplete, or container of Dst
-      return AK_Ok;
+      return AliasingKind::Ok;
   }
 
   if (DstDecl) {
     const RecordDecl *DstDef = DstDecl->getDefinition();
     if (!DstDef)
-      return AK_ToIncomplete;
+      return AliasingKind::ToIncomplete;
     if (Contains(DstDef, Src, SrcTBAA, Contains))
       // To container of Src.
-      return AK_Ok;
+      return AliasingKind::Ok;
   }
 
   // Both are complete and we've not found a relationship.
-  return AK_MaybeDisjoint;
+  return AliasingKind::MaybeDisjoint;
 }
