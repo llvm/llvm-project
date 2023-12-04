@@ -286,6 +286,27 @@ void Frob(MA *a) {
 
 }
 
+namespace std {
+enum byte : unsigned char {};
+enum my_byte : unsigned char {};
+}
+
+namespace ubiquitous_char {
+void Frob(int a) {
+  // ubiquitous char
+  RValue(*reinterpret_cast<char *>(&a));
+  RValue(*reinterpret_cast<unsigned char *>(&a));
+  RValue(*reinterpret_cast<signed char *>(&a));
+  RValue(*reinterpret_cast<std::byte *>(&a));
+
+  // Not ubiquitous char
+  // level23-warning@+2{{type-punned pointer breaks}}
+  // level1-warning@+1{{type-punned pointer might break}}
+  RValue(*reinterpret_cast<std::my_byte *>(&a));
+  // level123-note@-1{{'std::my_byte' and 'int' are not alias compatible}}
+}
+}
+
 namespace record {
 
 struct A {
@@ -397,7 +418,6 @@ void Frob(Wrapper<A> *awptr, Wrapper<C> *cwptr)
   RValue(*reinterpret_cast<B *>(&cwptr->t));
   // level123-note-re@-1{{'{{(record::)?}}B' and '{{(record::)?}}C' are not alias compatible}}
 
-  // FIXME: no level 3, No actual deref
   // GCC: 1, 2, 3
   // level12-warning@+1{{type-punned reference might break}}
   LValue(reinterpret_cast<B &>(cwptr->t));
@@ -432,7 +452,6 @@ void Frob() {
   RValue(*reinterpret_cast<B *>(&c));
   // level123-note-re@-1{{'{{(record::)?}}B' and '{{(record::)?}}C' are not alias compatible}}
 
-  // FIXME: no level 3, No actual deref
   // GCC: 1, 2, 3
   // level12-warning@+1{{type-punned reference might break}}
   LValue(reinterpret_cast<B &>(c));
@@ -626,7 +645,6 @@ void Object() {
   RValue(*(long long *)(&Scalar));
   // level123-note@-1{{'long long' and 'long' are not alias compatible}}
 
-  // FIXME: no level 3, No actual deref
   // GCC: 1, 2, 3
   // level2-warning@+2{{type-punned reference breaks}}
   // level1-warning@+1{{type-punned reference might break}}
@@ -869,7 +887,6 @@ void Object() {
   RValue(*LongLongPtr(&Scalar));
   // level123-note@-1{{'long long' and 'long' are not alias compatible}}
 
-  // FIXME: no level 3, No actual deref
   // GCC: 1, 2, 3
   // level2-warning@+2{{type-punned reference breaks}}
   // level1-warning@+1{{type-punned reference might break}}
