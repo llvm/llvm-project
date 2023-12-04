@@ -544,7 +544,7 @@ class FlattenContiguousRowMajorTransferReadPattern
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
     VectorType vectorType = cast<VectorType>(vector.getType());
-    Value source = transferReadOp.getSource();
+    auto source = transferReadOp.getSource();
     MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
 
     // 0. Check pre-conditions
@@ -602,26 +602,30 @@ class FlattenContiguousRowMajorTransferReadPattern
       //
       // For this example:
       //   %2 = vector.transfer_read %arg4[%c0, %arg0, %c0] (...) :
-      //   memref<1x43x2xi32>, vector<1x2xi32>
+      //      memref<1x43x2xi32>, vector<1x2xi32>
       // which would be collapsed to:
       //   %1 = vector.transfer_read %collapse_shape[%c0, %offset] (...) :
-      //   memref<1x86xi32>, vector<2xi32>
+      //      memref<1x86xi32>, vector<2xi32>
       // one would get the following offset:
       //    %offset = %arg0 * 43
-      int64_t outputRank = transferReadOp.getIndices().size();
-      Value offset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-      for (int64_t i = firstDimToCollapse; i < outputRank; ++i) {
-        Value dimIdx = rewriter.create<arith::ConstantIndexOp>(loc, i);
-        auto sourceDimSize =
-            rewriter.create<memref::DimOp>(loc, source, dimIdx);
+      AffineExpr offsetE, idx;
+      bindSymbols(rewriter.getContext(), offsetE, idx);
 
-        offset = rewriter.create<arith::AddIOp>(
-            loc,
-            rewriter.create<arith::MulIOp>(loc, transferReadOp.getIndices()[i],
-                                           sourceDimSize),
-            offset);
+      int64_t outputRank = transferReadOp.getIndices().size();
+      OpFoldResult offset =
+          rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+      for (int64_t i = firstDimToCollapse; i < outputRank; ++i) {
+        int64_t dim = dyn_cast<ShapedType>(source.getType()).getDimSize(i);
+        offset = affine::makeComposedFoldedAffineApply(
+            rewriter, loc, offsetE + dim * idx,
+            {offset, transferReadOp.getIndices()[i]});
       }
-      collapsedIndices.push_back(offset);
+      if (offset.is<Value>()) {
+        collapsedIndices.push_back(offset.get<Value>());
+      } else {
+        collapsedIndices.push_back(rewriter.create<arith::ConstantIndexOp>(
+            loc, *getConstantIntValue(offset)));
+      }
     }
 
     // 3. Create new vector.transfer_read that reads from the collapsed memref

@@ -55,21 +55,19 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
   return
 }
 
+// CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0, s1] -> (s0 * 4 + s1 * 43)>
+
 // CHECK-LABEL:   func.func @transfer_read_dims_mismatch_non_zero_indices(
 // CHECK-SAME:      %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index,
 // CHECK-SAME:      %[[VAL_2:.*]]: memref<1x43x4x6xi32>,
 // CHECK-SAME:      %[[VAL_3:.*]]: memref<1x2x6xi32>) {
-// CHECK:           %[[VAL_4:.*]] = arith.constant 43 : index
-// CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
-// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
-// CHECK:           %[[VAL_7:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_8:.*]] = memref.collapse_shape %[[VAL_2]] {{\[\[}}0], [1, 2, 3]] : memref<1x43x4x6xi32> into memref<1x1032xi32>
-// CHECK:           %[[VAL_9:.*]] = arith.muli %[[VAL_0]], %[[VAL_4]] : index
-// CHECK:           %[[VAL_10:.*]] = arith.muli %[[VAL_1]], %[[VAL_5]] : index
-// CHECK:           %[[VAL_11:.*]] = arith.addi %[[VAL_10]], %[[VAL_9]] : index
-// CHECK:           %[[VAL_12:.*]] = vector.transfer_read %[[VAL_8]]{{\[}}%[[VAL_7]], %[[VAL_11]]], %[[VAL_6]] {in_bounds = [true]} : memref<1x1032xi32>, vector<12xi32>
-// CHECK:           %[[VAL_13:.*]] = memref.collapse_shape %[[VAL_3]] {{\[\[}}0, 1, 2]] : memref<1x2x6xi32> into memref<12xi32>
-// CHECK:           vector.transfer_write %[[VAL_12]], %[[VAL_13]]{{\[}}%[[VAL_7]]] {in_bounds = [true]} : vector<12xi32>, memref<12xi32>
+// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_6:.*]] = memref.collapse_shape %[[VAL_2]] {{\[\[}}0], [1, 2, 3]] : memref<1x43x4x6xi32> into memref<1x1032xi32>
+// CHECK:           %[[VAL_7:.*]] = affine.apply #[[$ATTR_0]](){{\[}}%[[VAL_1]], %[[VAL_0]]]
+// CHECK:           %[[VAL_8:.*]] = vector.transfer_read %[[VAL_6]]{{\[}}%[[VAL_5]], %[[VAL_7]]], %[[VAL_4]] {in_bounds = [true]} : memref<1x1032xi32>, vector<12xi32>
+// CHECK:           %[[VAL_9:.*]] = memref.collapse_shape %[[VAL_3]] {{\[\[}}0, 1, 2]] : memref<1x2x6xi32> into memref<12xi32>
+// CHECK:           vector.transfer_write %[[VAL_8]], %[[VAL_9]]{{\[}}%[[VAL_5]]] {in_bounds = [true]} : vector<12xi32>, memref<12xi32>
 
 // -----
 
