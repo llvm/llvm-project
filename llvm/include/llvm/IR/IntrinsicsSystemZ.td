@@ -398,11 +398,11 @@ let TargetPrefix = "s390" in {
                                  [IntrNoMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
   // Instructions from the Vector Packed Decimal Facility
-  def int_s390_vlrl : ClangBuiltin<"__builtin_s390_vlrl">,
+  def int_s390_vlrl : ClangBuiltin<"__builtin_s390_vlrlr">,
                       Intrinsic<[llvm_v16i8_ty], [llvm_i32_ty, llvm_ptr_ty],
                                 [IntrReadMem, IntrArgMemOnly]>;
 
-  def int_s390_vstrl : ClangBuiltin<"__builtin_s390_vstrl">,
+  def int_s390_vstrl : ClangBuiltin<"__builtin_s390_vstrlr">,
                        Intrinsic<[], [llvm_v16i8_ty, llvm_i32_ty, llvm_ptr_ty],
                                  [IntrArgMemOnly, IntrWriteMem]>;
 
