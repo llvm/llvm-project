@@ -24,7 +24,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _InputIterator, class _Size, class _OutputIterator,
          __enable_if_t<__has_input_iterator_category<_InputIterator>::value &&
                        !__has_random_access_iterator_category<_InputIterator>::value, int> = 0>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {
@@ -46,7 +46,7 @@ copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 
 template<class _InputIterator, class _Size, class _OutputIterator,
          __enable_if_t<__has_random_access_iterator_category<_InputIterator>::value, int> = 0>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {

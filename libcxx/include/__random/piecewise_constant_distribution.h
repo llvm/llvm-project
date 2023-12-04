@@ -55,15 +55,15 @@ public:
         _LIBCPP_HIDE_FROM_ABI param_type(param_type const&) = default;
         _LIBCPP_HIDE_FROM_ABI param_type & operator=(const param_type& __rhs);
 
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         vector<result_type> intervals() const {return __b_;}
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         vector<result_type> densities() const {return __densities_;}
 
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__densities_ == __y.__densities_ && __x.__b_ == __y.__b_;}
-        friend _LIBCPP_INLINE_VISIBILITY
+        friend _LIBCPP_HIDE_FROM_ABI
             bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
 
@@ -90,10 +90,10 @@ private:
 
 public:
     // constructor and reset functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     piecewise_constant_distribution() {}
     template<class _InputIteratorB, class _InputIteratorW>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         piecewise_constant_distribution(_InputIteratorB __f_b,
                                         _InputIteratorB __l_b,
                                         _InputIteratorW __f_w)
@@ -101,54 +101,54 @@ public:
 
 #ifndef _LIBCPP_CXX03_LANG
     template<class _UnaryOperation>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         piecewise_constant_distribution(initializer_list<result_type> __bl,
                                         _UnaryOperation __fw)
         : __p_(__bl, __fw) {}
 #endif // _LIBCPP_CXX03_LANG
 
     template<class _UnaryOperation>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         piecewise_constant_distribution(size_t __nw, result_type __xmin,
                                         result_type __xmax, _UnaryOperation __fw)
         : __p_(__nw, __xmin, __xmax, __fw) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit piecewise_constant_distribution(const param_type& __p)
         : __p_(__p) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void reset() {}
 
     // generating functions
     template<class _URNG>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g)
         {return (*this)(__g, __p_);}
     template<class _URNG>
     _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
     // property functions
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     vector<result_type> intervals() const {return __p_.intervals();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     vector<result_type> densities() const {return __p_.densities();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     param_type param() const {return __p_;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void param(const param_type& __p) {__p_ = __p;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type min() const {return __p_.__b_.front();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     result_type max() const {return __p_.__b_.back();}
 
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator==(const piecewise_constant_distribution& __x,
                         const piecewise_constant_distribution& __y)
         {return __x.__p_ == __y.__p_;}
-    friend _LIBCPP_INLINE_VISIBILITY
+    friend _LIBCPP_HIDE_FROM_ABI
         bool operator!=(const piecewise_constant_distribution& __x,
                            const piecewise_constant_distribution& __y)
         {return !(__x == __y);}

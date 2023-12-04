@@ -89,7 +89,7 @@ __rotate_forward(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIt
 }
 
 template<typename _Integral>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX17 _Integral
 __algo_gcd(_Integral __x, _Integral __y)
 {
@@ -139,7 +139,7 @@ __rotate_gcd(_RandomAccessIterator __first, _RandomAccessIterator __middle, _Ran
 }
 
 template <class _AlgPolicy, class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _ForwardIterator
 __rotate_impl(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last,
          _VSTD::forward_iterator_tag)
@@ -154,7 +154,7 @@ __rotate_impl(_ForwardIterator __first, _ForwardIterator __middle, _ForwardItera
 }
 
 template <class _AlgPolicy, class _BidirectionalIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _BidirectionalIterator
 __rotate_impl(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last,
          bidirectional_iterator_tag)
@@ -171,7 +171,7 @@ __rotate_impl(_BidirectionalIterator __first, _BidirectionalIterator __middle, _
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _RandomAccessIterator
 __rotate_impl(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last,
          random_access_iterator_tag)
@@ -208,7 +208,7 @@ __rotate(_Iterator __first, _Iterator __middle, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last)
 {

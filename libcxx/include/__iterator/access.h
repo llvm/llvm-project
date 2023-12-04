@@ -32,7 +32,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* end(_Tp (&__array)[_Np]) _NOEXCEPT 
 #if !defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 begin(_Cp& __c) -> decltype(__c.begin())
 {
@@ -40,7 +40,7 @@ begin(_Cp& __c) -> decltype(__c.begin())
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 begin(const _Cp& __c) -> decltype(__c.begin())
 {
@@ -48,7 +48,7 @@ begin(const _Cp& __c) -> decltype(__c.begin())
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 end(_Cp& __c) -> decltype(__c.end())
 {
@@ -56,7 +56,7 @@ end(_Cp& __c) -> decltype(__c.end())
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 end(const _Cp& __c) -> decltype(__c.end())
 {
@@ -82,7 +82,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto cend(const _Cp& __c) noexcept(noexcept(std:
 #else  // defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::iterator
 begin(_Cp& __c)
 {
@@ -90,7 +90,7 @@ begin(_Cp& __c)
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::const_iterator
 begin(const _Cp& __c)
 {
@@ -98,7 +98,7 @@ begin(const _Cp& __c)
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::iterator
 end(_Cp& __c)
 {
@@ -106,7 +106,7 @@ end(_Cp& __c)
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::const_iterator
 end(const _Cp& __c)
 {

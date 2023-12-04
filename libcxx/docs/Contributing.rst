@@ -68,8 +68,6 @@ In general, try to follow the style of existing code. There are a few
 exceptions:
 
 - ``_VSTD::foo`` is no longer used in new code. Use ``std::foo`` instead.
-- ``_LIBCPP_INLINE_VISIBILITY`` is no longer used in new code. Use
-  ``_LIBCPP_HIDE_FROM_ABI`` instead.
 - Prefer ``using foo = int`` over ``typedef int foo``. The compilers supported
   by libc++ accept alias declarations in all standard modes.
 

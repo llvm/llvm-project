@@ -27,14 +27,14 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 pointer_to_unary_function
 {
     _Result (*__f_)(_Arg);
 public:
-    _LIBCPP_INLINE_VISIBILITY explicit pointer_to_unary_function(_Result (*__f)(_Arg))
+    _LIBCPP_HIDE_FROM_ABI explicit pointer_to_unary_function(_Result (*__f)(_Arg))
         : __f_(__f) {}
-    _LIBCPP_INLINE_VISIBILITY _Result operator()(_Arg __x) const
+    _LIBCPP_HIDE_FROM_ABI _Result operator()(_Arg __x) const
         {return __f_(__x);}
 };
 
 template <class _Arg, class _Result>
-_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_HIDE_FROM_ABI
 pointer_to_unary_function<_Arg,_Result>
 ptr_fun(_Result (*__f)(_Arg))
     {return pointer_to_unary_function<_Arg,_Result>(__f);}

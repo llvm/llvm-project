@@ -53,14 +53,14 @@ struct __throw_with_nested;
 
 template <class _Tp, class _Up>
 struct __throw_with_nested<_Tp, _Up, true> {
-  _LIBCPP_NORETURN static inline _LIBCPP_INLINE_VISIBILITY void __do_throw(_Tp&& __t) {
+  _LIBCPP_NORETURN static inline _LIBCPP_HIDE_FROM_ABI void __do_throw(_Tp&& __t) {
     throw __nested<_Up>(std::forward<_Tp>(__t));
   }
 };
 
 template <class _Tp, class _Up>
 struct __throw_with_nested<_Tp, _Up, false> {
-  _LIBCPP_NORETURN static inline _LIBCPP_INLINE_VISIBILITY void __do_throw(_Tp&& __t) { throw std::forward<_Tp>(__t); }
+  _LIBCPP_NORETURN static inline _LIBCPP_HIDE_FROM_ABI void __do_throw(_Tp&& __t) { throw std::forward<_Tp>(__t); }
 };
 #endif
 

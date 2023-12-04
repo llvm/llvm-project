@@ -815,7 +815,8 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HIDE_FROM_ABI_AFTER_V1 _LIBCPP_HIDE_FROM_ABI
 #  endif
 
-// Just so we can migrate to the new macros gradually.
+// TODO(LLVM-19): Remove _LIBCPP_INLINE_VISIBILITY, which we're keeping around only to
+//                ease the renaming for downstreams.
 #  define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
 
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
@@ -846,9 +847,9 @@ typedef __char32_t char32_t;
 // clang-format off
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)                                                                      \
       __lx __v_;                                                                                                       \
-      _LIBCPP_INLINE_VISIBILITY x(__lx __v) : __v_(__v) {}                                                             \
-      _LIBCPP_INLINE_VISIBILITY explicit x(int __v) : __v_(static_cast<__lx>(__v)) {}                                  \
-      _LIBCPP_INLINE_VISIBILITY operator int() const { return __v_; }                                                  \
+      _LIBCPP_HIDE_FROM_ABI x(__lx __v) : __v_(__v) {}                                                                 \
+      _LIBCPP_HIDE_FROM_ABI explicit x(int __v) : __v_(static_cast<__lx>(__v)) {}                                      \
+      _LIBCPP_HIDE_FROM_ABI operator int() const { return __v_; }                                                      \
       };
 // clang-format on
 
