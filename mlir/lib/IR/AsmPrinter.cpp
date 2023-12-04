@@ -16,7 +16,9 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -44,6 +46,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <type_traits>
 
 #include <optional>
 #include <tuple>
@@ -424,6 +427,8 @@ public:
   LogicalResult pushCyclicPrinting(const void *opaquePointer);
 
   void popCyclicPrinting();
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
 protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
@@ -1860,6 +1865,20 @@ private:
   // Allow direct access to the impl fields.
   friend AsmState;
 };
+
+template <typename Range>
+void printDimensionList(raw_ostream &stream, Range &&shape) {
+  llvm::interleave(
+      shape, stream,
+      [&stream](const auto &dimSize) {
+        if (ShapedType::isDynamic(dimSize))
+          stream << "?";
+        else
+          stream << dimSize;
+      },
+      "x");
+}
+
 } // namespace detail
 } // namespace mlir
 
@@ -2576,7 +2595,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
         os << "tensor<";
-        printShape(os, tensorTy.getShape());
+        printDimensionList(tensorTy.getShape());
         if (!tensorTy.getShape().empty())
           os << 'x';
         printType(tensorTy.getElementType());
@@ -2594,7 +2613,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       })
       .Case<MemRefType>([&](MemRefType memrefTy) {
         os << "memref<";
-        printShape(os, memrefTy.getShape());
+        printDimensionList(memrefTy.getShape());
         if (!memrefTy.getShape().empty())
           os << 'x';
         printType(memrefTy.getElementType());
@@ -2727,6 +2746,10 @@ LogicalResult AsmPrinter::Impl::pushCyclicPrinting(const void *opaquePointer) {
 
 void AsmPrinter::Impl::popCyclicPrinting() { state.popCyclicPrinting(); }
 
+void AsmPrinter::Impl::printDimensionList(ArrayRef<int64_t> shape) {
+  detail::printDimensionList(os, shape);
+}
+
 //===--------------------------------------------------------------------===//
 // AsmPrinter
 //===--------------------------------------------------------------------===//
@@ -2790,6 +2813,10 @@ void AsmPrinter::printSymbolName(StringRef symbolRef) {
 void AsmPrinter::printResourceHandle(const AsmDialectResourceHandle &resource) {
   assert(impl && "expected AsmPrinter::printResourceHandle to be overriden");
   impl->printResourceHandle(resource);
+}
+
+void AsmPrinter::printDimensionList(ArrayRef<int64_t> shape) {
+  detail::printDimensionList(getStream(), shape);
 }
 
 LogicalResult AsmPrinter::pushCyclicPrinting(const void *opaquePointer) {
@@ -3903,3 +3930,39 @@ void Block::printAsOperand(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
   printer.printBlockName(this);
 }
+
+//===--------------------------------------------------------------------===//
+// Custom attribute printers and parsers.
+//===--------------------------------------------------------------------===//
+namespace mlir {
+
+void printShape(OpAsmPrinter &printer, Operation *op, ArrayRef<int64_t> shape) {
+  if (!shape.empty())
+    printer << "[";
+  printer.printDimensionList(shape);
+  if (!shape.empty())
+    printer << "]";
+}
+
+ParseResult parseShape(OpAsmParser &parser, DenseI64ArrayAttr &shape) {
+  bool hasOpeningSquare = succeeded(parser.parseOptionalLSquare());
+  SmallVector<int64_t> shapeArr;
+  if (failed(parser.parseDimensionList(shapeArr, true, false))) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing shape.";
+  }
+  if (shapeArr.empty() && !hasOpeningSquare) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing shape. Did you mean a 0-rank shape? It must be "
+              "denoted by \"[]\".";
+  }
+  if (hasOpeningSquare && failed(parser.parseRSquare())) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "Failed parsing shape.";
+  }
+
+  shape = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
+  return success();
+}
+
+} // namespace mlir

@@ -28,8 +28,6 @@ class FunctionType;
 class IntegerSet;
 class IntegerType;
 class Location;
-class OpAsmParser;
-class OpAsmPrinter;
 class Operation;
 class RankedTensorType;
 
@@ -1102,9 +1100,6 @@ namespace mlir {
 ///         (i, j, k)[off, M, N, P]->(off + M * i + N * j + P * k)
 AffineMap makeStridedLinearLayoutMap(ArrayRef<int64_t> strides, int64_t offset,
                                      MLIRContext *context);
-
-void printShape(OpAsmPrinter &printer, Operation *op, ArrayRef<int64_t> shape);
-ParseResult parseShape(OpAsmParser &parser, DenseI64ArrayAttr &shape);
 
 } // namespace mlir
 

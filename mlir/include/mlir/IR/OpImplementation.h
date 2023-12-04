@@ -13,16 +13,12 @@
 #ifndef MLIR_IR_OPIMPLEMENTATION_H
 #define MLIR_IR_OPIMPLEMENTATION_H
 
-#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <type_traits>
 
 namespace mlir {
 class AsmParsedResourceEntry;
@@ -229,6 +225,8 @@ public:
     os << ')';
     printArrowTypeList(results);
   }
+
+  void printDimensionList(ArrayRef<int64_t> shape);
 
   /// Class used to automatically end a cyclic region on destruction.
   class CyclicPrintReset {
@@ -775,6 +773,9 @@ public:
   parseCommaSeparatedList(function_ref<ParseResult()> parseElementFn) {
     return parseCommaSeparatedList(Delimiter::None, parseElementFn);
   }
+
+  template <typename OutIt>
+  ParseResult parseShape(SmallVectorImpl<int64_t> &dims);
 
   //===--------------------------------------------------------------------===//
   // Keyword Parsing
@@ -1767,18 +1768,13 @@ public:
                  AsmResourceBuilder &builder) const {}
 };
 
-template <typename Range>
-void printShape(raw_ostream &stream, Range &&shape) {
-  llvm::interleave(
-      shape, stream,
-      [&stream](const auto &dimSize) {
-        if (ShapedType::isDynamic(dimSize))
-          stream << "?";
-        else
-          stream << dimSize;
-      },
-      "x");
-}
+//===--------------------------------------------------------------------===//
+// Custom attribute printers and parsers.
+//===--------------------------------------------------------------------===//
+
+// Handles custom<Shape>(...) in TableGen.
+void printShape(OpAsmPrinter &printer, Operation *op, ArrayRef<int64_t> shape);
+ParseResult parseShape(OpAsmParser &parser, DenseI64ArrayAttr &shape);
 
 } // namespace mlir
 
