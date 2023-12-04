@@ -99,21 +99,19 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
 
     auto packOuterDimsPerm = packOp.getOuterDimsPerm();
     auto transposePerm = transposeOp.getPermutation();
-    llvm::SmallVector<int64_t> newPackOuterDimsPermVec;
+    SmallVector<int64_t> newPackOuterDimsPermVec;
 
     for (unsigned int i = 0; i < packOuterDimsPerm.size(); ++i)
       newPackOuterDimsPermVec.push_back(packOuterDimsPerm[transposePerm[i]]);
 
-    // Create a new empty output tensor.
-    Type elementType = packOp.getDestType().getElementType();
-    auto transposeOpResultType = transposeOp.getResult().getType()[0];
-    auto rankedTensorType = transposeOpResultType.dyn_cast<RankedTensorType>();
-    Value output = rewriter.create<EmptyOp>(
-        transposeOp.getLoc(), rankedTensorType.getShape(), elementType);
+    Value output = packOp.createDestinationTensor(
+        rewriter, transposeOp.getLoc(), packOp.getSource(),
+        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
+        static_cast<llvm::ArrayRef<int64_t>>(newPackOuterDimsPermVec));
 
     rewriter.replaceOpWithNewOp<PackOp>(
         transposeOp, packOp.getSource(), output, packOp.getInnerDimsPos(),
-        packOp.getMixedTiles(), std::nullopt,
+        packOp.getMixedTiles(), /*paddingValue=*/std::nullopt,
         static_cast<llvm::ArrayRef<int64_t>>(newPackOuterDimsPermVec));
 
     return success();
@@ -136,21 +134,19 @@ struct FoldConsumerPackWithProducerLinalgTransposeOp
 
     auto packOuterDimsPerm = packOp.getOuterDimsPerm();
     auto transposePerm = transposeOp.getPermutation();
-    llvm::SmallVector<int64_t> newPackOuterDimsPermVec;
+    SmallVector<int64_t> newPackOuterDimsPermVec;
 
     for (unsigned int i = 0; i < packOuterDimsPerm.size(); ++i)
       newPackOuterDimsPermVec.push_back(transposePerm[packOuterDimsPerm[i]]);
 
-    // Create a new empty output tensor.
-    Type elementType = packOp.getDestType().getElementType();
-    auto packOpResultType = packOp.getResult().getType();
-    auto rankedTensorType = packOpResultType.dyn_cast<RankedTensorType>();
-    Value output = rewriter.create<EmptyOp>(
-        packOp.getLoc(), rankedTensorType.getShape(), elementType);
+    Value output = packOp.createDestinationTensor(
+        rewriter, packOp.getLoc(), transposeOp.getOperand(0),
+        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
+        static_cast<llvm::ArrayRef<int64_t>>(newPackOuterDimsPermVec));
 
     rewriter.replaceOpWithNewOp<PackOp>(
         packOp, transposeOp.getOperand(0), output, packOp.getInnerDimsPos(),
-        packOp.getMixedTiles(), std::nullopt,
+        packOp.getMixedTiles(), /*paddingValue=*/std::nullopt,
         static_cast<llvm::ArrayRef<int64_t>>(newPackOuterDimsPermVec));
 
     return success();
