@@ -14,6 +14,8 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
+#include "llvm/ADT/StringRef.h"
+
 #include <cstddef>
 #include <cstdint>
 
@@ -247,7 +249,7 @@ public:
   bool Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
             DumpStyle fallback_style = DumpStyleInvalid,
             uint32_t addr_byte_size = UINT32_MAX, bool all_ranges = false,
-            const char *pattern = nullptr) const;
+            llvm::StringRef pattern = "") const;
 
   AddressClass GetAddressClass() const;
 

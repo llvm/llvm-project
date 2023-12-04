@@ -175,7 +175,7 @@ public:
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
-                      const char *pattern = nullptr) const;
+                      llvm::StringRef pattern = "") const;
 
   bool IsSynthetic() const { return m_is_synthetic; }
 

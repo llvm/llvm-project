@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
@@ -406,7 +407,7 @@ bool Address::GetDescription(Stream &s, Target &target,
 
 bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                    DumpStyle fallback_style, uint32_t addr_size,
-                   bool all_ranges, const char *pattern) const {
+                   bool all_ranges, llvm::StringRef pattern) const {
   // If the section was nullptr, only load address is going to work unless we
   // are trying to deref a pointer
   SectionSP section_sp(GetSection());
@@ -502,7 +503,6 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
         pointer_size = target->GetArchitecture().GetAddressByteSize();
       else if (module_sp)
         pointer_size = module_sp->GetArchitecture().GetAddressByteSize();
-
       bool showed_info = false;
       if (section_sp) {
         SectionType sect_type = section_sp->GetType();
@@ -516,7 +516,12 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               if (symbol) {
                 const char *symbol_name = symbol->GetName().AsCString();
                 if (symbol_name) {
-                  s->PutCStringColorHighlighted(symbol_name, pattern);
+                  llvm::StringRef ansi_prefix =
+                      target->GetDebugger().GetRegexMatchAnsiPrefix();
+                  llvm::StringRef ansi_suffix =
+                      target->GetDebugger().GetRegexMatchAnsiSuffix();
+                  s->PutCStringColorHighlighted(symbol_name, pattern,
+                                                ansi_prefix, ansi_suffix);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
                   if (delta)

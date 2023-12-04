@@ -245,7 +245,10 @@ public:
   ///     The regex pattern to match against the \a text string. Portions of \a
   ///     text matching this pattern will be colorized. If this parameter is
   ///     nullptr, highlighting is not performed.
-  void PutCStringColorHighlighted(llvm::StringRef text, const char *pattern);
+  void PutCStringColorHighlighted(llvm::StringRef text,
+                                  llvm::StringRef pattern = "",
+                                  llvm::StringRef prefix = "",
+                                  llvm::StringRef suffix = "");
 
   /// Output and End of Line character to the stream.
   size_t EOL();

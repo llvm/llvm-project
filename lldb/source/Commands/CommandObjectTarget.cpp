@@ -1533,7 +1533,7 @@ static void DumpOsoFilesTable(Stream &strm,
 
 static void DumpAddress(ExecutionContextScope *exe_scope,
                         const Address &so_addr, bool verbose, bool all_ranges,
-                        Stream &strm, const char *pattern = nullptr) {
+                        Stream &strm, llvm::StringRef pattern = "") {
   strm.IndentMore();
   strm.Indent("    Address: ");
   so_addr.Dump(&strm, exe_scope, Address::DumpStyleModuleWithFileAddress);
@@ -1595,7 +1595,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     return 0;
 
   SymbolContext sc;
-  bool use_color = interpreter.GetDebugger().GetUseColor();
+  const bool use_color = interpreter.GetDebugger().GetUseColor();
   std::vector<uint32_t> match_indexes;
   ConstString symbol_name(name);
   uint32_t num_matches = 0;
@@ -1627,9 +1627,13 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         } else {
           strm.IndentMore();
           strm.Indent("    Name: ");
+          llvm::StringRef ansi_prefix =
+              interpreter.GetDebugger().GetRegexMatchAnsiPrefix();
+          llvm::StringRef ansi_suffix =
+              interpreter.GetDebugger().GetRegexMatchAnsiSuffix();
           strm.PutCStringColorHighlighted(
               symbol->GetDisplayName().GetStringRef(),
-              use_color ? name : nullptr);
+              use_color ? name : nullptr, ansi_prefix, ansi_suffix);
           strm.EOL();
           strm.Indent("    Value: ");
           strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());

@@ -73,7 +73,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                                     bool show_module, bool show_inlined_frames,
                                     bool show_function_arguments,
                                     bool show_function_name,
-                                    const char *pattern) const {
+                                    llvm::StringRef pattern) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
@@ -83,7 +83,6 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
     s->PutChar('`');
     dumped_something = true;
   }
-
   if (function != nullptr) {
     SymbolContext inline_parent_sc;
     Address inline_parent_addr;
@@ -96,8 +95,12 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
         name = function->GetNameNoArguments();
       if (!name)
         name = function->GetName();
-      if (name)
-        s->PutCStringColorHighlighted(name.GetStringRef(), pattern);
+      if (name) {
+        llvm::StringRef ansi_prefix = "${ansi.fg.red}";
+        llvm::StringRef ansi_suffix = "${ansi.normal}";
+        s->PutCStringColorHighlighted(name.GetStringRef(), pattern, ansi_prefix,
+                                      ansi_suffix);
+      }
     }
 
     if (addr.IsValid()) {
@@ -188,7 +191,8 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
 }
 
 void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                                   Target *target, const char *pattern) const {
+                                   Target *target,
+                                   llvm::StringRef pattern) const {
   if (module_sp) {
     s->Indent("     Module: file = \"");
     module_sp->GetFileSpec().Dump(s->AsRawOstream());
