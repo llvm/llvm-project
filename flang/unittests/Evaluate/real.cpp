@@ -14,7 +14,7 @@ using Real2 = Scalar<Type<TypeCategory::Real, 2>>;
 using Real3 = Scalar<Type<TypeCategory::Real, 3>>;
 using Real4 = Scalar<Type<TypeCategory::Real, 4>>;
 using Real8 = Scalar<Type<TypeCategory::Real, 8>>;
-#ifndef __PPC__
+#ifdef __x86_64__
 using Real10 = Scalar<Type<TypeCategory::Real, 10>>;
 #endif
 using Real16 = Scalar<Type<TypeCategory::Real, 16>>;
@@ -540,7 +540,7 @@ void roundTest(int rm, Rounding rounding, std::uint32_t opds) {
   basicTests<Real3>(rm, rounding);
   basicTests<Real4>(rm, rounding);
   basicTests<Real8>(rm, rounding);
-#ifndef __PPC__
+#ifdef __x86_64__
   basicTests<Real10>(rm, rounding);
 #endif
   basicTests<Real16>(rm, rounding);
