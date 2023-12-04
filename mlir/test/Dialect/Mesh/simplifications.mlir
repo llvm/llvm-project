@@ -22,6 +22,41 @@ func.func @all_reduce_arith_addf_endomorphism(
   return %2 : tensor<5xf32>
 }
 
+// CHECK-LABEL: func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_result
+func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_result(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg0: tensor<5xf32>,
+    // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg1: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ARG0]], %[[ARG1]]
+  %2 = arith.addf %0, %1 : tensor<5xf32>
+  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]]
+  // CHECK: return %[[ALL_REDUCE_RES]], %[[ALL_REDUCE_RES]]
+  return %2, %2 : tensor<5xf32>, tensor<5xf32>
+}
+
+// CHECK-LABEL: func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_all_reduce_result
+func.func @all_reduce_arith_addf_endomorphism_multiple_uses_of_all_reduce_result(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg0: tensor<5xf32>,
+    // CHECK-SAME: %[[ARG1:[A-Za-z0-9_]*]]: tensor<5xf32>
+    %arg1: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
+  // CHECK: %[[ALL_REDUCE_0_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ARG0]]
+  %0 = mesh.all_reduce %arg0 on @mesh0 mesh_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  %1 = mesh.all_reduce %arg1 on @mesh0 mesh_axes = [0]
+    : tensor<5xf32> -> tensor<5xf32>
+  // CHECK: %[[ADD_RES:[A-Za-z0-9_]*]] = arith.addf %[[ARG0]], %[[ARG1]]
+  %2 = arith.addf %0, %1 : tensor<5xf32>
+  // CHECK: %[[ALL_REDUCE_RES:[A-Za-z0-9_]*]] = mesh.all_reduce %[[ADD_RES]]
+  // CHECK: return %[[ALL_REDUCE_0_RES]], %[[ALL_REDUCE_RES]]
+  return %0, %2 : tensor<5xf32>, tensor<5xf32>
+}
+
 // CHECK-LABEL: func.func @all_reduce_arith_addf_no_endomorphism_different_mesh
 func.func @all_reduce_arith_addf_no_endomorphism_different_mesh(
     // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<5xf32>
