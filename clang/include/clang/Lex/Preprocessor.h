@@ -123,6 +123,7 @@ enum MacroUse {
 };
 
 enum class EmbedResult {
+  Invalid = -1, // Parsing error occurred.
   NotFound = 0, // Corresponds to __STDC_EMBED_NOT_FOUND__
   Found = 1,    // Corresponds to __STDC_EMBED_FOUND__
   Empty = 2,    // Corresponds to __STDC_EMBED_EMPTY__

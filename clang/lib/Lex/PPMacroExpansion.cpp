@@ -1295,18 +1295,18 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     Diag(Tok, diag::err_pp_expected_after) << II << tok::l_paren;
     // If the next token looks like a filename or the start of one,
     // assume it is and process it as such.
-    return EmbedResult::NotFound;
+    return EmbedResult::Invalid;
   }
 
   // Save '(' location for possible missing ')' message and then lex the header
   // name token for the embed resource.
   SourceLocation LParenLoc = Tok.getLocation();
   if (this->LexHeaderName(Tok))
-    return EmbedResult::NotFound;
+    return EmbedResult::Invalid;
 
   if (Tok.isNot(tok::header_name)) {
     Diag(Tok.getLocation(), diag::err_pp_expects_filename);
-    return EmbedResult::NotFound;
+    return EmbedResult::Invalid;
   }
 
   SourceLocation FilenameLoc = Tok.getLocation();
@@ -1318,7 +1318,7 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
                        "expected success or to be at the end of the directive");
 
   if (!Params)
-    return EmbedResult::NotFound;
+    return EmbedResult::Invalid;
 
   if (Params->UnrecognizedParams > 0)
     return EmbedResult::NotFound;
@@ -1327,8 +1327,9 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     Diag(this->getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
         << II << tok::r_paren;
     Diag(LParenLoc, diag::note_matching) << tok::l_paren;
-    DiscardUntilEndOfDirective();
-    return EmbedResult::NotFound;
+    if (Tok.isNot(tok::eod))
+      DiscardUntilEndOfDirective();
+    return EmbedResult::Invalid;
   }
 
   SmallString<128> FilenameBuffer;
@@ -1347,9 +1348,9 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   if (Callbacks) {
     Callbacks->HasEmbed(LParenLoc, Filename, isAngled, MaybeFileEntry);
   }
-  if (!MaybeFileEntry) {
+  if (!MaybeFileEntry)
     return EmbedResult::NotFound;
-  }
+
   size_t FileSize = MaybeFileEntry->getSize();
   if (Params->MaybeLimitParam) {
     if (FileSize > Params->MaybeLimitParam->Limit) {
@@ -1908,11 +1909,11 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // double-quotes (""), optionally followed by a series of
     // arguments similar to form like attributes.
     EmbedResult Value = EvaluateHasEmbed(Tok, II);
-
-    if (Tok.isNot(tok::r_paren))
+    if (Value == EmbedResult::Invalid)
       return;
-    OS << static_cast<int>(Value);
+
     Tok.setKind(tok::numeric_constant);
+    OS << static_cast<int>(Value);
   } else if (II == Ident__has_warning) {
     // The argument should be a parenthesized string literal.
     EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,

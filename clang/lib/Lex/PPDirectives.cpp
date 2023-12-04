@@ -3681,6 +3681,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     if (!ExpectOrDiagAndSkipToEOD(tok::l_paren))
       return std::nullopt;
 
+    // We do not consume the ( because EvaluateDirectiveExpression will lex
+    // the next token for us.
     IdentifierInfo *ParameterIfNDef = nullptr;
     DirectiveEvalResult LimitEvalResult = EvaluateDirectiveExpression(
         ParameterIfNDef, CurTok, /*CheckForEOD=*/false);
@@ -3769,7 +3771,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       };
 
   LexNonComment(CurTok); // Prime the pump.
-  while (CurTok.isNot(EndTokenKind)) {
+  while (!CurTok.isOneOf(EndTokenKind, tok::eod)) {
     std::optional<std::string> ParamName = LexPPParameterName();
     if (!ParamName)
       return std::nullopt;
