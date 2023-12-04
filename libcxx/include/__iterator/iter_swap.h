@@ -77,14 +77,14 @@ namespace __iter_swap {
     }
 
     template <class _T1, class _T2>
-      requires (!__unqualified_iter_swap<_T1, _T2> &&
-                !__readable_swappable<_T1, _T2>) &&
-               indirectly_movable_storable<_T1, _T2> &&
+      requires (!__unqualified_iter_swap<_T1, _T2> && //
+                !__readable_swappable<_T1, _T2>) && //
+               indirectly_movable_storable<_T1, _T2> && //
                indirectly_movable_storable<_T2, _T1>
     _LIBCPP_HIDE_FROM_ABI
     constexpr void operator()(_T1&& __x, _T2&& __y) const
-      noexcept(noexcept(iter_value_t<_T2>(ranges::iter_move(__y))) &&
-               noexcept(*__y = ranges::iter_move(__x)) &&
+      noexcept(noexcept(iter_value_t<_T2>(ranges::iter_move(__y))) && //
+               noexcept(*__y = ranges::iter_move(__x)) && //
                noexcept(*_VSTD::forward<_T1>(__x) = std::declval<iter_value_t<_T2>>()))
     {
       iter_value_t<_T2> __old(ranges::iter_move(__y));

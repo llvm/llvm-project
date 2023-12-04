@@ -381,7 +381,7 @@ namespace dr532 { // dr532: 3.5
 
 // dr533: na
 
-namespace dr534 { // dr534: yes
+namespace dr534 { // dr534: 2.9
   struct S {};
   template<typename T> void operator+(S, T);
   template<typename T> void operator+<T*>(S, T*) {} // expected-error {{function template partial spec}}
@@ -511,7 +511,7 @@ namespace dr542 { // dr542: yes
 #endif
 }
 
-namespace dr543 { // dr543: yes
+namespace dr543 { // dr543: 3.0
   // In C++98+DR543, this is valid because value-initialization doesn't call a
   // trivial default constructor, so we never notice that defining the
   // constructor would be ill-formed.
@@ -544,7 +544,7 @@ namespace dr546 { // dr546: yes
   template<typename T> void A<T>::f() { T::error; }
 }
 
-namespace dr547 { // dr547: yes
+namespace dr547 { // dr547: 3.2
   template<typename T> struct X;
   template<typename T> struct X<T() const> {};
   template<typename T, typename C> X<T> f(T C::*) { return X<T>(); }
@@ -607,7 +607,7 @@ namespace dr553 {
 // dr554: na
 // dr556: na
 
-namespace dr557 { // dr557: yes
+namespace dr557 { // dr557: 3.1
   template<typename T> struct S {
     friend void f(S<T> *);
     friend void g(S<S<T> > *);
@@ -618,7 +618,7 @@ namespace dr557 { // dr557: yes
   }
 }
 
-namespace dr558 { // dr558: yes
+namespace dr558 { // dr558: 2.9
   wchar_t a = L'\uD7FF';
   wchar_t b = L'\xD7FF';
   wchar_t c = L'\uD800'; // expected-error {{invalid universal character}}
@@ -674,7 +674,7 @@ namespace dr566 { // dr566: yes
 
 // dr567: na
 
-namespace dr568 { // dr568: yes c++11
+namespace dr568 { // dr568: 3.0 c++11
   // FIXME: This is a DR issue against C++98, so should probably apply there
   // too.
   struct x { int y; };
@@ -762,7 +762,7 @@ namespace dr573 { // dr573: no
   template<int*> struct T;
 }
 
-namespace dr574 { // dr574: yes
+namespace dr574 { // dr574: 3.0
   struct A {
     A &operator=(const A&) const; // expected-note {{different qualifiers}}
   };
@@ -827,13 +827,13 @@ namespace dr575 { // dr575: yes
   void *p = h((void*)0);
 }
 
-namespace dr576 { // dr576: yes
+namespace dr576 { // dr576: 3.5
   typedef void f() {} // expected-error {{function definition declared 'typedef'}}
   void f(typedef int n); // expected-error {{invalid storage class}}
   void f(char c) { typedef int n; }
 }
 
-namespace dr577 { // dr577: yes
+namespace dr577 { // dr577: 3.5
   typedef void V;
   typedef const void CV;
   void a(void);
@@ -910,7 +910,7 @@ namespace dr583 { // dr583: 4
 
 // dr584: na
 
-namespace dr585 { // dr585: yes
+namespace dr585 { // dr585: 3.0
   template<typename> struct T;
   struct A {
     friend T;
@@ -938,7 +938,7 @@ namespace dr585 { // dr585: yes
 
 // dr586: na
 
-namespace dr587 { // dr587: yes
+namespace dr587 { // dr587: 3.2
   template<typename T> void f(bool b, const T x, T y) {
     const T *p = &(b ? x : y);
   }
