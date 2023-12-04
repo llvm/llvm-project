@@ -287,11 +287,11 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
     if (block_shifts < static_cast<int>(ten_blocks)) {
       ten_blocks = ten_blocks - block_shifts;
       five_blocks = block_shifts;
-      shift_amount = shift_amount + (block_shifts * BLOCK_SIZE);
+      shift_amount = shift_amount + static_cast<int>(block_shifts * BLOCK_SIZE);
     } else {
       ten_blocks = 0;
       five_blocks = i;
-      shift_amount = static_cast<int>(shift_amount + (i * BLOCK_SIZE));
+      shift_amount = shift_amount + static_cast<int>(i * BLOCK_SIZE);
     }
   }
 
@@ -490,7 +490,7 @@ public:
       val = POW10_SPLIT[POW10_OFFSET[idx] + block_index];
 #endif
       const uint32_t shift_amount =
-          static_cast<uint32_t>(SHIFT_CONST + (IDX_SIZE * idx) - exponent);
+          SHIFT_CONST + static_cast<uint32_t>(IDX_SIZE * idx) - exponent;
       const uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, (int32_t)(shift_amount));
       return digits;
@@ -551,7 +551,7 @@ public:
       val = POW10_SPLIT_2[p];
 #endif
       const int32_t shift_amount =
-          static_cast<int32_t>(SHIFT_CONST + (-exponent - IDX_SIZE * idx));
+          SHIFT_CONST + (-exponent - static_cast<int32_t>(IDX_SIZE * idx));
       uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
       return digits;
