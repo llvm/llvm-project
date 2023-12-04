@@ -262,7 +262,8 @@ public:
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       BenchmarkRunner::ExecutionModeE ExecutionMode,
-      Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
+      Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min,
+      unsigned BenchmarkRepeatCount = 30) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
   // does not exist.
@@ -305,7 +306,8 @@ private:
       const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,
-      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      unsigned BenchmarkRepeatCount) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,

@@ -262,6 +262,12 @@ static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
                           "allows for the use of memory annotations")),
     cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
 
+static cl::opt<unsigned>
+    BenchmarkRepeatCount("benchmark-repeat-count",
+                         cl::desc("The number of times to repeat the benchmark "
+                                  "before aggregating the results"),
+                         cl::cat(BenchmarkOptions), cl::init(30));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
