@@ -64,9 +64,6 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #  define __has_attribute(X) _MSVC_HAS_ATTRIBUTE_##X
 #  define _MSVC_HAS_ATTRIBUTE_vector_size 0
 
-#  define __has_builtin(X) _MSVC_HAS_BUILTIN_##X
-#  define _MSVC_HAS_BUILTIN___builtin_source_location 1
-
 // Silence compiler warnings.
 #  pragma warning(disable : 4180)  // qualifier applied to function type has no meaning; ignored
 #  pragma warning(disable : 4324)  // structure was padded due to alignment specifier
