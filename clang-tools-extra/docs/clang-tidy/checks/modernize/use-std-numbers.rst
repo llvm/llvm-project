@@ -56,3 +56,19 @@ where appropriate.
         floatSink(MY_PI);                           // floatSink(std::numbers::pi);
         floatSink(static_cast<float>(MY_PI));       // floatSink(std::numbers::pi_v<float>);
     }
+
+Options
+-------
+
+.. option:: DiffThreshold
+
+    A floating point value that sets the detection threshold for when literals
+    match a constant.
+    A literal matches a constant if
+    ``abs(literal - constant) < DiffThreshold`` evaluates to true.
+    Default is `0.001`.
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.
