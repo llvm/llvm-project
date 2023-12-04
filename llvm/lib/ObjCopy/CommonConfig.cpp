@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/Support/Errc.h"
 
 namespace llvm {
 namespace objcopy {
@@ -39,8 +40,15 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   }
   case MatchStyle::Regex: {
     SmallVector<char, 32> Data;
-    return NameOrPattern(std::make_shared<Regex>(
-        ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data)));
+    auto AnchoredPattern =
+        ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data);
+    auto RegEx = std::make_shared<Regex>(AnchoredPattern);
+    std::string Err;
+    if (!RegEx->isValid(Err))
+      return createStringError(errc::invalid_argument,
+                               "cannot compile regular expression \'" +
+                                   Pattern + "\': " + Err);
+    return NameOrPattern(RegEx);
   }
   }
   llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
