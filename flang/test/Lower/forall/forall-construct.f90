@@ -60,7 +60,7 @@ end subroutine test_forall_construct
 ! CHECK:             %[[VAL_48:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_43]], %[[VAL_47]] : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
 ! CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_48]] : !fir.ref<f32>
 ! CHECK:             %[[VAL_50:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK:             %[[VAL_51:.*]] = arith.cmpf ogt, %[[VAL_49]], %[[VAL_50]] : f32
+! CHECK:             %[[VAL_51:.*]] = arith.cmpf ogt, %[[VAL_49]], %[[VAL_50]] {{.*}} : f32
 ! CHECK:             %[[VAL_52:.*]] = fir.if %[[VAL_51]] -> (!fir.array<?x?xf32>) {
 ! CHECK:               %[[VAL_53:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_54:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>

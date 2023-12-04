@@ -24,7 +24,7 @@
 ! HLFIR:     %[[D2:.*]] = hlfir.designate %14 (%[[ARG0]], %[[ARG1]])  : (!fir.box<!fir.array<?x?xf32>>, index, index) -> !fir.ref<f32>
 ! HLFIR:     %[[LOAD1:.*]] = fir.load %[[D1]] : !fir.ref<f32>
 ! HLFIR:     %[[LOAD2:.*]] = fir.load %[[D2]] : !fir.ref<f32>
-! HLFIR:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD1]], %[[LOAD2]] : f32
+! HLFIR:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD1]], %[[LOAD2]] {{.*}} : f32
 ! HLFIR:     %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD1]], %[[LOAD2]] : f32
 ! HLFIR:     hlfir.yield_element %[[SELECT]] : f32
 ! HLFIR:   }
@@ -59,7 +59,7 @@
 ! HLFIR:     %[[V2:.*]] = hlfir.designate %[[DES_V2]] (%[[IV]])  : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V1:.*]] = fir.load %[[V1]] : !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V2:.*]] = fir.load %[[V2]] : !fir.ref<f32>
-! HLFIR:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD_V1]], %[[LOAD_V2]] : f32
+! HLFIR:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD_V1]], %[[LOAD_V2]] {{.*}} : f32
 ! HLFIR:     %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD_V1]], %[[LOAD_V2]] : f32
 ! HLFIR:     hlfir.yield_element %[[SELECT]] : f32
 ! HLFIR:   }
@@ -113,7 +113,7 @@
 ! HLFIR:     %[[DES_V2:.*]] = hlfir.designate %[[RIGHT]] (%{{.*}})  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V1:.*]] = fir.load %[[DES_V1]] : !fir.ref<f32>
 ! HLFIR:     %[[LOAD_V2:.*]] = fir.load %[[DES_V2]] : !fir.ref<f32>
-! HLFIR:     %[[CMPF:.*]] = arith.cmpf ogt, %[[LOAD_V1]], %[[LOAD_V2]] : f32
+! HLFIR:     %[[CMPF:.*]] = arith.cmpf ogt, %[[LOAD_V1]], %[[LOAD_V2]] {{.*}} : f32
 ! HLFIR:     %[[SELECT:.*]] = arith.select %[[CMPF]], %[[LOAD_V1]], %[[LOAD_V2]] : f32
 ! HLFIR:     hlfir.yield_element %[[SELECT]] : f32
 ! HLFIR:   }
@@ -340,7 +340,7 @@
 ! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]] : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
 ! CHECK:     %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<f32>
-! CHECK:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD1]], %[[LOAD2]] : f32
+! CHECK:     %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD1]], %[[LOAD2]] {{.*}} : f32
 ! CHECK:     %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD1]], %[[LOAD2]] : f32
 ! CHECK:     fir.store %[[SELECT]] to %[[COORD1]] : !fir.ref<f32>
 ! CHECK:   }
@@ -358,7 +358,7 @@
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<f32>, %[[ARG1:.*]]: !fir.ref<f32>):
 ! CHECK:   %[[LOAD0:.*]] = fir.load %[[ARG0]] : !fir.ref<f32>
 ! CHECK:   %[[LOAD1:.*]] = fir.load %[[ARG1]] : !fir.ref<f32>
-! CHECK:   %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD0]], %[[LOAD1]] : f32
+! CHECK:   %[[CMP:.*]] = arith.cmpf ogt, %[[LOAD0]], %[[LOAD1]] {{.*}} : f32
 ! CHECK:   %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD0]], %[[LOAD1]] : f32
 ! CHECK:   fir.store %[[SELECT]] to %[[ARG0]] : !fir.ref<f32>
 ! CHECK:   acc.yield %[[ARG0]] : !fir.ref<f32>
@@ -431,7 +431,7 @@
 ! CHECK:       %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<100x10xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:       %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<f32>
 ! CHECK:       %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<f32>
-! CHECK:       %[[CMP:.*]] = arith.cmpf olt, %[[LOAD1]], %[[LOAD2]] : f32
+! CHECK:       %[[CMP:.*]] = arith.cmpf olt, %[[LOAD1]], %[[LOAD2]] {{.*}} : f32
 ! CHECK:       %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD1]], %[[LOAD2]] : f32
 ! CHECK:       fir.store %[[SELECT]] to %[[COORD1]] : !fir.ref<f32>
 ! CHECK:     }
@@ -450,7 +450,7 @@
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<f32>, %[[ARG1:.*]]: !fir.ref<f32>):
 ! CHECK:   %[[LOAD0:.*]] = fir.load %[[ARG0]] : !fir.ref<f32>
 ! CHECK:   %[[LOAD1:.*]] = fir.load %[[ARG1]] : !fir.ref<f32>
-! CHECK:   %[[CMP:.*]] = arith.cmpf olt, %[[LOAD0]], %[[LOAD1]] : f32
+! CHECK:   %[[CMP:.*]] = arith.cmpf olt, %[[LOAD0]], %[[LOAD1]] {{.*}} : f32
 ! CHECK:   %[[SELECT:.*]] = arith.select %[[CMP]], %[[LOAD0]], %[[LOAD1]] : f32
 ! CHECK:   fir.store %[[SELECT]] to %[[ARG0]] : !fir.ref<f32>
 ! CHECK:   acc.yield %[[ARG0]] : !fir.ref<f32>

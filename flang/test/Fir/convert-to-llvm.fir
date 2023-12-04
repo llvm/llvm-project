@@ -650,13 +650,13 @@ func.func @compare_complex_eq(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 
 // CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1] : !llvm.struct<(f64, f64)>
-// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "oeq" [[RA]], [[RB]] : f64
-// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "oeq" [[IA]], [[IB]] : f64
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "oeq" [[RA]], [[RB]] {fastmath = {{.*}}} : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "oeq" [[IA]], [[IB]] {fastmath = {{.*}}} : f64
 // CHECK: [[RES:%.*]] = llvm.and [[RESR]], [[RESI]] : i1
 // CHECK: return [[RES]] : i1
 
 func.func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
-  %r = fir.cmpc "une", %a, %b : !fir.complex<8>
+  %r = fir.cmpc "une", %a, %b {fastmath = #arith.fastmath<fast>} : !fir.complex<8>
   return %r : i1
 }
 
@@ -667,13 +667,13 @@ func.func @compare_complex_ne(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 
 // CHECK-DAG: [[IA:%.*]] = llvm.extractvalue [[A]][1] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[IB:%.*]] = llvm.extractvalue [[B]][1] : !llvm.struct<(f64, f64)>
-// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "une" [[RA]], [[RB]] : f64
-// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "une" [[IA]], [[IB]] : f64
+// CHECK-DAG: [[RESR:%.*]] = llvm.fcmp "une" [[RA]], [[RB]] {fastmath = #llvm.fastmath<fast>} : f64
+// CHECK-DAG: [[RESI:%.*]] = llvm.fcmp "une" [[IA]], [[IB]] {fastmath = #llvm.fastmath<fast>} : f64
 // CHECK: [[RES:%.*]] = llvm.or [[RESR]], [[RESI]] : i1
 // CHECK: return [[RES]] : i1
 
 func.func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> i1 {
-  %r = fir.cmpc "ogt", %a, %b : !fir.complex<8>
+  %r = fir.cmpc "ogt", %a, %b {fastmath = #arith.fastmath<fast>} : !fir.complex<8>
   return %r : i1
 }
 
@@ -682,7 +682,7 @@ func.func @compare_complex_other(%a : !fir.complex<8>, %b : !fir.complex<8>) -> 
 // CHECK-SAME: [[B:%.*]]: !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RA:%.*]] = llvm.extractvalue [[A]][0] : !llvm.struct<(f64, f64)>
 // CHECK-DAG: [[RB:%.*]] = llvm.extractvalue [[B]][0] : !llvm.struct<(f64, f64)>
-// CHECK: [[RESR:%.*]] = llvm.fcmp "ogt" [[RA]], [[RB]] : f64
+// CHECK: [[RESR:%.*]] = llvm.fcmp "ogt" [[RA]], [[RB]] {fastmath = #llvm.fastmath<fast>}} : f64
 // CHECK: return [[RESR]] : i1
 
 // -----

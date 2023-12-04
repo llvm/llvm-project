@@ -1368,7 +1368,8 @@ def Arith_CmpIOp
 // CmpFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
+def Arith_CmpFOp : Arith_CompareOp<"cmpf",
+    [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "floating-point comparison operation";
   let description = [{
     The `cmpf` operation compares its two operands according to the float
@@ -1398,14 +1399,27 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
 
   let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
                        FloatLike:$lhs,
-                       FloatLike:$rhs);
+                       FloatLike:$rhs,
+                       DefaultValuedAttr<
+                         Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
 
   let extraClassDeclaration = [{
     static arith::CmpFPredicate getPredicateByName(StringRef name);
   }];
 
+  let builders = [
+    OpBuilder<(ins "::mlir::arith::CmpFPredicateAttr":$predicate,
+                   "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, predicate, lhs, rhs,
+          mlir::arith::FastMathFlagsAttr::get($_builder.getContext(),
+              mlir::arith::FastMathFlags::none));
+    }]>
+  ];
+
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+  let assemblyFormat = [{ $predicate `,` $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($lhs)}];
 }
 
 //===----------------------------------------------------------------------===//
