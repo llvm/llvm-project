@@ -641,6 +641,55 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
   let assemblyFormat = "$n attr-dict";
 }
 
+def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
+  let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
+  let description = [{
+    The `cp.async.mbarrier.arrive` Op makes the mbarrier object track
+    all prior cp.async operations initiated by the executing thread.
+    The `addr` operand specifies the address of the mbarrier object
+    in generic address space. The `noinc` attr impacts how the
+    mbarrier's state is updated.
+    [For more information, refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+
+  let arguments = (ins
+    LLVM_AnyPointer:$addr, DefaultValuedAttr<I1Attr, "0">:$noinc);
+
+  string llvmBuilder = [{
+    auto intId = $noinc ?
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc :
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive;
+
+    createIntrinsicCall(builder, intId, {$addr});
+  }];
+}
+
+def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.shared"> {
+  let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive.shared";
+  let description = [{
+    The `cp.async.mbarrier.arrive.shared` Op makes the mbarrier object
+    track all prior cp.async operations initiated by the executing thread.
+    The `addr` operand specifies the address of the mbarrier object in
+    shared memory. The `noinc` attr impacts how the mbarrier's state
+    is updated. [For more information, refer PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
+  }];
+  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+
+  let arguments = (ins
+    LLVM_PointerShared:$addr, DefaultValuedAttr<I1Attr, "0">:$noinc);
+
+  string llvmBuilder = [{
+    auto intId = $noinc ?
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared :
+      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_shared;
+
+    createIntrinsicCall(builder, intId, {$addr});
+  }];
+}
+
 /// Helpers to instantiate different version of wmma intrinsics.
 /// This matches the hierarchy used in IntrinsicsNVVM.td to define all the
 /// combinations of the intrinsics.
