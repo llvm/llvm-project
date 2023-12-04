@@ -2487,8 +2487,7 @@ void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
   DestinationArgExpr Dest = {{Call.getArgExpr(0), 0}};
 
-  // FIXME: We should use `Call.parameters().size()` here.
-  const auto NumParams = CE->getCalleeDecl()->getAsFunction()->getNumParams();
+  const auto NumParams = Call.parameters().size();
   assert(CE->getNumArgs() >= NumParams);
 
   const auto AllArguments =
