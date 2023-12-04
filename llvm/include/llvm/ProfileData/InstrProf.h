@@ -171,8 +171,8 @@ inline StringRef getInstrProfCounterBiasVarName() {
 /// Return the marker used to separate PGO names during serialization.
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 
-/// DEPRECATED. Use getIRPGOFuncName for new code. See that function for
-/// details.
+/// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+/// used by front-end (Clang, etc) instrumentation.
 /// Return the modified name for function \c F suitable to be
 /// used the key for profile lookup. Variable \c InLTO indicates if this
 /// is called in LTO optimization passes.
@@ -183,10 +183,10 @@ std::string getPGOFuncName(const Function &F, bool InLTO = false,
 /// used the key for profile lookup. The function's original
 /// name is \c RawFuncName and has linkage of type \c Linkage.
 /// The function is defined in module \c FileName.
-std::string getLegacyPGOFuncName(StringRef RawFuncName,
-                                 GlobalValue::LinkageTypes Linkage,
-                                 StringRef FileName,
-                                 uint64_t Version = INSTR_PROF_INDEX_VERSION);
+std::string getPGOFuncName(StringRef RawFuncName,
+                           GlobalValue::LinkageTypes Linkage,
+                           StringRef FileName,
+                           uint64_t Version = INSTR_PROF_INDEX_VERSION);
 
 /// \return the modified name for function \c F suitable to be
 /// used as the key for IRPGO profile lookup. \c InLTO indicates if this is
