@@ -195,7 +195,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .widenScalarToNextPow2(0)
       .clampScalar(0, sXLen, sXLen);
 
-  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE}).legalFor({p0});
+  getActionDefinitionsBuilder({G_GLOBAL_VALUE, G_JUMP_TABLE, G_CONSTANT_POOL})
+      .legalFor({p0});
 
   if (ST.hasStdExtM() || ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
@@ -241,7 +242,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .widenScalarToNextPow2(0);
   }
 
-  getActionDefinitionsBuilder(G_ABS).lower();
+  auto &AbsActions = getActionDefinitionsBuilder(G_ABS);
+  if (ST.hasStdExtZbb())
+    AbsActions.customFor({s32, sXLen}).minScalar(0, sXLen);
+  AbsActions.lower();
 
   auto &MinMaxActions =
       getActionDefinitionsBuilder({G_UMAX, G_UMIN, G_SMAX, G_SMIN});
@@ -283,7 +287,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_IS_FPCLASS)
       .customIf(all(typeIs(0, s1), typeIsScalarFPArith(1, ST)));
 
-  getActionDefinitionsBuilder(G_FCONSTANT).legalIf(typeIsScalarFPArith(0, ST));
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf(typeIsScalarFPArith(0, ST))
+      .lowerFor({s32, s64});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalIf(all(typeInSet(0, {s32, sXLen}), typeIsScalarFPArith(1, ST)))
@@ -353,6 +359,8 @@ bool RISCVLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   default:
     // No idea what to do.
     return false;
+  case TargetOpcode::G_ABS:
+    return Helper.lowerAbsToMaxNeg(MI);
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:

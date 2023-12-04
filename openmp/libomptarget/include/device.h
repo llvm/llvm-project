@@ -19,27 +19,24 @@
 #include <cstring>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 
 #include "ExclusiveAccess.h"
+#include "OffloadEntry.h"
 #include "omptarget.h"
 #include "rtl.h"
 
 #include "OpenMP/Mapping.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+
 // Forward declarations.
 struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
-
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
 
 ///
 struct PendingCtorDtorListsTy {
@@ -56,7 +53,7 @@ struct DeviceTy {
 
   bool IsInit;
   std::once_flag InitFlag;
-  bool HasPendingGlobals;
+  bool HasMappedGlobalData = false;
 
   /// Host data to device map type with a wrapper key indirection that allows
   /// concurrent modification of the entries without invalidating the underlying
@@ -231,12 +228,21 @@ struct DeviceTy {
   int32_t destroyEvent(void *Event);
   /// }
 
+  /// Register \p Entry as an offload entry that is avalable on this device.
+  void addOffloadEntry(OffloadEntryTy &Entry);
+
+  /// Print all offload entries to stderr.
+  void dumpOffloadEntries();
+
 private:
   // Call to RTL
   void init(); // To be called only via DeviceTy::initOnce()
 
   /// Deinitialize the device (and plugin).
   void deinit();
+
+  /// All offload entries available on this device.
+  llvm::DenseMap<llvm::StringRef, OffloadEntryTy *> DeviceOffloadEntries;
 };
 
 extern bool deviceIsReady(int DeviceNum);

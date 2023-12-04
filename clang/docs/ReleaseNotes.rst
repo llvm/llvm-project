@@ -184,6 +184,9 @@ C++2c Feature Support
 
 - Implemented `P2864R2 Remove Deprecated Arithmetic Conversion on Enumerations From C++26 <https://wg21.link/P2864R2>`_.
 
+- Implemented `P2361R6 Template parameter initialization <https://wg21.link/P2308R1>`_.
+  This change is applied as a DR in all language modes.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -648,6 +651,8 @@ Bug Fixes in This Version
 - Fixed false positive error emitted by clang when performing qualified name
   lookup and the current class instantiation has dependent bases.
   Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
+- Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
+  Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -798,11 +803,6 @@ Bug Fixes to C++ Support
 
 - Fix crash when parsing nested requirement. Fixes:
   (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
-
-- Clang now immediately instantiates function template specializations
-  at the end of the definition of the corresponding function template
-  when the definition appears after the first point of instantiation.
-  (`#73232 <https://github.com/llvm/llvm-project/issues/73232>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -981,6 +981,8 @@ clang-format
 - Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 - Change ``BreakAfterAttributes`` from ``Never`` to ``Leave`` in LLVM style.
 - Add ``BreakAdjacentStringLiterals`` option.
+- Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
+  attributes (like ``nonatomic, strong, nullable``).
 
 libclang
 --------

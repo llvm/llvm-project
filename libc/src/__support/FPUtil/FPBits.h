@@ -249,7 +249,7 @@ template <typename T> struct FPBits {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#ifdef SPECIAL_X86_LONG_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 #include "x86_64/LongDoubleBits.h"
 #endif
 

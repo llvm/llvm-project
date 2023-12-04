@@ -2181,6 +2181,16 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
     return nullptr;
   }
 
+  // Treat lshr with non-negative operand as ashr.
+  if (match(V, m_LShr(m_Value(A), m_Value(B))) &&
+      isKnownNonNegative(A, SQ.getWithInstruction(cast<Instruction>(V)),
+                         Depth)) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateAShr(AV, B) : NonNull;
+    return nullptr;
+  }
+
   Value *Cond;
   // LogicOps are special in that we canonicalize them at the cost of an
   // instruction.
