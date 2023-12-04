@@ -18,15 +18,16 @@ using namespace clang::ast_matchers;
 
 namespace {
 std::vector<std::basic_string<char>>
-splitString3Symbols(const std::basic_string<char> &String) {
+splitStringByGroupSize(const std::basic_string<char> &String, size_t GroupSize) {
   std::vector<std::basic_string<char>> Result;
   std::basic_string<char> ReversedString(String.rbegin(), String.rend());
 
-  for (size_t I = 0; I < ReversedString.size(); I += 3) {
-    Result.push_back(ReversedString.substr(I, 3));
+  for (size_t I = 0; I < ReversedString.size(); I += GroupSize) {
+    Result.push_back(ReversedString.substr(I, GroupSize));
   }
 
   std::reverse(Result.begin(), Result.end());
+  std::for_each(Result.begin(), Result.end(), [](std::basic_string<char> &Str) {return std::reverse(Str.begin(), Str.end());});
 
   return Result;
 }
@@ -46,11 +47,28 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
   // Get original literal source text
   const StringRef OriginalLiteralString = Lexer::getSourceText(CharSourceRange::getTokenRange(MatchedInteger->getSourceRange()), Source, Context.getLangOpts());
 
+  // Configure formatting
+  unsigned int Radix;
+  size_t GroupSize;
+  std::string Prefix;
+  if (OriginalLiteralString.starts_with("0b")) {
+    Radix = 2;
+    GroupSize = 4;
+    Prefix = "0b";
+  } else if (OriginalLiteralString.starts_with("0x")) {
+    Radix = 16;
+    GroupSize = 4;
+    Prefix = "0x";
+  } else {
+      Radix = 10;
+      GroupSize = 3;
+  }
+
   // Get formatting literal text
   const llvm::APInt IntegerValue = MatchedInteger->getValue();
   const std::vector<std::string> SplittedIntegerLiteral =
-      splitString3Symbols(toString(IntegerValue, 10, true));
-  const std::string FormatedLiteralString =
+      splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+  const std::string FormatedLiteralString = Prefix +
       std::accumulate(SplittedIntegerLiteral.begin(),
                       SplittedIntegerLiteral.end(),
                       std::string(""),
