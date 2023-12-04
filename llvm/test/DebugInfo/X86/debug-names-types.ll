@@ -1,14 +1,9 @@
 ; UNSUPPORTED: system-windows
-; This checks that .debug_names can be generated with monolithic -fdebug-type-sections, and does not generate when split-dwarf is enabled.
+; This checks that .debug_names can be generated with monolithic, and split-dwarf, when -fdebug-type-sections is enabled.
 ; Generated with: clang++ main.cpp   -g2 -gdwarf-5 -gpubnames -fdebug-types-section
 
 ; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj %s -o %t
 ; RUN: llvm-dwarfdump -debug-info -debug-names %t | FileCheck %s
-
-; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj -split-dwarf-file=%t.mainTypes.dwo --split-dwarf-output=%t.mainTypes.dwo %s -o %t
-; RUN: llvm-readelf --sections %t | FileCheck %s --check-prefixes=CHECK-SPLIT
-
-; CHECK-SPLIT-NOT: .debug_names
 
 ; CHECK:     .debug_info contents:
 ; CHECK:      DW_TAG_type_unit
@@ -116,6 +111,99 @@
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:   ]
 ; CHECK-NEXT: }
+
+; RUN: llc -mtriple=x86_64 -generate-type-units -dwarf-version=5 -filetype=obj -split-dwarf-file=%t.mainTypes.dwo --split-dwarf-output=%t.mainTypes.dwo %s -o %t
+; RUN: llvm-dwarfdump -debug-names %t | FileCheck %s --check-prefixes=CHECK-SPLIT
+
+; CHECK-SPLIT:          .debug_names contents
+; CHECK-SPLIT:          Foreign TU count: 1
+; CHECK-SPLIT-NEXT:     Bucket count: 4
+; CHECK-SPLIT-NEXT:     Name count: 4
+; CHECK-SPLIT-NEXT:     Abbreviations table size: 0x28
+; CHECK-SPLIT-NEXT:     Augmentation: 'LLVM0700'
+; CHECK-SPLIT-NEXT:   }
+; CHECK-SPLIT-NEXT:   Compilation Unit offsets [
+; CHECK-SPLIT-NEXT:     CU[0]: 0x00000000
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT:   Foreign Type Unit signatures [
+; CHECK-SPLIT-NEXT:     ForeignTU[0]: 0x675d23e4f33235f2
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT:   Abbreviations [
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_structure_type
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV1:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_structure_type
+; CHECK-SPLIT-NEXT:       DW_IDX_type_unit: DW_FORM_data1
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV2:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_base_type
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV3:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_subprogram
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:     Abbreviation [[ABBREV4:0x[0-9a-f]*]] {
+; CHECK-SPLIT-NEXT:       Tag: DW_TAG_base_type
+; CHECK-SPLIT-NEXT:       DW_IDX_type_unit: DW_FORM_data1
+; CHECK-SPLIT-NEXT:       DW_IDX_die_offset: DW_FORM_ref4
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT:   Bucket 0 [
+; CHECK-SPLIT-NEXT:     Name 1 {
+; CHECK-SPLIT-NEXT:       Hash: 0xB888030
+; CHECK-SPLIT-NEXT:       String: {{.+}} "int"
+; CHECK-SPLIT-NEXT:       Entry @ {{.+}} {
+; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV2]]
+; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000035
+; CHECK-SPLIT-NEXT:       }
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT:   Bucket 1 [
+; CHECK-SPLIT-NEXT:     Name 2 {
+; CHECK-SPLIT-NEXT:       Hash: 0xB887389
+; CHECK-SPLIT-NEXT:       String: {{.+}} "Foo"
+; CHECK-SPLIT-NEXT:       Entry @ {{.+}} {
+; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV1]]
+; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
+; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x0000001f
+; CHECK-SPLIT-NEXT:       }
+; CHECK-SPLIT-NEXT:       Entry @ 0xae {
+; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV]]
+; CHECK-SPLIT-NEXT:         Tag: DW_TAG_structure_type
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000039
+; CHECK-SPLIT-NEXT:       }
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT:   Bucket 2 [
+; CHECK-SPLIT-NEXT:     Name 3 {
+; CHECK-SPLIT-NEXT:       Hash: 0x7C9A7F6A
+; CHECK-SPLIT-NEXT:       String: {{.+}} "main"
+; CHECK-SPLIT-NEXT:       Entry @ {{.+}} {
+; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV3]]
+; CHECK-SPLIT-NEXT:         Tag: DW_TAG_subprogram
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x0000001a
+; CHECK-SPLIT-NEXT:       }
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT:   Bucket 3 [
+; CHECK-SPLIT-NEXT:     Name 4 {
+; CHECK-SPLIT-NEXT:       Hash: 0x7C952063
+; CHECK-SPLIT-NEXT:       String: {{.+}} "char"
+; CHECK-SPLIT-NEXT:       Entry @ {{.+}} {
+; CHECK-SPLIT-NEXT:         Abbrev: [[ABBREV4]]
+; CHECK-SPLIT-NEXT:         Tag: DW_TAG_base_type
+; CHECK-SPLIT-NEXT:         DW_IDX_type_unit: 0x00
+; CHECK-SPLIT-NEXT:         DW_IDX_die_offset: 0x00000034
+; CHECK-SPLIT-NEXT:       }
+; CHECK-SPLIT-NEXT:     }
+; CHECK-SPLIT-NEXT:   ]
+; CHECK-SPLIT-NEXT: }
 
 
 ; ModuleID = 'main.cpp'
