@@ -1115,6 +1115,9 @@ Crash and bug fixes
   `#59493 <https://github.com/llvm/llvm-project/issues/59493>`_,
   `#54533 <https://github.com/llvm/llvm-project/issues/54533>`_)
 
+- Fixed an ``alpha.unix.cstring`` crash on variadic functions.
+  (`#74269 <https://github.com/llvm/llvm-project/issues/74269>`_)
+
 - Fix false positive in mutation check when using pointer to member function.
   (`#66204 <https://github.com/llvm/llvm-project/issues/66204>`_)
 
