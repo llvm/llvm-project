@@ -1261,7 +1261,6 @@ namespace dr483 { // dr483: yes
     int check2[__SHRT_MAX__ >= 32767 ? 1 : -1];
     int check3[__INT_MAX__ >= 32767 ? 1 : -1];
     int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
-    // FIXME: we issue 2 diagnostics for windows triple, but only 1 for linux triple.
     int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
     // cxx98-error@-1 {{'long long' is a C++11 extension}}
     // cxx98-error@-2 0-1{{'long long' is a C++11 extension}}
