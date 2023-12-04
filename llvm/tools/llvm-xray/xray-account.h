@@ -13,7 +13,6 @@
 #ifndef LLVM_TOOLS_LLVM_XRAY_XRAY_ACCOUNT_H
 #define LLVM_TOOLS_LLVM_XRAY_XRAY_ACCOUNT_H
 
-#include <map>
 #include <utility>
 #include <vector>
 
