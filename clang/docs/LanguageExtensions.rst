@@ -1487,6 +1487,7 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C23           C89
 Attributes (N2335)                                                      C23           C89
+``#embed`` (N3017)                                                      C23           C89, C++
 ====================================== ================================ ============= =============
 
 Type Trait Primitives
@@ -5320,3 +5321,26 @@ but the expression has no runtime effects.
 Type- and value-dependent expressions are not supported yet.
 
 This facility is designed to aid with testing name lookup machinery.
+
+``#embed`` Parameters
+=====================
+
+``clang::offset``
+-----------------
+The ``clang::offset`` embed parameter may appear zero times or one time in the
+embed parameter sequence. Its preprocessor argument clause shall be present and
+have the form:
+
+..code-block: text
+
+  ( constant-expression )
+
+and shall be an integer constant expression. The integer constant expression
+shall not evaluate to a value less than 0. The token ``defined`` shall not
+appear within the constant expression.
+
+The offset will be used when reading the contents of the embedded resource to
+specify the starting offset to begin embedding from. The resources is treated
+as being empty if the specified offset is larger than the number of bytes in
+the resource. The offset will be applied *before* any ``limit`` parameters are
+applied.
