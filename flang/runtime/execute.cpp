@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <windows.h>
 #else
+#include <signal.h>
 #include <unistd.h>
 #endif
 
@@ -223,6 +224,8 @@ void RTNAME(ExecuteCommandLine)(const Descriptor *command, bool wait,
     }
     delete[] wcmd;
 #else
+    // terminated children do not become zombies
+    signal(SIGCHLD, SIG_IGN);
     pid_t pid{fork()};
     if (pid < 0) {
       if (!cmdstat) {
