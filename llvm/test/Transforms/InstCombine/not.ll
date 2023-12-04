@@ -722,3 +722,55 @@ define i8 @bitcast_to_scalar_sext_bool_use2(<4 x i1> %b) {
   %not = xor i8 %bc, -1
   ret i8 %not
 }
+
+; PR74302
+define i1 @invert_both_cmp_operands_add(i32 %a, i32 %b) {
+; CHECK-LABEL: @invert_both_cmp_operands_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NOT_A]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %not.a = xor i32 %a, -1
+  %add = add i32 %b, %not.a
+  %cmp = icmp sgt i32 %add, 0
+  ret i1 %cmp
+}
+
+define i1 @invert_both_cmp_operands_sub(i32 %a, i32 %b) {
+; CHECK-LABEL: @invert_both_cmp_operands_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[NOT_A]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 42
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %not.a = xor i32 %a, -1
+  %add = sub i32 %not.a, %b
+  %cmp = icmp ult i32 %add, 42
+  ret i1 %cmp
+}
+
+define i1 @invert_both_cmp_operands_complex(i1 %x, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @invert_both_cmp_operands_complex(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[NOT_B:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i32 [[C:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[NOT_A]], [[C]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[X:%.*]], i32 [[ADD]], i32 [[NOT_B]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[SELECT]], [[NOT_C]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %not.a = xor i32 %a, -1
+  %not.b = xor i32 %b, -1
+  %not.c = xor i32 %c, -1
+  %add = add i32 %c, %not.a
+  %select = select i1 %x, i32 %add, i32 %not.b
+  %cmp = icmp sle i32 %select, %not.c
+  ret i1 %cmp
+}
