@@ -30,8 +30,8 @@ ObjCPropertyAttributeOrderFixer::ObjCPropertyAttributeOrderFixer(
 }
 
 struct ObjCPropertyEntry {
-  StringRef Attribute; // eg, "readwrite"
-  StringRef Value;     // eg, the "foo" of the attribute "getter=foo"
+  StringRef Attribute; // eg, `readwrite`
+  StringRef Value;     // eg, the `foo` of the attribute `getter=foo`
 };
 
 void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
@@ -90,7 +90,7 @@ void ObjCPropertyAttributeOrderFixer::sortPropertyAttributes(
     if (It == SortOrderMap.end())
       It = SortOrderMap.insert({Attribute, SortOrderMap.size()}).first;
 
-    // Sort the indices based on the priority stored in 'SortOrderMap'.
+    // Sort the indices based on the priority stored in `SortOrderMap`.
     const auto Ordinal = It->second;
     if (!Ordinals.insert(Ordinal).second) {
       HasDuplicates = true;

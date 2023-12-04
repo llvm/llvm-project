@@ -176,7 +176,7 @@ TEST_F(ObjCPropertyAttributeOrderFixerTest, HandlesDuplicatedAttributes) {
   // A dup and something else.
   verifyFormat("@property(a, b) int p;", "@property(a, b, a) int p;", Style);
 
-  // Duplicates using `=`: stable-sort irrespective of their value.
+  // Duplicates using `=`.
   verifyFormat("@property(a=A, b=X) int p;",
                "@property(a=A, b=X, a=A, b=Y) int p;", Style);
   verifyFormat("@property(a=A, b=Y) int p;",
@@ -200,7 +200,7 @@ TEST_F(ObjCPropertyAttributeOrderFixerTest, SortsInPPDirective) {
 }
 
 TEST_F(ObjCPropertyAttributeOrderFixerTest, HandlesAllAttributes) {
-  // 'class' is the only attribute that is a keyword, so make sure it works too.
+  // `class` is the only attribute that is a keyword, so make sure it works too.
   FormatStyle Style = getLLVMStyle();
   Style.Language = FormatStyle::LK_ObjC;
   Style.ObjCPropertyAttributeOrder = {"FIRST",
@@ -282,7 +282,7 @@ TEST_F(ObjCPropertyAttributeOrderFixerTest, HandlesAllAttributes) {
   verifyFormat("@property(FIRST, null_resettable, LAST) int p;", Style);
   verifyFormat("@property(FIRST, null_unspecified, LAST) int p;", Style);
 
-  // Reorder: put 'FIRST' and/or 'LAST' in the wrong spot.
+  // Reorder: put `FIRST` and/or `LAST` in the wrong spot.
   verifyFormat("@property(class, LAST) int p;", "@property(LAST, class) int p;",
                Style);
   verifyFormat("@property(direct, LAST) int p;",
