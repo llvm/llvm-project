@@ -60,11 +60,10 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Compare the original and formatted representation of a literal
   if (OriginalLiteralString != FormatedLiteralString) {
-    diag(MatchedInteger->getLocation(), "integer warning %0 %1")
-        << FormatedLiteralString << OriginalLiteralString
+    diag(MatchedInteger->getLocation(), "unformatted representation of integer literal '%0'")
+        << OriginalLiteralString
         << FixItHint::CreateInsertion(MatchedInteger->getLocation(),
-                                      "this is integer");
-    diag(MatchedInteger->getLocation(), "integer", DiagnosticIDs::Note);
+                                      FormatedLiteralString);
   }
 }
 
