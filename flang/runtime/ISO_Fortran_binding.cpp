@@ -75,14 +75,7 @@ RT_API_ATTRS int CFI_allocate(CFI_cdesc_t *descriptor,
     dim->sm = byteSize;
     byteSize *= extent;
   }
-#ifdef _AIX
-  if (!byteSize)
-    void *p{std::malloc(1)};
-  else
-    void *p{std::malloc(byteSize)};
-#else
-  void *p{std::malloc(byteSize)};
-#endif
+  void *p = byteSize ? std::malloc(byteSize) : std::malloc(1);
   if (!p && byteSize) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
