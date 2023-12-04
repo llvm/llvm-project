@@ -22,6 +22,10 @@
 // RUN:     FileCheck --check-prefix=X86_64 %s
 // X86_64: target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 
+// RUN: %clang_cc1 -triple x86_64-unknown-uefi -emit-llvm -o - %s | \
+// RUN:     FileCheck --check-prefix=X86_64_UEFI %s
+// X86_64_UEFI: target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+
 // RUN: %clang_cc1 -triple xcore-unknown-unknown -emit-llvm -o - %s | \
 // RUN:     FileCheck --check-prefix=XCORE %s
 // XCORE: target datalayout = "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i64:32-f64:32-a:0:32-n32"
