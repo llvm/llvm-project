@@ -165,7 +165,7 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
   // CHECK:   nvgpu.device_async_copy
   // CHECK:   scf.yield
   // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 1
-  // CHEKC: nvgpu.device_async_wait %{{.*}} {numGroups = 0
+  // CHECK: nvgpu.device_async_wait %{{.*}} {numGroups = 0
   scf.for %i = %c0 to %c98 step %c4 {
     %c96 = arith.constant 96 : index
     %cond = arith.cmpi slt, %i, %c96 : index

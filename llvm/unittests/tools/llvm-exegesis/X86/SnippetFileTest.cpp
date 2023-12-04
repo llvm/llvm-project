@@ -209,15 +209,6 @@ TEST_F(X86SnippetFileTest, MemoryMappingNoDefinition) {
   consumeError(std::move(Error));
 }
 
-TEST_F(X86SnippetFileTest, IncompatibleExecutorMode) {
-  auto Error = TestCommon(R"(
-    # LLVM-EXEGESIS-MEM-MAP test1 4096
-  )")
-                   .takeError();
-  EXPECT_TRUE((bool)Error);
-  consumeError(std::move(Error));
-}
-
 } // namespace
 } // namespace exegesis
 } // namespace llvm

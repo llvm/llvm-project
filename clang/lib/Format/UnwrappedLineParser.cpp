@@ -47,8 +47,7 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
       OS << Prefix;
       NewLine = false;
     }
-    OS << I->Tok->Tok.getName() << "["
-       << "T=" << (unsigned)I->Tok->getType()
+    OS << I->Tok->Tok.getName() << "[" << "T=" << (unsigned)I->Tok->getType()
        << ", OC=" << I->Tok->OriginalColumn << ", \"" << I->Tok->TokenText
        << "\"] ";
     for (SmallVectorImpl<UnwrappedLine>::const_iterator
@@ -496,7 +495,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash)) {
+    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
       NextTok = Tokens->getNextToken();
       do {
         NextTok = Tokens->getNextToken();

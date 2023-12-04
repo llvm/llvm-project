@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // Clang's support for atomic operations on long double is broken. See https://github.com/llvm/llvm-project/issues/72893
-// XFAIL: tsan
-// ADDITIONAL_COMPILE_FLAGS(has-latomic): -latomic
 // XFAIL: !has-64-bit-atomics
+// XFAIL: target={{x86_64-.*}} && tsan
+// UNSUPPORTED: !non-lockfree-atomics
 
 // void store(floating-point-type, memory_order = memory_order::seq_cst) volatile noexcept;
 // void store(floating-point-type, memory_order = memory_order::seq_cst) noexcept;
@@ -41,7 +41,7 @@ void test_impl() {
 
   // store
   {
-    MaybeVolatile<std::atomic<T>> a(3.1);
+    MaybeVolatile<std::atomic<T>> a(T(3.1));
     a.store(T(1.2), std::memory_order::relaxed);
     assert(a.load() == T(1.2));
   }

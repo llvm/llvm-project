@@ -35,6 +35,8 @@ public:
 private:
   bool legalizeShlAshrLshr(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
                            GISelChangeObserver &Observer) const;
+
+  bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
 };
 } // end namespace llvm
 #endif

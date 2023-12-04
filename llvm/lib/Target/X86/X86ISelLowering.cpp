@@ -1135,6 +1135,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSUB, MVT::v8f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v8f16, Expand);
     setOperationAction(ISD::FDIV, MVT::v8f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v8f16, Custom);
+    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v8f16, Custom);
 
     // Custom lower v2i64 and v2f64 selects.
     setOperationAction(ISD::SELECT,             MVT::v2f64, Custom);
@@ -1396,8 +1399,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
     }
 
-    setOperationAction(ISD::FABS, MVT::v8f16, Custom);
-
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
     setOperationPromotedToType(ISD::FP_TO_SINT,        MVT::v8i16, MVT::v8i32);
@@ -1596,7 +1597,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STORE,              VT, Custom);
     }
     setF16Action(MVT::v16f16, Expand);
+    setOperationAction(ISD::FNEG, MVT::v16f16, Custom);
     setOperationAction(ISD::FABS, MVT::v16f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v16f16, Custom);
     setOperationAction(ISD::FADD, MVT::v16f16, Expand);
     setOperationAction(ISD::FSUB, MVT::v16f16, Expand);
     setOperationAction(ISD::FMUL, MVT::v16f16, Expand);
@@ -2053,7 +2056,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+    setOperationAction(ISD::FNEG, MVT::v32f16, Custom);
     setOperationAction(ISD::FABS, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::v32f16, Custom);
   }
 
   // This block control legalization of v32i1/v64i1 which are available with

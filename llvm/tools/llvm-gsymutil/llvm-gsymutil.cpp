@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Archive.h"
@@ -32,7 +31,6 @@
 #include <cstring>
 #include <inttypes.h>
 #include <iostream>
-#include <map>
 #include <optional>
 #include <string>
 #include <system_error>

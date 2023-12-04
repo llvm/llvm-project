@@ -423,17 +423,83 @@ bool RISCVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
+static const MCPhysReg ArgGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
+                                    RISCV::X13, RISCV::X14, RISCV::X15,
+                                    RISCV::X16, RISCV::X17};
+
+/// If there are varargs that were passed in a0-a7, the data in those registers
+/// must be copied to the varargs save area on the stack.
+void RISCVCallLowering::saveVarArgRegisters(
+    MachineIRBuilder &MIRBuilder, CallLowering::IncomingValueHandler &Handler,
+    IncomingValueAssigner &Assigner, CCState &CCInfo) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
+  unsigned XLenInBytes = Subtarget.getXLen() / 8;
+  ArrayRef<MCPhysReg> ArgRegs(ArgGPRs);
+  unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+
+  // Offset of the first variable argument from stack pointer, and size of
+  // the vararg save area. For now, the varargs save area is either zero or
+  // large enough to hold a0-a7.
+  int VaArgOffset;
+  int VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
+
+  // If all registers are allocated, then all varargs must be passed on the
+  // stack and we don't need to save any argregs.
+  if (VarArgsSaveSize == 0) {
+    VaArgOffset = Assigner.StackSize;
+  } else {
+    VaArgOffset = -VarArgsSaveSize;
+  }
+
+  // Record the frame index of the first variable argument which is a value
+  // necessary to G_VASTART.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  int FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
+  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  RVFI->setVarArgsFrameIndex(FI);
+
+  // If saving an odd number of registers then create an extra stack slot to
+  // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
+  // offsets to even-numbered registered remain 2*XLEN-aligned.
+  if (Idx % 2) {
+    MFI.CreateFixedObject(XLenInBytes, VaArgOffset - (int)XLenInBytes, true);
+    VarArgsSaveSize += XLenInBytes;
+  }
+  RVFI->setVarArgsSaveSize(VarArgsSaveSize);
+
+  // Copy the integer registers that may have been used for passing varargs
+  // to the vararg save area.
+  const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
+                              Subtarget.getXLen());
+  const LLT sXLen = LLT::scalar(Subtarget.getXLen());
+  const MVT XLenVT = Subtarget.getXLenVT();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += XLenInBytes) {
+    const Register VReg = MRI.createGenericVirtualRegister(sXLen);
+    Handler.assignValueToReg(
+        VReg, ArgRegs[I],
+        CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,
+                            ArgRegs[I], XLenVT, CCValAssign::Full));
+    FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
+    auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
+    auto MPO = MachinePointerInfo::getFixedStack(MF, FI);
+    auto Store =
+        MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+    // This was taken from  SelectionDAG, but we are not sure why it exists.
+    // It is being investigated in github.com/llvm/llvm-project/issues/73735.
+    Store->memoperands()[0]->setValue((Value *)nullptr);
+  }
+}
+
 bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
                                              FunctionLoweringInfo &FLI) const {
-  // Early exit if there are no arguments.
-  if (F.arg_empty())
+  // Early exit if there are no arguments. varargs are not part of F.args() but
+  // must be lowered.
+  if (F.arg_empty() && !F.isVarArg())
     return true;
-
-  // TODO: Support vararg functions.
-  if (F.isVarArg())
-    return false;
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
@@ -467,8 +533,16 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       /*IsRet=*/false);
   RISCVFormalArgHandler Handler(MIRBuilder, MF.getRegInfo());
 
-  return determineAndHandleAssignments(Handler, Assigner, SplitArgInfos,
-                                       MIRBuilder, CC, F.isVarArg());
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CC, F.isVarArg(), MIRBuilder.getMF(), ArgLocs, F.getContext());
+  if (!determineAssignments(Assigner, SplitArgInfos, CCInfo) ||
+      !handleAssignments(Handler, SplitArgInfos, CCInfo, ArgLocs, MIRBuilder))
+    return false;
+
+  if (F.isVarArg())
+    saveVarArgRegisters(MIRBuilder, Handler, Assigner, CCInfo);
+
+  return true;
 }
 
 bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,

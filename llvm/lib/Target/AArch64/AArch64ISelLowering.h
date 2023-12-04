@@ -83,6 +83,10 @@ enum NodeType : unsigned {
   ADC,
   SBC, // adc, sbc instructions
 
+  // To avoid stack clash, allocation is performed by block and each block is
+  // probed.
+  PROBED_ALLOCA,
+
   // Predicated instructions where inactive lanes produce undefined results.
   ABDS_PRED,
   ABDU_PRED,
@@ -514,6 +518,13 @@ const unsigned RoundingBitsPos = 22;
 ArrayRef<MCPhysReg> getGPRArgRegs();
 ArrayRef<MCPhysReg> getFPRArgRegs();
 
+/// Maximum allowed number of unprobed bytes above SP at an ABI
+/// boundary.
+const unsigned StackProbeMaxUnprobedStack = 1024;
+
+/// Maximum number of iterations to unroll for a constant size probing loop.
+const unsigned StackProbeMaxLoopUnroll = 4;
+
 } // namespace AArch64
 
 class AArch64Subtarget;
@@ -609,6 +620,9 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
+                                            MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
                                   MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
@@ -616,6 +630,8 @@ public:
   MachineBasicBlock *EmitZAInstr(unsigned Opc, unsigned BaseReg,
                                  MachineInstr &MI, MachineBasicBlock *BB,
                                  bool HasTile) const;
+  MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
+                                 unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
@@ -954,6 +970,21 @@ public:
   // used for 64bit and 128bit vectors as well.
   bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
 
+  // Follow NEON ABI rules even when using SVE for fixed length vectors.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
+
+  /// True if stack clash protection is enabled for this functions.
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -974,6 +1005,9 @@ private:
                                const SmallVectorImpl<ISD::InputArg> &Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
+
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
 
   SDValue LowerCall(CallLoweringInfo & /*CLI*/,
                     SmallVectorImpl<SDValue> &InVals) const override;
@@ -1114,10 +1148,10 @@ private:
   SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_AND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SDValue Chain,
-                                         SDValue &Size,
-                                         SelectionDAG &DAG) const;
+
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
   SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,

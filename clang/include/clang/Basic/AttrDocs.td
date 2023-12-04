@@ -7547,7 +7547,7 @@ For example,
   Task<int> foo() { return increment(1); } // Error. foo is not a coroutine.
 
   // Fine for a coroutine wrapper to return a CRT.
-  Task<int> [[clang::coro_wrapper]] foo() { return increment(1); }
+  [[clang::coro_wrapper]] Task<int> foo() { return increment(1); }
 
   void bar() {
     // Invalid. This intantiates a function which returns a CRT but is not marked as

@@ -9,6 +9,7 @@
 #include "Flang.h"
 #include "CommonArgs.h"
 
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
@@ -204,6 +205,30 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
   }
 }
 
+static void addVSDefines(const ToolChain &TC, const ArgList &Args,
+                         ArgStringList &CmdArgs) {
+
+  unsigned ver = 0;
+  const VersionTuple vt = TC.computeMSVCVersion(nullptr, Args);
+  ver = vt.getMajor() * 10000000 + vt.getMinor().value_or(0) * 100000 +
+        vt.getSubminor().value_or(0);
+  CmdArgs.push_back(Args.MakeArgString("-D_MSC_VER=" + Twine(ver / 100000)));
+  CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
+  CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
+
+  llvm::Triple triple = TC.getTriple();
+  if (triple.isAArch64()) {
+    CmdArgs.push_back("-D_M_ARM64=1");
+  } else if (triple.isX86() && triple.isArch32Bit()) {
+    CmdArgs.push_back("-D_M_IX86=600");
+  } else if (triple.isX86() && triple.isArch64Bit()) {
+    CmdArgs.push_back("-D_M_X64=100");
+  } else {
+    llvm_unreachable(
+        "Flang on Windows only supports X86_32, X86_64 and AArch64");
+  }
+}
+
 static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
@@ -333,6 +358,7 @@ void Flang::addTargetOptions(const ArgList &Args,
 
   if (Triple.isKnownWindowsMSVCEnvironment()) {
     processVSRuntimeLibrary(TC, Args, CmdArgs);
+    addVSDefines(TC, Args, CmdArgs);
   }
 
   // TODO: Add target specific flags, ABI, mtune option etc.
@@ -673,6 +699,24 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);
+
+  CodeGenOptions::FramePointerKind FPKeepKind =
+      getFramePointerKind(Args, Triple);
+
+  const char *FPKeepKindStr = nullptr;
+  switch (FPKeepKind) {
+  case CodeGenOptions::FramePointerKind::None:
+    FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    FPKeepKindStr = "-mframe-pointer=non-leaf";
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    FPKeepKindStr = "-mframe-pointer=all";
+    break;
+  }
+  assert(FPKeepKindStr && "unknown FramePointerKind");
+  CmdArgs.push_back(FPKeepKindStr);
 
   // Forward -mllvm options to the LLVM option parser. In practice, this means
   // forwarding to `-fc1` as that's where the LLVM parser is run.

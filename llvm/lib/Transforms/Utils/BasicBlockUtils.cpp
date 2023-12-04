@@ -1456,17 +1456,6 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
                                        ArrayRef<BasicBlock *> Preds,
                                        const char *Suffix1, const char *Suffix2,
                                        SmallVectorImpl<BasicBlock *> &NewBBs,
-                                       DominatorTree *DT, LoopInfo *LI,
-                                       MemorySSAUpdater *MSSAU,
-                                       bool PreserveLCSSA) {
-  return SplitLandingPadPredecessorsImpl(
-      OrigBB, Preds, Suffix1, Suffix2, NewBBs,
-      /*DTU=*/nullptr, DT, LI, MSSAU, PreserveLCSSA);
-}
-void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
-                                       ArrayRef<BasicBlock *> Preds,
-                                       const char *Suffix1, const char *Suffix2,
-                                       SmallVectorImpl<BasicBlock *> &NewBBs,
                                        DomTreeUpdater *DTU, LoopInfo *LI,
                                        MemorySSAUpdater *MSSAU,
                                        bool PreserveLCSSA) {
@@ -2148,4 +2137,16 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
+}
+
+bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                         const BasicBlock &Dest) {
+  assert(Src.getParent() == Dest.getParent());
+  if (!Src.getParent()->isPresplitCoroutine())
+    return false;
+  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
+    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
+      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
+             SW->getDefaultDest() == &Dest;
+  return false;
 }

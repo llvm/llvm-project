@@ -20,6 +20,7 @@ static_library("Format") {
     "MacroCallReconstructor.cpp",
     "MacroExpander.cpp",
     "NamespaceEndCommentsFixer.cpp",
+    "ObjCPropertyAttributeOrderFixer.cpp",
     "QualifierAlignmentFixer.cpp",
     "SortJavaScriptImports.cpp",
     "TokenAnalyzer.cpp",

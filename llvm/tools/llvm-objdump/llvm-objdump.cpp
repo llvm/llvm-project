@@ -24,7 +24,6 @@
 #include "SourcePrinter.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"

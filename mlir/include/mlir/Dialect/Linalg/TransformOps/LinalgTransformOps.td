@@ -1910,16 +1910,20 @@ def TileUsingForallOp :
     #### Example using `num_threads`
 
     ```
-    %0 = pdl_match @match_matmul in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+       : (!transform.any_op) -> !transform.any_op
     %3:2 = transform.structured.tile_using_forall %0 num_threads [10, 20]
+       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     ```
 
     #### Example using `tile_sizes`
 
     ```
-    %0 = pdl_match @match_matmul in %arg1
-    %sz = pdl_match @match_size_op in %arg1
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+       : (!transform.any_op) -> !transform.any_op
+    %sz = transform.structured.match ...
     %3:2 = transform.structured.tile_using_forall %0 tile_sizes [0, %sz, 20]
+       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     ```
   }];
 
