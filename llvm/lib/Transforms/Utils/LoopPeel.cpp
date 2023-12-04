@@ -351,11 +351,20 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     MaxPeelCount =
         std::min((unsigned)SC->getAPInt().getLimitedValue() - 1, MaxPeelCount);
 
-  auto ComputePeelCount = [&](Value *Condition) -> void {
-    if (!Condition->getType()->isIntegerTy())
+  const unsigned MaxDepth = 4;
+  std::function<void(Value *, unsigned)> ComputePeelCount =
+      [&](Value *Condition, unsigned Depth) -> void {
+    if (!Condition->getType()->isIntegerTy() || Depth >= MaxDepth)
       return;
 
     Value *LeftVal, *RightVal;
+    if (match(Condition, m_And(m_Value(LeftVal), m_Value(RightVal))) ||
+        match(Condition, m_Or(m_Value(LeftVal), m_Value(RightVal)))) {
+      ComputePeelCount(LeftVal, Depth + 1);
+      ComputePeelCount(RightVal, Depth + 1);
+      return;
+    }
+
     CmpInst::Predicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
       return;
@@ -443,7 +452,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (SelectInst *SI = dyn_cast<SelectInst>(&I))
-        ComputePeelCount(SI->getCondition());
+        ComputePeelCount(SI->getCondition(), 0);
     }
 
     auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
@@ -454,7 +463,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     if (L.getLoopLatch() == BB)
       continue;
 
-    ComputePeelCount(BI->getCondition());
+    ComputePeelCount(BI->getCondition(), 0);
   }
 
   return DesiredPeelCount;
@@ -631,9 +640,7 @@ struct WeightInfo {
 /// To avoid dealing with division rounding we can just multiple both part
 /// of weights to E and use weight as (F - I * E, E).
 static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  MDBuilder MDB(Term->getContext());
-  Term->setMetadata(LLVMContext::MD_prof,
-                    MDB.createBranchWeights(Info.Weights));
+  setBranchWeights(*Term, Info.Weights);
   for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
     if (SubWeight != 0)
       // Don't set the probability of taking the edge from latch to loop header
@@ -688,14 +695,6 @@ static void initBranchWeights(DenseMap<Instruction *, WeightInfo> &WeightInfos,
 
     WeightInfos.insert({Term, {std::move(Weights), std::move(SubWeights)}});
   }
-}
-
-/// Update the weights of original exiting block after peeling off all
-/// iterations.
-static void fixupBranchWeights(Instruction *Term, const WeightInfo &Info) {
-  MDBuilder MDB(Term->getContext());
-  Term->setMetadata(LLVMContext::MD_prof,
-                    MDB.createBranchWeights(Info.Weights));
 }
 
 /// Clones the body of the loop L, putting it between \p InsertTop and \p
@@ -1033,8 +1032,9 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
   }
 
-  for (const auto &[Term, Info] : Weights)
-    fixupBranchWeights(Term, Info);
+  for (const auto &[Term, Info] : Weights) {
+    setBranchWeights(*Term, Info.Weights);
+  }
 
   // Update Metadata for count of peeled off iterations.
   unsigned AlreadyPeeled = 0;

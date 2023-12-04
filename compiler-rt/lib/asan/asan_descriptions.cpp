@@ -291,7 +291,7 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
   }
   str.AppendF(" global variable '%s' defined in '",
               MaybeDemangleGlobalName(g.name));
-  PrintGlobalLocation(&str, g);
+  PrintGlobalLocation(&str, g, /*print_module_name=*/false);
   str.AppendF("' (0x%zx) of size %zu\n", g.beg, g.size);
   str.Append(d.Default());
   PrintGlobalNameIfASCII(&str, g);

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=arm64-apple-ios < %s | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu < %s | FileCheck %s --check-prefix=CHECK-LINUX
+; RUN: llc -mtriple=arm64-apple-ios -aarch64-min-jump-table-entries=4 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -aarch64-min-jump-table-entries=4 < %s | FileCheck %s --check-prefix=CHECK-LINUX
 ; <rdar://11417675>
 
 define void @sum(i32 %a, ptr %to, i32 %c) {

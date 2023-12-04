@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -62,6 +63,12 @@ iterator_range<DPValue::location_op_iterator> DPValue::location_ops() const {
   assert(cast<MDNode>(MD)->getNumOperands() == 0);
   return {location_op_iterator(static_cast<ValueAsMetadata *>(nullptr)),
           location_op_iterator(static_cast<ValueAsMetadata *>(nullptr))};
+}
+
+unsigned DPValue::getNumVariableLocationOps() const {
+  if (hasArgList())
+    return cast<DIArgList>(getRawLocation())->getArgs().size();
+  return 1;
 }
 
 Value *DPValue::getVariableLocationOp(unsigned OpIdx) const {
@@ -148,6 +155,24 @@ void DPValue::addVariableLocationOps(ArrayRef<Value *> NewValues,
   for (auto *VMD : NewValues)
     MDs.push_back(getAsMetadata(VMD));
   setRawLocation(DIArgList::get(getVariableLocationOp(0)->getContext(), MDs));
+}
+
+void DPValue::setKillLocation() {
+  // TODO: When/if we remove duplicate values from DIArgLists, we don't need
+  // this set anymore.
+  SmallPtrSet<Value *, 4> RemovedValues;
+  for (Value *OldValue : location_ops()) {
+    if (!RemovedValues.insert(OldValue).second)
+      continue;
+    Value *Poison = PoisonValue::get(OldValue->getType());
+    replaceVariableLocationOp(OldValue, Poison);
+  }
+}
+
+bool DPValue::isKillLocation() const {
+  return (getNumVariableLocationOps() == 0 &&
+          !getExpression()->isComplex()) ||
+         any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
 std::optional<uint64_t> DPValue::getFragmentSizeInBits() const {
@@ -260,15 +285,10 @@ void DPMarker::removeMarker() {
   // The attached DPValues need to be preserved; attach them to the next
   // instruction. If there isn't a next instruction, put them on the
   // "trailing" list.
-  // (This logic gets refactored in a future patch, needed to break some
-  //  dependencies here).
-  BasicBlock::iterator NextInst = std::next(Owner->getIterator());
-  DPMarker *NextMarker;
-  if (NextInst == Owner->getParent()->end()) {
+  DPMarker *NextMarker = Owner->getParent()->getNextMarker(Owner);
+  if (NextMarker == nullptr) {
     NextMarker = new DPMarker();
     Owner->getParent()->setTrailingDPValues(NextMarker);
-  } else {
-    NextMarker = NextInst->DbgMarker;
   }
   NextMarker->absorbDebugValues(*this, true);
 
@@ -312,6 +332,18 @@ void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
     DPV.setMarker(this);
 
   StoredDPValues.splice(It, Src.StoredDPValues);
+}
+
+void DPMarker::absorbDebugValues(iterator_range<DPValue::self_iterator> Range,
+                                 DPMarker &Src, bool InsertAtHead) {
+  for (DPValue &DPV : Range)
+    DPV.setMarker(this);
+
+  auto InsertPos =
+      (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
+
+  StoredDPValues.splice(InsertPos, Src.StoredDPValues, Range.begin(),
+                        Range.end());
 }
 
 iterator_range<simple_ilist<DPValue>::iterator> DPMarker::cloneDebugInfoFrom(

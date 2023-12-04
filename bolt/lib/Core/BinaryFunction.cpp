@@ -40,6 +40,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 #include <functional>
 #include <limits>
 #include <numeric>
@@ -54,7 +55,6 @@ namespace opts {
 
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
-extern cl::OptionCategory BoltRelocCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
@@ -108,6 +108,13 @@ cl::opt<bool>
     PreserveBlocksAlignment("preserve-blocks-alignment",
                             cl::desc("try to preserve basic block alignment"),
                             cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintOutputAddressRange(
+    "print-output-address-range",
+    cl::desc(
+        "print output address range for each basic block in the function when"
+        "BinaryFunction::print is called"),
+    cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintDynoStats("dyno-stats",
@@ -322,7 +329,8 @@ void BinaryFunction::markUnreachableBlocks() {
 
 // Any unnecessary fallthrough jumps revealed after calling eraseInvalidBBs
 // will be cleaned up by fixBranches().
-std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
+std::pair<unsigned, uint64_t>
+BinaryFunction::eraseInvalidBBs(const MCCodeEmitter *Emitter) {
   DenseSet<const BinaryBasicBlock *> InvalidBBs;
   unsigned Count = 0;
   uint64_t Bytes = 0;
@@ -331,7 +339,7 @@ std::pair<unsigned, uint64_t> BinaryFunction::eraseInvalidBBs() {
       assert(!isEntryPoint(*BB) && "all entry blocks must be valid");
       InvalidBBs.insert(BB);
       ++Count;
-      Bytes += BC.computeCodeSize(BB->begin(), BB->end());
+      Bytes += BC.computeCodeSize(BB->begin(), BB->end(), Emitter);
     }
   }
 
@@ -430,8 +438,6 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   OS << "\n  IsSplit     : " << isSplit();
   OS << "\n  BB Count    : " << size();
 
-  if (HasFixedIndirectBranch)
-    OS << "\n  HasFixedIndirectBranch : true";
   if (HasUnknownControlFlow)
     OS << "\n  Unknown CF  : true";
   if (getPersonalityFunction())
@@ -511,6 +517,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     for (const BinaryBasicBlock *BB : FF) {
       OS << BB->getName() << " (" << BB->size()
          << " instructions, align : " << BB->getAlignment() << ")\n";
+
+      if (opts::PrintOutputAddressRange)
+        OS << formatv("  Output Address Range: [{0:x}, {1:x}) ({2} bytes)\n",
+                      BB->getOutputAddressRange().first,
+                      BB->getOutputAddressRange().second, BB->getOutputSize());
 
       if (isEntryPoint(*BB)) {
         if (MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB))
@@ -1116,7 +1127,7 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
       Instruction.clear();
       MIB->createUncondBranch(Instruction, TargetSymbol, BC.Ctx.get());
       TakenBranches.emplace_back(Offset, IndirectTarget - getAddress());
-      HasFixedIndirectBranch = true;
+      addEntryPointAtOffset(IndirectTarget - getAddress());
     } else {
       MIB->convertJmpToTailCall(Instruction);
       BC.addInterproceduralReference(this, IndirectTarget);
@@ -1379,7 +1390,7 @@ add_instruction:
       // NOTE: disassembly loses the correct size information for noops on x86.
       //       E.g. nopw 0x0(%rax,%rax,1) is 9 bytes, but re-encoded it's only
       //       5 bytes. Preserve the size info using annotations.
-      MIB->addAnnotation(Instruction, "Size", static_cast<uint32_t>(Size));
+      MIB->setSize(Instruction, Size);
     }
 
     addInstruction(Offset, std::move(Instruction));
@@ -1891,9 +1902,6 @@ bool BinaryFunction::postProcessIndirectBranches(
 
     LastIndirectJumpBB->updateJumpTableSuccessors();
   }
-
-  if (HasFixedIndirectBranch)
-    return false;
 
   // Validate that all data references to function offsets are claimed by
   // recognized jump tables. Register externally referenced blocks as entry
@@ -3288,7 +3296,7 @@ void BinaryFunction::fixBranches() {
       BB->eraseInstruction(BB->findInstruction(UncondBranch));
 
     // Basic block that follows the current one in the final layout.
-    const BinaryBasicBlock *NextBB =
+    const BinaryBasicBlock *const NextBB =
         Layout.getBasicBlockAfter(BB, /*IgnoreSplits=*/false);
 
     if (BB->succ_size() == 1) {
@@ -3305,39 +3313,54 @@ void BinaryFunction::fixBranches() {
       assert(CondBranch && "conditional branch expected");
       const BinaryBasicBlock *TSuccessor = BB->getConditionalSuccessor(true);
       const BinaryBasicBlock *FSuccessor = BB->getConditionalSuccessor(false);
-      // Check whether we support reversing this branch direction
-      const bool IsSupported = !MIB->isUnsupportedBranch(*CondBranch);
-      if (NextBB && NextBB == TSuccessor && IsSupported) {
+
+      // Eliminate unnecessary conditional branch.
+      if (TSuccessor == FSuccessor) {
+        BB->removeDuplicateConditionalSuccessor(CondBranch);
+        if (TSuccessor != NextBB)
+          BB->addBranchInstruction(TSuccessor);
+        continue;
+      }
+
+      // Reverse branch condition and swap successors.
+      auto swapSuccessors = [&]() {
+        if (MIB->isUnsupportedBranch(*CondBranch))
+          return false;
         std::swap(TSuccessor, FSuccessor);
-        {
-          auto L = BC.scopeLock();
-          MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
-        }
         BB->swapConditionalSuccessors();
-      } else {
+        auto L = BC.scopeLock();
+        MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
+        return true;
+      };
+
+      // Check whether the next block is a "taken" target and try to swap it
+      // with a "fall-through" target.
+      if (TSuccessor == NextBB && swapSuccessors())
+        continue;
+
+      // Update conditional branch destination if needed.
+      if (MIB->getTargetSymbol(*CondBranch) != TSuccessor->getLabel()) {
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(*CondBranch, TSuccessor->getLabel(), Ctx);
       }
-      if (TSuccessor == FSuccessor)
-        BB->removeDuplicateConditionalSuccessor(CondBranch);
-      if (!NextBB ||
-          ((NextBB != TSuccessor || !IsSupported) && NextBB != FSuccessor)) {
-        // If one of the branches is guaranteed to be "long" while the other
-        // could be "short", then prioritize short for "taken". This will
-        // generate a sequence 1 byte shorter on x86.
-        if (IsSupported && BC.isX86() &&
-            TSuccessor->getFragmentNum() != FSuccessor->getFragmentNum() &&
-            BB->getFragmentNum() != TSuccessor->getFragmentNum()) {
-          std::swap(TSuccessor, FSuccessor);
-          {
-            auto L = BC.scopeLock();
-            MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(),
-                                        Ctx);
-          }
-          BB->swapConditionalSuccessors();
-        }
-        BB->addBranchInstruction(FSuccessor);
+
+      // No need for the unconditional branch.
+      if (FSuccessor == NextBB)
+        continue;
+
+      if (BC.isX86()) {
+        // We are going to generate two branches. Check if their targets are in
+        // the same fragment as this block. If only one target is in the same
+        // fragment, make it the destination of the conditional branch. There
+        // is a chance it will be a short branch which takes 4 bytes fewer than
+        // a long conditional branch. For unconditional branch, the difference
+        // is 3 bytes.
+        if (BB->getFragmentNum() != TSuccessor->getFragmentNum() &&
+            BB->getFragmentNum() == FSuccessor->getFragmentNum())
+          swapSuccessors();
       }
+
+      BB->addBranchInstruction(FSuccessor);
     }
     // Cases where the number of successors is 0 (block ends with a
     // terminator) or more than 2 (switch table) don't require branch
@@ -3629,7 +3652,7 @@ size_t BinaryFunction::computeHash(bool UseDFS,
   for (const BinaryBasicBlock *BB : Order)
     HashString.append(hashBlock(BC, *BB, OperandHashFunc));
 
-  return Hash = std::hash<std::string>{}(HashString);
+  return Hash = llvm::xxh3_64bits(HashString);
 }
 
 void BinaryFunction::insertBasicBlocks(
@@ -4136,10 +4159,6 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
   if (!requiresAddressMap())
     return;
 
-  // Output ranges should match the input if the body hasn't changed.
-  if (!isSimple() && !BC.HasRelocations)
-    return;
-
   // AArch64 may have functions that only contains a constant island (no code).
   if (getLayout().block_empty())
     return;
@@ -4186,6 +4205,12 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
     PrevBB->setOutputEndAddress(PrevBB->isSplit()
                                     ? FF.getAddress() + FF.getImageSize()
                                     : getOutputAddress() + getOutputSize());
+  }
+
+  // Reset output addresses for deleted blocks.
+  for (BinaryBasicBlock *BB : DeletedBasicBlocks) {
+    BB->setOutputStartAddress(0);
+    BB->setOutputEndAddress(0);
   }
 }
 
@@ -4306,7 +4331,7 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
-      return OutAddress;
+      return std::min(OutAddress, BB.getOutputAddressRange().second);
     };
 
     uint64_t OutLowPC = BB.getOutputAddressRange().first;
@@ -4352,10 +4377,11 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
     }
 
     if (MCInst *LastInstr = BB->getLastNonPseudoInstr()) {
-      const uint32_t Size =
-          BC.MIB->getAnnotationWithDefault<uint32_t>(*LastInstr, "Size");
-      if (BB->getEndOffset() - Offset == Size)
-        return LastInstr;
+      if (std::optional<uint32_t> Size = BC.MIB->getSize(*LastInstr)) {
+        if (BB->getEndOffset() - Offset == Size) {
+          return LastInstr;
+        }
+      }
     }
 
     return nullptr;

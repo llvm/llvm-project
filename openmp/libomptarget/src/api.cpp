@@ -10,10 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PluginManager.h"
 #include "device.h"
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
+
+#include "OpenMP/omp.h"
+#include "Shared/Profile.h"
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -24,13 +28,11 @@
 
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
-  PM->RTLsMtx.lock();
-  size_t DevicesSize = PM->Devices.size();
-  PM->RTLsMtx.unlock();
+  size_t NumDevices = PM->getNumDevices();
 
-  DP("Call to omp_get_num_devices returning %zd\n", DevicesSize);
+  DP("Call to omp_get_num_devices returning %zd\n", NumDevices);
 
-  return DevicesSize;
+  return NumDevices;
 }
 
 EXTERN int omp_get_device_num(void) {
@@ -108,10 +110,8 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
     return true;
   }
 
-  PM->RTLsMtx.lock();
-  size_t DevicesSize = PM->Devices.size();
-  PM->RTLsMtx.unlock();
-  if (DevicesSize <= (size_t)DeviceNum) {
+  size_t NumDevices = PM->getNumDevices();
+  if (NumDevices <= (size_t)DeviceNum) {
     DP("Call to omp_target_is_present with invalid device ID, returning "
        "false\n");
     return false;
@@ -210,7 +210,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
 }
 
 // The helper function that calls omp_target_memcpy or omp_target_memcpy_rect
-static int libomp_target_memcpy_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
+static int libomp_target_memcpy_async_task(int32_t Gtid, kmp_task_t *Task) {
   if (Task == nullptr)
     return OFFLOAD_FAIL;
 
@@ -241,7 +241,7 @@ static int libomp_target_memcpy_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
   return Rc;
 }
 
-static int libomp_target_memset_async_task(kmp_int32 Gtid, kmp_task_t *Task) {
+static int libomp_target_memset_async_task(int32_t Gtid, kmp_task_t *Task) {
   if (!Task)
     return OFFLOAD_FAIL;
 
@@ -268,13 +268,13 @@ convertDepObjVector(llvm::SmallVector<kmp_depend_info_t> &Vec, int DepObjCount,
 
 template <class T>
 static inline int
-libomp_helper_task_creation(T *Args, int (*Fn)(kmp_int32, kmp_task_t *),
+libomp_helper_task_creation(T *Args, int (*Fn)(int32_t, kmp_task_t *),
                             int DepObjCount, omp_depend_t *DepObjList) {
   // Create global thread ID
   int Gtid = __kmpc_global_thread_num(nullptr);
 
   // Setup the hidden helper flags
-  kmp_int32 Flags = 0;
+  int32_t Flags = 0;
   kmp_tasking_flags_t *InputFlags = (kmp_tasking_flags_t *)&Flags;
   InputFlags->hidden_helper = 1;
 
@@ -558,18 +558,14 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
     return nullptr;
   }
 
-  if (DeviceNum == omp_get_initial_device()) {
+  size_t NumDevices = omp_get_initial_device();
+  if (DeviceNum == NumDevices) {
     REPORT("Device %d is initial device, returning Ptr " DPxMOD ".\n",
            DeviceNum, DPxPTR(Ptr));
     return const_cast<void *>(Ptr);
   }
 
-  int DevicesSize = omp_get_initial_device();
-  {
-    std::lock_guard<std::mutex> LG(PM->RTLsMtx);
-    DevicesSize = PM->Devices.size();
-  }
-  if (DevicesSize <= DeviceNum) {
+  if (NumDevices <= DeviceNum) {
     DP("DeviceNum %d is invalid, returning nullptr.\n", DeviceNum);
     return nullptr;
   }

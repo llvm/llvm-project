@@ -341,7 +341,8 @@ static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
 }
 
 static inline bool hasLEAOffset(const MachineOperand &Offset) {
-  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal();
+  return (Offset.isImm() && Offset.getImm() != 0) || Offset.isGlobal() ||
+         Offset.isBlockAddress();
 }
 
 static inline unsigned getADDrrFromLEA(unsigned LEAOpcode) {

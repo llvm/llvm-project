@@ -9,12 +9,58 @@
 #include "DWARFLinkerImpl.h"
 #include "DIEGenerator.h"
 #include "DependencyTracker.h"
+#include "Utils.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/ThreadPool.h"
 
 namespace llvm {
 namespace dwarflinker_parallel {
+
+DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
+                                 MessageHandlerTy WarningHandler,
+                                 TranslatorFuncTy StringsTranslator)
+    : UniqueUnitID(0), DebugStrStrings(GlobalData),
+      DebugLineStrStrings(GlobalData), CommonSections(GlobalData) {
+  GlobalData.setTranslator(StringsTranslator);
+  GlobalData.setErrorHandler(ErrorHandler);
+  GlobalData.setWarningHandler(WarningHandler);
+}
+
+DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
+                                          DWARFFile &File,
+                                          StringMap<uint64_t> &ClangModules,
+                                          std::atomic<size_t> &UniqueUnitID,
+                                          std::optional<Triple> TargetTriple)
+    : OutputSections(GlobalData), InputDWARFFile(File),
+      ClangModules(ClangModules), TargetTriple(TargetTriple),
+      UniqueUnitID(UniqueUnitID) {
+
+  if (File.Dwarf) {
+    if (!File.Dwarf->compile_units().empty())
+      CompileUnits.reserve(File.Dwarf->getNumCompileUnits());
+
+    // Set context format&endianness based on the input file.
+    Format.Version = File.Dwarf->getMaxVersion();
+    Format.AddrSize = File.Dwarf->getCUAddrSize();
+    Endianness = File.Dwarf->isLittleEndian() ? llvm::endianness::little
+                                              : llvm::endianness::big;
+  }
+}
+
+DWARFLinkerImpl::LinkContext::RefModuleUnit::RefModuleUnit(
+    DWARFFile &File, std::unique_ptr<CompileUnit> Unit)
+    : File(File), Unit(std::move(Unit)) {}
+
+DWARFLinkerImpl::LinkContext::RefModuleUnit::RefModuleUnit(
+    LinkContext::RefModuleUnit &&Other)
+    : File(Other.File), Unit(std::move(Other.Unit)) {}
+
+void DWARFLinkerImpl::LinkContext::addModulesCompileUnit(
+    LinkContext::RefModuleUnit &&Unit) {
+  ModulesCompileUnits.emplace_back(std::move(Unit));
+}
 
 Error DWARFLinkerImpl::createEmitter(const Triple &TheTriple,
                                      OutputFileType FileType,
@@ -55,6 +101,10 @@ void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
   }
 }
 
+void DWARFLinkerImpl::setEstimatedObjfilesAmount(unsigned ObjFilesNum) {
+  ObjectContexts.reserve(ObjFilesNum);
+}
+
 Error DWARFLinkerImpl::link() {
   // reset compile unit unique ID counter.
   UniqueUnitID = 0;
@@ -71,6 +121,7 @@ Error DWARFLinkerImpl::link() {
                            ? llvm::endianness::little
                            : llvm::endianness::big;
   }
+  std::optional<uint16_t> Language;
 
   for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
     if (Context->InputDWARFFile.Dwarf.get() == nullptr) {
@@ -101,6 +152,23 @@ Error DWARFLinkerImpl::link() {
         std::max(GlobalFormat.AddrSize, Context->getFormParams().AddrSize);
 
     Context->setOutputFormat(Context->getFormParams(), GlobalEndianness);
+
+    // FIXME: move creation of CompileUnits into the addObjectFile.
+    // This would allow to not scan for context Language and Modules state
+    // twice. And then following handling might be removed.
+    for (const std::unique_ptr<DWARFUnit> &OrigCU :
+         Context->InputDWARFFile.Dwarf->compile_units()) {
+      DWARFDie UnitDie = OrigCU.get()->getUnitDIE();
+
+      if (!Language) {
+        if (std::optional<DWARFFormValue> Val =
+                UnitDie.find(dwarf::DW_AT_language)) {
+          uint16_t LangVal = dwarf::toUnsigned(Val, 0);
+          if (isODRLanguage(LangVal))
+            Language = LangVal;
+        }
+      }
+    }
   }
 
   if (GlobalFormat.AddrSize == 0) {
@@ -113,6 +181,14 @@ Error DWARFLinkerImpl::link() {
 
   CommonSections.setOutputFormat(GlobalFormat, GlobalEndianness);
 
+  if (!GlobalData.Options.NoODR && Language.has_value()) {
+    parallel::TaskGroup TGroup;
+    TGroup.spawn([&]() {
+      ArtificialTypeUnit = std::make_unique<TypeUnit>(
+          GlobalData, UniqueUnitID++, Language, GlobalFormat, GlobalEndianness);
+    });
+  }
+
   // Set parallel options.
   if (GlobalData.getOptions().Threads == 0)
     parallel::strategy = optimal_concurrency(OverallNumberOfCU);
@@ -123,7 +199,7 @@ Error DWARFLinkerImpl::link() {
   if (GlobalData.getOptions().Threads == 1) {
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
       // Link object file.
-      if (Error Err = Context->link())
+      if (Error Err = Context->link(ArtificialTypeUnit.get()))
         GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
 
       Context->InputDWARFFile.unload();
@@ -133,13 +209,26 @@ Error DWARFLinkerImpl::link() {
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
       Pool.async([&]() {
         // Link object file.
-        if (Error Err = Context->link())
+        if (Error Err = Context->link(ArtificialTypeUnit.get()))
           GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
 
         Context->InputDWARFFile.unload();
       });
 
     Pool.wait();
+  }
+
+  if (ArtificialTypeUnit.get() != nullptr && !ArtificialTypeUnit->getTypePool()
+                                                  .getRoot()
+                                                  ->getValue()
+                                                  .load()
+                                                  ->Children.empty()) {
+    std::optional<Triple> OutTriple = TheDwarfEmitter.get() == nullptr
+                                          ? std::optional<Triple>(std::nullopt)
+                                          : TheDwarfEmitter->getTargetTriple();
+
+    if (Error Err = ArtificialTypeUnit.get()->finishCloningAndEmit(OutTriple))
+      return Err;
   }
 
   // At this stage each compile units are cloned to their own set of debug
@@ -174,6 +263,11 @@ Error DWARFLinkerImpl::validateAndUpdateOptions() {
     GlobalData.warn(
         "set number of threads to 1 to make --verbose to work properly.", "");
   }
+
+  // Do not do types deduplication in case --update.
+  if (GlobalData.getOptions().UpdateIndexTablesOnly &&
+      !GlobalData.Options.NoODR)
+    GlobalData.Options.NoODR = true;
 
   return Error::success();
 }
@@ -369,7 +463,7 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   return Error::success();
 }
 
-Error DWARFLinkerImpl::LinkContext::link() {
+Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   InterCUProcessingStarted = false;
   if (!InputDWARFFile.Dwarf)
     return Error::success();
@@ -380,7 +474,7 @@ Error DWARFLinkerImpl::LinkContext::link() {
 
   // Link modules compile units first.
   parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
-    linkSingleCompileUnit(*RefModule.Unit);
+    linkSingleCompileUnit(*RefModule.Unit, ArtificialTypeUnit);
   });
 
   // Check for live relocations. If there is no any live relocation then we
@@ -420,43 +514,78 @@ Error DWARFLinkerImpl::LinkContext::link() {
     // Link self-sufficient compile units and discover inter-connected compile
     // units.
     parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
-      linkSingleCompileUnit(*CU);
+      linkSingleCompileUnit(*CU, ArtificialTypeUnit);
     });
 
     // Link all inter-connected units.
     if (HasNewInterconnectedCUs) {
       InterCUProcessingStarted = true;
 
-      do {
-        HasNewInterconnectedCUs = false;
+      if (Error Err = finiteLoop([&]() -> Expected<bool> {
+            HasNewInterconnectedCUs = false;
 
-        // Load inter-connected units.
-        parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
-          if (CU->isInterconnectedCU()) {
-            CU->maybeResetToLoadedStage();
-            linkSingleCompileUnit(*CU, CompileUnit::Stage::Loaded);
-          }
-        });
+            // Load inter-connected units.
+            parallelForEach(
+                CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
+                  if (CU->isInterconnectedCU()) {
+                    CU->maybeResetToLoadedStage();
+                    linkSingleCompileUnit(*CU, ArtificialTypeUnit,
+                                          CompileUnit::Stage::Loaded);
+                  }
+                });
 
-        // Do liveness analysis for inter-connected units.
-        parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
-          linkSingleCompileUnit(*CU, CompileUnit::Stage::LivenessAnalysisDone);
-        });
-      } while (HasNewInterconnectedCUs);
+            // Do liveness analysis for inter-connected units.
+            parallelForEach(CompileUnits,
+                            [&](std::unique_ptr<CompileUnit> &CU) {
+                              linkSingleCompileUnit(
+                                  *CU, ArtificialTypeUnit,
+                                  CompileUnit::Stage::LivenessAnalysisDone);
+                            });
+
+            return HasNewInterconnectedCUs.load();
+          }))
+        return Err;
+
+      // Update dependencies.
+      if (Error Err = finiteLoop([&]() -> Expected<bool> {
+            HasNewGlobalDependency = false;
+            parallelForEach(
+                CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
+                  linkSingleCompileUnit(
+                      *CU, ArtificialTypeUnit,
+                      CompileUnit::Stage::UpdateDependenciesCompleteness);
+                });
+            return HasNewGlobalDependency.load();
+          }))
+        return Err;
+      parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
+        if (CU->isInterconnectedCU() &&
+            CU->getStage() == CompileUnit::Stage::LivenessAnalysisDone)
+          CU->setStage(CompileUnit::Stage::UpdateDependenciesCompleteness);
+      });
+
+      // Assign type names.
+      parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
+        linkSingleCompileUnit(*CU, ArtificialTypeUnit,
+                              CompileUnit::Stage::TypeNamesAssigned);
+      });
 
       // Clone inter-connected units.
       parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
-        linkSingleCompileUnit(*CU, CompileUnit::Stage::Cloned);
+        linkSingleCompileUnit(*CU, ArtificialTypeUnit,
+                              CompileUnit::Stage::Cloned);
       });
 
       // Update patches for inter-connected units.
       parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
-        linkSingleCompileUnit(*CU, CompileUnit::Stage::PatchesUpdated);
+        linkSingleCompileUnit(*CU, ArtificialTypeUnit,
+                              CompileUnit::Stage::PatchesUpdated);
       });
 
       // Release data.
       parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
-        linkSingleCompileUnit(*CU, CompileUnit::Stage::Cleaned);
+        linkSingleCompileUnit(*CU, ArtificialTypeUnit,
+                              CompileUnit::Stage::Cleaned);
       });
     }
 
@@ -483,78 +612,119 @@ Error DWARFLinkerImpl::LinkContext::link() {
 }
 
 void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
-    CompileUnit &CU, enum CompileUnit::Stage DoUntilStage) {
-  while (CU.getStage() < DoUntilStage) {
-    if (InterCUProcessingStarted != CU.isInterconnectedCU())
-      return;
+    CompileUnit &CU, TypeUnit *ArtificialTypeUnit,
+    enum CompileUnit::Stage DoUntilStage) {
+  if (InterCUProcessingStarted != CU.isInterconnectedCU())
+    return;
 
-    switch (CU.getStage()) {
-    case CompileUnit::Stage::CreatedNotLoaded: {
-      // Load input compilation unit DIEs.
-      // Analyze properties of DIEs.
-      if (!CU.loadInputDIEs()) {
-        // We do not need to do liveness analysis for invalud compilation unit.
-        CU.setStage(CompileUnit::Stage::LivenessAnalysisDone);
-      } else {
-        CU.analyzeDWARFStructure();
+  if (Error Err = finiteLoop([&]() -> Expected<bool> {
+        if (CU.getStage() >= DoUntilStage)
+          return false;
 
-        // The registerModuleReference() condition effectively skips
-        // over fully resolved skeleton units. This second pass of
-        // registerModuleReferences doesn't do any new work, but it
-        // will collect top-level errors, which are suppressed. Module
-        // warnings were already displayed in the first iteration.
-        if (registerModuleReference(
-                CU.getOrigUnit().getUnitDIE(), nullptr,
-                [](const DWARFUnit &) {}, 0))
-          CU.setStage(CompileUnit::Stage::PatchesUpdated);
-        else
-          CU.setStage(CompileUnit::Stage::Loaded);
-      }
-    } break;
+        switch (CU.getStage()) {
+        case CompileUnit::Stage::CreatedNotLoaded: {
+          // Load input compilation unit DIEs.
+          // Analyze properties of DIEs.
+          if (!CU.loadInputDIEs()) {
+            // We do not need to do liveness analysis for invalid compilation
+            // unit.
+            CU.setStage(CompileUnit::Stage::Skipped);
+          } else {
+            CU.analyzeDWARFStructure();
 
-    case CompileUnit::Stage::Loaded: {
-      // Mark all the DIEs that need to be present in the generated output.
-      // If ODR requested, build type names.
-      if (!DependencyTracker(*this).resolveDependenciesAndMarkLiveness(CU)) {
-        assert(HasNewInterconnectedCUs);
-        return;
-      }
+            // The registerModuleReference() condition effectively skips
+            // over fully resolved skeleton units. This second pass of
+            // registerModuleReferences doesn't do any new work, but it
+            // will collect top-level errors, which are suppressed. Module
+            // warnings were already displayed in the first iteration.
+            if (registerModuleReference(
+                    CU.getOrigUnit().getUnitDIE(), nullptr,
+                    [](const DWARFUnit &) {}, 0))
+              CU.setStage(CompileUnit::Stage::PatchesUpdated);
+            else
+              CU.setStage(CompileUnit::Stage::Loaded);
+          }
+        } break;
 
-      CU.setStage(CompileUnit::Stage::LivenessAnalysisDone);
-    } break;
+        case CompileUnit::Stage::Loaded: {
+          // Mark all the DIEs that need to be present in the generated output.
+          // If ODR requested, build type names.
+          if (!CU.resolveDependenciesAndMarkLiveness(InterCUProcessingStarted,
+                                                     HasNewInterconnectedCUs)) {
+            assert(HasNewInterconnectedCUs &&
+                   "Flag indicating new inter-connections is not set");
+            return false;
+          }
 
-    case CompileUnit::Stage::LivenessAnalysisDone:
+          CU.setStage(CompileUnit::Stage::LivenessAnalysisDone);
+        } break;
 
+        case CompileUnit::Stage::LivenessAnalysisDone: {
+          if (InterCUProcessingStarted) {
+            if (CU.updateDependenciesCompleteness())
+              HasNewGlobalDependency = true;
+            return false;
+          } else {
+            if (Error Err = finiteLoop([&]() -> Expected<bool> {
+                  return CU.updateDependenciesCompleteness();
+                }))
+              return std::move(Err);
+
+            CU.setStage(CompileUnit::Stage::UpdateDependenciesCompleteness);
+          }
+        } break;
+
+        case CompileUnit::Stage::UpdateDependenciesCompleteness:
 #ifndef NDEBUG
-      DependencyTracker::verifyKeepChain(CU);
+          CU.verifyDependencies();
 #endif
 
-      // Clone input compile unit.
-      if (CU.isClangModule() || GlobalData.getOptions().UpdateIndexTablesOnly ||
-          CU.getContaingFile().Addresses->hasValidRelocs()) {
-        if (Error Err = CU.cloneAndEmit(TargetTriple))
-          CU.error(std::move(Err));
-      }
+          if (ArtificialTypeUnit) {
+            if (Error Err =
+                    CU.assignTypeNames(ArtificialTypeUnit->getTypePool()))
+              return std::move(Err);
+          }
+          CU.setStage(CompileUnit::Stage::TypeNamesAssigned);
+          break;
 
-      CU.setStage(CompileUnit::Stage::Cloned);
-      break;
+        case CompileUnit::Stage::TypeNamesAssigned:
+          // Clone input compile unit.
+          if (CU.isClangModule() ||
+              GlobalData.getOptions().UpdateIndexTablesOnly ||
+              CU.getContaingFile().Addresses->hasValidRelocs()) {
+            if (Error Err = CU.cloneAndEmit(TargetTriple, ArtificialTypeUnit))
+              return std::move(Err);
+          }
 
-    case CompileUnit::Stage::Cloned:
-      // Update DIEs referencies.
-      CU.updateDieRefPatchesWithClonedOffsets();
-      CU.setStage(CompileUnit::Stage::PatchesUpdated);
-      break;
+          CU.setStage(CompileUnit::Stage::Cloned);
+          break;
 
-    case CompileUnit::Stage::PatchesUpdated:
-      // Cleanup resources.
-      CU.cleanupDataAfterClonning();
-      CU.setStage(CompileUnit::Stage::Cleaned);
-      break;
+        case CompileUnit::Stage::Cloned:
+          // Update DIEs referencies.
+          CU.updateDieRefPatchesWithClonedOffsets();
+          CU.setStage(CompileUnit::Stage::PatchesUpdated);
+          break;
 
-    case CompileUnit::Stage::Cleaned:
-      assert(false);
-      break;
-    }
+        case CompileUnit::Stage::PatchesUpdated:
+          // Cleanup resources.
+          CU.cleanupDataAfterClonning();
+          CU.setStage(CompileUnit::Stage::Cleaned);
+          break;
+
+        case CompileUnit::Stage::Cleaned:
+          assert(false);
+          break;
+
+        case CompileUnit::Stage::Skipped:
+          // Nothing to do.
+          break;
+        }
+
+        return true;
+      })) {
+    CU.error(std::move(Err));
+    CU.cleanupDataAfterClonning();
+    CU.setStage(CompileUnit::Stage::Skipped);
   }
 }
 
@@ -716,6 +886,9 @@ void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
   // units into the resulting file.
   emitCommonSectionsAndWriteCompileUnitsToTheOutput();
 
+  if (ArtificialTypeUnit.get() != nullptr)
+    ArtificialTypeUnit.reset();
+
   // Write common debug sections into the resulting file.
   writeCommonSectionsToTheOutput();
 
@@ -861,27 +1034,79 @@ void DWARFLinkerImpl::forEachOutputString(
       });
     });
 
-    CU->AcceleratorRecords.forEach([&](DwarfUnit::AccelInfo &Info) {
+    CU->forEachAcceleratorRecord([&](DwarfUnit::AccelInfo &Info) {
       StringHandler(DebugStr, Info.String);
     });
   });
+
+  if (ArtificialTypeUnit.get() != nullptr) {
+    ArtificialTypeUnit->forEach([&](SectionDescriptor &OutSection) {
+      OutSection.ListDebugStrPatch.forEach([&](DebugStrPatch &Patch) {
+        StringHandler(StringDestinationKind::DebugStr, Patch.String);
+      });
+
+      OutSection.ListDebugLineStrPatch.forEach([&](DebugLineStrPatch &Patch) {
+        StringHandler(StringDestinationKind::DebugLineStr, Patch.String);
+      });
+
+      OutSection.ListDebugTypeStrPatch.forEach([&](DebugTypeStrPatch &Patch) {
+        if (Patch.Die == nullptr)
+          return;
+
+        StringHandler(StringDestinationKind::DebugStr, Patch.String);
+      });
+
+      OutSection.ListDebugTypeLineStrPatch.forEach(
+          [&](DebugTypeLineStrPatch &Patch) {
+            if (Patch.Die == nullptr)
+              return;
+
+            StringHandler(StringDestinationKind::DebugStr, Patch.String);
+          });
+    });
+  }
 }
 
 void DWARFLinkerImpl::forEachObjectSectionsSet(
     function_ref<void(OutputSections &)> SectionsSetHandler) {
-  // Handle all modules first(before regular compilation units).
+  // Handle artificial type unit first.
+  if (ArtificialTypeUnit.get() != nullptr)
+    SectionsSetHandler(*ArtificialTypeUnit);
+
+  // Then all modules(before regular compilation units).
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
     for (LinkContext::RefModuleUnit &ModuleUnit : Context->ModulesCompileUnits)
-      SectionsSetHandler(*ModuleUnit.Unit);
+      if (ModuleUnit.Unit->getStage() != CompileUnit::Stage::Skipped)
+        SectionsSetHandler(*ModuleUnit.Unit);
 
+  // Finally all compilation units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts) {
     // Handle object file common sections.
     SectionsSetHandler(*Context);
 
     // Handle compilation units.
     for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
-      SectionsSetHandler(*CU);
+      if (CU->getStage() != CompileUnit::Stage::Skipped)
+        SectionsSetHandler(*CU);
   }
+}
+
+void DWARFLinkerImpl::forEachCompileAndTypeUnit(
+    function_ref<void(DwarfUnit *CU)> UnitHandler) {
+  if (ArtificialTypeUnit.get() != nullptr)
+    UnitHandler(ArtificialTypeUnit.get());
+
+  // Enumerate module units.
+  for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
+    for (LinkContext::RefModuleUnit &ModuleUnit : Context->ModulesCompileUnits)
+      if (ModuleUnit.Unit->getStage() != CompileUnit::Stage::Skipped)
+        UnitHandler(ModuleUnit.Unit.get());
+
+  // Enumerate compile units.
+  for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
+    for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
+      if (CU->getStage() != CompileUnit::Stage::Skipped)
+        UnitHandler(CU.get());
 }
 
 void DWARFLinkerImpl::forEachCompileUnit(
@@ -889,19 +1114,21 @@ void DWARFLinkerImpl::forEachCompileUnit(
   // Enumerate module units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
     for (LinkContext::RefModuleUnit &ModuleUnit : Context->ModulesCompileUnits)
-      UnitHandler(ModuleUnit.Unit.get());
+      if (ModuleUnit.Unit->getStage() != CompileUnit::Stage::Skipped)
+        UnitHandler(ModuleUnit.Unit.get());
 
   // Enumerate compile units.
   for (const std::unique_ptr<LinkContext> &Context : ObjectContexts)
     for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
-      UnitHandler(CU.get());
+      if (CU->getStage() != CompileUnit::Stage::Skipped)
+        UnitHandler(CU.get());
 }
 
 void DWARFLinkerImpl::patchOffsetsAndSizes() {
   forEachObjectSectionsSet([&](OutputSections &SectionsSet) {
     SectionsSet.forEach([&](SectionDescriptor &OutSection) {
-      SectionsSet.applyPatches(OutSection, DebugStrStrings,
-                               DebugLineStrStrings);
+      SectionsSet.applyPatches(OutSection, DebugStrStrings, DebugLineStrStrings,
+                               ArtificialTypeUnit.get());
     });
   });
 }
@@ -1005,8 +1232,9 @@ void DWARFLinkerImpl::emitAppleAcceleratorSections(const Triple &TargetTriple) {
   AccelTable<AppleAccelTableStaticOffsetData> AppleObjC;
   AccelTable<AppleAccelTableStaticTypeData> AppleTypes;
 
-  forEachCompileUnit([&](CompileUnit *CU) {
-    CU->AcceleratorRecords.forEach([&](const DwarfUnit::AccelInfo &Info) {
+  forEachCompileAndTypeUnit([&](DwarfUnit *CU) {
+    CU->forEachAcceleratorRecord([&](const DwarfUnit::AccelInfo &Info) {
+      uint64_t OutOffset = Info.OutOffset;
       switch (Info.Type) {
       case DwarfUnit::AccelType::None: {
         llvm_unreachable("Unknown accelerator record");
@@ -1015,25 +1243,25 @@ void DWARFLinkerImpl::emitAppleAcceleratorSections(const Triple &TargetTriple) {
         AppleNamespaces.addName(
             *DebugStrStrings.getExistingEntry(Info.String),
             CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                Info.OutOffset);
+                OutOffset);
       } break;
       case DwarfUnit::AccelType::Name: {
         AppleNames.addName(
             *DebugStrStrings.getExistingEntry(Info.String),
             CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                Info.OutOffset);
+                OutOffset);
       } break;
       case DwarfUnit::AccelType::ObjC: {
         AppleObjC.addName(
             *DebugStrStrings.getExistingEntry(Info.String),
             CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                Info.OutOffset);
+                OutOffset);
       } break;
       case DwarfUnit::AccelType::Type: {
         AppleTypes.addName(
             *DebugStrStrings.getExistingEntry(Info.String),
             CU->getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset +
-                Info.OutOffset,
+                OutOffset,
             Info.Tag,
             Info.ObjcClassImplementation ? dwarf::DW_FLAG_type_implementation
                                          : 0,
@@ -1136,16 +1364,13 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
 
   unsigned Id = 0;
 
-  forEachCompileUnit([&](CompileUnit *CU) {
-    CompUnits.push_back(
-        CU->getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo)
-            .StartOffset);
-    CUidToIdx[CU->getUniqueID()] = Id++;
-
-    CU->AcceleratorRecords.forEach([&](const DwarfUnit::AccelInfo &Info) {
+  forEachCompileAndTypeUnit([&](DwarfUnit *CU) {
+    bool HasRecords = false;
+    CU->forEachAcceleratorRecord([&](const DwarfUnit::AccelInfo &Info) {
       if (DebugNames.get() == nullptr)
         DebugNames = std::make_unique<DWARF5AccelTable>();
 
+      HasRecords = true;
       switch (Info.Type) {
       case DwarfUnit::AccelType::Name:
       case DwarfUnit::AccelType::Namespace:
@@ -1158,6 +1383,13 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
         break; // Nothing to do.
       };
     });
+
+    if (HasRecords) {
+      CompUnits.push_back(
+          CU->getOrCreateSectionDescriptor(DebugSectionKind::DebugInfo)
+              .StartOffset);
+      CUidToIdx[CU->getUniqueID()] = Id++;
+    }
   });
 
   if (DebugNames.get() != nullptr) {

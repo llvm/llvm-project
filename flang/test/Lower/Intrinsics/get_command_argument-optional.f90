@@ -1,5 +1,5 @@
 ! Test GET_COMMAND_ARGUMENT with dynamically optional arguments.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPtest(
 ! CHECK-SAME:  %[[numberParam:.*]]: !fir.ref<i32> {fir.bindc_name = "number", fir.optional},

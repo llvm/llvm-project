@@ -152,28 +152,28 @@ bool MemRefDependenceGraph::init() {
       auto memref = cast<AffineWriteOpInterface>(op).getMemRef();
       memrefAccesses[memref].insert(node.id);
       nodes.insert({node.id, node});
-    } else if (op.getNumRegions() != 0) {
-      // Return false if another region is found (not currently supported).
-      return false;
     } else if (op.getNumResults() > 0 && !op.use_empty()) {
       // Create graph node for top-level producer of SSA values, which
       // could be used by loop nest nodes.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
-    } else if (isa<CallOpInterface>(op)) {
-      // Create graph node for top-level Call Op that takes any argument of
-      // memref type. Call Op that returns one or more memref type results
-      // is already taken care of, by the previous conditions.
-      if (llvm::any_of(op.getOperandTypes(),
-                       [&](Type t) { return isa<MemRefType>(t); })) {
-        Node node(nextNodeId++, &op);
-        nodes.insert({node.id, node});
-      }
-    } else if (hasEffect<MemoryEffects::Write, MemoryEffects::Free>(&op)) {
-      // Create graph node for top-level op, which could have a memory write
-      // side effect.
+    } else if (!isMemoryEffectFree(&op) &&
+               (op.getNumRegions() == 0 || isa<RegionBranchOpInterface>(op))) {
+      // Create graph node for top-level op unless it is known to be
+      // memory-effect free. This covers all unknown/unregistered ops,
+      // non-affine ops with memory effects, and region-holding ops with a
+      // well-defined control flow. During the fusion validity checks, we look
+      // for non-affine ops on the path from source to destination, at which
+      // point we check which memrefs if any are used in the region.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
+    } else if (op.getNumRegions() != 0) {
+      // Return false if non-handled/unknown region-holding ops are found. We
+      // won't know what such ops do or what its regions mean; for e.g., it may
+      // not be an imperative op.
+      LLVM_DEBUG(llvm::dbgs()
+                 << "MDG init failed; unknown region-holding op found!\n");
+      return false;
     }
   }
 
@@ -199,10 +199,15 @@ bool MemRefDependenceGraph::init() {
           continue;
         SmallVector<AffineForOp, 4> loops;
         getAffineForIVs(*user, &loops);
-        if (loops.empty())
+        // Find the surrounding affine.for nested immediately within the
+        // block.
+        auto *it = llvm::find_if(loops, [&](AffineForOp loop) {
+          return loop->getBlock() == &block;
+        });
+        if (it == loops.end())
           continue;
-        assert(forToNodeMap.count(loops[0]) > 0 && "missing mapping");
-        unsigned userLoopNestId = forToNodeMap[loops[0]];
+        assert(forToNodeMap.count(*it) > 0 && "missing mapping");
+        unsigned userLoopNestId = forToNodeMap[*it];
         addEdge(node.id, userLoopNestId, value);
       }
     }
@@ -631,8 +636,8 @@ void mlir::affine::getAffineForIVs(Operation &op,
   AffineForOp currAffineForOp;
   // Traverse up the hierarchy collecting all 'affine.for' operation while
   // skipping over 'affine.if' operations.
-  while (currOp) {
-    if (AffineForOp currAffineForOp = dyn_cast<AffineForOp>(currOp))
+  while (currOp && !currOp->hasTrait<OpTrait::AffineScope>()) {
+    if (auto currAffineForOp = dyn_cast<AffineForOp>(currOp))
       loops->push_back(currAffineForOp);
     currOp = currOp->getParentOp();
   }
@@ -646,7 +651,7 @@ void mlir::affine::getEnclosingAffineOps(Operation &op,
 
   // Traverse up the hierarchy collecting all `affine.for`, `affine.if`, and
   // affine.parallel operations.
-  while (currOp) {
+  while (currOp && !currOp->hasTrait<OpTrait::AffineScope>()) {
     if (isa<AffineIfOp, AffineForOp, AffineParallelOp>(currOp))
       ops->push_back(currOp);
     currOp = currOp->getParentOp();
@@ -758,12 +763,12 @@ std::optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
         // iteration (e.g., lbMap.getResult(0) = 0, ubMap.getResult(0) = 1).
         // Make sure we skip those cases by checking that the lb result is not
         // just a constant.
-        lbMap.getResult(0).isa<AffineConstantExpr>())
+        isa<AffineConstantExpr>(lbMap.getResult(0)))
       return std::nullopt;
 
     // Limited support: we expect the lb result to be just a loop dimension for
     // now.
-    AffineDimExpr result = lbMap.getResult(0).dyn_cast<AffineDimExpr>();
+    AffineDimExpr result = dyn_cast<AffineDimExpr>(lbMap.getResult(0));
     if (!result)
       return std::nullopt;
 
@@ -791,10 +796,10 @@ std::optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
     AffineExpr dstLbResult = dstLbMap.getResult(0);
     AffineExpr srcUbResult = srcUbMap.getResult(0);
     AffineExpr dstUbResult = dstUbMap.getResult(0);
-    if (!srcLbResult.isa<AffineConstantExpr>() ||
-        !srcUbResult.isa<AffineConstantExpr>() ||
-        !dstLbResult.isa<AffineConstantExpr>() ||
-        !dstUbResult.isa<AffineConstantExpr>())
+    if (!isa<AffineConstantExpr>(srcLbResult) ||
+        !isa<AffineConstantExpr>(srcUbResult) ||
+        !isa<AffineConstantExpr>(dstLbResult) ||
+        !isa<AffineConstantExpr>(dstUbResult))
       return std::nullopt;
 
     // Check if src and dst loop bounds are the same. If not, we can guarantee
@@ -1583,7 +1588,7 @@ static std::optional<uint64_t> getConstDifference(AffineMap lbMap,
   AffineExpr ubExpr(ubMap.getResult(0));
   auto loopSpanExpr = simplifyAffineExpr(ubExpr - lbExpr, lbMap.getNumDims(),
                                          lbMap.getNumSymbols());
-  auto cExpr = loopSpanExpr.dyn_cast<AffineConstantExpr>();
+  auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
   if (!cExpr)
     return std::nullopt;
   return cExpr.getValue();

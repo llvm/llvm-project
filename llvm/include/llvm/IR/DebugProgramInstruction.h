@@ -50,10 +50,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
-#include <cstdint>
-#include <utility>
 
 namespace llvm {
 
@@ -186,11 +183,7 @@ public:
 
   void setExpression(DIExpression *NewExpr) { Expression = NewExpr; }
 
-  unsigned getNumVariableLocationOps() const {
-    if (hasArgList())
-      return cast<DIArgList>(getRawLocation())->getArgs().size();
-    return 1;
-  }
+  unsigned getNumVariableLocationOps() const;
 
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
   /// Returns true if this DPValue has no empty MDNodes in its location list.
@@ -204,23 +197,8 @@ public:
   DebugLoc getDebugLoc() const { return DbgLoc; }
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
 
-  void setKillLocation() {
-    // TODO: When/if we remove duplicate values from DIArgLists, we don't need
-    // this set anymore.
-    SmallPtrSet<Value *, 4> RemovedValues;
-    for (Value *OldValue : location_ops()) {
-      if (!RemovedValues.insert(OldValue).second)
-        continue;
-      Value *Poison = PoisonValue::get(OldValue->getType());
-      replaceVariableLocationOp(OldValue, Poison);
-    }
-  }
-
-  bool isKillLocation() const {
-    return (getNumVariableLocationOps() == 0 &&
-            !getExpression()->isComplex()) ||
-           any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
-  }
+  void setKillLocation();
+  bool isKillLocation() const;
 
   DILocalVariable *getVariable() const { return Variable; }
 
@@ -308,6 +286,7 @@ public:
   /// representation has been converted, and the ordering of DPValues is
   /// meaningful in the same was a dbg.values.
   simple_ilist<DPValue> StoredDPValues;
+  bool empty() const { return StoredDPValues.empty(); }
 
   const BasicBlock *getParent() const;
   BasicBlock *getParent();
@@ -330,6 +309,11 @@ public:
   /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
   /// is true, place them before existing DPValues, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
+  /// Transfer the DPValues in \p Range from \p Src into this DPMarker. If
+  /// \p InsertAtHead is true, place them before existing DPValues, otherwise
+  // afterwards.
+  void absorbDebugValues(iterator_range<DPValue::self_iterator> Range,
+                         DPMarker &Src, bool InsertAtHead);
   /// Insert a DPValue into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
   void insertDPValue(DPValue *New, bool InsertAtHead);

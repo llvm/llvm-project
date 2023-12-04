@@ -13,6 +13,7 @@
 // iter_type put(iter_type s, ios_base& iob, char_type fill, long double v) const;
 
 // XFAIL: win32-broken-printf-g-precision
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // Needs more investigation, but this is probably failing on Android M (API 23)
 // and up because the printf formatting of NAN changed.

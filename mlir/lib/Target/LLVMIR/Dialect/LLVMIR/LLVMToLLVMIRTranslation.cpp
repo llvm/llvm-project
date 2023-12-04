@@ -172,6 +172,24 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+static void convertLinkerOptionsOp(ArrayAttr options,
+                                   llvm::IRBuilderBase &builder,
+                                   LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::LLVMContext &context = llvmModule->getContext();
+  llvm::NamedMDNode *linkerMDNode =
+      llvmModule->getOrInsertNamedMetadata("llvm.linker.options");
+  SmallVector<llvm::Metadata *> MDNodes;
+  MDNodes.reserve(options.size());
+  for (auto s : options.getAsRange<StringAttr>()) {
+    auto *MDNode = llvm::MDString::get(context, s.getValue());
+    MDNodes.push_back(MDNode);
+  }
+
+  auto *listMDNode = llvm::MDTuple::get(context, MDNodes);
+  linkerMDNode->addOperand(listMDNode);
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {

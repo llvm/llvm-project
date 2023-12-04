@@ -85,6 +85,49 @@ linalgIntBroadcastExtSIAdd(PatternRewriter &rewriter, Location loc, Value bias,
       .getResult(0);
 }
 
+// Broadcast the source value to all the outer dimensions of the result value.
+// If required, the element type is expanded using an arith.extsi operation.
+static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
+                                                Location loc, Value source,
+                                                Value result) {
+  ShapedType resultTy = cast<ShapedType>(result.getType());
+  ShapedType sourceTy = cast<ShapedType>(source.getType());
+  int64_t resultRank = resultTy.getRank();
+  int64_t sourceRank = sourceTy.getRank();
+
+  // The source tensor is broadcast to all the outer dimensions of the
+  // result tensor.
+  SmallVector<AffineExpr> sourceDims;
+  for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
+    auto expr = rewriter.getAffineDimExpr(dim + resultRank - sourceRank);
+    sourceDims.push_back(expr);
+  }
+
+  // Creating maps for the input and output of the broacast-like generic op.
+  SmallVector<AffineMap, 2> indexingMaps = {
+      // Broadcast the last dimension of the bias to all output dimensions.
+      AffineMap::get(/*dimCount=*/resultRank,
+                     /*symbolCount=*/0, sourceDims, rewriter.getContext()),
+
+      // Output indexing map.
+      rewriter.getMultiDimIdentityMap(resultRank)};
+
+  // Build the broadcast-like operation as a linalg.generic.
+  return rewriter
+      .create<linalg::GenericOp>(
+          loc, resultTy, ValueRange({source}), result, indexingMaps,
+          getNParallelLoopsAttrs(resultTy.getRank()),
+          [](OpBuilder &builder, Location loc, ValueRange args) {
+            Value biasVal = args[0];
+            Type resType = args[1].getType();
+            if (resType != biasVal.getType()) {
+              biasVal = builder.create<arith::ExtSIOp>(loc, resType, biasVal);
+            }
+            builder.create<linalg::YieldOp>(loc, biasVal);
+          })
+      .getResult(0);
+}
+
 static mlir::Value reifyConstantDim(int64_t attr,
                                     ImplicitLocOpBuilder &builder) {
   return builder.createOrFold<arith::IndexCastOp>(
@@ -136,7 +179,7 @@ static SmallVector<Value> inferDynamicDimsForConv(
   for (uint32_t i = 0, s = inputSizeDims.size(); i < s; ++i) {
     int64_t inputDim = inputSizeDims[i];
     int64_t kernelDim = kernelSizeDims[i];
-    if (inputTy.isDynamicDim(inputDim)) {
+    if (resultTy.isDynamicDim(inputDim)) {
       auto padTop = padAttr[i * 2];
       auto padBottom = padAttr[i * 2 + 1];
       auto stride = strideAttr[i];
@@ -153,7 +196,7 @@ static SmallVector<Value> inferDynamicDimsForConv(
 
   // Get the batch/channels dimensions.
   for (int i = 0; i < inputRank; i++) {
-    if (inputTy.isDynamicDim(i) && !dynDims[i])
+    if (resultTy.isDynamicDim(i) && !dynDims[i])
       dynDims[i] = rewriter.create<tensor::DimOp>(loc, input, i);
   }
 
@@ -301,15 +344,6 @@ public:
                                                   weightPermValue);
     }
 
-    auto resultZeroAttr = rewriter.getZeroAttr(resultETy);
-    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, resultTy.getShape(), resultETy, filteredDims);
-    Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
-    Value zeroTensor = rewriter
-                           .create<linalg::FillOp>(loc, ValueRange{zero},
-                                                   ValueRange{emptyTensor})
-                           .result();
-
     // Extract the attributes for convolution.
     ArrayRef<int64_t> stride = strideTosaAttr;
     ArrayRef<int64_t> dilation = dilationTosaAttr;
@@ -318,17 +352,11 @@ public:
     auto strideAttr = rewriter.getI64TensorAttr(stride);
     auto dilationAttr = rewriter.getI64TensorAttr(dilation);
 
-    // Create maps for the bias broadcasting
-    SmallVector<AffineMap, 4> indexingMaps;
-    indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/resultTy.getRank(), /*symbolCount=*/0,
-        {rewriter.getAffineDimExpr(resultTy.getRank() - 1)},
-        rewriter.getContext()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultTy.getRank()));
-
     Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultTy.getShape(), resultETy, filteredDims);
+
+    Value broadcastBias =
+        linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
 
     if (isQuantized) {
       auto quantizationInfo = *op.getQuantizationInfo();
@@ -337,38 +365,25 @@ public:
 
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
+
       Value conv =
           rewriter
               .create<LinalgConvQOp>(
                   loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
-                  ValueRange{zeroTensor}, strideAttr, dilationAttr)
+                  ValueRange{broadcastBias}, strideAttr, dilationAttr)
               ->getResult(0);
-      Value result = linalgIntBroadcastExtSIAdd(rewriter, loc, bias, conv,
-                                                biasEmptyTensor, indexingMaps);
-      rewriter.replaceOp(op, result);
+
+      rewriter.replaceOp(op, conv);
       return success();
     }
 
     Value conv = rewriter
                      .create<LinalgConvOp>(
                          loc, resultTy, ValueRange{input, weight},
-                         ValueRange{zeroTensor}, strideAttr, dilationAttr)
+                         ValueRange{broadcastBias}, strideAttr, dilationAttr)
                      ->getResult(0);
 
-    Value result =
-        rewriter
-            .create<linalg::GenericOp>(
-                loc, resultTy, ValueRange({bias, conv}), biasEmptyTensor,
-                indexingMaps, getNParallelLoopsAttrs(resultTy.getRank()),
-                [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                    ValueRange args) {
-                  Value added = nestedBuilder.create<arith::AddFOp>(
-                      loc, args[0], args[1]);
-                  nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
-                })
-            .getResult(0);
-
-    rewriter.replaceOp(op, result);
+    rewriter.replaceOp(op, conv);
     return success();
   }
 };
@@ -540,21 +555,18 @@ public:
     auto outputTy = cast<ShapedType>(op.getType());
     auto outputElementTy = outputTy.getElementType();
 
-    auto firstOperandTy = cast<ShapedType>(op->getOperand(0).getType());
-    auto secondOperandTy = cast<ShapedType>(op->getOperand(1).getType());
-
     SmallVector<Value> dynDims;
     dynDims.resize(cast<ShapedType>(op->getResult(0).getType()).getRank());
 
-    if (!firstOperandTy.hasRank() || firstOperandTy.isDynamicDim(0)) {
+    if (!outputTy.hasRank() || outputTy.isDynamicDim(0)) {
       dynDims[0] = rewriter.create<tensor::DimOp>(loc, op->getOperand(0), 0);
     }
 
-    if (!firstOperandTy.hasRank() || firstOperandTy.isDynamicDim(1)) {
+    if (!outputTy.hasRank() || outputTy.isDynamicDim(1)) {
       dynDims[1] = rewriter.create<tensor::DimOp>(loc, op->getOperand(0), 1);
     }
 
-    if (!secondOperandTy.hasRank() || secondOperandTy.isDynamicDim(2)) {
+    if (!outputTy.hasRank() || outputTy.isDynamicDim(2)) {
       dynDims[2] = rewriter.create<tensor::DimOp>(loc, op->getOperand(1), 2);
     }
 
@@ -621,28 +633,6 @@ public:
 
     SmallVector<Value> filteredDims = condenseValues(dynDims);
 
-    // Creating maps for the output of MatMul and the bias
-    SmallVector<AffineMap, 4> indexingMaps;
-
-    // Broadcast the bias.
-    indexingMaps.push_back(AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
-                                          {rewriter.getAffineDimExpr(1)},
-                                          rewriter.getContext()));
-
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
-
-    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
-        loc, outputTy.getShape(), outputTy.getElementType(), filteredDims);
-
-    // When quantized, the input elemeny type is not the same as the output
-    auto resultZeroAttr = rewriter.getZeroAttr(outputETy);
-    Value zero = rewriter.create<arith::ConstantOp>(loc, resultZeroAttr);
-    Value zeroTensor = rewriter
-                           .create<linalg::FillOp>(loc, ValueRange{zero},
-                                                   ValueRange{emptyTensor})
-                           .result();
-
     SmallVector<int64_t> permutation{1, 0};
     auto permutationAttr = rewriter.getI64TensorAttr(permutation);
     Value permutationValue =
@@ -658,26 +648,17 @@ public:
     Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, outputTy.getShape(), outputETy, filteredDims);
 
+    Value broadcastBias =
+        linalgBroadcastAndMaybeExtSI(rewriter, loc, bias, biasEmptyTensor);
+
     if (!op.getQuantizationInfo()) {
       Value matmul = rewriter
                          .create<linalg::MatmulOp>(
                              loc, TypeRange{op.getType()},
-                             ValueRange{input, transposedWeight}, zeroTensor)
+                             ValueRange{input, transposedWeight}, broadcastBias)
                          ->getResult(0);
 
-      Value result =
-          rewriter
-              .create<linalg::GenericOp>(
-                  loc, outputTy, ValueRange({bias, matmul}), biasEmptyTensor,
-                  indexingMaps, getNParallelLoopsAttrs(outputTy.getRank()),
-                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                      ValueRange args) {
-                    Value added = nestedBuilder.create<arith::AddFOp>(
-                        loc, args[0], args[1]);
-                    nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
-                  })
-              .getResult(0);
-      rewriter.replaceOp(op, result);
+      rewriter.replaceOp(op, matmul);
       return success();
     }
 
@@ -691,11 +672,10 @@ public:
             .create<linalg::QuantizedMatmulOp>(
                 loc, TypeRange{op.getType()},
                 ValueRange{input, transposedWeight, inputZp, outputZp},
-                zeroTensor)
+                broadcastBias)
             ->getResult(0);
-    Value result = linalgIntBroadcastExtSIAdd(rewriter, loc, bias, matmul,
-                                              biasEmptyTensor, indexingMaps);
-    rewriter.replaceOp(op, result);
+
+    rewriter.replaceOp(op, matmul);
     return success();
   }
 };

@@ -1,4 +1,5 @@
 ; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare -mtriple=x86_64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -start-before=codegenprepare -stop-after=codegenprepare -mtriple=x86_64-unknown-unknown %s -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ;
 ; CGP duplicates address calculation into each basic block that contains loads
 ; or stores, so that they can be folded into instruction memory operands for

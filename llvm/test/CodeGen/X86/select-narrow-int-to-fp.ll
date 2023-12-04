@@ -101,7 +101,7 @@ define <16 x half> @vector_uint8ToHalf(<16 x i8> %int8) {
 ; CHECK-WITH_FP16-LABEL: vector_uint8ToHalf:
 ; CHECK-WITH_FP16:       # %bb.0:
 ; CHECK-WITH_FP16-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; CHECK-WITH_FP16-NEXT:    vcvtuw2ph %ymm0, %ymm0
+; CHECK-WITH_FP16-NEXT:    vcvtw2ph %ymm0, %ymm0
 ; CHECK-WITH_FP16-NEXT:    retq
     %fp32 = uitofp <16 x i8> %int8 to <16 x half>
     ret <16 x half> %fp32

@@ -3,6 +3,285 @@
 
 declare void @llvm.assume(i1)
 declare void @barrier()
+declare void @use.i8(i8)
+
+; test for (~x ^ y) < ~z
+define i1 @test_xor1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %nz = xor i8 %z, -1
+  %r = icmp slt i8 %xor2, %nz
+  ret i1 %r
+}
+
+; test for ~z <= (x ^ ~y)
+define i1 @test_xor2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %y, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %x
+  %r = icmp sle i8 %nz, %xor2
+  ret i1 %r
+}
+
+; test for ~z > (~x ^ y)
+define i1 @test_xor3(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor3(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %r = icmp sgt i8 %nz, %xor2
+  ret i1 %r
+}
+
+; tests for equality
+define i1 @test_xor_ne(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %y, -1
+  %xor2 = xor i8 %xor, %x
+  %r = icmp ne i8 %nz, %xor2
+  ret i1 %r
+}
+
+define i1 @test_xor_eq(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %y, -1
+  %xor2 = xor i8 %xor, %x
+  %r = icmp eq i8 %nz, %xor2
+  ret i1 %r
+}
+
+; other tests
+define i1 @test_xor4(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor4(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %r = icmp sge i8 %xor2, %nz
+  ret i1 %r
+}
+
+define i1 @test_xor5(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor5(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %r = icmp ult i8 %xor2, %nz
+  ret i1 %r
+}
+
+define i1 @test_xor6(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor6(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %r = icmp ule i8 %xor2, %nz
+  ret i1 %r
+}
+
+define i1 @test_xor7(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor7(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %r = icmp ugt i8 %xor2, %nz
+  ret i1 %r
+}
+
+define i1 @test_xor8(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor8(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = xor i8 %z, -1
+  %xor = xor i8 %x, -1
+  call void @use.i8(i8 %xor)
+  %xor2 = xor i8 %xor, %y
+  %r = icmp uge i8 %xor2, %nz
+  ret i1 %r
+}
+
+; test (~a ^ b) < ~a
+define i1 @test_slt_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_slt_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %r = icmp slt i32 %xor2, %xor1
+  ret i1 %r
+}
+
+; test (a ^ ~b) <= ~b
+define i1 @test_sle_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sle_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i32 [[TMP1]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor1 = xor i32 %y, -1
+  %xor2 = xor i32 %xor1, %x
+  %r = icmp sle i32 %xor2, %xor1
+  ret i1 %r
+}
+
+; test ~a > (~a ^ b)
+define i1 @test_sgt_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sgt_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %cmp = icmp sgt i32 %xor2, %xor1
+  ret i1 %cmp
+}
+
+define i1 @test_sge_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sge_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %cmp = icmp sge i32 %xor2, %xor1
+  ret i1 %cmp
+}
+
+define i1 @test_ult_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_ult_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %cmp = icmp ult i32 %xor2, %xor1
+  ret i1 %cmp
+}
+
+define i1 @test_ule_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_ule_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %cmp = icmp ule i32 %xor2, %xor1
+  ret i1 %cmp
+}
+
+define i1 @test_ugt_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_ugt_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %cmp = icmp ugt i32 %xor2, %xor1
+  ret i1 %cmp
+}
+
+define i1 @test_uge_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_uge_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor1 = xor i32 %x, -1
+  %xor2 = xor i32 %xor1, %y
+  %cmp = icmp uge i32 %xor2, %xor1
+  ret i1 %cmp
+}
+
+; Negative tests
+define i1 @test_xor1_nofold_multi_use(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @test_xor1_nofold_multi_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[XOR2]])
+; CHECK-NEXT:    [[NZ:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    call void @use.i8(i8 [[NZ]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[TMP1]], [[Z]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i8 %x, -1
+  %xor2 = xor i8 %xor, %y
+  call void @use.i8(i8 %xor2)
+  %nz = xor i8 %z, -1
+  call void @use.i8(i8 %nz)
+  %r = icmp slt i8 %xor2, %nz
+  ret i1 %r
+}
 
 define i1 @xor_uge(i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_uge(
@@ -79,7 +358,7 @@ define i1 @xor_ugt_2(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-LABEL: @xor_ugt_2(
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[YZ:%.*]] = and i8 [[Y:%.*]], 63
-; CHECK-NEXT:    [[Y1:%.*]] = or i8 [[YZ]], 64
+; CHECK-NEXT:    [[Y1:%.*]] = or disjoint i8 [[YZ]], 64
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y1]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[XOR]]
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -106,7 +385,7 @@ define i1 @xor_ult(i8 %x) {
 define <2 x i1> @xor_sgt(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @xor_sgt(
 ; CHECK-NEXT:    [[YZ:%.*]] = and <2 x i8> [[Y:%.*]], <i8 31, i8 31>
-; CHECK-NEXT:    [[Y1:%.*]] = or <2 x i8> [[YZ]], <i8 64, i8 64>
+; CHECK-NEXT:    [[Y1:%.*]] = or disjoint <2 x i8> [[YZ]], <i8 64, i8 64>
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[Y1]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[XOR]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -121,7 +400,7 @@ define <2 x i1> @xor_sgt(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i1> @xor_sgt_fail_no_known_msb(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @xor_sgt_fail_no_known_msb(
 ; CHECK-NEXT:    [[YZ:%.*]] = and <2 x i8> [[Y:%.*]], <i8 55, i8 55>
-; CHECK-NEXT:    [[Y1:%.*]] = or <2 x i8> [[YZ]], <i8 8, i8 8>
+; CHECK-NEXT:    [[Y1:%.*]] = or disjoint <2 x i8> [[YZ]], <i8 8, i8 8>
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[Y1]], [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[XOR]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]

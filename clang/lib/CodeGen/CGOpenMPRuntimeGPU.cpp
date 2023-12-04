@@ -153,9 +153,11 @@ static RecordDecl *buildRecordForGlobalizedVars(
           Field->addAttr(*I);
       }
     } else {
-      llvm::APInt ArraySize(32, BufSize);
-      Type = C.getConstantArrayType(Type, ArraySize, nullptr,
-                                    ArraySizeModifier::Normal, 0);
+      if (BufSize > 1) {
+        llvm::APInt ArraySize(32, BufSize);
+        Type = C.getConstantArrayType(Type, ArraySize, nullptr,
+                                      ArraySizeModifier::Normal, 0);
+      }
       Field = FieldDecl::Create(
           C, GlobalizedRD, Loc, Loc, VD->getIdentifier(), Type,
           C.getTrivialTypeSourceInfo(Type, SourceLocation()),
@@ -802,7 +804,9 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();
   uint64_t ReductionDataSize =
-      DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
+      TeamsReductions.empty()
+          ? 0
+          : DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
   OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
                                 C.getLangOpts().OpenMPCUDAReductionBufNum);
@@ -1416,9 +1420,7 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
     return CGF.Builder.CreateIntCast(Val, LLVMCastTy,
                                      CastTy->hasSignedIntegerRepresentation());
   Address CastItem = CGF.CreateMemTemp(CastTy);
-  Address ValCastItem = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      CastItem, Val->getType()->getPointerTo(CastItem.getAddressSpace()),
-      Val->getType());
+  Address ValCastItem = CastItem.withElementType(Val->getType());
   CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy,
                         LValueBaseInfo(AlignmentSource::Type),
                         TBAAAccessInfo());
@@ -1837,12 +1839,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           {llvm::Constant::getNullValue(CGM.Int64Ty), WarpID});
       // Casting to actual data type.
       // MediumPtr = (CopyType*)MediumPtrAddr;
-      Address MediumPtr(
-          Bld.CreateBitCast(
-              MediumPtrVal,
-              CopyType->getPointerTo(
-                  MediumPtrVal->getType()->getPointerAddressSpace())),
-          CopyType, Align);
+      Address MediumPtr(MediumPtrVal, CopyType, Align);
 
       // elem = *elemptr
       //*MediumPtr = elem
@@ -1889,12 +1886,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           TransferMedium->getValueType(), TransferMedium,
           {llvm::Constant::getNullValue(CGM.Int64Ty), ThreadID});
       // SrcMediumVal = *SrcMediumPtr;
-      Address SrcMediumPtr(
-          Bld.CreateBitCast(
-              SrcMediumPtrVal,
-              CopyType->getPointerTo(
-                  SrcMediumPtrVal->getType()->getPointerAddressSpace())),
-          CopyType, Align);
+      Address SrcMediumPtr(SrcMediumPtrVal, CopyType, Align);
 
       // TargetElemPtr = (CopyType*)(SrcDataAddr[i]) + I
       Address TargetElemPtrPtr = Bld.CreateConstArrayGEP(LocalReduceList, Idx);
@@ -2205,8 +2197,7 @@ static llvm::Value *emitListToGlobalCopyFunction(
   llvm::Value *BufferArrPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
       CGF.EmitLoadOfScalar(AddrBufferArg, /*Volatile=*/false, C.VoidPtrTy, Loc),
       LLVMReductionsBufferTy->getPointerTo());
-  llvm::Value *Idxs[] = {llvm::ConstantInt::getNullValue(CGF.Int32Ty),
-                         CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
+  llvm::Value *Idxs[] = {CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
                                               /*Volatile=*/false, C.IntTy,
                                               Loc)};
   unsigned Idx = 0;
@@ -2224,12 +2215,12 @@ static llvm::Value *emitListToGlobalCopyFunction(
     const ValueDecl *VD = cast<DeclRefExpr>(Private)->getDecl();
     // Global = Buffer.VD[Idx];
     const FieldDecl *FD = VarFieldMap.lookup(VD);
+    llvm::Value *BufferPtr =
+        Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
-        CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
+        CGF.MakeNaturalAlignAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(GlobAddr.getElementType(),
-                                                   GlobAddr.getPointer(), Idxs);
-    GlobLVal.setAddress(Address(BufferPtr,
+    GlobLVal.setAddress(Address(GlobAddr.getPointer(),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
@@ -2316,8 +2307,7 @@ static llvm::Value *emitListToGlobalReduceFunction(
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
   auto IPriv = Privates.begin();
-  llvm::Value *Idxs[] = {llvm::ConstantInt::getNullValue(CGF.Int32Ty),
-                         CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
+  llvm::Value *Idxs[] = {CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
                                               /*Volatile=*/false, C.IntTy,
                                               Loc)};
   unsigned Idx = 0;
@@ -2326,12 +2316,13 @@ static llvm::Value *emitListToGlobalReduceFunction(
     // Global = Buffer.VD[Idx];
     const ValueDecl *VD = cast<DeclRefExpr>(*IPriv)->getDecl();
     const FieldDecl *FD = VarFieldMap.lookup(VD);
+    llvm::Value *BufferPtr =
+        Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
-        CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
+        CGF.MakeNaturalAlignAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
-        GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
-    CGF.EmitStoreOfScalar(BufferPtr, Elem, /*Volatile=*/false, C.VoidPtrTy);
+    CGF.EmitStoreOfScalar(GlobAddr.getPointer(), Elem, /*Volatile=*/false,
+                          C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
@@ -2413,8 +2404,7 @@ static llvm::Value *emitGlobalToListCopyFunction(
       CGF.EmitLoadOfScalar(AddrBufferArg, /*Volatile=*/false, C.VoidPtrTy, Loc),
       LLVMReductionsBufferTy->getPointerTo());
 
-  llvm::Value *Idxs[] = {llvm::ConstantInt::getNullValue(CGF.Int32Ty),
-                         CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
+  llvm::Value *Idxs[] = {CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
                                               /*Volatile=*/false, C.IntTy,
                                               Loc)};
   unsigned Idx = 0;
@@ -2432,12 +2422,12 @@ static llvm::Value *emitGlobalToListCopyFunction(
     const ValueDecl *VD = cast<DeclRefExpr>(Private)->getDecl();
     // Global = Buffer.VD[Idx];
     const FieldDecl *FD = VarFieldMap.lookup(VD);
+    llvm::Value *BufferPtr =
+        Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
-        CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
+        CGF.MakeNaturalAlignAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(GlobAddr.getElementType(),
-                                                   GlobAddr.getPointer(), Idxs);
-    GlobLVal.setAddress(Address(BufferPtr,
+    GlobLVal.setAddress(Address(GlobAddr.getPointer(),
                                 CGF.ConvertTypeForMem(Private->getType()),
                                 GlobAddr.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
@@ -2524,8 +2514,7 @@ static llvm::Value *emitGlobalToListReduceFunction(
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
   auto IPriv = Privates.begin();
-  llvm::Value *Idxs[] = {llvm::ConstantInt::getNullValue(CGF.Int32Ty),
-                         CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
+  llvm::Value *Idxs[] = {CGF.EmitLoadOfScalar(CGF.GetAddrOfLocalVar(&IdxArg),
                                               /*Volatile=*/false, C.IntTy,
                                               Loc)};
   unsigned Idx = 0;
@@ -2534,12 +2523,13 @@ static llvm::Value *emitGlobalToListReduceFunction(
     // Global = Buffer.VD[Idx];
     const ValueDecl *VD = cast<DeclRefExpr>(*IPriv)->getDecl();
     const FieldDecl *FD = VarFieldMap.lookup(VD);
+    llvm::Value *BufferPtr =
+        Bld.CreateInBoundsGEP(LLVMReductionsBufferTy, BufferArrPtr, Idxs);
     LValue GlobLVal = CGF.EmitLValueForField(
-        CGF.MakeNaturalAlignAddrLValue(BufferArrPtr, StaticTy), FD);
+        CGF.MakeNaturalAlignAddrLValue(BufferPtr, StaticTy), FD);
     Address GlobAddr = GlobLVal.getAddress(CGF);
-    llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
-        GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
-    CGF.EmitStoreOfScalar(BufferPtr, Elem, /*Volatile=*/false, C.VoidPtrTy);
+    CGF.EmitStoreOfScalar(GlobAddr.getPointer(), Elem, /*Volatile=*/false,
+                          C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
@@ -3542,6 +3532,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1103:
       case CudaArch::GFX1150:
       case CudaArch::GFX1151:
+      case CudaArch::GFX1200:
+      case CudaArch::GFX1201:
       case CudaArch::Generic:
       case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:

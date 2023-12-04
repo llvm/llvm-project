@@ -1,4 +1,5 @@
 ; RUN: opt %s -passes=dce -S | FileCheck %s
+; RUN: opt %s -passes=dce -S --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; Tests the salvaging of GEP instructions, specifically struct indexing,
 ; non-constant array indexing, and non-constant array indexing into an array of

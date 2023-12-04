@@ -144,8 +144,8 @@ template<typename T> T Fizz(int Buzz);
       },
       "location": {
         "position": {
-          "character": 27,
-          "line": 1
+          "character": 26,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -278,8 +278,8 @@ template<typename T> T Fizz(int Buzz);
       },
       "location": {
         "position": {
-          "character": 24,
-          "line": 3
+          "character": 23,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },

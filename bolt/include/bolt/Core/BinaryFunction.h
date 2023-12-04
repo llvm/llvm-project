@@ -319,10 +319,6 @@ private:
   /// Execution halts whenever this function is entered.
   bool TrapsOnEntry{false};
 
-  /// True if the function had an indirect branch with a fixed internal
-  /// destination.
-  bool HasFixedIndirectBranch{false};
-
   /// True if the function is a fragment of another function. This means that
   /// this function could only be entered via its parent or one of its sibling
   /// fragments. It could be entered at any basic block. It can also return
@@ -1240,6 +1236,8 @@ public:
       return SmallString<32>(CodeSectionName);
     if (Fragment == FragmentNum::cold())
       return SmallString<32>(ColdCodeSectionName);
+    if (BC.HasWarmSection && Fragment == FragmentNum::warm())
+      return SmallString<32>(BC.getWarmCodeSectionName());
     return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
   }
 
@@ -1445,7 +1443,8 @@ public:
 
   /// Rebuilds BBs layout, ignoring dead BBs. Returns the number of removed
   /// BBs and the removed number of bytes of code.
-  std::pair<unsigned, uint64_t> eraseInvalidBBs();
+  std::pair<unsigned, uint64_t>
+  eraseInvalidBBs(const MCCodeEmitter *Emitter = nullptr);
 
   /// Get the relative order between two basic blocks in the original
   /// layout.  The result is > 0 if B occurs before A and < 0 if B
@@ -2172,7 +2171,7 @@ public:
   /// is corrupted. If it is unable to fix it, it returns false.
   bool finalizeCFIState();
 
-  /// Return true if this function needs an address-transaltion table after
+  /// Return true if this function needs an address-translation table after
   /// its code emission.
   bool requiresAddressTranslation() const;
 

@@ -6,7 +6,7 @@
 // RUN:     -disable-O0-optnone | opt -S -passes=mem2reg \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZBKB
 
-#include <stdint.h>
+#include <riscv_bitmanip.h>
 
 // RV32ZBKB-LABEL: @brev8_32(
 // RV32ZBKB-NEXT:  entry:
@@ -20,7 +20,7 @@
 //
 uint32_t brev8_32(uint32_t rs1)
 {
-  return __builtin_riscv_brev8_32(rs1);
+  return __riscv_brev8_32(rs1);
 }
 
 #if __riscv_xlen == 64
@@ -31,7 +31,7 @@ uint32_t brev8_32(uint32_t rs1)
 //
 uint64_t brev8_64(uint64_t rs1)
 {
-  return __builtin_riscv_brev8_64(rs1);
+  return __riscv_brev8_64(rs1);
 }
 #endif
 
@@ -43,7 +43,7 @@ uint64_t brev8_64(uint64_t rs1)
 //
 uint32_t zip(uint32_t rs1)
 {
-  return __builtin_riscv_zip_32(rs1);
+  return __riscv_zip_32(rs1);
 }
 
 // RV32ZBKB-LABEL: @unzip(
@@ -53,6 +53,6 @@ uint32_t zip(uint32_t rs1)
 //
 uint32_t unzip(uint32_t rs1)
 {
-  return __builtin_riscv_unzip_32(rs1);
+  return __riscv_unzip_32(rs1);
 }
 #endif

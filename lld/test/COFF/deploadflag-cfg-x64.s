@@ -1,3 +1,5 @@
+# REQUIRES: x86
+
 # RUN: llvm-mc -triple x86_64-windows-msvc -filetype=obj %s -o %t.ldcfg.obj
 
 # RUN: lld-link %S/Inputs/precomp-a.obj %t.ldcfg.obj /out:%t.exe /nodefaultlib /force

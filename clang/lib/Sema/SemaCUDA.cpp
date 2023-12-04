@@ -225,6 +225,15 @@ Sema::CUDAFunctionPreference
 Sema::IdentifyCUDAPreference(const FunctionDecl *Caller,
                              const FunctionDecl *Callee) {
   assert(Callee && "Callee must be valid.");
+
+  // Treat ctor/dtor as host device function in device var initializer to allow
+  // trivial ctor/dtor without device attr to be used. Non-trivial ctor/dtor
+  // will be diagnosed by checkAllowedCUDAInitializer.
+  if (Caller == nullptr && CurCUDATargetCtx.Kind == CTCK_InitGlobalVar &&
+      CurCUDATargetCtx.Target == CFT_Device &&
+      (isa<CXXConstructorDecl>(Callee) || isa<CXXDestructorDecl>(Callee)))
+    return CFP_HostDevice;
+
   CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller);
   CUDAFunctionTarget CalleeTarget = IdentifyCUDATarget(Callee);
 
@@ -678,6 +687,27 @@ void Sema::checkAllowedCUDAInitializer(VarDecl *VD) {
   }
 }
 
+void Sema::CUDARecordImplicitHostDeviceFuncUsedByDevice(
+    const FunctionDecl *Callee) {
+  FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+  if (!Caller)
+    return;
+
+  if (!isCUDAImplicitHostDeviceFunction(Callee))
+    return;
+
+  CUDAFunctionTarget CallerTarget = IdentifyCUDATarget(Caller);
+
+  // Record whether an implicit host device function is used on device side.
+  if (CallerTarget != CFT_Device && CallerTarget != CFT_Global &&
+      (CallerTarget != CFT_HostDevice ||
+       (isCUDAImplicitHostDeviceFunction(Caller) &&
+        !getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.count(Caller))))
+    return;
+
+  getASTContext().CUDAImplicitHostDeviceFunUsedByDevice.insert(Callee);
+}
+
 // With -fcuda-host-device-constexpr, an unattributed constexpr function is
 // treated as implicitly __host__ __device__, unless:
 //  * it is a variadic function (device-side variadic functions are not
@@ -699,6 +729,18 @@ void Sema::maybeAddCUDAHostDeviceAttrs(FunctionDecl *NewD,
       NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
     if (!NewD->hasAttr<CUDADeviceAttr>())
       NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
+    return;
+  }
+
+  // If a template function has no host/device/global attributes,
+  // make it implicitly host device function.
+  if (getLangOpts().OffloadImplicitHostDeviceTemplates &&
+      !NewD->hasAttr<CUDAHostAttr>() && !NewD->hasAttr<CUDADeviceAttr>() &&
+      !NewD->hasAttr<CUDAGlobalAttr>() &&
+      (NewD->getDescribedFunctionTemplate() ||
+       NewD->isFunctionTemplateSpecialization())) {
+    NewD->addAttr(CUDAHostAttr::CreateImplicit(Context));
+    NewD->addAttr(CUDADeviceAttr::CreateImplicit(Context));
     return;
   }
 
@@ -950,7 +992,14 @@ void Sema::checkCUDATargetOverload(FunctionDecl *NewFD,
     // HD/global functions "exist" in some sense on both the host and device, so
     // should have the same implementation on both sides.
     if (NewTarget != OldTarget &&
-        ((NewTarget == CFT_HostDevice) || (OldTarget == CFT_HostDevice) ||
+        ((NewTarget == CFT_HostDevice &&
+          !(LangOpts.OffloadImplicitHostDeviceTemplates &&
+            isCUDAImplicitHostDeviceFunction(NewFD) &&
+            OldTarget == CFT_Device)) ||
+         (OldTarget == CFT_HostDevice &&
+          !(LangOpts.OffloadImplicitHostDeviceTemplates &&
+            isCUDAImplicitHostDeviceFunction(OldFD) &&
+            NewTarget == CFT_Device)) ||
          (NewTarget == CFT_Global) || (OldTarget == CFT_Global)) &&
         !IsOverload(NewFD, OldFD, /* UseMemberUsingDeclRules = */ false,
                     /* ConsiderCudaAttrs = */ false)) {

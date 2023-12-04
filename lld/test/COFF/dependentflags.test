@@ -1,3 +1,5 @@
+// REQUIRES: x86
+
 // ---- precomp-a.obj - x86_64, hotpatch
 RUN: llvm-mc -triple x86_64-windows-msvc -filetype=obj %S/Inputs/loadconfig-cfg-x64.s -o %t.ldcfg.obj
 

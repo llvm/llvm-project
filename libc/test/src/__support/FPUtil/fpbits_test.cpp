@@ -213,7 +213,7 @@ TEST(LlvmLibcFPBitsTest, X86LongDoubleType) {
 }
 #else
 TEST(LlvmLibcFPBitsTest, LongDoubleType) {
-#if defined(LONG_DOUBLE_IS_DOUBLE)
+#if defined(LIBC_LONG_DOUBLE_IS_FLOAT64)
   return; // The tests for the "double" type cover for this case.
 #else
   using LongDoubleBits = FPBits<long double>;
@@ -287,3 +287,75 @@ TEST(LlvmLibcFPBitsTest, LongDoubleType) {
 #endif
 }
 #endif
+
+#if defined(LIBC_COMPILER_HAS_FLOAT128)
+TEST(LlvmLibcFPBitsTest, Float128Type) {
+  using Float128Bits = FPBits<float128>;
+
+  EXPECT_STREQ(LIBC_NAMESPACE::str(Float128Bits(Float128Bits::inf())).c_str(),
+               "(+Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(Float128Bits(Float128Bits::neg_inf())).c_str(),
+      "(-Infinity)");
+  EXPECT_STREQ(
+      LIBC_NAMESPACE::str(Float128Bits(Float128Bits::build_nan(1))).c_str(),
+      "(NaN)");
+
+  Float128Bits zero(Float128Bits::zero());
+  EXPECT_EQ(zero.get_sign(), false);
+  EXPECT_EQ(zero.get_unbiased_exponent(), static_cast<uint16_t>(0x0000));
+  EXPECT_EQ(zero.get_mantissa(), static_cast<UInt128>(0x0000000000000000)
+                                     << 64);
+  EXPECT_EQ(zero.uintval(), static_cast<UInt128>(0x0000000000000000) << 64);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(zero).c_str(),
+               "0x00000000000000000000000000000000 = "
+               "(S: 0, E: 0x0000, M: 0x00000000000000000000000000000000)");
+
+  Float128Bits negzero(Float128Bits::neg_zero());
+  EXPECT_EQ(negzero.get_sign(), true);
+  EXPECT_EQ(negzero.get_unbiased_exponent(), static_cast<uint16_t>(0x0000));
+  EXPECT_EQ(negzero.get_mantissa(), static_cast<UInt128>(0x0000000000000000)
+                                        << 64);
+  EXPECT_EQ(negzero.uintval(), static_cast<UInt128>(0x1) << 127);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(negzero).c_str(),
+               "0x80000000000000000000000000000000 = "
+               "(S: 1, E: 0x0000, M: 0x00000000000000000000000000000000)");
+
+  Float128Bits one(float128(1.0));
+  EXPECT_EQ(one.get_sign(), false);
+  EXPECT_EQ(one.get_unbiased_exponent(), static_cast<uint16_t>(0x3FFF));
+  EXPECT_EQ(one.get_mantissa(), static_cast<UInt128>(0x0000000000000000) << 64);
+  EXPECT_EQ(one.uintval(), static_cast<UInt128>(0x3FFF) << 112);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(one).c_str(),
+               "0x3FFF0000000000000000000000000000 = "
+               "(S: 0, E: 0x3FFF, M: 0x00000000000000000000000000000000)");
+
+  Float128Bits negone(float128(-1.0));
+  EXPECT_EQ(negone.get_sign(), true);
+  EXPECT_EQ(negone.get_unbiased_exponent(), static_cast<uint16_t>(0x3FFF));
+  EXPECT_EQ(negone.get_mantissa(), static_cast<UInt128>(0x0000000000000000)
+                                       << 64);
+  EXPECT_EQ(negone.uintval(), static_cast<UInt128>(0xBFFF) << 112);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(negone).c_str(),
+               "0xBFFF0000000000000000000000000000 = "
+               "(S: 1, E: 0x3FFF, M: 0x00000000000000000000000000000000)");
+
+  Float128Bits num(float128(1.125));
+  EXPECT_EQ(num.get_sign(), false);
+  EXPECT_EQ(num.get_unbiased_exponent(), static_cast<uint16_t>(0x3FFF));
+  EXPECT_EQ(num.get_mantissa(), static_cast<UInt128>(0x2) << 108);
+  EXPECT_EQ(num.uintval(), static_cast<UInt128>(0x3FFF2) << 108);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(num).c_str(),
+               "0x3FFF2000000000000000000000000000 = "
+               "(S: 0, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
+
+  Float128Bits negnum(float128(-1.125));
+  EXPECT_EQ(negnum.get_sign(), true);
+  EXPECT_EQ(negnum.get_unbiased_exponent(), static_cast<uint16_t>(0x3FFF));
+  EXPECT_EQ(negnum.get_mantissa(), static_cast<UInt128>(0x2) << 108);
+  EXPECT_EQ(negnum.uintval(), static_cast<UInt128>(0xBFFF2) << 108);
+  EXPECT_STREQ(LIBC_NAMESPACE::str(negnum).c_str(),
+               "0xBFFF2000000000000000000000000000 = "
+               "(S: 1, E: 0x3FFF, M: 0x00002000000000000000000000000000)");
+}
+#endif // LIBC_COMPILER_HAS_FLOAT128

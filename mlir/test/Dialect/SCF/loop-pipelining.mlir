@@ -671,3 +671,55 @@ func.func @backedge_mix_order(%A: memref<?xf32>) -> f32 {
   }  { __test_pipelining_loop__ }
   return %r : f32
 }
+
+// -----
+
+// CHECK-LABEL: @distance_1_use
+//  CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//  CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
+// Prologue:
+//  CHECK: %[[L0:.+]] = memref.load %{{.*}}[%[[C0]]] : memref<?xf32>
+//  CHECK: %[[L1:.+]] = memref.load %{{.*}}[%[[C1]]] : memref<?xf32>
+//  CHECK: %[[R:.+]]:5 = scf.for {{.*}} iter_args(%[[IDX0:.+]] = %[[C2]], %[[L2:.+]] = %[[L0]], %[[L3:.+]] = %[[L1]]
+//  CHECK:   %[[L4:.+]] = memref.load %{{.*}}[%[[IDX0]]] : memref<?xf32>
+//  CHECK:   %[[IDX1:.+]] = arith.addi %[[IDX0]], %[[C1]] : index
+//  CHECK:   memref.store %[[L2]]
+//  CHECK:   scf.yield %[[IDX1]], %[[L3]], %[[L4]]
+func.func @distance_1_use(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cf = arith.constant 1.0 : f32
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%idx = %c0) -> (index) {
+    %A_elem = memref.load %A[%idx] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 0 } : memref<?xf32>
+    %idx1 = arith.addi %idx, %c1 { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 1 } : index
+    memref.store %A_elem, %result[%idx] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    scf.yield %idx1 : index
+  }  { __test_pipelining_loop__ }
+  return
+}
+
+// -----
+
+// NOEPILOGUE-LABEL: stage_0_value_escape(
+func.func @stage_0_value_escape(%A: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cf = arith.constant 1.0 : f32
+// NOEPILOGUE: %[[C3:.+]] = arith.constant 3 : index
+// NOEPILOGUE: %[[A:.+]] = arith.addf
+// NOEPILOGUE: scf.for %[[IV:.+]] = {{.*}} iter_args(%[[ARG:.+]] = %[[A]],
+// NOEPILOGUE:   %[[C:.+]] = arith.cmpi slt, %[[IV]], %[[C3]] : index
+// NOEPILOGUE:   %[[S:.+]] = arith.select %[[C]], %{{.+}}, %[[ARG]] : f32
+// NOEPILOGUE:   scf.yield %[[S]]
+  %r = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%arg0 = %cf) -> (f32) {
+    %A_elem = memref.load %A[%i0] { __test_pipelining_stage__ = 0, __test_pipelining_op_order__ = 1 } : memref<?xf32>
+    %A1_elem = arith.addf %A_elem, %arg0 { __test_pipelining_stage__ = 1, __test_pipelining_op_order__ = 0 } : f32
+    memref.store %A1_elem, %result[%c0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 2 } : memref<?xf32>
+    scf.yield %A1_elem : f32
+  }  { __test_pipelining_loop__ }
+  memref.store %r, %result[%c1] : memref<?xf32>
+  return
+}

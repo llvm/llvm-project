@@ -150,9 +150,9 @@ define i8 @lshr_add_fail(i8 %x) {
 define i8 @ashr_add_fail(i8 %x) {
 ; CHECK-LABEL: define i8 @ashr_add_fail
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i8 -128, [[X]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = ashr exact i8 -128, [[X]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr i8 -128, [[ADD]]
+; CHECK-NEXT:    [[SHIFT2:%.*]] = ashr exact i8 -128, [[ADD]]
 ; CHECK-NEXT:    [[BINOP:%.*]] = add i8 [[SHIFT]], [[SHIFT2]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
@@ -271,7 +271,7 @@ define i8 @mismatched_shifts(i8 %x) {
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 16, [[X]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
 ; CHECK-NEXT:    [[SHIFT2:%.*]] = lshr i8 3, [[ADD]]
-; CHECK-NEXT:    [[BINOP:%.*]] = or i8 [[SHIFT]], [[SHIFT2]]
+; CHECK-NEXT:    [[BINOP:%.*]] = or disjoint i8 [[SHIFT]], [[SHIFT2]]
 ; CHECK-NEXT:    ret i8 [[BINOP]]
 ;
   %shift = shl i8 16, %x

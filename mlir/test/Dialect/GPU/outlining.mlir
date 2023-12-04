@@ -37,7 +37,6 @@ func.func @launch() {
 }
 
 // CHECK-DL-LABEL: gpu.module @launch_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
-
 // CHECK-LABEL: gpu.module @launch_kernel
 // CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
@@ -60,6 +59,42 @@ func.func @launch() {
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[BID]], %[[BDIM]]) : (index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
+
+// -----
+
+// This test checks gpu-out-lining can handle gpu.launch kernel from an llvm.func
+// CHECK-LABEL: @launch_from_llvm_func
+llvm.func @launch_from_llvm_func() {
+  // CHECK: %[[ARG0:.*]] = "op"() : () -> f32
+  %0 = "op"() : () -> (f32)
+  // CHECK: %[[ARG1:.*]] = "op"() : () -> memref<?xf32, 1>
+  %1 = "op"() : () -> (memref<?xf32, 1>)
+
+  // CHECK: %[[DIM:.*]] = arith.constant 1
+  %dim = arith.constant 1 : index
+
+  // CHECK: gpu.launch_func @launch_from_llvm_func_kernel::@launch_from_llvm_func_kernel
+  // CHECK-SAME: (%[[DIM]], %[[DIM]], %[[DIM]])
+  // CHECK-SAME: (%[[DIM]], %[[DIM]], %[[DIM]]) args(%[[ARG0]] : f32, %[[ARG1]] : memref<?xf32, 1>)
+  // CHECK-NEXT: llvm.return
+
+  // CHECK: gpu.func {{.*}} kernel attributes
+  // CHECK-SAME: gpu.known_block_size = array<i32: 1, 1, 1>
+  // CHECK-SAME: gpu.known_grid_size = array<i32: 1, 1, 1>
+  // CHECK: gpu.return
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %dim, %grid_y = %dim,
+                                       %grid_z = %dim)
+             threads(%tx, %ty, %tz) in (%block_x = %dim, %block_y = %dim,
+                                        %block_z = %dim) {
+    "use"(%0): (f32) -> ()
+    "some_op"(%bx, %block_x) : (index, index) -> ()
+    %2 = memref.load %1[%tx] : memref<?xf32, 1>
+    gpu.terminator
+  }
+  llvm.return
+}
+
+// CHECK-DL-LABLE: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
 
 // -----
 

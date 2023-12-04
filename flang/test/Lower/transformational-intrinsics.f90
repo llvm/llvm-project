@@ -1,6 +1,6 @@
 ! Test how transformational intrinsic function references are lowered
 
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! The exact intrinsic being tested does not really matter, what is
 ! tested here is that transformational intrinsics are lowered correctly

@@ -253,6 +253,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getpid", &I::genGetPID},
     {"iachar", &I::genIchar},
     {"iall",
      &I::genIall,
@@ -1234,7 +1235,7 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
 static void checkPrecisionLoss(llvm::StringRef name,
                                mlir::FunctionType funcType,
                                const FunctionDistance &distance,
-                               mlir::Location loc) {
+                               fir::FirOpBuilder &builder, mlir::Location loc) {
   if (!distance.isLosingPrecision())
     return;
 
@@ -1248,13 +1249,20 @@ static void checkPrecisionLoss(llvm::StringRef name,
   llvm::raw_string_ostream sstream(message);
   if (name == "pow") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
-    sstream << funcType.getInput(0) << " ** " << funcType.getInput(1);
+    std::string displayName{" ** "};
+    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
+                                        displayName)
+            << displayName
+            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
+                                        displayName);
   } else {
-    sstream << name << "(";
+    sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << funcType.getInput(0);
-    for (mlir::Type argType : funcType.getInputs().drop_front())
-      sstream << ", " << argType;
+      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
+                                          name);
+    for (mlir::Type argType : funcType.getInputs().drop_front()) {
+      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
+    }
     sstream << ")";
   }
   sstream << "'";
@@ -1372,7 +1380,7 @@ void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name) {
   else if (isCoarrayIntrinsic(name))
     TODO(loc, "coarray: intrinsic " + llvm::Twine(name));
   else
-    TODO(loc, "intrinsic: " + llvm::Twine(name));
+    TODO(loc, "intrinsic: " + llvm::Twine(name.upper()));
 }
 
 template <typename GeneratorType>
@@ -1755,7 +1763,7 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
   if (!mathOp && bestNearMatch) {
     // Use the best near match, optionally issuing an error,
     // if types conversions cause precision loss.
-    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, loc);
+    checkPrecisionLoss(name, soughtFuncType, bestMatchDistance, builder, loc);
     mathOp = bestNearMatch;
   }
 
@@ -2944,6 +2952,14 @@ void IntrinsicLibrary::genGetCommand(llvm::ArrayRef<fir::ExtendedValue> args) {
   }
 }
 
+// GETPID
+mlir::Value IntrinsicLibrary::genGetPID(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0 && "getpid takes no input");
+  return builder.createConvert(loc, resultType,
+                               fir::runtime::genGetPID(builder, loc));
+}
+
 // GET_COMMAND_ARGUMENT
 void IntrinsicLibrary::genGetCommandArgument(
     llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -4129,17 +4145,46 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type resultType,
       fir::getBase(args[1]), fir::getLen(args[1]));
 }
 
+static bool isOptional(mlir::Value value) {
+  auto varIface = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+      value.getDefiningOp());
+  return varIface && varIface.isOptional();
+}
+
 // LOC
 fir::ExtendedValue
 IntrinsicLibrary::genLoc(mlir::Type resultType,
                          llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
-  mlir::Value argValue = fir::getBase(args[0]);
-  assert(fir::isa_box_type(argValue.getType()) &&
+  mlir::Value box = fir::getBase(args[0]);
+  assert(fir::isa_box_type(box.getType()) &&
          "argument must have been lowered to box type");
-  bool isFunc = argValue.getType().isa<fir::BoxProcType>();
-  mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
-  return builder.createConvert(loc, fir::unwrapRefType(resultType), argAddr);
+  bool isFunc = box.getType().isa<fir::BoxProcType>();
+  if (!isOptional(box)) {
+    mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
+    return builder.createConvert(loc, resultType, argAddr);
+  }
+  // Optional assumed shape case.  Although this is not specified in this GNU
+  // intrinsic extension, LOC accepts absent optional and returns zero in that
+  // case.
+  // Note that the other OPTIONAL cases do not fall here since `box` was
+  // created when preparing the argument cases, but the box can be safely be
+  // used for all those cases and the address will be null if absent.
+  mlir::Value isPresent =
+      builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), box);
+  return builder
+      .genIfOp(loc, {resultType}, isPresent,
+               /*withElseRegion=*/true)
+      .genThen([&]() {
+        mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
+        mlir::Value cast = builder.createConvert(loc, resultType, argAddr);
+        builder.create<fir::ResultOp>(loc, cast);
+      })
+      .genElse([&]() {
+        mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+        builder.create<fir::ResultOp>(loc, zero);
+      })
+      .getResults()[0];
 }
 
 // MASKL, MASKR
@@ -4335,7 +4380,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
   // Real case
   if (resultType == mlir::FloatType::getF128(builder.getContext()))
 
-    TODO(loc, "intrinsic: modulo for floating point of KIND=16");
+    TODO(loc, "REAL(KIND=16): in MODULO intrinsic");
   auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
   mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
   auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(

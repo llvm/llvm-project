@@ -31,6 +31,7 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
 // See PassManagers.h for Pass Manager infrastructure overview.
 
 //===----------------------------------------------------------------------===//
@@ -527,6 +528,11 @@ bool PassManagerImpl::run(Module &M) {
   dumpArguments();
   dumpPasses();
 
+  // RemoveDIs: if a command line flag is given, convert to the DPValue
+  // representation of debug-info for the duration of these passes.
+  if (UseNewDbgInfoFormat)
+    M.convertToNewDbgValues();
+
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doInitialization(M);
 
@@ -538,6 +544,8 @@ bool PassManagerImpl::run(Module &M) {
 
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doFinalization(M);
+
+  M.convertFromNewDbgValues();
 
   return Changed;
 }

@@ -134,16 +134,16 @@ define void @fcvt_v16f16_v16f32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #12 // =0xc
+; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    ld1h { z2.s }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z3.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z3.s }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z1.h
 ; CHECK-NEXT:    fcvt z3.s, p0/m, z3.h
-; CHECK-NEXT:    fcvt z2.s, p0/m, z2.h
 ; CHECK-NEXT:    stp q0, q1, [x1, #32]
-; CHECK-NEXT:    stp q3, q2, [x1]
+; CHECK-NEXT:    stp q2, q3, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %res = fpext <16 x half> %op1 to <16 x float>
@@ -206,16 +206,16 @@ define void @fcvt_v8f16_v8f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #6 // =0x6
+; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #2 // =0x2
-; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    stp q0, q1, [x1, #32]
-; CHECK-NEXT:    stp q3, q2, [x1]
+; CHECK-NEXT:    stp q2, q3, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x half>, ptr %a
   %res = fpext <8 x half> %op1 to <8 x double>
@@ -230,6 +230,7 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #12 // =0xc
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #14 // =0xe
+; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #8 // =0x8
 ; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, x8, lsl #1]
@@ -238,23 +239,22 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
 ; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    mov x8, #6 // =0x6
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
+; CHECK-NEXT:    mov x8, #6 // =0x6
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    mov x8, #2 // =0x2
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
-; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
+; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    fcvt z4.d, p0/m, z4.h
 ; CHECK-NEXT:    stp q0, q1, [x1, #96]
 ; CHECK-NEXT:    movprfx z0, z5
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z5.h
-; CHECK-NEXT:    movprfx z1, z7
-; CHECK-NEXT:    fcvt z1.d, p0/m, z7.h
+; CHECK-NEXT:    movprfx z1, z6
+; CHECK-NEXT:    fcvt z1.d, p0/m, z6.h
 ; CHECK-NEXT:    stp q2, q3, [x1, #64]
-; CHECK-NEXT:    movprfx z2, z6
-; CHECK-NEXT:    fcvt z2.d, p0/m, z6.h
+; CHECK-NEXT:    movprfx z2, z7
+; CHECK-NEXT:    fcvt z2.d, p0/m, z7.h
 ; CHECK-NEXT:    stp q1, q2, [x1]
 ; CHECK-NEXT:    stp q4, q0, [x1, #32]
 ; CHECK-NEXT:    ret
@@ -319,16 +319,16 @@ define void @fcvt_v8f32_v8f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    mov x8, #6 // =0x6
+; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    mov x8, #2 // =0x2
-; CHECK-NEXT:    ld1w { z2.d }, p0/z, [x0, x8, lsl #2]
-; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z3.d }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.s
 ; CHECK-NEXT:    fcvt z1.d, p0/m, z1.s
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z3.s
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.s
 ; CHECK-NEXT:    stp q0, q1, [x1, #32]
-; CHECK-NEXT:    stp q3, q2, [x1]
+; CHECK-NEXT:    stp q2, q3, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
   %res = fpext <8 x float> %op1 to <8 x double>

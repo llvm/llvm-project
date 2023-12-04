@@ -611,6 +611,14 @@ public:
   /// Indicates if the binary contains split functions.
   bool HasSplitFunctions{false};
 
+  /// Indicates if the function ordering of the binary is finalized.
+  bool HasFinalizedFunctionOrder{false};
+
+  /// Indicates if a separate .text.warm section is needed that contains
+  /// function fragments with
+  /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
+  bool HasWarmSection{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
@@ -927,6 +935,8 @@ public:
 
   const char *getMainCodeSectionName() const { return ".text"; }
 
+  const char *getWarmCodeSectionName() const { return ".text.warm"; }
+
   const char *getColdCodeSectionName() const { return ".text.cold"; }
 
   const char *getHotTextMoverSectionName() const { return ".text.mover"; }
@@ -950,7 +960,7 @@ public:
   bool registerFragment(BinaryFunction &TargetFunction,
                         BinaryFunction &Function) const;
 
-  /// Add unterprocedural reference for \p Function to \p Address
+  /// Add interprocedural reference for \p Function to \p Address
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1230,6 +1240,9 @@ public:
   ///
   /// Return the pair where the first size is for the main part, and the second
   /// size is for the cold one.
+  /// Modify BinaryBasicBlock::OutputAddressRange for each basic block in the
+  /// function in place so that BinaryBasicBlock::getOutputSize() gives the
+  /// emitted size of the basic block.
   std::pair<size_t, size_t> calculateEmittedSize(BinaryFunction &BF,
                                                  bool FixBranches = true);
 
@@ -1239,8 +1252,8 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
-    if (auto Size = MIB->getAnnotationWithDefault<uint32_t>(Inst, "Size"))
-      return Size;
+    if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
 
     if (!Emitter)
       Emitter = this->MCE.get();
@@ -1289,6 +1302,9 @@ public:
 
   /// Return true if the function should be emitted to the output file.
   bool shouldEmit(const BinaryFunction &Function) const;
+
+  /// Dump the assembly representation of MCInst to debug output.
+  void dump(const MCInst &Inst) const;
 
   /// Print the string name for a CFI operation.
   static void printCFI(raw_ostream &OS, const MCCFIInstruction &Inst);

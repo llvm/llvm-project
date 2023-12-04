@@ -1,5 +1,5 @@
 ! Test default initialization of local and dummy variables (dynamic initialization)
-! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -polymorphic-type %s -o - | FileCheck %s
 
 module test_dinit
   type t

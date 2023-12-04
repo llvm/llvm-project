@@ -1,5 +1,5 @@
 ! Test GET_ENVIRONMENT_VARIABLE with dynamically optional arguments.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 
 ! CHECK-LABEL: func @_QPtest(

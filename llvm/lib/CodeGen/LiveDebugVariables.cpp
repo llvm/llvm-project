@@ -58,6 +58,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <optional>
 #include <utility>

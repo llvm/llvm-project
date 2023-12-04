@@ -28,21 +28,13 @@ static bool isMaterializing(Value val) {
          val.getDefiningOp<bufferization::AllocTensorOp>();
 }
 
-/// Makes target array's elements sorted according to the `order` array.
-static void sortArrayBasedOnOrder(std::vector<LoopCoeffPair> &target,
-                                  ArrayRef<LoopId> order) {
+/// Sorts the dependent loops such that it is ordered in the same sequence in
+/// which loops will be generated.
+static void sortDependentLoops(std::vector<LoopCoeffPair> &target) {
   std::sort(target.begin(), target.end(),
-            [&order](const LoopCoeffPair &l, const LoopCoeffPair &r) {
+            [](const LoopCoeffPair &l, const LoopCoeffPair &r) {
               assert(std::addressof(l) == std::addressof(r) || l != r);
-              int idxL = -1, idxR = -1;
-              for (int i = 0, e = order.size(); i < e; i++) {
-                if (order[i] == l.first)
-                  idxL = i;
-                if (order[i] == r.first)
-                  idxR = i;
-              }
-              assert(idxL >= 0 && idxR >= 0);
-              return idxL < idxR;
+              return l.first < r.first;
             });
 }
 //===----------------------------------------------------------------------===//
@@ -50,14 +42,12 @@ static void sortArrayBasedOnOrder(std::vector<LoopCoeffPair> &target,
 //===----------------------------------------------------------------------===//
 
 CodegenEnv::CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-                       unsigned numTensors, unsigned numLoops,
-                       unsigned numFilterLoops, unsigned maxRank)
+                       unsigned numTensors, unsigned numLoops, unsigned maxRank)
     : linalgOp(linop), sparseOptions(opts),
-      latticeMerger(numTensors, numLoops, numFilterLoops, maxRank),
-      loopEmitter(), topSort(), sparseOut(nullptr), outerParNest(-1u),
-      insChain(), expValues(), expFilled(), expAdded(), expCount(), redVal(),
-      redExp(detail::kInvalidId), redCustom(detail::kInvalidId),
-      redValidLexInsert() {}
+      latticeMerger(numTensors, numLoops, maxRank), loopEmitter(),
+      sparseOut(nullptr), outerParNest(-1u), insChain(), expValues(),
+      expFilled(), expAdded(), expCount(), redVal(), redExp(detail::kInvalidId),
+      redCustom(detail::kInvalidId), redValidLexInsert() {}
 
 LogicalResult CodegenEnv::initTensorExp() {
   // Builds the tensor expression for the Linalg operation in SSA form.
@@ -93,7 +83,7 @@ void CodegenEnv::startEmit() {
     (void)enc;
     assert(!enc || lvlRank == enc.getLvlRank());
     for (Level lvl = 0; lvl < lvlRank; lvl++)
-      sortArrayBasedOnOrder(latticeMerger.getDependentLoops(tid, lvl), topSort);
+      sortDependentLoops(latticeMerger.getDependentLoops(tid, lvl));
   }
 
   loopEmitter.initialize(
@@ -101,7 +91,7 @@ void CodegenEnv::startEmit() {
       StringAttr::get(linalgOp.getContext(),
                       linalg::GenericOp::getOperationName()),
       /*hasOutput=*/true,
-      /*isSparseOut=*/sparseOut != nullptr, topSort,
+      /*isSparseOut=*/sparseOut != nullptr, /*numLoops=*/getLoopNum(),
       // TODO: compute the map and pass it to loop emitter directly instead of
       // passing in a callback.
       /*dependentLvlGetter=*/
@@ -181,62 +171,30 @@ bool CodegenEnv::isAdmissibleTensorExp(ExprId exp) {
   // Accept "truly dynamic" if the output tensor materializes uninitialized
   // into the computation and insertions occur in lexicographic index order.
   sparseOut = lhs;
-  return isMaterializing(lhs->get());
-}
 
-bool CodegenEnv::isAdmissibleTopoOrder() {
-  if (!hasSparseOutput())
-    return true;
-
-  OpOperand *lhs = linalgOp.getDpsInitOperand(0);
-  // Accept "truly dynamic" if the output tensor materializes uninitialized
-  // into the computation and insertions occur in lexicographic index order.
-  LoopOrd nest = 0;
+  // Find the outermost parallel nest to determine whether compress/expand is
+  // needed.
+  outerParNest = 0;
   const auto iteratorTypes = linalgOp.getIteratorTypesArray();
-  assert(topSortSize() == latticeMerger.getNumLoops());
-  for (const LoopId i : topSort) {
-    if (!latticeMerger.isFilterLoop(i)) {
-      // We only count non-filter loops as filter loops should be considered
-      // a special type of parallel loops.
-      if (linalg::isReductionIterator(iteratorTypes[i]))
-        break; // terminate at first reduction
-      nest++;
-    }
+  for (unsigned i = 0, e = getLoopNum(); i < e; i++) {
+    if (linalg::isReductionIterator(iteratorTypes[i]))
+      break; // terminate at first reduction
+    outerParNest++;
   }
-  // Determine admissible dynamic insertion situations:
-  // (1) fully injective, since there are no reductions,
-  // (2) admissible 1-d expansion in innermost dimension.
-  if (static_cast<int64_t>(nest) >= linalgOp.getRank(lhs) - 1) {
-    outerParNest = nest;
-    return true;
-  }
-  return false;
+
+  // Inadmissible kernel should have already been rejected by the previous
+  // path during loop scheduling.
+  assert(static_cast<int64_t>(outerParNest) >=
+         linalgOp.getRank(linalgOp.getDpsInitOperand(0)) - 1);
+  return isMaterializing(lhs->get());
 }
 
 //===----------------------------------------------------------------------===//
 // Code generation environment topological sort methods
 //===----------------------------------------------------------------------===//
 
-ArrayRef<LoopId> CodegenEnv::getTopSortSlice(LoopOrd n, LoopOrd m) const {
-  return ArrayRef<LoopId>(topSort).slice(n, m);
-}
-
-ArrayRef<LoopId> CodegenEnv::getLoopStackUpTo(LoopOrd n) const {
-  return ArrayRef<LoopId>(topSort).take_front(n);
-}
-
-ArrayRef<LoopId> CodegenEnv::getCurrentLoopStack() const {
-  return getLoopStackUpTo(loopEmitter.getCurrentDepth());
-}
-
 Value CodegenEnv::getLoopVar(LoopId i) const {
-  // TODO: this class should store the inverse of `topSort` so that
-  // it can do this conversion directly, instead of searching through
-  // `topSort` every time.  (Or else, `LoopEmitter` should handle this.)
-  for (LoopOrd n = 0, numLoops = topSortSize(); n < numLoops; n++)
-    if (topSort[n] == i)
-      return loopEmitter.getLoopIV(n);
-  llvm_unreachable("invalid loop identifier");
+  return loopEmitter.getLoopIV(i);
 }
 
 //===----------------------------------------------------------------------===//

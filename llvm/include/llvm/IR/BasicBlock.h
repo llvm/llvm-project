@@ -19,7 +19,9 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/IR/Value.h"
 #include <cassert>
@@ -117,6 +119,36 @@ public:
 
   void dumpDbgValues() const;
 
+  /// Return the DPMarker for the position given by \p It, so that DPValues can
+  /// be inserted there. This will either be nullptr if not present, a DPMarker,
+  /// or TrailingDPValues if It is end().
+  DPMarker *getMarker(InstListType::iterator It);
+
+  /// Return the DPMarker for the position that comes after \p I. \see
+  /// BasicBlock::getMarker, this can be nullptr, a DPMarker, or
+  /// TrailingDPValues if there is no next instruction.
+  DPMarker *getNextMarker(Instruction *I);
+
+  /// Insert a DPValue into a block at the position given by \p I.
+  void insertDPValueAfter(DPValue *DPV, Instruction *I);
+
+  /// Insert a DPValue into a block at the position given by \p Here.
+  void insertDPValueBefore(DPValue *DPV, InstListType::iterator Here);
+
+  /// Eject any debug-info trailing at the end of a block. DPValues can
+  /// transiently be located "off the end" of a block if the blocks terminator
+  /// is temporarily removed. Once a terminator is re-inserted this method will
+  /// move such DPValues back to the right place (ahead of the terminator).
+  void flushTerminatorDbgValues();
+
+  /// In rare circumstances instructions can be speculatively removed from
+  /// blocks, and then be re-inserted back into that position later. When this
+  /// happens in RemoveDIs debug-info mode, some special patching-up needs to
+  /// occur: inserting into the middle of a sequence of dbg.value intrinsics
+  /// does not have an equivalent with DPValues.
+  void reinsertInstInDPValues(Instruction *I,
+                              std::optional<DPValue::self_iterator> Pos);
+
 private:
   void setParent(Function *parent);
 
@@ -152,6 +184,19 @@ public:
                                            ilist_iterator_bits<true>>;
   friend class llvm::ilist_node_with_parent<llvm::Instruction, llvm::BasicBlock,
                                             ilist_iterator_bits<true>>;
+
+  // Friendly methods that need to access us for the maintenence of
+  // debug-info attachments.
+  friend void Instruction::insertBefore(BasicBlock::iterator InsertPos);
+  friend void Instruction::insertAfter(Instruction *InsertPos);
+  friend void Instruction::insertBefore(BasicBlock &BB,
+                                        InstListType::iterator InsertPos);
+  friend void Instruction::moveBeforeImpl(BasicBlock &BB,
+                                          InstListType::iterator I,
+                                          bool Preserve);
+  friend iterator_range<DPValue::self_iterator> Instruction::cloneDebugInfoFrom(
+      const Instruction *From, std::optional<DPValue::self_iterator> FromHere,
+      bool InsertAtHead);
 
   /// Creates a new BasicBlock.
   ///
@@ -476,6 +521,24 @@ private:
   static InstListType BasicBlock::*getSublistAccess(Instruction *) {
     return &BasicBlock::InstList;
   }
+
+  /// Dedicated function for splicing debug-info: when we have an empty
+  /// splice (i.e. zero instructions), the caller may still intend any
+  /// debug-info in between the two "positions" to be spliced.
+  void spliceDebugInfoEmptyBlock(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                                 BasicBlock::iterator FromBeginIt,
+                                 BasicBlock::iterator FromEndIt);
+
+  /// Perform any debug-info specific maintenence for the given splice
+  /// activity. In the DPValue debug-info representation, debug-info is not
+  /// in instructions, and so it does not automatically move from one block
+  /// to another.
+  void spliceDebugInfo(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                       BasicBlock::iterator FromBeginIt,
+                       BasicBlock::iterator FromEndIt);
+  void spliceDebugInfoImpl(BasicBlock::iterator ToIt, BasicBlock *FromBB,
+                           BasicBlock::iterator FromBeginIt,
+                           BasicBlock::iterator FromEndIt);
 
 public:
   /// Returns a pointer to the symbol table if one exists.

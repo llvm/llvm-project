@@ -1421,6 +1421,36 @@ if.end:
   ret i1  %cmp1
 }
 
+define i1 @phi_knownnonzero_eq_or_disjoint_icmp(i32 %n, i32 %s, ptr %P, i32 %val) {
+; CHECK-LABEL: @phi_knownnonzero_eq_or_disjoint_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF_THEN]] ], [ [[N]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ORPHI:%.*]] = or i32 [[PHI]], [[VAL:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[ORPHI]], 0
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+entry:
+  %tobool = icmp slt  i32 %n, %s
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:
+  %load = load i32, ptr %P
+  %cmp = icmp eq i32 %n, %load
+  %sel = select i1 %cmp, i32 1, i32 2
+  br label %if.end
+
+if.end:
+  %phi = phi i32 [ %sel,  %if.then ], [ %n, %entry ]
+  %orphi = or disjoint i32 %phi, %val
+  %cmp1 = icmp eq i32 %orphi, 0
+  ret i1  %cmp1
+}
+
 define i1 @phi_knownnonzero_ne_oricmp(i32 %n, i32 %s, ptr %P, i32 %val) {
 ; CHECK-LABEL: @phi_knownnonzero_ne_oricmp(
 ; CHECK-NEXT:  entry:
