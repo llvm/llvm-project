@@ -1360,7 +1360,8 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   if (FileSize == 0) {
     return EmbedResult::Empty;
   }
-  if (Params->MaybeOffsetParam && Params->MaybeOffsetParam->Offset >= FileSize) {
+  if (Params->MaybeOffsetParam &&
+      Params->MaybeOffsetParam->Offset >= FileSize) {
     return EmbedResult::Empty;
   }
   return EmbedResult::Found;

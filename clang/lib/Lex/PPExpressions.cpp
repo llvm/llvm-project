@@ -957,8 +957,9 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 /// EvaluateDirectiveExpression - Evaluate an integer constant expression that
 /// may occur after a #if or #elif directive.  If the expression is equivalent
 /// to "!defined(X)" return X in IfNDefMacro.
-Preprocessor::DirectiveEvalResult Preprocessor::EvaluateDirectiveExpression(
-    IdentifierInfo *&IfNDefMacro, bool CheckForEoD) {
+Preprocessor::DirectiveEvalResult
+Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+                                          bool CheckForEoD) {
   Token Tok;
   return EvaluateDirectiveExpression(IfNDefMacro, Tok, CheckForEoD);
 }
