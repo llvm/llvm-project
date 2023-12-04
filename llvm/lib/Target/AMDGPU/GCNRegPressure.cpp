@@ -183,18 +183,13 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
         }))
       continue;
 
-    LaneBitmask UseMask;
-    auto &LI = LIS.getInterval(Reg);
-    if (!LI.hasSubRanges())
-      UseMask = MRI.getMaxLaneMaskForVReg(Reg);
-    else {
-      // For a tentative schedule LIS isn't updated yet but livemask should
-      // remain the same on any schedule. Subreg defs can be reordered but they
-      // all must dominate uses anyway.
-      if (!InstrSI)
-        InstrSI = LIS.getInstructionIndex(*MO.getParent()).getBaseIndex();
-      UseMask = getLiveLaneMask(LI, InstrSI, MRI);
-    }
+    if (!InstrSI)
+      InstrSI = LIS.getInstructionIndex(*MO.getParent()).getBaseIndex();
+
+    // For a tentative schedule LIS isn't updated yet but livemask should
+    // remain the same on any schedule. Subreg defs can be reordered but they
+    // all must dominate uses anyway.
+    LaneBitmask UseMask = getLiveLaneMask(LIS.getInterval(Reg), InstrSI, MRI);
 
     RegMaskPairs.emplace_back(Reg, UseMask);
   }
@@ -274,48 +269,48 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   if (MI.isDebugInstr())
     return;
 
-  auto DecrementDef = [this](const MachineOperand &MO) {
-    Register Reg = MO.getReg();
-    auto I = LiveRegs.find(Reg);
-    if (I == LiveRegs.end())
-      return;
-
-    LaneBitmask &LiveMask = I->second;
-    LaneBitmask PrevMask = LiveMask;
-    LiveMask &= ~getDefRegMask(MO, *MRI);
-    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
-    if (LiveMask.none())
-      LiveRegs.erase(I);
-  };
-
-  // Decrement non-early-clobber defs.
-  SmallVector<const MachineOperand *, 2> EarlyClobberDefs;
+  // Kill all defs.
+  GCNRegPressure DefPressure, ECDefPressure;
   for (const MachineOperand &MO : MI.all_defs()) {
     if (!MO.getReg().isVirtual())
       continue;
-    if (!MO.isEarlyClobber())
-      DecrementDef(MO);
-    else
-      EarlyClobberDefs.push_back(&MO);
+
+    Register Reg = MO.getReg();
+    LaneBitmask DefMask = getDefRegMask(MO, *MRI);
+
+    // Treat a def as fully live at the moment of definition: keep a record.
+    (MO.isEarlyClobber() ? &ECDefPressure : &DefPressure)
+        ->inc(Reg, LaneBitmask::getNone(), DefMask, *MRI);
+
+    auto I = LiveRegs.find(Reg);
+    if (I == LiveRegs.end())
+      continue;
+
+    LaneBitmask &LiveMask = I->second;
+    LaneBitmask PrevMask = LiveMask;
+    LiveMask &= ~DefMask;
+    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
+    if (LiveMask.none())
+      LiveRegs.erase(I);
   }
 
-  // Increment uses.
+  // Update MaxPressure with defs pressure.
+  MaxPressure = max(CurPressure + DefPressure + ECDefPressure, MaxPressure);
+
+  // Make uses alive.
   SmallVector<RegisterMaskPair, 8> RegUses;
   collectVirtualRegUses(RegUses, MI, LIS, *MRI);
-  for (const RegisterMaskPair &U : RegUses) {
-    LaneBitmask &LiveMask = LiveRegs[U.RegUnit];
+  for (auto [Reg, LaneMask] : RegUses) {
+    if (LaneMask.none())
+      continue;
+    LaneBitmask &LiveMask = LiveRegs[Reg];
     LaneBitmask PrevMask = LiveMask;
-    LiveMask |= U.LaneMask;
-    CurPressure.inc(U.RegUnit, PrevMask, LiveMask, *MRI);
+    LiveMask |= LaneMask;
+    CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
   }
 
-  // Point of maximum pressure: non-early-clobber defs are decremented and uses
-  // are incremented.
-  MaxPressure = max(CurPressure, MaxPressure);
-
-  // Now decrement early clobber defs.
-  for (const MachineOperand *MO : EarlyClobberDefs)
-    DecrementDef(*MO);
+  // Update MaxPressure with all uses alive plus early-clobber defs pressure.
+  MaxPressure = max(CurPressure + ECDefPressure, MaxPressure);
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
