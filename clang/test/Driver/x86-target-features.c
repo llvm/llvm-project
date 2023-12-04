@@ -422,6 +422,7 @@
 
 // RUN: touch %t.o
 // RUN: %clang -fdriver-only -Werror --target=x86_64-pc-linux-gnu -mharden-sls=all %t.o -o /dev/null 2>&1 | count 0
+
 // RUN: %clang -target x86_64-unknown-linux-gnu -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 // RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
