@@ -3695,8 +3695,9 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     // We do not consume the ( because EvaluateDirectiveExpression will lex
     // the next token for us.
     IdentifierInfo *ParameterIfNDef = nullptr;
+    bool EvaluatedDefined;
     DirectiveEvalResult LimitEvalResult = EvaluateDirectiveExpression(
-        ParameterIfNDef, CurTok, /*CheckForEOD=*/false);
+        ParameterIfNDef, CurTok, EvaluatedDefined, /*CheckForEOD=*/false);
 
     if (!LimitEvalResult.Value) {
       // If there was an error evaluating the directive expression, we expect
@@ -3710,6 +3711,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
     // Eat the ).
     LexNonComment(CurTok);
+
+    // C23 6.10.3.2p2: The token defined shall not appear within the constant
+    // expression.
+    if (EvaluatedDefined) {
+      Diag(CurTok, diag::err_defined_in_pp_embed);
+      return std::nullopt;
+    }
+
     if (LimitEvalResult.Value) {
       const llvm::APSInt &Result = *LimitEvalResult.Value;
       if (Result.isNegative()) {

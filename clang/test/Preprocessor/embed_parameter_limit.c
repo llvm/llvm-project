@@ -87,3 +87,8 @@ const unsigned char a[] = {
 #embed <jk.txt> limit(1) if_empty() limit(2)
 // expected-error@-1 {{cannot specify parameter 'limit' twice in the same '#embed' directive}}
 };
+
+// C23 6.10.3.2p2
+static_assert(
+#embed <jk.txt> limit(defined(FOO)) // expected-error {{'defined' cannot appear within this context}}
+  == 0); // expected-error {{expected expression}}

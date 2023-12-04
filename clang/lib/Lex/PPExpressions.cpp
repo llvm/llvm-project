@@ -869,7 +869,8 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 /// to "!defined(X)" return X in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
 Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
-                                          Token &Tok, bool CheckForEoD) {
+                                          Token &Tok, bool &EvaluatedDefined,
+                                          bool CheckForEoD) {
   SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
   // Save the current state of 'DisableMacroExpansion' and reset it to false. If
   // 'DisableMacroExpansion' is true, then we must be in a macro argument list
@@ -906,6 +907,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
             DT.IncludedUndefinedIds,
             {ExprStartLoc, ConditionRange.getEnd()}};
   }
+
+  EvaluatedDefined = DT.State != DefinedTracker::Unknown;
 
   // If we are at the end of the expression after just parsing a value, there
   // must be no (unparenthesized) binary operators involved, so we can exit
@@ -947,6 +950,8 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     }
   }
 
+  EvaluatedDefined = EvaluatedDefined || DT.State != DefinedTracker::Unknown;
+
   // Restore 'DisableMacroExpansion'.
   DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
   const bool IsNonZero = ResVal.Val != 0;
@@ -961,5 +966,7 @@ Preprocessor::DirectiveEvalResult
 Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
                                           bool CheckForEoD) {
   Token Tok;
-  return EvaluateDirectiveExpression(IfNDefMacro, Tok, CheckForEoD);
+  bool EvaluatedDefined;
+  return EvaluateDirectiveExpression(IfNDefMacro, Tok, EvaluatedDefined,
+                                     CheckForEoD);
 }

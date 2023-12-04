@@ -2566,8 +2566,11 @@ private:
   /// \#if or \#elif directive and return a \p DirectiveEvalResult object.
   ///
   /// If the expression is equivalent to "!defined(X)" return X in IfNDefMacro.
+  /// \p EvaluatedDefined will contain the result of whether "defined" appeared
+  /// in the evaluated expression or not.
   DirectiveEvalResult EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
                                                   Token &Tok,
+                                                  bool &EvaluatedDefined,
                                                   bool CheckForEoD = true);
 
   /// Process a '__has_embed("path" [, ...])' expression.

@@ -96,3 +96,11 @@ const unsigned char a[] = {
    pedantic-warning@-1 2 {{'clang::offset' is a Clang extension}}
  */
 };
+
+// Matches with C23 6.10.3.2p2, is documented as part of our extension.
+static_assert(
+#embed <jk.txt> clang::offset(defined(FOO))
+  == 0); // expected-error {{expected expression}}
+ /* expected-error@-2 {{'defined' cannot appear within this context}}
+    pedantic-warning@-2 {{'clang::offset' is a Clang extension}}
+  */
