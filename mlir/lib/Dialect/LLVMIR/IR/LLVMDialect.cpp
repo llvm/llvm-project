@@ -1781,7 +1781,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool isConstant, Linkage linkage, StringRef name,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
                      bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
-                     ArrayRef<NamedAttribute> attrs) {
+                     ArrayRef<NamedAttribute> attrs,
+                     DIGlobalVariableExpressionAttr dbgExpr) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
@@ -1812,6 +1813,10 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
     result.addAttribute(getAddrSpaceAttrName(result.name),
                         builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
+
+  if (dbgExpr)
+    result.addAttribute(getDbgExprAttrName(result.name), dbgExpr);
+
   result.addRegion();
 }
 
@@ -2910,7 +2915,8 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
     return TypeSwitch<Attribute, AliasResult>(attr)
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
               DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
+              DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+              DIGlobalVariableExpressionAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
               DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
               DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,

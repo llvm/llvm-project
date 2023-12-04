@@ -116,6 +116,16 @@ DebugImporter::translateImpl(llvm::DILexicalBlockFile *node) {
                                      node->getDiscriminator());
 }
 
+DIGlobalVariableAttr
+DebugImporter::translateImpl(llvm::DIGlobalVariable *node) {
+  return DIGlobalVariableAttr::get(
+      context, translate(node->getScope()),
+      StringAttr::get(context, node->getName()),
+      StringAttr::get(context, node->getLinkageName()),
+      translate(node->getFile()), node->getLine(), translate(node->getType()),
+      node->isLocalToUnit(), node->isDefinition(), node->getAlignInBits());
+}
+
 DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
   return DILocalVariableAttr::get(context, translate(node->getScope()),
                                   getStringAttrOrNull(node->getRawName()),
@@ -231,6 +241,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIGlobalVariable>(node))
+      return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILabel>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILexicalBlock>(node))
@@ -279,6 +291,28 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   result = FusedLocWith<DIScopeAttr>::get({result}, translate(loc->getScope()),
                                           context);
   return result;
+}
+
+DIExpressionAttr DebugImporter::translateExpression(llvm::DIExpression *node) {
+  SmallVector<DIExpressionElemAttr> ops;
+
+  // Begin processing the operations.
+  for (const llvm::DIExpression::ExprOperand &op : node->expr_ops()) {
+    SmallVector<uint64_t> operands;
+    operands.reserve(op.getNumArgs());
+    for (const auto &i : llvm::seq(op.getNumArgs()))
+      operands.push_back(op.getArg(i));
+    const auto attr = DIExpressionElemAttr::get(context, op.getOp(), operands);
+    ops.push_back(attr);
+  }
+  return DIExpressionAttr::get(context, ops);
+}
+
+DIGlobalVariableExpressionAttr DebugImporter::translateGlobalVariableExpression(
+    llvm::DIGlobalVariableExpression *node) {
+  return DIGlobalVariableExpressionAttr::get(
+      context, translate(node->getVariable()),
+      translateExpression(node->getExpression()));
 }
 
 StringAttr DebugImporter::getStringAttrOrNull(llvm::MDString *stringNode) {
