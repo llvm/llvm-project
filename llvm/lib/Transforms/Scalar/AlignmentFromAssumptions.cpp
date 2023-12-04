@@ -266,12 +266,11 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
     if (auto UJ = dyn_cast<User>(J))
       for (auto &U : UJ->uses()) {
         if (U->getType()->isPointerTy()) {
-          StoreInst *SI = dyn_cast<StoreInst>(U.getUser());
-          if ((SI && SI->getPointerOperandIndex() == U.getOperandNo()) ||
-              isa<GetElementPtrInst>(U.getUser()) ||
-              isa<PHINode>(U.getUser()) || isa<LoadInst>(U.getUser()) ||
-              isa<MemIntrinsic>(U.getUser())) {
+          if (isa<GetElementPtrInst>(J) || isa<PHINode>(J)) {
             Instruction *K = cast<Instruction>(U.getUser());
+            StoreInst *SI = dyn_cast<StoreInst>(K);
+            if (SI && SI->getPointerOperandIndex() != U.getOperandNo())
+              continue;
             if (!Visited.count(K))
               WorkList.push_back(K);
           }
