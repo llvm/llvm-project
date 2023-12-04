@@ -157,6 +157,25 @@
 #define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
+// clang-format off
+#if defined(__clang__) || defined(__GNUC__)
+#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_BEGIN                         \
+  _Pragma("GCC diagnostic push")                                               \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_END                           \
+  _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_BEGIN                         \
+  _Pragma("warning(push)")                                                     \
+  _Pragma("warning(disable : 4996)")
+#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_END                           \
+  _Pragma("warning(pop)")
+#else
+#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_BEGIN
+#define LLVM_IGNORE_DEPRECATIONS_OF_DECLARATIONS_END
+#endif
+// clang-format on
+
 // Indicate that a non-static, non-const C++ member function reinitializes
 // the entire object to a known state, independent of the previous state of
 // the object.
