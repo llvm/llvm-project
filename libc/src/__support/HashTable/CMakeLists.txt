@@ -28,7 +28,6 @@ add_header_library(
     libc.include.llvm-libc-types.ENTRY
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
-    libc.src.__support.CPP.type_traits
     libc.src.__support.hash
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
