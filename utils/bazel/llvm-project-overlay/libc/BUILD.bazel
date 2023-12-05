@@ -439,7 +439,6 @@ libc_support_library(
     name = "__support_integer_utils",
     hdrs = ["src/__support/integer_utils.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_type_traits",
         ":__support_math_extras",
@@ -451,7 +450,6 @@ libc_support_library(
     name = "__support_uint",
     hdrs = ["src/__support/UInt.h"],
     deps = [
-        ":__support_bit",
         ":__support_cpp_array",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
@@ -537,8 +535,8 @@ libc_support_library(
         "src/__support/str_to_float.h",
     ],
     deps = [
-        ":__support_bit",
         ":__support_common",
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_optional",
         ":__support_ctype_utils",
@@ -588,15 +586,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_bit",
-    hdrs = ["src/__support/bit.h"],
-    deps = [
-        ":__support_cpp_type_traits",
-        ":__support_macros_attributes",
-    ],
-)
-
-libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
@@ -610,8 +599,8 @@ libc_support_library(
     name = "__support_fputil_generic_fmod",
     hdrs = ["src/__support/FPUtil/generic/FMod.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
+        ":__support_cpp_bit",
         ":__support_cpp_limits",
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
@@ -683,7 +672,6 @@ libc_support_library(
     hdrs = ["src/__support/FPUtil/FPBits.h"],
     textual_hdrs = ["src/__support/FPUtil/x86_64/LongDoubleBits.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
@@ -711,7 +699,6 @@ libc_support_library(
     name = "__support_fputil_hypot",
     hdrs = ["src/__support/FPUtil/Hypot.h"],
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
@@ -782,7 +769,6 @@ libc_support_library(
     name = "__support_fputil_sqrt",
     hdrs = sqrt_hdrs,
     deps = [
-        ":__support_bit",
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
@@ -810,7 +796,6 @@ libc_support_library(
     # doesn't support FMA, so they can't be compiled on their own.
     textual_hdrs = fma_platform_hdrs,
     deps = [
-        ":__support_bit",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
         ":__support_fputil_fenv_impl",
