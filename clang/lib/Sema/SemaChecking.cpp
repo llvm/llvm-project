@@ -3156,7 +3156,6 @@ static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
                                      ArmStreamingType BuiltinType) {
   ArmStreamingType FnType = getArmStreamingFnType(FD);
-
   if (FnType == ArmStreaming && BuiltinType == ArmNonStreaming) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "streaming";
@@ -3186,6 +3185,9 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 #define GET_SME_STREAMING_ATTRS
 #include "clang/Basic/arm_sme_streaming_attrs.inc"
 #undef GET_SME_STREAMING_ATTRS
+#define GET_SVE_STREAMING_ATTRS
+#include "clang/Basic/arm_sve_streaming_attrs.inc"
+#undef GET_SVE_STREAMING_ATTRS
     }
 
     if (BuiltinType)
@@ -3207,6 +3209,18 @@ bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 }
 
 bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
+  if (const FunctionDecl *FD = getCurFunctionDecl()) {
+        std::optional<ArmStreamingType> BuiltinType;
+      switch (BuiltinID) {
+      default:
+        break;
+#define GET_SVE_STREAMING_ATTRS
+#include "clang/Basic/arm_sve_streaming_attrs.inc"
+#undef GET_SVE_STREAMING_ATTRS
+      }
+      if (BuiltinType)
+        checkArmStreamingBuiltin(*this, TheCall, FD, *BuiltinType);
+    }
   // Range check SVE intrinsics that take immediate values.
   SmallVector<std::tuple<int,int,int>, 3> ImmChecks;
 

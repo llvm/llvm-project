@@ -86,6 +86,7 @@ enum ActionType {
   GenArmSveBuiltinCG,
   GenArmSveTypeFlags,
   GenArmSveRangeChecks,
+  GenArmSveStreamingAttrs,
   GenArmSmeHeader,
   GenArmSmeBuiltins,
   GenArmSmeBuiltinCG,
@@ -247,6 +248,8 @@ cl::opt<ActionType> Action(
                    "Generate arm_sve_typeflags.inc for clang"),
         clEnumValN(GenArmSveRangeChecks, "gen-arm-sve-sema-rangechecks",
                    "Generate arm_sve_sema_rangechecks.inc for clang"),
+        clEnumValN(GenArmSveStreamingAttrs, "gen-arm-sve-streaming-attrs",
+                   "Generate arm_sve_streaming_attrs.inc for clang"),
         clEnumValN(GenArmSmeHeader, "gen-arm-sme-header",
                    "Generate arm_sme.h for clang"),
         clEnumValN(GenArmSmeBuiltins, "gen-arm-sme-builtins",
@@ -496,6 +499,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenArmSveRangeChecks:
     EmitSveRangeChecks(Records, OS);
+    break;
+  case GenArmSveStreamingAttrs:
+    EmitSveStreamingAttrs(Records, OS);
     break;
   case GenArmSmeHeader:
     EmitSmeHeader(Records, OS);

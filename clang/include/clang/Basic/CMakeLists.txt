@@ -88,6 +88,9 @@ clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
 clang_tablegen(arm_sve_sema_rangechecks.inc -gen-arm-sve-sema-rangechecks
   SOURCE arm_sve.td
   TARGET ClangARMSveSemaRangeChecks)
+clang_tablegen(arm_sve_streaming_attrs.inc -gen-arm-sve-streaming-attrs
+  SOURCE arm_sve.td
+  TARGET ClangARMSveStreamingAttrs)
 clang_tablegen(arm_sme_builtins.inc -gen-arm-sme-builtins
   SOURCE arm_sme.td
   TARGET ClangARMSmeBuiltins)

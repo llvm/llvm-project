@@ -105,6 +105,7 @@ void EmitSveBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveTypeFlags(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSveRangeChecks(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitSveStreamingAttrs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitSmeHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitSmeBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

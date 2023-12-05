@@ -1781,6 +1781,10 @@ void EmitSveTypeFlags(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createTypeFlags(OS);
 }
 
+void EmitSveStreamingAttrs(RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createStreamingAttrs(OS, ACLEKind::SVE);
+}
+
 void EmitSmeHeader(RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMEHeader(OS);
 }
