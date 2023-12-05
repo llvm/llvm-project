@@ -51,7 +51,7 @@ using llvm::object::BuildIDRef;
 namespace {
 std::optional<SmallVector<StringRef>> DebuginfodUrls;
 // Many Readers/Single Writer lock protecting the global debuginfod URL list.
-std::shared_mutex UrlsMutex;
+llvm::sys::RWMutex UrlsMutex;
 } // namespace
 
 static std::string uniqueKey(llvm::StringRef S) {
@@ -69,12 +69,12 @@ bool canUseDebuginfod() {
 }
 
 SmallVector<StringRef> getDefaultDebuginfodUrls() {
-  std::shared_lock<std::shared_mutex> ReadGuard(UrlsMutex);
+  std::shared_lock<llvm::sys::RWMutex> ReadGuard(UrlsMutex);
   if (!DebuginfodUrls) {
     // Only read from the environment variable if the user hasn't already
     // set the value
     ReadGuard.unlock();
-    std::unique_lock<std::shared_mutex> WriteGuard(UrlsMutex);
+    std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
     DebuginfodUrls = SmallVector<StringRef>();
     if (const char *DebuginfodUrlsEnv = std::getenv("DEBUGINFOD_URLS")) {
       StringRef(DebuginfodUrlsEnv)
@@ -88,7 +88,7 @@ SmallVector<StringRef> getDefaultDebuginfodUrls() {
 
 // Set the default debuginfod URL list, override the environment variable
 void setDefaultDebuginfodUrls(const SmallVector<StringRef> &URLs) {
-  std::unique_lock<std::shared_mutex> WriteGuard(UrlsMutex);
+  std::unique_lock<llvm::sys::RWMutex> WriteGuard(UrlsMutex);
   DebuginfodUrls = URLs;
 }
 

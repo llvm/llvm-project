@@ -1286,6 +1286,11 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
         return true;
       if (Alignment)
         GV->setAlignment(*Alignment);
+    } else if (Lex.getKind() == lltok::kw_code_model) {
+      CodeModel::Model CodeModel;
+      if (parseOptionalCodeModel(CodeModel))
+        return true;
+      GV->setCodeModel(CodeModel);
     } else if (Lex.getKind() == lltok::MetadataVar) {
       if (parseGlobalObjectMetadataAttachment(*GV))
         return true;
@@ -2165,6 +2170,30 @@ bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   if (Value > Value::MaximumAlignment)
     return error(AlignLoc, "huge alignments are not supported yet");
   Alignment = Align(Value);
+  return false;
+}
+
+/// parseOptionalCodeModel
+///   ::= /* empty */
+///   ::= 'code_model' "large"
+bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
+  Lex.Lex();
+  auto StrVal = Lex.getStrVal();
+  auto ErrMsg = "expected global code model string";
+  if (StrVal == "tiny")
+    model = CodeModel::Tiny;
+  else if (StrVal == "small")
+    model = CodeModel::Small;
+  else if (StrVal == "kernel")
+    model = CodeModel::Kernel;
+  else if (StrVal == "medium")
+    model = CodeModel::Medium;
+  else if (StrVal == "large")
+    model = CodeModel::Large;
+  else
+    return tokError(ErrMsg);
+  if (parseToken(lltok::StringConstant, ErrMsg))
+    return true;
   return false;
 }
 

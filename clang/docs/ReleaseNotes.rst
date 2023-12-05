@@ -794,6 +794,9 @@ Bug Fixes to C++ Support
   Fixes:
   (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
 
+- Clang now rejects incomplete types for ``__builtin_dump_struct``. Fixes:
+  (`#63506 <https://github.com/llvm/llvm-project/issues/63506>`_)
+
 - Fixed a crash for C++98/03 while checking an ill-formed ``_Static_assert`` expression.
   Fixes: (`#72025 <https://github.com/llvm/llvm-project/issues/72025>`_)
 
