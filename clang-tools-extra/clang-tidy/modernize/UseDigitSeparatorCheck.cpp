@@ -108,26 +108,32 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     }
   } else if (MatchedFloat != nullptr) {
     // Get original literal source text
-    const std::string OriginalLiteralString = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()),
-        Source, Context.getLangOpts()).str();
+    const std::string OriginalLiteralString =
+        Lexer::getSourceText(
+            CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()),
+            Source, Context.getLangOpts())
+            .str();
 
     // Get formatting literal text
     std::string::size_type DotPosition = OriginalLiteralString.find('.');
     std::string FirstSubString = OriginalLiteralString.substr(0, DotPosition);
-    std::string SecondSubString = OriginalLiteralString.substr(DotPosition + 1, OriginalLiteralString.size());
+    std::string SecondSubString = OriginalLiteralString.substr(
+        DotPosition + 1, OriginalLiteralString.size());
     std::reverse(SecondSubString.begin(), SecondSubString.end());
 
     std::vector<std::string> SplitedString = {FirstSubString, SecondSubString};
-    std::vector<std::string> SplittedFloatLiteral0 = splitStringByGroupSize(SplitedString[0], 3);
-    std::vector<std::string> SplittedFloatLiteral1 = splitStringByGroupSize(SplitedString[1], 3);
-    std::string SecondReversedString = std::accumulate(
-                                           SplittedFloatLiteral1.begin(), SplittedFloatLiteral1.end(),
-                                           std::string(""),
-                                           [](std::basic_string<char> S1, std::basic_string<char> S2) {
-                                             return S1 + "\'" + S2;
-                                           })
-                                           .erase(0, 1);
+    std::vector<std::string> SplittedFloatLiteral0 =
+        splitStringByGroupSize(SplitedString[0], 3);
+    std::vector<std::string> SplittedFloatLiteral1 =
+        splitStringByGroupSize(SplitedString[1], 3);
+    std::string SecondReversedString =
+        std::accumulate(
+            SplittedFloatLiteral1.begin(), SplittedFloatLiteral1.end(),
+            std::string(""),
+            [](std::basic_string<char> S1, std::basic_string<char> S2) {
+              return S1 + "\'" + S2;
+            })
+            .erase(0, 1);
     std::reverse(SecondReversedString.begin(), SecondReversedString.end());
     const std::string FormatedLiteralString =
         std::accumulate(
@@ -136,7 +142,8 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
             [](std::basic_string<char> S1, std::basic_string<char> S2) {
               return S1 + "\'" + S2;
             })
-            .erase(0, 1) + '.' + SecondReversedString;
+            .erase(0, 1) +
+        '.' + SecondReversedString;
 
     // Compare the original and formatted representation of a literal
     if (OriginalLiteralString != FormatedLiteralString) {
