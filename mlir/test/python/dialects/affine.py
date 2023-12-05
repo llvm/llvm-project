@@ -5,6 +5,7 @@ from mlir.dialects import func
 from mlir.dialects import arith
 from mlir.dialects import memref
 from mlir.dialects import affine
+import mlir.extras.types as T
 
 
 def constructAndPrintInModule(f):
@@ -115,58 +116,130 @@ def testAffineForOp():
 
 @constructAndPrintInModule
 def testForSugar():
-    index_type = IndexType.get()
-    memref_t = MemRefType.get([10], index_type)
+    memref_t = T.memref(10, T.index())
     range = affine.for_
 
-    # CHECK:  func.func @range_loop_1(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: memref<10xindex>) {
-    # CHECK:    %[[VAL_4:.*]] = arith.constant 10 : index
-    # CHECK:    affine.for %[[VAL_6:.*]] = %[[VAL_0]] to %[[VAL_4]] step 2 {
-    # CHECK:      %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_6]] : index
-    # CHECK:      affine.store %[[VAL_7]], %[[VAL_3]]{{\[symbol\(}}%[[VAL_6]]{{\)\]}} : memref<10xindex>
-    # CHECK:    }
-    # CHECK:    return
-    # CHECK:  }
-    @func.FuncOp.from_py_func(index_type, index_type, index_type, memref_t)
-    def range_loop_1(lb, ub, step, memref_v):
-        for i in range(lb, 10, 2):
+    # CHECK-LABEL:   func.func @range_loop_1(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 1 to 1 iter_args() -> () {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:             affine.yield
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_1(lb, ub, memref_v):
+        for i in range(lb, ub, step=1):
             add = arith.addi(i, i)
-            s0 = AffineSymbolExpr.get(0)
-            map = AffineMap.get(0, 1, [s0])
-            affine.store(add, memref_v, [i], map=map)
-            affine.AffineYieldOp([])
+            memref.store(add, memref_v, [i])
 
-    # CHECK:  func.func @range_loop_2(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: memref<10xindex>) {
-    # CHECK:    %[[VAL_4:.*]] = arith.constant 0 : index
-    # CHECK:    %[[VAL_5:.*]] = arith.constant 10 : index
-    # CHECK:    affine.for %[[VAL_7:.*]] = %[[VAL_4]] to %[[VAL_5]] {
-    # CHECK:      %[[VAL_8:.*]] = arith.addi %[[VAL_7]], %[[VAL_7]] : index
-    # CHECK:      affine.store %[[VAL_8]], %[[VAL_3]]{{\[symbol\(}}%[[VAL_7]]{{\)\]}} : memref<10xindex>
-    # CHECK:    }
-    # CHECK:    return
-    # CHECK:  }
-    @func.FuncOp.from_py_func(index_type, index_type, index_type, memref_t)
-    def range_loop_2(lb, ub, step, memref_v):
-        for i in range(0, 10, 1):
-            add = arith.addi(i, i)
-            s0 = AffineSymbolExpr.get(0)
-            map = AffineMap.get(0, 1, [s0])
-            affine.store(add, memref_v, [i], map=map)
-            affine.AffineYieldOp([])
+            affine.yield_([])
 
-    # CHECK:  func.func @range_loop_3(%[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: memref<10xindex>) {
-    # CHECK:    %[[VAL_4:.*]] = arith.constant 0 : index
-    # CHECK:    affine.for %[[VAL_6:.*]] = %[[VAL_4]] to %[[VAL_1]] {
-    # CHECK:      %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_6]] : index
-    # CHECK:      affine.store %[[VAL_7]], %[[VAL_3]]{{\[symbol\(}}%[[VAL_6]]{{\)\]}} : memref<10xindex>
-    # CHECK:    }
-    # CHECK:    return
-    # CHECK:  }
-    @func.FuncOp.from_py_func(index_type, index_type, index_type, memref_t)
-    def range_loop_3(lb, ub, step, memref_v):
-        for i in range(0, ub, 1):
+    # CHECK-LABEL:   func.func @range_loop_2(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 1 to 10 iter_args() -> () {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:             affine.yield
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_2(lb, ub, memref_v):
+        for i in range(lb, 10, step=1):
             add = arith.addi(i, i)
-            s0 = AffineSymbolExpr.get(0)
-            map = AffineMap.get(0, 1, [s0])
-            affine.store(add, memref_v, [i], map=map)
-            affine.AffineYieldOp([])
+            memref.store(add, memref_v, [i])
+            affine.yield_([])
+
+    # CHECK-LABEL:   func.func @range_loop_3(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 1 iter_args() -> () {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:             affine.yield
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_3(lb, ub, memref_v):
+        for i in range(0, ub, step=1):
+            add = arith.addi(i, i)
+            memref.store(add, memref_v, [i])
+            affine.yield_([])
+
+    # CHECK-LABEL:   func.func @range_loop_4(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_4(lb, ub, memref_v):
+        for i in range(0, 10, step=1):
+            add = arith.addi(i, i)
+            memref.store(add, memref_v, [i])
+            affine.yield_([])
+
+    # CHECK-LABEL:   func.func @range_loop_5(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_5(lb, ub, memref_v):
+        for i in range(0, 10, step=1):
+            add = arith.addi(i, i)
+            memref.store(add, memref_v, [i])
+            affine.yield_([])
+
+    # CHECK-LABEL:   func.func @range_loop_6(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_6(lb, ub, memref_v):
+        for i in range(0, 10):
+            add = arith.addi(i, i)
+            memref.store(add, memref_v, [i])
+            affine.yield_([])
+
+    # CHECK-LABEL:   func.func @range_loop_7(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 10 {
+    # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
+    # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_7(lb, ub, memref_v):
+        for i in range(10):
+            add = arith.addi(i, i)
+            memref.store(add, memref_v, [i])
+            affine.yield_([])
+
+    # CHECK-LABEL:   func.func @range_loop_8(
+    # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
+    # CHECK:           %[[VAL_3:.*]] = affine.for %[[VAL_4:.*]] = 0 to 10 iter_args(%[[VAL_5:.*]] = %[[VAL_2]]) -> (memref<10xindex>) {
+    # CHECK:             %[[VAL_6:.*]] = arith.addi %[[VAL_4]], %[[VAL_4]] : index
+    # CHECK:             memref.store %[[VAL_6]], %[[VAL_5]]{{\[}}%[[VAL_4]]] : memref<10xindex>
+    # CHECK:             affine.yield %[[VAL_5]] : memref<10xindex>
+    # CHECK:           }
+    # CHECK:           return
+    # CHECK:         }
+    @func.FuncOp.from_py_func(T.index(), T.index(), memref_t)
+    def range_loop_8(lb, ub, memref_v):
+        for i, it in range(10, iter_args=[memref_v]):
+            add = arith.addi(i, i)
+            memref.store(add, it, [i])
+            affine.yield_([it])
