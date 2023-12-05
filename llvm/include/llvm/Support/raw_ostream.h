@@ -615,6 +615,8 @@ public:
   /// immediately destroyed.
   raw_fd_stream(StringRef Filename, std::error_code &EC);
 
+  raw_fd_stream(int fd, bool shouldClose);
+
   /// This reads the \p Size bytes into a buffer pointed by \p Ptr.
   ///
   /// \param Ptr The start of the buffer to hold data to be read.
@@ -636,24 +638,46 @@ public:
 
 /// A raw stream for sockets reading/writing
 
-class raw_socket_stream : public raw_fd_ostream {
-  StringRef SocketPath;
-  bool ShouldUnlink;
-
-  uint64_t current_pos() const override { return 0; }
-
+class raw_socket_stream;
+class ListeningSocket {
+  int FD;
+  ListeningSocket(int SocketFD);
+  // ...
 public:
-  int get_socket() { return get_fd(); }
-
-  static int MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog,
-                              std::error_code &EC);
-
-  raw_socket_stream(int SocketFD, StringRef SockPath, std::error_code &EC);
-  raw_socket_stream(StringRef SockPath, std::error_code &EC);
-  ~raw_socket_stream();
-
-  Expected<std::string> read_impl();
+  static Expected<ListeningSocket> createUnix(StringRef SocketPath);
+  Expected<raw_socket_stream> accept();
+  ~ListeningSocket();
 };
+class raw_socket_stream : public raw_fd_stream {
+  uint64_t current_pos() const override { return 0; }
+public:
+  raw_socket_stream(int SocketFD);
+
+  /// Create a \p raw_socket_stream connected to the Unix domain socket at \p
+  /// SocketPath.
+  static Expected<raw_socket_stream> createConnectedUnix(StringRef SocketPath);
+  ~raw_socket_stream();
+};
+
+
+// class raw_socket_stream : public raw_fd_ostream {
+//   StringRef SocketPath;
+//   bool ShouldUnlink;
+
+//   uint64_t current_pos() const override { return 0; }
+
+// public:
+//   int get_socket() { return get_fd(); }
+
+//   static int MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog,
+//                               std::error_code &EC);
+
+//   raw_socket_stream(int SocketFD, StringRef SockPath, std::error_code &EC);
+//   raw_socket_stream(StringRef SockPath, std::error_code &EC);
+//   ~raw_socket_stream();
+
+//   Expected<std::string> read_impl();
+// };
 
 //===----------------------------------------------------------------------===//
 // Output Stream Adaptors

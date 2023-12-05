@@ -65,11 +65,12 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+// winsock2.h must be included before afunix.h. Briefly turn off clang-format to avoid error.
 // clang-format off
 #include <winsock2.h>
 #include <afunix.h>
-#include <io.h>
 // clang-format on
+#include <io.h>
 #endif
 
 using namespace llvm;
@@ -940,6 +941,10 @@ raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
     EC = std::make_error_code(std::errc::invalid_argument);
 }
 
+raw_fd_stream::raw_fd_stream(int fd, bool shouldClose)
+    : raw_fd_ostream(fd, shouldClose, false, OStreamKind::OK_FDStream) {}
+
+
 ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
   assert(get_fd() >= 0 && "File already closed.");
   ssize_t Ret = ::read(get_fd(), (void *)Ptr, Size);
@@ -958,6 +963,99 @@ bool raw_fd_stream::classof(const raw_ostream *OS) {
 //  raw_socket_stream
 //===----------------------------------------------------------------------===//
 
+ListeningSocket::ListeningSocket(int SocketFD) : FD(SocketFD) {}
+
+Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath) {
+
+  int MaxBacklog = 3;
+#ifdef _WIN32
+  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (MaybeWinsocket == INVALID_SOCKET) {
+#else
+  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (MaybeWinsocket == -1) {
+#endif
+    return llvm::make_error<StringError>("socket create failed", inconvertibleErrorCode());
+  }
+    struct sockaddr_un Addr;
+  memset(&Addr, 0, sizeof(Addr));
+  Addr.sun_family = AF_UNIX;
+  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
+
+  if (bind(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
+    std::string Msg;
+    if (errno == EADDRINUSE) {
+      ::close(MaybeWinsocket);
+      return llvm::make_error<StringError>("Address in use", inconvertibleErrorCode());
+    } else {
+      return llvm::make_error<StringError>("Unknown error", inconvertibleErrorCode());
+    }
+  }
+  if (listen(MaybeWinsocket, MaxBacklog) == -1) {
+    return llvm::make_error<StringError>("Listen error", inconvertibleErrorCode());
+  }
+  int UnixSocket;
+#ifdef _WIN32
+  UnixSocket = _open_osfhandle(MaybeWinsocket, 0);
+#else
+  UnixSocket = MaybeWinsocket;
+#endif // _WIN32
+  ListeningSocket ListenSocket(UnixSocket);
+  return ListenSocket;
+}
+
+Expected<raw_socket_stream> ListeningSocket::accept() {
+  int AcceptFD;
+#ifdef _WIN32
+  SOCKET WinServerSock = _get_osfhandle(FD);
+  SOCKET WinAcceptSock = ::accept(WinServerSock, NULL, NULL);
+  AcceptFD = _open_osfhandle(WinAcceptSock, 0);
+#else
+  AcceptFD = ::accept(FD, NULL, NULL);
+#endif //_WIN32
+  if (AcceptFD == -1) {
+    return llvm::make_error<StringError>("Accept failed", inconvertibleErrorCode());
+  }
+  Expected<raw_socket_stream> MaybeSocketStream(AcceptFD);
+  return MaybeSocketStream;
+}
+
+// Expected?
+int GetSocketFD(StringRef SocketPath) {
+#ifdef _WIN32
+  SOCKET MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (MaybeWinsocket == INVALID_SOCKET) {
+#else
+  int MaybeWinsocket = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (MaybeWinsocket == -1) {
+#endif // _WIN32
+    // return llvm::make_error<StringError>("Create socket failed", inconvertibleErrorCode());
+  }
+
+  struct sockaddr_un Addr;
+  memset(&Addr, 0, sizeof(Addr));
+  Addr.sun_family = AF_UNIX;
+  strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
+
+  int status = connect(MaybeWinsocket, (struct sockaddr *)&Addr, sizeof(Addr));
+  if (status == -1) {
+    // return llvm::make_error<StringError>("Connect socket failed", inconvertibleErrorCode());
+  }
+#ifdef _WIN32
+  return _open_osfhandle(MaybeWinsocket, 0);
+#else
+  return MaybeWinsocket;
+#endif // _WIN32
+}
+
+raw_socket_stream::raw_socket_stream(int AcceptFD): raw_fd_stream(AcceptFD, false) {}
+
+Expected<raw_socket_stream> createConnectedUnix(StringRef SocketPath) {
+  Expected<raw_socket_stream> MaybeSocketStream(GetSocketFD(SocketPath));
+  return MaybeSocketStream;
+}
+
+/*
 int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
                                         unsigned int MaxBacklog,
                                         std::error_code &EC) {
@@ -1094,6 +1192,8 @@ Expected<std::string> raw_socket_stream::read_impl() {
   }
   return std::string(Buffer.data());
 }
+
+*/
 
 //===----------------------------------------------------------------------===//
 //  raw_string_ostream
