@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "Parser.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 
 #include <gmock/gmock.h>
@@ -166,4 +167,43 @@ TEST(IntegerRelationTest, symbolicLexmax) {
   EXPECT_TRUE(lexmax2.lexopt.isEqual(expectedLexmax2));
   EXPECT_TRUE(lexmax3.unboundedDomain.isIntegerEmpty());
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexmax3));
+}
+
+TEST(IntegerRelationTest, swapVar) {
+  PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 2, 0);
+  space.resetIds();
+
+  int identifiers[6] = {0, 1, 2, 3, 4};
+
+  // Attach identifiers to domain identifiers.
+  space.getId(VarKind::Domain, 0) = Identifier(&identifiers[0]);
+  space.getId(VarKind::Domain, 1) = Identifier(&identifiers[1]);
+
+  // Attach identifiers to range identifiers.
+  space.getId(VarKind::Range, 0) = Identifier(&identifiers[2]);
+
+  // Attach identifiers to symbol identifiers.
+  space.getId(VarKind::Symbol, 0) = Identifier(&identifiers[3]);
+  space.getId(VarKind::Symbol, 1) = Identifier(&identifiers[4]);
+
+  IntegerRelation rel =
+      parseRelationFromSet("(x, y, z)[N, M] : (z - x - y == 0, x >= 0, N - x "
+                           ">= 0, y >= 0, M - y >= 0)",
+                           2);
+  rel.setSpace(space);
+  // Swap (Domain 0, Range 0)
+  rel.swapVar(0, 2);
+  // Swap (Domain 1, Symbol 1)
+  rel.swapVar(1, 4);
+
+  PresburgerSpace swappedSpace = rel.getSpace();
+
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Domain, 0)
+                  .isEqual(space.getId(VarKind::Range, 0)));
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Domain, 1)
+                  .isEqual(space.getId(VarKind::Symbol, 1)));
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Range, 0)
+                  .isEqual(space.getId(VarKind::Domain, 0)));
+  EXPECT_TRUE(swappedSpace.getId(VarKind::Symbol, 1)
+                  .isEqual(space.getId(VarKind::Domain, 1)));
 }
