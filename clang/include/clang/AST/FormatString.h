@@ -275,6 +275,8 @@ public:
     /// The conversion specifier and the argument type are compatible. For
     /// instance, "%d" and int.
     Match = 1,
+    /// The conversion specifier and the argument type have different sign
+    MatchSignedness,
     /// The conversion specifier and the argument type are compatible because of
     /// default argument promotions. For instance, "%hhd" and int.
     MatchPromotion,

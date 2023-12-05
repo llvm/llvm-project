@@ -44,6 +44,7 @@ DIAGOPT(Name, Bits, Default)
 #endif
 
 SEMANTIC_DIAGOPT(IgnoreWarnings, 1, 0)   /// -w
+DIAGOPT(FormatSignedness, 1, 0) /// -Wformat-signedness
 DIAGOPT(NoRewriteMacros, 1, 0)  /// -Wno-rewrite-macros
 DIAGOPT(Pedantic, 1, 0)         /// -pedantic
 DIAGOPT(PedanticErrors, 1, 0)   /// -pedantic-errors
