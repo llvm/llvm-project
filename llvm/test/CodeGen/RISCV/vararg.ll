@@ -869,19 +869,10 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a5, 40(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a4, 32(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a3, 24(sp)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a0, sp, 16
-; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a0, 8(sp)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    lw a0, 8(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a2, 16(sp)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a0, a0, 7
-; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a2, a0, 32
-; LP64-LP64F-LP64D-FPELIM-NEXT:    srli a2, a2, 32
-; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a2, a2, 8
-; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a2, 8(sp)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    srliw a0, a0, 3
-; LP64-LP64F-LP64D-FPELIM-NEXT:    slli a0, a0, 3
-; LP64-LP64F-LP64D-FPELIM-NEXT:    ld a0, 0(a0)
-; LP64-LP64F-LP64D-FPELIM-NEXT:    add a0, a1, a0
+; LP64-LP64F-LP64D-FPELIM-NEXT:    addi a3, sp, 31
+; LP64-LP64F-LP64D-FPELIM-NEXT:    add a0, a1, a2
+; LP64-LP64F-LP64D-FPELIM-NEXT:    sd a3, 8(sp)
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    addi sp, sp, 64
 ; LP64-LP64F-LP64D-FPELIM-NEXT:    ret
 ;
@@ -896,32 +887,24 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a5, 24(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a4, 16(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a3, 8(s0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    mv a0, s0
-; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a0, -24(s0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    lw a0, -24(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a2, 0(s0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a0, a0, 7
-; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a2, a0, 32
-; LP64-LP64F-LP64D-WITHFP-NEXT:    srli a2, a2, 32
-; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a2, a2, 8
-; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a2, -24(s0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    srliw a0, a0, 3
-; LP64-LP64F-LP64D-WITHFP-NEXT:    slli a0, a0, 3
-; LP64-LP64F-LP64D-WITHFP-NEXT:    ld a0, 0(a0)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    add a0, a1, a0
+; LP64-LP64F-LP64D-WITHFP-NEXT:    addi a3, s0, 15
+; LP64-LP64F-LP64D-WITHFP-NEXT:    add a0, a1, a2
+; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a3, -24(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addi sp, sp, 80
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ret
   %va = alloca ptr
   call void @llvm.va_start(ptr %va)
-  %argp.cur = load i32, ptr %va, align 4
-  %1 = add i32 %argp.cur, 7
-  %2 = and i32 %1, -8
-  %argp.cur.aligned = inttoptr i32 %1 to ptr
+  %argp.cur = load ptr, ptr %va
+  %ptrint = ptrtoint ptr %argp.cur to iXLen
+  %1 = add iXLen %ptrint, 7
+  %2 = and iXLen %1, -8
+  %argp.cur.aligned = inttoptr iXLen %1 to ptr
   %argp.next = getelementptr inbounds i8, ptr %argp.cur.aligned, i32 8
-  store ptr %argp.next, ptr %va, align 4
-  %3 = inttoptr i32 %2 to ptr
+  store ptr %argp.next, ptr %va
+  %3 = inttoptr iXLen %2 to ptr
   %4 = load double, ptr %3, align 8
   call void @llvm.va_end(ptr %va)
   %5 = bitcast double %4 to i64
