@@ -329,7 +329,8 @@ void Parser::ParseOpenACCCacheVarList() {
   // specifications.  First, see if we have `readonly:`, else we back-out and
   // treat it like the beginning of a reference to a potentially-existing
   // `readonly` variable.
-  if (getPreprocessor().getSpelling(getCurToken()) == "readonly" &&
+  if (getCurToken().is(tok::identifier) &&
+      getCurToken().getIdentifierInfo()->getName() == "readonly" &&
       NextToken().is(tok::colon)) {
     // Consume both tokens.
     ConsumeToken();
