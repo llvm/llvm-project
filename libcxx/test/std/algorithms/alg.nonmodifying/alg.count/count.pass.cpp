@@ -38,7 +38,7 @@ struct Test {
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<const int*>(), Test());
 
-  if (!TEST_IS_CONSTANT_EVALUATED || TEST_STD_VER >= 20) {
+  if (TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED) {
     std::vector<bool> vec(256 + 64);
     for (ptrdiff_t i = 0; i != 256; ++i) {
       for (size_t offset = 0; offset != 64; ++offset) {
