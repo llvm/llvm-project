@@ -49,6 +49,11 @@ GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
 // Returns nullptr on failure.
 Comdat *getOrCreateFunctionComdat(Function &F, Triple &T);
 
+// Place global in a large section for x86-64 ELF binaries to mitigate
+// relocation pressure. Should typically be used for metadata globals that
+// aren't directly accessed in the module.
+void setGlobalVariableLargeSection(Triple &TargetTriple, GlobalVariable &GV);
+
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
   static GCOVOptions getDefault();

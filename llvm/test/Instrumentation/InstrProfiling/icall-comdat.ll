@@ -1,5 +1,4 @@
 ;; Check that static counters are allocated for value profiler
-
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
 ; RUN: opt < %s -mtriple=powerpc-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
 ; RUN: opt < %s -mtriple=sparc-unknown-linux -passes=instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=STATIC
@@ -15,6 +14,10 @@
 ; RUN: opt %s -mtriple=powerpc-ibm-aix -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
 ; RUN: opt %s -mtriple=powerpc64-ibm-aix -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
 ; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=ALIGN
+
+;; Check that globals have the proper code model.
+; RUN: opt %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=X8664-CODEMODEL
+; RUN: opt %s -mtriple=powerpc-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=PPC-CODEMODEL
 
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_bar = private constant [3 x i8] c"bar"
@@ -46,8 +49,8 @@ declare void @llvm.instrprof.value.profile(ptr, i64, i64, i32, i32) #0
 
 attributes #0 = { nounwind }
 
-; STATIC: @__profvp_foo = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", comdat($__profc_foo)
-; STATIC: @__profvp_bar = private global [1 x i64] zeroinitializer, section "{{[^"]+}}", comdat($__profc_bar)
+; STATIC: @__profvp_foo = private global [1 x i64] zeroinitializer, section "{{[^"]+}}",{{.*}} comdat($__profc_foo)
+; STATIC: @__profvp_bar = private global [1 x i64] zeroinitializer, section "{{[^"]+}}",{{.*}} comdat($__profc_bar)
 ; STATIC: @__llvm_prf_vnodes
 
 ; DYN-NOT: @__profvp_foo
@@ -73,5 +76,15 @@ attributes #0 = { nounwind }
 ; ALIGN: @__profc_bar = private global {{.*}} section "__llvm_prf_cnts",{{.*}} align 8
 ; ALIGN: @__profvp_bar = private global {{.*}} section "__llvm_prf_vals",{{.*}}  align 8
 ; ALIGN: @__profd_bar = private global {{.*}} section "__llvm_prf_data",{{.*}} align 8
-; ALIGN: @__llvm_prf_vnodes = private global {{.*}} section "__llvm_prf_vnds", align 8
-; ALIGN: @__llvm_prf_nm = private constant {{.*}} section "__llvm_prf_names", align 1
+; ALIGN: @__llvm_prf_vnodes = private global {{.*}} section "__llvm_prf_vnds",{{.*}} align 8
+; ALIGN: @__llvm_prf_nm = private constant {{.*}} section "__llvm_prf_names",{{.*}} align 1
+
+; X8664-CODEMODEL-NOT: @__profc_foo = {{.*}}, code_model "large"
+; X8664-CODEMODEL:     @__profvp_foo = {{.*}}, code_model "large"
+; X8664-CODEMODEL-NOT: @__profd_foo = {{.*}}, code_model "large"
+; X8664-CODEMODEL-NOT: @__profc_bar = {{.*}}, code_model "large"
+; X8664-CODEMODEL:     @__profvp_bar = {{.*}}, code_model "large"
+; X8664-CODEMODEL-NOT: @__profd_bar = {{.*}}, code_model "large"
+; X8664-CODEMODEL:     @__llvm_prf_vnodes = {{.*}}, code_model "large"
+; X8664-CODEMODEL:     @__llvm_prf_nm = {{.*}}, code_model "large"
+; PPC-CODEMODEL-NOT: code_model "large"
