@@ -1769,9 +1769,11 @@ public:
 // Custom printers and parsers.
 //===--------------------------------------------------------------------===//
 
-// Handles custom<Shape>(...) in TableGen.
-void printShape(OpAsmPrinter &printer, Operation *op, ArrayRef<int64_t> shape);
-ParseResult parseShape(OpAsmParser &parser, DenseI64ArrayAttr &shape);
+// Handles custom<DimensionList>(...) in TableGen.
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions);
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions);
 
 } // namespace mlir
 

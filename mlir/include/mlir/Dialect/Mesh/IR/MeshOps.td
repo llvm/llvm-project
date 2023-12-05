@@ -77,7 +77,7 @@ def Mesh_ClusterOp : Mesh_Op<"cluster", [Symbol]> {
     DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$dim_sizes
   );
   let assemblyFormat = [{
-    $sym_name `(` `rank` `=` $rank (`,` `dim_sizes` `=` custom<Shape>($dim_sizes)^)? `)`
+    $sym_name `(` `rank` `=` $rank (`,` `dim_sizes` `=` custom<DimensionList>($dim_sizes)^)? `)`
       attr-dict
   }];
   let extraClassDeclaration = [{

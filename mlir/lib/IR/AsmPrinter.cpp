@@ -3932,36 +3932,39 @@ void Block::printAsOperand(raw_ostream &os, AsmState &state) {
 }
 
 //===--------------------------------------------------------------------===//
-// Custom printers and parsers.
+// Custom printers
 //===--------------------------------------------------------------------===//
 namespace mlir {
 
-void printShape(OpAsmPrinter &printer, Operation *op, ArrayRef<int64_t> shape) {
-  if (!shape.empty())
+void printDimensionList(OpAsmPrinter &printer, Operation *op,
+                        ArrayRef<int64_t> dimensions) {
+  if (dimensions.empty())
     printer << "[";
-  printer.printDimensionList(shape);
-  if (!shape.empty())
+  printer.printDimensionList(dimensions);
+  if (dimensions.empty())
     printer << "]";
 }
 
-ParseResult parseShape(OpAsmParser &parser, DenseI64ArrayAttr &shape) {
+ParseResult parseDimensionList(OpAsmParser &parser,
+                               DenseI64ArrayAttr &dimensions) {
   bool hasOpeningSquare = succeeded(parser.parseOptionalLSquare());
   SmallVector<int64_t> shapeArr;
   if (failed(parser.parseDimensionList(shapeArr, true, false))) {
     return parser.emitError(parser.getCurrentLocation())
-           << "Failed parsing shape.";
+           << "Failed parsing dimension list.";
   }
   if (shapeArr.empty() && !hasOpeningSquare) {
     return parser.emitError(parser.getCurrentLocation())
-           << "Failed parsing shape. Did you mean a 0-rank shape? It must be "
+           << "Failed parsing dimension list. Did you mean an empty list? It "
+              "must be "
               "denoted by \"[]\".";
   }
   if (hasOpeningSquare && failed(parser.parseRSquare())) {
     return parser.emitError(parser.getCurrentLocation())
-           << "Failed parsing shape.";
+           << "Failed parsing dimension list.";
   }
 
-  shape = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
+  dimensions = DenseI64ArrayAttr::get(parser.getContext(), shapeArr);
   return success();
 }
 

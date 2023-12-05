@@ -14,6 +14,9 @@ mesh.cluster @mesh3(rank = 2)
 
 mesh.cluster @mesh4(rank = 1, dim_sizes = 3)
 
+// CHECK: mesh.cluster @mesh5(rank = 1)
+mesh.cluster @mesh5(rank = 1, dim_sizes = [])
+
 // CHECK-LABEL: func @mesh_shard_encoding_fully_replicated
 func.func @mesh_shard_encoding_fully_replicated(
     // CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32, #mesh.shard<@mesh0, {{\[\[}}]]>>
