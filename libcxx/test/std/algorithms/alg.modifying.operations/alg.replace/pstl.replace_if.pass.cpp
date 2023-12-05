@@ -42,7 +42,8 @@ struct Test {
 
     { // non-empty range without a match works
       std::array a = {1, 2};
-      std::replace_if(policy, Iter(std::data(a)), Iter(std::data(a) + std::size(a)), [](int) { return false; }, 6);
+      std::replace_if(
+          policy, Iter(std::data(a)), Iter(std::data(a) + std::size(a)), [](int) { return false; }, 6);
     }
 
     { // single element range works
@@ -61,7 +62,8 @@ struct Test {
 
     { // multiple matching elements work
       std::array a = {1, 2, 3, 4, 3, 3, 5, 6, 3};
-      std::replace_if(policy, Iter(std::data(a)), Iter(std::data(a) + std::size(a)), [](int i) { return i == 3; }, 9);
+      std::replace_if(
+          policy, Iter(std::data(a)), Iter(std::data(a) + std::size(a)), [](int i) { return i == 3; }, 9);
       assert((a == std::array{1, 2, 9, 4, 9, 9, 5, 6, 9}));
     }
 

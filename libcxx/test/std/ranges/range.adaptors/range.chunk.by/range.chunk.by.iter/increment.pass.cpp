@@ -109,8 +109,8 @@ constexpr void test() {
   // Test with a predicate that is invocable but not callable (i.e. cannot be called like regular function 'f()')
   {
     std::array array = {1, 2, 3, -3, -2, -1};
-    auto v = View{Iterator{array.data()}, Sentinel{Iterator{array.data() + array.size()}}}
-           | std::views::transform([](int x) { return IntWrapper{x}; });
+    auto v           = View{Iterator{array.data()}, Sentinel{Iterator{array.data() + array.size()}}} |
+             std::views::transform([](int x) { return IntWrapper{x}; });
     auto view = std::views::chunk_by(std::move(v), &IntWrapper::lessEqual);
 
     auto it = view.begin();

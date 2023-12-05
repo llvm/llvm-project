@@ -27,8 +27,8 @@
 
 template <typename Iter1, typename Iter2, typename C1, typename C2, typename Order>
 constexpr void test_lexicographical_compare(C1 a, C2 b, Order expected) {
-  std::same_as<Order> decltype(auto) result =
-      std::lexicographical_compare_three_way(Iter1{a.data()}, Iter1{a.data() + a.size()}, Iter2{b.data()}, Iter2{b.data() + b.size()});
+  std::same_as<Order> decltype(auto) result = std::lexicographical_compare_three_way(
+      Iter1{a.data()}, Iter1{a.data() + a.size()}, Iter2{b.data()}, Iter2{b.data() + b.size()});
   assert(expected == result);
 }
 
