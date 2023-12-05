@@ -38,72 +38,104 @@ namespace clang::tidy::modernize {
 
 void UseDigitSeparatorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(integerLiteral().bind("integerLiteral"), this);
+  Finder->addMatcher(floatLiteral().bind("floatLiteral"), this);
 }
 
 void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
   const IntegerLiteral *MatchedInteger = Result.Nodes.getNodeAs<IntegerLiteral>("integerLiteral");
+  const FloatingLiteral *MatchedFloat = Result.Nodes.getNodeAs<FloatingLiteral>("floatLiteral");
 
-  // Get original literal source text
-  const StringRef OriginalLiteralString = Lexer::getSourceText(CharSourceRange::getTokenRange(MatchedInteger->getSourceRange()), Source, Context.getLangOpts());
+  if (MatchedInteger != nullptr) {
+    // Get original literal source text
+    const StringRef OriginalLiteralString = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(MatchedInteger->getSourceRange()),
+        Source, Context.getLangOpts());
 
-  // Configure formatting
-  unsigned int Radix;
-  size_t GroupSize;
-  std::string Prefix;
-  std::string Postfix;
-  if (OriginalLiteralString.starts_with("0b")) {
-    Radix = 2;
-    GroupSize = 4;
-    Prefix = "0b";
-  } else if (OriginalLiteralString.starts_with("0x")) {
-    Radix = 16;
-    GroupSize = 4;
-    Prefix = "0x";
-  } else if (OriginalLiteralString.starts_with("0") &&
-             OriginalLiteralString != "0") {
-    Radix = 8;
-    GroupSize = 3;
-    Prefix = "0";
+    // Configure formatting
+    unsigned int Radix;
+    size_t GroupSize;
+    std::string Prefix;
+    std::string Postfix;
+    if (OriginalLiteralString.starts_with("0b")) {
+      Radix = 2;
+      GroupSize = 4;
+      Prefix = "0b";
+    } else if (OriginalLiteralString.starts_with("0x")) {
+      Radix = 16;
+      GroupSize = 4;
+      Prefix = "0x";
+    } else if (OriginalLiteralString.starts_with("0") &&
+               OriginalLiteralString != "0") {
+      Radix = 8;
+      GroupSize = 3;
+      Prefix = "0";
+    } else {
+      Radix = 10;
+      GroupSize = 3;
+    }
+
+    if (OriginalLiteralString.ends_with("L") ||
+        OriginalLiteralString.ends_with("l") ||
+        OriginalLiteralString.ends_with("U") ||
+        OriginalLiteralString.ends_with("u")) {
+      Postfix = OriginalLiteralString.back();
+    }
+
+    // Get formatting literal text
+    const llvm::APInt IntegerValue = MatchedInteger->getValue();
+    const std::vector<std::string> SplittedIntegerLiteral =
+        splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+    //  if (OriginalLiteralString.contains('.')) {
+    //    std::vector<std::string> SplitedString;
+    //    const std::regex DotRegex(".");
+    //    std::sregex_token_iterator
+    //        Begin(OriginalLiteralString.str().begin(), OriginalLiteralString.str().end(), DotRegex, -1), End;
+    //
+    //    std::copy(Begin, End, std::back_inserter(SplitedString));
+    ////    const auto SplitedString = std::views::split(OriginalLiteralString, '.');
+    //  } else {
+    //    SplittedIntegerLiteral = splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+    //  }
+    const std::string FormatedLiteralString =
+        Prefix +
+        std::accumulate(
+            SplittedIntegerLiteral.begin(), SplittedIntegerLiteral.end(),
+            std::string(""),
+            [](std::basic_string<char> S1, std::basic_string<char> S2) {
+              return S1 + "\'" + S2;
+            })
+            .erase(0, 1) +
+        Postfix;
+
+    // Compare the original and formatted representation of a literal
+    if (OriginalLiteralString != FormatedLiteralString) {
+      diag(MatchedInteger->getLocation(),
+           "unformatted representation of integer literal '%0'")
+          << OriginalLiteralString
+          << FixItHint::CreateInsertion(MatchedInteger->getLocation(),
+                                        FormatedLiteralString);
+    }
+  } else if (MatchedFloat != nullptr) {
+    // Get original literal source text
+    const StringRef OriginalLiteralString = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(MatchedFloat->getSourceRange()),
+        Source, Context.getLangOpts());
+
+    // Get formatting literal text
+    const std::string FormatedLiteralString;
+
+    // Compare the original and formatted representation of a literal
+    if (OriginalLiteralString != FormatedLiteralString) {
+      diag(MatchedFloat->getLocation(),
+           "unformatted representation of integer literal '%0'")
+          << OriginalLiteralString
+          << FixItHint::CreateInsertion(MatchedFloat->getLocation(),
+                                        FormatedLiteralString);
+    }
   } else {
-    Radix = 10;
-    GroupSize = 3;
-  }
-
-  if (OriginalLiteralString.ends_with("L") || OriginalLiteralString.ends_with("l") || OriginalLiteralString.ends_with("U") || OriginalLiteralString.ends_with("u")) {
-    Postfix = OriginalLiteralString.back();
-  }
-
-  // Get formatting literal text
-  const llvm::APInt IntegerValue = MatchedInteger->getValue();
-  std::vector<std::string> SplittedIntegerLiteral = splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
-//  if (OriginalLiteralString.contains('.')) {
-//    std::vector<std::string> SplitedString;
-//    const std::regex DotRegex(".");
-//    std::sregex_token_iterator
-//        Begin(OriginalLiteralString.str().begin(), OriginalLiteralString.str().end(), DotRegex, -1),
-//        End;
-//
-//    std::copy(Begin, End, std::back_inserter(SplitedString));
-////    const auto SplitedString = std::views::split(OriginalLiteralString, '.');
-//  } else {
-//    SplittedIntegerLiteral = splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
-//  }
-  const std::string FormatedLiteralString = Prefix +
-      std::accumulate(SplittedIntegerLiteral.begin(),
-                      SplittedIntegerLiteral.end(),
-                      std::string(""),
-                      [](std::basic_string<char> S1,
-                         std::basic_string<char> S2) { return S1 + "\'" + S2; })
-          .erase(0, 1) + Postfix;
-
-  // Compare the original and formatted representation of a literal
-  if (OriginalLiteralString != FormatedLiteralString) {
-    diag(MatchedInteger->getLocation(), "unformatted representation of integer literal '%0'")
-        << OriginalLiteralString
-        << FixItHint::CreateInsertion(MatchedInteger->getLocation(),
-                                      FormatedLiteralString);
+    assert(0);
   }
 }
 
