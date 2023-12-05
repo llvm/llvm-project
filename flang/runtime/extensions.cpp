@@ -11,10 +11,10 @@
 
 #include "flang/Runtime/extensions.h"
 #include "terminator.h"
+#include "flang/Runtime/character.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
-#include <cstring>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -81,14 +81,15 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 }
 
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
-  int charLen{LOGIN_NAME_MAX + 1};
-  char str[charLen];
+  const int nameMaxLen = LOGIN_NAME_MAX + 1;
+  char str[nameMaxLen];
 
-  int error{getlogin_r(*str, charLen)};
+  int error{getlogin_r(str, nameMaxLen)};
   Terminator terminator{__FILE__, __LINE__};
   RUNTIME_CHECK(terminator, error == 0);
 
-  CopyBufferAndPad(reinterpret_cast<char *>(arg), length, *str, charLen);
+  // find first \0 in string then pad from there
+  CopyAndPad(reinterpret_cast<char *>(arg), str, length, std::strlen(str));
 }
 
 } // namespace Fortran::runtime
