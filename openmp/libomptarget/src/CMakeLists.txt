@@ -55,6 +55,9 @@ target_compile_definitions(omptarget PRIVATE
   DEBUG_PREFIX="omptarget"
 )
 
+target_compile_options(omptarget PUBLIC ${offload_compile_flags})
+target_link_options(omptarget PUBLIC ${offload_link_flags})
+
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
