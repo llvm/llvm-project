@@ -109,7 +109,7 @@ private:
     void __release_ptr()
     {
         __ptr_ = nullptr;
-        __alloc_ = _VSTD::nullopt;
+        __alloc_ = std::nullopt;
     }
 
     _LIBCPP_HIDE_FROM_ABI
@@ -140,17 +140,17 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     __basic_node_handle(__basic_node_handle&& __other) noexcept
             : __ptr_(__other.__ptr_),
-              __alloc_(_VSTD::move(__other.__alloc_))
+              __alloc_(std::move(__other.__alloc_))
     {
         __other.__ptr_ = nullptr;
-        __other.__alloc_ = _VSTD::nullopt;
+        __other.__alloc_ = std::nullopt;
     }
 
     _LIBCPP_HIDE_FROM_ABI
     __basic_node_handle& operator=(__basic_node_handle&& __other)
     {
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
-            __alloc_ == _VSTD::nullopt ||
+            __alloc_ == std::nullopt ||
             __alloc_traits::propagate_on_container_move_assignment::value ||
             __alloc_ == __other.__alloc_,
             "node_type with incompatible allocator passed to "
@@ -160,11 +160,11 @@ public:
         __ptr_ = __other.__ptr_;
 
         if (__alloc_traits::propagate_on_container_move_assignment::value ||
-            __alloc_ == _VSTD::nullopt)
-            __alloc_ = _VSTD::move(__other.__alloc_);
+            __alloc_ == std::nullopt)
+            __alloc_ = std::move(__other.__alloc_);
 
         __other.__ptr_ = nullptr;
-        __other.__alloc_ = _VSTD::nullopt;
+        __other.__alloc_ = std::nullopt;
 
         return *this;
     }
@@ -183,10 +183,10 @@ public:
         __alloc_traits::propagate_on_container_swap::value ||
         __alloc_traits::is_always_equal::value)
     {
-        using _VSTD::swap;
+        using std::swap;
         swap(__ptr_, __other.__ptr_);
         if (__alloc_traits::propagate_on_container_swap::value ||
-            __alloc_ == _VSTD::nullopt || __other.__alloc_ == _VSTD::nullopt)
+            __alloc_ == std::nullopt || __other.__alloc_ == std::nullopt)
             swap(__alloc_, __other.__alloc_);
     }
 

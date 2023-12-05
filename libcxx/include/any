@@ -266,7 +266,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   any & operator=(any && __rhs) _NOEXCEPT {
-    any(_VSTD::move(__rhs)).swap(*this);
+    any(std::move(__rhs)).swap(*this);
     return *this;
   }
 
@@ -399,7 +399,7 @@ namespace __any_imp
         typedef allocator_traits<_Alloc> _ATraits;
         _Alloc __a;
         _Tp * __ret = static_cast<_Tp*>(static_cast<void*>(&__dest.__s_.__buf));
-        _ATraits::construct(__a, __ret, _VSTD::forward<_Args>(__args)...);
+        _ATraits::construct(__a, __ret, std::forward<_Args>(__args)...);
         __dest.__h_ = &_SmallHandler::__handle;
         return *__ret;
     }
@@ -423,7 +423,7 @@ namespace __any_imp
 
     _LIBCPP_HIDE_FROM_ABI
     static void __move(any & __this, any & __dest) {
-        _SmallHandler::__create(__dest, _VSTD::move(
+        _SmallHandler::__create(__dest, std::move(
             *static_cast<_Tp*>(static_cast<void*>(&__this.__s_.__buf))));
         __destroy(__this);
     }
@@ -485,7 +485,7 @@ namespace __any_imp
         _Alloc __a;
         unique_ptr<_Tp, _Dp> __hold(_ATraits::allocate(__a, 1), _Dp(__a, 1));
         _Tp * __ret = __hold.get();
-        _ATraits::construct(__a, __ret, _VSTD::forward<_Args>(__args)...);
+        _ATraits::construct(__a, __ret, std::forward<_Args>(__args)...);
         __dest.__s_.__ptr = __hold.release();
         __dest.__h_ = &_LargeHandler::__handle;
         return *__ret;
@@ -543,24 +543,24 @@ namespace __any_imp
 template <class _ValueType, class _Tp, class>
 any::any(_ValueType && __v) : __h_(nullptr)
 {
-  __any_imp::_Handler<_Tp>::__create(*this, _VSTD::forward<_ValueType>(__v));
+  __any_imp::_Handler<_Tp>::__create(*this, std::forward<_ValueType>(__v));
 }
 
 template <class _ValueType, class ..._Args, class _Tp, class>
 any::any(in_place_type_t<_ValueType>, _Args&&... __args) {
-  __any_imp::_Handler<_Tp>::__create(*this, _VSTD::forward<_Args>(__args)...);
+  __any_imp::_Handler<_Tp>::__create(*this, std::forward<_Args>(__args)...);
 }
 
 template <class _ValueType, class _Up, class ..._Args, class _Tp, class>
 any::any(in_place_type_t<_ValueType>, initializer_list<_Up> __il, _Args&&... __args) {
-  __any_imp::_Handler<_Tp>::__create(*this, __il, _VSTD::forward<_Args>(__args)...);
+  __any_imp::_Handler<_Tp>::__create(*this, __il, std::forward<_Args>(__args)...);
 }
 
 template <class _ValueType, class, class>
 inline _LIBCPP_HIDE_FROM_ABI
 any & any::operator=(_ValueType && __v)
 {
-  any(_VSTD::forward<_ValueType>(__v)).swap(*this);
+  any(std::forward<_ValueType>(__v)).swap(*this);
   return *this;
 }
 
@@ -568,14 +568,14 @@ template <class _ValueType, class ..._Args, class _Tp, class>
 inline _LIBCPP_HIDE_FROM_ABI
 _Tp& any::emplace(_Args&&... __args) {
   reset();
-  return __any_imp::_Handler<_Tp>::__create(*this, _VSTD::forward<_Args>(__args)...);
+  return __any_imp::_Handler<_Tp>::__create(*this, std::forward<_Args>(__args)...);
 }
 
 template <class _ValueType, class _Up, class ..._Args, class _Tp, class>
 inline _LIBCPP_HIDE_FROM_ABI
 _Tp& any::emplace(initializer_list<_Up> __il, _Args&&... __args) {
   reset();
-  return __any_imp::_Handler<_Tp>::__create(*this, __il, _VSTD::forward<_Args>(__args)...);
+  return __any_imp::_Handler<_Tp>::__create(*this, __il, std::forward<_Args>(__args)...);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI
@@ -608,13 +608,13 @@ void swap(any & __lhs, any & __rhs) _NOEXCEPT
 template <class _Tp, class ..._Args>
 inline _LIBCPP_HIDE_FROM_ABI
 any make_any(_Args&&... __args) {
-    return any(in_place_type<_Tp>, _VSTD::forward<_Args>(__args)...);
+    return any(in_place_type<_Tp>, std::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class _Up, class ..._Args>
 inline _LIBCPP_HIDE_FROM_ABI
 any make_any(initializer_list<_Up> __il, _Args&&... __args) {
-    return any(in_place_type<_Tp>, __il, _VSTD::forward<_Args>(__args)...);
+    return any(in_place_type<_Tp>, __il, std::forward<_Args>(__args)...);
 }
 
 template <class _ValueType>
@@ -626,7 +626,7 @@ _ValueType any_cast(any const & __v)
     static_assert(is_constructible<_ValueType, _RawValueType const &>::value,
                   "ValueType is required to be a const lvalue reference "
                   "or a CopyConstructible type");
-    auto __tmp = _VSTD::any_cast<add_const_t<_RawValueType>>(&__v);
+    auto __tmp = std::any_cast<add_const_t<_RawValueType>>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
     return static_cast<_ValueType>(*__tmp);
@@ -641,7 +641,7 @@ _ValueType any_cast(any & __v)
     static_assert(is_constructible<_ValueType, _RawValueType &>::value,
                   "ValueType is required to be an lvalue reference "
                   "or a CopyConstructible type");
-    auto __tmp = _VSTD::any_cast<_RawValueType>(&__v);
+    auto __tmp = std::any_cast<_RawValueType>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
     return static_cast<_ValueType>(*__tmp);
@@ -656,10 +656,10 @@ _ValueType any_cast(any && __v)
     static_assert(is_constructible<_ValueType, _RawValueType>::value,
                   "ValueType is required to be an rvalue reference "
                   "or a CopyConstructible type");
-    auto __tmp = _VSTD::any_cast<_RawValueType>(&__v);
+    auto __tmp = std::any_cast<_RawValueType>(&__v);
     if (__tmp == nullptr)
         __throw_bad_any_cast();
-    return static_cast<_ValueType>(_VSTD::move(*__tmp));
+    return static_cast<_ValueType>(std::move(*__tmp));
 }
 
 template <class _ValueType>
@@ -669,7 +669,7 @@ any_cast(any const * __any) _NOEXCEPT
 {
     static_assert(!is_reference<_ValueType>::value,
                   "_ValueType may not be a reference.");
-    return _VSTD::any_cast<_ValueType>(const_cast<any *>(__any));
+    return std::any_cast<_ValueType>(const_cast<any *>(__any));
 }
 
 template <class _RetType>
@@ -701,7 +701,7 @@ any_cast(any * __any) _NOEXCEPT
                           nullptr,
 #endif
                           __any_imp::__get_fallback_typeid<_ValueType>());
-        return _VSTD::__pointer_or_func_cast<_ReturnType>(
+        return std::__pointer_or_func_cast<_ReturnType>(
             __p, is_function<_ValueType>{});
     }
     return nullptr;
