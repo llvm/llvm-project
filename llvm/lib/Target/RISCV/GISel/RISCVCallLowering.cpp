@@ -432,60 +432,63 @@ void RISCVCallLowering::saveVarArgRegisters(
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
   ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
-  // Offset of the first variable argument from stack pointer, and size of
-  // the vararg save area. For now, the varargs save area is either zero or
-  // large enough to hold a0-a7.
-  int VaArgOffset;
+  // Size of the vararg save area. For now, the varargs save area is either
+  // zero or large enough to hold a0-a7.
   int VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
+  int FI;
 
   // If all registers are allocated, then all varargs must be passed on the
   // stack and we don't need to save any argregs.
   if (VarArgsSaveSize == 0) {
-    VaArgOffset = Assigner.StackSize;
+    int VaArgOffset = Assigner.StackSize;
+    FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
   } else {
-    VaArgOffset = -VarArgsSaveSize;
+    int VaArgOffset = -VarArgsSaveSize;
+    FI = MFI.CreateFixedObject(VarArgsSaveSize, VaArgOffset, true);
+
+    // If saving an odd number of registers then create an extra stack slot to
+    // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
+    // offsets to even-numbered registered remain 2*XLEN-aligned.
+    if (Idx % 2) {
+      MFI.CreateFixedObject(XLenInBytes,
+                            VaArgOffset - static_cast<int>(XLenInBytes), true);
+      VarArgsSaveSize += XLenInBytes;
+    }
+
+    const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
+                                Subtarget.getXLen());
+    const LLT sXLen = LLT::scalar(Subtarget.getXLen());
+
+    auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
+    auto Offset = MIRBuilder.buildConstant(
+        MRI.createGenericVirtualRegister(sXLen), XLenInBytes);
+
+    // Copy the integer registers that may have been used for passing varargs
+    // to the vararg save area.
+    const MVT XLenVT = Subtarget.getXLenVT();
+    for (unsigned I = Idx; I < ArgRegs.size(); ++I) {
+      const Register VReg = MRI.createGenericVirtualRegister(sXLen);
+      Handler.assignValueToReg(
+          VReg, ArgRegs[I],
+          CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,
+                              ArgRegs[I], XLenVT, CCValAssign::Full));
+      auto MPO =
+          MachinePointerInfo::getFixedStack(MF, FI, (I - Idx) * XLenInBytes);
+      MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+      FIN = MIRBuilder.buildPtrAdd(MRI.createGenericVirtualRegister(p0),
+                                   FIN.getReg(0), Offset);
+    }
   }
 
   // Record the frame index of the first variable argument which is a value
   // necessary to G_VASTART.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  int FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
-  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   RVFI->setVarArgsFrameIndex(FI);
-
-  // If saving an odd number of registers then create an extra stack slot to
-  // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
-  // offsets to even-numbered registered remain 2*XLEN-aligned.
-  if (Idx % 2) {
-    MFI.CreateFixedObject(XLenInBytes, VaArgOffset - (int)XLenInBytes, true);
-    VarArgsSaveSize += XLenInBytes;
-  }
   RVFI->setVarArgsSaveSize(VarArgsSaveSize);
-
-  // Copy the integer registers that may have been used for passing varargs
-  // to the vararg save area.
-  const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
-                              Subtarget.getXLen());
-  const LLT sXLen = LLT::scalar(Subtarget.getXLen());
-  const MVT XLenVT = Subtarget.getXLenVT();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += XLenInBytes) {
-    const Register VReg = MRI.createGenericVirtualRegister(sXLen);
-    Handler.assignValueToReg(
-        VReg, ArgRegs[I],
-        CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,
-                            ArgRegs[I], XLenVT, CCValAssign::Full));
-    FI = MFI.CreateFixedObject(XLenInBytes, VaArgOffset, true);
-    auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
-    auto MPO = MachinePointerInfo::getFixedStack(MF, FI);
-    auto Store =
-        MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
-    // This was taken from  SelectionDAG, but we are not sure why it exists.
-    // It is being investigated in github.com/llvm/llvm-project/issues/73735.
-    Store->memoperands()[0]->setValue((Value *)nullptr);
-  }
 }
 
 bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
