@@ -12,7 +12,6 @@
 #include "include/llvm-libc-types/ENTRY.h"
 #include "src/__support/CPP/bit.h" // bit_ceil
 #include "src/__support/CPP/new.h"
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/HashTable/bitmask.h"
 #include "src/__support/hash.h"
 #include "src/__support/macros/attributes.h"
@@ -118,7 +117,7 @@ private:
 
   LIBC_INLINE constexpr static size_t offset_to_groups() {
     size_t header_size = sizeof(HashTable);
-    return header_size + offset_to(header_size, table_alignment());
+    return header_size + SafeMemSize::offset_to(header_size, table_alignment());
   }
 
   LIBC_INLINE ENTRY &entry(size_t i) {
