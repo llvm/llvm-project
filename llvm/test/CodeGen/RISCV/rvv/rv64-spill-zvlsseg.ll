@@ -3,6 +3,8 @@
 ; RUN:    | FileCheck --check-prefix=SPILL-O0 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v -mattr=+m -O2 < %s \
 ; RUN:    | FileCheck --check-prefix=SPILL-O2 %s
+; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -O2 < %s \
+; RUN:    | FileCheck --check-prefix=SPILL-O2-VLEN128 %s
 
 define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O0-LABEL: spill_zvlsseg_nxv1i32:
@@ -56,6 +58,28 @@ define <vscale x 1 x i32> @spill_zvlsseg_nxv1i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16
 ; SPILL-O2-NEXT:    ret
+;
+; SPILL-O2-VLEN128-LABEL: spill_zvlsseg_nxv1i32:
+; SPILL-O2-VLEN128:       # %bb.0: # %entry
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -16
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -32
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
+; SPILL-O2-VLEN128-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 16
+; SPILL-O2-VLEN128-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    #APP
+; SPILL-O2-VLEN128-NEXT:    #NO_APP
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 16
+; SPILL-O2-VLEN128-NEXT:    vl1r.v v7, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 32
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
+; SPILL-O2-VLEN128-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vlseg2.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, ptr %base, i64 %vl)
   call void asm sideeffect "",
@@ -116,6 +140,28 @@ define <vscale x 2 x i32> @spill_zvlsseg_nxv2i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16
 ; SPILL-O2-NEXT:    ret
+;
+; SPILL-O2-VLEN128-LABEL: spill_zvlsseg_nxv2i32:
+; SPILL-O2-VLEN128:       # %bb.0: # %entry
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -16
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -32
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; SPILL-O2-VLEN128-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 16
+; SPILL-O2-VLEN128-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vs1r.v v9, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    #APP
+; SPILL-O2-VLEN128-NEXT:    #NO_APP
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 16
+; SPILL-O2-VLEN128-NEXT:    vl1r.v v7, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 32
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
+; SPILL-O2-VLEN128-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vlseg2.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, ptr %base, i64 %vl)
   call void asm sideeffect "",
@@ -179,6 +225,28 @@ define <vscale x 4 x i32> @spill_zvlsseg_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16
 ; SPILL-O2-NEXT:    ret
+;
+; SPILL-O2-VLEN128-LABEL: spill_zvlsseg_nxv4i32:
+; SPILL-O2-VLEN128:       # %bb.0: # %entry
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -16
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -64
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; SPILL-O2-VLEN128-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 32
+; SPILL-O2-VLEN128-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    #APP
+; SPILL-O2-VLEN128-NEXT:    #NO_APP
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 32
+; SPILL-O2-VLEN128-NEXT:    vl2r.v v6, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 64
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
+; SPILL-O2-VLEN128-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg2.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, ptr %base, i64 %vl)
   call void asm sideeffect "",
@@ -242,6 +310,28 @@ define <vscale x 8 x i32> @spill_zvlsseg_nxv8i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16
 ; SPILL-O2-NEXT:    ret
+;
+; SPILL-O2-VLEN128-LABEL: spill_zvlsseg_nxv8i32:
+; SPILL-O2-VLEN128:       # %bb.0: # %entry
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -16
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -128
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
+; SPILL-O2-VLEN128-NEXT:    vlseg2e32.v v8, (a0)
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 64
+; SPILL-O2-VLEN128-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vs4r.v v12, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    #APP
+; SPILL-O2-VLEN128-NEXT:    #NO_APP
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 64
+; SPILL-O2-VLEN128-NEXT:    vl4r.v v4, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vl4r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 128
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
+; SPILL-O2-VLEN128-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vlseg2.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, ptr %base, i64 %vl)
   call void asm sideeffect "",
@@ -314,6 +404,32 @@ define <vscale x 4 x i32> @spill_zvlsseg3_nxv4i32(ptr %base, i64 %vl) nounwind {
 ; SPILL-O2-NEXT:    add sp, sp, a0
 ; SPILL-O2-NEXT:    addi sp, sp, 16
 ; SPILL-O2-NEXT:    ret
+;
+; SPILL-O2-VLEN128-LABEL: spill_zvlsseg3_nxv4i32:
+; SPILL-O2-VLEN128:       # %bb.0: # %entry
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -16
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -96
+; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; SPILL-O2-VLEN128-NEXT:    vlseg3e32.v v8, (a0)
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 32
+; SPILL-O2-VLEN128-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vs2r.v v12, (a0) # Unknown-size Folded Spill
+; SPILL-O2-VLEN128-NEXT:    #APP
+; SPILL-O2-VLEN128-NEXT:    #NO_APP
+; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 16
+; SPILL-O2-VLEN128-NEXT:    li a1, 32
+; SPILL-O2-VLEN128-NEXT:    vl2r.v v6, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    add a0, a0, a1
+; SPILL-O2-VLEN128-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 96
+; SPILL-O2-VLEN128-NEXT:    addi sp, sp, 16
+; SPILL-O2-VLEN128-NEXT:    ret
 entry:
   %0 = tail call {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vlseg3.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, <vscale x 4 x i32> undef, ptr %base, i64 %vl)
   call void asm sideeffect "",

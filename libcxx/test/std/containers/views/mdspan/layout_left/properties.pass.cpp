@@ -53,7 +53,7 @@ constexpr void test_layout_mapping_left() {
 constexpr bool test() {
   constexpr size_t D = std::dynamic_extent;
   test_layout_mapping_left<std::extents<int>>();
-  test_layout_mapping_left<std::extents<char, 4, 5>>();
+  test_layout_mapping_left<std::extents<signed char, 4, 5>>();
   test_layout_mapping_left<std::extents<unsigned, D, 4>>();
   test_layout_mapping_left<std::extents<size_t, D, D, D, D>>();
   return true;

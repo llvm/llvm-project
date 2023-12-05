@@ -2853,46 +2853,55 @@ defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, SchedWriteFCmp>, E
 // - copy from GPR to mask register and vice versa
 //
 multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
-                         string OpcodeStr, RegisterClass KRC,
-                         ValueType vvt, X86MemOperand x86memop> {
-  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
-  def kk : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
-             !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
-             Sched<[WriteMove]>;
-  def km : I<opc_km, MRMSrcMem, (outs KRC:$dst), (ins x86memop:$src),
-             !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-             [(set KRC:$dst, (vvt (load addr:$src)))]>,
-             Sched<[WriteLoad]>;
-  def mk : I<opc_mk, MRMDestMem, (outs), (ins x86memop:$dst, KRC:$src),
-             !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
-             [(store KRC:$src, addr:$dst)]>,
-             Sched<[WriteStore]>;
+                          string OpcodeStr, RegisterClass KRC, ValueType vvt,
+                          X86MemOperand x86memop, string Suffix = ""> {
+  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove],
+      explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in
+  def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
+                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
+                  Sched<[WriteMove]>;
+  def km#Suffix : I<opc_km, MRMSrcMem, (outs KRC:$dst), (ins x86memop:$src),
+                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                    [(set KRC:$dst, (vvt (load addr:$src)))]>,
+                  Sched<[WriteLoad]>;
+  def mk#Suffix : I<opc_mk, MRMDestMem, (outs), (ins x86memop:$dst, KRC:$src),
+                    !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
+                    [(store KRC:$src, addr:$dst)]>,
+                  Sched<[WriteStore]>;
 }
 
 multiclass avx512_mask_mov_gpr<bits<8> opc_kr, bits<8> opc_rk,
-                             string OpcodeStr,
-                             RegisterClass KRC, RegisterClass GRC> {
+                               string OpcodeStr, RegisterClass KRC,
+                               RegisterClass GRC, string Suffix = ""> {
   let hasSideEffects = 0 in {
-    def kr : I<opc_kr, MRMSrcReg, (outs KRC:$dst), (ins GRC:$src),
-               !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
-               Sched<[WriteMove]>;
-    def rk : I<opc_rk, MRMSrcReg, (outs GRC:$dst), (ins KRC:$src),
-               !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
-               Sched<[WriteMove]>;
+    def kr#Suffix : I<opc_kr, MRMSrcReg, (outs KRC:$dst), (ins GRC:$src),
+                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
+                    Sched<[WriteMove]>;
+    def rk#Suffix : I<opc_rk, MRMSrcReg, (outs GRC:$dst), (ins KRC:$src),
+                      !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
+                    Sched<[WriteMove]>;
   }
 }
 
-let Predicates = [HasDQI] in
+let Predicates = [HasDQI, NoEGPR] in
   defm KMOVB : avx512_mask_mov<0x90, 0x90, 0x91, "kmovb", VK8, v8i1, i8mem>,
                avx512_mask_mov_gpr<0x92, 0x93, "kmovb", VK8, GR32>,
                VEX, PD;
+let Predicates = [HasDQI, HasEGPR, In64BitMode] in
+  defm KMOVB : avx512_mask_mov<0x90, 0x90, 0x91, "kmovb", VK8, v8i1, i8mem, "_EVEX">,
+               avx512_mask_mov_gpr<0x92, 0x93, "kmovb", VK8, GR32, "_EVEX">,
+               EVEX, PD;
 
-let Predicates = [HasAVX512] in
+let Predicates = [HasAVX512, NoEGPR] in
   defm KMOVW : avx512_mask_mov<0x90, 0x90, 0x91, "kmovw", VK16, v16i1, i16mem>,
                avx512_mask_mov_gpr<0x92, 0x93, "kmovw", VK16, GR32>,
                VEX, PS;
+let Predicates = [HasAVX512, HasEGPR, In64BitMode] in
+  defm KMOVW : avx512_mask_mov<0x90, 0x90, 0x91, "kmovw", VK16, v16i1, i16mem, "_EVEX">,
+               avx512_mask_mov_gpr<0x92, 0x93, "kmovw", VK16, GR32, "_EVEX">,
+               EVEX, PS;
 
-let Predicates = [HasBWI] in {
+let Predicates = [HasBWI, NoEGPR] in {
   defm KMOVD : avx512_mask_mov<0x90, 0x90, 0x91, "kmovd", VK32, v32i1,i32mem>,
                VEX, PD, REX_W;
   defm KMOVD : avx512_mask_mov_gpr<0x92, 0x93, "kmovd", VK32, GR32>,
@@ -2901,6 +2910,16 @@ let Predicates = [HasBWI] in {
                VEX, PS, REX_W;
   defm KMOVQ : avx512_mask_mov_gpr<0x92, 0x93, "kmovq", VK64, GR64>,
                VEX, XD, REX_W;
+}
+let Predicates = [HasBWI, HasEGPR, In64BitMode] in {
+  defm KMOVD : avx512_mask_mov<0x90, 0x90, 0x91, "kmovd", VK32, v32i1,i32mem, "_EVEX">,
+               EVEX, PD, REX_W;
+  defm KMOVD : avx512_mask_mov_gpr<0x92, 0x93, "kmovd", VK32, GR32, "_EVEX">,
+               EVEX, XD;
+  defm KMOVQ : avx512_mask_mov<0x90, 0x90, 0x91, "kmovq", VK64, v64i1, i64mem, "_EVEX">,
+               EVEX, PS, REX_W;
+  defm KMOVQ : avx512_mask_mov_gpr<0x92, 0x93, "kmovq", VK64, GR64, "_EVEX">,
+               EVEX, XD, REX_W;
 }
 
 // GR from/to mask register
@@ -12855,8 +12874,10 @@ multiclass avx512_vp2intersect<X86SchedWriteWidths sched, AVX512VLVectorVTInfo _
   }
 }
 
+let ExeDomain = SSEPackedInt in {
 defm VP2INTERSECTD : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i32_info>;
 defm VP2INTERSECTQ : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i64_info>, REX_W;
+}
 
 multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
                              X86SchedWriteWidths sched,

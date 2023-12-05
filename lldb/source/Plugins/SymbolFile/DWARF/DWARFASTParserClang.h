@@ -368,7 +368,7 @@ private:
                          const lldb_private::plugin::dwarf::DWARFDIE &die,
                          ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseSubroutine(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                               ParsedDWARFTypeAttributes &attrs);
+                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseArrayType(const lldb_private::plugin::dwarf::DWARFDIE &die,
                               const ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP

@@ -182,6 +182,11 @@ C++2c Feature Support
   This is applied to both C++ standard attributes, and other attributes supported by Clang.
   This completes the implementation of `P2361R6 Unevaluated Strings <https://wg21.link/P2361R6>`_
 
+- Implemented `P2864R2 Remove Deprecated Arithmetic Conversion on Enumerations From C++26 <https://wg21.link/P2864R2>`_.
+
+- Implemented `P2361R6 Template parameter initialization <https://wg21.link/P2308R1>`_.
+  This change is applied as a DR in all language modes.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -637,9 +642,19 @@ Bug Fixes in This Version
 - Fix crash during code generation of C++ coroutine initial suspend when the return
   type of await_resume is not trivially destructible.
   Fixes (`#63803 <https://github.com/llvm/llvm-project/issues/63803>`_)
+- ``__is_trivially_relocatable`` no longer returns true for non-object types
+  such as references and functions.
+  Fixes (`#67498 <https://github.com/llvm/llvm-project/issues/67498>`_)
 - Fix crash when the object used as a ``static_assert`` message has ``size`` or ``data`` members
   which are not member functions.
 - Support UDLs in ``static_assert`` message.
+- Fixed false positive error emitted by clang when performing qualified name
+  lookup and the current class instantiation has dependent bases.
+  Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
+- Fixes compile error that double colon operator cannot resolve macro with parentheses.
+  Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
+- Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
+  Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -781,9 +796,18 @@ Bug Fixes to C++ Support
   Fixes:
   (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
 
+- Clang now rejects incomplete types for ``__builtin_dump_struct``. Fixes:
+  (`#63506 <https://github.com/llvm/llvm-project/issues/63506>`_)
+
+- Fixed a crash for C++98/03 while checking an ill-formed ``_Static_assert`` expression.
+  Fixes: (`#72025 <https://github.com/llvm/llvm-project/issues/72025>`_)
+
 - Clang now defers the instantiation of explicit specifier until constraint checking
   completes (except deduction guides). Fixes:
   (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
+
+- Fix crash when parsing nested requirement. Fixes:
+  (`#73112 <https://github.com/llvm/llvm-project/issues/73112>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -962,6 +986,8 @@ clang-format
 - Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 - Change ``BreakAfterAttributes`` from ``Never`` to ``Leave`` in LLVM style.
 - Add ``BreakAdjacentStringLiterals`` option.
+- Add ``ObjCPropertyAttributeOrder`` which can be used to sort ObjC property
+  attributes (like ``nonatomic, strong, nullable``).
 
 libclang
 --------

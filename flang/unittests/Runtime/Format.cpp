@@ -111,6 +111,7 @@ TEST(FormatTests, FormatStringTraversal) {
           ResultsTy{"I4", "E10.1", "E10.1", "/", "I4", "E10.1", "E10.1", "/",
               "I4", "E10.1", "E10.1"},
           1},
+      {1, "(F)", ResultsTy{"F"}, 1}, // missing 'w'
   };
 
   for (const auto &[n, format, expect, repeat] : params) {
@@ -170,7 +171,7 @@ TEST(InvalidFormatFailure, MissingPrecision) {
       R"(Invalid FORMAT: integer expected at '\)')");
 }
 
-TEST(InvalidFormatFailure, MissingFormatWidth) {
+TEST(InvalidFormatFailure, MissingFormatWidthWithDigits) {
   static constexpr const char *format{"(F.9)"};
   static constexpr int repeat{1};
 

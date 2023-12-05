@@ -2451,7 +2451,7 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ], [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
 // CHECK-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // CHECK-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
-// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or i32 [[BF_VALUE_I]], 2143289344
+// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32 [[BF_SET9_I]] to float
 // CHECK-NEXT:    ret float [[TMP10]]
 //
@@ -2549,7 +2549,7 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // CHECK:       _ZL3nanPKc.exit:
 // CHECK-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ], [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
 // CHECK-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
-// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or i64 [[BF_VALUE_I]], 9221120237041090560
+// CHECK-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[BF_SET9_I]] to double
 // CHECK-NEXT:    ret double [[TMP10]]
 //

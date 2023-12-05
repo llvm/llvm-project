@@ -39,7 +39,7 @@ _warningFlags = [
     "-Wno-literal-suffix",  # GCC
     "-Wno-user-defined-literals",  # Clang
     # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
-    # function. (This mostely happens in C++11 mode.)
+    # function. (This mostly happens in C++11 mode.)
     # TODO(mordante) investigate a solution for this issue.
     "-Wno-tautological-compare",
     # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently

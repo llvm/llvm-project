@@ -73,7 +73,11 @@ def EnableArmStreaming
                             "new-za",
                             "The function has ZA state. The ZA state is "
                             "created on entry and destroyed on exit.")
-           )}]>
+           )}]>,
+    Option<"onlyIfRequiredByOps", "only-if-required-by-ops", "bool",
+           /*default=*/"false",
+           "Only apply the selected streaming/ZA modes if the function "
+           " contains ops that require them.">
   ];
   let dependentDialects = ["func::FuncDialect"];
 }
