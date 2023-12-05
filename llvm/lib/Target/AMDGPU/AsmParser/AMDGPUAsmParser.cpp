@@ -4199,10 +4199,9 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
     return true;
 
   Error(getSMEMOffsetLoc(Operands),
-        isGFX12Plus()
-            ? "expected a 24-bit signed offset"
-            : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
-                                   : "expected a 21-bit signed offset");
+        isGFX12Plus()          ? "expected a 24-bit signed offset"
+        : (isVI() || IsBuffer) ? "expected a 20-bit unsigned offset"
+                               : "expected a 21-bit signed offset");
 
   return false;
 }
