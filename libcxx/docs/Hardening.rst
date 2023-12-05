@@ -19,13 +19,13 @@ modes are:
 - **Unchecked mode/none**, which disables all hardening checks.
 - **Fast mode**, which contains a set of security-critical checks that can be
   done with relatively little overhead in constant time and are intended to be
-  used in production. We recommend most projects to adopt the fast mode.
-- **Extensive mode**, which contains all the checks from the fast mode and
-  some additional checks for undefined behavior that incur relatively little
-  overhead but aren't security-critical. Production builds requiring a broader
-  set of checks than fast mode should consider enabling extensive mode. The
-  additional rigour impacts performance more than fast mode: we recommend
-  benchmarking to determine if that is acceptable for your program.
+  used in production. We recommend most projects adopt this.
+- **Extensive mode**, which contains all the checks from fast mode and some
+  additional checks for undefined behavior that incur relatively little overhead
+  but aren't security-critical. Production builds requiring a broader set of
+  checks than fast mode should consider enabling extensive mode. The additional
+  rigour impacts performance more than fast mode: we recommend benchmarking to
+  determine if that is acceptable for your program.
 - **Debug mode**, which enables all the available checks in the library,
   including internal assertions, some of which might be very expensive. This
   mode is intended to be used for testing, not in production.
