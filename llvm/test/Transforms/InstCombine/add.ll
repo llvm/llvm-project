@@ -657,8 +657,8 @@ define <2 x i1> @test21vec(<2 x i32> %x) {
 define i32 @test22(i32 %V) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 10, label [[LAB1:%.*]]
-; CHECK-NEXT:    i32 20, label [[LAB2:%.*]]
+; CHECK-NEXT:      i32 10, label [[LAB1:%.*]]
+; CHECK-NEXT:      i32 20, label [[LAB2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       Default:
 ; CHECK-NEXT:    ret i32 123
@@ -1507,6 +1507,16 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   %i0 = shl i8 %x, 4
   %i1 = or i8 %i0, 15 ; no common bits
   call void @use(i8 %i1) ; extra use
+  %r = add i8 %i1, 42
+  ret i8 %r
+}
+
+define i8 @add_like_or_disjoint(i8 %x) {
+; CHECK-LABEL: @add_like_or_disjoint(
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 57
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i1 = or disjoint i8 %x, 15
   %r = add i8 %i1, 42
   ret i8 %r
 }

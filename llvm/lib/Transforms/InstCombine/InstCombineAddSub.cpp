@@ -903,8 +903,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
 
   // (X | Op01C) + Op1C --> X + (Op01C + Op1C) iff the `or` is actually an `add`
   Constant *Op01C;
-  if (match(Op0, m_Or(m_Value(X), m_ImmConstant(Op01C))) &&
-      haveNoCommonBitsSet(X, Op01C, SQ.getWithInstruction(&Add)))
+  if (match(Op0, m_DisjointOr(m_Value(X), m_ImmConstant(Op01C))))
     return BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
 
   // (X | C2) + C --> (X | C2) ^ C2 iff (C2 == -C)
