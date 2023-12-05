@@ -376,9 +376,9 @@ void Parser::ParseOpenACCDirective() {
     }
   } else if (DirKind == OpenACCDirectiveKind::Cache) {
     // Cache's paren var-list is required, so error here if it isn't provided.
-    // We know that the consumeOpen above left the first non-paren here, so use
-    // expectAndConsume to emit the proper dialog, then continue.
-    (void)T.expectAndConsume();
+    // We know that the consumeOpen above left the first non-paren here, so
+    // diagnose, then continue as if it was completely omitted.
+    Diag(Tok, diag::err_expected) << tok::l_paren;
   }
 
   // Parses the list of clauses, if present.
