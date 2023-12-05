@@ -76,6 +76,7 @@ export int aa = 43;
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
     Invocation->getFrontendOpts().DisableFree = false;
+    Invocation->getFrontendOpts().ModulesEmbedAllFiles = false;
 
     auto Buf = CIOpts.VFS->getBufferForFile("a.cppm");
     EXPECT_TRUE(Buf);
@@ -115,6 +116,7 @@ export int aa = 43;
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
     Invocation->getFrontendOpts().DisableFree = false;
+    Invocation->getFrontendOpts().ModulesEmbedAllFiles = false;
 
     CompilerInstance Clang;
 

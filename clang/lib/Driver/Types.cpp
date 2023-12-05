@@ -249,6 +249,10 @@ bool types::isCXX(ID Id) {
   }
 }
 
+bool types::isCXXModuleUnit(ID Id) {
+  return Id == TY_CXXModule || Id == TY_PP_CXXModule;
+}
+
 bool types::isLLVMIR(ID Id) {
   switch (Id) {
   default:

@@ -3817,6 +3817,13 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     Args.ClaimAllArgs(options::OPT_fmodules_disable_diagnostic_validation);
   }
 
+  // '-fmodules-embed-all-files' should be enabled by default for C++20 named
+  // modules.
+  // See the discussion in https://github.com/llvm/llvm-project/issues/72383.
+  if (types::isCXXModuleUnit(Input.getType()) && HaveModules) {
+    CmdArgs.push_back("-fmodules-embed-all-files");
+  }
+
   // Claim `-fmodule-output` and `-fmodule-output=` to avoid unused warnings.
   Args.ClaimAllArgs(options::OPT_fmodule_output);
   Args.ClaimAllArgs(options::OPT_fmodule_output_EQ);

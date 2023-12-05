@@ -80,6 +80,9 @@ namespace types {
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
 
+  /// isCXXModuleUnit - Is this a "C++ module unit" input.
+  bool isCXXModuleUnit(ID Id);
+
   /// Is this LLVM IR.
   bool isLLVMIR(ID Id);
 
