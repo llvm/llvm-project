@@ -536,6 +536,10 @@ public:
     return SanitizeBinaryMetadataCovered || SanitizeBinaryMetadataAtomics ||
            SanitizeBinaryMetadataUAR;
   }
+
+  /// Reset all of the options that are not considered when building a
+  /// module.
+  void resetNonModularOptions(StringRef ModuleFormat);
 };
 
 }  // end namespace clang
