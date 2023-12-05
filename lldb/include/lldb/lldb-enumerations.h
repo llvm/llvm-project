@@ -1299,8 +1299,9 @@ enum CompletionType {
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
   // This last enum element is just for input validation.
-  // Add new completions before this element.
-  eTerminatorCompletion = (1ul << 63)
+  // Add new completions before this element,
+  // and then increment eTerminatorCompletion's shift value
+  eTerminatorCompletion = (1ul << 27)
 };
 
 } // namespace lldb
