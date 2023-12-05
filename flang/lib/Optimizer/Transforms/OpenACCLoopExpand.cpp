@@ -44,6 +44,8 @@ static void clearInductionRangesAndAttrs(fir::FirOpBuilder &builder,
   accLoopOp.getLowerboundMutable().clear();
   accLoopOp.getUpperboundMutable().clear();
   accLoopOp.getStepMutable().clear();
+
+  accLoopOp.removeInclusiveUpperboundAttr();
 }
 
 static llvm::SmallVector<mlir::Value>
