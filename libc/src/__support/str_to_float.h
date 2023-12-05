@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/UInt128.h"
+#include "src/__support/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
@@ -68,12 +69,12 @@ template <class T> LIBC_INLINE uint32_t leading_zeroes(T inputNumber) {
 
 template <>
 LIBC_INLINE uint32_t leading_zeroes<uint32_t>(uint32_t inputNumber) {
-  return cpp::countl_zero(inputNumber);
+  return safe_clz(inputNumber);
 }
 
 template <>
 LIBC_INLINE uint32_t leading_zeroes<uint64_t>(uint64_t inputNumber) {
-  return cpp::countl_zero(inputNumber);
+  return safe_clz(inputNumber);
 }
 
 LIBC_INLINE uint64_t low64(const UInt128 &num) {
