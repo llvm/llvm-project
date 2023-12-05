@@ -1068,6 +1068,17 @@ define i8 @negation_of_increment_via_or_common_bits_set(i8 %x, i8 %y) {
   ret i8 %t2
 }
 
+define i8 @negation_of_increment_via_or_disjoint(i8 %x, i8 %y) {
+; CHECK-LABEL: @negation_of_increment_via_or_disjoint(
+; CHECK-NEXT:    [[T1_NEG:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t1 = or disjoint i8 %y, 1
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+
 ; 'or' of operands with no common bits set is 'add'
 define i8 @add_via_or_with_no_common_bits_set(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_via_or_with_no_common_bits_set(
