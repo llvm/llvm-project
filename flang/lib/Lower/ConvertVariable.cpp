@@ -639,11 +639,11 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(sym);
   mlir::Location loc = genLocation(converter, sym);
-  fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  fir::GlobalOp global;
   if (var.isModuleOrSubmoduleVariable()) {
-    // A module global was or will be defined when lowering the module. Emit
-    // only a declaration if the global does not exist at that point.
+    // A non-intrinsic module global is defined when lowering the module.
+    // Emit only a declaration if the global does not exist.
     global = declareGlobal(converter, var, globalName, linkage);
   } else {
     global = defineGlobal(converter, var, globalName, linkage);
@@ -2274,8 +2274,14 @@ void Fortran::lower::mapSymbolAttributes(
                       preAlloc);
 }
 
+void Fortran::lower::createIntrinsicModuleGlobal(
+    Fortran::lower::AbstractConverter &converter, const pft::Variable &var) {
+  defineGlobal(converter, var, converter.mangleName(var.getSymbol()),
+               converter.getFirOpBuilder().createLinkOnceODRLinkage());
+}
+
 void Fortran::lower::createRuntimeTypeInfoGlobal(
-    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &typeInfoSym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(typeInfoSym);

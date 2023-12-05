@@ -87,6 +87,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
+  __algorithm/pstl_equal.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
@@ -849,6 +850,7 @@ set(files
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
   __utility/move.h
+  __utility/no_destroy.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h

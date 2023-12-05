@@ -1,5 +1,8 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV1_4
 
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
+
 ;; TODO: We cannot check SPIR_V 1.1 and 1.4 simultaneously, implement additional
 ;;       run with CHECK-SPIRV1_1.
 

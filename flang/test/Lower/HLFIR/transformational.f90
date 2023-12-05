@@ -28,7 +28,7 @@ end subroutine
 ! CHECK:  %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_26]](%{{.*}}) {uniq_name = ".tmp.intrinsic_result"} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:  %[[VAL_29:.*]] = arith.constant true
 ! CHECK:  %[[VAL_30:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[VAL_29]] : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
-! CHECK:  %[[VAL_32:.*]]:3 = hlfir.associate %[[VAL_30]](%{{.*}}) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:  %[[VAL_32:.*]]:3 = hlfir.associate %[[VAL_30]](%{{.*}}) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:  %[[VAL_33:.*]] = fir.convert %[[VAL_32]]#1 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<2xi32>>
 ! CHECK:  fir.call @_QPtakes_array_arg(%[[VAL_33]])
 ! CHECK:  hlfir.end_associate %[[VAL_32]]#1, %[[VAL_32]]#2 : !fir.ref<!fir.array<?xi32>>, i1

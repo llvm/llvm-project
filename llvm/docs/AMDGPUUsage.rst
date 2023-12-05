@@ -820,6 +820,8 @@ supported for the ``amdgcn`` target.
   that reach other lanes or by explicitly constructing the scratch buffer descriptor,
   triggers undefined behavior when it modifies the scratch values of other lanes.
   The compiler may assume that such modifications do not occur.
+  When using code object V5 ``LIBOMPTARGET_STACK_SIZE`` may be used to provide the
+  private segment size in bytes, for cases where a dynamic stack is used.
 
 **Constant 32-bit**
   *TODO*

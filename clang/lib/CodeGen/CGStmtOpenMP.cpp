@@ -667,11 +667,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
           I->second.first ? I->second.first->getType() : Arg->getType(),
           AlignmentSource::Decl);
       if (LV.getType()->isAnyComplexType())
-        LV.setAddress(WrapperCGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            LV.getAddress(WrapperCGF),
-            PI->getType()->getPointerTo(
-                LV.getAddress(WrapperCGF).getAddressSpace()),
-            PI->getType()));
+        LV.setAddress(LV.getAddress(WrapperCGF).withElementType(PI->getType()));
       CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc());
     } else {
       auto EI = VLASizes.find(Arg);
@@ -2562,9 +2558,9 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
   (void)CGF.EmitOMPLinearClauseInit(S);
   {
     CodeGenFunction::OMPPrivateScope LoopScope(CGF);
+    CGF.EmitOMPPrivateClause(S, LoopScope);
     CGF.EmitOMPPrivateLoopCounters(S, LoopScope);
     CGF.EmitOMPLinearClause(S, LoopScope);
-    CGF.EmitOMPPrivateClause(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
     CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
         CGF, S, CGF.EmitLValue(S.getIterationVariable()));
@@ -4828,8 +4824,6 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
-      CopyFn = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          CopyFn, CopyFnTy->getPointerTo());
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : LastprivateDstsOrigs) {
@@ -5115,8 +5109,6 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
       }
       auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
                                                ParamTypes, /*isVarArg=*/false);
-      CopyFn = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          CopyFn, CopyFnTy->getPointerTo());
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : PrivatePtrs) {
@@ -6214,7 +6206,7 @@ static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
                                          X.getAddress(CGF).getElementType());
   }
   llvm::Value *Res =
-      CGF.Builder.CreateAtomicRMW(RMWOp, X.getPointer(CGF), UpdateVal, AO);
+      CGF.Builder.CreateAtomicRMW(RMWOp, X.getAddress(CGF), UpdateVal, AO);
   return std::make_pair(true, RValue::get(Res));
 }
 

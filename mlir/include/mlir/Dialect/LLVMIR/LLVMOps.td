@@ -1087,6 +1087,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<SymbolRefAttr>:$comdat,
+    DefaultValuedAttr<LLVM_DIGlobalVariableExpressionAttr, "{}">:$dbg_expr,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect global.";
@@ -1196,7 +1197,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"bool", "false">:$dsoLocal,
       CArg<"bool", "false">:$thread_local_,
       CArg<"SymbolRefAttr", "{}">:$comdat,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"DIGlobalVariableExpressionAttr", "{}">:$dbgExpr)>
   ];
 
   let extraClassDeclaration = [{
@@ -1391,7 +1393,9 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
-    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range
+    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
+    OptionalAttr<FramePointerKindAttr>:$frame_pointer,
+    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
   );
 
   let regions = (region AnyRegion:$body);

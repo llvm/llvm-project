@@ -297,17 +297,16 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVAPSZ256rm:
   case X86::VMOVUPDZ256rm:
   case X86::VMOVUPSZ256rm:
-    return ConvertToBroadcast(
-        0, HasDQI ? X86::VBROADCASTF64X2Z128rm : X86::VBROADCASTF32X4Z256rm,
-        X86::VBROADCASTSDZ256rm, X86::VBROADCASTSSZ256rm, 0, 0, 1);
+    return ConvertToBroadcast(0, X86::VBROADCASTF32X4Z256rm,
+                              X86::VBROADCASTSDZ256rm, X86::VBROADCASTSSZ256rm,
+                              0, 0, 1);
   case X86::VMOVAPDZrm:
   case X86::VMOVAPSZrm:
   case X86::VMOVUPDZrm:
   case X86::VMOVUPSZrm:
-    return ConvertToBroadcast(
-        HasDQI ? X86::VBROADCASTF32X8rm : X86::VBROADCASTF64X4rm,
-        HasDQI ? X86::VBROADCASTF64X2rm : X86::VBROADCASTF32X4rm,
-        X86::VBROADCASTSDZrm, X86::VBROADCASTSSZrm, 0, 0, 1);
+    return ConvertToBroadcast(X86::VBROADCASTF64X4rm, X86::VBROADCASTF32X4rm,
+                              X86::VBROADCASTSDZrm, X86::VBROADCASTSSZrm, 0, 0,
+                              1);
     /* Integer Loads */
   case X86::VMOVDQArm:
   case X86::VMOVDQUrm:
@@ -336,21 +335,18 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVDQA64Z256rm:
   case X86::VMOVDQU32Z256rm:
   case X86::VMOVDQU64Z256rm:
-    return ConvertToBroadcast(
-        0, HasDQI ? X86::VBROADCASTI64X2Z128rm : X86::VBROADCASTI32X4Z256rm,
-        X86::VPBROADCASTQZ256rm, X86::VPBROADCASTDZ256rm,
-        HasBWI ? X86::VPBROADCASTWZ256rm : 0,
-        HasBWI ? X86::VPBROADCASTBZ256rm : 0, 1);
+    return ConvertToBroadcast(0, X86::VBROADCASTI32X4Z256rm,
+                              X86::VPBROADCASTQZ256rm, X86::VPBROADCASTDZ256rm,
+                              HasBWI ? X86::VPBROADCASTWZ256rm : 0,
+                              HasBWI ? X86::VPBROADCASTBZ256rm : 0, 1);
   case X86::VMOVDQA32Zrm:
   case X86::VMOVDQA64Zrm:
   case X86::VMOVDQU32Zrm:
   case X86::VMOVDQU64Zrm:
-    return ConvertToBroadcast(
-        HasDQI ? X86::VBROADCASTI32X8rm : X86::VBROADCASTI64X4rm,
-        HasDQI ? X86::VBROADCASTI64X2rm : X86::VBROADCASTI32X4rm,
-        X86::VPBROADCASTQZrm, X86::VPBROADCASTDZrm,
-        HasBWI ? X86::VPBROADCASTWZrm : 0, HasBWI ? X86::VPBROADCASTBZrm : 0,
-        1);
+    return ConvertToBroadcast(X86::VBROADCASTI64X4rm, X86::VBROADCASTI32X4rm,
+                              X86::VPBROADCASTQZrm, X86::VPBROADCASTDZrm,
+                              HasBWI ? X86::VPBROADCASTWZrm : 0,
+                              HasBWI ? X86::VPBROADCASTBZrm : 0, 1);
   }
 
   auto ConvertToBroadcastAVX512 = [&](unsigned OpSrc32, unsigned OpSrc64) {
