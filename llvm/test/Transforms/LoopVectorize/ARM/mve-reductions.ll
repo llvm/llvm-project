@@ -1380,7 +1380,7 @@ entry:
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
   %red.phi = phi i32 [ %red.2, %for.body ], [ 0, %entry ]
-  %add = or i32 %iv, 1
+  %add = or disjoint i32 %iv, 1
   %gep.0 = getelementptr inbounds i32, ptr %arr, i32 %add
   %l.0 = load i32, ptr %gep.0, align 4
   %gep.1 = getelementptr inbounds i32, ptr %arr, i32 %iv

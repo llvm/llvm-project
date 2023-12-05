@@ -85,7 +85,7 @@ INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
 
 #if SANITIZER_INTERCEPT_REALLOCARRAY
 INTERCEPTOR(void*, reallocarray, void *ptr, uptr nmemb, uptr size) {
-  ENSURE_ASAN_INITED();
+  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
   return asan_reallocarray(ptr, nmemb, size, &stack);
 }
