@@ -773,7 +773,7 @@ define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.x>
-; CHECK-NEXT:   WIDEN ir<%or.1> = or ir<%lv>, ir<1>
+; CHECK-NEXT:   WIDEN ir<%or.1> = or disjoint ir<%lv>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%or.2> = or ir<%lv>, ir<3>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nuw nsw ir<%or.1>, ir<%or.2>
 ; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%add>

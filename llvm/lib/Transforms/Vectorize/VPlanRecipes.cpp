@@ -635,6 +635,10 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::Cmp:
     O << " " << CmpInst::getPredicateName(getPredicate());
     break;
+  case OperationType::DisjointOp:
+    if (DisjointFlags.IsDisjoint)
+      O << " disjoint";
+    break;
   case OperationType::PossiblyExactOp:
     if (ExactFlags.IsExact)
       O << " exact";
