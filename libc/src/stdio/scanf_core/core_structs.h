@@ -46,7 +46,7 @@ struct FormatSection {
 
   cpp::bitset<256> scan_set;
 
-  bool operator==(const FormatSection &other) {
+  LIBC_INLINE bool operator==(const FormatSection &other) {
     if (has_conv != other.has_conv)
       return false;
 
