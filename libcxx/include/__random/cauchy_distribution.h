@@ -120,7 +120,7 @@ cauchy_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     uniform_real_distribution<result_type> __gen;
     // purposefully let tan arg get as close to pi/2 as it wants, tan will return a finite
-    return __p.a() + __p.b() * _VSTD::tan(3.1415926535897932384626433832795 * __gen(__g));
+    return __p.a() + __p.b() * std::tan(3.1415926535897932384626433832795 * __gen(__g));
 }
 
 template <class _CharT, class _Traits, class _RT>

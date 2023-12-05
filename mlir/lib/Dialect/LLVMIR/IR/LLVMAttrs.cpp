@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -31,8 +32,8 @@ static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
 
 /// Prints DWARF expression arguments with respect to the specific DWARF
 /// operation. Some operands are printed in their textual form.
-static LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
-                                        ArrayRef<uint64_t> args);
+static void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
+                               ArrayRef<uint64_t> args);
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
@@ -166,8 +167,8 @@ LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
   return parser.parseCommaSeparatedList(operandParser);
 }
 
-LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
-                                 ArrayRef<uint64_t> args) {
+void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
+                        ArrayRef<uint64_t> args) {
   size_t i = 0;
   llvm::interleaveComma(args, printer, [&](uint64_t operand) {
     if (i > 0 && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
@@ -182,5 +183,68 @@ LogicalResult printExpressionArg(AsmPrinter &printer, uint64_t opcode,
     printer << operand;
     i++;
   });
+}
+
+//===----------------------------------------------------------------------===//
+// TargetFeaturesAttr
+//===----------------------------------------------------------------------===//
+
+TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
+                                           llvm::ArrayRef<StringRef> features) {
+  return Base::get(context,
+                   llvm::map_to_vector(features, [&](StringRef feature) {
+                     return StringAttr::get(context, feature);
+                   }));
+}
+
+TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
+                                           StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
+  return get(context, features);
+}
+
+LogicalResult
+TargetFeaturesAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           llvm::ArrayRef<StringAttr> features) {
+  for (StringAttr featureAttr : features) {
+    if (!featureAttr || featureAttr.empty())
+      return emitError() << "target features can not be null or empty";
+    auto feature = featureAttr.strref();
+    if (feature[0] != '+' && feature[0] != '-')
+      return emitError() << "target features must start with '+' or '-'";
+    if (feature.contains(','))
+      return emitError() << "target features can not contain ','";
+  }
   return success();
+}
+
+bool TargetFeaturesAttr::contains(StringAttr feature) const {
+  if (nullOrEmpty())
+    return false;
+  // Note: Using StringAttr does pointer comparisons.
+  return llvm::is_contained(getFeatures(), feature);
+}
+
+bool TargetFeaturesAttr::contains(StringRef feature) const {
+  if (nullOrEmpty())
+    return false;
+  return llvm::is_contained(getFeatures(), feature);
+}
+
+std::string TargetFeaturesAttr::getFeaturesString() const {
+  std::string featuresString;
+  llvm::raw_string_ostream ss(featuresString);
+  llvm::interleave(
+      getFeatures(), ss, [&](auto &feature) { ss << feature.strref(); }, ",");
+  return ss.str();
+}
+
+TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
+  auto parentFunction = op->getParentOfType<FunctionOpInterface>();
+  if (!parentFunction)
+    return {};
+  return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
+      getAttributeName());
 }

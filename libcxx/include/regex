@@ -1470,7 +1470,7 @@ class __node
     __node(const __node&);
     __node& operator=(const __node&);
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __node() {}
@@ -1490,7 +1490,7 @@ class __end_state
     : public __node<_CharT>
 {
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __end_state() {}
@@ -1555,7 +1555,7 @@ class __empty_state
     typedef __owns_one_state<_CharT> base;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __empty_state(__node<_CharT>* __s)
@@ -1581,7 +1581,7 @@ class __empty_non_own_state
     typedef __has_one_state<_CharT> base;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __empty_non_own_state(__node<_CharT>* __s)
@@ -1607,7 +1607,7 @@ class __repeat_one_loop
     typedef __has_one_state<_CharT> base;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __repeat_one_loop(__node<_CharT>* __s)
@@ -1669,7 +1669,7 @@ class __loop
     bool __greedy_;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __loop(unsigned __loop_id,
@@ -1768,7 +1768,7 @@ class __alternate
     typedef __owns_two_states<_CharT> base;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __alternate(__owns_one_state<_CharT>* __s1,
@@ -1807,7 +1807,7 @@ class __begin_marked_subexpression
 
     unsigned __mexp_;
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __begin_marked_subexpression(unsigned __mexp, __node<_CharT>* __s)
@@ -1835,7 +1835,7 @@ class __end_marked_subexpression
 
     unsigned __mexp_;
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __end_marked_subexpression(unsigned __mexp, __node<_CharT>* __s)
@@ -1864,7 +1864,7 @@ class __back_ref
 
     unsigned __mexp_;
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __back_ref(unsigned __mexp, __node<_CharT>* __s)
@@ -1884,7 +1884,7 @@ __back_ref<_CharT>::__exec(__state& __s) const
     {
         ptrdiff_t __len = __sm.second - __sm.first;
         if (__s.__last_ - __s.__current_ >= __len &&
-            _VSTD::equal(__sm.first, __sm.second, __s.__current_))
+            std::equal(__sm.first, __sm.second, __s.__current_))
         {
             __s.__do_ = __state::__accept_but_not_consume;
             __s.__current_ += __len;
@@ -1914,7 +1914,7 @@ class __back_ref_icase
     _Traits __traits_;
     unsigned __mexp_;
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __back_ref_icase(const _Traits& __traits, unsigned __mexp,
@@ -1969,7 +1969,7 @@ class __back_ref_collate
     _Traits __traits_;
     unsigned __mexp_;
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __back_ref_collate(const _Traits& __traits, unsigned __mexp,
@@ -2024,7 +2024,7 @@ class __word_boundary
     _Traits __traits_;
     bool __invert_;
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     explicit __word_boundary(const _Traits& __traits, bool __invert,
@@ -2101,7 +2101,7 @@ class __l_anchor_multiline
     bool __multiline_;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __l_anchor_multiline(bool __multiline, __node<_CharT>* __s)
@@ -2122,7 +2122,7 @@ __l_anchor_multiline<_CharT>::__exec(__state& __s) const
     }
     else if (__multiline_ &&
              !__s.__at_first_ &&
-             std::__is_eol(*_VSTD::prev(__s.__current_)))
+             std::__is_eol(*std::prev(__s.__current_)))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2145,7 +2145,7 @@ class __r_anchor_multiline
     bool __multiline_;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __r_anchor_multiline(bool __multiline, __node<_CharT>* __s)
@@ -2185,7 +2185,7 @@ class __match_any
     typedef __owns_one_state<_CharT> base;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __match_any(__node<_CharT>* __s)
@@ -2220,7 +2220,7 @@ class __match_any_but_newline
     typedef __owns_one_state<_CharT> base;
 
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __match_any_but_newline(__node<_CharT>* __s)
@@ -2247,7 +2247,7 @@ class __match_char
     __match_char(const __match_char&);
     __match_char& operator=(const __match_char&);
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __match_char(_CharT __c, __node<_CharT>* __s)
@@ -2287,7 +2287,7 @@ class __match_char_icase
     __match_char_icase(const __match_char_icase&);
     __match_char_icase& operator=(const __match_char_icase&);
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __match_char_icase(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
@@ -2328,7 +2328,7 @@ class __match_char_collate
     __match_char_collate(const __match_char_collate&);
     __match_char_collate& operator=(const __match_char_collate&);
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __match_char_collate(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
@@ -2380,7 +2380,7 @@ class __bracket_expression
     __bracket_expression(const __bracket_expression&);
     __bracket_expression& operator=(const __bracket_expression&);
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __bracket_expression(const _Traits& __traits, __node<_CharT>* __s,
@@ -2446,7 +2446,7 @@ public:
                     __b[0] = __traits_.translate_nocase(__b[0]);
                     __e[0] = __traits_.translate_nocase(__e[0]);
                 }
-                __ranges_.push_back(std::make_pair(_VSTD::move(__b), _VSTD::move(__e)));
+                __ranges_.push_back(std::make_pair(std::move(__b), std::move(__e)));
             }
         }
     _LIBCPP_HIDE_FROM_ABI
@@ -2483,7 +2483,7 @@ __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const
         ++__consumed;
         if (__might_have_digraph_)
         {
-            const _CharT* __next = _VSTD::next(__s.__current_);
+            const _CharT* __next = std::next(__s.__current_);
             if (__next != __s.__last_)
             {
                 pair<_CharT, _CharT> __ch2(*__s.__current_, *__next);
@@ -2577,7 +2577,7 @@ __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const
         {
             const bool __in_neg_mask = __traits_.isctype(__ch, __neg_mask_);
           const bool __in_neg_chars =
-              _VSTD::find(__neg_chars_.begin(), __neg_chars_.end(), __ch) !=
+              std::find(__neg_chars_.begin(), __neg_chars_.end(), __ch) !=
               __neg_chars_.end();
           if (!(__in_neg_mask || __in_neg_chars))
           {
@@ -2667,8 +2667,8 @@ private:
     shared_ptr<__empty_state<_CharT> > __start_;
     __owns_one_state<_CharT>* __end_;
 
-    typedef _VSTD::__state<_CharT> __state;
-    typedef _VSTD::__node<_CharT> __node;
+    typedef std::__state<_CharT> __state;
+    typedef std::__node<_CharT> __node;
 
 public:
     // constants:
@@ -2762,7 +2762,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
     basic_regex& assign(basic_regex&& __that) _NOEXCEPT
-        {return *this = _VSTD::move(__that);}
+        {return *this = std::move(__that);}
 #endif
     _LIBCPP_HIDE_FROM_ABI
     basic_regex& assign(const value_type* __p, flag_type __f = regex_constants::ECMAScript)
@@ -3137,7 +3137,7 @@ template <class _CharT, class _Traits>
 void
 basic_regex<_CharT, _Traits>::swap(basic_regex& __r)
 {
-    using _VSTD::swap;
+    using std::swap;
     swap(__traits_, __r.__traits_);
     swap(__flags_, __r.__flags_);
     swap(__marked_count_, __r.__marked_count_);
@@ -3170,7 +3170,7 @@ class __lookahead
     __lookahead(const __lookahead&);
     __lookahead& operator=(const __lookahead&);
 public:
-    typedef _VSTD::__state<_CharT> __state;
+    typedef std::__state<_CharT> __state;
 
     _LIBCPP_HIDE_FROM_ABI
     __lookahead(const basic_regex<_CharT, _Traits>& __exp, bool __invert, __node<_CharT>* __s, unsigned __mexp)
@@ -3271,7 +3271,7 @@ basic_regex<_CharT, _Traits>::__parse_basic_reg_exp(_ForwardIterator __first,
             __first = __parse_RE_expression(__first, __last);
             if (__first != __last)
             {
-                _ForwardIterator __temp = _VSTD::next(__first);
+                _ForwardIterator __temp = std::next(__first);
                 if (__temp == __last && *__first == '$')
                 {
                     __push_r_anchor();
@@ -3488,7 +3488,7 @@ basic_regex<_CharT, _Traits>::__parse_Back_open_paren(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last)
         {
             if (*__first == '\\' && *__temp == '(')
@@ -3506,7 +3506,7 @@ basic_regex<_CharT, _Traits>::__parse_Back_close_paren(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last)
         {
             if (*__first == '\\' && *__temp == ')')
@@ -3524,7 +3524,7 @@ basic_regex<_CharT, _Traits>::__parse_Back_open_brace(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last)
         {
             if (*__first == '\\' && *__temp == '{')
@@ -3542,7 +3542,7 @@ basic_regex<_CharT, _Traits>::__parse_Back_close_brace(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last)
         {
             if (*__first == '\\' && *__temp == '}')
@@ -3560,7 +3560,7 @@ basic_regex<_CharT, _Traits>::__parse_BACKREF(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last && *__first == '\\' && __test_back_ref(*__temp))
             __first = ++__temp;
     }
@@ -3575,7 +3575,7 @@ basic_regex<_CharT, _Traits>::__parse_ORD_CHAR(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp == __last && *__first == '$')
             return __first;
         // Not called inside a bracket
@@ -3633,7 +3633,7 @@ basic_regex<_CharT, _Traits>::__parse_QUOTED_CHAR(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last)
         {
             if (*__first == '\\')
@@ -3664,7 +3664,7 @@ basic_regex<_CharT, _Traits>::__parse_QUOTED_CHAR_ERE(_ForwardIterator __first,
 {
     if (__first != __last)
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         if (__temp != __last)
         {
             if (*__first == '\\')
@@ -3945,7 +3945,7 @@ basic_regex<_CharT, _Traits>::__parse_expression_term(_ForwardIterator __first,
 {
     if (__first != __last && *__first != ']')
     {
-        _ForwardIterator __temp = _VSTD::next(__first);
+        _ForwardIterator __temp = std::next(__first);
         basic_string<_CharT> __start_range;
         if (__temp != __last && *__first == '[')
         {
@@ -3974,7 +3974,7 @@ basic_regex<_CharT, _Traits>::__parse_expression_term(_ForwardIterator __first,
         }
         if (__first != __last && *__first != ']')
         {
-            __temp = _VSTD::next(__first);
+            __temp = std::next(__first);
             if (__temp != __last && *__first == '-' && *__temp != ']')
             {
                 // parse a range
@@ -4000,7 +4000,7 @@ basic_regex<_CharT, _Traits>::__parse_expression_term(_ForwardIterator __first,
                         ++__first;
                     }
                 }
-                __ml->__add_range(_VSTD::move(__start_range), _VSTD::move(__end_range));
+                __ml->__add_range(std::move(__start_range), std::move(__end_range));
             }
             else if (!__start_range.empty())
             {
@@ -4155,7 +4155,7 @@ basic_regex<_CharT, _Traits>::__parse_equivalence_class(_ForwardIterator __first
     // Found [=
     //   This means =] must exist
     value_type __equal_close[2] = {'=', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, __equal_close,
+    _ForwardIterator __temp = std::search(__first, __last, __equal_close,
                                                             __equal_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
@@ -4183,7 +4183,7 @@ basic_regex<_CharT, _Traits>::__parse_equivalence_class(_ForwardIterator __first
             __throw_regex_error<regex_constants::error_collate>();
         }
     }
-    __first = _VSTD::next(__temp, 2);
+    __first = std::next(__temp, 2);
     return __first;
 }
 
@@ -4197,7 +4197,7 @@ basic_regex<_CharT, _Traits>::__parse_character_class(_ForwardIterator __first,
     // Found [:
     //   This means :] must exist
     value_type __colon_close[2] = {':', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, __colon_close,
+    _ForwardIterator __temp = std::search(__first, __last, __colon_close,
                                                             __colon_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
@@ -4208,7 +4208,7 @@ basic_regex<_CharT, _Traits>::__parse_character_class(_ForwardIterator __first,
     if (__class_type == 0)
         __throw_regex_error<regex_constants::error_ctype>();
     __ml->__add_class(__class_type);
-    __first = _VSTD::next(__temp, 2);
+    __first = std::next(__temp, 2);
     return __first;
 }
 
@@ -4222,7 +4222,7 @@ basic_regex<_CharT, _Traits>::__parse_collating_symbol(_ForwardIterator __first,
     // Found [.
     //   This means .] must exist
     value_type __dot_close[2] = {'.', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, __dot_close,
+    _ForwardIterator __temp = std::search(__first, __last, __dot_close,
                                                             __dot_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
@@ -4236,7 +4236,7 @@ basic_regex<_CharT, _Traits>::__parse_collating_symbol(_ForwardIterator __first,
     default:
         __throw_regex_error<regex_constants::error_collate>();
     }
-    __first = _VSTD::next(__temp, 2);
+    __first = std::next(__temp, 2);
     return __first;
 }
 
@@ -4347,7 +4347,7 @@ basic_regex<_CharT, _Traits>::__parse_assertion(_ForwardIterator __first,
             break;
         case '\\':
             {
-                _ForwardIterator __temp = _VSTD::next(__first);
+                _ForwardIterator __temp = std::next(__first);
                 if (__temp != __last)
                 {
                     if (*__temp == 'b')
@@ -4365,7 +4365,7 @@ basic_regex<_CharT, _Traits>::__parse_assertion(_ForwardIterator __first,
             break;
         case '(':
             {
-                _ForwardIterator __temp = _VSTD::next(__first);
+                _ForwardIterator __temp = std::next(__first);
                 if (__temp != __last && *__temp == '?')
                 {
                     if (++__temp != __last)
@@ -4378,7 +4378,7 @@ basic_regex<_CharT, _Traits>::__parse_assertion(_ForwardIterator __first,
                                 __exp.__flags_ = __flags_;
                                 __temp = __exp.__parse(++__temp, __last);
                                 unsigned __mexp = __exp.__marked_count_;
-                                __push_lookahead(_VSTD::move(__exp), false, __marked_count_);
+                                __push_lookahead(std::move(__exp), false, __marked_count_);
                                 __marked_count_ += __mexp;
                                 if (__temp == __last || *__temp != ')')
                                     __throw_regex_error<regex_constants::error_paren>();
@@ -4391,7 +4391,7 @@ basic_regex<_CharT, _Traits>::__parse_assertion(_ForwardIterator __first,
                                 __exp.__flags_ = __flags_;
                                 __temp = __exp.__parse(++__temp, __last);
                                 unsigned __mexp = __exp.__marked_count_;
-                                __push_lookahead(_VSTD::move(__exp), true, __marked_count_);
+                                __push_lookahead(std::move(__exp), true, __marked_count_);
                                 __marked_count_ += __mexp;
                                 if (__temp == __last || *__temp != ')')
                                     __throw_regex_error<regex_constants::error_paren>();
@@ -4433,7 +4433,7 @@ basic_regex<_CharT, _Traits>::__parse_atom(_ForwardIterator __first,
                 ++__first;
                 if (__first == __last)
                     __throw_regex_error<regex_constants::error_paren>();
-                _ForwardIterator __temp = _VSTD::next(__first);
+                _ForwardIterator __temp = std::next(__first);
                 if (__temp != __last && *__first == '?' && *__temp == ':')
                 {
                     ++__open_count_;
@@ -4479,7 +4479,7 @@ basic_regex<_CharT, _Traits>::__parse_atom_escape(_ForwardIterator __first,
 {
     if (__first != __last && *__first == '\\')
     {
-        _ForwardIterator __t1 = _VSTD::next(__first);
+        _ForwardIterator __t1 = std::next(__first);
         if (__t1 == __last)
             __throw_regex_error<regex_constants::error_escape>();
 
@@ -4631,7 +4631,7 @@ basic_regex<_CharT, _Traits>::__parse_character_escape(_ForwardIterator __first,
             ++__first;
             break;
         case 'c':
-            if ((__t = _VSTD::next(__first)) != __last)
+            if ((__t = std::next(__first)) != __last)
             {
                 if (('A' <= *__t && *__t <= 'Z') ||
                     ('a' <= *__t && *__t <= 'z'))
@@ -4750,7 +4750,7 @@ basic_regex<_CharT, _Traits>::__parse_grep(_ForwardIterator __first,
                                            _ForwardIterator __last)
 {
     __owns_one_state<_CharT>* __sa = __end_;
-    _ForwardIterator __t1 = _VSTD::find(__first, __last, _CharT('\n'));
+    _ForwardIterator __t1 = std::find(__first, __last, _CharT('\n'));
     if (__t1 != __first)
         __parse_basic_reg_exp(__first, __t1);
     else
@@ -4760,7 +4760,7 @@ basic_regex<_CharT, _Traits>::__parse_grep(_ForwardIterator __first,
         ++__first;
     while (__first != __last)
     {
-        __t1 = _VSTD::find(__first, __last, _CharT('\n'));
+        __t1 = std::find(__first, __last, _CharT('\n'));
         __owns_one_state<_CharT>* __sb = __end_;
         if (__t1 != __first)
             __parse_basic_reg_exp(__first, __t1);
@@ -4781,7 +4781,7 @@ basic_regex<_CharT, _Traits>::__parse_egrep(_ForwardIterator __first,
                                             _ForwardIterator __last)
 {
     __owns_one_state<_CharT>* __sa = __end_;
-    _ForwardIterator __t1 = _VSTD::find(__first, __last, _CharT('\n'));
+    _ForwardIterator __t1 = std::find(__first, __last, _CharT('\n'));
     if (__t1 != __first)
         __parse_extended_reg_exp(__first, __t1);
     else
@@ -4791,7 +4791,7 @@ basic_regex<_CharT, _Traits>::__parse_egrep(_ForwardIterator __first,
         ++__first;
     while (__first != __last)
     {
-        __t1 = _VSTD::find(__first, __last, _CharT('\n'));
+        __t1 = std::find(__first, __last, _CharT('\n'));
         __owns_one_state<_CharT>* __sb = __end_;
         if (__t1 != __first)
             __parse_extended_reg_exp(__first, __t1);
@@ -5015,7 +5015,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     difference_type length() const
-        {return matched ? _VSTD::distance(this->first, this->second) : 0;}
+        {return matched ? std::distance(this->first, this->second) : 0;}
     _LIBCPP_HIDE_FROM_ABI
     string_type str() const
         {return matched ? string_type(this->first, this->second) : string_type();}
@@ -5536,7 +5536,7 @@ public:
     difference_type position(size_type __sub = 0) const
         {
         _LIBCPP_ASSERT_UNCATEGORIZED(ready(), "match_results::position() called when not ready");
-        return _VSTD::distance(__position_start_, (*this)[__sub].first);
+        return std::distance(__position_start_, (*this)[__sub].first);
         }
     _LIBCPP_HIDE_FROM_ABI
     string_type str(size_type __sub = 0) const
@@ -5623,18 +5623,18 @@ public:
         __matches_.resize(__m.size());
         for (size_type __i = 0; __i < __matches_.size(); ++__i)
         {
-            __matches_[__i].first = _VSTD::next(__f, _VSTD::distance(__mf, __m[__i].first));
-            __matches_[__i].second = _VSTD::next(__f, _VSTD::distance(__mf, __m[__i].second));
+            __matches_[__i].first = std::next(__f, std::distance(__mf, __m[__i].first));
+            __matches_[__i].second = std::next(__f, std::distance(__mf, __m[__i].second));
             __matches_[__i].matched = __m[__i].matched;
         }
         __unmatched_.first   = __l;
         __unmatched_.second  = __l;
         __unmatched_.matched = false;
-        __prefix_.first = _VSTD::next(__f, _VSTD::distance(__mf, __m.prefix().first));
-        __prefix_.second = _VSTD::next(__f, _VSTD::distance(__mf, __m.prefix().second));
+        __prefix_.first = std::next(__f, std::distance(__mf, __m.prefix().first));
+        __prefix_.second = std::next(__f, std::distance(__mf, __m.prefix().second));
         __prefix_.matched = __m.prefix().matched;
-        __suffix_.first = _VSTD::next(__f, _VSTD::distance(__mf, __m.suffix().first));
-        __suffix_.second = _VSTD::next(__f, _VSTD::distance(__mf, __m.suffix().second));
+        __suffix_.first = std::next(__f, std::distance(__mf, __m.suffix().first));
+        __suffix_.second = std::next(__f, std::distance(__mf, __m.suffix().second));
         __suffix_.matched = __m.suffix().matched;
         if (!__no_update_pos)
             __position_start_ = __prefix_.first;
@@ -5706,7 +5706,7 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output_i
         for (; __fmt_first != __fmt_last; ++__fmt_first)
         {
             if (*__fmt_first == '&')
-                __output_iter = _VSTD::copy(__matches_[0].first, __matches_[0].second,
+                __output_iter = std::copy(__matches_[0].first, __matches_[0].second,
                                    __output_iter);
             else if (*__fmt_first == '\\' && __fmt_first + 1 != __fmt_last)
             {
@@ -5714,7 +5714,7 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output_i
                 if ('0' <= *__fmt_first && *__fmt_first <= '9')
                 {
                     size_t __i = *__fmt_first - '0';
-                    __output_iter = _VSTD::copy((*this)[__i].first,
+                    __output_iter = std::copy((*this)[__i].first,
                                         (*this)[__i].second, __output_iter);
                 }
                 else
@@ -5744,16 +5744,16 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output_i
                     break;
                 case '&':
                     ++__fmt_first;
-                    __output_iter = _VSTD::copy(__matches_[0].first, __matches_[0].second,
+                    __output_iter = std::copy(__matches_[0].first, __matches_[0].second,
                                        __output_iter);
                     break;
                 case '`':
                     ++__fmt_first;
-                    __output_iter = _VSTD::copy(__prefix_.first, __prefix_.second, __output_iter);
+                    __output_iter = std::copy(__prefix_.first, __prefix_.second, __output_iter);
                     break;
                 case '\'':
                     ++__fmt_first;
-                    __output_iter = _VSTD::copy(__suffix_.first, __suffix_.second, __output_iter);
+                    __output_iter = std::copy(__suffix_.first, __suffix_.second, __output_iter);
                     break;
                 default:
                     if ('0' <= __fmt_first[1] && __fmt_first[1] <= '9')
@@ -5768,7 +5768,7 @@ match_results<_BidirectionalIterator, _Allocator>::format(_OutputIter __output_i
                                 __throw_regex_error<regex_constants::error_escape>();
                             __idx = 10 * __idx + *__fmt_first - '0';
                         }
-                        __output_iter = _VSTD::copy((*this)[__idx].first,
+                        __output_iter = std::copy((*this)[__idx].first,
                                             (*this)[__idx].second, __output_iter);
                     }
                     else
@@ -5793,7 +5793,7 @@ template <class _BidirectionalIterator, class _Allocator>
 void
 match_results<_BidirectionalIterator, _Allocator>::swap(match_results& __m)
 {
-    using _VSTD::swap;
+    using std::swap;
     swap(__matches_, __m.__matches_);
     swap(__unmatched_, __m.__unmatched_);
     swap(__prefix_, __m.__prefix_);
@@ -5892,7 +5892,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_ecma(
                   break;
                 }
                 __m.__matches_[0].first = __first;
-                __m.__matches_[0].second = _VSTD::next(__first, __s.__current_ - __first);
+                __m.__matches_[0].second = std::next(__first, __s.__current_ - __first);
                 __m.__matches_[0].matched = true;
                 for (unsigned __i = 0; __i < __s.__sub_matches_.size(); ++__i)
                     __m.__matches_[__i+1] = __s.__sub_matches_[__i];
@@ -5906,7 +5906,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_ecma(
                 __state __snext = __s;
                 __s.__node_->__exec_split(true, __s);
                 __snext.__node_->__exec_split(false, __snext);
-                __states.push_back(_VSTD::move(__snext));
+                __states.push_back(std::move(__snext));
                 }
                 break;
             case __state::__reject:
@@ -5932,7 +5932,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
 {
     deque<__state> __states;
     ptrdiff_t __highest_j = 0;
-    ptrdiff_t __np = _VSTD::distance(__first, __last);
+    ptrdiff_t __np = std::distance(__first, __last);
     __node* __st = __start_.get();
     if (__st)
     {
@@ -5983,7 +5983,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
             case __state::__consume_input:
                 break;
             case __state::__accept_and_consume:
-                __states.push_front(_VSTD::move(__s));
+                __states.push_front(std::move(__s));
                 __states.pop_back();
                 break;
             case __state::__repeat:
@@ -5994,7 +5994,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
                 __state __snext = __s;
                 __s.__node_->__exec_split(true, __s);
                 __snext.__node_->__exec_split(false, __snext);
-                __states.push_back(_VSTD::move(__snext));
+                __states.push_back(std::move(__snext));
                 }
                 break;
             case __state::__reject:
@@ -6008,7 +6008,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
         if (__matched)
         {
             __m.__matches_[0].first = __first;
-            __m.__matches_[0].second = _VSTD::next(__first, __highest_j);
+            __m.__matches_[0].second = std::next(__first, __highest_j);
             __m.__matches_[0].matched = true;
             return true;
         }
@@ -6027,7 +6027,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
     vector<__state> __states;
     __state __best_state;
     ptrdiff_t __highest_j = 0;
-    ptrdiff_t __np = _VSTD::distance(__first, __last);
+    ptrdiff_t __np = std::distance(__first, __last);
     __node* __st = __start_.get();
     if (__st)
     {
@@ -6093,7 +6093,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
                 __state __snext = __s;
                 __s.__node_->__exec_split(true, __s);
                 __snext.__node_->__exec_split(false, __snext);
-                __states.push_back(_VSTD::move(__snext));
+                __states.push_back(std::move(__snext));
                 }
                 break;
             case __state::__reject:
@@ -6107,7 +6107,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
         if (__matched)
         {
             __m.__matches_[0].first = __first;
-            __m.__matches_[0].second = _VSTD::next(__first, __highest_j);
+            __m.__matches_[0].second = std::next(__first, __highest_j);
             __m.__matches_[0].matched = true;
             for (unsigned __i = 0; __i < __best_state.__sub_matches_.size(); ++__i)
                 __m.__matches_[__i+1] = __best_state.__sub_matches_[__i];
@@ -6184,7 +6184,7 @@ regex_search(_BidirectionalIterator __first, _BidirectionalIterator __last,
              regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     int __offset = (__flags & regex_constants::match_prev_avail) ? 1 : 0;
-    basic_string<_CharT> __s(_VSTD::prev(__first, __offset), __last);
+    basic_string<_CharT> __s(std::prev(__first, __offset), __last);
     match_results<const _CharT*> __mc;
     bool __r = __e.__search(__s.data() + __offset, __s.data() + __s.size(), __mc, __flags);
     __m.__assign(__first, __last, __mc, __flags & regex_constants::__no_update_pos);
@@ -6257,7 +6257,7 @@ regex_search(const _CharT* __str, const basic_regex<_CharT, _Traits>& __e,
              regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     match_results<const _CharT*> __m;
-    return _VSTD::regex_search(__str, __m, __e, __flags);
+    return std::regex_search(__str, __m, __e, __flags);
 }
 
 template <class _ST, class _SA, class _CharT, class _Traits>
@@ -6303,7 +6303,7 @@ regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             const basic_regex<_CharT, _Traits>& __e,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    bool __r = _VSTD::regex_search(
+    bool __r = std::regex_search(
         __first, __last, __m, __e,
         __flags | regex_constants::match_continuous |
         regex_constants::__full_match);
@@ -6324,7 +6324,7 @@ regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     match_results<_BidirectionalIterator> __m;
-    return _VSTD::regex_match(__first, __last, __m, __e, __flags);
+    return std::regex_match(__first, __last, __m, __e, __flags);
 }
 
 template <class _CharT, class _Allocator, class _Traits>
@@ -6334,7 +6334,7 @@ regex_match(const _CharT* __str, match_results<const _CharT*, _Allocator>& __m,
             const basic_regex<_CharT, _Traits>& __e,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_match(__str, __str + _Traits::length(__str), __m, __e, __flags);
+    return std::regex_match(__str, __str + _Traits::length(__str), __m, __e, __flags);
 }
 
 template <class _ST, class _SA, class _Allocator, class _CharT, class _Traits>
@@ -6345,7 +6345,7 @@ regex_match(const basic_string<_CharT, _ST, _SA>& __s,
             const basic_regex<_CharT, _Traits>& __e,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_match(__s.begin(), __s.end(), __m, __e, __flags);
+    return std::regex_match(__s.begin(), __s.end(), __m, __e, __flags);
 }
 
 #if _LIBCPP_STD_VER >= 14
@@ -6364,7 +6364,7 @@ bool
 regex_match(const _CharT* __str, const basic_regex<_CharT, _Traits>& __e,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_match(__str, __str + _Traits::length(__str), __e, __flags);
+    return std::regex_match(__str, __str + _Traits::length(__str), __e, __flags);
 }
 
 template <class _ST, class _SA, class _CharT, class _Traits>
@@ -6374,7 +6374,7 @@ regex_match(const basic_string<_CharT, _ST, _SA>& __s,
             const basic_regex<_CharT, _Traits>& __e,
             regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_match(__s.begin(), __s.end(), __e, __flags);
+    return std::regex_match(__s.begin(), __s.end(), __e, __flags);
 }
 
 // regex_iterator
@@ -6440,7 +6440,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     reference operator*() const {return  __match_;}
     _LIBCPP_HIDE_FROM_ABI
-    pointer operator->() const  {return _VSTD::addressof(__match_);}
+    pointer operator->() const  {return std::addressof(__match_);}
 
     regex_iterator& operator++();
     _LIBCPP_HIDE_FROM_ABI
@@ -6464,10 +6464,10 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::
                    const regex_type& __re, regex_constants::match_flag_type __m)
     : __begin_(__a),
       __end_(__b),
-      __pregex_(_VSTD::addressof(__re)),
+      __pregex_(std::addressof(__re)),
       __flags_(__m)
 {
-    _VSTD::regex_search(__begin_, __end_, __match_, *__pregex_, __flags_);
+    std::regex_search(__begin_, __end_, __match_, *__pregex_, __flags_);
 }
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
@@ -6499,7 +6499,7 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
             __match_ = value_type();
             return *this;
         }
-        else if (_VSTD::regex_search(__start, __end_, __match_, *__pregex_,
+        else if (std::regex_search(__start, __end_, __match_, *__pregex_,
                                     __flags_ | regex_constants::match_not_null |
                                     regex_constants::match_continuous))
             return *this;
@@ -6507,7 +6507,7 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
             ++__start;
     }
     __flags_ |= regex_constants::match_prev_avail;
-    if (!_VSTD::regex_search(__start, __end_, __match_, *__pregex_, __flags_))
+    if (!std::regex_search(__start, __end_, __match_, *__pregex_, __flags_))
         __match_ = value_type();
     return *this;
 }
@@ -6803,7 +6803,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
             __establish_result();
         else
         {
-            if (_VSTD::find(__subs_.begin(), __subs_.end(), -1) != __subs_.end()
+            if (std::find(__subs_.begin(), __subs_.end(), -1) != __subs_.end()
                 && __prev->suffix().length() != 0)
             {
                 __suffix_.matched = true;
@@ -6834,7 +6834,7 @@ regex_replace(_OutputIterator __output_iter,
     if (__i == __eof)
     {
         if (!(__flags & regex_constants::format_no_copy))
-            __output_iter = _VSTD::copy(__first, __last, __output_iter);
+            __output_iter = std::copy(__first, __last, __output_iter);
     }
     else
     {
@@ -6842,14 +6842,14 @@ regex_replace(_OutputIterator __output_iter,
         for (size_t __len = char_traits<_CharT>::length(__fmt); __i != __eof; ++__i)
         {
             if (!(__flags & regex_constants::format_no_copy))
-                __output_iter = _VSTD::copy(__i->prefix().first, __i->prefix().second, __output_iter);
+                __output_iter = std::copy(__i->prefix().first, __i->prefix().second, __output_iter);
             __output_iter = __i->format(__output_iter, __fmt, __fmt + __len, __flags);
             __lm = __i->suffix();
             if (__flags & regex_constants::format_first_only)
                 break;
         }
         if (!(__flags & regex_constants::format_no_copy))
-            __output_iter = _VSTD::copy(__lm.first, __lm.second, __output_iter);
+            __output_iter = std::copy(__lm.first, __lm.second, __output_iter);
     }
     return __output_iter;
 }
@@ -6864,7 +6864,7 @@ regex_replace(_OutputIterator __output_iter,
               const basic_string<_CharT, _ST, _SA>& __fmt,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
-    return _VSTD::regex_replace(__output_iter, __first, __last, __e, __fmt.c_str(), __flags);
+    return std::regex_replace(__output_iter, __first, __last, __e, __fmt.c_str(), __flags);
 }
 
 template <class _Traits, class _CharT, class _ST, class _SA, class _FST,
@@ -6877,7 +6877,7 @@ regex_replace(const basic_string<_CharT, _ST, _SA>& __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT, _ST, _SA> __r;
-    _VSTD::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
+    std::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
                         __fmt.c_str(), __flags);
     return __r;
 }
@@ -6890,7 +6890,7 @@ regex_replace(const basic_string<_CharT, _ST, _SA>& __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT, _ST, _SA> __r;
-    _VSTD::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
+    std::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
                         __fmt, __flags);
     return __r;
 }
@@ -6904,7 +6904,7 @@ regex_replace(const _CharT* __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT> __r;
-    _VSTD::regex_replace(std::back_inserter(__r), __s,
+    std::regex_replace(std::back_inserter(__r), __s,
                         __s + char_traits<_CharT>::length(__s), __e,
                         __fmt.c_str(), __flags);
     return __r;
@@ -6919,7 +6919,7 @@ regex_replace(const _CharT* __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT> __r;
-    _VSTD::regex_replace(std::back_inserter(__r), __s,
+    std::regex_replace(std::back_inserter(__r), __s,
                         __s + char_traits<_CharT>::length(__s), __e,
                         __fmt, __flags);
     return __r;

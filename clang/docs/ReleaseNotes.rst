@@ -651,6 +651,8 @@ Bug Fixes in This Version
 - Fixed false positive error emitted by clang when performing qualified name
   lookup and the current class instantiation has dependent bases.
   Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
+- Fixes compile error that double colon operator cannot resolve macro with parentheses.
+  Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
 
@@ -793,6 +795,9 @@ Bug Fixes to C++ Support
 - Fix crash when template class static member imported to other translation unit.
   Fixes:
   (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
+
+- Clang now rejects incomplete types for ``__builtin_dump_struct``. Fixes:
+  (`#63506 <https://github.com/llvm/llvm-project/issues/63506>`_)
 
 - Fixed a crash for C++98/03 while checking an ill-formed ``_Static_assert`` expression.
   Fixes: (`#72025 <https://github.com/llvm/llvm-project/issues/72025>`_)

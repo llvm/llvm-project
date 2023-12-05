@@ -36,7 +36,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 bool
 is_heap(_RandomAccessIterator __first, _RandomAccessIterator __last)
 {
-    return _VSTD::is_heap(__first, __last, __less<>());
+    return std::is_heap(__first, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

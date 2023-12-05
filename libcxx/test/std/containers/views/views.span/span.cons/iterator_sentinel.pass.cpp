@@ -71,7 +71,7 @@ public:
   typedef typename std::iterator_traits<It>::difference_type difference_type;
   typedef It pointer;
   typedef typename std::iterator_traits<It>::reference reference;
-  typedef typename std::remove_pointer<It>::type element_type;
+  typedef std::remove_reference_t<reference> element_type;
 
   throw_operator_minus() : it_() {}
   explicit throw_operator_minus(It it) : it_(it) {}
