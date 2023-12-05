@@ -5134,7 +5134,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               Node->getValueType(0),
               {AArch64::LUTI4_2ZTZI_B, AArch64::LUTI4_2ZTZI_H,
                AArch64::LUTI4_2ZTZI_S}))
-      // Second Immediate must be <= 3:
+        // Second Immediate must be <= 3:
         SelectMultiVectorLuti(Node, 2, Opc, 3);
       return;
     }
