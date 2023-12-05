@@ -609,13 +609,14 @@ static void printCopyInfo(int DeviceId, bool H2D, void *SrcPtrBegin,
 
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
-                             AsyncInfoTy &AsyncInfo,
-                             HostDataToTargetTy *Entry) {
+                             AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
+                             DeviceTy::HDTTMapAccessorTy *HDTTMapPtr) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor(Entry);
+    HDTTMapAccessorTy HDTTMap =
+        HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
     LookupResult LR;
     if (!Entry) {
-      LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+      LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
       Entry = LR.TPR.getEntry();
     }
     printCopyInfo(DeviceID, /* H2D */ true, HstPtrBegin, TgtPtrBegin, Size,
@@ -638,12 +639,14 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 // Retrieve data from device
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
-                               HostDataToTargetTy *Entry) {
+                               HostDataToTargetTy *Entry,
+                               DeviceTy::HDTTMapAccessorTy *HDTTMapPtr) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor(Entry);
+    HDTTMapAccessorTy HDTTMap =
+        HostDataToTargetMap.getExclusiveAccessor(!!Entry || !!HDTTMapPtr);
     LookupResult LR;
     if (!Entry) {
-      LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+      LR = lookupMapping(HDTTMapPtr ? *HDTTMapPtr : HDTTMap, HstPtrBegin, Size);
       Entry = LR.TPR.getEntry();
     }
     printCopyInfo(DeviceID, /* H2D */ false, TgtPtrBegin, HstPtrBegin, Size,
