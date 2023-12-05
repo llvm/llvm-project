@@ -103,7 +103,7 @@ constexpr size_t MID_INT_SIZE = 192;
 namespace LIBC_NAMESPACE {
 
 using BlockInt = uint32_t;
-constexpr size_t BLOCK_SIZE = 9;
+constexpr uint32_t BLOCK_SIZE = 9;
 
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
@@ -157,10 +157,9 @@ LIBC_INLINE constexpr uint32_t ceil_log10_pow2(const uint32_t e) {
 LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
                                               const uint32_t mantissa_width) {
   //+8 to round up when dividing by 9
-  return static_cast<uint32_t>((ceil_log10_pow2(idx) +
-                                ceil_log10_pow2(mantissa_width + 1) +
-                                (BLOCK_SIZE - 1)) /
-                               BLOCK_SIZE);
+  return (ceil_log10_pow2(idx) + ceil_log10_pow2(mantissa_width + 1) +
+          (BLOCK_SIZE - 1)) /
+         BLOCK_SIZE;
   // return (ceil_log10_pow2(16 * idx + mantissa_width) + 8) / 9;
 }
 
@@ -287,11 +286,11 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
     if (block_shifts < static_cast<int>(ten_blocks)) {
       ten_blocks = ten_blocks - block_shifts;
       five_blocks = block_shifts;
-      shift_amount = shift_amount + static_cast<int>(block_shifts * BLOCK_SIZE);
+      shift_amount = shift_amount + (block_shifts * BLOCK_SIZE);
     } else {
       ten_blocks = 0;
       five_blocks = i;
-      shift_amount = shift_amount + static_cast<int>(i * BLOCK_SIZE);
+      shift_amount = shift_amount + (static_cast<int>(i) * BLOCK_SIZE);
     }
   }
 
@@ -490,7 +489,7 @@ public:
       val = POW10_SPLIT[POW10_OFFSET[idx] + block_index];
 #endif
       const uint32_t shift_amount =
-          SHIFT_CONST + static_cast<uint32_t>(IDX_SIZE * idx) - exponent;
+          SHIFT_CONST + (static_cast<uint32_t>(IDX_SIZE) * idx) - exponent;
       const uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, (int32_t)(shift_amount));
       return digits;
@@ -551,7 +550,7 @@ public:
       val = POW10_SPLIT_2[p];
 #endif
       const int32_t shift_amount =
-          SHIFT_CONST + (-exponent - static_cast<int32_t>(IDX_SIZE * idx));
+          SHIFT_CONST + (-exponent - (static_cast<int32_t>(IDX_SIZE) * idx));
       uint32_t digits =
           internal::mul_shift_mod_1e9(mantissa, val, shift_amount);
       return digits;

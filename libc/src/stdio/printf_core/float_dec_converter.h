@@ -861,13 +861,13 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
       trailing_nines = 0;
       trailing_zeroes = 0;
       BlockInt copy_of_digits = digits;
-      int cur_last_digit = copy_of_digits % 10;
+      BlockInt cur_last_digit = copy_of_digits % 10;
       // We only care if it ends in nines or zeroes.
       while (copy_of_digits > 0 &&
              (cur_last_digit == 9 || cur_last_digit == 0)) {
         // If the next digit is not the same as the previous one, then there are
         // no more contiguous trailing digits.
-        if (static_cast<int>(copy_of_digits % 10) != cur_last_digit) {
+        if (copy_of_digits % 10 != cur_last_digit) {
           break;
         }
         if (cur_last_digit == 9) {
