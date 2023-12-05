@@ -754,12 +754,6 @@ void MachOPlatform::rt_pushInitializers(PushInitializersSendResultFn SendResult,
 void MachOPlatform::rt_pushSymbols(
     PushSymbolsInSendResultFn SendResult, ExecutorAddr Handle,
     const std::vector<std::pair<StringRef, bool>> &SymbolNames) {
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform::rt_pushSymbols(" << Handle << ", [ ";
-    for (auto &Name : SymbolNames)
-      dbgs() << "\"" << Name.first << "\" ";
-    dbgs() << "])\n";
-  });
 
   JITDylib *JD = nullptr;
 
@@ -769,6 +763,16 @@ void MachOPlatform::rt_pushSymbols(
     if (I != HeaderAddrToJITDylib.end())
       JD = I->second;
   }
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_pushSymbols(";
+    if (JD)
+      dbgs() << "\"" << JD->getName() << "\", [ ";
+    else
+      dbgs() << "<invalid handle " << Handle << ">, [ ";
+    for (auto &Name : SymbolNames)
+      dbgs() << "\"" << Name.first << "\" ";
+    dbgs() << "])\n";
+  });
 
   if (!JD) {
     SendResult(make_error<StringError>("No JITDylib associated with handle " +
@@ -787,7 +791,6 @@ void MachOPlatform::rt_pushSymbols(
       LookupKind::DLSym, {{JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
       std::move(LS), SymbolState::Ready,
       [SendResult = std::move(SendResult)](Expected<SymbolMap> Result) mutable {
-        dbgs() << "Sending result pushSymbols result...\n";
         SendResult(Result.takeError());
       },
       NoDependenciesToRegister);
@@ -812,14 +815,6 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
     jitlink::PassConfiguration &Config) {
 
   using namespace jitlink;
-
-  // Check for a header address.
-  {
-    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-    auto I = MP.JITDylibToHeaderAddr.find(&MR.getTargetJITDylib());
-    if (I != MP.JITDylibToHeaderAddr.end())
-      HeaderAddr = I->second;
-  }
 
   bool InBootstrapPhase =
       &MR.getTargetJITDylib() == &MP.PlatformJD && MP.Bootstrap;
@@ -875,10 +870,10 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
   Config.PostPrunePasses.push_back([this, JITSymTabInfo](LinkGraph &G) {
     return prepareSymbolTableRegistration(G, *JITSymTabInfo);
   });
-  Config.PostFixupPasses.push_back(
-      [this, JITSymTabInfo, InBootstrapPhase](LinkGraph &G) {
-        return addSymbolTableRegistration(G, *JITSymTabInfo, InBootstrapPhase);
-      });
+  Config.PostFixupPasses.push_back([this, &MR, JITSymTabInfo,
+                                    InBootstrapPhase](LinkGraph &G) {
+    return addSymbolTableRegistration(G, MR, *JITSymTabInfo, InBootstrapPhase);
+  });
 
   // Add a pass to register the final addresses of any special sections in the
   // object with the runtime.
@@ -1427,7 +1422,15 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
                                              ? G.allocActions()
                                              : MP.Bootstrap.load()->DeferredAAs;
 
-    assert(HeaderAddr && "No HeaderAddr for JITDylib");
+    ExecutorAddr HeaderAddr;
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      auto I = MP.JITDylibToHeaderAddr.find(&JD);
+      assert(I != MP.JITDylibToHeaderAddr.end() &&
+             "No header registered for JD");
+      assert(I->second && "Null header registered for JD");
+      HeaderAddr = I->second;
+    }
     allocActions.push_back(
         {cantFail(
              WrapperFunctionCall::Create<SPSRegisterObjectPlatformSectionsArgs>(
@@ -1699,16 +1702,23 @@ Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
 }
 
 Error MachOPlatform::MachOPlatformPlugin::addSymbolTableRegistration(
-    jitlink::LinkGraph &G, JITSymTabVector &JITSymTabInfo,
-    bool InBootstrapPhase) {
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR,
+    JITSymTabVector &JITSymTabInfo, bool InBootstrapPhase) {
+
+  ExecutorAddr HeaderAddr;
+  {
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+    auto I = MP.JITDylibToHeaderAddr.find(&MR.getTargetJITDylib());
+    assert(I != MP.JITDylibToHeaderAddr.end() && "No header registered for JD");
+    assert(I->second && "Null header registered for JD");
+    HeaderAddr = I->second;
+  }
 
   SmallVector<std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>
       SymTab;
-  for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo) {
-    // dbgs() << "Original symbol: \"" << OriginalSymbol->getName() << "\"\n";
+  for (auto &[OriginalSymbol, NameSym] : JITSymTabInfo)
     SymTab.push_back({NameSym->getAddress(), OriginalSymbol->getAddress(),
                       flagsForSymbol(*OriginalSymbol)});
-  }
 
   using SPSRegisterSymbolsArgs =
       SPSArgList<SPSExecutorAddr,
