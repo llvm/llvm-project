@@ -180,11 +180,11 @@ discrete_distribution<_IntType>::param_type::__init()
     {
         if (__p_.size() > 1)
         {
-            double __s = _VSTD::accumulate(__p_.begin(), __p_.end(), 0.0);
+            double __s = std::accumulate(__p_.begin(), __p_.end(), 0.0);
             for (vector<double>::iterator __i = __p_.begin(), __e = __p_.end(); __i < __e; ++__i)
                 *__i /= __s;
             vector<double> __t(__p_.size() - 1);
-            _VSTD::partial_sum(__p_.begin(), __p_.end() - 1, __t.begin());
+            std::partial_sum(__p_.begin(), __p_.end() - 1, __t.begin());
             swap(__p_, __t);
         }
         else
@@ -201,7 +201,7 @@ discrete_distribution<_IntType>::param_type::probabilities() const
 {
     size_t __n = __p_.size();
     vector<double> __p(__n+1);
-    _VSTD::adjacent_difference(__p_.begin(), __p_.end(), __p.begin());
+    std::adjacent_difference(__p_.begin(), __p_.end(), __p.begin());
     if (__n > 0)
         __p[__n] = 1 - __p_[__n-1];
     else
@@ -217,7 +217,7 @@ discrete_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p)
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     uniform_real_distribution<double> __gen;
     return static_cast<_IntType>(
-           _VSTD::upper_bound(__p.__p_.begin(), __p.__p_.end(), __gen(__g)) -
+           std::upper_bound(__p.__p_.begin(), __p.__p_.end(), __gen(__g)) -
                                                               __p.__p_.begin());
 }
 

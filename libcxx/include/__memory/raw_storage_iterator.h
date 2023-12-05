@@ -50,10 +50,10 @@ public:
     _LIBCPP_HIDE_FROM_ABI explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
     _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() {return *this;}
     _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(const _Tp& __element)
-        {::new ((void*)_VSTD::addressof(*__x_)) _Tp(__element); return *this;}
+        {::new ((void*)std::addressof(*__x_)) _Tp(__element); return *this;}
 #if _LIBCPP_STD_VER >= 14
     _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(_Tp&& __element)
-        {::new ((void*)_VSTD::addressof(*__x_)) _Tp(_VSTD::move(__element)); return *this;}
+        {::new ((void*)std::addressof(*__x_)) _Tp(std::move(__element)); return *this;}
 #endif
     _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator++() {++__x_; return *this;}
     _LIBCPP_HIDE_FROM_ABI raw_storage_iterator  operator++(int)

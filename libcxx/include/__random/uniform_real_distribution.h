@@ -117,7 +117,7 @@ uniform_real_distribution<_RealType>::operator()(_URNG& __g, const param_type& _
 {
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     return (__p.b() - __p.a())
-        * _VSTD::generate_canonical<_RealType, numeric_limits<_RealType>::digits>(__g)
+        * std::generate_canonical<_RealType, numeric_limits<_RealType>::digits>(__g)
         + __p.a();
 }
 
