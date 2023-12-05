@@ -111,7 +111,7 @@ public:
         if (__libcpp_is_constant_evaluated()) {
             return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
         } else {
-            return static_cast<_Tp*>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+            return static_cast<_Tp*>(std::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
         }
     }
 
@@ -127,7 +127,7 @@ public:
         if (__libcpp_is_constant_evaluated()) {
             ::operator delete(__p);
         } else {
-            _VSTD::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+            std::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
         }
     }
 
@@ -145,11 +145,11 @@ public:
 
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI
     pointer address(reference __x) const _NOEXCEPT {
-        return _VSTD::addressof(__x);
+        return std::addressof(__x);
     }
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI
     const_pointer address(const_reference __x) const _NOEXCEPT {
-        return _VSTD::addressof(__x);
+        return std::addressof(__x);
     }
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17
@@ -164,7 +164,7 @@ public:
     template <class _Up, class... _Args>
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI
     void construct(_Up* __p, _Args&&... __args) {
-        ::new ((void*)__p) _Up(_VSTD::forward<_Args>(__args)...);
+        ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
     }
 
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI
@@ -199,7 +199,7 @@ public:
         if (__libcpp_is_constant_evaluated()) {
             return static_cast<const _Tp*>(::operator new(__n * sizeof(_Tp)));
         } else {
-            return static_cast<const _Tp*>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+            return static_cast<const _Tp*>(std::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
         }
     }
 
@@ -215,7 +215,7 @@ public:
         if (__libcpp_is_constant_evaluated()) {
             ::operator delete(const_cast<_Tp*>(__p));
         } else {
-            _VSTD::__libcpp_deallocate((void*) const_cast<_Tp *>(__p), __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+            std::__libcpp_deallocate((void*) const_cast<_Tp *>(__p), __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
         }
     }
 
@@ -233,7 +233,7 @@ public:
 
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI
     const_pointer address(const_reference __x) const _NOEXCEPT {
-        return _VSTD::addressof(__x);
+        return std::addressof(__x);
     }
 
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17
@@ -248,7 +248,7 @@ public:
     template <class _Up, class... _Args>
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI
     void construct(_Up* __p, _Args&&... __args) {
-        ::new ((void*)__p) _Up(_VSTD::forward<_Args>(__args)...);
+        ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
     }
 
     _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI

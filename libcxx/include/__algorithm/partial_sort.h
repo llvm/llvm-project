@@ -87,7 +87,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void
 partial_sort(_RandomAccessIterator __first, _RandomAccessIterator __middle, _RandomAccessIterator __last)
 {
-    _VSTD::partial_sort(__first, __middle, __last, __less<>());
+    std::partial_sort(__first, __middle, __last, __less<>());
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -156,7 +156,7 @@ private:
 public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     static pointer pointer_to(__conditional_t<is_void<element_type>::value, __nat, element_type>& __r) _NOEXCEPT
-        {return _VSTD::addressof(__r);}
+        {return std::addressof(__r);}
 };
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -213,9 +213,9 @@ __to_address(const _Pointer& __p) _NOEXCEPT {
 template <class _Pointer, class>
 struct __to_address_helper {
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
-    static decltype(_VSTD::__to_address(std::declval<const _Pointer&>().operator->()))
+    static decltype(std::__to_address(std::declval<const _Pointer&>().operator->()))
     __call(const _Pointer& __p) _NOEXCEPT {
-        return _VSTD::__to_address(__p.operator->());
+        return std::__to_address(__p.operator->());
     }
 };
 
@@ -232,13 +232,13 @@ struct __to_address_helper<_Pointer, decltype((void)pointer_traits<_Pointer>::to
 template <class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI constexpr
 auto to_address(_Tp *__p) noexcept {
-    return _VSTD::__to_address(__p);
+    return std::__to_address(__p);
 }
 
 template <class _Pointer>
 inline _LIBCPP_HIDE_FROM_ABI constexpr
 auto to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
-    return _VSTD::__to_address(__p);
+    return std::__to_address(__p);
 }
 #endif
 

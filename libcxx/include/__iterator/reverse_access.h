@@ -81,16 +81,16 @@ auto rend(const _Cp& __c) -> decltype(__c.rend())
 
 template <class _Cp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
-auto crbegin(const _Cp& __c) -> decltype(_VSTD::rbegin(__c))
+auto crbegin(const _Cp& __c) -> decltype(std::rbegin(__c))
 {
-    return _VSTD::rbegin(__c);
+    return std::rbegin(__c);
 }
 
 template <class _Cp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
-auto crend(const _Cp& __c) -> decltype(_VSTD::rend(__c))
+auto crend(const _Cp& __c) -> decltype(std::rend(__c))
 {
-    return _VSTD::rend(__c);
+    return std::rend(__c);
 }
 
 #endif // _LIBCPP_STD_VER >= 14

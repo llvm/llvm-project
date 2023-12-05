@@ -294,7 +294,7 @@ piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const param_typ
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     typedef uniform_real_distribution<result_type> _Gen;
     result_type __u = _Gen()(__g);
-    ptrdiff_t __k = _VSTD::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),
+    ptrdiff_t __k = std::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),
                                       __u) - __p.__areas_.begin() - 1;
     __u -= __p.__areas_[__k];
     const result_type __dk = __p.__densities_[__k];
@@ -306,7 +306,7 @@ piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const param_typ
     const result_type __bk1 = __p.__b_[__k+1];
     const result_type __deltab = __bk1 - __bk;
     return (__bk * __dk1 - __bk1 * __dk +
-        _VSTD::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) /
+        std::sqrt(__deltab * (__deltab * __dk * __dk + 2 * __deltad * __u))) /
         __deltad;
 }
 
