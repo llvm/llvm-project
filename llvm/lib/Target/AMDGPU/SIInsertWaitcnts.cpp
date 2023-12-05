@@ -31,6 +31,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
@@ -121,8 +122,13 @@ enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 1,    // A reserved slot for DS.
-  EXTRA_VGPR_LDS = 0,     // An artificial register to track LDS writes.
+  NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
+  // Artificial register slots to track LDS writes into specific LDS locations
+  // if a location is known. When slots are exhausted or location is
+  // unknown use the first slot. The first slot is also always updated in
+  // addition to known location's slot to properly generate waits if dependent
+  // instruction's location is unknown.
+  EXTRA_VGPR_LDS = 0,
   NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
 };
 
@@ -292,6 +298,10 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
+  const SmallVectorImpl<const MachineInstr *>& getLDSDMAStores() const {
+    return LDSDMAStores;
+  }
+
   void print(raw_ostream &);
   void dump() { print(dbgs()); }
 
@@ -354,6 +364,9 @@ private:
   // Bitmask of the VmemTypes of VMEM instructions that might have a pending
   // write to each vgpr.
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
+  // Store representative LDS DMA operations. The only useful info here is
+  // alias info. One store is kept per unique AAInfo.
+  SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
 };
 
 class SIInsertWaitcnts : public MachineFunctionPass {
@@ -369,6 +382,7 @@ private:
   DenseMap<MachineBasicBlock *, bool> PreheadersToFlush;
   MachineLoopInfo *MLI;
   MachinePostDominatorTree *PDT;
+  AliasAnalysis *AA = nullptr;
 
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
@@ -411,6 +425,8 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<MachineLoopInfo>();
     AU.addRequired<MachinePostDominatorTree>();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -452,7 +468,7 @@ public:
   // FLAT instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
-    if (!ST->hasVscnt())
+    if (!ST->hasVscnt() || SIInstrInfo::isLDSDMA(Inst))
       return VMEM_ACCESS;
     if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst)) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
@@ -547,8 +563,7 @@ void WaitcntBrackets::setExpScore(const MachineInstr *MI,
 // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS written
 // can be accessed. A load from LDS to VMEM does not need a wait.
 static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
-  return SIInstrInfo::isVALU(MI) &&
-         (SIInstrInfo::isMUBUF(MI) || SIInstrInfo::isFLAT(MI)) &&
+  return SIInstrInfo::isLDSDMA(MI) &&
          MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
 }
 
@@ -704,7 +719,36 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     }
     if (Inst.mayStore() && (TII->isDS(Inst) || mayWriteLDSThroughDMA(Inst))) {
-      setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
+      unsigned Slot = 0;
+      for (const auto *MemOp : Inst.memoperands()) {
+        if (MemOp->isStore() &&
+            MemOp->getAddrSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+          // Comparing just AA info does not guarantee memoperands are equal
+          // in general, but this is so for LDS DMA on practice.
+          auto AAI = MemOp->getAAInfo();
+          if (!AAI)
+            break;
+          auto I = llvm::find_if(LDSDMAStores, [&AAI](const MachineInstr *I) {
+            for (const auto *MemOp : I->memoperands()) {
+              if (MemOp->isStore())
+                return AAI == MemOp->getAAInfo();
+            }
+            return false;
+          });
+          if (I != LDSDMAStores.end()) {
+            Slot = I - LDSDMAStores.begin() + 1;
+            break;
+          }
+          if (LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
+            break;
+          LDSDMAStores.push_back(&Inst);
+          Slot = LDSDMAStores.size();
+          break;
+        }
+      }
+      setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS + Slot, T, CurrScore);
+      if (Slot)
+        setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
     }
   }
 }
@@ -1180,9 +1224,21 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
         // No need to wait before load from VMEM to LDS.
         if (mayWriteLDSThroughDMA(MI))
           continue;
-        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+
         // VM_CNT is only relevant to vgpr or LDS.
-        ScoreBrackets.determineWait(VM_CNT, RegNo, Wait);
+        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+        bool FoundAliasingStore = false;
+        if (Ptr && Memop->getAAInfo()) {
+          const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
+          for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
+            if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
+              FoundAliasingStore = true;
+              ScoreBrackets.determineWait(VM_CNT, RegNo + I + 1, Wait);
+            }
+          }
+        }
+        if (!FoundAliasingStore)
+          ScoreBrackets.determineWait(VM_CNT, RegNo, Wait);
         if (Memop->isStore()) {
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
         }
@@ -1818,6 +1874,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   PDT = &getAnalysis<MachinePostDominatorTree>();
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
