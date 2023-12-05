@@ -233,7 +233,7 @@ for.body:
   %0 = load i32, ptr %gep.src, align 4
   %sum.1 = add nsw i32 %0, %sum
   store i32 %sum.1, ptr %gep.dst, align 4
-  %1 = or i64 %iv, 1
+  %1 = or disjoint i64 %iv, 1
   %gep.src.1 = getelementptr inbounds i32, ptr %src, i64 %1
   %2 = load i32, ptr %gep.src.1, align 4
   %sum.2 = add nsw i32 %2, %sum.1
@@ -302,7 +302,7 @@ for.body:
   %0 = load i32, ptr %arrayidx, align 4
   %sum.1 = add nsw i32 %0, %sum
   store i32 %sum.1, ptr %gep.dst, align 4
-  %1 = or i64 %iv, 1
+  %1 = or disjoint i64 %iv, 1
   %arrayidx4 = getelementptr inbounds i32, ptr %src, i64 %1
   %2 = load i32, ptr %arrayidx4, align 4
   %sum.2 = add nsw i32 %2, %sum.1
@@ -349,7 +349,7 @@ predicated:                                       ; preds = %for.body
   br label %latch
 
 latch:                                            ; preds = %predicated, %for.body
-  %1 = or i64 %iv, 1
+  %1 = or disjoint i64 %iv, 1
   %gep.src.1 = getelementptr inbounds i32, ptr %src, i64 %1
   %2 = load i32, ptr %gep.src.1, align 4
   %sum.2 = add nsw i32 %2, %sum.1
@@ -384,7 +384,7 @@ for.body:                                         ; preds = %latch, %entry
   %0 = load i32, ptr %arrayidx, align 4
   %sum.1 = add nsw i32 %0, %sum
   store i32 %sum.1, ptr %gep.dst, align 4
-  %1 = or i64 %iv, 1
+  %1 = or disjoint i64 %iv, 1
   %gep.src.1 = getelementptr inbounds i32, ptr %src, i64 %1
   %2 = load i32, ptr %gep.src.1, align 4
   %sum.2 = add nsw i32 %2, %sum.1

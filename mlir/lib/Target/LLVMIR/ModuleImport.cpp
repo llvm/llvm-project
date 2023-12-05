@@ -1627,6 +1627,7 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_za_new"),
     StringLiteral("vscale_range"),
     StringLiteral("frame-pointer"),
+    StringLiteral("target-features"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1716,6 +1717,12 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
         funcOp.getContext(), LLVM::framePointerKind::symbolizeFramePointerKind(
                                  stringRefFramePointerKind)
                                  .value()));
+  }
+
+  if (llvm::Attribute attr = func->getFnAttribute("target-features");
+      attr.isStringAttribute()) {
+    funcOp.setTargetFeaturesAttr(
+        LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
   }
 }
 
