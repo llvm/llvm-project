@@ -44,7 +44,7 @@ typedef void (*CompletionCallback)(CommandInterpreter &interpreter,
                                    lldb_private::SearchFilter *searcher);
 
 struct CommonCompletionElement {
-  uint32_t type;
+  uint64_t type;
   CompletionCallback callback;
 };
 
@@ -54,6 +54,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
   bool handled = false;
 
   const CommonCompletionElement common_completions[] = {
+      {lldb::eNoCompletion, nullptr},
       {lldb::eSourceFileCompletion, CommandCompletions::SourceFiles},
       {lldb::eDiskFileCompletion, CommandCompletions::DiskFiles},
       {lldb::eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
@@ -84,12 +85,12 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {lldb::eTypeCategoryNameCompletion,
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
-      {lldb::CompletionType::eNoCompletion,
+      {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
 
   for (int i = 0;; i++) {
-    if (common_completions[i].type == lldb::eNoCompletion)
+    if (common_completions[i].type == lldb::eTerminatorCompletion)
       break;
     else if ((common_completions[i].type & completion_mask) ==
                  common_completions[i].type &&
