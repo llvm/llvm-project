@@ -8578,8 +8578,8 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   }
 
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
-    return toVPRecipeResult(
-        new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(), CI));
+    return toVPRecipeResult(new VPWidenCastRecipe(CI->getOpcode(), Operands[0],
+                                                  CI->getType(), *CI));
   }
 
   return toVPRecipeResult(tryToWiden(Instr, Operands, VPBB, Plan));

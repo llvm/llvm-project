@@ -711,10 +711,10 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 }
 
 // Run region on device
-bool DeviceTy::printDeviceInfo(int32_t RTLDevId) {
+bool DeviceTy::printDeviceInfo() {
   if (!RTL->print_device_info)
     return false;
-  RTL->print_device_info(RTLDevId);
+  RTL->print_device_info(RTLDeviceID);
   return true;
 }
 
@@ -776,39 +776,6 @@ int32_t DeviceTy::destroyEvent(void *Event) {
     return RTL->destroy_event(RTLDeviceID, Event);
 
   return OFFLOAD_SUCCESS;
-}
-
-/// Check whether a device has an associated RTL and initialize it if it's not
-/// already initialized.
-bool deviceIsReady(int DeviceNum) {
-  DP("Checking whether device %d is ready.\n", DeviceNum);
-  // Devices.size() can only change while registering a new
-  // library, so try to acquire the lock of RTLs' mutex.
-  size_t DevicesSize;
-  {
-    std::lock_guard<decltype(PM->RTLsMtx)> LG(PM->RTLsMtx);
-    DevicesSize = PM->Devices.size();
-  }
-  if (DevicesSize <= (size_t)DeviceNum) {
-    DP("Device ID  %d does not have a matching RTL\n", DeviceNum);
-    return false;
-  }
-
-  // Get device info
-  DeviceTy &Device = *PM->Devices[DeviceNum];
-
-  DP("Is the device %d (local ID %d) initialized? %d\n", DeviceNum,
-     Device.RTLDeviceID, Device.IsInit);
-
-  // Init the device if not done before
-  if (!Device.IsInit && Device.initOnce() != OFFLOAD_SUCCESS) {
-    DP("Failed to init device %d\n", DeviceNum);
-    return false;
-  }
-
-  DP("Device %d is ready to use.\n", DeviceNum);
-
-  return true;
 }
 
 void DeviceTy::addOffloadEntry(OffloadEntryTy &Entry) {

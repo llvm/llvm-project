@@ -433,7 +433,7 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
 
 typedef underlying_type<launch>::type __launch_underlying_type;
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR
 launch
 operator&(launch __x, launch __y)
@@ -442,7 +442,7 @@ operator&(launch __x, launch __y)
                                static_cast<__launch_underlying_type>(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR
 launch
 operator|(launch __x, launch __y)
@@ -451,7 +451,7 @@ operator|(launch __x, launch __y)
                                static_cast<__launch_underlying_type>(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR
 launch
 operator^(launch __x, launch __y)
@@ -460,7 +460,7 @@ operator^(launch __x, launch __y)
                                static_cast<__launch_underlying_type>(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR
 launch
 operator~(launch __x)
@@ -468,21 +468,21 @@ operator~(launch __x)
     return static_cast<launch>(~static_cast<__launch_underlying_type>(__x) & 3);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 launch&
 operator&=(launch& __x, launch __y)
 {
     __x = __x & __y; return __x;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 launch&
 operator|=(launch& __x, launch __y)
 {
     __x = __x | __y; return __x;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 launch&
 operator^=(launch& __x, launch __y)
 {
@@ -502,14 +502,14 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(future_status)
 
 _LIBCPP_EXPORTED_FROM_ABI const error_category& future_category() _NOEXCEPT;
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 error_code
 make_error_code(future_errc __e) _NOEXCEPT
 {
     return error_code(static_cast<int>(__e), future_category());
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 error_condition
 make_error_condition(future_errc __e) _NOEXCEPT
 {
@@ -530,7 +530,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI explicit future_error(future_errc __ec) : future_error(std::make_error_code(__ec)) {}
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const error_code& code() const _NOEXCEPT {return __ec_;}
 
     _LIBCPP_HIDE_FROM_ABI future_error(const future_error&) _NOEXCEPT = default;
@@ -566,14 +566,14 @@ public:
         deferred = 8
     };
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __assoc_sub_state() : __state_(0) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool __has_value() const
         {return (__state_ & __constructed) || (__exception_ != nullptr);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __attach_future() {
         lock_guard<mutex> __lk(__mut_);
         bool __has_future_attached = (__state_ & __future_attached) != 0;
@@ -583,11 +583,11 @@ public:
         __state_ |= __future_attached;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void __set_deferred() {__state_ |= deferred;}
 
     void __make_ready();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool __is_ready() const {return (__state_ & ready) != 0;}
 
     void set_value();
@@ -601,7 +601,7 @@ public:
     void wait();
     template <class _Rep, class _Period>
         future_status
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const;
     template <class _Clock, class _Duration>
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
@@ -780,7 +780,7 @@ class __assoc_state_alloc : public __assoc_state<_Rp>
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __on_zero_shared() _NOEXCEPT;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __assoc_state_alloc(const _Alloc& __a)
         : __alloc_(__a) {}
 };
@@ -807,7 +807,7 @@ class __assoc_state_alloc<_Rp&, _Alloc> : public __assoc_state<_Rp&>
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __on_zero_shared() _NOEXCEPT;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __assoc_state_alloc(const _Alloc& __a)
         : __alloc_(__a) {}
 };
@@ -832,7 +832,7 @@ class __assoc_sub_state_alloc : public __assoc_sub_state
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __assoc_sub_state_alloc(const _Alloc& __a)
         : __alloc_(__a) {}
 };
@@ -857,7 +857,7 @@ class __deferred_assoc_state : public __assoc_state<_Rp>
     _Fp __func_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __deferred_assoc_state(_Fp&& __f);
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __execute();
@@ -897,7 +897,7 @@ class __deferred_assoc_state<void, _Fp> : public __assoc_sub_state
     _Fp __func_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __deferred_assoc_state(_Fp&& __f);
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __execute() override;
@@ -939,7 +939,7 @@ class __async_assoc_state : public __assoc_state<_Rp>
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __on_zero_shared() _NOEXCEPT;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __async_assoc_state(_Fp&& __f);
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __execute();
@@ -987,7 +987,7 @@ class __async_assoc_state<void, _Fp> : public __assoc_sub_state
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __async_assoc_state(_Fp&& __f);
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __execute() override;
@@ -1035,11 +1035,11 @@ template <class _Rp> class _LIBCPP_TEMPLATE_VIS shared_future;
 template <class _Rp> class _LIBCPP_TEMPLATE_VIS future;
 
 template <class _Rp, class _Fp>
-_LIBCPP_INLINE_VISIBILITY future<_Rp>
+_LIBCPP_HIDE_FROM_ABI future<_Rp>
 __make_deferred_assoc_state(_Fp&& __f);
 
 template <class _Rp, class _Fp>
-_LIBCPP_INLINE_VISIBILITY future<_Rp>
+_LIBCPP_HIDE_FROM_ABI future<_Rp>
 __make_async_assoc_state(_Fp&& __f);
 
 template <class _Rp>
@@ -1058,14 +1058,14 @@ class _LIBCPP_TEMPLATE_VIS future
         friend future<_R1> __make_async_assoc_state(_Fp&& __f);
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future() _NOEXCEPT : __state_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future(future&& __rhs) _NOEXCEPT
         : __state_(__rhs.__state_) {__rhs.__state_ = nullptr;}
     future(const future&) = delete;
     future& operator=(const future&) = delete;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future& operator=(future&& __rhs) _NOEXCEPT
         {
             future(_VSTD::move(__rhs)).swap(*this);
@@ -1073,28 +1073,28 @@ public:
         }
 
     _LIBCPP_HIDE_FROM_ABI ~future();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future<_Rp> share() _NOEXCEPT;
 
     // retrieving the value
     _LIBCPP_HIDE_FROM_ABI _Rp get();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(future& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // functions to check state
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __state_ != nullptr;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void wait() const {__state_->wait();}
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const
             {return __state_->wait_for(__rel_time);}
     template <class _Clock, class _Duration>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const
             {return __state_->wait_until(__abs_time);}
@@ -1145,14 +1145,14 @@ class _LIBCPP_TEMPLATE_VIS future<_Rp&>
         friend future<_R1> __make_async_assoc_state(_Fp&& __f);
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future() _NOEXCEPT : __state_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future(future&& __rhs) _NOEXCEPT
         : __state_(__rhs.__state_) {__rhs.__state_ = nullptr;}
     future(const future&) = delete;
     future& operator=(const future&) = delete;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future& operator=(future&& __rhs) _NOEXCEPT
         {
             future(_VSTD::move(__rhs)).swap(*this);
@@ -1160,28 +1160,28 @@ public:
         }
 
     _LIBCPP_HIDE_FROM_ABI ~future();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future<_Rp&> share() _NOEXCEPT;
 
     // retrieving the value
     _LIBCPP_HIDE_FROM_ABI _Rp& get();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(future& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // functions to check state
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __state_ != nullptr;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void wait() const {__state_->wait();}
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const
             {return __state_->wait_for(__rel_time);}
     template <class _Clock, class _Duration>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const
             {return __state_->wait_until(__abs_time);}
@@ -1227,14 +1227,14 @@ class _LIBCPP_EXPORTED_FROM_ABI future<void>
         friend future<_R1> __make_async_assoc_state(_Fp&& __f);
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future() _NOEXCEPT : __state_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future(future&& __rhs) _NOEXCEPT
         : __state_(__rhs.__state_) {__rhs.__state_ = nullptr;}
     future(const future&) = delete;
     future& operator=(const future&) = delete;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future& operator=(future&& __rhs) _NOEXCEPT
         {
             future(_VSTD::move(__rhs)).swap(*this);
@@ -1242,35 +1242,35 @@ public:
         }
 
     ~future();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future<void> share() _NOEXCEPT;
 
     // retrieving the value
     void get();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(future& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // functions to check state
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __state_ != nullptr;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void wait() const {__state_->wait();}
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const
             {return __state_->wait_for(__rel_time);}
     template <class _Clock, class _Duration>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const
             {return __state_->wait_until(__abs_time);}
 };
 
 template <class _Rp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(future<_Rp>& __x, future<_Rp>& __y) _NOEXCEPT
 {
@@ -1286,7 +1286,7 @@ class _LIBCPP_TEMPLATE_VIS promise
 {
     __assoc_state<_Rp>* __state_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit promise(nullptr_t) _NOEXCEPT : __state_(nullptr) {}
 
     template <class> friend class packaged_task;
@@ -1294,14 +1294,14 @@ public:
     _LIBCPP_HIDE_FROM_ABI promise();
     template <class _Alloc>
     _LIBCPP_HIDE_FROM_ABI promise(allocator_arg_t, const _Alloc& __a);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     promise(promise&& __rhs) _NOEXCEPT
         : __state_(__rhs.__state_) {__rhs.__state_ = nullptr;}
     promise(const promise& __rhs) = delete;
     _LIBCPP_HIDE_FROM_ABI ~promise();
 
     // assignment
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     promise& operator=(promise&& __rhs) _NOEXCEPT
         {
             promise(_VSTD::move(__rhs)).swap(*this);
@@ -1309,7 +1309,7 @@ public:
         }
     promise& operator=(const promise& __rhs) = delete;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(promise& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // retrieving the result
@@ -1428,7 +1428,7 @@ class _LIBCPP_TEMPLATE_VIS promise<_Rp&>
 {
     __assoc_state<_Rp&>* __state_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit promise(nullptr_t) _NOEXCEPT : __state_(nullptr) {}
 
     template <class> friend class packaged_task;
@@ -1437,14 +1437,14 @@ public:
     _LIBCPP_HIDE_FROM_ABI promise();
     template <class _Allocator>
     _LIBCPP_HIDE_FROM_ABI promise(allocator_arg_t, const _Allocator& __a);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     promise(promise&& __rhs) _NOEXCEPT
         : __state_(__rhs.__state_) {__rhs.__state_ = nullptr;}
     promise(const promise& __rhs) = delete;
     _LIBCPP_HIDE_FROM_ABI ~promise();
 
     // assignment
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     promise& operator=(promise&& __rhs) _NOEXCEPT
         {
             promise(_VSTD::move(__rhs)).swap(*this);
@@ -1452,7 +1452,7 @@ public:
         }
     promise& operator=(const promise& __rhs) = delete;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(promise& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // retrieving the result
@@ -1551,7 +1551,7 @@ class _LIBCPP_EXPORTED_FROM_ABI promise<void>
 {
     __assoc_sub_state* __state_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit promise(nullptr_t) _NOEXCEPT : __state_(nullptr) {}
 
     template <class> friend class packaged_task;
@@ -1561,14 +1561,14 @@ public:
     template <class _Allocator>
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         promise(allocator_arg_t, const _Allocator& __a);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     promise(promise&& __rhs) _NOEXCEPT
         : __state_(__rhs.__state_) {__rhs.__state_ = nullptr;}
     promise(const promise& __rhs) = delete;
     ~promise();
 
     // assignment
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     promise& operator=(promise&& __rhs) _NOEXCEPT
         {
             promise(_VSTD::move(__rhs)).swap(*this);
@@ -1576,7 +1576,7 @@ public:
         }
     promise& operator=(const promise& __rhs) = delete;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(promise& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // retrieving the result
@@ -1604,7 +1604,7 @@ promise<void>::promise(allocator_arg_t, const _Alloc& __a0)
 }
 
 template <class _Rp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(promise<_Rp>& __x, promise<_Rp>& __y) _NOEXCEPT
 {
@@ -1625,7 +1625,7 @@ class __packaged_task_base<_Rp(_ArgTypes...)>
     __packaged_task_base(const __packaged_task_base&);
     __packaged_task_base& operator=(const __packaged_task_base&);
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __packaged_task_base() {}
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual ~__packaged_task_base() {}
@@ -1642,14 +1642,14 @@ class __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)> : public  __packaged_
 {
     __compressed_pair<_Fp, _Alloc> __f_;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __packaged_task_func(const _Fp& __f) : __f_(__f, __default_init_tag()) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __packaged_task_func(_Fp&& __f) : __f_(_VSTD::move(__f), __default_init_tag()) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __packaged_task_func(const _Fp& __f, const _Alloc& __a)
         : __f_(__f, __a) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __packaged_task_func(_Fp&& __f, const _Alloc& __a)
         : __f_(_VSTD::move(__f), __a) {}
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __move_to(__packaged_task_base<_Rp(_ArgTypes...)>*) _NOEXCEPT;
@@ -1699,7 +1699,7 @@ class __packaged_task_function<_Rp(_ArgTypes...)>
 {
     typedef __packaged_task_base<_Rp(_ArgTypes...)> __base;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_NO_CFI
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI
     __base* __get_buf() { return (__base*)&__buf_; }
 
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -1711,7 +1711,7 @@ public:
     typedef _Rp result_type;
 
     // construct/copy/destroy:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __packaged_task_function() _NOEXCEPT : __f_(nullptr) {}
     template<class _Fp>
     _LIBCPP_HIDE_FROM_ABI __packaged_task_function(_Fp&& __f);
@@ -1728,7 +1728,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI void swap(__packaged_task_function&) _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
 };
 
@@ -1890,15 +1890,15 @@ private:
 
 public:
     // construction and destruction
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     packaged_task() _NOEXCEPT : __p_(nullptr) {}
     template <class _Fp,
               class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         explicit packaged_task(_Fp&& __f) : __f_(_VSTD::forward<_Fp>(__f)) {}
     template <class _Fp, class _Allocator,
               class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
              : __f_(allocator_arg_t(), __a, _VSTD::forward<_Fp>(__f)),
                __p_(allocator_arg_t(), __a) {}
@@ -1909,28 +1909,28 @@ public:
     packaged_task& operator=(const packaged_task&) = delete;
 
     // move support
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     packaged_task(packaged_task&& __other) _NOEXCEPT
         : __f_(_VSTD::move(__other.__f_)), __p_(_VSTD::move(__other.__p_)) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     packaged_task& operator=(packaged_task&& __other) _NOEXCEPT
     {
         __f_ = _VSTD::move(__other.__f_);
         __p_ = _VSTD::move(__other.__p_);
         return *this;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(packaged_task& __other) _NOEXCEPT
     {
         __f_.swap(__other.__f_);
         __p_.swap(__other.__p_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __p_.__state_ != nullptr;}
 
     // result retrieval
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future<result_type> get_future() {return __p_.get_future();}
 
     // execution
@@ -2005,15 +2005,15 @@ private:
 
 public:
     // construction and destruction
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     packaged_task() _NOEXCEPT : __p_(nullptr) {}
     template <class _Fp,
               class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         explicit packaged_task(_Fp&& __f) : __f_(_VSTD::forward<_Fp>(__f)) {}
     template <class _Fp, class _Allocator,
               class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, packaged_task>::value> >
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         packaged_task(allocator_arg_t, const _Allocator& __a, _Fp&& __f)
              : __f_(allocator_arg_t(), __a, _VSTD::forward<_Fp>(__f)),
                __p_(allocator_arg_t(), __a) {}
@@ -2024,28 +2024,28 @@ public:
     packaged_task& operator=(const packaged_task&) = delete;
 
     // move support
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     packaged_task(packaged_task&& __other) _NOEXCEPT
         : __f_(_VSTD::move(__other.__f_)), __p_(_VSTD::move(__other.__p_)) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     packaged_task& operator=(packaged_task&& __other) _NOEXCEPT
     {
         __f_ = _VSTD::move(__other.__f_);
         __p_ = _VSTD::move(__other.__p_);
         return *this;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(packaged_task& __other) _NOEXCEPT
     {
         __f_.swap(__other.__f_);
         __p_.swap(__other.__p_);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __p_.__state_ != nullptr;}
 
     // result retrieval
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     future<result_type> get_future() {return __p_.get_future();}
 
     // execution
@@ -2121,7 +2121,7 @@ packaged_task<void(_ArgTypes...)>::reset()
 }
 
 template <class _Rp, class... _ArgTypes>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(packaged_task<_Rp(_ArgTypes...)>& __x, packaged_task<_Rp(_ArgTypes...)>& __y) _NOEXCEPT
 {
@@ -2133,7 +2133,7 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<packaged_task<_Callable>, _Alloc>
     : public true_type {};
 
 template <class _Rp, class _Fp>
-_LIBCPP_INLINE_VISIBILITY future<_Rp>
+_LIBCPP_HIDE_FROM_ABI future<_Rp>
 __make_deferred_assoc_state(_Fp&& __f)
 {
     unique_ptr<__deferred_assoc_state<_Rp, _Fp>, __release_shared_count>
@@ -2142,7 +2142,7 @@ __make_deferred_assoc_state(_Fp&& __f)
 }
 
 template <class _Rp, class _Fp>
-_LIBCPP_INLINE_VISIBILITY future<_Rp>
+_LIBCPP_HIDE_FROM_ABI future<_Rp>
 __make_async_assoc_state(_Fp&& __f)
 {
     unique_ptr<__async_assoc_state<_Rp, _Fp>, __release_shared_count>
@@ -2161,11 +2161,11 @@ class _LIBCPP_HIDDEN __async_func
 public:
     typedef typename __invoke_of<_Fp, _Args...>::type _Rp;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __async_func(_Fp&& __f, _Args&&... __args)
         : __f_(_VSTD::move(__f), _VSTD::move(__args)...) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __async_func(__async_func&& __f) : __f_(_VSTD::move(__f.__f_)) {}
 
     _LIBCPP_HIDE_FROM_ABI _Rp operator()()
@@ -2182,7 +2182,7 @@ private:
     }
 };
 
-inline _LIBCPP_INLINE_VISIBILITY bool __does_policy_contain(launch __policy, launch __value )
+inline _LIBCPP_HIDE_FROM_ABI bool __does_policy_contain(launch __policy, launch __value )
 { return (int(__policy) & int(__value)) != 0; }
 
 template <class _Fp, class... _Args>
@@ -2212,7 +2212,7 @@ async(launch __policy, _Fp&& __f, _Args&&... __args)
 }
 
 template <class _Fp, class... _Args>
-_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 future<typename __invoke_of<__decay_t<_Fp>, __decay_t<_Args>...>::type>
 async(_Fp&& __f, _Args&&... __args)
 {
@@ -2230,20 +2230,20 @@ class _LIBCPP_TEMPLATE_VIS shared_future
     __assoc_state<_Rp>* __state_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future() _NOEXCEPT : __state_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(const shared_future& __rhs)  _NOEXCEPT : __state_(__rhs.__state_)
         {if (__state_) __state_->__add_shared();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(future<_Rp>&& __f) _NOEXCEPT : __state_(__f.__state_)
         {__f.__state_ = nullptr;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(shared_future&& __rhs) _NOEXCEPT : __state_(__rhs.__state_)
         {__rhs.__state_ = nullptr;}
     _LIBCPP_HIDE_FROM_ABI ~shared_future();
     _LIBCPP_HIDE_FROM_ABI shared_future& operator=(const shared_future& __rhs) _NOEXCEPT;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future& operator=(shared_future&& __rhs) _NOEXCEPT
         {
             shared_future(_VSTD::move(__rhs)).swap(*this);
@@ -2251,25 +2251,25 @@ public:
         }
 
     // retrieving the value
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     const _Rp& get() const {return __state_->copy();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(shared_future& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // functions to check state
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __state_ != nullptr;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void wait() const {__state_->wait();}
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const
             {return __state_->wait_for(__rel_time);}
     template <class _Clock, class _Duration>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const
             {return __state_->wait_until(__abs_time);}
@@ -2300,20 +2300,20 @@ class _LIBCPP_TEMPLATE_VIS shared_future<_Rp&>
     __assoc_state<_Rp&>* __state_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future() _NOEXCEPT : __state_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(const shared_future& __rhs) : __state_(__rhs.__state_)
         {if (__state_) __state_->__add_shared();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(future<_Rp&>&& __f) _NOEXCEPT : __state_(__f.__state_)
         {__f.__state_ = nullptr;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(shared_future&& __rhs) _NOEXCEPT : __state_(__rhs.__state_)
         {__rhs.__state_ = nullptr;}
     _LIBCPP_HIDE_FROM_ABI ~shared_future();
     _LIBCPP_HIDE_FROM_ABI shared_future& operator=(const shared_future& __rhs);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future& operator=(shared_future&& __rhs) _NOEXCEPT
         {
             shared_future(_VSTD::move(__rhs)).swap(*this);
@@ -2321,25 +2321,25 @@ public:
         }
 
     // retrieving the value
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _Rp& get() const {return __state_->copy();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(shared_future& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // functions to check state
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __state_ != nullptr;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void wait() const {__state_->wait();}
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const
             {return __state_->wait_for(__rel_time);}
     template <class _Clock, class _Duration>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const
             {return __state_->wait_until(__abs_time);}
@@ -2370,20 +2370,20 @@ class _LIBCPP_EXPORTED_FROM_ABI shared_future<void>
     __assoc_sub_state* __state_;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future() _NOEXCEPT : __state_(nullptr) {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(const shared_future& __rhs) : __state_(__rhs.__state_)
         {if (__state_) __state_->__add_shared();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(future<void>&& __f) _NOEXCEPT : __state_(__f.__state_)
         {__f.__state_ = nullptr;}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future(shared_future&& __rhs) _NOEXCEPT : __state_(__rhs.__state_)
         {__rhs.__state_ = nullptr;}
     ~shared_future();
     shared_future& operator=(const shared_future& __rhs);
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     shared_future& operator=(shared_future&& __rhs) _NOEXCEPT
         {
             shared_future(_VSTD::move(__rhs)).swap(*this);
@@ -2391,32 +2391,32 @@ public:
         }
 
     // retrieving the value
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void get() const {__state_->copy();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(shared_future& __rhs) _NOEXCEPT {_VSTD::swap(__state_, __rhs.__state_);}
 
     // functions to check state
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool valid() const _NOEXCEPT {return __state_ != nullptr;}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void wait() const {__state_->wait();}
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const
             {return __state_->wait_for(__rel_time);}
     template <class _Clock, class _Duration>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         future_status
         wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const
             {return __state_->wait_until(__abs_time);}
 };
 
 template <class _Rp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 swap(shared_future<_Rp>& __x, shared_future<_Rp>& __y) _NOEXCEPT
 {

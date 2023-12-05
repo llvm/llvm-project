@@ -20,8 +20,11 @@ void test_outer_product(svbool_t pred, svint16_t s16, svuint16_t u16, svint32_t 
   svbmops_za32_s32_m(4, pred, pred, s32, s32); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
 }
 
-void test_ldr_str_zt(const void *const_base, void *base) __arm_streaming_compatible __arm_shared_za __arm_preserves_za {
+void test_ldr_zt(const void *const_base) __arm_streaming_compatible __arm_shared_za {
   svldr_zt(1, const_base); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+}
+
+void test_str_zt(void *base) __arm_streaming_compatible __arm_shared_za __arm_preserves_za {
   svstr_zt(1, base);       // expected-error {{argument value 1 is outside the valid range [0, 0]}}
 }
 
@@ -74,4 +77,3 @@ void test_svluti4_lane_zt_x4(svuint8_t zn) __arm_streaming __arm_shared_za __arm
   // Test index value range
   svluti4_lane_zt_f32_x4(0, zn, 2);   // expected-error {{argument value 2 is outside the valid range [0, 1]}}
 }
-
