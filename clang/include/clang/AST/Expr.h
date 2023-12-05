@@ -4833,8 +4833,6 @@ public:
   /// Build an empty call expression.
   explicit PPEmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
 
-  /// If the PPEmbedExpr has been resolved return the subexpression
-  /// representing the resolved value. Otherwise return null.
   const DeclContext *getParentContext() const { return ParentContext; }
   DeclContext *getParentContext() { return ParentContext; }
 
@@ -4863,7 +4861,7 @@ private:
     IntegerLiteral *FakeNode = nullptr;
     StringRef DataRef;
     LLVM_PREFERRED_TYPE(bool) unsigned IsSigned : 1;
-    // FIXME: a sufficiently large embedded resource cannot be iterated over,
+    // FIXME: a sufficiently large embedded resource cannot be iterated over;
     // woe unto such users.
     unsigned CurOffset : 31;
     using BaseTy = typename ChildElementIter::iterator_facade_base;

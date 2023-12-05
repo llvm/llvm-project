@@ -741,8 +741,6 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 };
 }
 
-// clang-format off
-
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
 /// a unary-expression.
 ///

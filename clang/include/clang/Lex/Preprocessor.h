@@ -2428,7 +2428,8 @@ public:
              bool *IsFrameworkFound, bool SkipCache = false,
              bool OpenFile = true, bool CacheFailures = true);
 
-  /// Given a "foo" or \<foo> reference, look up the indicated embed resource.
+  /// Given a "Filename" or \<Filename> reference, look up the indicated embed
+  /// resource.
   ///
   /// Returns std::nullopt on failure.  \p isAngled indicates whether the file
   /// reference is for system \#include's or not (i.e. using <> instead of "").
