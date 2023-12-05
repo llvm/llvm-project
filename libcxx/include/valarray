@@ -2674,9 +2674,9 @@ valarray<_Tp>::__assign_range(const value_type* __f, const value_type* __l)
         __clear(size());
         __begin_ = allocator<value_type>().allocate(__n);
         __end_ = __begin_ + __n;
-        _VSTD::uninitialized_copy(__f, __l, __begin_);
+        std::uninitialized_copy(__f, __l, __begin_);
     } else {
-        _VSTD::copy(__f, __l, __begin_);
+        std::copy(__f, __l, __begin_);
     }
     return *this;
 }
@@ -2685,7 +2685,7 @@ template <class _Tp>
 valarray<_Tp>&
 valarray<_Tp>::operator=(const valarray& __v)
 {
-    if (this != _VSTD::addressof(__v))
+    if (this != std::addressof(__v))
         return __assign_range(__v.__begin_, __v.__end_);
     return *this;
 }
@@ -2720,7 +2720,7 @@ inline
 valarray<_Tp>&
 valarray<_Tp>::operator=(const value_type& __x)
 {
-    _VSTD::fill(__begin_, __end_, __x);
+    std::fill(__begin_, __end_, __x);
     return *this;
 }
 
@@ -3178,8 +3178,8 @@ inline
 void
 valarray<_Tp>::swap(valarray& __v) _NOEXCEPT
 {
-    _VSTD::swap(__begin_, __v.__begin_);
-    _VSTD::swap(__end_, __v.__end_);
+    std::swap(__begin_, __v.__begin_);
+    std::swap(__end_, __v.__end_);
 }
 
 template <class _Tp>
@@ -3203,7 +3203,7 @@ valarray<_Tp>::min() const
 {
     if (__begin_ == __end_)
         return value_type();
-    return *_VSTD::min_element(__begin_, __end_);
+    return *std::min_element(__begin_, __end_);
 }
 
 template <class _Tp>
@@ -3213,7 +3213,7 @@ valarray<_Tp>::max() const
 {
     if (__begin_ == __end_)
         return value_type();
-    return *_VSTD::max_element(__begin_, __end_);
+    return *std::max_element(__begin_, __end_);
 }
 
 template <class _Tp>
@@ -3230,14 +3230,14 @@ valarray<_Tp>::shift(int __i) const
         value_type* __te;
         if (__i >= 0)
         {
-            __i = _VSTD::min(__i, static_cast<int>(__n));
+            __i = std::min(__i, static_cast<int>(__n));
             __sb = __begin_ + __i;
             __tb = __r.__begin_;
             __te = __r.__begin_ + (__n - __i);
         }
         else
         {
-            __i = _VSTD::min(-__i, static_cast<int>(__n));
+            __i = std::min(-__i, static_cast<int>(__n));
             __sb = __begin_;
             __tb = __r.__begin_ + __i;
             __te = __r.__begin_ + __n;
