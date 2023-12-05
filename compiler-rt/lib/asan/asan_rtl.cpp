@@ -74,7 +74,7 @@ static void CheckUnwind() {
 static int asan_inited = 0;
 static int asan_init_is_running = 0;
 
-static void SetAsanInited(u32 val) { asan_inited = val; }
+static void SetAsanInited() { asan_inited = 1; }
 
 static void SetAsanInitIsRunning(u32 val) { asan_init_is_running = val; }
 
@@ -470,7 +470,7 @@ static void AsanInitInternal() {
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
   replace_intrin_cached = flags()->replace_intrin;
-  SetAsanInited(1);
+  SetAsanInited();
   SetAsanInitIsRunning(0);
 
   if (flags()->atexit)
