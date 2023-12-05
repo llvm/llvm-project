@@ -216,7 +216,7 @@ class Preprocessor {
 
   enum {
     /// Maximum depth of \#includes.
-    MaxAllowedIncludeStackDepth = 200,
+    MaxAllowedIncludeStackDepth = 200
   };
 
   // State that is set before the preprocessor begins.
