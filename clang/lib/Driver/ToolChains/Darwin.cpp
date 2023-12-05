@@ -678,7 +678,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // to generate executables.
   if (getToolChain().getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-    addFortranRuntimeLibs(getToolChain(), CmdArgs);
+    addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
@@ -2073,7 +2073,7 @@ std::optional<DarwinPlatform> getDeploymentTargetFromTargetArg(
         continue;
       A->claim();
       // Accept a -target-variant triple when compiling code that may run on
-      // macOS or Mac Catalust.
+      // macOS or Mac Catalyst.
       if ((Triple.isMacOSX() && TVT.getOS() == llvm::Triple::IOS &&
            TVT.isMacCatalystEnvironment()) ||
           (TVT.isMacOSX() && Triple.getOS() == llvm::Triple::IOS &&

@@ -146,7 +146,7 @@ define i16 @reduce_blockstrided2(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX8]], align 2
-; CHECK-NEXT:    [[ADD10:%.*]] = or i32 [[MUL]], 1
+; CHECK-NEXT:    [[ADD10:%.*]] = or disjoint i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[ADD10]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 [[IDXPROM11]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX12]], align 2
@@ -205,7 +205,7 @@ entry:
   %idxprom7 = sext i32 %mul to i64
   %arrayidx8 = getelementptr inbounds i16, ptr %x, i64 %idxprom7
   %4 = load i16, ptr %arrayidx8, align 2
-  %add10 = or i32 %mul, 1
+  %add10 = or disjoint i32 %mul, 1
   %idxprom11 = sext i32 %add10 to i64
   %arrayidx12 = getelementptr inbounds i16, ptr %x, i64 %idxprom11
   %5 = load i16, ptr %arrayidx12, align 2
@@ -688,7 +688,7 @@ define void @store_blockstrided3(ptr nocapture noundef readonly %x, ptr nocaptur
 ; CHECK-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM11]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX12]], align 4
-; CHECK-NEXT:    [[ADD14:%.*]] = or i32 [[MUL]], 1
+; CHECK-NEXT:    [[ADD14:%.*]] = or disjoint i32 [[MUL]], 1
 ; CHECK-NEXT:    [[IDXPROM15:%.*]] = sext i32 [[ADD14]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM15]]
 ; CHECK-NEXT:    [[MUL21:%.*]] = mul nsw i32 [[STRIDE]], 3
@@ -754,7 +754,7 @@ entry:
   %idxprom11 = sext i32 %mul to i64
   %arrayidx12 = getelementptr inbounds i32, ptr %x, i64 %idxprom11
   %5 = load i32, ptr %arrayidx12, align 4
-  %add14 = or i32 %mul, 1
+  %add14 = or disjoint i32 %mul, 1
   %idxprom15 = sext i32 %add14 to i64
   %arrayidx16 = getelementptr inbounds i32, ptr %x, i64 %idxprom15
   %6 = load i32, ptr %arrayidx16, align 4

@@ -107,7 +107,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal(_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1, _RandomAccessIterator2 __first2,
         _RandomAccessIterator2 __last2, _BinaryPredicate __pred, random_access_iterator_tag,
         random_access_iterator_tag) {
-  if (_VSTD::distance(__first1, __last1) != _VSTD::distance(__first2, __last2))
+  if (std::distance(__first1, __last1) != std::distance(__first2, __last2))
     return false;
   __identity __proj;
   return std::__equal_impl(
@@ -124,7 +124,7 @@ template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2,
       _BinaryPredicate __pred) {
-  return _VSTD::__equal<_BinaryPredicate&>(
+  return std::__equal<_BinaryPredicate&>(
       __first1, __last1, __first2, __last2, __pred, typename iterator_traits<_InputIterator1>::iterator_category(),
       typename iterator_traits<_InputIterator2>::iterator_category());
 }

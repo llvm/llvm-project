@@ -270,6 +270,21 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
 
     bool IsNegative = Name.startswith("no-");
+    if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
+        A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
+
+      for (StringRef Value : A->getValues()) {
+        if (Value == "egpr" || Value == "push2pop2" || Value == "ppx" ||
+            Value == "ndd" || Value == "ccmp" || Value == "cf") {
+          Features.push_back(
+              Args.MakeArgString((IsNegative ? "-" : "+") + Value));
+          continue;
+        }
+        D.Diag(clang::diag::err_drv_unsupported_option_argument)
+            << A->getSpelling() << Value;
+      }
+      continue;
+    }
     if (IsNegative)
       Name = Name.substr(3);
     Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOATPROPERTIES_H
 
 #include "src/__support/UInt128.h"
+#include "src/__support/macros/attributes.h"       // LIBC_INLINE
 #include "src/__support/macros/properties/float.h" // LIBC_COMPILER_HAS_FLOAT128
 
 #include <stdint.h>
@@ -139,7 +140,7 @@ template <> struct FPProperties<FPType::IEEE754_Binary128> {
 };
 
 //-----------------------------------------------------------------------------
-template <typename FP> static constexpr FPType get_fp_type() {
+template <typename FP> LIBC_INLINE static constexpr FPType get_fp_type() {
   if constexpr (cpp::is_same_v<FP, float> && __FLT_MANT_DIG__ == 24)
     return FPType::IEEE754_Binary32;
   else if constexpr (cpp::is_same_v<FP, double> && __DBL_MANT_DIG__ == 53)

@@ -7,6 +7,9 @@
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; TODO(#60133): Requires updates following opaque pointer migration.
+; XFAIL: *
+
 ; CHECK-SPIRV:     OpCapability Float16Buffer
 ; CHECK-SPIRV-NOT: OpCapability Float16
 

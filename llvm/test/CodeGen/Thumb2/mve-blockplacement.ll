@@ -213,7 +213,7 @@ cond.end22:                                       ; preds = %for.body10, %cond.t
   %tobool24 = icmp ne i32 %cond23, 0
   %frombool = zext i1 %tobool24 to i8
   store i8 %frombool, ptr @var_36, align 1
-  %add = or i32 %i_15.044, 1
+  %add = or disjoint i32 %i_15.044, 1
   %arraydecay.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add, i32 0
   %2 = ptrtoint ptr %arraydecay.1 to i32
   %arrayidx13.1 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add
@@ -258,7 +258,7 @@ cond.end22.1119:                                  ; preds = %cond.true19.1114, %
   %tobool24.1116 = icmp ne i32 %cond23.1115, 0
   %frombool.1117 = zext i1 %tobool24.1116 to i8
   store i8 %frombool.1117, ptr @var_36, align 1
-  %add.1118 = or i32 %i_15.044.1, 1
+  %add.1118 = or disjoint i32 %i_15.044.1, 1
   %arraydecay.1.1 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add.1118, i32 0
   %6 = ptrtoint ptr %arraydecay.1.1 to i32
   %arrayidx13.1.1 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add.1118
@@ -308,7 +308,7 @@ cond.end22.2:                                     ; preds = %cond.true19.2, %for
   %tobool24.2 = icmp ne i32 %cond23.2, 0
   %frombool.2 = zext i1 %tobool24.2 to i8
   store i8 %frombool.2, ptr @var_36, align 1
-  %add.2 = or i32 %i_15.044.2, 1
+  %add.2 = or disjoint i32 %i_15.044.2, 1
   %arraydecay.1.2 = getelementptr inbounds [18 x [22 x i8]], ptr %arr_60, i32 %add.2, i32 0
   %10 = ptrtoint ptr %arraydecay.1.2 to i32
   %arrayidx13.1.2 = getelementptr inbounds [1 x i32], ptr @arr_61, i32 0, i32 %add.2

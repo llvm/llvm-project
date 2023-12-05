@@ -5568,8 +5568,8 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Type *XTy = X.Var->getType();
-  assert(XTy->isPointerTy() && "OMP Atomic expects a pointer to target memory");
+  assert(X.Var->getType()->isPointerTy() &&
+         "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
           XElemTy->isPointerTy()) &&
@@ -5580,14 +5580,11 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
     XSt->setAtomic(AO);
   } else {
     // We need to bitcast and perform atomic op as integers
-    unsigned Addrspace = cast<PointerType>(XTy)->getAddressSpace();
     IntegerType *IntCastTy =
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
-    Value *XBCast = Builder.CreateBitCast(
-        X.Var, IntCastTy->getPointerTo(Addrspace), "atomic.dst.int.cast");
     Value *ExprCast =
         Builder.CreateBitCast(Expr, IntCastTy, "atomic.src.int.cast");
-    StoreInst *XSt = Builder.CreateStore(ExprCast, XBCast, X.IsVolatile);
+    StoreInst *XSt = Builder.CreateStore(ExprCast, X.Var, X.IsVolatile);
     XSt->setAtomic(AO);
   }
 

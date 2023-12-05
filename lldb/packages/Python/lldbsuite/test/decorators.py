@@ -113,10 +113,6 @@ def _compiler_supports(
     return True
 
 
-def expectedFailure(func):
-    return unittest2.expectedFailure(func)
-
-
 def expectedFailureIfFn(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
