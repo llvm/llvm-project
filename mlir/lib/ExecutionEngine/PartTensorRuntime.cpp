@@ -339,6 +339,23 @@ void _mlir_ciface_setSlice(void *tensor,
                                  partSpec->sizes[0]),
       static_cast<SparseTensorStorageBase *>(spTensor));
 }
+extern void *snl_utah_spadd_dense_f32(void *tensor, void *spTensor);
+
+void _mlir_ciface_updateSlice(void *partTensor,
+                              StridedMemRefType<index_type, 1> *partSpec,
+                              void *spTensor) {
+  // For now it only works on dense.
+  auto *oldVal = static_cast<SparseTensorStorageBase *>(
+      _mlir_ciface_getSlice(partTensor, partSpec));
+  auto *newVal = static_cast<SparseTensorStorageBase *>(spTensor);
+  std::vector<float> *valuesVector;
+  std::vector<float> *newValuesVector;
+  oldVal->getValues(&valuesVector);
+  newVal->getValues(&newValuesVector);
+  for (auto elem : llvm::zip(*valuesVector, *newValuesVector)) {
+    std::get<0>(elem) += std::get<1>(elem);
+  }
+}
 } // extern "C"
 
 #undef MEMREF_GET_PAYLOAD
