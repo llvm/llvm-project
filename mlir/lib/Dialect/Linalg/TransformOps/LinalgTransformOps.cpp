@@ -1203,7 +1203,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
 
         for (auto [attr, operandType] :
              llvm::zip_equal(getFilterOperandTypes().value(), operandTypes)) {
-          auto typeattr = dyn_cast<mlir::TypeAttr>(attr);
+          auto typeattr = cast<mlir::TypeAttr>(attr);
           Type type = typeattr.getValue().cast<::mlir::Type>();
 
           if (type != operandType)
