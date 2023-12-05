@@ -4463,9 +4463,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   Value *M;
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
                         m_c_And(m_Deferred(M), m_Value())))) {
-    auto *Or = BinaryOperator::CreateOr(Op0, Op1);
-    cast<PossiblyDisjointInst>(Or)->setIsDisjoint(true);
-    return Or;
+    return BinaryOperator::CreateDisjointOr(Op0, Op1);
   }
 
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
