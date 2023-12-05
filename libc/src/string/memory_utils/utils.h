@@ -47,13 +47,13 @@ LIBC_INLINE constexpr size_t log2s(size_t value) {
 // Returns the first power of two preceding value or value if it is already a
 // power of two (or 0 when value is 0).
 LIBC_INLINE constexpr size_t le_power2(size_t value) {
-  return value == 0 ? value : 1ULL << log2s(value);
+  return value == 0 ? value : 1UL << log2s(value);
 }
 
 // Returns the first power of two following value or value if it is already a
 // power of two (or 0 when value is 0).
 LIBC_INLINE constexpr size_t ge_power2(size_t value) {
-  return is_power2_or_zero(value) ? value : 1ULL << (log2s(value) + 1);
+  return is_power2_or_zero(value) ? value : 1UL << (log2s(value) + 1);
 }
 
 // Returns the number of bytes to substract from ptr to get to the previous
