@@ -14,10 +14,7 @@
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
-#include "device.h"
-#include "omptarget.h"
 #include "private.h"
-#include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Profile.h"
@@ -28,8 +25,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <mutex>
-#include <type_traits>
 
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
