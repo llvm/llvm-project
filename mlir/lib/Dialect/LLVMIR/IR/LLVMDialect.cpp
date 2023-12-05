@@ -2544,6 +2544,10 @@ LogicalResult LLVM::ConstantOp::verify() {
   if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
+  if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
+    if (!llvm::isa<IntegerType>(getType()))
+      return emitOpError() << "expected integer type";
+  }
   if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     unsigned floatWidth = APFloat::getSizeInBits(sem);
@@ -2557,6 +2561,12 @@ LogicalResult LLVM::ConstantOp::verify() {
     if (getType().isa<IntegerType>() && !getType().isInteger(floatWidth)) {
       return emitOpError() << "expected integer type of width " << floatWidth;
     }
+  }
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
+    if (!getType().isa<VectorType>() && !getType().isa<LLVM::LLVMArrayType>() &&
+        !getType().isa<LLVM::LLVMFixedVectorType>() &&
+        !getType().isa<LLVM::LLVMScalableVectorType>())
+      return emitOpError() << "expected vector or array type";
   }
   return success();
 }
