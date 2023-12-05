@@ -26,14 +26,6 @@ namespace DOT = llvm::DOT;
 
 namespace {
 class DependencyGraphCallback : public PPCallbacks {
-public:
-  enum DirectiveBehavior {
-    Normal = 0,
-    IgnoreEmbed = 0b01,
-    IgnoreInclude = 0b10,
-  };
-
-private:
   const Preprocessor *PP;
   std::string OutputFile;
   std::string SysRoot;
@@ -42,7 +34,6 @@ private:
       llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef, 2>>;
 
   DependencyMap Dependencies;
-  DirectiveBehavior Behavior;
 
 private:
   raw_ostream &writeNodeReference(raw_ostream &OS,
@@ -51,8 +42,7 @@ private:
 
 public:
   DependencyGraphCallback(const Preprocessor *_PP, StringRef OutputFile,
-                          StringRef SysRoot,
-                          DirectiveBehavior Action = IgnoreEmbed)
+                          StringRef SysRoot)
       : PP(_PP), OutputFile(OutputFile.str()), SysRoot(SysRoot.str()) {}
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
@@ -84,9 +74,6 @@ void DependencyGraphCallback::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
-  if ((Behavior & IgnoreInclude) == IgnoreInclude) {
-    return;
-  }
   if (!File)
     return;
 
@@ -105,9 +92,6 @@ void DependencyGraphCallback::InclusionDirective(
 void DependencyGraphCallback::EmbedDirective(SourceLocation HashLoc, StringRef,
                                              bool, OptionalFileEntryRef File,
                                              const LexEmbedParametersResult &) {
-  if ((Behavior & IgnoreEmbed) == IgnoreEmbed) {
-    return;
-  }
   if (!File)
     return;
 
