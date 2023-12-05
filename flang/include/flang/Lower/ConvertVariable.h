@@ -76,6 +76,7 @@ void defineCommonBlocks(
 /// of the COMMON block. As the offset from the symbol \p sym, generate the
 /// COMMON block member value (commonValue + offset) for the symbol.
 mlir::Value genCommonBlockMember(AbstractConverter &converter,
+                                 mlir::Location loc,
                                  const Fortran::semantics::Symbol &sym,
                                  mlir::Value commonValue);
 
