@@ -1331,6 +1331,27 @@ void Fortran::lower::defineCommonBlocks(
     finalizeCommonBlockDefinition(loc, converter, global, cmnBlkMems);
 }
 
+/// FIXME: Share the code with `instantiateCommon` in ConvertVariable.cpp.
+mlir::Value Fortran::lower::genCommonBlockMember(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::semantics::Symbol &sym, mlir::Value commonValue) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+  mlir::IntegerType i8Ty = firOpBuilder.getIntegerType(8);
+  mlir::Type i8Ptr = firOpBuilder.getRefType(i8Ty);
+  mlir::Type seqTy = firOpBuilder.getRefType(firOpBuilder.getVarLenSeqTy(i8Ty));
+  mlir::Value base =
+      firOpBuilder.createConvert(currentLocation, seqTy, commonValue);
+  std::size_t byteOffset = sym.GetUltimate().offset();
+  mlir::Value offs = firOpBuilder.createIntegerConstant(
+      currentLocation, firOpBuilder.getIndexType(), byteOffset);
+  mlir::Value varAddr = firOpBuilder.create<fir::CoordinateOp>(
+      currentLocation, i8Ptr, base, mlir::ValueRange{offs});
+  mlir::Type symType = converter.genType(sym);
+  return firOpBuilder.createConvert(currentLocation,
+                                    firOpBuilder.getRefType(symType), varAddr);
+}
+
 /// The COMMON block is a global structure. `var` will be at some offset
 /// within the COMMON block. Adds the address of `var` (COMMON + offset) to
 /// the symbol map.
