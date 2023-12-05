@@ -71,6 +71,9 @@ func.func @transfer_read_dims_mismatch_non_zero_indices(
 
 // -----
 
+// The input memref has a dynamic trailing shape and hence is not flattened.
+// TODO: This case could be supported via memref.dim
+
 func.func @transfer_read_dims_mismatch_non_zero_indices_dynamic_shapes(
                      %idx_1: index,
                      %idx_2: index,
