@@ -9,9 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASH_H
 #define LLVM_LIBC_SRC___SUPPORT_HASH_H
 
-#include "src/__support/CPP/bit.h"           // rotl
-#include "src/__support/CPP/limits.h"        // numeric_limits
 #include "src/__support/UInt128.h"           // UInt128
+#include "src/__support/bit.h"               // rotate_left
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include <stdint.h>                          // For uint64_t
 
@@ -104,7 +103,7 @@ class HashState {
     uint64_t combined =
         folded_multiply(low ^ extra_keys[0], high ^ extra_keys[1]);
     buffer = (buffer + pad) ^ combined;
-    buffer = cpp::rotl(buffer, ROTATE);
+    buffer = rotate_left(buffer, ROTATE);
   }
   LIBC_INLINE static uint64_t mix(uint64_t seed) {
     HashState mixer{RANDOMNESS[0][0], RANDOMNESS[0][1], RANDOMNESS[0][2],
@@ -153,9 +152,9 @@ public:
     }
   }
   LIBC_INLINE uint64_t finish() {
-    int rot = buffer & 63;
+    uint64_t rot = buffer & 63;
     uint64_t folded = folded_multiply(buffer, pad);
-    return cpp::rotl(folded, rot);
+    return rotate_left(folded, rot);
   }
 };
 
