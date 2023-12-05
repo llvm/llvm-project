@@ -133,7 +133,6 @@ loop:
   br label %loop
 }
 
-; FIXME: This is a miscompile.
 define i32 @test_splat_gep_capture(<1 x i32> %index) {
 ; CHECK-LABEL: define i32 @test_splat_gep_capture(
 ; CHECK-SAME: <1 x i32> [[INDEX:%.*]]) {
@@ -141,7 +140,8 @@ define i32 @test_splat_gep_capture(<1 x i32> %index) {
 ; CHECK-NEXT:    store i32 123, ptr [[A]], align 4
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr inbounds i32, ptr [[A]], <1 x i32> [[INDEX]]
 ; CHECK-NEXT:    call void @some_call(<1 x ptr> [[PTRS]])
-; CHECK-NEXT:    ret i32 123
+; CHECK-NEXT:    [[RELOAD:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[RELOAD]]
 ;
   %a = alloca i32
   store i32 123, ptr %a
