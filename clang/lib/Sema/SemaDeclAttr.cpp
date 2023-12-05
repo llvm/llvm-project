@@ -3387,7 +3387,7 @@ static void handleCodeModelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
              .Default(CM);
   }
 
-  // Check that the value.
+  // Check that the value is acceptable.
   if (!Ok) {
     S.Diag(LiteralLoc, diag::err_attr_codemodel_arg) << Str;
     return;
