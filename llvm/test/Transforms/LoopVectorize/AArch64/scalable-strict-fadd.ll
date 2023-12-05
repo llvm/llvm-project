@@ -556,7 +556,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-NOT-VECTORIZED-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-NOT-VECTORIZED-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
 ; CHECK-NOT-VECTORIZED-NEXT:    [[ADD1]] = fadd float [[TMP0]], [[ADD_PHI2]]
-; CHECK-NOT-VECTORIZED-NEXT:    [[OR:%.*]] = or i64 [[IV]], 1
+; CHECK-NOT-VECTORIZED-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-NOT-VECTORIZED-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
 ; CHECK-NOT-VECTORIZED-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
 ; CHECK-NOT-VECTORIZED-NEXT:    [[ADD2]] = fadd float [[TMP1]], [[ADD_PHI1]]
@@ -628,7 +628,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-UNORDERED-NEXT:    [[TMP21:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
 ; CHECK-UNORDERED-NEXT:    [[ADD1]] = fadd float [[TMP21]], [[ADD_PHI2]]
-; CHECK-UNORDERED-NEXT:    [[OR:%.*]] = or i64 [[IV]], 1
+; CHECK-UNORDERED-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-UNORDERED-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
 ; CHECK-UNORDERED-NEXT:    [[TMP22:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
 ; CHECK-UNORDERED-NEXT:    [[ADD2]] = fadd float [[TMP22]], [[ADD_PHI1]]
@@ -696,7 +696,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-ORDERED-NEXT:    [[TMP17:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
 ; CHECK-ORDERED-NEXT:    [[ADD1]] = fadd float [[TMP17]], [[ADD_PHI2]]
-; CHECK-ORDERED-NEXT:    [[OR:%.*]] = or i64 [[IV]], 1
+; CHECK-ORDERED-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-ORDERED-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
 ; CHECK-ORDERED-NEXT:    [[TMP18:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
 ; CHECK-ORDERED-NEXT:    [[ADD2]] = fadd float [[TMP18]], [[ADD_PHI1]]
@@ -776,7 +776,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP26:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ADD1]] = fadd float [[TMP26]], [[ADD_PHI2]]
-; CHECK-ORDERED-TF-NEXT:    [[OR:%.*]] = or i64 [[IV]], 1
+; CHECK-ORDERED-TF-NEXT:    [[OR:%.*]] = or disjoint i64 [[IV]], 1
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDXB2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[OR]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP27:%.*]] = load float, ptr [[ARRAYIDXB2]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ADD2]] = fadd float [[TMP27]], [[ADD_PHI1]]
@@ -807,7 +807,7 @@ for.body:
   %arrayidxb1 = getelementptr inbounds float, ptr %b, i64 %iv
   %0 = load float, ptr %arrayidxb1, align 4
   %add1 = fadd float %0, %add.phi2
-  %or = or i64 %iv, 1
+  %or = or disjoint i64 %iv, 1
   %arrayidxb2 = getelementptr inbounds float, ptr %b, i64 %or
   %1 = load float, ptr %arrayidxb2, align 4
   %add2 = fadd float %1, %add.phi1
