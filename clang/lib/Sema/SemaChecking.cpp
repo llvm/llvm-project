@@ -3117,6 +3117,18 @@ bool Sema::ParseSVEImmChecks(
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 255))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck1_1:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 1))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck1_3:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 3))
+        HasError = true;
+      break;
+    case SVETypeFlags::ImmCheck1_7:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 1, 7))
+        HasError = true;
+      break;
     case SVETypeFlags::ImmCheck2_4_Mul2:
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 2, 4) ||
           SemaBuiltinConstantArgMultiple(TheCall, ArgNum, 2))
