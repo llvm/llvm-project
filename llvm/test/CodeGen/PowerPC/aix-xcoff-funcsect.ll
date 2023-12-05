@@ -219,7 +219,7 @@ entry:
 ; DIS64-NEXT:       5c: 4b ff ff a5  	bl 0x0 <.alias_foo>
 ; DIS64-NEXT: 		000000000000005c:  R_RBR	(idx: 9) .alias_foo
 ; DIS64-NEXT:       60: 60 00 00 00  	nop
-; DIS64-NEXT:       64: 4b ff ff 9d  	bl 0x0 <.extern>
+; DIS64-NEXT:       64: 4b ff ff 9d  	bl 0x0 <.extern_foo>
 ; DIS64-NEXT: 		0000000000000064:  R_RBR	(idx: 1) .extern_foo[PR]
 ; DIS64-NEXT:       68: 60 00 00 00  	nop
 ; DIS64-NEXT:       6c: 4b ff ff b5  	bl 0x20 <.hidden_foo>
