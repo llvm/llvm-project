@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <numeric>
+//#include <regex>
 
 #include "UseDigitSeparatorCheck.h"
 #include "clang/AST/ASTContext.h"
@@ -51,6 +52,7 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
   unsigned int Radix;
   size_t GroupSize;
   std::string Prefix;
+  std::string Postfix;
   if (OriginalLiteralString.starts_with("0b")) {
     Radix = 2;
     GroupSize = 4;
@@ -69,17 +71,32 @@ void UseDigitSeparatorCheck::check(const MatchFinder::MatchResult &Result) {
     GroupSize = 3;
   }
 
+  if (OriginalLiteralString.ends_with("L") || OriginalLiteralString.ends_with("l") || OriginalLiteralString.ends_with("U") || OriginalLiteralString.ends_with("u")) {
+    Postfix = OriginalLiteralString.back();
+  }
+
   // Get formatting literal text
   const llvm::APInt IntegerValue = MatchedInteger->getValue();
-  const std::vector<std::string> SplittedIntegerLiteral =
-      splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+  std::vector<std::string> SplittedIntegerLiteral = splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+//  if (OriginalLiteralString.contains('.')) {
+//    std::vector<std::string> SplitedString;
+//    const std::regex DotRegex(".");
+//    std::sregex_token_iterator
+//        Begin(OriginalLiteralString.str().begin(), OriginalLiteralString.str().end(), DotRegex, -1),
+//        End;
+//
+//    std::copy(Begin, End, std::back_inserter(SplitedString));
+////    const auto SplitedString = std::views::split(OriginalLiteralString, '.');
+//  } else {
+//    SplittedIntegerLiteral = splitStringByGroupSize(toString(IntegerValue, Radix, true), GroupSize);
+//  }
   const std::string FormatedLiteralString = Prefix +
       std::accumulate(SplittedIntegerLiteral.begin(),
                       SplittedIntegerLiteral.end(),
                       std::string(""),
                       [](std::basic_string<char> S1,
                          std::basic_string<char> S2) { return S1 + "\'" + S2; })
-          .erase(0, 1);
+          .erase(0, 1) + Postfix;
 
   // Compare the original and formatted representation of a literal
   if (OriginalLiteralString != FormatedLiteralString) {
