@@ -37,9 +37,8 @@ else:
 
 
 def main():
-    basename = os.path.basename(sys.argv[0])
     parser = argparse.ArgumentParser(
-        description=__doc__.format(clang_format_diff=basename),
+        description=__doc__.format(clang_format_diff='%(prog)s'),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
