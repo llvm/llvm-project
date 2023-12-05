@@ -3616,13 +3616,12 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   LexEmbedParametersResult Result{};
   SmallVector<Token, 2> ParameterTokens;
   tok::TokenKind EndTokenKind = ForHasEmbed ? tok::r_paren : tok::eod;
-  Result.StartLoc = CurTok.getLocation();
-  Result.EndLoc = CurTok.getLocation();
+  Result.ParamRange = {CurTok.getLocation(), CurTok.getLocation()};
 
   auto DiagMismatchedBracesAndSkipToEOD =
       [&](tok::TokenKind Expected,
           std::pair<tok::TokenKind, SourceLocation> Matches) {
-        Result.EndLoc = CurTok.getEndLoc();
+        Result.ParamRange.setEnd(CurTok.getEndLoc());
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
         if (CurTok.isNot(tok::eod))
@@ -3631,7 +3630,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
-      Result.EndLoc = CurTok.getEndLoc();
+      Result.ParamRange.setEnd(CurTok.getEndLoc());
       Diag(CurTok, diag::err_expected) << Kind;
       if (CurTok.isNot(tok::eod))
         DiscardUntilEndOfDirective(CurTok);
@@ -3795,6 +3794,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
   LexNonComment(CurTok); // Prime the pump.
   while (!CurTok.isOneOf(EndTokenKind, tok::eod)) {
+    SourceLocation ParamStartLoc = CurTok.getLocation();
     std::optional<std::string> ParamName = LexPPParameterName();
     if (!ParamName)
       return std::nullopt;
@@ -3811,8 +3811,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       std::optional<size_t> Limit = LexParenthesizedIntegerExpr();
       if (!Limit)
         return std::nullopt;
-      Result.MaybeLimitParam = PPEmbedParameterLimit{
-          *Limit, CurTok.getLocation(), CurTok.getEndLoc()};
+      Result.MaybeLimitParam =
+          PPEmbedParameterLimit{*Limit, {ParamStartLoc, CurTok.getLocation()}};
     } else if (Parameter == "clang::offset") {
       // Let the user know they're using an extension.
       Diag(CurTok, diag::ext_pp_embed_parameter_extension) << Parameter;
@@ -3824,7 +3824,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (!Offset)
         return std::nullopt;
       Result.MaybeOffsetParam = PPEmbedParameterOffset{
-          *Offset, CurTok.getLocation(), CurTok.getEndLoc()};
+          *Offset, {ParamStartLoc, CurTok.getLocation()}};
     } else if (Parameter == "prefix") {
       if (Result.MaybePrefixParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -3833,7 +3833,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (!LexParenthesizedBalancedTokenSoup(Soup))
         return std::nullopt;
       Result.MaybePrefixParam = PPEmbedParameterPrefix{
-          std::move(Soup), CurTok.getLocation(), CurTok.getLocation()};
+          std::move(Soup), {ParamStartLoc, CurTok.getLocation()}};
     } else if (Parameter == "suffix") {
       if (Result.MaybeSuffixParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -3842,7 +3842,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (!LexParenthesizedBalancedTokenSoup(Soup))
         return std::nullopt;
       Result.MaybeSuffixParam = PPEmbedParameterSuffix{
-          std::move(Soup), CurTok.getLocation(), CurTok.getLocation()};
+          std::move(Soup), {ParamStartLoc, CurTok.getLocation()}};
     } else if (Parameter == "if_empty") {
       if (Result.MaybeIfEmptyParam)
         Diag(CurTok, diag::err_pp_embed_dup_params) << Parameter;
@@ -3851,7 +3851,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (!LexParenthesizedBalancedTokenSoup(Soup))
         return std::nullopt;
       Result.MaybeIfEmptyParam = PPEmbedParameterIfEmpty{
-          std::move(Soup), CurTok.getLocation(), CurTok.getLocation()};
+          std::move(Soup), {ParamStartLoc, CurTok.getLocation()}};
     } else {
       ++Result.UnrecognizedParams;
 
@@ -3866,7 +3866,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
         Diag(CurTok, diag::warn_pp_unknown_parameter_ignored) << 1 << Parameter;
     }
   }
-  Result.EndLoc = CurTok.getEndLoc();
+  Result.ParamRange.setEnd(CurTok.getLocation());
   return Result;
 }
 

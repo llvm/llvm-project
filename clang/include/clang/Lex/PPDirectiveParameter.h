@@ -20,12 +20,12 @@ namespace clang {
 
 /// Captures basic information about a preprocessor directive parameter.
 class PPDirectiveParameter {
-public:
-  SourceLocation Start;
-  SourceLocation End;
+  SourceRange R;
 
-  PPDirectiveParameter(SourceLocation Start, SourceLocation End)
-      : Start(Start), End(End) {}
+public:
+  PPDirectiveParameter(SourceRange R) : R(R) {}
+
+  SourceRange getParameterRange() const { return R; }
 };
 
 } // end namespace clang

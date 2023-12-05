@@ -25,9 +25,8 @@ class PPEmbedParameterOffset : public PPDirectiveParameter {
 public:
   size_t Offset;
 
-  PPEmbedParameterOffset(size_t Offset, SourceLocation Start,
-                         SourceLocation End)
-      : PPDirectiveParameter(Start, End), Offset(Offset) {}
+  PPEmbedParameterOffset(size_t Offset, SourceRange R)
+      : PPDirectiveParameter(R), Offset(Offset) {}
 };
 
 /// Preprocessor standard embed parameter "limit"
@@ -36,8 +35,8 @@ class PPEmbedParameterLimit : public PPDirectiveParameter {
 public:
   size_t Limit;
 
-  PPEmbedParameterLimit(size_t Limit, SourceLocation Start, SourceLocation End)
-      : PPDirectiveParameter(Start, End), Limit(Limit) {}
+  PPEmbedParameterLimit(size_t Limit, SourceRange R)
+      : PPDirectiveParameter(R), Limit(Limit) {}
 };
 
 /// Preprocessor standard embed parameter "prefix"
@@ -46,9 +45,8 @@ class PPEmbedParameterPrefix : public PPDirectiveParameter {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterPrefix(SmallVectorImpl<Token> &&Tokens, SourceLocation Start,
-                         SourceLocation End)
-      : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
+  PPEmbedParameterPrefix(SmallVectorImpl<Token> &&Tokens, SourceRange R)
+      : PPDirectiveParameter(R), Tokens(std::move(Tokens)) {}
 };
 
 /// Preprocessor standard embed parameter "suffix"
@@ -57,9 +55,8 @@ class PPEmbedParameterSuffix : public PPDirectiveParameter {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterSuffix(SmallVectorImpl<Token> &&Tokens, SourceLocation Start,
-                         SourceLocation End)
-      : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
+  PPEmbedParameterSuffix(SmallVectorImpl<Token> &&Tokens, SourceRange R)
+      : PPDirectiveParameter(R), Tokens(std::move(Tokens)) {}
 };
 
 /// Preprocessor standard embed parameter "if_empty"
@@ -68,9 +65,8 @@ class PPEmbedParameterIfEmpty : public PPDirectiveParameter {
 public:
   SmallVector<Token, 2> Tokens;
 
-  PPEmbedParameterIfEmpty(SmallVectorImpl<Token> &&Tokens, SourceLocation Start,
-                          SourceLocation End)
-      : PPDirectiveParameter(Start, End), Tokens(std::move(Tokens)) {}
+  PPEmbedParameterIfEmpty(SmallVectorImpl<Token> &&Tokens, SourceRange R)
+      : PPDirectiveParameter(R), Tokens(std::move(Tokens)) {}
 };
 
 struct LexEmbedParametersResult {
@@ -79,8 +75,7 @@ struct LexEmbedParametersResult {
   std::optional<PPEmbedParameterIfEmpty> MaybeIfEmptyParam;
   std::optional<PPEmbedParameterPrefix> MaybePrefixParam;
   std::optional<PPEmbedParameterSuffix> MaybeSuffixParam;
-  SourceLocation StartLoc;
-  SourceLocation EndLoc;
+  SourceRange ParamRange;
   int UnrecognizedParams;
 
   size_t PrefixTokenCount() const {
