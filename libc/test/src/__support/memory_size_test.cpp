@@ -75,7 +75,7 @@ TEST(LlvmLibcMemSizeTest, AlignUp) {
       auto safe_size = SafeMemSize{size};
       auto safe_aligned_size = safe_size.align_up(alignment);
       ASSERT_TRUE(safe_aligned_size.valid());
-      ASSERT_EQ(static_cast<size_t>(safe_aligned_size) % alignment, size_t{0});
+      ASSERT_EQ(static_cast<size_t>(safe_aligned_size) % alignment, size_t(0));
     }
   }
   auto max = SafeMemSize{SAFE_MEM_SIZE_TEST_LIMIT};
