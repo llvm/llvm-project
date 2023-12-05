@@ -975,16 +975,22 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
   llvm::Value *DSTr, *DSTi;
   if (LHSr->getType()->isFloatingPointTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
-    if (RHSi && Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran) {
-      if (!LHSi)
-        LHSi = llvm::Constant::getNullValue(RHSi->getType());
+    if (!RHSi) {
+      assert(LHSi && "Can have at most one non-complex operand!");
+
+      DSTr = Builder.CreateFDiv(LHSr, RHSr);
+      DSTi = Builder.CreateFDiv(LHSi, RHSr);
+      return ComplexPairTy(DSTr, DSTi);
+    }
+    llvm::Value *TmpLHSi = LHSi;
+    if (!LHSi)
+      LHSi = llvm::Constant::getNullValue(RHSi->getType());
+    if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Fortran)
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
-    } else if (RHSi &&
-               Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited) {
-      if (!LHSi)
-        LHSi = llvm::Constant::getNullValue(RHSi->getType());
+    else if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited)
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
-    } else if (RHSi && !CGF.getLangOpts().FastMath) {
+    else if (!CGF.getLangOpts().FastMath) {
+      LHSi = TmpLHSi;
       // If we have a complex operand on the RHS and FastMath is not allowed, we
       // delegate to a libcall to handle all of the complexities and minimize
       // underflow/overflow cases. When FastMath is allowed we construct the
@@ -1013,16 +1019,8 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       case llvm::Type::FP128TyID:
         return EmitComplexBinOpLibCall("__divtc3", LibCallOp);
       }
-    } else if (RHSi) {
-      if (!LHSi)
-        LHSi = llvm::Constant::getNullValue(RHSi->getType());
-
-      return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
     } else {
-      assert(LHSi && "Can have at most one non-complex operand!");
-
-      DSTr = Builder.CreateFDiv(LHSr, RHSr);
-      DSTi = Builder.CreateFDiv(LHSi, RHSr);
+      return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
     }
   } else {
     assert(Op.LHS.second && Op.RHS.second &&

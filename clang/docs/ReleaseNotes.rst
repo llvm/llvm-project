@@ -245,13 +245,12 @@ New Compiler Flags
 
 * ``-fcx-limited-range`` enables the naive mathematical formulas for complex
   division and multiplication with no NaN checking of results. The default is
-  ``-fno-cx-limited-range``.
+  ``-fno-cx-limited-range``, but this option is enabled by ``-ffast-math``.
 
 * ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
   multiplication and enables application of Smith's algorithm for complex
   division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
-  (1962). The default is ``-fno-cx-fortran-rules``, but this option is enabled by
-  ``-ffast-math``.
+  (1962). The default is ``-fno-cx-fortran-rules``.
 
 
 Deprecated Compiler Flags
