@@ -83,13 +83,13 @@ TEST(LlvmLibcMemSizeTest, AlignUp) {
 }
 
 TEST(LlvmLibcBlockBitTest, OffsetTo) {
-  ASSERT_EQ(SafeMemSize::offset_to(0, 512), 0UL);
-  ASSERT_EQ(SafeMemSize::offset_to(1, 512), 511UL);
-  ASSERT_EQ(SafeMemSize::offset_to(2, 512), 510UL);
-  ASSERT_EQ(SafeMemSize::offset_to(13, 1), 0UL);
-  ASSERT_EQ(SafeMemSize::offset_to(13, 4), 3UL);
+  ASSERT_EQ(SafeMemSize::offset_to(0, 512), size_t(0));
+  ASSERT_EQ(SafeMemSize::offset_to(1, 512), size_t(511));
+  ASSERT_EQ(SafeMemSize::offset_to(2, 512), size_t(510));
+  ASSERT_EQ(SafeMemSize::offset_to(13, 1), size_t(0));
+  ASSERT_EQ(SafeMemSize::offset_to(13, 4), size_t(3));
   for (unsigned int i = 0; i < 31; ++i) {
-    ASSERT_EQ((SafeMemSize::offset_to(i, 1u << i) + i) % (1u << i), 0UL);
+    ASSERT_EQ((SafeMemSize::offset_to(i, 1u << i) + i) % (1u << i), size_t(0));
   }
 }
 } // namespace internal
