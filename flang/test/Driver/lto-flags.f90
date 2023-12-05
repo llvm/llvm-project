@@ -11,7 +11,7 @@
 
 ! Also check linker plugin opt for Thin LTO
 ! RUN: %flang -### -flto=thin %s 2>&1 | FileCheck %s \
-! RUN:        --check-prefixes=%if system-darwin %{THIN-LTO-ALL%} \
+! RUN:        --check-prefixes=%if system-darwin %{THIN-LTO-ALL%}%if system-aix %{THIN-LTO-ALL,THIN-LTO-LINKER-PLUGIN-AIX%} \
 ! RUN:        %else %{THIN-LTO-ALL,THIN-LTO-LINKER-PLUGIN%}
 
 ! RUN: not %flang -### -S -flto=somelto %s 2>&1 | FileCheck %s --check-prefix=ERROR
@@ -31,5 +31,6 @@
 ! THIN-LTO-ALL: "-fc1"
 ! THIN-LTO-ALL-SAME: "-flto=thin"
 ! THIN-LTO-LINKER-PLUGIN: "-plugin-opt=thinlto"
+! THIN-LTO-LINKER-PLUGIN-AIX: "-bdbg:thinlto"
 
 ! ERROR: error: unsupported argument 'somelto' to option '-flto=
