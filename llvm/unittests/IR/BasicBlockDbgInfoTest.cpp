@@ -79,7 +79,7 @@ TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
 
   // Convert the module to "new" form debug-info.
   M->convertToNewDbgValues();
-  // Fetch the entry block,
+  // Fetch the entry block.
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
 
   Instruction *Inst1 = &*BB.begin();

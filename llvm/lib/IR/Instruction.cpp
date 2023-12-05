@@ -201,7 +201,7 @@ void Instruction::moveBeforeImpl(BasicBlock &BB, InstListType::iterator I,
   // the instruction, no more special handling needed.
   if (BB.IsNewDbgInfoFormat && DbgMarker && !Preserve) {
     if (I != this->getIterator() || InsertAtHead) {
-      // "this" is definitely moving in the list, or it's moving ahead of it's
+      // "this" is definitely moving in the list, or it's moving ahead of its
       // attached DPValues. Detach any existing DPValues.
       handleMarkerRemoval();
     }
