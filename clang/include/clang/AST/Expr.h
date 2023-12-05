@@ -4860,10 +4860,8 @@ private:
     const ASTContext *Ctx = nullptr;
     IntegerLiteral *FakeNode = nullptr;
     StringRef DataRef;
-    LLVM_PREFERRED_TYPE(bool) unsigned IsSigned : 1;
-    // FIXME: a sufficiently large embedded resource cannot be iterated over;
-    // woe unto such users.
-    unsigned CurOffset : 31;
+    LLVM_PREFERRED_TYPE(bool) unsigned long long IsSigned : 1;
+    unsigned long long CurOffset : 63;
     using BaseTy = typename ChildElementIter::iterator_facade_base;
 
     ChildElementIter(const PPEmbedExpr *E)
