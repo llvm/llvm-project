@@ -34,9 +34,9 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "e-p:32:32-G1");
   // and that ANDGCN adds p7 and p8 as well.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"),
-            "e-p:64:64-G1-ni:7:8-p7:160:256:256:32-p8:128:128");
+            "e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G1", "amdgcn"),
-            "e-p:64:64-G1-ni:7:8-p7:160:256:256:32-p8:128:128");
+            "e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128");
   // but that r600 does not.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G1", "r600"), "e-p:32:32-G1");
 
@@ -50,7 +50,7 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
           "amdgcn"),
       "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-"
       "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:"
-      "1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8-p7:160:256:256:32-p8:128:128");
+      "1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128");
 
   // Check that RISCV64 upgrades -n64 to -n32:64.
   EXPECT_EQ(UpgradeDataLayoutString("e-m:e-p:64:64-i64:64-i128:128-n64-S128",
@@ -89,11 +89,11 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
 
   // Check that AMDGCN targets don't add already declared address space 7.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64", "amdgcn"),
-            "e-p:64:64-p7:64:64-G1-ni:7:8-p8:128:128");
+            "e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128");
   EXPECT_EQ(UpgradeDataLayoutString("p7:64:64-G2-e-p:64:64", "amdgcn"),
             "p7:64:64-G2-e-p:64:64-ni:7:8-p8:128:128");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64-G1", "amdgcn"),
-            "e-p:64:64-p7:64:64-G1-ni:7:8-p8:128:128");
+            "e-p:64:64-p7:64:64-G1-ni:7:8:9-p8:128:128");
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
@@ -106,7 +106,7 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
   // Check that AMDGPU targets add G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "G1");
   EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"),
-            "G1-ni:7:8-p7:160:256:256:32-p8:128:128");
+            "G1-ni:7:8:9-p7:160:256:256:32-p8:128:128");
 }
 
 } // end namespace
