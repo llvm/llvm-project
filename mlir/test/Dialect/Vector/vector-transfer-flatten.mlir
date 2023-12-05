@@ -41,6 +41,61 @@ func.func @transfer_read_dims_mismatch_contiguous(
 
 // -----
 
+func.func @transfer_read_dims_mismatch_non_zero_indices(
+                     %idx_1: index,
+                     %idx_2: index,
+                     %m_in: memref<1x43x4x6xi32>,
+                     %m_out: memref<1x2x6xi32>) {
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %2 = vector.transfer_read %m_in[%c0, %idx_1, %idx_2, %c0], %c0_i32 {in_bounds = [true, true, true]} : 
+    memref<1x43x4x6xi32>, vector<1x2x6xi32>
+  vector.transfer_write %2, %m_out[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<1x2x6xi32>, memref<1x2x6xi32>
+  return
+}
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<()[s0, s1] -> (s0 * 4 + s1 * 43)>
+
+// CHECK-LABEL:   func.func @transfer_read_dims_mismatch_non_zero_indices(
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
+// CHECK-SAME:      %[[M_IN:.*]]: memref<1x43x4x6xi32>,
+// CHECK-SAME:      %[[M_OUT:.*]]: memref<1x2x6xi32>) {
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[C_0_IDX:.*]] = arith.constant 0 : index
+// CHECK:           %[[COLLAPSED_IN:.*]] = memref.collapse_shape %[[M_IN]] {{\[}}[0], [1, 2, 3]] : memref<1x43x4x6xi32> into memref<1x1032xi32>
+// CHECK:           %[[COLLAPSED_IDX:.*]] = affine.apply #[[$ATTR_0]]()[%[[IDX_2]], %[[IDX_1]]]
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[COLLAPSED_IN]][%[[C_0_IDX]], %[[COLLAPSED_IDX]]], %[[C_0]] {in_bounds = [true]} : memref<1x1032xi32>, vector<12xi32>
+// CHECK:           %[[COLLAPSED_OUT:.*]] = memref.collapse_shape %[[M_OUT]] {{\[}}[0, 1, 2]] : memref<1x2x6xi32> into memref<12xi32>
+// CHECK:           vector.transfer_write %[[READ]], %[[COLLAPSED_OUT]][%[[C_0_IDX]]] {in_bounds = [true]} : vector<12xi32>, memref<12xi32>
+
+// -----
+
+func.func @transfer_read_dims_mismatch_non_zero_indices_dynamic_shapes(
+                     %idx_1: index,
+                     %idx_2: index,
+                     %m_in: memref<1x?x4x6xi32>,
+                     %m_out: memref<1x2x6xi32>) {
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %2 = vector.transfer_read %m_in[%c0, %idx_1, %idx_2, %c0], %c0_i32 {in_bounds = [true, true, true]} : 
+    memref<1x?x4x6xi32>, vector<1x2x6xi32>
+  vector.transfer_write %2, %m_out[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<1x2x6xi32>, memref<1x2x6xi32>
+  return
+}
+
+// CHECK-LABEL:   func.func @transfer_read_dims_mismatch_non_zero_indices_dynamic_shapes(
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
+// CHECK-SAME:      %[[M_IN:.*]]: memref<1x?x4x6xi32>,
+// CHECK-SAME:      %[[M_OUT:.*]]: memref<1x2x6xi32>) {
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[M_IN]]{{.*}} : memref<1x?x4x6xi32>, vector<1x2x6xi32>
+// CHECK:           %[[COLLAPSED:.*]] = memref.collapse_shape %[[M_OUT]]{{.*}} : memref<1x2x6xi32> into memref<12xi32>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[READ]] : vector<1x2x6xi32> to vector<12xi32>
+// CHECK:           vector.transfer_write %[[SC]], %[[COLLAPSED]]{{.*}} : vector<12xi32>, memref<12xi32>
+
+// -----
+
 func.func @transfer_read_dims_mismatch_non_contiguous(
     %arg : memref<5x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<2x1x2x2xi8> {
     %c0 = arith.constant 0 : index
