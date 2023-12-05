@@ -17,7 +17,7 @@
 namespace llvm {
 namespace GOFFYAML {
 
-Object::Object() { memset(&Header, 0, sizeof(Header)); }
+Object::Object() {}
 
 } // namespace GOFFYAML
 

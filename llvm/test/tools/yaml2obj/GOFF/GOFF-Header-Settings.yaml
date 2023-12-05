@@ -1,10 +1,10 @@
 # RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
 
 ## Verify that GOFF Header is correct.
-# CHECK: 03 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK:      03 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# CHECK-NEXT: 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 01 00 03 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
 ## Verify GOFF Module end.
@@ -16,4 +16,11 @@
 
 --- !GOFF
 FileHeader:
+  TargetEnvironment: 0
+  TargetOperatingSystem: 0
+  CCSID: 0
+  CharacterSetName: ""
+  LanguageProductIdentifier: ""
   ArchitectureLevel: 1
+  InternalCCSID: 0
+  TargetSoftwareEnvironment: 0 

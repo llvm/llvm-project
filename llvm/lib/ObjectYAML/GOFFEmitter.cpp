@@ -124,6 +124,7 @@ private:
        << binaryBe(static_cast<unsigned char>(TypeAndFlags))
        << binaryBe(static_cast<unsigned char>(0));
   }
+
   // Fill the last physical record of a logical record with zero bytes.
   void fillRecord() {
     assert((GetNumBytesInBuffer() <= RemainingSize) &&
