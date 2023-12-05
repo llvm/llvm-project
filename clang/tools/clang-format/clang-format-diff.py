@@ -38,7 +38,7 @@ else:
 
 def main():
     parser = argparse.ArgumentParser(
-        description=__doc__.format(clang_format_diff='%(prog)s'),
+        description=__doc__.format(clang_format_diff="%(prog)s"),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
