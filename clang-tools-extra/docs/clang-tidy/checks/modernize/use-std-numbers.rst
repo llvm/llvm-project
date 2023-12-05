@@ -63,10 +63,9 @@ Options
 .. option:: DiffThreshold
 
     A floating point value that sets the detection threshold for when literals
-    match a constant.
-    A literal matches a constant if
-    ``abs(literal - constant) < DiffThreshold`` evaluates to true.
-    Default is `0.001`.
+    match a constant. A literal matches a constant if
+    ``abs(literal - constant) < DiffThreshold`` evaluates to ``true``. Default is
+    `0.001`.
 
 .. option:: IncludeStyle
 
