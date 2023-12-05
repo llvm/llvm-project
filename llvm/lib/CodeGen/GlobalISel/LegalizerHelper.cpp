@@ -7900,9 +7900,10 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   // The list should be bumped by the size of element in the current head of
   // list.
   Register Dst = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(Dst);
-  auto IncAmt = MIRBuilder.buildConstant(
-      PtrTyAsScalarTy, DL.getTypeAllocSize(getTypeForLLT(Ty, Ctx)));
+  LLT LLTTy = MRI.getType(Dst);
+  Type *Ty = getTypeForLLT(LLTTy, Ctx);
+  auto IncAmt =
+      MIRBuilder.buildConstant(PtrTyAsScalarTy, DL.getTypeAllocSize(Ty));
   auto Succ = MIRBuilder.buildPtrAdd(PtrTy, VAList, IncAmt);
 
   // Store the increment VAList to the legalized pointer
@@ -7910,9 +7911,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
       MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, PtrAlignment);
   MIRBuilder.buildStore(Succ, ListPtr, *StoreMMO);
   // Load the actual argument out of the pointer VAList
-  Align EltAlignment = DL.getABITypeAlign(getTypeForLLT(Ty, Ctx));
+  Align EltAlignment = DL.getABITypeAlign(Ty);
   MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
-      MachinePointerInfo(), MachineMemOperand::MOLoad, Ty, EltAlignment);
+      MachinePointerInfo(), MachineMemOperand::MOLoad, LLTTy, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
 
   MI.eraseFromParent();

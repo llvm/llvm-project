@@ -4,23 +4,6 @@
 # On RISC-V, the MinStackArgumentAlignment is 1 and the ABI Alignment for p0 is
 # greater than 1, so we will always generate code to adjust for this alignment.
 
---- |
-  define void @va_arg_i32(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
-    %va = alloca ptr, align 8
-    %p = va_arg ptr %va, i32
-    ret void
-  }
-  define void @va_arg_i64(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
-    %va = alloca ptr, align 8
-    %p = va_arg ptr %va, i32
-    ret void
-  }
-  define void @va_arg_ptr(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
-    %va = alloca ptr, align 8
-    %p = va_arg ptr %va, ptr
-    ret void
-  }
-...
 ---
 name:            va_arg_i32
 legalized:       false
@@ -29,14 +12,14 @@ fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
       isImmutable: true, isAliased: false }
 stack:
-  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 8 }
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 8 }
 machineFunctionInfo:
   varArgsFrameIndex: -1
   varArgsSaveSize: 0
 body:             |
-  bb.1 (%ir-block.8):
+  bb.1:
     ; CHECK-LABEL: name: va_arg_i32
-    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0))
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -46,7 +29,7 @@ body:             |
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTRMASK]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[PTR_ADD1]](p0), [[FRAME_INDEX]](p0) :: (store (p0))
     ; CHECK-NEXT: PseudoRET
-    %0:_(p0) = G_FRAME_INDEX %stack.0.va
+    %0:_(p0) = G_FRAME_INDEX %stack.0
     %1:_(s32) = G_VAARG %0(p0), 4
     PseudoRET
 ...
@@ -58,14 +41,14 @@ fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
       isImmutable: true, isAliased: false }
 stack:
-  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 8 }
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 8 }
 machineFunctionInfo:
   varArgsFrameIndex: -1
   varArgsSaveSize: 0
 body:             |
-  bb.1 (%ir-block.8):
+  bb.1:
     ; CHECK-LABEL: name: va_arg_i64
-    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0))
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -75,7 +58,7 @@ body:             |
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTRMASK]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[PTR_ADD1]](p0), [[FRAME_INDEX]](p0) :: (store (p0))
     ; CHECK-NEXT: PseudoRET
-    %0:_(p0) = G_FRAME_INDEX %stack.0.va
+    %0:_(p0) = G_FRAME_INDEX %stack.0
     %1:_(s64) = G_VAARG %0(p0), 4
     PseudoRET
 ...
@@ -87,14 +70,14 @@ fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
       isImmutable: true, isAliased: false }
 stack:
-  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 8 }
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 8 }
 machineFunctionInfo:
   varArgsFrameIndex: -1
   varArgsSaveSize: 0
 body:             |
-  bb.1 (%ir-block.8):
+  bb.1:
     ; CHECK-LABEL: name: va_arg_ptr
-    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
+    ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0))
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -104,7 +87,7 @@ body:             |
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTRMASK]], [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[PTR_ADD1]](p0), [[FRAME_INDEX]](p0) :: (store (p0))
     ; CHECK-NEXT: PseudoRET
-    %0:_(p0) = G_FRAME_INDEX %stack.0.va
+    %0:_(p0) = G_FRAME_INDEX %stack.0
     %1:_(s64) = G_VAARG %0(p0), 4
     PseudoRET
 ...
