@@ -882,9 +882,9 @@ Floating Point Support in Clang
   ``__builtin_exp10f128`` builtins.
 - Add ``__builtin_iszero``, ``__builtin_issignaling`` and
   ``__builtin_issubnormal``.
-- ``#pragma STDC CX_LIMITED_RANGE on-off-switch`` enables the naive mathematical
-  formulas for complex division and multiplication with no NaN checking of
-  results.
+- Add support for C99's ``#pragma STDC CX_LIMITED_RANGE`` feature.  This
+  enables the naive mathematical formulas for complex multiplication and
+  division, which are faster but do not correctly handle overflow and infinities.
 
 AST Matchers
 ------------
