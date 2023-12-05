@@ -7,7 +7,7 @@ Finds constants and function calls to math functions that can be replaced
 with C++20's mathematical constants from the ``numbers`` header and offers
 fix-it hints.
 Does not match the use of variables with that value, and instead,
-offers a replacement at the definition of those variables.
+offers a replacement for the definition of those variables.
 Function calls that match the pattern of how the constant is calculated are
 matched and replaced with the ``std::numbers`` constant.
 The use of macros gets replaced with the corresponding ``std::numbers``
