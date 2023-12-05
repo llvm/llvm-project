@@ -222,8 +222,8 @@ while.cond:                         ; preds = %while.cond
 define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-LABEL: issue63986_reduced_expanded:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:  ; %bb.1: ; %loop-memcpy-expansion.preheader
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  ; %bb.2: ; %loop-memcpy-residual-header
 ; CHECK-NEXT:    s_and_b32 s4, 32, 15
@@ -233,9 +233,11 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    s_branch .LBB1_5
 ; CHECK-NEXT:  .LBB1_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_8
 ; CHECK-NEXT:  .LBB1_5: ; %loop-memcpy-residual.preheader
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
@@ -251,6 +253,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:  .LBB1_8: ; %post-loop-memcpy-expansion
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_and_b64 vcc, exec, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:3
 ; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:2
 ; CHECK-NEXT:    flat_store_byte v[0:1], v2 offset:1

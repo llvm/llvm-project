@@ -55,8 +55,8 @@ define i8 @v_ashr_i8_7(i8 %value) {
 ;
 ; GFX9-LABEL: v_ashr_i8_7:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 7
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_ashrrev_i16_sdwa v0, v1, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -492,8 +492,9 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ;
 ; GFX10-LABEL: v_ashr_v16i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v0, v16, v0
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, v17, v1
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v2, v18, v2
@@ -515,8 +516,9 @@ define <16 x i32> @v_ashr_v16i32(<16 x i32> %value, <16 x i32> %amount) {
 ;
 ; GFX11-LABEL: v_ashr_v16i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
+; GFX11-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v0, v16, v0
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v1, v17, v1
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v2, v18, v2
@@ -790,8 +792,8 @@ define <2 x i16> @v_ashr_v2i16_15(<2 x i16> %value) {
 ;
 ; GFX8-LABEL: v_ashr_v2i16_15:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 15
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_ashrrev_i16_e32 v1, 15, v0
 ; GFX8-NEXT:    v_ashrrev_i16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0

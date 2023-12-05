@@ -1858,8 +1858,8 @@ define void @mul_inline_imm_0.5_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_0.5_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -1898,8 +1898,8 @@ define void @mul_inline_imm_neg_0.5_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_neg_0.5_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -1938,8 +1938,8 @@ define void @mul_inline_imm_1.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_1.0_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -1978,8 +1978,8 @@ define void @mul_inline_imm_neg_1.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_neg_1.0_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -2010,8 +2010,8 @@ define void @shl_inline_imm_2.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; VI-LABEL: shl_inline_imm_2.0_i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_movk_i32 s4, 0x4000 ; encoding: [0x00,0x40,0x04,0xb0]
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_lshlrev_b16_e64 v2, v2, s4 ; encoding: [0x02,0x00,0x2a,0xd1,0x02,0x09,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
 ; VI-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
@@ -2019,11 +2019,11 @@ define void @shl_inline_imm_2.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: shl_inline_imm_2.0_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshl_b32_e32 v2, 0x4000, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -2050,8 +2050,8 @@ define void @shl_inline_imm_neg_2.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; VI-LABEL: shl_inline_imm_neg_2.0_i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    s_movk_i32 s4, 0xc000 ; encoding: [0x00,0xc0,0x04,0xb0]
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
 ; VI-NEXT:    v_lshlrev_b16_e64 v2, v2, s4 ; encoding: [0x02,0x00,0x2a,0xd1,0x02,0x09,0x00,0x00]
 ; VI-NEXT:    flat_store_short v[0:1], v2 ; encoding: [0x00,0x00,0x68,0xdc,0x00,0x02,0x00,0x00]
 ; VI-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
@@ -2059,11 +2059,11 @@ define void @shl_inline_imm_neg_2.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: shl_inline_imm_neg_2.0_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshl_b32_e32 v2, 0xffffc000, v2
 ; SI-NEXT:    buffer_store_short v2, v[0:1], s[4:7], 0 addr64
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -2098,8 +2098,8 @@ define void @mul_inline_imm_4.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_4.0_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -2138,8 +2138,8 @@ define void @mul_inline_imm_neg_4.0_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_neg_4.0_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6
@@ -2178,8 +2178,8 @@ define void @mul_inline_imm_inv2pi_i16(ptr addrspace(1) %out, i16 %x) {
 ;
 ; SI-LABEL: mul_inline_imm_inv2pi_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6

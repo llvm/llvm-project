@@ -142,8 +142,8 @@ define i32 @test_max_K0min_K1Val__u32(i32 %a) {
 define <2 x i16> @test_max_K0min_K1Val__v2u16(<2 x i16> %a) {
 ; GFX8-LABEL: test_max_K0min_K1Val__v2u16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 17
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_min_u16_e32 v1, 17, v0
 ; GFX8-NEXT:    v_min_u16_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 12
@@ -190,8 +190,8 @@ define amdgpu_ps i32 @test_uniform_min_max(i32 inreg %a) {
 define i32 @test_non_inline_constant_u32(i32 %a) {
 ; GFX89-LABEL: test_non_inline_constant_u32:
 ; GFX89:       ; %bb.0:
-; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX89-NEXT:    v_mov_b32_e32 v1, 0x41
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX89-NEXT:    v_med3_u32 v0, v0, 12, v1
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;

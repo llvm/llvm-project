@@ -181,8 +181,8 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 ;
 ; GFX9-LABEL: v_test_canonicalize_build_vector_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -2476,27 +2476,27 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
 define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
 ; VI-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_bfrev_b32_e32 v0, 60
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CI-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    v_mov_b32_e32 v1, 1.0
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfrev_b32_e32 v0, 60
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 1.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
@@ -2506,27 +2506,27 @@ define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
 define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
 ; VI-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x3c00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x3c00
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CI-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x3c00
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 1.0, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
@@ -2536,27 +2536,27 @@ define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
 define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
 ; VI-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_bfrev_b32_e32 v0, 50
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_bfrev_b32_e32 v0, 50
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CI-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    v_mov_b32_e32 v1, 0x41800000
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfrev_b32_e32 v0, 50
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 16.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
@@ -2566,27 +2566,27 @@ define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
 define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
 ; VI-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, 0x4c00
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0x4c00
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; CI-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x41800000
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x4c00
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 16.0, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
@@ -2766,8 +2766,8 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ;
 ; GFX9-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
@@ -2813,8 +2813,8 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ;
 ; GFX9-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
 ; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
@@ -3214,8 +3214,9 @@ define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
 ;
 ; CI-LABEL: v_test_canonicalize_var_v32f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; CI-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
@@ -3413,8 +3414,9 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v64f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
@@ -3714,8 +3716,9 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ;
 ; GFX11-LABEL: v_test_canonicalize_var_v64f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
+; GFX11-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2

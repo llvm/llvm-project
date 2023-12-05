@@ -23,8 +23,9 @@ define ptr addrspace(1) @flat_to_gobal_addrspacecast(ptr %ptr) {
 define ptr @group_to_flat_addrspacecast(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: group_to_flat_addrspacecast:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s4, s[6:7], 0x10
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -49,8 +50,9 @@ define ptr addrspace(3) @flat_to_group_addrspacecast(ptr %ptr) {
 define ptr @private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; CHECK-LABEL: private_to_flat_addrspacecast:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s4, s[6:7], 0x11
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -97,8 +99,8 @@ define ptr addrspace(6) @global_to_constant32_addrspacecast(ptr addrspace(1) %pt
 define ptr @constant32bit_to_flat_addrspacecast_0(ptr addrspace(6) %ptr) {
 ; CHECK-LABEL: constant32bit_to_flat_addrspacecast_0:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(6) %ptr to ptr
   ret ptr %stof
@@ -107,8 +109,8 @@ define ptr @constant32bit_to_flat_addrspacecast_0(ptr addrspace(6) %ptr) {
 define ptr @constant32bit_to_flat_addrspacecast_1(ptr addrspace(6) %ptr) #0 {
 ; CHECK-LABEL: constant32bit_to_flat_addrspacecast_1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0xffff8000
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(6) %ptr to ptr
   ret ptr %stof
@@ -117,9 +119,9 @@ define ptr @constant32bit_to_flat_addrspacecast_1(ptr addrspace(6) %ptr) #0 {
 define ptr @constant32bit_to_flat_addrspacecast_null() {
 ; CHECK-LABEL: constant32bit_to_flat_addrspacecast_null:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(6) null to ptr
   ret ptr %stof
@@ -128,8 +130,8 @@ define ptr @constant32bit_to_flat_addrspacecast_null() {
 define ptr @constant32bit_to_flat_addrspacecast_undef() #0 {
 ; SDAG-LABEL: constant32bit_to_flat_addrspacecast_undef:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: constant32bit_to_flat_addrspacecast_undef:
@@ -143,8 +145,8 @@ define ptr @constant32bit_to_flat_addrspacecast_undef() #0 {
 define ptr @constant32bit_to_flat_addrspacecast_poison() #0 {
 ; SDAG-LABEL: constant32bit_to_flat_addrspacecast_poison:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: constant32bit_to_flat_addrspacecast_poison:
@@ -158,9 +160,9 @@ define ptr @constant32bit_to_flat_addrspacecast_poison() #0 {
 define ptr @constant32bit_to_flat_addrspacecast_constant() #0 {
 ; CHECK-LABEL: constant32bit_to_flat_addrspacecast_constant:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x3039
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0xffff8000
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(6) inttoptr (i32 12345 to ptr addrspace(6)) to ptr
   ret ptr %stof
@@ -169,9 +171,9 @@ define ptr @constant32bit_to_flat_addrspacecast_constant() #0 {
 define ptr addrspace(1) @addrspacecast_flat_null_to_global() {
 ; CHECK-LABEL: addrspacecast_flat_null_to_global:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret ptr addrspace(1) addrspacecast (ptr null to ptr addrspace(1))
 }
@@ -179,8 +181,8 @@ define ptr addrspace(1) @addrspacecast_flat_null_to_global() {
 define ptr addrspace(3) @addrspacecast_flat_null_to_group() {
 ; CHECK-LABEL: addrspacecast_flat_null_to_group:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3))
 }
@@ -188,8 +190,8 @@ define ptr addrspace(3) @addrspacecast_flat_null_to_group() {
 define ptr addrspace(5) @addrspacecast_flat_null_to_private() {
 ; CHECK-LABEL: addrspacecast_flat_null_to_private:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5))
 }
@@ -197,8 +199,8 @@ define ptr addrspace(5) @addrspacecast_flat_null_to_private() {
 define ptr addrspace(6) @addrspacecast_flat_null_to_constant32bit() {
 ; CHECK-LABEL: addrspacecast_flat_null_to_constant32bit:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   ret ptr addrspace(6) addrspacecast (ptr null to ptr addrspace(6))
 }

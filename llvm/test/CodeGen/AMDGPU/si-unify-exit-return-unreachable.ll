@@ -107,7 +107,6 @@ define void @my_func(i32 %0) {
 ;
 ; GCN-LABEL: my_func:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_load_dword s10, s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b64 s[8:9], -1
@@ -121,6 +120,7 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:    s_cbranch_execz .LBB0_8
 ; GCN-NEXT:  .LBB0_2: ; %Flow11
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; GCN-NEXT:  .LBB0_3: ; %do.body
 ; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], exec
@@ -131,6 +131,7 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    ; divergent unreachable
 ; GCN-NEXT:  ; %bb.6: ; %UnifiedReturnBlock
 ; GCN-NEXT:    s_or_b64 exec, exec, s[6:7]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .LBB0_7: ; %Flow
 ; GCN-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
@@ -140,10 +141,12 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_10
 ; GCN-NEXT:  ; %bb.9:
 ; GCN-NEXT:    s_mov_b64 s[6:7], -1
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_3
 ; GCN-NEXT:    s_branch .LBB0_4
 ; GCN-NEXT:  .LBB0_10: ; %NodeBlock7
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_mov_b64 s[8:9], 0
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0

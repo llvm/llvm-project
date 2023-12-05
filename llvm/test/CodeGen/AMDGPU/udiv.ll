@@ -2519,7 +2519,6 @@ bb:
 define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; SI-LABEL: v_test_udiv64_mulhi_fold:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x346d900
 ; SI-NEXT:    s_add_u32 s4, 0x4237, s4
 ; SI-NEXT:    v_mov_b32_e32 v2, 0xa9000000
@@ -2552,6 +2551,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; SI-NEXT:    v_mov_b32_e32 v5, s5
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
 ; SI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v4, vcc
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_mul_lo_u32 v4, v0, v3
 ; SI-NEXT:    v_mul_hi_u32 v5, v0, v2
 ; SI-NEXT:    v_mul_hi_u32 v6, v0, v3
@@ -2597,7 +2597,6 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ;
 ; VI-LABEL: v_test_udiv64_mulhi_fold:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x346d900
 ; VI-NEXT:    s_add_u32 s4, 0x4237, s4
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xa9000000
@@ -2624,6 +2623,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; VI-NEXT:    v_mov_b32_e32 v4, s6
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, v6, v2
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, v4, v3, vcc
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v0, v4, 0
 ; VI-NEXT:    v_mul_hi_u32 v6, v0, v5
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, v6, v2
@@ -2666,7 +2666,6 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ;
 ; GCN-LABEL: v_test_udiv64_mulhi_fold:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, 0x346d900
 ; GCN-NEXT:    s_add_u32 s4, 0x4237, s4
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0xa9000000
@@ -2693,6 +2692,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GCN-NEXT:    v_mov_b32_e32 v4, s6
 ; GCN-NEXT:    v_add_u32_e32 v5, vcc, v6, v2
 ; GCN-NEXT:    v_addc_u32_e32 v4, vcc, v4, v3, vcc
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v0, v4, 0
 ; GCN-NEXT:    v_mul_hi_u32 v6, v0, v5
 ; GCN-NEXT:    v_add_u32_e32 v6, vcc, v6, v2
@@ -2735,7 +2735,6 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ;
 ; GFX1030-LABEL: v_test_udiv64_mulhi_fold:
 ; GFX1030:       ; %bb.0:
-; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1030-NEXT:    s_mov_b32 s4, 0x346d900
 ; GFX1030-NEXT:    s_add_u32 s4, 0x4237, s4
 ; GFX1030-NEXT:    s_addc_u32 s5, 0, 0
@@ -2765,6 +2764,7 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-NEXT:    v_add_co_u32 v4, s4, v2, s4
 ; GFX1030-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1030-NEXT:    s_addc_u32 s4, s5, s6
+; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1030-NEXT:    v_mul_hi_u32 v8, v0, v4
 ; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], null, v0, s4, 0
 ; GFX1030-NEXT:    v_mad_u64_u32 v[4:5], null, v1, v4, 0

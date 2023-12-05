@@ -40,9 +40,9 @@ define i32 @v_udot4_clamp(i32 %a, i32 %b, i32 %c) {
 define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ; GFX906-LABEL: v_udot4_cast_v4i8:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v10, 8
 ; GFX906-NEXT:    v_mov_b32_e32 v9, 0xff
+; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX906-NEXT:    v_lshlrev_b32_sdwa v1, v10, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX906-NEXT:    v_and_or_b32 v0, v0, v9, v1
 ; GFX906-NEXT:    v_and_b32_e32 v1, 0xff, v2
@@ -62,8 +62,8 @@ define i32 @v_udot4_cast_v4i8(<4 x i8> %a, <4 x i8> %b, i32 %c) {
 ;
 ; GFX10-LABEL: v_udot4_cast_v4i8:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v9, 8
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_lshlrev_b32_sdwa v1, v9, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_and_or_b32 v0, 0xff, v0, v1
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xff, v2

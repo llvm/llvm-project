@@ -99,9 +99,8 @@ bb2:
 }
 
 ; ALL-LABEL: {{^}}test_workitem_id_x_func:
-; ALL: s_waitcnt
-; HSA-NEXT: v_and_b32_e32 v2, 0x3ff, v31
-; MESA-NEXT: v_and_b32_e32 v2, 0x3ff, v31
+; HSA: v_and_b32_e32 v2, 0x3ff, v31
+; MESA: v_and_b32_e32 v2, 0x3ff, v31
 define void @test_workitem_id_x_func(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   store i32 %id, ptr addrspace(1) %out

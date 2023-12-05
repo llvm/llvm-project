@@ -66,9 +66,9 @@ define amdgpu_kernel void @s_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #
 define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
 ; SI-LABEL: v_bfm_pattern:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_bfm_b32_e32 v2, v2, v3
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6
@@ -93,9 +93,9 @@ define void @v_bfm_pattern(ptr addrspace(1) %out, i32 %x, i32 %y) #0 {
 define void @v_bfm_pattern_simple(ptr addrspace(1) %out, i32 %x) #0 {
 ; SI-LABEL: v_bfm_pattern_simple:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_bfm_b32_e64 v2, v2, 0
 ; SI-NEXT:    s_mov_b32 s4, s6
 ; SI-NEXT:    s_mov_b32 s5, s6

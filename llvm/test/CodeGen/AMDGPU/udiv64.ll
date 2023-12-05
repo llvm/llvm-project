@@ -1475,7 +1475,6 @@ define amdgpu_kernel void @s_test_udiv_k_den_i64(ptr addrspace(1) %out, i64 %x) 
 define i64 @v_test_udiv_k_den_i64(i64 %x) {
 ; GCN-LABEL: v_test_udiv_k_den_i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_add_u32 s4, 0, 0xaaaa0000
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0xffffffe8
 ; GCN-NEXT:    v_mul_hi_u32 v2, s4, v2
@@ -1503,6 +1502,7 @@ define i64 @v_test_udiv_k_den_i64(i64 %x) {
 ; GCN-NEXT:    v_mov_b32_e32 v4, s5
 ; GCN-NEXT:    v_add_i32_e32 v2, vcc, s4, v2
 ; GCN-NEXT:    v_addc_u32_e32 v3, vcc, v4, v3, vcc
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mul_lo_u32 v4, v0, v3
 ; GCN-NEXT:    v_mul_hi_u32 v5, v0, v2
 ; GCN-NEXT:    v_mul_hi_u32 v6, v0, v3

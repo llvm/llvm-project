@@ -44,8 +44,8 @@ entry:
 define <4 x half> @test_v4s16(<4 x half> %a) #0 {
 ; GCN-LABEL: test_v4s16:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
 ; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, v0, 0, vcc
@@ -70,8 +70,8 @@ entry:
 define <8 x half> @test_v8s16(<8 x half> %a) #0 {
 ; GCN-LABEL: test_v8s16:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
 ; GCN-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v9, v0, 0, vcc

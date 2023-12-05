@@ -129,38 +129,38 @@ define float @v_mul_legacy_undef1_f32(float %a) {
 define float @v_mul_legacy_undef_f32() {
 ; GFX6-LABEL: v_mul_legacy_undef_f32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_mul_legacy_f32_e64 v0, s4, s4
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_mul_legacy_undef_f32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mul_legacy_f32_e64 v0, s4, s4
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_mul_legacy_undef_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mul_legacy_f32_e64 v0, s4, s4
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX101-LABEL: v_mul_legacy_undef_f32:
 ; GFX101:       ; %bb.0:
-; GFX101-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX101-NEXT:    v_mul_legacy_f32_e64 v0, s4, s4
+; GFX101-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX101-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX103-LABEL: v_mul_legacy_undef_f32:
 ; GFX103:       ; %bb.0:
-; GFX103-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX103-NEXT:    v_mul_legacy_f32_e64 v0, s4, s4
+; GFX103-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX103-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_mul_legacy_undef_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mul_dx9_zero_f32_e64 v0, s0, s0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.amdgcn.fmul.legacy(float undef, float undef)
   ret float %result

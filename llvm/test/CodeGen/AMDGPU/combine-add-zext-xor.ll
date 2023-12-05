@@ -7,7 +7,6 @@
 define i32 @combine_add_zext_xor() {
 ; GFX1010-LABEL: combine_add_zext_xor:
 ; GFX1010:       ; %bb.0: ; %.entry
-; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-NEXT:    s_branch .LBB0_2
 ; GFX1010-NEXT:  .LBB0_1: ; %bb9
@@ -29,11 +28,11 @@ define i32 @combine_add_zext_xor() {
 ; GFX1010-NEXT:    v_cmp_eq_u32_e64 s4, 0, v0
 ; GFX1010-NEXT:    s_branch .LBB0_1
 ; GFX1010-NEXT:  .LBB0_4: ; %.exit
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_add_zext_xor:
 ; GFX1100:       ; %bb.0: ; %.entry
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-NEXT:    s_branch .LBB0_2
 ; GFX1100-NEXT:  .LBB0_1: ; %bb9
@@ -57,6 +56,7 @@ define i32 @combine_add_zext_xor() {
 ; GFX1100-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX1100-NEXT:    s_branch .LBB0_1
 ; GFX1100-NEXT:  .LBB0_4: ; %.exit
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -87,7 +87,6 @@ bb9:                                              ; preds = %bb, %.a
 define i32 @combine_sub_zext_xor() {
 ; GFX1010-LABEL: combine_sub_zext_xor:
 ; GFX1010:       ; %bb.0: ; %.entry
-; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-NEXT:    s_branch .LBB1_2
 ; GFX1010-NEXT:  .LBB1_1: ; %bb9
@@ -109,11 +108,11 @@ define i32 @combine_sub_zext_xor() {
 ; GFX1010-NEXT:    v_cmp_eq_u32_e64 s4, 0, v0
 ; GFX1010-NEXT:    s_branch .LBB1_1
 ; GFX1010-NEXT:  .LBB1_4: ; %.exit
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_sub_zext_xor:
 ; GFX1100:       ; %bb.0: ; %.entry
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-NEXT:    s_branch .LBB1_2
 ; GFX1100-NEXT:  .LBB1_1: ; %bb9
@@ -137,6 +136,7 @@ define i32 @combine_sub_zext_xor() {
 ; GFX1100-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX1100-NEXT:    s_branch .LBB1_1
 ; GFX1100-NEXT:  .LBB1_4: ; %.exit
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -167,7 +167,6 @@ bb9:                                              ; preds = %bb, %.a
 define i32 @combine_add_zext_or() {
 ; GFX1010-LABEL: combine_add_zext_or:
 ; GFX1010:       ; %bb.0: ; %.entry
-; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_mov_b32 s4, 0
 ; GFX1010-NEXT:    s_branch .LBB2_2
 ; GFX1010-NEXT:  .LBB2_1: ; %bb9
@@ -191,11 +190,11 @@ define i32 @combine_add_zext_or() {
 ; GFX1010-NEXT:  .LBB2_4: ; %.exit
 ; GFX1010-NEXT:    s_or_b32 s4, s5, s6
 ; GFX1010-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_add_zext_or:
 ; GFX1100:       ; %bb.0: ; %.entry
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
 ; GFX1100-NEXT:    s_branch .LBB2_2
 ; GFX1100-NEXT:  .LBB2_1: ; %bb9
@@ -220,6 +219,7 @@ define i32 @combine_add_zext_or() {
 ; GFX1100-NEXT:    s_or_b32 s0, s1, s2
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -251,7 +251,6 @@ bb9:                                              ; preds = %bb, %.a
 define i32 @combine_sub_zext_or() {
 ; GFX1010-LABEL: combine_sub_zext_or:
 ; GFX1010:       ; %bb.0: ; %.entry
-; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_mov_b32 s4, 0
 ; GFX1010-NEXT:    s_branch .LBB3_2
 ; GFX1010-NEXT:  .LBB3_1: ; %bb9
@@ -275,11 +274,11 @@ define i32 @combine_sub_zext_or() {
 ; GFX1010-NEXT:  .LBB3_4: ; %.exit
 ; GFX1010-NEXT:    s_or_b32 s4, s5, s6
 ; GFX1010-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_sub_zext_or:
 ; GFX1100:       ; %bb.0: ; %.entry
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
 ; GFX1100-NEXT:    s_branch .LBB3_2
 ; GFX1100-NEXT:  .LBB3_1: ; %bb9
@@ -304,6 +303,7 @@ define i32 @combine_sub_zext_or() {
 ; GFX1100-NEXT:    s_or_b32 s0, s1, s2
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -335,7 +335,6 @@ bb9:                                              ; preds = %bb, %.a
 define i32 @combine_add_zext_and() {
 ; GFX1010-LABEL: combine_add_zext_and:
 ; GFX1010:       ; %bb.0: ; %.entry
-; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-NEXT:    s_branch .LBB4_2
 ; GFX1010-NEXT:  .LBB4_1: ; %bb9
@@ -356,11 +355,11 @@ define i32 @combine_add_zext_and() {
 ; GFX1010-NEXT:    v_cmp_eq_u32_e64 s4, 0, v0
 ; GFX1010-NEXT:    s_branch .LBB4_1
 ; GFX1010-NEXT:  .LBB4_4: ; %.exit
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_add_zext_and:
 ; GFX1100:       ; %bb.0: ; %.entry
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-NEXT:    s_branch .LBB4_2
 ; GFX1100-NEXT:  .LBB4_1: ; %bb9
@@ -383,6 +382,7 @@ define i32 @combine_add_zext_and() {
 ; GFX1100-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX1100-NEXT:    s_branch .LBB4_1
 ; GFX1100-NEXT:  .LBB4_4: ; %.exit
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a
@@ -414,7 +414,6 @@ bb9:                                              ; preds = %bb, %.a
 define i32 @combine_sub_zext_and() {
 ; GFX1010-LABEL: combine_sub_zext_and:
 ; GFX1010:       ; %bb.0: ; %.entry
-; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-NEXT:    s_branch .LBB5_2
 ; GFX1010-NEXT:  .LBB5_1: ; %bb9
@@ -435,11 +434,11 @@ define i32 @combine_sub_zext_and() {
 ; GFX1010-NEXT:    v_cmp_eq_u32_e64 s4, 0, v0
 ; GFX1010-NEXT:    s_branch .LBB5_1
 ; GFX1010-NEXT:  .LBB5_4: ; %.exit
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-LABEL: combine_sub_zext_and:
 ; GFX1100:       ; %bb.0: ; %.entry
-; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-NEXT:    s_branch .LBB5_2
 ; GFX1100-NEXT:  .LBB5_1: ; %bb9
@@ -462,6 +461,7 @@ define i32 @combine_sub_zext_and() {
 ; GFX1100-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX1100-NEXT:    s_branch .LBB5_1
 ; GFX1100-NEXT:  .LBB5_4: ; %.exit
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   br label %.a

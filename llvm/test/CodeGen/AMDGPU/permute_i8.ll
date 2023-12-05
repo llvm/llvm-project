@@ -2726,8 +2726,8 @@ define void @Source16Bit(i16 %in, <2 x i16> %reg) {
 ;
 ; GFX9-LABEL: Source16Bit:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x3050204
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

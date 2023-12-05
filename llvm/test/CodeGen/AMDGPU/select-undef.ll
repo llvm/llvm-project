@@ -242,8 +242,7 @@ ret:
 ; would then see we used no elements of the vector, and reform the
 ; undef vector resulting in a combiner loop.
 ; GCN-LABEL: {{^}}inf_loop_undef_vector:
-; GCN: s_waitcnt
-; GCN-NEXT: v_mad_u64_u32
+; GCN: v_mad_u64_u32
 ; GCN-NEXT: v_mul_lo_u32
 ; GCN-NEXT: v_mul_lo_u32
 ; GCN-NEXT: v_add3_u32

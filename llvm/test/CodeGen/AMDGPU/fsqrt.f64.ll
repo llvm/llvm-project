@@ -8,9 +8,9 @@
 define double @v_sqrt_f64(double %x) {
 ; SDAG-LABEL: v_sqrt_f64:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -36,9 +36,9 @@ define double @v_sqrt_f64(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -68,9 +68,9 @@ define double @v_sqrt_f64(double %x) {
 define double @v_sqrt_f64_fneg(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_fneg:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 9
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -96,9 +96,9 @@ define double @v_sqrt_f64_fneg(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_fneg:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, -v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -129,9 +129,9 @@ define double @v_sqrt_f64_fneg(double %x) {
 define double @v_sqrt_f64_fabs(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_fabs:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -157,9 +157,9 @@ define double @v_sqrt_f64_fabs(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_fabs:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -190,9 +190,9 @@ define double @v_sqrt_f64_fabs(double %x) {
 define double @v_sqrt_f64_fneg_fabs(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_fneg_fabs:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 9
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -218,9 +218,9 @@ define double @v_sqrt_f64_fneg_fabs(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_fneg_fabs:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, -|v[0:1]|, v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -252,9 +252,9 @@ define double @v_sqrt_f64_fneg_fabs(double %x) {
 define double @v_sqrt_f64_ninf(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_ninf:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -280,9 +280,9 @@ define double @v_sqrt_f64_ninf(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_ninf:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -312,9 +312,9 @@ define double @v_sqrt_f64_ninf(double %x) {
 define double @v_sqrt_f64_no_infs_attribute(double %x) "no-infs-fp-math"="true" {
 ; SDAG-LABEL: v_sqrt_f64_no_infs_attribute:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -340,9 +340,9 @@ define double @v_sqrt_f64_no_infs_attribute(double %x) "no-infs-fp-math"="true" 
 ;
 ; GISEL-LABEL: v_sqrt_f64_no_infs_attribute:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -372,9 +372,9 @@ define double @v_sqrt_f64_no_infs_attribute(double %x) "no-infs-fp-math"="true" 
 define double @v_sqrt_f64_nnan(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_nnan:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -400,9 +400,9 @@ define double @v_sqrt_f64_nnan(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_nnan:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -708,9 +708,9 @@ define amdgpu_ps <2 x i32> @s_sqrt_f64_afn_nnan_ninf(double inreg %x) {
 define double @v_sqrt_f64_nsz(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_nsz:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -736,9 +736,9 @@ define double @v_sqrt_f64_nsz(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_nsz:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -768,9 +768,9 @@ define double @v_sqrt_f64_nsz(double %x) {
 define double @v_sqrt_f64_nnan_ninf(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_nnan_ninf:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -796,9 +796,9 @@ define double @v_sqrt_f64_nnan_ninf(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_nnan_ninf:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -828,9 +828,9 @@ define double @v_sqrt_f64_nnan_ninf(double %x) {
 define double @v_sqrt_f64_nnan_ninf_nsz(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_nnan_ninf_nsz:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -856,9 +856,9 @@ define double @v_sqrt_f64_nnan_ninf_nsz(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_nnan_ninf_nsz:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -888,9 +888,9 @@ define double @v_sqrt_f64_nnan_ninf_nsz(double %x) {
 define double @v_sqrt_f64_afn(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_afn:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -916,9 +916,9 @@ define double @v_sqrt_f64_afn(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_afn:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -948,9 +948,9 @@ define double @v_sqrt_f64_afn(double %x) {
 define double @v_sqrt_f64_afn_nsz(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_afn_nsz:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -976,9 +976,9 @@ define double @v_sqrt_f64_afn_nsz(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_afn_nsz:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1008,9 +1008,9 @@ define double @v_sqrt_f64_afn_nsz(double %x) {
 define <2 x double> @v_sqrt_v2f64_afn(<2 x double> %x) {
 ; SDAG-LABEL: v_sqrt_v2f64_afn:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[2:3]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
@@ -1055,11 +1055,11 @@ define <2 x double> @v_sqrt_v2f64_afn(<2 x double> %x) {
 ;
 ; GISEL-LABEL: v_sqrt_v2f64_afn:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_mov_b32 s4, 0
 ; GISEL-NEXT:    s_brev_b32 s5, 8
 ; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s5
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 s[4:5], v[2:3], v[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0x100
@@ -1107,9 +1107,9 @@ define <2 x double> @v_sqrt_v2f64_afn(<2 x double> %x) {
 define double @v_sqrt_f64_afn_nnan(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_afn_nnan:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1135,9 +1135,9 @@ define double @v_sqrt_f64_afn_nnan(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_afn_nnan:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1167,9 +1167,9 @@ define double @v_sqrt_f64_afn_nnan(double %x) {
 define double @v_sqrt_f64_fabs_afn_ninf(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_fabs_afn_ninf:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1195,9 +1195,9 @@ define double @v_sqrt_f64_fabs_afn_ninf(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_fabs_afn_ninf:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1228,9 +1228,9 @@ define double @v_sqrt_f64_fabs_afn_ninf(double %x) {
 define double @v_sqrt_f64_afn_nnan_ninf(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_afn_nnan_ninf:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1256,9 +1256,9 @@ define double @v_sqrt_f64_afn_nnan_ninf(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_afn_nnan_ninf:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1288,9 +1288,9 @@ define double @v_sqrt_f64_afn_nnan_ninf(double %x) {
 define <2 x double> @v_sqrt_v2f64_afn_nnan_ninf(<2 x double> %x) {
 ; SDAG-LABEL: v_sqrt_v2f64_afn_nnan_ninf:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[2:3]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
@@ -1335,11 +1335,11 @@ define <2 x double> @v_sqrt_v2f64_afn_nnan_ninf(<2 x double> %x) {
 ;
 ; GISEL-LABEL: v_sqrt_v2f64_afn_nnan_ninf:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_mov_b32 s4, 0
 ; GISEL-NEXT:    s_brev_b32 s5, 8
 ; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s5
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 s[4:5], v[2:3], v[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0x100
@@ -1387,9 +1387,9 @@ define <2 x double> @v_sqrt_v2f64_afn_nnan_ninf(<2 x double> %x) {
 define double @v_sqrt_f64_afn_nnan_ninf_nsz(double %x) {
 ; SDAG-LABEL: v_sqrt_f64_afn_nnan_ninf_nsz:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1415,9 +1415,9 @@ define double @v_sqrt_f64_afn_nnan_ninf_nsz(double %x) {
 ;
 ; GISEL-LABEL: v_sqrt_f64_afn_nnan_ninf_nsz:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1447,9 +1447,9 @@ define double @v_sqrt_f64_afn_nnan_ninf_nsz(double %x) {
 define double @v_sqrt_f64__approx_func_fp_math(double %x) #2 {
 ; SDAG-LABEL: v_sqrt_f64__approx_func_fp_math:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1475,9 +1475,9 @@ define double @v_sqrt_f64__approx_func_fp_math(double %x) #2 {
 ;
 ; GISEL-LABEL: v_sqrt_f64__approx_func_fp_math:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1507,9 +1507,9 @@ define double @v_sqrt_f64__approx_func_fp_math(double %x) #2 {
 define double @v_sqrt_f64__enough_unsafe_attrs(double %x) #3 {
 ; SDAG-LABEL: v_sqrt_f64__enough_unsafe_attrs:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1535,9 +1535,9 @@ define double @v_sqrt_f64__enough_unsafe_attrs(double %x) #3 {
 ;
 ; GISEL-LABEL: v_sqrt_f64__enough_unsafe_attrs:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1567,9 +1567,9 @@ define double @v_sqrt_f64__enough_unsafe_attrs(double %x) #3 {
 define double @v_sqrt_f64__unsafe_attr(double %x) #4 {
 ; SDAG-LABEL: v_sqrt_f64__unsafe_attr:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
@@ -1595,9 +1595,9 @@ define double @v_sqrt_f64__unsafe_attr(double %x) #4 {
 ;
 ; GISEL-LABEL: v_sqrt_f64__unsafe_attr:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GISEL-NEXT:    v_bfrev_b32_e32 v3, 8
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_lt_f64_e32 vcc, v[0:1], v[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0x100
 ; GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc
@@ -1627,9 +1627,9 @@ define double @v_sqrt_f64__unsafe_attr(double %x) #4 {
 define <2 x double> @v_sqrt_v2f64(<2 x double> %x) {
 ; SDAG-LABEL: v_sqrt_v2f64:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s4, 0
 ; SDAG-NEXT:    s_brev_b32 s5, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[2:3]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
@@ -1674,11 +1674,11 @@ define <2 x double> @v_sqrt_v2f64(<2 x double> %x) {
 ;
 ; GISEL-LABEL: v_sqrt_v2f64:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_mov_b32 s4, 0
 ; GISEL-NEXT:    s_brev_b32 s5, 8
 ; GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s5
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 s[4:5], v[2:3], v[4:5]
 ; GISEL-NEXT:    v_mov_b32_e32 v6, 0x100
@@ -1726,9 +1726,9 @@ define <2 x double> @v_sqrt_v2f64(<2 x double> %x) {
 define <3 x double> @v_sqrt_v3f64(<3 x double> %x) {
 ; SDAG-LABEL: v_sqrt_v3f64:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s6, 0
 ; SDAG-NEXT:    s_brev_b32 s7, 8
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[6:7], v[0:1]
 ; SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[6:7], v[2:3]
 ; SDAG-NEXT:    v_cmp_gt_f64_e64 s[6:7], s[6:7], v[4:5]
@@ -1792,11 +1792,11 @@ define <3 x double> @v_sqrt_v3f64(<3 x double> %x) {
 ;
 ; GISEL-LABEL: v_sqrt_v3f64:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_mov_b32 s4, 0
 ; GISEL-NEXT:    s_brev_b32 s5, 8
 ; GISEL-NEXT:    v_mov_b32_e32 v6, s4
 ; GISEL-NEXT:    v_mov_b32_e32 v7, s5
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 s[4:5], v[2:3], v[6:7]
 ; GISEL-NEXT:    v_cmp_lt_f64_e64 s[6:7], v[4:5], v[6:7]

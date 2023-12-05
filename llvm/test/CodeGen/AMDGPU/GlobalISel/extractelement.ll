@@ -291,7 +291,6 @@ entry:
 define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GCN-LABEL: dyn_extract_v8i64_const_s_v:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[4:5], 1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s4
@@ -299,6 +298,7 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GCN-NEXT:    v_mov_b32_e32 v3, s6
 ; GCN-NEXT:    v_mov_b32_e32 v4, s7
 ; GCN-NEXT:    s_mov_b64 s[8:9], 3
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v5, s8
 ; GCN-NEXT:    v_mov_b32_e32 v6, s9
@@ -341,8 +341,8 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ;
 ; GFX10-LABEL: dyn_extract_v8i64_const_s_v:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b64 s[6:7], 2
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s7
@@ -377,8 +377,8 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ;
 ; GFX11-LABEL: dyn_extract_v8i64_const_s_v:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 2
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s3
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 1

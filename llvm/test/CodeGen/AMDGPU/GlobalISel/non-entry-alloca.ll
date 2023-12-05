@@ -147,8 +147,9 @@ bb.1:
 define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
 ; GCN-LABEL: func_non_entry_block_static_alloca_align4:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s7, s33
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
@@ -210,9 +211,10 @@ bb.2:
 define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
 ; GCN-LABEL: func_non_entry_block_static_alloca_align64:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s7, s33
 ; GCN-NEXT:    s_add_i32 s33, s32, 0xfc0
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GCN-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; GCN-NEXT:    s_addk_i32 s32, 0x2000

@@ -680,8 +680,8 @@ define <4 x float> @v_repeat_divisor_v2f32_x2(<2 x float> %x, <2 x float> %y, <2
 define <2 x float> @v_repeat_divisor_f32_x2_ulp25(float %x, float %y, float %D) #0 {
 ; GFX6-LABEL: v_repeat_divisor_f32_x2_ulp25:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s4, 0x7f800000
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    v_frexp_mant_f32_e32 v3, v2
 ; GFX6-NEXT:    v_cmp_lt_f32_e64 vcc, |v2|, s4
 ; GFX6-NEXT:    v_cndmask_b32_e32 v3, v2, v3, vcc

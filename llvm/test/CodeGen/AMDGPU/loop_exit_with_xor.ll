@@ -9,9 +9,9 @@
 define void @needs_and(i32 %arg) {
 ; GCN-LABEL: needs_and:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s10, 1
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_branch .LBB0_2
 ; GCN-NEXT:  .LBB0_1: ; %endif
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -23,6 +23,7 @@ define void @needs_and(i32 %arg) {
 ; GCN-NEXT:    s_cbranch_execz .LBB0_4
 ; GCN-NEXT:  .LBB0_2: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_u32_e64 s[4:5], s10, v0
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s10, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
@@ -63,12 +64,13 @@ loopexit:
 define void @doesnt_need_and(i32 %arg) {
 ; GCN-LABEL: doesnt_need_and:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:  .LBB1_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_i32 s6, s6, 1
+; GCN-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_le_u32_e32 vcc, s6, v0
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], s4

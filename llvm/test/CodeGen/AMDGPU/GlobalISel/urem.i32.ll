@@ -210,7 +210,6 @@ define <2 x i32> @v_urem_v2i32_pow2k_denom(<2 x i32> %num) {
 define i32 @v_urem_i32_oddk_denom(i32 %num) {
 ; CHECK-LABEL: v_urem_i32_oddk_denom:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_rcp_iflag_f32_e32 v1, 0x4996c7d8
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0xffed2705
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x12d8fb
@@ -219,6 +218,7 @@ define i32 @v_urem_i32_oddk_denom(i32 %num) {
 ; CHECK-NEXT:    v_mul_lo_u32 v2, v1, v2
 ; CHECK-NEXT:    v_mul_hi_u32 v2, v1, v2
 ; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mul_hi_u32 v1, v0, v1
 ; CHECK-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
@@ -236,7 +236,6 @@ define i32 @v_urem_i32_oddk_denom(i32 %num) {
 define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; GISEL-LABEL: v_urem_v2i32_oddk_denom:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0x12d8fb
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v3, 0x12d8fb
 ; GISEL-NEXT:    v_mov_b32_e32 v4, 0xffed2705
@@ -246,6 +245,7 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; GISEL-NEXT:    v_mul_lo_u32 v4, v3, v4
 ; GISEL-NEXT:    v_mul_hi_u32 v4, v3, v4
 ; GISEL-NEXT:    v_add_i32_e32 v3, vcc, v3, v4
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_mul_hi_u32 v4, v0, v3
 ; GISEL-NEXT:    v_mul_hi_u32 v3, v1, v3
 ; GISEL-NEXT:    v_mul_lo_u32 v4, v4, v2
@@ -268,7 +268,6 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ;
 ; CGP-LABEL: v_urem_v2i32_oddk_denom:
 ; CGP:       ; %bb.0:
-; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    v_rcp_iflag_f32_e32 v2, 0x4996c7d8
 ; CGP-NEXT:    v_mov_b32_e32 v3, 0xffed2705
 ; CGP-NEXT:    v_mov_b32_e32 v4, 0x12d8fb
@@ -277,6 +276,7 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; CGP-NEXT:    v_mul_lo_u32 v3, v2, v3
 ; CGP-NEXT:    v_mul_hi_u32 v3, v2, v3
 ; CGP-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
+; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    v_mul_hi_u32 v3, v0, v2
 ; CGP-NEXT:    v_mul_hi_u32 v2, v1, v2
 ; CGP-NEXT:    v_mul_lo_u32 v3, v3, v4

@@ -55,9 +55,8 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ;
 ; GFX940-LABEL: syncscope_system:
 ; GFX940:       ; %bb.0:
-; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_wbl2 sc0 sc1
-; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc0 sc1
@@ -118,8 +117,8 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ;
 ; GFX90A-LABEL: syncscope_workgroup_rtn:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr3
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -188,8 +187,8 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX908-LABEL: syncscope_workgroup_nortn:
 ; GFX908:       ; %bb.0: ; %atomicrmw.check.shared
-; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -240,8 +239,8 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ;
 ; GFX90A-LABEL: syncscope_workgroup_nortn:
 ; GFX90A:       ; %bb.0: ; %atomicrmw.check.shared
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_shared_base
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]

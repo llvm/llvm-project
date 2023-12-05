@@ -974,8 +974,8 @@ define amdgpu_kernel void @s_exp2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 define float @v_exp2_f32(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -988,9 +988,9 @@ define float @v_exp2_f32(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1016,8 +1016,8 @@ define float @v_exp2_f32(float %in) {
 define float @v_exp2_fabs_f32(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_fabs_f32:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1030,9 +1030,9 @@ define float @v_exp2_fabs_f32(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_fabs_f32:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
@@ -1059,8 +1059,8 @@ define float @v_exp2_fabs_f32(float %in) {
 define float @v_exp2_fneg_fabs_f32(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_fneg_fabs_f32:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1073,9 +1073,9 @@ define float @v_exp2_fneg_fabs_f32(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_fneg_fabs_f32:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -|v0|, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_sub_f32_e64 v0, v1, |v0|
@@ -1103,8 +1103,8 @@ define float @v_exp2_fneg_fabs_f32(float %in) {
 define float @v_exp2_fneg_f32(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_fneg_f32:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0x42fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1117,9 +1117,9 @@ define float @v_exp2_fneg_f32(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_fneg_f32:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, -v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -1146,8 +1146,8 @@ define float @v_exp2_fneg_f32(float %in) {
 define float @v_exp2_f32_fast(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_fast:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1160,9 +1160,9 @@ define float @v_exp2_f32_fast(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_fast:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1188,8 +1188,8 @@ define float @v_exp2_f32_fast(float %in) {
 define float @v_exp2_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
 ; GCN-SDAG-LABEL: v_exp2_f32_unsafe_math_attr:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1202,9 +1202,9 @@ define float @v_exp2_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_unsafe_math_attr:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1230,8 +1230,8 @@ define float @v_exp2_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
 define float @v_exp2_f32_approx_fn_attr(float %in) "approx-func-fp-math"="true" {
 ; GCN-SDAG-LABEL: v_exp2_f32_approx_fn_attr:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1244,9 +1244,9 @@ define float @v_exp2_f32_approx_fn_attr(float %in) "approx-func-fp-math"="true" 
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_approx_fn_attr:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1272,8 +1272,8 @@ define float @v_exp2_f32_approx_fn_attr(float %in) "approx-func-fp-math"="true" 
 define float @v_exp2_f32_ninf(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_ninf:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1286,9 +1286,9 @@ define float @v_exp2_f32_ninf(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_ninf:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1314,8 +1314,8 @@ define float @v_exp2_f32_ninf(float %in) {
 define float @v_exp2_f32_afn(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_afn:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1328,9 +1328,9 @@ define float @v_exp2_f32_afn(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_afn:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1376,8 +1376,8 @@ define float @v_exp2_f32_afn_daz(float %in) #0 {
 define float @v_exp2_f32_afn_dynamic(float %in) #1 {
 ; GCN-SDAG-LABEL: v_exp2_f32_afn_dynamic:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1390,9 +1390,9 @@ define float @v_exp2_f32_afn_dynamic(float %in) #1 {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_afn_dynamic:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1418,8 +1418,8 @@ define float @v_exp2_f32_afn_dynamic(float %in) #1 {
 define float @v_fabs_exp2_f32_afn(float %in) {
 ; GCN-SDAG-LABEL: v_fabs_exp2_f32_afn:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1432,9 +1432,9 @@ define float @v_fabs_exp2_f32_afn(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_fabs_exp2_f32_afn:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e64 v0, |v0|, v1
@@ -1481,8 +1481,8 @@ define float @v_exp2_f32_daz(float %in) #0 {
 define float @v_exp2_f32_nnan(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_nnan:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1495,9 +1495,9 @@ define float @v_exp2_f32_nnan(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_nnan:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1543,8 +1543,8 @@ define float @v_exp2_f32_nnan_daz(float %in) #0 {
 define float @v_exp2_f32_nnan_dynamic(float %in) #1 {
 ; GCN-SDAG-LABEL: v_exp2_f32_nnan_dynamic:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1557,9 +1557,9 @@ define float @v_exp2_f32_nnan_dynamic(float %in) #1 {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_nnan_dynamic:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1605,8 +1605,8 @@ define float @v_exp2_f32_ninf_daz(float %in) #0 {
 define float @v_exp2_f32_ninf_dynamic(float %in) #1 {
 ; GCN-SDAG-LABEL: v_exp2_f32_ninf_dynamic:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1619,9 +1619,9 @@ define float @v_exp2_f32_ninf_dynamic(float %in) #1 {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_ninf_dynamic:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1647,8 +1647,8 @@ define float @v_exp2_f32_ninf_dynamic(float %in) #1 {
 define float @v_exp2_f32_nnan_ninf(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_nnan_ninf:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1661,9 +1661,9 @@ define float @v_exp2_f32_nnan_ninf(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_nnan_ninf:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1709,8 +1709,8 @@ define float @v_exp2_f32_nnan_ninf_daz(float %in) #0 {
 define float @v_exp2_f32_nnan_ninf_dynamic(float %in) #1 {
 ; GCN-SDAG-LABEL: v_exp2_f32_nnan_ninf_dynamic:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1723,9 +1723,9 @@ define float @v_exp2_f32_nnan_ninf_dynamic(float %in) #1 {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_nnan_ninf_dynamic:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1771,8 +1771,8 @@ define float @v_exp2_f32_fast_daz(float %in) #0 {
 define float @v_exp2_f32_dynamic_mode(float %in) #1 {
 ; GCN-SDAG-LABEL: v_exp2_f32_dynamic_mode:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -1785,9 +1785,9 @@ define float @v_exp2_f32_dynamic_mode(float %in) #1 {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_dynamic_mode:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -1813,13 +1813,12 @@ define float @v_exp2_f32_dynamic_mode(float %in) #1 {
 define float @v_exp2_f32_undef() {
 ; GCN-SDAG-LABEL: v_exp2_f32_undef:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_exp_f32_e32 v0, 0x7fc00000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_undef:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0x42800000
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v1, s4, v1
@@ -1830,6 +1829,7 @@ define float @v_exp2_f32_undef() {
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0x1f800000
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
 ; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_undef:
@@ -1848,8 +1848,8 @@ define float @v_exp2_f32_undef() {
 define float @v_exp2_f32_0() {
 ; GCN-LABEL: v_exp2_f32_0:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1.0
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_exp2_f32_0:
@@ -1970,8 +1970,8 @@ define float @v_exp2_f32_from_fpext_math_f16(i16 %src0.i, i16 %src1.i) {
 define float @v_exp2_f32_from_fpext_bf16(bfloat %src) {
 ; GCN-LABEL: v_exp2_f32_from_fpext_bf16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -2821,8 +2821,8 @@ define <3 x half> @v_exp2_v3f16_afn(<3 x half> %in) {
 define float @v_exp2_f32_contract(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_contract:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -2835,9 +2835,9 @@ define float @v_exp2_f32_contract(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_contract:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -2883,8 +2883,8 @@ define float @v_exp2_f32_contract_daz(float %in) #0 {
 define float @v_exp2_f32_contract_nnan_ninf(float %in) {
 ; GCN-SDAG-LABEL: v_exp2_f32_contract_nnan_ninf:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
@@ -2897,9 +2897,9 @@ define float @v_exp2_f32_contract_nnan_ninf(float %in) {
 ;
 ; GCN-GISEL-LABEL: v_exp2_f32_contract_nnan_ninf:
 ; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1

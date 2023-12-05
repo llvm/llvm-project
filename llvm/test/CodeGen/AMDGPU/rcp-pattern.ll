@@ -276,8 +276,8 @@ define float @v_neg_rcp_f32_daz(float %x) #0 {
 define float @v_rcp_f32_ieee_ulp25(float %x) #3 {
 ; SI-LABEL: v_rcp_f32_ieee_ulp25:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
@@ -308,8 +308,8 @@ define float @v_rcp_f32_ieee_ulp25(float %x) #3 {
 define float @v_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %x) #3 {
 ; SI-LABEL: v_rcp_f32_ieee_ulp25_known_not_denormal:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
@@ -340,8 +340,8 @@ define float @v_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %x) #
 define float @v_neg_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %x) #3 {
 ; SI-LABEL: v_neg_rcp_f32_ieee_ulp25_known_not_denormal:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e64 v1, -v0
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[4:5]
@@ -372,8 +372,8 @@ define float @v_neg_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %
 define float @v_rcp_f32_ieee_ulp25_ninf_nnan(float %x) #3 {
 ; SI-LABEL: v_rcp_f32_ieee_ulp25_ninf_nnan:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
@@ -419,8 +419,8 @@ define float @v_rcp_f32_daz_ulp25(float %x) #0 {
 define float @v_neg_rcp_f32_ieee_ulp25(float %x) #3 {
 ; SI-LABEL: v_neg_rcp_f32_ieee_ulp25:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e64 v1, -v0
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[4:5]
@@ -558,8 +558,8 @@ define float @v_rcp_fabs_f32_daz(float %x) #0 {
 define float @v_rcp_fabs_f32_ieee_ulp25(float %x) #3 {
 ; SI-LABEL: v_rcp_fabs_f32_ieee_ulp25:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e64 v1, |v0|
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e64 v1, |v0|, v1, s[4:5]
@@ -699,8 +699,8 @@ define float @v_rcp_neg_fabs_f32_daz(float %x) #0 {
 define float @v_rcp_neg_fabs_f32_ieee_ulp25(float %x) #3 {
 ; SI-LABEL: v_rcp_neg_fabs_f32_ieee_ulp25:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_frexp_mant_f32_e64 v1, -|v0|
 ; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
 ; SI-NEXT:    v_cndmask_b32_e64 v1, -|v0|, v1, s[4:5]

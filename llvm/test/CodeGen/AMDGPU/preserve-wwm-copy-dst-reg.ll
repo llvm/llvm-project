@@ -9,10 +9,12 @@
 define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-LABEL: preserve_wwm_copy_dstreg:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    s_mov_b32 s16, s33
 ; GFX906-NEXT:    s_mov_b32 s33, s32
+; GFX906-NEXT:    s_waitcnt expcnt(0)
 ; GFX906-NEXT:    s_xor_saveexec_b64 s[18:19], -1
+; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:144 ; 4-byte Folded Spill
 ; GFX906-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:152 ; 4-byte Folded Spill
 ; GFX906-NEXT:    s_mov_b64 exec, -1
@@ -370,10 +372,12 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ;
 ; GFX908-LABEL: preserve_wwm_copy_dstreg:
 ; GFX908:       ; %bb.0:
-; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    s_mov_b32 s16, s33
 ; GFX908-NEXT:    s_mov_b32 s33, s32
+; GFX908-NEXT:    s_waitcnt expcnt(0)
 ; GFX908-NEXT:    s_xor_saveexec_b64 s[18:19], -1
+; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
 ; GFX908-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:156 ; 4-byte Folded Spill
 ; GFX908-NEXT:    s_mov_b64 exec, -1

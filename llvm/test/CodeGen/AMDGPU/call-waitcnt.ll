@@ -123,7 +123,6 @@ define amdgpu_kernel void @call_got_load(ptr addrspace(1) %ptr, i32) #0 {
 define void @tailcall_got_load(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: tailcall_got_load:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, got.func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, got.func@gotpcrel32@hi+12

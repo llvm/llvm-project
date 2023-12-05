@@ -60,9 +60,9 @@ define i16 @v_powi_f16(i16 %l, i32 %r) {
 define float @v_powi_f32(float %l, i32 %r) {
 ; GFX78-LABEL: v_powi_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v3, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
 ; GFX78-NEXT:    v_cndmask_b32_e32 v2, 1.0, v3, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v2
@@ -143,9 +143,9 @@ define float @v_powi_1_f32(float %l) {
 define float @v_powi_neg1_f32(float %l) {
 ; GFX78-LABEL: v_powi_neg1_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -194,9 +194,9 @@ define float @v_powi_neg1_f32(float %l) {
 define float @v_powi_2_f32(float %l) {
 ; GFX78-LABEL: v_powi_2_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -245,9 +245,9 @@ define float @v_powi_2_f32(float %l) {
 define float @v_powi_neg2_f32(float %l) {
 ; GFX78-LABEL: v_powi_neg2_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -296,9 +296,9 @@ define float @v_powi_neg2_f32(float %l) {
 define float @v_powi_4_f32(float %l) {
 ; GFX78-LABEL: v_powi_4_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -347,9 +347,9 @@ define float @v_powi_4_f32(float %l) {
 define float @v_powi_8_f32(float %l) {
 ; GFX78-LABEL: v_powi_8_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -398,9 +398,9 @@ define float @v_powi_8_f32(float %l) {
 define float @v_powi_16_f32(float %l) {
 ; GFX78-LABEL: v_powi_16_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -449,9 +449,9 @@ define float @v_powi_16_f32(float %l) {
 define float @v_powi_128_f32(float %l) {
 ; GFX78-LABEL: v_powi_128_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1
@@ -500,9 +500,9 @@ define float @v_powi_128_f32(float %l) {
 define float @v_powi_neg128_f32(float %l) {
 ; GFX78-LABEL: v_powi_neg128_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v1, 0x800000
 ; GFX78-NEXT:    v_mov_b32_e32 v2, 0x4f800000
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
 ; GFX78-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
 ; GFX78-NEXT:    v_mul_f32_e32 v0, v0, v1

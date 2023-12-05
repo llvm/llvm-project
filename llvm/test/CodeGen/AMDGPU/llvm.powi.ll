@@ -61,14 +61,14 @@ define float @v_powi_f32(float %l, i32 %r) {
 define float @v_powi_0_f32(float %l) {
 ; GFX78-LABEL: v_powi_0_f32:
 ; GFX78:       ; %bb.0:
-; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX78-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX78-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_powi_0_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 0)
   ret float %res

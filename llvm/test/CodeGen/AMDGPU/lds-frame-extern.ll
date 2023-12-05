@@ -16,10 +16,9 @@
 define void @use_module() #0 {
 ; CHECK-LABEL: use_module:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ds_write_b16 v0, v0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   store i16 0, ptr addrspace(3) @module_variable
   ret void
@@ -38,10 +37,10 @@ define void @use_module() #0 {
 define void @use_extern_normal() #0 {
 ; CHECK-LABEL: use_extern_normal:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.dynlds.offset.table@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.dynlds.offset.table@rel32@hi+12
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, s15
 ; CHECK-NEXT:    s_ashr_i32 s5, s15, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x4048f5c3
@@ -52,7 +51,7 @@ define void @use_extern_normal() #0 {
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    ds_write_b32 v1, v0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %arrayidx = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_normal, i32 0, i32 0
   store float 0x40091EB860000000, ptr addrspace(3) %arrayidx
@@ -62,10 +61,10 @@ define void @use_extern_normal() #0 {
 define void @use_extern_overalign() #0 {
 ; CHECK-LABEL: use_extern_overalign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.dynlds.offset.table@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.dynlds.offset.table@rel32@hi+12
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, s15
 ; CHECK-NEXT:    s_ashr_i32 s5, s15, 31
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x42280000
@@ -76,7 +75,7 @@ define void @use_extern_overalign() #0 {
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    ds_write_b32 v1, v0 offset:4
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %arrayidx = getelementptr inbounds [0 x float], ptr addrspace(3) @extern_overalign, i32 0, i32 1
   store float 4.200000e+01, ptr addrspace(3) %arrayidx

@@ -24,10 +24,10 @@ define i32 @zextload_global_i1_to_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i1_to_i32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -70,10 +70,10 @@ define i32 @zextload_global_i8_to_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i8_to_i32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -113,10 +113,10 @@ define i32 @zextload_global_i16_to_i32(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i16_to_i32:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -160,10 +160,10 @@ define i64 @zextload_global_i1_to_i64(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i1_to_i64:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
@@ -210,10 +210,10 @@ define i64 @zextload_global_i8_to_i64(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i8_to_i64:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
@@ -258,10 +258,10 @@ define i64 @zextload_global_i16_to_i64(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i16_to_i64:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_ushort v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
@@ -306,10 +306,10 @@ define i64 @zextload_global_i32_to_i64(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i32_to_i64:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
@@ -356,10 +356,10 @@ define i96 @zextload_global_i32_to_i96(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i32_to_i96:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
@@ -410,10 +410,10 @@ define i128 @zextload_global_i32_to_i128(ptr addrspace(1) %ptr) {
 ;
 ; GFX6-LABEL: zextload_global_i32_to_i128:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[4:5], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0

@@ -15,8 +15,8 @@ define <4 x i32> @load_lds_v4i32(ptr addrspace(3) %ptr) {
 ;
 ; GFX7-LABEL: load_lds_v4i32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b128 v[0:3], v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -93,8 +93,8 @@ define <4 x i32> @load_lds_v4i32_align1(ptr addrspace(3) %ptr) {
 ;
 ; GFX7-LABEL: load_lds_v4i32_align1:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_u8 v1, v0 offset:6
 ; GFX7-NEXT:    ds_read_u8 v2, v0 offset:4
 ; GFX7-NEXT:    ds_read_u8 v3, v0 offset:2
@@ -329,8 +329,8 @@ define <4 x i32> @load_lds_v4i32_align2(ptr addrspace(3) %ptr) {
 ;
 ; GFX7-LABEL: load_lds_v4i32_align2:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_u16 v3, v0 offset:12
 ; GFX7-NEXT:    ds_read_u16 v2, v0 offset:8
 ; GFX7-NEXT:    ds_read_u16 v1, v0 offset:4
@@ -500,8 +500,8 @@ define <4 x i32> @load_lds_v4i32_align8(ptr addrspace(3) %ptr) {
 ;
 ; GFX7-LABEL: load_lds_v4i32_align8:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -544,8 +544,8 @@ define <4 x i32> @load_lds_v4i32_align16(ptr addrspace(3) %ptr) {
 ;
 ; GFX7-LABEL: load_lds_v4i32_align16:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b128 v[0:3], v0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]

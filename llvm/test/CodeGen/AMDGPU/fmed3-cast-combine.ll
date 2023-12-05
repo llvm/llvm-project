@@ -335,8 +335,8 @@ define half @fmed3_f32_fpext_f16_k2(half %arg0, half %arg1) #1 {
 define half @fmed3_f32_fpext_f16_k0_k1(half %arg2) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_k0_k1:
 ; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v1, 0x41800000
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, 0, v1, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -353,20 +353,20 @@ define half @fmed3_f32_fpext_f16_k0_k1(half %arg2) #1 {
 ;
 ; GFX8-SDAG-LABEL: fmed3_f32_fpext_f16_k0_k1:
 ; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v1, 0x4c00
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v2, 0, v1
 ; GFX8-SDAG-NEXT:    v_min_f16_e32 v1, 0, v1
+; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_max_f16_e32 v0, v1, v0
 ; GFX8-SDAG-NEXT:    v_min_f16_e32 v0, v2, v0
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: fmed3_f32_fpext_f16_k0_k1:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0x4c00
 ; GFX8-GISEL-NEXT:    v_min_f16_e32 v2, 0, v1
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v1, 0, v1
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_max_f16_e32 v0, v2, v0
 ; GFX8-GISEL-NEXT:    v_min_f16_e32 v0, v1, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1144,8 +1144,8 @@ define half @fmed3_f32_fpext_f16_bf16_2(half %arg0, half %arg1, bfloat %arg2) #1
 define half @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k0:
 ; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0x4f800000
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, s4, v0, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -1210,8 +1210,8 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k0(half %arg1, half %arg2) #1 {
 define half @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k1:
 ; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0x4f800000
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, s4, v1
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -1276,8 +1276,8 @@ define half @fmed3_f32_fpext_f16_unrepresentable_k1(half %arg0, half %arg2) #1 {
 define half @fmed3_f32_fpext_f16_unrepresentable_k2(half %arg0, half %arg1) #1 {
 ; GFX7-SDAG-LABEL: fmed3_f32_fpext_f16_unrepresentable_k2:
 ; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    s_mov_b32 s4, 0x4f800000
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_med3_f32 v0, v0, v1, s4
 ; GFX7-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0

@@ -9,10 +9,11 @@
 define void @vector_reg_liverange_split() #0 {
 ; GFX90A-LABEL: vector_reg_liverange_split:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-NEXT:    s_mov_b32 s33, s32
+; GFX90A-NEXT:    s_waitcnt expcnt(0)
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[18:19], -1
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, -1
 ; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill

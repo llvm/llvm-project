@@ -8,7 +8,6 @@
   ; GFX908-LABEL: test_spill:
   ; GFX908:       ; %bb.0:
   ; GFX908-NEXT:    ; implicit-def: $agpr96_agpr97_agpr98_agpr99_agpr100_agpr101_agpr102_agpr103_agpr104_agpr105_agpr106_agpr107_agpr108_agpr109_agpr110_agpr111
-  ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; GFX908-NEXT:    v_accvgpr_read_b32 v63, a96
   ; GFX908-NEXT:    ; implicit-def: $vgpr0
   ; GFX908-NEXT:    ; implicit-def: $vgpr1
@@ -120,8 +119,8 @@
   ; GFX908-NEXT:    s_nop 1
   ; GFX908-NEXT:    v_accvgpr_write_b32 a79, v63
   ; GFX908-NEXT:    v_accvgpr_read_b32 v63, a96 ; Reload Reuse
+  ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; GFX908-NEXT:    v_accvgpr_read_b32 v62, a111 ; Reload Reuse
-  ; GFX908-NEXT:    s_nop 0
   ; GFX908-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
   ; GFX908-NEXT:    v_accvgpr_read_b32 v63, a97 ; Reload Reuse
   ; GFX908-NEXT:    s_nop 1
@@ -218,7 +217,6 @@
   ; GFX90A-LABEL: test_spill:
   ; GFX90A:       ; %bb.0:
   ; GFX90A-NEXT:    ; implicit-def: $agpr96_agpr97_agpr98_agpr99_agpr100_agpr101_agpr102_agpr103_agpr104_agpr105_agpr106_agpr107_agpr108_agpr109_agpr110_agpr111
-  ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; GFX90A-NEXT:    v_accvgpr_mov_b32 a64, a96
   ; GFX90A-NEXT:    v_accvgpr_mov_b32 a65, a97
   ; GFX90A-NEXT:    v_accvgpr_mov_b32 a66, a98
@@ -235,6 +233,7 @@
   ; GFX90A-NEXT:    v_accvgpr_mov_b32 a77, a109
   ; GFX90A-NEXT:    v_accvgpr_mov_b32 a78, a110
   ; GFX90A-NEXT:    v_accvgpr_mov_b32 a79, a111
+  ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
   ; GFX90A-NEXT:    v_accvgpr_read_b32 v77, a96 ; Reload Reuse
   ; GFX90A-NEXT:    ; implicit-def: $vgpr0
   ; GFX90A-NEXT:    ; implicit-def: $vgpr1

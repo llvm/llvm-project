@@ -4,9 +4,9 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK-LABEL: test_srem_odd:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x1f5a814b
 ; CHECK-NEXT:    s_mov_b32 s5, 0x52bf5b
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s4
 ; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 0x295fad, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1fffffff, v0

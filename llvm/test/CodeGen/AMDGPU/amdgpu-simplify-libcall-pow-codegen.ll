@@ -20,7 +20,6 @@ declare hidden half @_Z4pownDhi(half, i32)
 define half @test_pow_fast_f16(half %x, half %y) {
 ; CHECK-LABEL: test_pow_fast_f16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z3powDhDh@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3powDhDh@rel32@hi+12
@@ -32,7 +31,6 @@ define half @test_pow_fast_f16(half %x, half %y) {
 define float @test_pow_fast_f32(float %x, float %y) {
 ; CHECK-LABEL: test_pow_fast_f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z3powff@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3powff@rel32@hi+12
@@ -44,7 +42,6 @@ define float @test_pow_fast_f32(float %x, float %y) {
 define double @test_pow_fast_f64(double %x, double %y) {
 ; CHECK-LABEL: test_pow_fast_f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z3powdd@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3powdd@rel32@hi+12
@@ -112,10 +109,12 @@ define float @test_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 define double @test_pow_fast_f64__integral_y(double %x, i32 %y.i) {
 ; CHECK-LABEL: test_pow_fast_f64__integral_y:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 14
@@ -225,8 +224,8 @@ define half @test_powr_fast_f16(half %x, half %y) {
 define float @test_powr_fast_f32(float %x, float %y) {
 ; CHECK-LABEL: test_powr_fast_f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x4f800000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
@@ -253,10 +252,12 @@ define float @test_powr_fast_f32(float %x, float %y) {
 define double @test_powr_fast_f64(double %x, double %y) {
 ; CHECK-LABEL: test_powr_fast_f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 14
@@ -365,8 +366,8 @@ define half @test_pown_fast_f16(half %x, i32 %y) {
 define float @test_pown_fast_f32(float %x, i32 %y) {
 ; CHECK-LABEL: test_pown_fast_f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x4f800000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
@@ -396,10 +397,12 @@ define float @test_pown_fast_f32(float %x, i32 %y) {
 define double @test_pown_fast_f64(double %x, i32 %y) {
 ; CHECK-LABEL: test_pown_fast_f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 14
@@ -508,8 +511,8 @@ define half @test_pown_fast_f16_known_even(half %x, i32 %y.arg) {
 define float @test_pown_fast_f32_known_even(float %x, i32 %y.arg) {
 ; CHECK-LABEL: test_pown_fast_f32_known_even:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x4f800000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
@@ -539,10 +542,12 @@ define float @test_pown_fast_f32_known_even(float %x, i32 %y.arg) {
 define double @test_pown_fast_f64_known_even(double %x, i32 %y.arg) {
 ; CHECK-LABEL: test_pown_fast_f64_known_even:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 14
@@ -648,8 +653,8 @@ define half @test_pown_fast_f16_known_odd(half %x, i32 %y.arg) {
 define float @test_pown_fast_f32_known_odd(float %x, i32 %y.arg) {
 ; CHECK-LABEL: test_pown_fast_f32_known_odd:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x4f800000
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
@@ -681,10 +686,12 @@ define float @test_pown_fast_f32_known_odd(float %x, i32 %y.arg) {
 define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) {
 ; CHECK-LABEL: test_pown_fast_f64_known_odd:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 14

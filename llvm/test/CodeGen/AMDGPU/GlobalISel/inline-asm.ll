@@ -4,7 +4,6 @@
 define i32 @test_sgpr_reg_class_constraint() nounwind {
 ; CHECK-LABEL: test_sgpr_reg_class_constraint:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s4, 7
 ; CHECK-NEXT:    ;;#ASMEND
@@ -15,6 +14,7 @@ define i32 @test_sgpr_reg_class_constraint() nounwind {
 ; CHECK-NEXT:    s_add_u32 s4, s4, s5
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind
@@ -26,7 +26,6 @@ entry:
 define i32 @test_sgpr_matching_constraint() nounwind {
 ; CHECK-LABEL: test_sgpr_matching_constraint:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s5, 7
 ; CHECK-NEXT:    ;;#ASMEND
@@ -37,6 +36,7 @@ define i32 @test_sgpr_matching_constraint() nounwind {
 ; CHECK-NEXT:    s_add_u32 s4, s5, s4
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind
@@ -48,13 +48,13 @@ entry:
 define i32 @test_sgpr_to_vgpr_move_reg_class_constraint() nounwind {
 ; CHECK-LABEL: test_sgpr_to_vgpr_move_reg_class_constraint:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s4, 7
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32 v0, s4
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind
@@ -65,7 +65,6 @@ entry:
 define i32 @test_sgpr_to_vgpr_move_matching_constraint() nounwind {
 ; CHECK-LABEL: test_sgpr_to_vgpr_move_matching_constraint:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s4, 7
 ; CHECK-NEXT:    ;;#ASMEND
@@ -73,6 +72,7 @@ define i32 @test_sgpr_to_vgpr_move_matching_constraint() nounwind {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32 v0, v0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind

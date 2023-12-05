@@ -172,8 +172,8 @@ define void @store_lds_v4i32_align1(ptr addrspace(3) %out, <4 x i32> %x) {
 ;
 ; GFX7-LABEL: store_lds_v4i32_align1:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX7-NEXT:    v_bfe_u32 v6, v1, 8, 8
 ; GFX7-NEXT:    ds_write_b8 v0, v1
@@ -233,8 +233,8 @@ define void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i32> %x) {
 ;
 ; GFX7-LABEL: store_lds_v3i32_align1:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX7-NEXT:    v_bfe_u32 v5, v1, 8, 8
 ; GFX7-NEXT:    ds_write_b8 v0, v1

@@ -244,8 +244,8 @@ define half @v_fdiv_f16_ulp25(half %a, half %b) {
 define half @v_neg_rcp_f16(half %x) {
 ; GFX6-IEEE-LABEL: v_neg_rcp_f16:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, -1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
@@ -263,8 +263,8 @@ define half @v_neg_rcp_f16(half %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_neg_rcp_f16:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, -1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
@@ -301,8 +301,8 @@ define half @v_neg_rcp_f16(half %x) {
 define half @v_rcp_f16(half %x) {
 ; GFX6-IEEE-LABEL: v_rcp_f16:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
@@ -320,8 +320,8 @@ define half @v_rcp_f16(half %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_rcp_f16:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
@@ -358,8 +358,8 @@ define half @v_rcp_f16(half %x) {
 define half @v_rcp_f16_arcp(half %x) {
 ; GFX6-IEEE-LABEL: v_rcp_f16_arcp:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
@@ -377,8 +377,8 @@ define half @v_rcp_f16_arcp(half %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_rcp_f16_arcp:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
@@ -441,8 +441,8 @@ define half @v_rcp_f16_arcp_afn(half %x) {
 define half @v_rcp_f16_ulp25(half %x) {
 ; GFX6-IEEE-LABEL: v_rcp_f16_ulp25:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-IEEE-NEXT:    v_rcp_f32_e32 v3, v2
@@ -460,8 +460,8 @@ define half @v_rcp_f16_ulp25(half %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_rcp_f16_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v1, 1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v2, s[4:5], v0, v0, v1
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v3, v2
@@ -993,8 +993,8 @@ define <2 x half> @v_fdiv_v2f16_ulp25(<2 x half> %a, <2 x half> %b) {
 define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_rcp_v2f16:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
@@ -1025,8 +1025,8 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_rcp_v2f16:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
@@ -1150,8 +1150,8 @@ define <2 x half> @v_rcp_v2f16(<2 x half> %x) {
 define <2 x half> @v_neg_rcp_v2f16(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_neg_rcp_v2f16:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, -1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
@@ -1182,8 +1182,8 @@ define <2 x half> @v_neg_rcp_v2f16(<2 x half> %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_neg_rcp_v2f16:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, -1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
@@ -1653,8 +1653,8 @@ define <2 x half> @v_neg_rcp_v2f16_fabs(<2 x half> %x) {
 define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_rcp_v2f16_arcp:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
@@ -1685,8 +1685,8 @@ define <2 x half> @v_rcp_v2f16_arcp(<2 x half> %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_rcp_v2f16_arcp:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3
@@ -1813,8 +1813,8 @@ define <2 x half> @v_rcp_v2f16_arcp_afn(<2 x half> %x) {
 define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ; GFX6-IEEE-LABEL: v_rcp_v2f16_ulp25:
 ; GFX6-IEEE:       ; %bb.0:
-; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
+; GFX6-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-IEEE-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX6-IEEE-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
@@ -1845,8 +1845,8 @@ define <2 x half> @v_rcp_v2f16_ulp25(<2 x half> %x) {
 ;
 ; GFX6-FLUSH-LABEL: v_rcp_v2f16_ulp25:
 ; GFX6-FLUSH:       ; %bb.0:
-; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v2, 1.0
+; GFX6-FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-FLUSH-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-FLUSH-NEXT:    v_div_scale_f32 v3, s[4:5], v0, v0, v2
 ; GFX6-FLUSH-NEXT:    v_rcp_f32_e32 v4, v3

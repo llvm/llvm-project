@@ -67,9 +67,9 @@ define float @safe_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly
 ;
 ; GFX7-LABEL: safe_math_fract_f32:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
@@ -83,8 +83,8 @@ define float @safe_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly
 ;
 ; GFX8-LABEL: safe_math_fract_f32:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
 ; GFX8-NEXT:    v_floor_f32_e32 v3, v0
@@ -154,11 +154,11 @@ define float @safe_math_fract_f32_noinf_check(float %x, ptr addrspace(1) nocaptu
 ;
 ; GFX7-LABEL: safe_math_fract_f32_noinf_check:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 s6, 0
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX7-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
@@ -509,8 +509,8 @@ define float @basic_fract_f32_multi_use_fsub_nonans(float nofpclass(nan) %x, ptr
 ;
 ; GFX7-LABEL: basic_fract_f32_multi_use_fsub_nonans:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 s6, 0
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
@@ -1721,8 +1721,8 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ;
 ; GFX7-LABEL: safe_math_fract_v2f32:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_fract_f32_e32 v6, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s6, 0
@@ -1741,8 +1741,8 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ;
 ; GFX8-LABEL: safe_math_fract_v2f32:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_fract_f32_e32 v6, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
 ; GFX8-NEXT:    v_floor_f32_e32 v4, v0
@@ -1840,9 +1840,9 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ;
 ; GFX7-LABEL: safe_math_fract_f64:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 s4, 0
 ; GFX7-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
 ; GFX7-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
 ; GFX7-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
@@ -1858,9 +1858,9 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ;
 ; GFX8-LABEL: safe_math_fract_f64:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, 0
 ; GFX8-NEXT:    s_mov_b32 s5, 0x7ff00000
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
 ; GFX8-NEXT:    v_cmp_neq_f64_e64 vcc, |v[0:1]|, s[4:5]
 ; GFX8-NEXT:    v_floor_f64_e32 v[6:7], v[0:1]
@@ -1979,8 +1979,8 @@ define half @safe_math_fract_f16(half %x, ptr addrspace(1) nocapture writeonly %
 ;
 ; GFX8-LABEL: safe_math_fract_f16:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_movk_i32 s4, 0x7c00
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_fract_f16_e32 v4, v0
 ; GFX8-NEXT:    v_cmp_neq_f16_e64 vcc, |v0|, s4
 ; GFX8-NEXT:    v_floor_f16_e32 v3, v0
@@ -2256,8 +2256,8 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ;
 ; GFX7-LABEL: safe_math_fract_v2f64:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_movk_i32 s4, 0x204
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_fract_f64_e32 v[10:11], v[0:1]
 ; GFX7-NEXT:    v_cmp_class_f64_e64 s[8:9], v[0:1], s4
 ; GFX7-NEXT:    v_fract_f64_e32 v[12:13], v[2:3]
@@ -2278,8 +2278,8 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ;
 ; GFX8-LABEL: safe_math_fract_v2f64:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_movk_i32 s6, 0x204
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_fract_f64_e32 v[10:11], v[0:1]
 ; GFX8-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], s6
 ; GFX8-NEXT:    v_fract_f64_e32 v[12:13], v[2:3]

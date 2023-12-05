@@ -15,10 +15,11 @@
 define void @test() #0 {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s16, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    s_xor_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, -1
@@ -71,10 +72,11 @@ define void @test() #0 {
 ;
 ; GCN-O0-LABEL: test:
 ; GCN-O0:       ; %bb.0:
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 s16, s33
 ; GCN-O0-NEXT:    s_mov_b32 s33, s32
+; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    s_xor_saveexec_b64 s[18:19], -1
+; GCN-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 exec, -1
 ; GCN-O0-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill

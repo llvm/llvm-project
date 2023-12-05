@@ -199,8 +199,8 @@ define i16 @v_uaddsat_v2i8(i16 %lhs.arg, i16 %rhs.arg) {
 ;
 ; GFX8-LABEL: v_uaddsat_v2i8:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 8
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_sdwa v3, v2, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_lshrrev_b32_sdwa v2, v2, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v0, 8, v0
@@ -430,8 +430,8 @@ define i32 @v_uaddsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ;
 ; GFX8-LABEL: v_uaddsat_v4i8:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 8
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_sdwa v3, v2, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 24, v0
@@ -1490,8 +1490,9 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ;
 ; GFX10-LABEL: v_uaddsat_v16i32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX10-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e64 v0, v0, v16 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v1, v1, v17 clamp
 ; GFX10-NEXT:    v_add_nc_u32_e64 v2, v2, v18 clamp
@@ -1513,8 +1514,9 @@ define <16 x i32> @v_uaddsat_v16i32(<16 x i32> %lhs, <16 x i32> %rhs) {
 ;
 ; GFX11-LABEL: v_uaddsat_v16i32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
+; GFX11-NEXT:    s_waitcnt vmcnt(1) expcnt(0)
 ; GFX11-NEXT:    v_add_nc_u32_e64 v0, v0, v16 clamp
 ; GFX11-NEXT:    v_add_nc_u32_e64 v1, v1, v17 clamp
 ; GFX11-NEXT:    v_add_nc_u32_e64 v2, v2, v18 clamp

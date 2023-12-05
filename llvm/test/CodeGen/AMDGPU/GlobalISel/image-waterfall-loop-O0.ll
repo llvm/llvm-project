@@ -10,8 +10,9 @@
 define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-LABEL: waterfall_loop:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_waitcnt expcnt(0)
 ; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:80 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:84 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4

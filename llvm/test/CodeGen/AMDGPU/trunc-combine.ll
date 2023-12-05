@@ -28,20 +28,20 @@ define i32 @trunc_bitcast_i64_lshr_32_i32(i64 %bar) {
 define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; SI-LABEL: trunc_bitcast_v2i32_to_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
+; SI-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: trunc_bitcast_v2i32_to_i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u16_e32 v0, 4, v0
+; VI-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %load0 = load i32, ptr addrspace(1) undef
   %load1 = load i32, ptr addrspace(1) null
@@ -57,20 +57,20 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; SI-LABEL: trunc_bitcast_v2f32_to_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    buffer_load_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
+; SI-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: trunc_bitcast_v2f32_to_i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u16_e32 v0, 4, v0
+; VI-NEXT:    s_waitcnt expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %load0 = load float, ptr addrspace(1) undef
   %load1 = load float, ptr addrspace(1) null
@@ -149,8 +149,8 @@ define <2 x i16> @trunc_v2i64_arg_to_v2i16(<2 x i64> %arg0) #0 {
 ;
 ; VI-LABEL: trunc_v2i64_arg_to_v2i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s4, 0x1000504
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc <2 x i64> %arg0 to <2 x i16>

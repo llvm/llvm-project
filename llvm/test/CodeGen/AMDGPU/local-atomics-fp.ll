@@ -7,27 +7,25 @@
 define float @lds_atomic_fadd_ret_f32(ptr addrspace(3) %ptr) nounwind {
 ; VI-LABEL: lds_atomic_fadd_ret_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, 4.0
 ; VI-NEXT:    s_mov_b32 m0, -1
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: lds_atomic_fadd_ret_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 4.0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_add_rtn_f32 v0, v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: lds_atomic_fadd_ret_f32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b32 v1, v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB0_1: ; %atomicrmw.start
@@ -49,8 +47,8 @@ define float @lds_atomic_fadd_ret_f32(ptr addrspace(3) %ptr) nounwind {
 ;
 ; GFX8-LABEL: lds_atomic_fadd_ret_f32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b32 v1, v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB0_1: ; %atomicrmw.start
@@ -76,27 +74,25 @@ define float @lds_atomic_fadd_ret_f32(ptr addrspace(3) %ptr) nounwind {
 define void @lds_atomic_fadd_noret_f32(ptr addrspace(3) %ptr) nounwind {
 ; VI-LABEL: lds_atomic_fadd_noret_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, 4.0
 ; VI-NEXT:    s_mov_b32 m0, -1
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_add_f32 v0, v1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: lds_atomic_fadd_noret_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 4.0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_add_f32 v0, v1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX7-LABEL: lds_atomic_fadd_noret_f32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b32 v1, v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB1_1: ; %atomicrmw.start
@@ -117,8 +113,8 @@ define void @lds_atomic_fadd_noret_f32(ptr addrspace(3) %ptr) nounwind {
 ;
 ; GFX8-LABEL: lds_atomic_fadd_noret_f32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b32 v1, v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB1_1: ; %atomicrmw.start
@@ -871,8 +867,8 @@ define amdgpu_kernel void @lds_ds_fadd_one_as(ptr addrspace(1) %out, ptr addrspa
 define double @lds_atomic_fadd_ret_f64(ptr addrspace(3) %ptr) nounwind {
 ; VI-LABEL: lds_atomic_fadd_ret_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, v0
 ; VI-NEXT:    ds_read_b64 v[0:1], v0
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
@@ -918,8 +914,8 @@ define double @lds_atomic_fadd_ret_f64(ptr addrspace(3) %ptr) nounwind {
 ;
 ; GFX7-LABEL: lds_atomic_fadd_ret_f64:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX7-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
@@ -942,8 +938,8 @@ define double @lds_atomic_fadd_ret_f64(ptr addrspace(3) %ptr) nounwind {
 ;
 ; GFX8-LABEL: lds_atomic_fadd_ret_f64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
@@ -970,8 +966,8 @@ define double @lds_atomic_fadd_ret_f64(ptr addrspace(3) %ptr) nounwind {
 define void @lds_atomic_fadd_noret_f64(ptr addrspace(3) %ptr) nounwind {
 ; VI-LABEL: lds_atomic_fadd_noret_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_read_b64 v[1:2], v0
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
 ; VI-NEXT:  .LBB5_1: ; %atomicrmw.start
@@ -1015,8 +1011,8 @@ define void @lds_atomic_fadd_noret_f64(ptr addrspace(3) %ptr) nounwind {
 ;
 ; GFX7-LABEL: lds_atomic_fadd_noret_f64:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b64 v[1:2], v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB5_1: ; %atomicrmw.start
@@ -1038,8 +1034,8 @@ define void @lds_atomic_fadd_noret_f64(ptr addrspace(3) %ptr) nounwind {
 ;
 ; GFX8-LABEL: lds_atomic_fadd_noret_f64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b64 v[1:2], v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB5_1: ; %atomicrmw.start
@@ -1065,8 +1061,8 @@ define void @lds_atomic_fadd_noret_f64(ptr addrspace(3) %ptr) nounwind {
 define float @lds_atomic_fsub_ret_f32(ptr addrspace(3) %ptr, float %val) nounwind {
 ; VI-LABEL: lds_atomic_fsub_ret_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_read_b32 v2, v0
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
 ; VI-NEXT:  .LBB6_1: ; %atomicrmw.start
@@ -1110,8 +1106,8 @@ define float @lds_atomic_fsub_ret_f32(ptr addrspace(3) %ptr, float %val) nounwin
 ;
 ; GFX7-LABEL: lds_atomic_fsub_ret_f32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b32 v2, v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB6_1: ; %atomicrmw.start
@@ -1133,8 +1129,8 @@ define float @lds_atomic_fsub_ret_f32(ptr addrspace(3) %ptr, float %val) nounwin
 ;
 ; GFX8-LABEL: lds_atomic_fsub_ret_f32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b32 v2, v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB6_1: ; %atomicrmw.start
@@ -1160,8 +1156,8 @@ define float @lds_atomic_fsub_ret_f32(ptr addrspace(3) %ptr, float %val) nounwin
 define void @lds_atomic_fsub_noret_f32(ptr addrspace(3) %ptr, float %val) nounwind {
 ; VI-LABEL: lds_atomic_fsub_noret_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_read_b32 v2, v0
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
 ; VI-NEXT:  .LBB7_1: ; %atomicrmw.start
@@ -1203,8 +1199,8 @@ define void @lds_atomic_fsub_noret_f32(ptr addrspace(3) %ptr, float %val) nounwi
 ;
 ; GFX7-LABEL: lds_atomic_fsub_noret_f32:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b32 v2, v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB7_1: ; %atomicrmw.start
@@ -1225,8 +1221,8 @@ define void @lds_atomic_fsub_noret_f32(ptr addrspace(3) %ptr, float %val) nounwi
 ;
 ; GFX8-LABEL: lds_atomic_fsub_noret_f32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b32 v2, v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB7_1: ; %atomicrmw.start
@@ -1251,8 +1247,8 @@ define void @lds_atomic_fsub_noret_f32(ptr addrspace(3) %ptr, float %val) nounwi
 define double @lds_atomic_fsub_ret_f64(ptr addrspace(3) %ptr, double %val) nounwind {
 ; VI-LABEL: lds_atomic_fsub_ret_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_read_b64 v[3:4], v0
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
 ; VI-NEXT:  .LBB8_1: ; %atomicrmw.start
@@ -1300,8 +1296,8 @@ define double @lds_atomic_fsub_ret_f64(ptr addrspace(3) %ptr, double %val) nounw
 ;
 ; GFX7-LABEL: lds_atomic_fsub_ret_f64:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b64 v[3:4], v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB8_1: ; %atomicrmw.start
@@ -1325,8 +1321,8 @@ define double @lds_atomic_fsub_ret_f64(ptr addrspace(3) %ptr, double %val) nounw
 ;
 ; GFX8-LABEL: lds_atomic_fsub_ret_f64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b64 v[3:4], v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB8_1: ; %atomicrmw.start
@@ -1354,8 +1350,8 @@ define double @lds_atomic_fsub_ret_f64(ptr addrspace(3) %ptr, double %val) nounw
 define void @lds_atomic_fsub_noret_f64(ptr addrspace(3) %ptr, double %val) nounwind {
 ; VI-LABEL: lds_atomic_fsub_noret_f64:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ds_read_b64 v[3:4], v0
 ; VI-NEXT:    s_mov_b64 s[4:5], 0
 ; VI-NEXT:  .LBB9_1: ; %atomicrmw.start
@@ -1399,8 +1395,8 @@ define void @lds_atomic_fsub_noret_f64(ptr addrspace(3) %ptr, double %val) nounw
 ;
 ; GFX7-LABEL: lds_atomic_fsub_noret_f64:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_read_b64 v[3:4], v0
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB9_1: ; %atomicrmw.start
@@ -1422,8 +1418,8 @@ define void @lds_atomic_fsub_noret_f64(ptr addrspace(3) %ptr, double %val) nounw
 ;
 ; GFX8-LABEL: lds_atomic_fsub_noret_f64:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 m0, -1
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    ds_read_b64 v[3:4], v0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB9_1: ; %atomicrmw.start

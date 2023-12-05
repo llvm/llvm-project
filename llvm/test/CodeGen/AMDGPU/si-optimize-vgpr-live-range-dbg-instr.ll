@@ -9,10 +9,10 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    .cfi_sections .debug_frame
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0: ; %bb
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    global_load_dwordx2 v[1:2], v[1:2], off
+; GCN-NEXT:    s_waitcnt vmcnt(1) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1

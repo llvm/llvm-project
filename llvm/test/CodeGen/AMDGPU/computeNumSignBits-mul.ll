@@ -161,8 +161,8 @@ define i32 @num_sign_bits_mul_i32_10(i32 %x, i32 %y, i32 %z, i32 %w) {
 define i32 @known_bits_mul24() {
 ; GFX9-LABEL: known_bits_mul24:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %r0 = call i32 @llvm.amdgcn.mul.i24(i32 0, i32 -7)
   %r1 = shl i32 %r0, 2

@@ -7,10 +7,12 @@ declare void @extern_c_func()
 define amdgpu_gfx void @gfx_func() {
 ; SDAG-LABEL: gfx_func:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_mov_b32 s36, s33
 ; SDAG-NEXT:    s_mov_b32 s33, s32
+; SDAG-NEXT:    s_waitcnt expcnt(0)
 ; SDAG-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; SDAG-NEXT:    s_mov_b64 exec, s[34:35]
 ; SDAG-NEXT:    v_writelane_b32 v40, s4, 0
@@ -84,10 +86,12 @@ define amdgpu_gfx void @gfx_func() {
 ;
 ; GISEL-LABEL: gfx_func:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_mov_b32 s36, s33
 ; GISEL-NEXT:    s_mov_b32 s33, s32
+; GISEL-NEXT:    s_waitcnt expcnt(0)
 ; GISEL-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b64 exec, s[34:35]
 ; GISEL-NEXT:    v_writelane_b32 v40, s4, 0

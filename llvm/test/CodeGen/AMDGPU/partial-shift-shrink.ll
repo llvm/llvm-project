@@ -63,8 +63,8 @@ define i16 @trunc_sra_i64_17_to_i16(i64 %x) {
 define i16 @trunc_shl_i64_16_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_shl_i64_16_to_i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = shl i64 %x, 16
   %trunc = trunc i64 %shift to i16
@@ -74,8 +74,8 @@ define i16 @trunc_shl_i64_16_to_i16(i64 %x) {
 define i16 @trunc_shl_i64_17_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_shl_i64_17_to_i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = shl i64 %x, 17
   %trunc = trunc i64 %shift to i16
@@ -85,8 +85,8 @@ define i16 @trunc_shl_i64_17_to_i16(i64 %x) {
 define <2 x i16> @trunc_srl_v2i64_16_to_v2i16(<2 x i64> %x) {
 ; GCN-LABEL: trunc_srl_v2i64_16_to_v2i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, 0x7060302
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_perm_b32 v0, v2, v0, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = lshr <2 x i64> %x, <i64 16, i64 16>

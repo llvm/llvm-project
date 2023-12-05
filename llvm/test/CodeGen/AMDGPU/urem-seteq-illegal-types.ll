@@ -20,9 +20,9 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 define i1 @test_urem_even(i27 %X) nounwind {
 ; CHECK-LABEL: test_urem_even:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6db6db7
 ; CHECK-NEXT:    s_mov_b32 s5, 0x924925
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s4
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 26, v0
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, 1, 26

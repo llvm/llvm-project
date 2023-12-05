@@ -159,8 +159,8 @@ define i64 @v_shl_i64_zext_i32_overflow(i32 %x) {
 ;
 ; GFX10-LABEL: v_shl_i64_zext_i32_overflow:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

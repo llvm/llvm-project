@@ -20,50 +20,55 @@ define hidden void @stack_passed_argument([32 x i32], i32) {
 define void @func_store_stacksave() {
 ; WAVE32-OPT-LABEL: func_store_stacksave:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
 ; WAVE32-OPT-NEXT:    ;;#ASMSTART
 ; WAVE32-OPT-NEXT:    ; use s4
 ; WAVE32-OPT-NEXT:    ;;#ASMEND
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_store_stacksave:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
 ; WAVE64-OPT-NEXT:    ;;#ASMSTART
 ; WAVE64-OPT-NEXT:    ; use s4
 ; WAVE64-OPT-NEXT:    ;;#ASMEND
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_store_stacksave:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s4
 ; WAVE32-O0-NEXT:    ;;#ASMEND
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_store_stacksave:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s4
 ; WAVE64-O0-NEXT:    ;;#ASMEND
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_store_stacksave:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
 ; WAVE32-WWM-PREALLOC-NEXT:    ; use s4
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stacksave)
@@ -234,8 +239,9 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ;
 ; WAVE32-O0-LABEL: func_stacksave_nonentry_block:
 ; WAVE32-O0:       ; %bb.0: ; %bb0
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt expcnt(0)
 ; WAVE32-O0-NEXT:    s_xor_saveexec_b32 s4, -1
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
@@ -276,8 +282,9 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ;
 ; WAVE64-O0-LABEL: func_stacksave_nonentry_block:
 ; WAVE64-O0:       ; %bb.0: ; %bb0
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt expcnt(0)
 ; WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; WAVE64-O0-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
@@ -320,8 +327,9 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stacksave_nonentry_block:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0: ; %bb0
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_xor_saveexec_b32 s4, -1
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v1, off, s[0:3], s32 ; 4-byte Folded Spill
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
@@ -362,38 +370,43 @@ bb2:
 define void @func_stackrestore_poison() {
 ; WAVE32-OPT-LABEL: func_stackrestore_poison:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_stackrestore_poison:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_stackrestore_poison:
 ; WAVE32-O0:       ; %bb.0:
 ; WAVE32-O0-NEXT:    ; implicit-def: $sgpr4
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stackrestore_poison:
 ; WAVE64-O0:       ; %bb.0:
 ; WAVE64-O0-NEXT:    ; implicit-def: $sgpr4
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stackrestore_poison:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
 ; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $sgpr4
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) poison)
   ret void
@@ -402,38 +415,43 @@ define void @func_stackrestore_poison() {
 define void @func_stackrestore_null() {
 ; WAVE32-OPT-LABEL: func_stackrestore_null:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_mov_b32 s32, 0
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_stackrestore_null:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_mov_b32 s32, 0
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_stackrestore_null:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, 0
 ; WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stackrestore_null:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, 0
 ; WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stackrestore_null:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, 0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) null)
   ret void
@@ -442,38 +460,43 @@ define void @func_stackrestore_null() {
 define void @func_stackrestore_neg1() {
 ; WAVE32-OPT-LABEL: func_stackrestore_neg1:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_movk_i32 s32, 0xffe0
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_stackrestore_neg1:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_movk_i32 s32, 0xffc0
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_stackrestore_neg1:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, -1
 ; WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stackrestore_neg1:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, -1
 ; WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stackrestore_neg1:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, -1
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) inttoptr (i32 -1 to ptr addrspace(5)))
   ret void
@@ -482,38 +505,43 @@ define void @func_stackrestore_neg1() {
 define void @func_stackrestore_42() {
 ; WAVE32-OPT-LABEL: func_stackrestore_42:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_movk_i32 s32, 0x540
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_stackrestore_42:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_movk_i32 s32, 0xa80
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_stackrestore_42:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, 42
 ; WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stackrestore_42:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, 42
 ; WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stackrestore_42:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, 42
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) inttoptr (i32 42 to ptr addrspace(5)))
   ret void
@@ -532,23 +560,26 @@ define void @func_stacksave_stackrestore() {
 ;
 ; WAVE32-O0-LABEL: func_stacksave_stackrestore:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stacksave_stackrestore:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stacksave_stackrestore:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stacksave)
@@ -558,53 +589,58 @@ define void @func_stacksave_stackrestore() {
 define void @func_stacksave_stackrestore_use() {
 ; WAVE32-OPT-LABEL: func_stacksave_stackrestore_use:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
 ; WAVE32-OPT-NEXT:    ;;#ASMSTART
 ; WAVE32-OPT-NEXT:    ; use s4
 ; WAVE32-OPT-NEXT:    ;;#ASMEND
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_stacksave_stackrestore_use:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
 ; WAVE64-OPT-NEXT:    ;;#ASMSTART
 ; WAVE64-OPT-NEXT:    ; use s4
 ; WAVE64-OPT-NEXT:    ;;#ASMEND
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_stacksave_stackrestore_use:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-O0-NEXT:    s_lshr_b32 s5, s4, 5
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
 ; WAVE32-O0-NEXT:    ; use s5
 ; WAVE32-O0-NEXT:    ;;#ASMEND
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stacksave_stackrestore_use:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE64-O0-NEXT:    s_lshr_b32 s5, s4, 6
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
 ; WAVE64-O0-NEXT:    ; use s5
 ; WAVE64-O0-NEXT:    ;;#ASMEND
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stacksave_stackrestore_use:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s5, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMSTART
 ; WAVE32-WWM-PREALLOC-NEXT:    ; use s5
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stacksave)
@@ -667,8 +703,9 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_use() {
 define void @func_stacksave_stackrestore_voffset(i32 %offset) {
 ; WAVE32-OPT-LABEL: func_stacksave_stackrestore_voffset:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    v_add_nc_u32_e32 v0, s4, v0
 ; WAVE32-OPT-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
@@ -676,8 +713,9 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) {
 ;
 ; WAVE64-OPT-LABEL: func_stacksave_stackrestore_voffset:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    v_add_nc_u32_e32 v0, s4, v0
 ; WAVE64-OPT-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
@@ -685,9 +723,10 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) {
 ;
 ; WAVE32-O0-LABEL: func_stacksave_stackrestore_voffset:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    v_add_nc_u32_e64 v0, s4, v0
 ; WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-O0-NEXT:    s_lshl_b32 s4, s4, 5
@@ -696,9 +735,10 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) {
 ;
 ; WAVE64-O0-LABEL: func_stacksave_stackrestore_voffset:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s4, s32
 ; WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    v_add_nc_u32_e64 v0, s4, v0
 ; WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE64-O0-NEXT:    s_lshl_b32 s4, s4, 6
@@ -707,9 +747,10 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) {
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stacksave_stackrestore_voffset:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshr_b32 s4, s4, 5
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    v_add_nc_u32_e64 v0, s4, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
@@ -766,35 +807,40 @@ define void @func_stacksave_vgpr(ptr addrspace(5) %stack) {
 define amdgpu_gfx void @func_stacksave_sgpr(ptr addrspace(5) inreg %stack) {
 ; WAVE32-OPT-LABEL: func_stacksave_sgpr:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_lshl_b32 s32, s4, 5
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-OPT-LABEL: func_stacksave_sgpr:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_lshl_b32 s32, s4, 6
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-O0-LABEL: func_stacksave_sgpr:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_lshl_b32 s34, s4, 5
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s34
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE64-O0-LABEL: func_stacksave_sgpr:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_lshl_b32 s34, s4, 6
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s34
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stacksave_sgpr:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s34, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s34
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stack)
   ret void
@@ -1273,10 +1319,12 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-OPT-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE32-OPT:       ; %bb.0:
-; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    s_mov_b32 s8, s33
 ; WAVE32-OPT-NEXT:    s_mov_b32 s33, s32
+; WAVE32-OPT-NEXT:    s_waitcnt expcnt(0)
 ; WAVE32-OPT-NEXT:    s_xor_saveexec_b32 s4, -1
+; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-OPT-NEXT:    buffer_store_dword v31, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
 ; WAVE32-OPT-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-OPT-NEXT:    v_writelane_b32 v31, s30, 0
@@ -1308,10 +1356,12 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ;
 ; WAVE64-OPT-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE64-OPT:       ; %bb.0:
-; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    s_mov_b32 s8, s33
 ; WAVE64-OPT-NEXT:    s_mov_b32 s33, s32
+; WAVE64-OPT-NEXT:    s_waitcnt expcnt(0)
 ; WAVE64-OPT-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE64-OPT-NEXT:    buffer_store_dword v31, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
 ; WAVE64-OPT-NEXT:    s_mov_b64 exec, s[4:5]
 ; WAVE64-OPT-NEXT:    v_writelane_b32 v31, s30, 0
@@ -1343,10 +1393,12 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ;
 ; WAVE32-O0-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s25, s33
 ; WAVE32-O0-NEXT:    s_mov_b32 s33, s32
+; WAVE32-O0-NEXT:    s_waitcnt expcnt(0)
 ; WAVE32-O0-NEXT:    s_xor_saveexec_b32 s16, -1
+; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-O0-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
 ; WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:136 ; 4-byte Folded Spill
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s16
@@ -1462,10 +1514,12 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ;
 ; WAVE64-O0-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s19, s33
 ; WAVE64-O0-NEXT:    s_mov_b32 s33, s32
+; WAVE64-O0-NEXT:    s_waitcnt expcnt(0)
 ; WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[16:17], -1
+; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE64-O0-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
 ; WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:136 ; 4-byte Folded Spill
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[16:17]
@@ -1581,10 +1635,12 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s24, s33
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s33, s32
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt expcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_xor_saveexec_b32 s16, -1
+; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 exec_lo, s16

@@ -7,10 +7,10 @@
 define <3 x i32> @quux() {
 ; CHECK-LABEL: quux:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = shufflevector <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> undef, <3 x i32> <i32 0, i32 1, i32 2>
