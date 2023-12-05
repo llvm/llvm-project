@@ -12,6 +12,9 @@ on:
         required: false
       extra_cmake_args:
         required: false
+      os_list:
+        required: false
+        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
   workflow_call:
     inputs:
       build_target:
@@ -25,6 +28,15 @@ on:
       extra_cmake_args:
         required: false
         type: string
+
+      os_list:
+        required: false
+        type: string
+        # Use windows-2019 due to:
+        # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
+        # We're using a specific version of macOS due to:
+        # https://github.com/actions/virtual-environments/issues/5900
+        default: '["ubuntu-latest", "windows-2019", "macOS-11"]'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -41,14 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          # Use windows-2019 due to:
-          # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
-          - windows-2019
-          # We're using a specific version of macOS due to:
-          # https://github.com/actions/virtual-environments/issues/5900
-          - macOS-11
+        os: ${{ fromJSON(inputs.os_list) }}
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
