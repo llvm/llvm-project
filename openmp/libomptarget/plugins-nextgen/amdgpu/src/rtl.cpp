@@ -771,7 +771,8 @@ private:
     uint32_t NumThreads = BlockSize;
 
     // If there is an override already, do nothing
-    if (NumThreads != GenericDevice.getDefaultNumThreads())
+    if (NumThreads != GenericDevice.getDefaultNumThreads() &&
+        NumThreads != ConstWGSize)
       return std::make_pair(false, NumThreads);
 
     // If tripcount not set or not low, do nothing.
