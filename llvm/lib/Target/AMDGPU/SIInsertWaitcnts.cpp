@@ -298,7 +298,7 @@ public:
     VgprVmemTypes[GprNo] = 0;
   }
 
-  const SmallVectorImpl<const MachineInstr *>& getLDSDMAStores() const {
+  const SmallVectorImpl<const MachineInstr *> &getLDSDMAStores() const {
     return LDSDMAStores;
   }
 
