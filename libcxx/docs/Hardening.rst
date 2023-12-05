@@ -22,9 +22,10 @@ modes are:
   used in production. We recommend most projects to adopt the fast mode.
 - **Extensive mode**, which contains all the checks from the fast mode and
   some additional checks for undefined behavior that incur relatively little
-  overhead but aren't security-critical. While the performance penalty is
-  somewhat more significant compared to the fast mode, the extensive mode is
-  still intended for use in production builds.
+  overhead but aren't security-critical. Production builds requiring a broader
+  set of checks than fast mode should consider enabling extensive mode. The
+  additional rigour impacts performance more than fast mode: we recommend
+  benchmarking to determine if that is acceptable for your program.
 - **Debug mode**, which enables all the available checks in the library,
   including internal assertions, some of which might be very expensive. This
   mode is intended to be used for testing, not in production.
