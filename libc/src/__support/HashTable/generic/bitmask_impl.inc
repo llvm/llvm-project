@@ -98,7 +98,7 @@ struct Group {
     auto cmp = data ^ repeat_byte(byte);
     auto result = LIBC_NAMESPACE::Endian::to_little_endian(
         (cmp - repeat_byte(0x01)) & ~cmp & repeat_byte(0x80));
-    return {result};
+    return {BitMask{result}};
   }
 
   // Find out the lanes equal to EMPTY or DELETE (highest bit set) and
