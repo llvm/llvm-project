@@ -563,7 +563,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
     // Build DPValue hashes for DPValues attached to the terminator, which isn't
     // considered in the loop above.
-    for (const DPValue &DPV : OrigPreheader->getTerminator()->getDbgValueRange())
+    for (const DPValue &DPV :
+         OrigPreheader->getTerminator()->getDbgValueRange())
       DbgIntrinsics.insert(makeHash(&DPV));
 
     // Remember the local noalias scope declarations in the header. After the
