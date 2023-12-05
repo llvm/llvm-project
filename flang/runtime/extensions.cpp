@@ -14,7 +14,6 @@
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
-#include "flang/Runtime/time-intrinsic.h" // CopyBufferAndPad
 #include <cstring>
 
 #ifdef _WIN32
@@ -82,14 +81,14 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 }
 
 void FORTRAN_PROCEDURE_NAME(getlog)(std::int8_t *arg, std::int64_t length) {
-  std::array<char, LOGIN_NAME_MAX + 1> str;
+  int charLen{LOGIN_NAME_MAX + 1};
+  char str[charLen];
 
-  int error{getlogin_r(str.data(), str.size())};
+  int error{getlogin_r(*str, charLen)};
   Terminator terminator{__FILE__, __LINE__};
   RUNTIME_CHECK(terminator, error == 0);
 
-  CopyBufferAndPad(
-      reinterpret_cast<char *>(arg), length, str.data(), str.size());
+  CopyBufferAndPad(reinterpret_cast<char *>(arg), length, *str, charLen);
 }
 
 } // namespace Fortran::runtime
