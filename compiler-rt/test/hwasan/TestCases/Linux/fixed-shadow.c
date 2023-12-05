@@ -13,41 +13,41 @@
 //
 // Note: if fixed_shadow_base is not set, compiler-rt will dynamically choose a
 // shadow base, which has a tiny but non-zero probability of matching the
-// compiler instrumentation. To avoid test flake, we do not test this case. 
+// compiler instrumentation. To avoid test flake, we do not test this case.
 //
 // Assume 48-bit VMA
 // REQUIRES: aarch64-target-arch
 //
 // UNSUPPORTED: android
 
-#include <stdio.h> 
-#include <stdlib.h>
-#include <assert.h>  
-#include <sys/mman.h>   
-#include <sanitizer/hwasan_interface.h>   
+#include <assert.h>
 #include <sanitizer/allocator_interface.h>
+#include <sanitizer/hwasan_interface.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
 
-int main() { 
+int main() {
   __hwasan_enable_allocator_tagging();
 
-  void** mmaps [256];
+  void **mmaps[256];
   // 48-bit VMA
-  for (int i = 0; i < 256; i++) {  
-      unsigned long long addr = (i * (1ULL << 40));
+  for (int i = 0; i < 256; i++) {
+    unsigned long long addr = (i * (1ULL << 40));
 
-      void *p = mmap ((void*)addr, 4096, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-      mmaps [i] = p;    
+    void *p = mmap((void *)addr, 4096, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+    mmaps[i] = p;
   }
 
   int failures = 0;
-  for (int i = 0; i < 256; i++) {   
-      if (mmaps [i] == MAP_FAILED) {
-          failures++;
-      } else {    
-          printf ("%d %p\n", i, mmaps [i]);
-          munmap (mmaps [i], 4096);
-      }
+  for (int i = 0; i < 256; i++) {
+    if (mmaps[i] == MAP_FAILED) {
+      failures++;
+    } else {
+      printf("%d %p\n", i, mmaps[i]);
+      munmap(mmaps[i], 4096);
+    }
   }
 
   // We expect roughly 17 failures:
@@ -56,7 +56,7 @@ int main() {
   // We could also get unlucky e.g., if libraries or binaries are loaded into the
   // exact addresses where we tried to map.
   // To avoid test flake, we allow some margin of error.
-  printf ("Failed: %d\n", failures);
-  assert (failures < 32);
+  printf("Failed: %d\n", failures);
+  assert(failures < 32);
   return 0;
 }
