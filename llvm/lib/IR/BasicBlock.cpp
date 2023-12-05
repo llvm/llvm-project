@@ -770,6 +770,7 @@ void BasicBlock::flushTerminatorDbgValues() {
 
   // Transfer DPValues from the trailing position onto the terminator.
   Term->DbgMarker->absorbDebugValues(*TrailingDPValues, false);
+  TrailingDPValues->eraseFromParent();
   deleteTrailingDPValues();
 }
 
@@ -813,6 +814,7 @@ void BasicBlock::spliceDebugInfoEmptyBlock(BasicBlock::iterator Dest,
 
     DPMarker *M = Dest->DbgMarker;
     M->absorbDebugValues(*SrcTrailingDPValues, InsertAtHead);
+    SrcTrailingDPValues->eraseFromParent();
     Src->deleteTrailingDPValues();
     return;
   }
@@ -920,6 +922,7 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
   // Use this flag to signal the abnormal case, where we don't want to copy the
   // DPValues ahead of the "Last" position.
   bool ReadFromTail = !Last.getTailBit();
+  bool LastIsEnd = (Last == Src->end());
 
   /*
     Here's an illustration of what we're about to do. We have two blocks, this
@@ -995,12 +998,16 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     DPMarker *OntoDest = getMarker(Dest);
     DPMarker *FromLast = Src->getMarker(Last);
     OntoDest->absorbDebugValues(*FromLast, true);
+    if (LastIsEnd) {
+      FromLast->eraseFromParent();
+      deleteTrailingDPValues();
+    }
   }
 
   // If we're _not_ reading from the head of First, i.e. the "++++" DPValues,
   // move their markers onto Last. They remain in the Src block. No action
   // needed.
-  if (!ReadFromHead) {
+  if (!ReadFromHead && First->hasDbgValues()) {
     DPMarker *OntoLast = Src->createMarker(Last);
     DPMarker *FromFirst = Src->createMarker(First);
     OntoLast->absorbDebugValues(*FromFirst,
@@ -1030,6 +1037,7 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     DPMarker *TrailingDPValues = getTrailingDPValues();
     if (TrailingDPValues) {
       FirstMarker->absorbDebugValues(*TrailingDPValues, true);
+      TrailingDPValues->eraseFromParent();
       deleteTrailingDPValues();
     }
   }
