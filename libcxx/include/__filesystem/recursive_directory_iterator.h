@@ -72,7 +72,7 @@ public:
   operator=(recursive_directory_iterator&& __o) noexcept {
     // non-default implementation provided to support self-move assign.
     if (this != &__o) {
-      __imp_ = _VSTD::move(__o.__imp_);
+      __imp_ = std::move(__o.__imp_);
       __rec_ = __o.__rec_;
     }
     return *this;
@@ -170,11 +170,11 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-inline constexpr bool _VSTD::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
 
 template <>
 _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
-inline constexpr bool _VSTD::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
+inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
 

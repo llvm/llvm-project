@@ -526,7 +526,7 @@ __quoted_output(basic_ostream<_CharT, _Traits>& __os,
         __str.push_back(*__first);
     }
     __str.push_back(__delim);
-    return _VSTD::__put_character_sequence(__os, __str.data(), __str.size());
+    return std::__put_character_sequence(__os, __str.data(), __str.size());
 }
 
 template <class _CharT, class _Traits, class _String>

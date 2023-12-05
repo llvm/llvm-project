@@ -233,7 +233,7 @@ protected:
 
     static _LIBCPP_CONSTEXPR const bool is_iec559 = false;
     static _LIBCPP_CONSTEXPR const bool is_bounded = true;
-    static _LIBCPP_CONSTEXPR const bool is_modulo = !_VSTD::is_signed<_Tp>::value;
+    static _LIBCPP_CONSTEXPR const bool is_modulo = !std::is_signed<_Tp>::value;
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__pnacl__) || \
     defined(__wasm__)

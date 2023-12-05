@@ -761,7 +761,7 @@ public:
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         pair<iterator, bool> emplace(_Args&&... __args)
-            {return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...);}
+            {return __table_.__emplace_unique(std::forward<_Args>(__args)...);}
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI
     iterator emplace_hint(const_iterator, _Args&&... __args) {
@@ -770,7 +770,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     pair<iterator, bool> insert(value_type&& __x)
-        {return __table_.__insert_unique(_VSTD::move(__x));}
+        {return __table_.__insert_unique(std::move(__x));}
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator, value_type&& __x) {
         return insert(std::move(__x)).first;
@@ -819,7 +819,7 @@ public:
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_set::insert()");
         return __table_.template __node_handle_insert_unique<
-            node_type, insert_return_type>(_VSTD::move(__nh));
+            node_type, insert_return_type>(std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __h, node_type&& __nh)
@@ -827,7 +827,7 @@ public:
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_set::insert()");
         return __table_.template __node_handle_insert_unique<node_type>(
-            __h, _VSTD::move(__nh));
+            __h, std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     node_type extract(key_type const& __key)
@@ -1141,20 +1141,20 @@ inline
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
         unordered_set&& __u)
     _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(_VSTD::move(__u.__table_))
+    : __table_(std::move(__u.__table_))
 {
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
         unordered_set&& __u, const allocator_type& __a)
-    : __table_(_VSTD::move(__u.__table_), __a)
+    : __table_(std::move(__u.__table_), __a)
 {
     if (__a != __u.get_allocator())
     {
         iterator __i = __u.begin();
         while (__u.size() != 0)
-            __table_.__insert_unique(_VSTD::move(__u.__table_.remove(__i++)->__get_value()));
+            __table_.__insert_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
     }
 }
 
@@ -1191,7 +1191,7 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>&
 unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(unordered_set&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value)
 {
-    __table_ = _VSTD::move(__u.__table_);
+    __table_ = std::move(__u.__table_);
     return *this;
 }
 
@@ -1235,7 +1235,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename unordered_set<_Value, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_set<_Value, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return _VSTD::__libcpp_erase_if_container(__c, __pred);
+  return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1450,17 +1450,17 @@ public:
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         iterator emplace(_Args&&... __args)
-            {return __table_.__emplace_multi(_VSTD::forward<_Args>(__args)...);}
+            {return __table_.__emplace_multi(std::forward<_Args>(__args)...);}
     template <class... _Args>
         _LIBCPP_HIDE_FROM_ABI
         iterator emplace_hint(const_iterator __p, _Args&&... __args)
-            {return __table_.__emplace_hint_multi(__p, _VSTD::forward<_Args>(__args)...);}
+            {return __table_.__emplace_hint_multi(__p, std::forward<_Args>(__args)...);}
 
     _LIBCPP_HIDE_FROM_ABI
-    iterator insert(value_type&& __x) {return __table_.__insert_multi(_VSTD::move(__x));}
+    iterator insert(value_type&& __x) {return __table_.__insert_multi(std::move(__x));}
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __p, value_type&& __x)
-        {return __table_.__insert_multi(__p, _VSTD::move(__x));}
+        {return __table_.__insert_multi(__p, std::move(__x));}
     _LIBCPP_HIDE_FROM_ABI
     void insert(initializer_list<value_type> __il)
         {insert(__il.begin(), __il.end());}
@@ -1494,7 +1494,7 @@ public:
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_multiset::insert()");
         return __table_.template __node_handle_insert_multi<node_type>(
-            _VSTD::move(__nh));
+            std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     iterator insert(const_iterator __hint, node_type&& __nh)
@@ -1502,7 +1502,7 @@ public:
         _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to unordered_multiset::insert()");
         return __table_.template __node_handle_insert_multi<node_type>(
-            __hint, _VSTD::move(__nh));
+            __hint, std::move(__nh));
     }
     _LIBCPP_HIDE_FROM_ABI
     node_type extract(const_iterator __position)
@@ -1826,20 +1826,20 @@ inline
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
         unordered_multiset&& __u)
     _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(_VSTD::move(__u.__table_))
+    : __table_(std::move(__u.__table_))
 {
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
         unordered_multiset&& __u, const allocator_type& __a)
-    : __table_(_VSTD::move(__u.__table_), __a)
+    : __table_(std::move(__u.__table_), __a)
 {
     if (__a != __u.get_allocator())
     {
         iterator __i = __u.begin();
         while (__u.size() != 0)
-            __table_.__insert_multi(_VSTD::move(__u.__table_.remove(__i++)->__get_value()));
+            __table_.__insert_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
     }
 }
 
@@ -1877,7 +1877,7 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(
         unordered_multiset&& __u)
     _NOEXCEPT_(is_nothrow_move_assignable<__table>::value)
 {
-    __table_ = _VSTD::move(__u.__table_);
+    __table_ = std::move(__u.__table_);
     return *this;
 }
 
@@ -1921,7 +1921,7 @@ inline _LIBCPP_HIDE_FROM_ABI
     typename unordered_multiset<_Value, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return _VSTD::__libcpp_erase_if_container(__c, __pred);
+  return std::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1939,9 +1939,9 @@ operator==(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
     {
         _EqRng __xeq = __x.equal_range(*__i);
         _EqRng __yeq = __y.equal_range(*__i);
-        if (_VSTD::distance(__xeq.first, __xeq.second) !=
-            _VSTD::distance(__yeq.first, __yeq.second) ||
-                  !_VSTD::is_permutation(__xeq.first, __xeq.second, __yeq.first))
+        if (std::distance(__xeq.first, __xeq.second) !=
+            std::distance(__yeq.first, __yeq.second) ||
+                  !std::is_permutation(__xeq.first, __xeq.second, __yeq.first))
             return false;
         __i = __xeq.second;
     }

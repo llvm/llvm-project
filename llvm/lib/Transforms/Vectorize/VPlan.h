@@ -826,6 +826,7 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
   enum class OperationType : unsigned char {
     Cmp,
     OverflowingBinOp,
+    DisjointOp,
     PossiblyExactOp,
     GEPOp,
     FPMathOp,
@@ -842,6 +843,9 @@ public:
   };
 
 private:
+  struct DisjointFlagsTy {
+    char IsDisjoint : 1;
+  };
   struct ExactFlagsTy {
     char IsExact : 1;
   };
@@ -868,6 +872,7 @@ private:
   union {
     CmpInst::Predicate CmpPredicate;
     WrapFlagsTy WrapFlags;
+    DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
     GEPFlagsTy GEPFlags;
     NonNegFlagsTy NonNegFlags;
@@ -889,6 +894,9 @@ public:
     if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       CmpPredicate = Op->getPredicate();
+    } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
+      OpType = OperationType::DisjointOp;
+      DisjointFlags.IsDisjoint = Op->isDisjoint();
     } else if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
       OpType = OperationType::OverflowingBinOp;
       WrapFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
@@ -942,6 +950,9 @@ public:
       WrapFlags.HasNUW = false;
       WrapFlags.HasNSW = false;
       break;
+    case OperationType::DisjointOp:
+      DisjointFlags.IsDisjoint = false;
+      break;
     case OperationType::PossiblyExactOp:
       ExactFlags.IsExact = false;
       break;
@@ -967,6 +978,9 @@ public:
     case OperationType::OverflowingBinOp:
       I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
       I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      break;
+    case OperationType::DisjointOp:
+      cast<PossiblyDisjointInst>(I)->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
       I->setIsExact(ExactFlags.IsExact);
