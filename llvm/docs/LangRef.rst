@@ -705,6 +705,13 @@ information. Attaching section information to an external declaration is an
 assertion that its definition is located in the specified section. If the
 definition is located in a different section, the behavior is undefined.
 
+LLVM allows an explicit code model to be specified for globals. If the
+target supports it, it will emit globals in the code model specified,
+overriding the code model used to compile the translation unit.
+The allowed values are "tiny", "small", "kernel", "medium", "large".
+This may be extended in the future to specify global data layout that
+doesn't cleanly fit into a specific code model.
+
 By default, global initializers are optimized by assuming that global
 variables defined within the module are not modified from their
 initial values before the start of the global initializer. This is
@@ -761,6 +768,7 @@ Syntax::
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, partition "name"]
                          [, comdat [($name)]] [, align <Alignment>]
+                         [, code_model "model"]
                          [, no_sanitize_address] [, no_sanitize_hwaddress]
                          [, sanitize_address_dyninit] [, sanitize_memtag]
                          (, !name !N)*
@@ -777,6 +785,13 @@ The following example just declares a global variable
 .. code-block:: llvm
 
    @G = external global i32
+
+The following example defines a global variable with the
+``large`` code model:
+
+.. code-block:: llvm
+
+    @G = internal global i32 0, code_model "large"
 
 The following example defines a thread-local global with the
 ``initialexec`` TLS model:
