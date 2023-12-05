@@ -748,8 +748,6 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
-
-  Builder.defineMacro("__cpp_pp_embed", "202403L");
 }
 
 /// InitializeOpenCLFeatureTestMacros - Define OpenCL macros based on target
