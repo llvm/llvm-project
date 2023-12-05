@@ -14577,6 +14577,25 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   if (InRange && IsEnumConstOrFromMacro(S, Constant))
     return false;
 
+  // Don't warn if the comparison involves integral or floating-point types with
+  // the same canonical types.
+  QualType LHSCanonical = Constant->getType().getCanonicalType();
+  QualType RHSCanonical = Other->getType().getCanonicalType();
+  if (TautologicalTypeCompare &&
+      (LHSCanonical->isIntegralOrEnumerationType() ||
+       LHSCanonical->isFloatingType()) &&
+      S.Context.hasSameType(LHSCanonical, RHSCanonical) &&
+      !S.Context.hasSameType(Constant->getType(), Other->getType())) {
+    return false;
+  }
+
+  // Don't warn if the comparison involves the 'size_t' type.
+  QualType SizeT = S.Context.getSizeType();
+  if (S.Context.hasSameType(Constant->getType().getCanonicalType(), SizeT) &&
+      S.Context.hasSameType(Other->getType().getCanonicalType(), SizeT)) {
+    return false;
+  }
+
   // A comparison of an unsigned bit-field against 0 is really a type problem,
   // even though at the type level the bit-field might promote to 'signed int'.
   if (Other->refersToBitField() && InRange && Value == 0 &&
