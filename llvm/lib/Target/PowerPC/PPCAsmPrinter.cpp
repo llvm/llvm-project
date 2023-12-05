@@ -2450,7 +2450,6 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     auto &Ctx = OutStreamer->getContext();
     MCSymbol *EHInfoSym =
         TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(MF);
-    cast<MCSymbolXCOFF>(EHInfoSym)->setEHInfo();
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(EHInfoSym, TOCType_EHBlock);
     const MCSymbol *TOCBaseSym =
         cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
