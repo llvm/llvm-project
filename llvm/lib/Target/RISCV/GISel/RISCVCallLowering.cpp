@@ -455,7 +455,8 @@ void RISCVCallLowering::saveVarArgRegisters(
     // ensure that the frame pointer is 2*XLEN-aligned, which in turn ensures
     // offsets to even-numbered registered remain 2*XLEN-aligned.
     if (Idx % 2) {
-      MFI.CreateFixedObject(XLenInBytes, VaArgOffset - static_cast<int>(XLenInBytes), true);
+      MFI.CreateFixedObject(XLenInBytes,
+                            VaArgOffset - static_cast<int>(XLenInBytes), true);
       VarArgsSaveSize += XLenInBytes;
     }
 
@@ -478,8 +479,7 @@ void RISCVCallLowering::saveVarArgRegisters(
                               ArgRegs[I], XLenVT, CCValAssign::Full));
       auto MPO =
           MachinePointerInfo::getFixedStack(MF, FI, (I - Idx) * XLenInBytes);
-      auto Store =
-          MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
+      MIRBuilder.buildStore(VReg, FIN, MPO, inferAlignFromPtrInfo(MF, MPO));
       FIN = MIRBuilder.buildPtrAdd(MRI.createGenericVirtualRegister(p0),
                                    FIN.getReg(0), Offset);
     }
