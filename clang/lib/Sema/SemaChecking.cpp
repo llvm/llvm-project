@@ -3184,7 +3184,6 @@ static bool hasSMEZAState(unsigned BuiltinID) {
 
 bool Sema::CheckSMEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
-    bool debug = FD->getDeclName().getAsString() == "incompat_sve_sm";
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
