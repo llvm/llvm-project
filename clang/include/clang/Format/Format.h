@@ -3264,6 +3264,29 @@ struct FormatStyle {
   /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
 
+  /// The order in which ObjC property attributes should appear.
+  ///
+  /// Attributes in code will be sorted in the order specified. Any attributes
+  /// encountered that are not mentioned in this array will be sorted last, in
+  /// stable order. Comments between attributes will leave the attributes
+  /// untouched.
+  /// \warning
+  ///  Using this option could lead to incorrect code formatting due to
+  ///  clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code{.yaml}
+  ///   ObjCPropertyAttributeOrder: [
+  ///       class, direct,
+  ///       atomic, nonatomic,
+  ///       assign, retain, strong, copy, weak, unsafe_unretained,
+  ///       readonly, readwrite, getter, setter,
+  ///       nullable, nonnull, null_resettable, null_unspecified
+  ///   ]
+  /// \endcode
+  /// \version 18
+  std::vector<std::string> ObjCPropertyAttributeOrder;
+
   /// Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
   /// \version 3.7
@@ -4821,6 +4844,7 @@ struct FormatStyle {
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
+           ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            PackConstructorInitializers == R.PackConstructorInitializers &&

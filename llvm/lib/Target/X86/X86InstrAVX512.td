@@ -2855,8 +2855,8 @@ defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, SchedWriteFCmp>, E
 multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
                           string OpcodeStr, RegisterClass KRC, ValueType vvt,
                           X86MemOperand x86memop, string Suffix = ""> {
-  let explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in {
-  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove] in
+  let isMoveReg = 1, hasSideEffects = 0, SchedRW = [WriteMove],
+      explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in
   def kk#Suffix : I<opc_kk, MRMSrcReg, (outs KRC:$dst), (ins KRC:$src),
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
                   Sched<[WriteMove]>;
@@ -2868,13 +2868,12 @@ multiclass avx512_mask_mov<bits<8> opc_kk, bits<8> opc_km, bits<8> opc_mk,
                     !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"),
                     [(store KRC:$src, addr:$dst)]>,
                   Sched<[WriteStore]>;
-  }
 }
 
 multiclass avx512_mask_mov_gpr<bits<8> opc_kr, bits<8> opc_rk,
                                string OpcodeStr, RegisterClass KRC,
                                RegisterClass GRC, string Suffix = ""> {
-  let hasSideEffects = 0, explicitOpPrefix = !if(!eq(Suffix, ""), NoExplicitOpPrefix, ExplicitEVEX) in {
+  let hasSideEffects = 0 in {
     def kr#Suffix : I<opc_kr, MRMSrcReg, (outs KRC:$dst), (ins GRC:$src),
                       !strconcat(OpcodeStr, "\t{$src, $dst|$dst, $src}"), []>,
                     Sched<[WriteMove]>;

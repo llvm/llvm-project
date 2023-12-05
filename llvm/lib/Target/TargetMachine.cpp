@@ -39,11 +39,19 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
 
 TargetMachine::~TargetMachine() = default;
 
-bool TargetMachine::isLargeData(const GlobalVariable *GV) const {
-  if (getTargetTriple().getArch() != Triple::x86_64 || GV->isThreadLocal())
+bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
 
   if (getCodeModel() != CodeModel::Medium && getCodeModel() != CodeModel::Large)
+    return false;
+
+  if (isa<Function>(GO))
+    return getCodeModel() == CodeModel::Large;
+
+  auto *GV = cast<GlobalVariable>(GO);
+
+  if (GV->isThreadLocal())
     return false;
 
   // Allowing large metadata sections in the presence of an explicit section is

@@ -574,7 +574,7 @@ public:
     return *this;
   }
   template <class _Source>
-  _LIBCPP_INLINE_VISIBILITY _EnableIfPathable<_Source>
+  _LIBCPP_HIDE_FROM_ABI _EnableIfPathable<_Source>
   operator/=(const _Source& __src) {
     return operator/=(path(__src));
   }

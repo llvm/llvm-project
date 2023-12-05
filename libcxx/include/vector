@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_VECTOR
 #define _LIBCPP_VECTOR
 
+// clang-format off
+
 /*
     vector synopsis
 
@@ -300,6 +302,8 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 }  // std
 
 */
+
+// clang-format on
 
 #include <__algorithm/copy.h>
 #include <__algorithm/equal.h>

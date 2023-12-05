@@ -416,14 +416,16 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
   DataEdit edit;
+  edit.modes = context.mutableModes();
+  // Handle repeated nonparenthesized edit descriptors
+  edit.repeat = std::min(repeat, maxRepeat); // 0 if maxRepeat==0
+  if (repeat > maxRepeat) {
+    stack_[height_].start = start; // after repeat count
+    stack_[height_].remaining = repeat - edit.repeat;
+    ++height_;
+  }
   edit.descriptor = static_cast<char>(Capitalize(GetNextChar(context)));
-  if (edit.descriptor == 'E') {
-    if (auto next{static_cast<char>(Capitalize(PeekNext()))};
-        next == 'N' || next == 'S' || next == 'X') {
-      edit.variation = next;
-      ++offset_;
-    }
-  } else if (edit.descriptor == 'D' && Capitalize(PeekNext()) == 'T') {
+  if (edit.descriptor == 'D' && Capitalize(PeekNext()) == 'T') {
     // DT['iotype'][(v_list)] defined I/O
     edit.descriptor = DataEdit::DefinedDerivedType;
     ++offset_;
@@ -479,37 +481,36 @@ std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
         return std::nullopt;
       }
     }
-  }
-  if (edit.descriptor == 'A' || edit.descriptor == 'L') {
-    // width is optional for A[w] or L[w]
-    auto ch{PeekNext()};
-    if (ch >= '0' && ch <= '9') {
+  } else { // not DT'iotype'
+    if (edit.descriptor == 'E') {
+      if (auto next{static_cast<char>(Capitalize(PeekNext()))};
+          next == 'N' || next == 'S' || next == 'X') {
+        edit.variation = next;
+        ++offset_;
+      }
+    }
+    // Width is optional for A[w] in the standard and optional
+    // for Lw in most compilers.
+    // Intel & (presumably, from bug report) Fujitsu allow
+    // a missing 'w' & 'd'/'m' for other edit descriptors -- but not
+    // 'd'/'m' with a missing 'w' -- and so interpret "(E)" as "(E0)".
+    if (CharType ch{PeekNext()}; (ch >= '0' && ch <= '9') || ch == '.') {
       edit.width = GetIntField(context);
+      if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
+        if (edit.width.value_or(-1) == 0) {
+          ReportBadFormat(context, "Input field width is zero", start);
+        }
+      }
+      if (PeekNext() == '.') {
+        ++offset_;
+        edit.digits = GetIntField(context);
+        if (CharType ch{PeekNext()};
+            ch == 'e' || ch == 'E' || ch == 'd' || ch == 'D') {
+          ++offset_;
+          edit.expoDigits = GetIntField(context);
+        }
+      }
     }
-  } else if (edit.descriptor != DataEdit::DefinedDerivedType) {
-    edit.width = GetIntField(context);
-  }
-  if constexpr (std::is_base_of_v<InputStatementState, CONTEXT>) {
-    if (edit.width.value_or(-1) == 0) {
-      ReportBadFormat(context, "Input field width is zero", start);
-    }
-  }
-  if (edit.descriptor != DataEdit::DefinedDerivedType && PeekNext() == '.') {
-    ++offset_;
-    edit.digits = GetIntField(context);
-    CharType ch{PeekNext()};
-    if (ch == 'e' || ch == 'E' || ch == 'd' || ch == 'D') {
-      ++offset_;
-      edit.expoDigits = GetIntField(context);
-    }
-  }
-  edit.modes = context.mutableModes();
-  // Handle repeated nonparenthesized edit descriptors
-  edit.repeat = std::min(repeat, maxRepeat); // 0 if maxRepeat==0
-  if (repeat > maxRepeat) {
-    stack_[height_].start = start; // after repeat count
-    stack_[height_].remaining = repeat - edit.repeat;
-    ++height_;
   }
   return edit;
 }

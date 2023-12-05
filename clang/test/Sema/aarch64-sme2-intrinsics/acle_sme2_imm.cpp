@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu \
-// RUN:    -target-feature +sve2 -target-feature +sme2 -target-feature +sve -fsyntax-only -verify %s
+// RUN:    -target-feature +sve2 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -fsyntax-only -verify %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -18,4 +18,9 @@ void test_outer_product(svbool_t pred, svint16_t s16, svuint16_t u16, svint32_t 
 
   svbmops_za32_u32_m(4, pred, pred, u32, u32); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
   svbmops_za32_s32_m(4, pred, pred, s32, s32); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}
+
+void test_ldr_str_zt(const void *const_base, void *base) __arm_streaming_compatible __arm_shared_za __arm_preserves_za {
+  svldr_zt(1, const_base); // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  svstr_zt(1, base);       // expected-error {{argument value 1 is outside the valid range [0, 0]}}
 }

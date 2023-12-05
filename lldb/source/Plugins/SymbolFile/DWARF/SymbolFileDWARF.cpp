@@ -4339,6 +4339,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     module_spec.GetSymbolFileSpec() =
         FileSpec(m_objfile_sp->GetModule()->GetFileSpec().GetPath() + ".dwp");
 
+    module_spec.GetUUID() = m_objfile_sp->GetUUID();
     FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
     FileSpec dwp_filespec =
         PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);

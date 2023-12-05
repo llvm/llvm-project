@@ -170,7 +170,7 @@ private:
   }
 };
 
-#ifdef SPECIAL_X86_LONG_DOUBLE
+#ifdef LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 template <>
 LIBC_INLINE void
 NormalFloat<long double>::init_from_bits(FPBits<long double> bits) {
@@ -259,7 +259,7 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
   result.set_implicit_bit(1);
   return static_cast<long double>(result);
 }
-#endif // SPECIAL_X86_LONG_DOUBLE
+#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE

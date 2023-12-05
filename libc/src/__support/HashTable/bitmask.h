@@ -73,7 +73,7 @@ template <class BitMask> struct IteratableBitMaskAdaptor : public BitMask {
     return *this;
   }
   LIBC_INLINE IteratableBitMaskAdaptor begin() { return *this; }
-  LIBC_INLINE IteratableBitMaskAdaptor end() { return {0}; }
+  LIBC_INLINE IteratableBitMaskAdaptor end() { return {BitMask{0}}; }
   LIBC_INLINE bool operator==(const IteratableBitMaskAdaptor &other) {
     return this->word == other.word;
   }
