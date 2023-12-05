@@ -17,6 +17,7 @@ add_llvm_unittest(SupportTests
   BalancedPartitioningTest.cpp
   BranchProbabilityTest.cpp
   CachePruningTest.cpp
+  CharSetTest.cpp
   CrashRecoveryTest.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
