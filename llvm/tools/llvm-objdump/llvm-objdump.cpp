@@ -2458,7 +2458,7 @@ void Dumper::printRelocations() {
           continue;
         Reloc.getTypeName(RelocName);
         if (Error E =
-            getRelocationValueString(Reloc, SymbolDescription, ValueStr))
+                getRelocationValueString(Reloc, SymbolDescription, ValueStr))
           reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
