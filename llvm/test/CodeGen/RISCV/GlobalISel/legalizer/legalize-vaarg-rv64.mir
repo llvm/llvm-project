@@ -5,19 +5,19 @@
 # greater than 1, so we will always generate code to adjust for this alignment.
 
 --- |
-  define void @va_arg_i32() {
+  define void @va_arg_i32(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
     %va = alloca ptr, align 8
-    %1 = va_arg ptr %va, i32
+    %p = va_arg ptr %va, i32
     ret void
   }
-  define void @va_arg_i64() {
+  define void @va_arg_i64(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
     %va = alloca ptr, align 8
-    %1 = va_arg ptr %va, i32
+    %p = va_arg ptr %va, i32
     ret void
   }
-  define void @va_arg_ptr() {
+  define void @va_arg_ptr(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
     %va = alloca ptr, align 8
-    %1 = va_arg ptr %va, ptr
+    %p = va_arg ptr %va, ptr
     ret void
   }
 ...
@@ -25,12 +25,16 @@
 name:            va_arg_i32
 legalized:       false
 tracksRegLiveness: true
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
+      isImmutable: true, isAliased: false }
 stack:
-  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 4,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 8 }
+machineFunctionInfo:
+  varArgsFrameIndex: -1
+  varArgsSaveSize: 0
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1 (%ir-block.8):
     ; CHECK-LABEL: name: va_arg_i32
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0))
@@ -50,12 +54,16 @@ body:             |
 name:            va_arg_i64
 legalized:       false
 tracksRegLiveness: true
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
+      isImmutable: true, isAliased: false }
 stack:
-  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 4,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 8 }
+machineFunctionInfo:
+  varArgsFrameIndex: -1
+  varArgsSaveSize: 0
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1 (%ir-block.8):
     ; CHECK-LABEL: name: va_arg_i64
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0))
@@ -75,12 +83,16 @@ body:             |
 name:            va_arg_ptr
 legalized:       false
 tracksRegLiveness: true
+fixedStack:
+  - { id: 0, type: default, offset: 0, size: 8, alignment: 16,
+      isImmutable: true, isAliased: false }
 stack:
-  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 4,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 0, name: va, type: default, offset: 0, size: 8, alignment: 8 }
+machineFunctionInfo:
+  varArgsFrameIndex: -1
+  varArgsSaveSize: 0
 body:             |
-  bb.1 (%ir-block.0):
+  bb.1 (%ir-block.8):
     ; CHECK-LABEL: name: va_arg_ptr
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.va
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0))

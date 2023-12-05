@@ -7882,9 +7882,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   // LstPtr is a pointer to the head of the list. Get the address
   // of the head of the list.
   Align PtrAlignment = DL.getABITypeAlign(getTypeForLLT(PtrTy, Ctx));
-  MachineMemOperand *PtrLoadMMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                              MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
+  MachineMemOperand *PtrLoadMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOLoad, PtrTy, PtrAlignment);
   auto VAList = MIRBuilder.buildLoad(PtrTy, ListPtr, *PtrLoadMMO).getReg(0);
 
   const Align A(MI.getOperand(2).getImm());
@@ -7907,18 +7906,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   auto Succ = MIRBuilder.buildPtrAdd(PtrTy, VAList, IncAmt);
 
   // Store the increment VAList to the legalized pointer
-  MachineMemOperand *StoreMMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                              MachineMemOperand::MOStore, PtrTy, PtrAlignment);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOStore, PtrTy, PtrAlignment);
   MIRBuilder.buildStore(Succ, ListPtr, *StoreMMO);
   // Load the actual argument out of the pointer VAList
   Align EltAlignment = DL.getABITypeAlign(getTypeForLLT(Ty, Ctx));
-  MachineMemOperand *EltLoadMMO =
-      MF.getMachineMemOperand(MachinePointerInfo::getUnknownStack(MF),
-                              MachineMemOperand::MOLoad, Ty, EltAlignment);
+  MachineMemOperand *EltLoadMMO = MF.getMachineMemOperand(
+      MachinePointerInfo(), MachineMemOperand::MOLoad, Ty, EltAlignment);
   MIRBuilder.buildLoad(Dst, VAList, *EltLoadMMO);
 
-  Observer.erasingInstr(MI);
   MI.eraseFromParent();
   return Legalized;
 }
