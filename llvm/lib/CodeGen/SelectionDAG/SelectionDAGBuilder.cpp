@@ -6548,6 +6548,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #include "llvm/IR/VPIntrinsics.def"
     visitVectorPredicationIntrinsic(cast<VPIntrinsic>(I));
     return;
+  case Intrinsic::experimental_vp_compress:
+  case Intrinsic::experimental_vp_expand:
+    visitTargetIntrinsic(I, Intrinsic);
+    return;
   case Intrinsic::fptrunc_round: {
     // Get the last argument, the metadata and convert it to an integer in the
     // call

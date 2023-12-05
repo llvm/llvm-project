@@ -1157,6 +1157,19 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
+  case Intrinsic::experimental_vp_compress: {
+    if (!isTypeLegal(RetTy))
+      return InstructionCost::getInvalid();
+    return 1;
+  }
+  case Intrinsic::experimental_vp_expand: {
+    // The codegen of vp.expand is iota.m + vrgatherei16.vv, so there will be an
+    // i16 vector whose element count is same as the RetTy.
+    IntegerType *HalfType = Type::getInt16Ty(RetTy->getContext());
+    if (!isTypeLegal(RetTy) || !isTypeLegal(RetTy->getWithNewType(HalfType)))
+      return InstructionCost::getInvalid();
+    return 4;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {

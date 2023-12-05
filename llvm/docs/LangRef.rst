@@ -21777,6 +21777,89 @@ This intrinsic reverses the order of the first ``evl`` elements in a vector.
 The lanes in the result vector disabled by ``mask`` are ``poison``. The
 elements past ``evl`` are poison.
 
+
+.. _int_experimental_vp_compress:
+
+
+'``llvm.experimental.vp.compress``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. A number of scalar values of integer, floating
+point or pointer data type are collected from an input vector. A mask defines
+which elements to collect from the vector.
+
+::
+
+      declare <8 x i32> @llvm.experimental.vp.compress.v8i32(<8 x i32> <value>, <8  x i1> <mask>, i32 <evl>)
+      declare <16 x float> @llvm.experimental.vp.compress.v16f32 (<16 x float> <value>, <16 x i1> <mask>, i32 <evl>)
+
+Overview:
+"""""""""
+
+Predicated version of :ref:`llvm.masked.compressstore <int_compressstore>` that
+writes to a vector instead of memory.
+
+Arguments:
+""""""""""
+
+The first operand is the input vector, from which elements are collected. The
+second operand is the mask, a vector of boolean values. The mask and the input
+vector must have the same number of vector elements. The fourth operand is the
+explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.vp.compress``' intrinsic is designed for compressing
+data. It allows to collect elements from possibly non-adjacent lanes of a vector
+in one IR operation. It is useful for targets that support compressing operations.
+The result after first '``evl``' lanes is a :ref:`poison value <poisonvalues>`.
+
+
+.. _int_experimental_vp_expand:
+
+
+'``llvm.experimental.vp.expand``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. Several values of integer, floating point or
+pointer data type are read from a vector and stored into the elements of a
+vector according to the mask. The fourth operand is the explicit vector length
+of the operation.
+
+::
+
+      declare <8 x i32> @llvm.experimental.vp.expand.v8i32(<8 x i32> <value>, <8 x i1> <mask>, i32 <evl>)
+      declare <16 x float> @llvm.experimental.vp.expand.v16f32 (<16 x float> <value>, <16 x i1> <mask>, i32 <evl>)
+
+Overview:
+"""""""""
+
+Predicated version of :ref:`llvm.masked.expandload <int_expandload>` that reads
+from a vector instead of memory.
+
+Arguments:
+""""""""""
+
+The first operand has same type as the result. The second operand is the mask, a
+vector of boolean values. The mask and the input vector must have the same
+number of vector elements. The fourth operand is the explicit vector length of
+the operation.
+
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.vp.expand``' intrinsic is designed for reading multiple
+scalar values from adjacent vector lanes into possibly non-adjacent vector lanes.
+It is useful for targets that support vector expanding. The result on disabled
+lanes is a :ref:`poison value <poisonvalues>`.
+
+
 .. _int_vp_load:
 
 '``llvm.vp.load``' Intrinsic

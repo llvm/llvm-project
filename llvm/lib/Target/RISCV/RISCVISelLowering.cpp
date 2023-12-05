@@ -8401,6 +8401,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
+  case Intrinsic::experimental_vp_compress:
+    return lowerVPCompressExperimental(Op, DAG);
+  case Intrinsic::experimental_vp_expand:
+    return lowerVPExpandExperimental(Op, DAG);
   case Intrinsic::riscv_vmv_x_s: {
     SDValue Res = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
@@ -19749,6 +19753,62 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
                                   SI->getPointerOperand(), VL});
 
   return true;
+}
+
+SDValue
+RISCVTargetLowering::lowerVPCompressExperimental(SDValue N,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  MVT VT = N.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Op = N.getOperand(1);
+  SDValue Mask = N.getOperand(2);
+  SDValue VL = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N.getOperand(3));
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    Op = convertToScalableVector(ContainerVT, Op, DAG, Subtarget);
+    MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
+    Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
+  }
+  SDValue Res =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ContainerVT,
+                  DAG.getConstant(Intrinsic::riscv_vcompress, DL, XLenVT),
+                  DAG.getUNDEF(ContainerVT), Op, Mask, VL);
+  if (!VT.isFixedLengthVector())
+    return Res;
+  return convertFromScalableVector(VT, Res, DAG, Subtarget);
+}
+
+SDValue
+RISCVTargetLowering::lowerVPExpandExperimental(SDValue N,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  MVT VT = N.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Op = N.getOperand(1);
+  SDValue Mask = N.getOperand(2);
+  SDValue VL = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N.getOperand(3));
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    Op = convertToScalableVector(ContainerVT, Op, DAG, Subtarget);
+    MVT MaskContainerVT = ContainerVT.changeVectorElementType(MVT::i1);
+    Mask = convertToScalableVector(MaskContainerVT, Mask, DAG, Subtarget);
+  }
+
+  MVT IndexVT = ContainerVT.changeVectorElementType(MVT::i16);
+  SDValue Index =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, IndexVT,
+                  DAG.getConstant(Intrinsic::riscv_viota, DL, XLenVT),
+                  DAG.getUNDEF(IndexVT), Mask, VL);
+  SDValue Res = DAG.getNode(RISCVISD::VRGATHEREI16_VV_VL, DL, ContainerVT, Op,
+                            Index, DAG.getUNDEF(ContainerVT), Mask, VL);
+  if (!VT.isFixedLengthVector())
+    return Res;
+  return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
 MachineInstr *
