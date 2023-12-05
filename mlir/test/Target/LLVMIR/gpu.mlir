@@ -50,6 +50,13 @@ module {
 
 // -----
 
+// Checking the correct selection of the second object using a target as a selector.
+module {
+  // CHECK: @kernel_module_bin_cst = internal constant [4 x i8] c"BLOB", align 8
+  gpu.binary @kernel_module <#gpu.select_object<#spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>>> [#gpu.object<#nvvm.target, "NVPTX">, #gpu.object<#spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>, "BLOB">]
+}
+
+// -----
 // Checking the translation of `gpu.launch_fun` with an async dependency.
 module attributes {gpu.container_module} {
   // CHECK: @kernel_module_bin_cst = internal constant [4 x i8] c"BLOB", align 8
