@@ -7,16 +7,16 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; A call whose argument can remain a scalar because it's sequential and only the
 ; starting value is required.
-define void @test_linear(ptr noalias %a, ptr readnone %b, i64 %n) {
-; NEON-LABEL: define void @test_linear
+define void @test_linear8(ptr noalias %a, ptr readnone %b, i64 %n) {
+; NEON-LABEL: define void @test_linear8
 ; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR0:[0-9]+]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear
+; SVE_OR_NEON-LABEL: define void @test_linear8
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
 ;
-; SVE_TF-LABEL: define void @test_linear
+; SVE_TF-LABEL: define void @test_linear8
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
 ;
@@ -37,16 +37,16 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear_with_vector(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) {
-; NEON-LABEL: define void @test_linear_with_vector
+define void @test_vector_linear4(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) {
+; NEON-LABEL: define void @test_vector_linear4
 ; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR1:[0-9]+]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear_with_vector
+; SVE_OR_NEON-LABEL: define void @test_vector_linear4
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
-; SVE_TF-LABEL: define void @test_linear_with_vector
+; SVE_TF-LABEL: define void @test_vector_linear4
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_TF:    [[DATA:%.*]] = call i32 @baz(i32 [[INPUT:%.*]], ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
@@ -69,16 +69,16 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear_bad_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
-; NEON-LABEL: define void @test_linear_bad_stride
+define void @test_linear8_bad_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
+; NEON-LABEL: define void @test_linear8_bad_stride
 ; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2:[0-9]+]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear_bad_stride
+; SVE_OR_NEON-LABEL: define void @test_linear8_bad_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
-; SVE_TF-LABEL: define void @test_linear_bad_stride
+; SVE_TF-LABEL: define void @test_linear8_bad_stride
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
@@ -99,16 +99,16 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear_wide_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
-; NEON-LABEL: define void @test_linear_wide_stride
+define void @test_linear16_wide_stride(ptr noalias %a, ptr readnone %b, i64 %n) {
+; NEON-LABEL: define void @test_linear16_wide_stride
 ; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR2]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear_wide_stride
+; SVE_OR_NEON-LABEL: define void @test_linear16_wide_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
 ;
-; SVE_TF-LABEL: define void @test_linear_wide_stride
+; SVE_TF-LABEL: define void @test_linear16_wide_stride
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_TF:    [[DATA:%.*]] = call i64 @foo(ptr [[GEPB:%.*]]) #[[ATTR3]]
 ;
@@ -130,16 +130,16 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear_mixed_types(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) {
-; NEON-LABEL: define void @test_linear_mixed_types
+define void @test_linear4_linear8(ptr noalias %a, ptr readnone %b, ptr readonly %c, i64 %n) {
+; NEON-LABEL: define void @test_linear4_linear8
 ; NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR3:[0-9]+]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear_mixed_types
+; SVE_OR_NEON-LABEL: define void @test_linear4_linear8
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
-; SVE_TF-LABEL: define void @test_linear_mixed_types
+; SVE_TF-LABEL: define void @test_linear4_linear8
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], ptr readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_TF:    [[DATA:%.*]] = call i32 @quux(ptr [[GEPC:%.*]], ptr [[GEPB:%.*]]) #[[ATTR4:[0-9]+]]
 ;
@@ -161,16 +161,16 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear_non_ptr(ptr noalias %a, i64 %n) {
-; NEON-LABEL: define void @test_linear_non_ptr
+define void @test_linear3_non_ptr(ptr noalias %a, i64 %n) {
+; NEON-LABEL: define void @test_linear3_non_ptr
 ; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR4:[0-9]+]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear_non_ptr
+; SVE_OR_NEON-LABEL: define void @test_linear3_non_ptr
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
 ;
-; SVE_TF-LABEL: define void @test_linear_non_ptr
+; SVE_TF-LABEL: define void @test_linear3_non_ptr
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_TF:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR5:[0-9]+]]
 ;
@@ -192,16 +192,16 @@ for.cond.cleanup:
   ret void
 }
 
-define void @test_linear_non_ptr_neg_stride(ptr noalias %a, i64 %n) {
-; NEON-LABEL: define void @test_linear_non_ptr_neg_stride
+define void @test_linearn5_non_ptr_neg_stride(ptr noalias %a, i64 %n) {
+; NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
 ; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR5:[0-9]+]]
 ;
-; SVE_OR_NEON-LABEL: define void @test_linear_non_ptr_neg_stride
+; SVE_OR_NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
 ;
-; SVE_TF-LABEL: define void @test_linear_non_ptr_neg_stride
+; SVE_TF-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_TF-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; SVE_TF:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR6:[0-9]+]]
 ;
@@ -229,25 +229,25 @@ declare i32 @quux(ptr, ptr)
 declare i32 @bar(i32)
 
 ; neon vector variants of foo
-declare <2 x i64> @neon_foo_linear(ptr)
-declare <2 x i64> @neon_foo_linear_2x(ptr)
-declare <4 x i32> @neon_baz_vector_and_linear(<4 x i32>, ptr)
-declare <4 x i32> @neon_quux_linear(ptr, ptr)
-declare <4 x i32> @neon_bar_linear(i32)
-declare <4 x i32> @neon_bar_neg_linear(i32)
+declare <2 x i64> @vec_foo_linear8_nomask_neon(ptr)
+declare <2 x i64> @vec_foo_linear16_nomask_neon(ptr)
+declare <4 x i32> @vec_baz_vector_linear4_nomask_neon(<4 x i32>, ptr)
+declare <4 x i32> @vec_quux_linear4_linear8_nomask_neon(ptr, ptr)
+declare <4 x i32> @vec_bar_linear3_nomask_neon(i32)
+declare <4 x i32> @vec_bar_linearn5_nomask_neon(i32)
 
 ; scalable vector variants of foo
-declare <vscale x 2 x i64> @sve_foo_linear(ptr, <vscale x 2 x i1>)
-declare <vscale x 2 x i64> @sve_foo_linear_nomask(ptr)
-declare <vscale x 2 x i64> @sve_foo_linear_nomask_2x(ptr)
-declare <vscale x 4 x i32> @sve_baz_vector_and_linear(<vscale x 4 x i32>, ptr)
-declare <vscale x 4 x i32> @sve_quux_linear_mask(ptr, ptr, <vscale x 4 x i1>)
-declare <vscale x 4 x i32> @sve_bar_linear(i32)
-declare <vscale x 4 x i32> @sve_bar_neg_linear(i32)
+declare <vscale x 2 x i64> @vec_foo_linear8_mask_sve(ptr, <vscale x 2 x i1>)
+declare <vscale x 2 x i64> @vec_foo_linear8_nomask_sve(ptr)
+declare <vscale x 2 x i64> @vec_foo_linear16_nomask_sve(ptr)
+declare <vscale x 4 x i32> @vec_baz_vector_linear4_nomask_sve(<vscale x 4 x i32>, ptr)
+declare <vscale x 4 x i32> @vec_quux_linear4_linear8_mask_sve(ptr, ptr, <vscale x 4 x i1>)
+declare <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32)
+declare <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32)
 
-attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVsNxl8_foo(sve_foo_linear_nomask),_ZGVsMxl8_foo(sve_foo_linear),_ZGVnN2l8_foo(neon_foo_linear)" }
-attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVsNxvl4_baz(sve_baz_vector_and_linear),_ZGVnN4vl4_baz(neon_baz_vector_and_linear)" }
-attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVsNxl16_foo(sve_foo_linear_nomask_2x),_ZGVnN2l16_foo(neon_foo_linear_2x)" }
-attributes #3 = { nounwind "vector-function-abi-variant"="_ZGVsMxl4l8_quux(sve_quux_linear_mask),_ZGVnN4l4l8_quux(neon_quux_linear)" }
-attributes #4 = { nounwind "vector-function-abi-variant"="_ZGVsNxl3_bar(sve_bar_linear),_ZGVnN4l3_bar(neon_bar_linear)" }
-attributes #5 = { nounwind "vector-function-abi-variant"="_ZGVsNxln5_bar(sve_bar_neg_linear),_ZGVnN4ln5_bar(neon_bar_neg_linear)" }
+attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVsNxl8_foo(vec_foo_linear8_nomask_sve),_ZGVsMxl8_foo(vec_foo_linear8_mask_sve),_ZGVnN2l8_foo(vec_foo_linear8_nomask_neon)" }
+attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVsNxvl4_baz(vec_baz_vector_linear4_nomask_sve),_ZGVnN4vl4_baz(vec_baz_vector_linear4_nomask_neon)" }
+attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVsNxl16_foo(vec_foo_linear16_nomask_sve),_ZGVnN2l16_foo(vec_foo_linear16_nomask_neon)" }
+attributes #3 = { nounwind "vector-function-abi-variant"="_ZGVsMxl4l8_quux(vec_quux_linear4_linear8_mask_sve),_ZGVnN4l4l8_quux(vec_quux_linear4_linear8_nomask_neon)" }
+attributes #4 = { nounwind "vector-function-abi-variant"="_ZGVsNxl3_bar(vec_bar_linear3_nomask_sve),_ZGVnN4l3_bar(vec_bar_linear3_nomask_neon)" }
+attributes #5 = { nounwind "vector-function-abi-variant"="_ZGVsNxln5_bar(vec_bar_linearn5_nomask_sve),_ZGVnN4ln5_bar(vec_bar_linearn5_nomask_neon)" }
