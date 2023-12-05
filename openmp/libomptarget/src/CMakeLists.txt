@@ -15,7 +15,6 @@ libomptarget_say("Building offloading runtime library libomptarget.")
 add_llvm_library(omptarget
   SHARED
 
-  api.cpp
   device.cpp
   interface.cpp
   omptarget.cpp
@@ -24,6 +23,7 @@ add_llvm_library(omptarget
   PluginManager.cpp
   DeviceImage.cpp
 
+  OpenMP/API.cpp
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
