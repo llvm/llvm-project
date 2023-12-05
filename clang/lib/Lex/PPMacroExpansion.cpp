@@ -1275,10 +1275,10 @@ static bool EvaluateHasIncludeCommon(Token &Tok, IdentifierInfo *II,
 EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
   // Give the usual extension/compatibility warnings.
   if (LangOpts.C23)
-    Diag(Tok, diag::warn_compat_pp_has_embed);
+    Diag(Tok, diag::warn_compat_pp_embed_directive) << /*__has_embed*/ 1;
   else
-    Diag(Tok, diag::ext_pp_has_embed)
-        << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
+    Diag(Tok, diag::ext_pp_embed_directive)
+        << /*__has_embed*/ 1 << (LangOpts.CPlusPlus ? /*Clang*/ 1 : /*C23*/ 0);
 
   // These expressions are only allowed within a preprocessor directive.
   if (!this->isParsingIfOrElifDirective()) {

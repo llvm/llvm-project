@@ -423,14 +423,10 @@ def warn_c23_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
 def ext_pp_embed_directive : ExtWarn<
-  "'#embed' is a %select{C23|Clang}0 extension">, InGroup<C23>;
+  "'%select{#embed|__has_embed}0' is a %select{C23|Clang}1 extension">,
+  InGroup<C23>;
 def warn_compat_pp_embed_directive : Warning<
-  "'#embed' is incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
-def ext_pp_has_embed : ExtWarn<
-  "'__has_embed' is a %select{C23|Clang}0 extension">, InGroup<C23>;
-def warn_compat_pp_has_embed : Warning<
-  "'__has_embed' is incompatible with C standards before C23">,
+  "'%select{#embed|__has_embed}0' is incompatible with C standards before C23">,
   InGroup<CPre23Compat>, DefaultIgnore;
 def err_pp_embed_dup_params : Error<
   "cannot specify parameter '%0' twice in the same '#embed' directive">;
