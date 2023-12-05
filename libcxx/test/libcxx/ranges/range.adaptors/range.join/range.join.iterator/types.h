@@ -15,12 +15,15 @@
 
 #include "test_iterators.h"
 
-template <std::forward_iterator Iter>
+template <std::input_iterator Iter>
 struct DieOnCopyIterator {
   using value_type      = std::iter_value_t<Iter>;
   using difference_type = std::iter_difference_t<Iter>;
 
-  DieOnCopyIterator() = default;
+  DieOnCopyIterator()
+    requires std::default_initializable<Iter>
+  = default;
+
   constexpr explicit DieOnCopyIterator(Iter iter) : iter_(std::move(iter)) {}
   constexpr DieOnCopyIterator(DieOnCopyIterator&& other) = default;
   DieOnCopyIterator& operator=(DieOnCopyIterator&&)      = default;
@@ -62,6 +65,8 @@ private:
 template <class Iter>
 explicit DieOnCopyIterator(Iter) -> DieOnCopyIterator<Iter>;
 
+static_assert(std::input_iterator<DieOnCopyIterator<cpp20_input_iterator<int*>>>);
+static_assert(!std::forward_iterator<DieOnCopyIterator<cpp20_input_iterator<int*>>>);
 static_assert(std::forward_iterator<DieOnCopyIterator<int*>>);
 static_assert(!std::bidirectional_iterator<DieOnCopyIterator<int*>>);
 static_assert(std::sentinel_for<sentinel_wrapper<int*>, DieOnCopyIterator<int*>>);
