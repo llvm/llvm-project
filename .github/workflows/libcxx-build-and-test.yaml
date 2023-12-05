@@ -69,23 +69,13 @@ jobs:
             cxx: 'g++-13'
             clang_tidy: 'OFF'
     steps:
-      - uses: actions/checkout@v4
-      - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
-        if: always()
+      # FIXME: Change to ./.github/actions/libcxx/run-buildbot
+      - uses: libcxx/actions/run-buildbot@main
         with:
-          name: ${{ matrix.config }}-${{ matrix.cxx }}-results
-          path: |
-            **/test-results.xml
-            **/*.abilist
-            **/CMakeError.log
-            **/CMakeOutput.log
-            **/crash_diagnostics/*
+          config: ${{ matrix.config }}
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
+          clang_tidy: ${{ matrix.clang_tidy }}
   stage2:
     if: github.repository_owner == 'llvm'
     runs-on: libcxx-runners-8-set
@@ -118,23 +108,13 @@ jobs:
             cxx: 'clang++-17'
             clang_tidy: 'OFF'
     steps:
-      - uses: actions/checkout@v4
-      - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: ${{ matrix.cc }}
-          CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
-      - uses: actions/upload-artifact@v3
-        if: always()  # Upload artifacts even if the build or test suite fails
+      - uses: ./.github/actions/libcxx/run-buildbot
         with:
-          name: ${{ matrix.config }}-results
-          path: |
-            **/test-results.xml
-            **/*.abilist
-            **/CMakeError.log
-            **/CMakeOutput.log
-            **/crash_diagnostics/*
+          config: ${{ matrix.config }}
+          cc: ${{ matrix.cc }}
+          cxx: ${{ matrix.cxx }}
+          clang_tidy: ${{ matrix.clang_tidy }}
+
   stage3:
     if: github.repository_owner == 'llvm'
     needs: [ stage1, stage2 ]
@@ -188,22 +168,10 @@ jobs:
           std_modules: 'OFF'
     runs-on: ${{ matrix.machine }}
     steps:
-      - uses: actions/checkout@v4
-      - name: ${{ matrix.config }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        env:
-          CC: clang-18
-          CXX: clang++-18
-          ENABLE_CLANG_TIDY: "OFF"
-          ENABLE_STD_MODULES: ${{ matrix.std_modules }}
-      - uses: actions/upload-artifact@v3
-        if: always()
+      - uses: libcxx/actions/run-buildbot@main
         with:
-          name: ${{ matrix.config }}-results
-          path: |
-            **/test-results.xml
-            **/*.abilist
-            **/CMakeError.log
-            **/CMakeOutput.log
-            **/crash_diagnostics/*
-  
+          config: ${{ matrix.config }}
+          cc: clang-18
+          cxx: clang++-18
+          clang_tidy: "OFF"
+          std_modules: ${{ matrix.std_modules }}
