@@ -557,6 +557,30 @@ enumerators at all.
    WidgetKind d = static_cast<WidgetKind>(4);  // warn
  }
 
+**Limitations**
+
+This checker does not accept the coding pattern where an enum type is used to
+store combinations of flag values:
+
+.. code-block:: cpp
+
+ enum AnimalFlags
+ {
+     HasClaws   = 1,
+     CanFly     = 2,
+     EatsFish   = 4,
+     Endangered = 8
+ };
+
+ AnimalFlags operator|(AnimalFlags a, AnimalFlags b)
+ {
+     return static_cast<AnimalFlags>(static_cast<int>(a) | static_cast<int>(b));
+ }
+
+ auto flags = HasClaws | CanFly;
+
+Projects that use this pattern should not enable this optin checker.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
