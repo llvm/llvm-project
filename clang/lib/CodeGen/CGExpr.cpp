@@ -978,8 +978,7 @@ namespace {
 ///
 /// If we have an expression like \p p->ptr->array[index], we want the
 /// \p MemberExpr for \p p->ptr instead of \p p.
-class StructAccessBase
-    : public StmtVisitor<StructAccessBase, Expr *> {
+class StructAccessBase : public StmtVisitor<StructAccessBase, Expr *> {
   const RecordDecl *ExpectedRD;
 
   bool IsExpectedRecordDecl(const Expr *E) const {
@@ -1106,16 +1105,15 @@ CodeGenFunction::EmitCountedByFieldExpr(const Expr *Base,
 
   llvm::Type *Ty =
       CGM.getTypes().ConvertType(QualType(CountedByRD->getTypeForDecl(), 0));
-  Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(), "struct.load");
+  Res = Builder.CreateAlignedLoad(Res->getType(), Res, getPointerAlign(),
+                                  "struct.load");
   Res = Builder.CreateInBoundsGEP(Ty, Res, Indices, "counted_by.gep");
   Ty = llvm::GetElementPtrInst::getIndexedType(Ty, Indices);
   return Builder.CreateAlignedLoad(Ty, Res, getIntAlign(), "counted_by.load");
 }
 
-const ValueDecl *
-CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                              const RecordDecl *RD,
-                                              uint64_t &Offset) {
+const ValueDecl *CodeGenFunction::FindFlexibleArrayMemberField(
+    ASTContext &Ctx, const RecordDecl *RD, uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
   unsigned FieldNo = 0;
@@ -1131,7 +1129,8 @@ CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
     }
 
     if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, Record, Offset)) {
+      if (const ValueDecl *VD =
+              FindFlexibleArrayMemberField(Ctx, Record, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         Offset += Layout.getFieldOffset(FieldNo);
         return VD;
