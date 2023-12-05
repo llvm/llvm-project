@@ -25,8 +25,7 @@ namespace internal {
 // of a function call by inlining them.
 // ------------------------------------------------------
 
-template<typename W = wint_t>
-LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
+template <typename W = wint_t> LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
   // This needs to be translated to EOF at the callsite. This is to avoid
   // including stdio.h in this file.
   if (c > 127)
