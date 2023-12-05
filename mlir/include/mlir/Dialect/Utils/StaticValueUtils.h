@@ -151,6 +151,39 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
 std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
                                          OpFoldResult step);
 
+/// Idiomatic saturated operations on values like offsets, sizes, and strides.
+struct SaturatedInteger {
+  static SaturatedInteger wrap(int64_t v) {
+    return (ShapedType::isDynamic(v)) ? SaturatedInteger{true, 0}
+                                      : SaturatedInteger{false, v};
+  }
+  int64_t asInteger() { return saturated ? ShapedType::kDynamic : v; }
+  FailureOr<SaturatedInteger> desaturate(SaturatedInteger other) {
+    if (saturated && !other.saturated)
+      return other;
+    if (!saturated && !other.saturated && v != other.v)
+      return failure();
+    return *this;
+  }
+  bool operator==(SaturatedInteger other) {
+    return (saturated && other.saturated) ||
+           (!saturated && !other.saturated && v == other.v);
+  }
+  bool operator!=(SaturatedInteger other) { return !(*this == other); }
+  SaturatedInteger operator+(SaturatedInteger other) {
+    if (saturated || other.saturated)
+      return SaturatedInteger{true, 0};
+    return SaturatedInteger{false, other.v + v};
+  }
+  SaturatedInteger operator*(SaturatedInteger other) {
+    if (saturated || other.saturated)
+      return SaturatedInteger{true, 0};
+    return SaturatedInteger{false, other.v * v};
+  }
+  bool saturated = true;
+  int64_t v = 0;
+};
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_STATICVALUEUTILS_H

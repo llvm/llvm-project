@@ -300,9 +300,8 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     // Canonicalize (X|C1)*MulC -> X*MulC+C1*MulC.
     Value *X;
     Constant *C1;
-    if ((match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1))))) ||
-        (match(Op0, m_OneUse(m_Or(m_Value(X), m_ImmConstant(C1)))) &&
-         haveNoCommonBitsSet(X, C1, SQ.getWithInstruction(&I)))) {
+    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1)))) ||
+        match(Op0, m_OneUse(m_DisjointOr(m_Value(X), m_ImmConstant(C1))))) {
       // C1*MulC simplifies to a tidier constant.
       Value *NewC = Builder.CreateMul(C1, MulC);
       auto *BOp0 = cast<BinaryOperator>(Op0);
@@ -1518,7 +1517,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   if (KnownDividend.isNonNegative()) {
     // If both operands are unsigned, turn this into a udiv.
-    if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
+    if (isKnownNonNegative(Op1, SQ.getWithInstruction(&I))) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
       BO->setIsExact(I.isExact());
       return BO;

@@ -748,6 +748,7 @@ module std_private_algorithm_pstl_backends_cpu_backends_transform        [system
 module std_private_algorithm_pstl_backends_cpu_backends_transform_reduce [system] { header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h" }
 module std_private_algorithm_pstl_copy                                   [system] { header "__algorithm/pstl_copy.h" }
 module std_private_algorithm_pstl_count                                  [system] { header "__algorithm/pstl_count.h" }
+module std_private_algorithm_pstl_equal                                  [system] { header "__algorithm/pstl_equal.h" }
 module std_private_algorithm_pstl_fill                                   [system] { header "__algorithm/pstl_fill.h" }
 module std_private_algorithm_pstl_find                                   [system] {
   header "__algorithm/pstl_find.h"
@@ -2042,6 +2043,7 @@ module std_private_utility_move                   [system] {
   export std_private_type_traits_is_nothrow_move_constructible
   export std_private_type_traits_remove_reference
 }
+module std_private_utility_no_destroy             [system] { header "__utility/no_destroy.h" }
 module std_private_utility_pair                   [system] {
   header "__utility/pair.h"
   export std_private_ranges_subrange_fwd

@@ -1463,7 +1463,7 @@ define i8 @set_bits(i8 %x, i1 %b)  {
 ; CHECK-LABEL: @set_bits(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select i1 [[B:%.*]], i8 5, i8 0
-; CHECK-NEXT:    [[COND:%.*]] = or i8 [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint i8 [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %and = and i8 %x, 250
@@ -1492,7 +1492,7 @@ define i8 @set_bits_extra_use1(i8 %x, i1 %b)  {
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -6
 ; CHECK-NEXT:    call void @use(i8 [[AND]])
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select i1 [[B:%.*]], i8 5, i8 0
-; CHECK-NEXT:    [[COND:%.*]] = or i8 [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint i8 [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret i8 [[COND]]
 ;
   %and = and i8 %x, 250
@@ -1523,7 +1523,7 @@ define <2 x i8> @clear_bits(<2 x i8> %x, <2 x i1> %b)  {
 ; CHECK-LABEL: @clear_bits(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 37, i8 37>
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> zeroinitializer, <2 x i8> <i8 -38, i8 -38>
-; CHECK-NEXT:    [[COND:%.*]] = or <2 x i8> [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint <2 x i8> [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %and = and <2 x i8> %x, <i8 37, i8 37>
@@ -1552,7 +1552,7 @@ define <2 x i8> @clear_bits_extra_use1(<2 x i8> %x, i1 %b)  {
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 37, i8 37>
 ; CHECK-NEXT:    call void @use_vec(<2 x i8> [[AND]])
 ; CHECK-NEXT:    [[MASKSEL:%.*]] = select i1 [[B:%.*]], <2 x i8> zeroinitializer, <2 x i8> <i8 -38, i8 -38>
-; CHECK-NEXT:    [[COND:%.*]] = or <2 x i8> [[AND]], [[MASKSEL]]
+; CHECK-NEXT:    [[COND:%.*]] = or disjoint <2 x i8> [[AND]], [[MASKSEL]]
 ; CHECK-NEXT:    ret <2 x i8> [[COND]]
 ;
   %and = and <2 x i8> %x, <i8 37, i8 37>
