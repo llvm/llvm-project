@@ -65,6 +65,60 @@ getOriginalInductionVars(mlir::acc::LoopOp &accLoopOp) {
   return ivs;
 }
 
+static unsigned getOperandPosition(const mlir::OperandRange &operands,
+                                   mlir::Value val) {
+  unsigned pos = 0;
+  for (auto v : operands) {
+    if (v == val)
+      return pos;
+    ++pos;
+  }
+  return UINT_MAX;
+}
+
+static void clearIVPrivatizations(llvm::SmallVector<mlir::Value> &ivs,
+                                  mlir::acc::LoopOp &accLoopOp,
+                                  mlir::MLIRContext *context) {
+  // Collect all of the private operations associated with IVs.
+  llvm::SmallVector<mlir::Value> privOps;
+  for (auto priv : accLoopOp.getPrivateOperands()) {
+    mlir::Value varPtr{mlir::acc::getVarPtr(priv.getDefiningOp())};
+    assert(varPtr && "must be able to extract varPtr from acc private op");
+    if (llvm::find(ivs, varPtr) != ivs.end()) {
+      privOps.push_back(priv);
+    }
+  }
+
+  // Next remove the private operations associated with IVs.
+  for (auto priv : privOps) {
+    llvm::errs() << priv << "\n";
+    mlir::Value varPtr{mlir::acc::getVarPtr(priv.getDefiningOp())};
+    auto pos = getOperandPosition(accLoopOp.getPrivateOperands(), priv);
+
+    // 1) Replace all uses of the private var with the varPtr.
+    priv.replaceAllUsesWith(varPtr);
+
+    // 2) Manually handle the loop operation since the operand list containing
+    accLoopOp.getPrivateOperandsMutable().erase(pos);
+    std::vector<mlir::Attribute> updatedRecipesList;
+    for (auto [index, attribute] :
+         llvm::enumerate(accLoopOp.getPrivatizationsAttr())) {
+      if (index != pos) {
+        updatedRecipesList.push_back(attribute);
+      }
+    }
+    if (updatedRecipesList.empty()) {
+      accLoopOp.removePrivatizationsAttr();
+    } else {
+      accLoopOp.setPrivatizationsAttr(
+          mlir::ArrayAttr::get(context, updatedRecipesList));
+    }
+
+    // 3) Now remove the private op.
+    priv.getDefiningOp()->erase();
+  }
+}
+
 void LoopExpand::runOnOperation() {
   mlir::func::FuncOp func = getOperation();
 
@@ -82,6 +136,9 @@ void LoopExpand::runOnOperation() {
 
     // Gather original (non-privatized) induction variables.
     llvm::SmallVector<mlir::Value> ivs = getOriginalInductionVars(accLoopOp);
+
+    // Clear the privatization list from privatized IVs.
+    clearIVPrivatizations(ivs, accLoopOp, &getContext());
 
     // Remove block arguments in order to create loop-nest and move current body
     // in the newly created loop nest.

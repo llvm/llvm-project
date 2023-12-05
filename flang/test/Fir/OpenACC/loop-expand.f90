@@ -12,7 +12,7 @@ subroutine singleloop(a)
 end subroutine
 ! CHECK-LABEL: func.func @_QPsingleloop
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsingleloopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: acc.loop private
+! CHECK: acc.loop {
 ! CHECK:   %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK:   %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
 ! CHECK:   %[[STEP0:.*]] = fir.convert %c1_i32_0 : (i32) -> index
@@ -42,7 +42,7 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsingle_loop_with_nest
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsingle_loop_with_nestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: acc.loop private
+! CHECK: acc.loop {
 ! CHECK:   %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK:   %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
 ! CHECK:   %[[STEP0:.*]] = fir.convert %c1_i32_0 : (i32) -> index
@@ -75,7 +75,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPloop_with_nest
 ! CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_with_nestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[J:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_with_nestEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK: acc.loop {
 ! CHECK:   %[[LB0:.*]] = fir.convert %{{.*}} : (i32) -> index
 ! CHECK:   %[[UB0:.*]] = fir.convert %{{.*}} : (i32) -> index
 ! CHECK:   %[[STEP0:.*]] = fir.convert %{{.*}} : (i32) -> index
@@ -115,7 +115,7 @@ subroutine loop_unstructured(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPloop_unstructured
-! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>)
+! CHECK: acc.loop {
 
 subroutine loop_iv_8()
   integer(4), parameter :: N = 10
@@ -131,7 +131,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPloop_iv_8()
 
 ! CHECK: %[[II:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFloop_iv_8Eii"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK: acc.loop
+! CHECK: acc.loop {
 ! CHECK: %[[LB0:.*]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK: %[[UB0:.*]] = fir.convert %c10_i32 : (i32) -> index
 ! CHECK: %[[STEP0:.*]] = fir.convert %c1_i32_0 : (i32) -> index
