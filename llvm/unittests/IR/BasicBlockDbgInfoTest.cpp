@@ -114,7 +114,6 @@ TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
   UseNewDbgInfoFormat = false;
 }
 
-
 TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
