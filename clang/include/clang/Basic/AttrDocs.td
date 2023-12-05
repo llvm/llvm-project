@@ -2515,12 +2515,13 @@ example, the following will emit 4 versions of the function:
     __attribute__((target_clones("arch=atom,avx2","arch=ivybridge","default")))
     void foo() {}
 
-Dispatch is done via ``ifunc`` mechanism. The assembler name of the indirect
-function is the original assembler name of the multiversioned function. For
-backward compatibility, an alias to this function is currently generated
-with an ``.ifunc`` suffix. This symbol is deprecated and may be removed
-in the future.
-
+For targets that support the GNU indirect function (IFUNC) feature, dispatch
+is performed by emitting an indirect function that is resolved to the appropriate
+target clone at load time. The indirect function is given the name the
+multiversioned function would have if it had been declared without the attribute.
+For backward compatibility with earlier Clang releases, a function alias with an
+``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
+feature and support for it may be removed in the future.
 }];
 }
 
