@@ -472,9 +472,8 @@ bool ArrayBoundCheckerV2::isInAddressOf(const Stmt *S, ASTContext &ACtx) {
       return false;
     S = Parents[0].get<Stmt>();
   } while (isa_and_nonnull<ParenExpr, ImplicitCastExpr>(S));
-  if (const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(S))
-    return UnaryOp->getOpcode() == UO_AddrOf;
-  return false;
+  const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(S);
+  return UnaryOp && UnaryOp->getOpcode() == UO_AddrOf;
 }
 
 void ento::registerArrayBoundCheckerV2(CheckerManager &mgr) {
