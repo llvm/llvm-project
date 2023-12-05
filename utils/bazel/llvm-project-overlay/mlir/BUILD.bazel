@@ -8381,6 +8381,18 @@ cc_library(
 )
 
 cc_library(
+    name = "SPIRVToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/SPIRV/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/SPIRV/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SPIRVDialect",
+        ":ToLLVMIRTranslation",
+    ],
+)
+
+cc_library(
     name = "GPUToLLVMIRTranslation",
     srcs = [
         "lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp",
@@ -8516,6 +8528,7 @@ cc_library(
         ":OpenMPToLLVMIRTranslation",
         ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
+        ":SPIRVToLLVMIRTranslation",
         ":X86VectorToLLVMIRTranslation",
     ],
 )
