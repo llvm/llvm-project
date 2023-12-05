@@ -290,12 +290,12 @@ llvm.mlir.global external @global_with_expr_2() {addr_space = 0 : i32, dbg_expr 
 // -----
 
 // CHECK-DAG: ![[FILE1:.*]] = !DIFile(filename: "foo1.mlir", directory: "/test/")
-// CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: "foo2.mlir", directory: "/test/")
 #di_file_1 = #llvm.di_file<"foo1.mlir" in "/test/">
+// CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: "foo2.mlir", directory: "/test/")
 #di_file_2 = #llvm.di_file<"foo2.mlir" in "/test/">
-// CHECK-DAG: ![[SCOPE1:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE1]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
 // CHECK-DAG: ![[SCOPE2:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE2]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: DebugDirectivesOnly)
 #di_compile_unit_1 = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file_1, producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
+// CHECK-DAG: ![[SCOPE1:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[FILE1]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
 #di_compile_unit_2 = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file_2, producer = "MLIR", isOptimized = true, emissionKind = DebugDirectivesOnly>
 #di_subprogram_1 = #llvm.di_subprogram<compileUnit = #di_compile_unit_1, scope = #di_file_1, name = "func1", file = #di_file_1, subprogramFlags = "Definition|Optimized">
 #di_subprogram_2 = #llvm.di_subprogram<compileUnit = #di_compile_unit_2, scope = #di_file_2, name = "func2", file = #di_file_2, subprogramFlags = "Definition|Optimized">
