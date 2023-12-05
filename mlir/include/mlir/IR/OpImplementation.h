@@ -774,9 +774,6 @@ public:
     return parseCommaSeparatedList(Delimiter::None, parseElementFn);
   }
 
-  template <typename OutIt>
-  ParseResult parseShape(SmallVectorImpl<int64_t> &dims);
-
   //===--------------------------------------------------------------------===//
   // Keyword Parsing
   //===--------------------------------------------------------------------===//
@@ -1769,7 +1766,7 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-// Custom attribute printers and parsers.
+// Custom printers and parsers.
 //===--------------------------------------------------------------------===//
 
 // Handles custom<Shape>(...) in TableGen.

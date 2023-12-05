@@ -3932,7 +3932,7 @@ void Block::printAsOperand(raw_ostream &os, AsmState &state) {
 }
 
 //===--------------------------------------------------------------------===//
-// Custom attribute printers and parsers.
+// Custom printers and parsers.
 //===--------------------------------------------------------------------===//
 namespace mlir {
 
