@@ -6,46 +6,28 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Functionality for handling RTL plugins.
+// Initialization and tear down of the offload runtime.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Object/OffloadBinary.h"
-
-#include "DeviceImage.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginManager.h"
-#include "device.h"
-#include "private.h"
-#include "rtl.h"
 
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
-#include "Shared/Utils.h"
-
-#include <cassert>
-#include <cstdlib>
-#include <cstring>
-#include <memory>
-#include <mutex>
-#include <string>
-
-using namespace llvm;
-using namespace llvm::sys;
-using namespace llvm::omp::target;
 
 #ifdef OMPT_SUPPORT
-extern void ompt::connectLibrary();
+extern void llvm::omp::target::ompt::connectLibrary();
 #endif
 
 __attribute__((constructor(101))) void init() {
-  DP("Init target library!\n");
+  DP("Init offload library!\n");
 
   PM = new PluginManager();
 
 #ifdef OMPT_SUPPORT
   // Initialize OMPT first
-  ompt::connectLibrary();
+  llvm::omp::target::ompt::connectLibrary();
 #endif
 
   PM->init();
@@ -55,6 +37,6 @@ __attribute__((constructor(101))) void init() {
 }
 
 __attribute__((destructor(101))) void deinit() {
-  DP("Deinit target library!\n");
+  DP("Deinit offload library!\n");
   delete PM;
 }
