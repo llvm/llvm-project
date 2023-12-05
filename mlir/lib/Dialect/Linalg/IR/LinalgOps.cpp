@@ -716,11 +716,16 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
           rewriter, loc, addMap, {std::get<0>(p), std::get<1>(p)}));
     }
 
+    RankedTensorType srcPadType = srcPadOp.getSourceType();
     SmallVector<OpFoldResult, 4> newSizes;
-    for (int i = 0, e = srcPadOp.getSourceType().getRank(); i < e; ++i) {
-      newSizes.push_back(
-          rewriter.create<tensor::DimOp>(loc, srcPadOp.getSource(), i)
-              .getResult());
+    for (int i = 0, e = srcPadType.getRank(); i < e; ++i) {
+      if (srcPadType.isDynamicDim(i)) {
+        newSizes.push_back(
+            rewriter.create<tensor::DimOp>(loc, srcPadOp.getSource(), i)
+                .getResult());
+      } else {
+        newSizes.push_back(rewriter.getIndexAttr(srcPadType.getDimSize(i)));
+      }
     }
 
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
