@@ -172,27 +172,7 @@ bool CIRGenModule::tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     llvm_unreachable("NYI");
 
   // Create the alias with no name.
-  auto *AliasFD = dyn_cast<FunctionDecl>(AliasDecl.getDecl());
-  assert(AliasFD && "expected FunctionDecl");
-  auto Alias = createCIRFunction(getLoc(AliasDecl.getDecl()->getSourceRange()),
-                                 "", Aliasee.getFunctionType(), AliasFD);
-  Alias.setAliasee(Aliasee.getName());
-  Alias.setLinkage(Linkage);
-  mlir::SymbolTable::setSymbolVisibility(
-      Alias, getMLIRVisibilityFromCIRLinkage(Linkage));
-
-  // Alias constructors and destructors are always unnamed_addr.
-  assert(!UnimplementedFeature::unnamedAddr());
-
-  // Switch any previous uses to the alias.
-  if (Entry) {
-    llvm_unreachable("NYI");
-  } else {
-    // Name already set by createCIRFunction
-  }
-
-  // Finally, set up the alias with its proper name and attributes.
-  setCommonAttributes(AliasDecl, Alias);
+  buildAliasForGlobal("", Entry, AliasDecl, Aliasee, Linkage);
   return false;
 }
 

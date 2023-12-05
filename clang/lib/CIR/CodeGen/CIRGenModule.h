@@ -431,6 +431,10 @@ public:
 
   bool tryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
 
+  void buildAliasForGlobal(StringRef mangledName, mlir::Operation *op,
+                           GlobalDecl aliasGD, mlir::cir::FuncOp aliasee,
+                           mlir::cir::GlobalLinkageKind linkage);
+
   mlir::Type getCIRType(const clang::QualType &type);
 
   /// Set the visibility for the given global.

@@ -1582,6 +1582,36 @@ mlir::cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   return getCIRLinkageForDeclarator(D, Linkage, /*IsConstantVariable=*/false);
 }
 
+void CIRGenModule::buildAliasForGlobal(StringRef mangledName,
+                                       mlir::Operation *op, GlobalDecl aliasGD,
+                                       mlir::cir::FuncOp aliasee,
+                                       mlir::cir::GlobalLinkageKind linkage) {
+
+  // Create the alias with no name.
+  auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
+  assert(aliasFD && "expected FunctionDecl");
+  auto alias =
+      createCIRFunction(getLoc(aliasGD.getDecl()->getSourceRange()),
+                        mangledName, aliasee.getFunctionType(), aliasFD);
+  alias.setAliasee(aliasee.getName());
+  alias.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      alias, getMLIRVisibilityFromCIRLinkage(linkage));
+
+  // Alias constructors and destructors are always unnamed_addr.
+  assert(!UnimplementedFeature::unnamedAddr());
+
+  // Switch any previous uses to the alias.
+  if (op) {
+    llvm_unreachable("NYI");
+  } else {
+    // Name already set by createCIRFunction
+  }
+
+  // Finally, set up the alias with its proper name and attributes.
+  setCommonAttributes(aliasGD, alias);
+}
+
 mlir::Type CIRGenModule::getCIRType(const QualType &type) {
   return genTypes.ConvertType(type);
 }
