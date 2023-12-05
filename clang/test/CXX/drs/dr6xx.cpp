@@ -637,12 +637,12 @@ namespace dr648 { // dr648: yes
 namespace dr649 { // dr649: 3.5
 // Maximum alignment is 8192 bytes for Windows, and 4 GB for Linux
 alignas(0x200000000) int n;
-// since-cxx11-error-re@-1 {{{{requested alignment must be \d+ bytes or smaller}}}}
+// since-cxx11-error-re@-1 {{{{requested alignment must be (8192|4294967296) bytes or smaller}}}}
 struct alignas(0x200000000) X {};
-// since-cxx11-error-re@-1 {{{{requested alignment must be \d+ bytes or smaller}}}}
+// since-cxx11-error-re@-1 {{{{requested alignment must be (8192|4294967296) bytes or smaller}}}}
 struct Y {
   int n alignas(0x200000000);
-  // since-cxx11-error-re@-1 {{{{requested alignment must be \d+ bytes or smaller}}}}
+  // since-cxx11-error-re@-1 {{{{requested alignment must be (8192|4294967296) bytes or smaller}}}}
 };
   struct alignas(256) Z {};
   // This part is superseded by dr2130 and eventually by aligned allocation support.
