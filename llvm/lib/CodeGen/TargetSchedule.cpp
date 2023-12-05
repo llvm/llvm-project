@@ -178,7 +178,7 @@ unsigned TargetSchedModel::computeOperandLatency(
   const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
 
   if (!hasInstrSchedModel() && !hasInstrItineraries())
-    return InstrLatency;
+    return DefaultDefLatency;
 
   if (hasInstrItineraries()) {
     std::optional<unsigned> OperLatency;
