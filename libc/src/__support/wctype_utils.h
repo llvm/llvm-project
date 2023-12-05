@@ -25,6 +25,7 @@ namespace internal {
 // of a function call by inlining them.
 // ------------------------------------------------------
 
+template<typename W = wint_t>
 LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
   // This needs to be translated to EOF at the callsite. This is to avoid
   // including stdio.h in this file.
@@ -33,7 +34,7 @@ LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
   // The standard states that wint_t may either be an alias of wchar_t or
   // an alias of an integer type, different platforms define this type with
   // different signedness, so we may need the c < 0 check.
-  if constexpr (cpp::is_signed_v<wint_t>)
+  if constexpr (cpp::is_signed_v<W>)
     if (c < 0)
       return cpp::nullopt;
   return static_cast<int>(c);
