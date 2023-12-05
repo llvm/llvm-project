@@ -4,7 +4,7 @@ modernize-use-std-numbers
 =========================
 
 Finds constants and function calls to math functions that can be replaced
-with c++20's mathematical constants from the ``numbers`` header and offers
+with C++20's mathematical constants from the ``numbers`` header and offers
 fix-it hints.
 Does not match the use of variables with that value, and instead,
 offers a replacement at the definition of those variables.
