@@ -22,14 +22,14 @@ constexpr bool test() {
   std::string strings[4] = {"aaaa", "bbbb", "cccc", "dddd"};
 
   { // Check if `outer_` is initialized with `std::move(outer)` for `iterator<false>`
-    MoveOnAccessSubrange r(DieOnCopyIterator(strings), sentinel_wrapper(strings + 4));
+    MoveOnAccessSubrange r{DieOnCopyIterator(strings), sentinel_wrapper(strings + 4)};
     std::ranges::join_view jv(std::move(r));
     auto iter = jv.begin(); // Calls `iterator(Parent& parent, OuterIter outer)`
     assert(*iter == 'a');
   }
 
   { // Check if `outer_` is initialized with `std::move(outer)` for `iterator<true>`
-    MoveOnAccessSubrange r(DieOnCopyIterator(strings), sentinel_wrapper(strings + 4));
+    MoveOnAccessSubrange r{DieOnCopyIterator(strings), sentinel_wrapper(strings + 4)};
     std::ranges::join_view jv(std::ranges::ref_view{r});
     auto iter = std::as_const(jv).begin(); // Calls `iterator(Parent& parent, OuterIter outer)`
     assert(*iter == 'a');

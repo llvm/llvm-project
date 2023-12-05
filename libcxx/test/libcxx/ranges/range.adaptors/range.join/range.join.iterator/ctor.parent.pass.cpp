@@ -19,8 +19,8 @@
 constexpr bool test() {
   std::string strings[4] = {"eeee", "ffff", "gggg", "hhhh"};
 
-  MoveOnAccessSubrange r(
-      DieOnCopyIterator(cpp20_input_iterator(strings)), sentinel_wrapper(cpp20_input_iterator(strings + 4)));
+  MoveOnAccessSubrange r{
+      DieOnCopyIterator(cpp20_input_iterator(strings)), sentinel_wrapper(cpp20_input_iterator(strings + 4))};
   std::ranges::join_view jv(std::move(r));
   auto iter = jv.begin(); // Calls `iterator(Parent& parent)`
   assert(*iter == 'e');
