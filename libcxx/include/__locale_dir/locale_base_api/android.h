@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_ANDROID_LOCALE_BIONIC_H
-#define _LIBCPP___SUPPORT_ANDROID_LOCALE_BIONIC_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H
 
 #if defined(__BIONIC__)
 
@@ -69,4 +69,4 @@ inline _LIBCPP_HIDE_FROM_ABI_C long strtol_l(const char* __nptr, char** __endptr
 #  endif     // defined(__ANDROID__)
 
 #endif // defined(__BIONIC__)
-#endif // _LIBCPP___SUPPORT_ANDROID_LOCALE_BIONIC_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_ANDROID_H

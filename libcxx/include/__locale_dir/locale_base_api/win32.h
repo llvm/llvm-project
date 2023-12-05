@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H
-#define _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
 
 #include <__config>
 #include <cstddef>
@@ -236,4 +236,4 @@ _LIBCPP_EXPORTED_FROM_ABI int vasprintf_l(char** __ret, locale_t __loc, const ch
 inline int isblank_l(int __c, locale_t /*loc*/) { return (__c == ' ' || __c == '\t'); }
 inline int iswblank_l(wint_t __c, locale_t /*loc*/) { return (__c == L' ' || __c == L'\t'); }
 
-#endif // _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_WIN32_H
