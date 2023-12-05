@@ -11,7 +11,7 @@
 // CHECK-LABEL: define dso_local <vscale x 32 x i16> @test_svluti4_lane_zt_u16
 // CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -25,7 +25,7 @@
 // CPP-CHECK-LABEL: define dso_local <vscale x 32 x i16> @_Z24test_svluti4_lane_zt_u16u11__SVUint8_t
 // CPP-CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0:[0-9]+]] {
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -37,13 +37,13 @@
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP8]]
 //
 svuint16x4_t test_svluti4_lane_zt_u16(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
-  return svluti4_lane_zt_u16_x4(0, zn, 0);
+  return svluti4_lane_zt_u16_x4(0, zn, 1);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 32 x half> @test_svluti4_lane_zt_f16
 // CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8f16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8f16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -57,7 +57,7 @@ svuint16x4_t test_svluti4_lane_zt_u16(svuint8_t zn) __arm_streaming __arm_shared
 // CPP-CHECK-LABEL: define dso_local <vscale x 32 x half> @_Z24test_svluti4_lane_zt_f16u11__SVUint8_t
 // CPP-CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8f16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8f16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP0]], 1
@@ -69,13 +69,13 @@ svuint16x4_t test_svluti4_lane_zt_u16(svuint8_t zn) __arm_streaming __arm_shared
 // CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP8]]
 //
 svfloat16x4_t test_svluti4_lane_zt_f16(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
-  return svluti4_lane_zt_f16_x4(0, zn, 0);
+  return svluti4_lane_zt_f16_x4(0, zn, 1);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 32 x bfloat> @test_svluti4_lane_zt_bf16
 // CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8bf16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8bf16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
@@ -89,7 +89,7 @@ svfloat16x4_t test_svluti4_lane_zt_f16(svuint8_t zn) __arm_streaming __arm_share
 // CPP-CHECK-LABEL: define dso_local <vscale x 32 x bfloat> @_Z25test_svluti4_lane_zt_bf16u11__SVUint8_t
 // CPP-CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8bf16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8bf16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x bfloat> @llvm.vector.insert.nxv32bf16.nxv8bf16(<vscale x 32 x bfloat> poison, <vscale x 8 x bfloat> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } [[TMP0]], 1
@@ -101,13 +101,13 @@ svfloat16x4_t test_svluti4_lane_zt_f16(svuint8_t zn) __arm_streaming __arm_share
 // CPP-CHECK-NEXT:    ret <vscale x 32 x bfloat> [[TMP8]]
 //
 svbfloat16x4_t test_svluti4_lane_zt_bf16(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
-  return svluti4_lane_zt_bf16_x4(0, zn, 0);
+  return svluti4_lane_zt_bf16_x4(0, zn, 1);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 32 x i16> @test_svluti4_lane_zt_s16
 // CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -121,7 +121,7 @@ svbfloat16x4_t test_svluti4_lane_zt_bf16(svuint8_t zn) __arm_streaming __arm_sha
 // CPP-CHECK-LABEL: define dso_local <vscale x 32 x i16> @_Z24test_svluti4_lane_zt_s16u11__SVUint8_t
 // CPP-CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> [[ZN]], i32 1)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP0]], 1
@@ -133,7 +133,7 @@ svbfloat16x4_t test_svluti4_lane_zt_bf16(svuint8_t zn) __arm_streaming __arm_sha
 // CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP8]]
 //
 svint16x4_t test_svluti4_lane_zt_s16(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
-  return svluti4_lane_zt_s16_x4(0, zn, 0);
+  return svluti4_lane_zt_s16_x4(0, zn, 1);
 }
 
 // CHECK-LABEL: define dso_local <vscale x 16 x i32> @test_svluti4_lane_zt_u32

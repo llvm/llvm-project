@@ -1885,9 +1885,9 @@ void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
       CurDAG->getMachineNode(Opc, DL, {MVT::Untyped, MVT::Other}, Ops);
   SDValue SuperReg = SDValue(Instruction, 0);
 
-  for (unsigned i = 0; i < NumOutVecs; ++i)
-    ReplaceUses(SDValue(Node, i), CurDAG->getTargetExtractSubreg(
-                                      AArch64::zsub0 + i, DL, VT, SuperReg));
+  for (unsigned I = 0; I < NumOutVecs; ++I)
+    ReplaceUses(SDValue(Node, I), CurDAG->getTargetExtractSubreg(
+                                      AArch64::zsub0 + I, DL, VT, SuperReg));
 
   // Copy chain
   unsigned ChainIdx = NumOutVecs;

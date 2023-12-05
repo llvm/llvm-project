@@ -10,7 +10,7 @@
 
 // CHECK-LABEL: @test_svluti2_lane_zt_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 3)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -23,7 +23,7 @@
 //
 // CPP-CHECK-LABEL: @_Z23test_svluti2_lane_zt_u8u11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 3)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -35,13 +35,13 @@
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP8]]
 //
 svuint8x4_t test_svluti2_lane_zt_u8(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
-  return svluti2_lane_zt_u8_x4(0, zn, 0);
+  return svluti2_lane_zt_u8_x4(0, zn, 3);
 }
 
 
 // CHECK-LABEL: @test_svluti2_lane_zt_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 3)
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -54,7 +54,7 @@ svuint8x4_t test_svluti2_lane_zt_u8(svuint8_t zn) __arm_streaming __arm_shared_z
 //
 // CPP-CHECK-LABEL: @_Z23test_svluti2_lane_zt_s8u11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sme.luti2.lane.zt.x4.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 3)
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 0
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP1]], i64 0)
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], 1
@@ -66,7 +66,7 @@ svuint8x4_t test_svluti2_lane_zt_u8(svuint8_t zn) __arm_streaming __arm_shared_z
 // CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP8]]
 //
 svint8x4_t test_svluti2_lane_zt_s8(svuint8_t zn) __arm_streaming __arm_shared_za __arm_preserves_za {
-  return svluti2_lane_zt_s8_x4(0, zn, 0);
+  return svluti2_lane_zt_s8_x4(0, zn, 3);
 }
 
 // CHECK-LABEL: @test_svluti2_lane_zt_u16(

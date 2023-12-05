@@ -6,9 +6,9 @@
 define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @luti4_i16(<vscale x 16 x i8> %x) {
 ; CHECK-LABEL: luti4_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    luti4 { z0.h - z3.h }, zt0, z0[0]
+; CHECK-NEXT:    luti4 { z0.h - z3.h }, zt0, z0[1]
 ; CHECK-NEXT:    ret
-    %res = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> %x, i32 0)
+    %res = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.luti4.lane.zt.x4.nxv8i16(i32 0, <vscale x 16 x i8> %x, i32 1)
     ret {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} %res
 }
 
