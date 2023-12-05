@@ -1239,6 +1239,29 @@ inline SpecificBinaryOp_match<LHS, RHS> m_BinOp(unsigned Opcode, const LHS &L,
   return SpecificBinaryOp_match<LHS, RHS>(Opcode, L, R);
 }
 
+template <typename LHS, typename RHS>
+struct DisjointOr_match {
+  LHS L;
+  RHS R;
+
+  DisjointOr_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(V)) {
+      assert(PDI->getOpcode() == Instruction::Or && "Only or can be disjoint");
+      if (!PDI->isDisjoint())
+        return false;
+      return L.match(PDI->getOperand(0)) && R.match(PDI->getOperand(1));
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline DisjointOr_match<LHS, RHS> m_DisjointOr(const LHS &L, const RHS &R) {
+  return DisjointOr_match<LHS, RHS>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //

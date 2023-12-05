@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-def imm_to_tile8   : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAB0>", []>;
-def imm_to_tile16  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAH0>", []>;
-def imm_to_tile32  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAS0>", []>;
-def imm_to_tile64  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAD0>", []>;
-def imm_to_tile128 : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAQ0>", []>;
+def imm_to_tile8   : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAB0, 0>",  []>;
+def imm_to_tile16  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAH0, 1>",  []>;
+def imm_to_tile32  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAS0, 3>",  []>;
+def imm_to_tile64  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAD0, 7>",  []>;
+def imm_to_tile128 : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAQ0, 15>", []>;
+def imm_to_zt      : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZT0,  0>",  []>;
 
 def tileslice8   : ComplexPattern<i32 , 2, "SelectSMETileSlice<15, 1>", []>;
 def tileslice16  : ComplexPattern<i32 , 2, "SelectSMETileSlice<7,  1>", []>;
@@ -221,6 +222,7 @@ def MSRpstatesvcrImm1
   let Inst{11-9} = pstatefield;
   let Inst{8} = imm;
   let Inst{7-5} = 0b011; // op2
+  let hasPostISelHook = 1;
 }
 
 def : InstAlias<"smstart",    (MSRpstatesvcrImm1 0b011, 0b1)>;
@@ -3118,6 +3120,17 @@ class sme2_zero_zt<string mnemonic, bits<4> opc>
   let Inst{3-0}  = opc;
 }
 
+multiclass sme2_zero_zt<string mnemonic, bits<4> opc> {
+  def NAME : sme2_zero_zt<mnemonic, opc>;
+  def NAME # _PSEUDO
+        : Pseudo<(outs), (ins ZTR:$ZT), []>, Sched<[]> {
+    // Translated to actual instruction in AArch64ISelLowering.cpp
+    let usesCustomInserter = 1;
+  }
+  def : Pat<(int_aarch64_sme_zero_zt (imm_to_zt untyped:$zt)),
+          (!cast<Instruction>(NAME # _PSEUDO) $zt)>;
+}
+
 //===----------------------------------------------------------------------===//
 // SME2 lookup table load/store
 class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
@@ -3135,6 +3148,18 @@ class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
 
   let mayLoad     = !not(opc{7});
   let mayStore    = opc{7};
+}
+
+
+multiclass sme2_spill_fill_vector<string mnemonic, bits<8> opc, SDPatternOperator op> {
+  def NAME : sme2_spill_fill_vector<mnemonic, opc>;
+  def NAME # _PSEUDO
+      : Pseudo<(outs), (ins ZTR:$ZTt, GPR64sp:$base), []>, Sched<[]> {
+    // Translated to actual instruction in AArch64ISelLowering.cpp
+    let usesCustomInserter = 1;
+  }
+  def : Pat<(op (imm_to_zt untyped:$tile), GPR64sp:$base),
+            (!cast<Instruction>(NAME # _PSEUDO) $tile, $base)>;
 }
 
 //===----------------------------------------------------------------------===///

@@ -93,7 +93,12 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
                         cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(false));
+                        cl::init(true));
+
+static cl::opt<bool> EnableMISchedLoadClustering(
+    "riscv-misched-load-clustering", cl::Hidden,
+    cl::desc("Enable load clustering in the machine scheduler"),
+    cl::init(false));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
@@ -345,12 +350,16 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
     const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    if (ST.hasMacroFusion()) {
-      ScheduleDAGMILive *DAG = createGenericSchedLive(C);
-      DAG->addMutation(createRISCVMacroFusionDAGMutation());
-      return DAG;
+    ScheduleDAGMILive *DAG = nullptr;
+    if (EnableMISchedLoadClustering) {
+      DAG = createGenericSchedLive(C);
+      DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
     }
-    return nullptr;
+    if (ST.hasMacroFusion()) {
+      DAG = DAG ? DAG : createGenericSchedLive(C);
+      DAG->addMutation(createRISCVMacroFusionDAGMutation());
+    }
+    return DAG;
   }
 
   ScheduleDAGInstrs *

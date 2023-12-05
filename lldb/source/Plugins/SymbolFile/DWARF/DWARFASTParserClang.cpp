@@ -980,8 +980,9 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
   return clang::CC_C;
 }
 
-TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
-                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP
+DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
+                                     const ParsedDWARFTypeAttributes &attrs) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1090,16 +1091,10 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         }
 
         if (class_opaque_type) {
-          // If accessibility isn't set to anything valid, assume public
-          // for now...
-          if (attrs.accessibility == eAccessNone)
-            attrs.accessibility = eAccessPublic;
-
           clang::ObjCMethodDecl *objc_method_decl =
               m_ast.AddMethodToObjCObjectType(
                   class_opaque_type, attrs.name.GetCString(), clang_type,
-                  attrs.accessibility, attrs.is_artificial, is_variadic,
-                  attrs.is_objc_direct_call);
+                  attrs.is_artificial, is_variadic, attrs.is_objc_direct_call);
           type_handled = objc_method_decl != nullptr;
           if (type_handled) {
             LinkDeclContextToDIE(objc_method_decl, die);
@@ -1206,14 +1201,15 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                   // Neither GCC 4.2 nor clang++ currently set a valid
                   // accessibility in the DWARF for C++ methods...
                   // Default to public for now...
-                  if (attrs.accessibility == eAccessNone)
-                    attrs.accessibility = eAccessPublic;
+                  const auto accessibility = attrs.accessibility == eAccessNone
+                                                 ? eAccessPublic
+                                                 : attrs.accessibility;
 
                   clang::CXXMethodDecl *cxx_method_decl =
                       m_ast.AddMethodToCXXRecordType(
                           class_opaque_type.GetOpaqueQualType(),
                           attrs.name.GetCString(), attrs.mangled_name,
-                          clang_type, attrs.accessibility, attrs.is_virtual,
+                          clang_type, accessibility, attrs.is_virtual,
                           is_static, attrs.is_inline, attrs.is_explicit,
                           is_attr_used, attrs.is_artificial);
 

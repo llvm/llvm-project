@@ -2126,9 +2126,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       }
     } else if (MO->isReg() && MO->isTied())
       report("Explicit operand should not be tied", MO, MONum);
-  } else {
+  } else if (!MI->isVariadic()) {
     // ARM adds %reg0 operands to indicate predicates. We'll allow that.
-    if (MO->isReg() && !MO->isImplicit() && !MI->isVariadic() && MO->getReg())
+    if (!MO->isValidExcessOperand())
       report("Extra explicit operand on non-variadic instruction", MO, MONum);
   }
 

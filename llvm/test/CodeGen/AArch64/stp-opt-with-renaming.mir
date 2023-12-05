@@ -622,7 +622,7 @@ body:             |
     STRQui killed renamable $q0, $sp, 2 :: (store 16, align 128)
     RET undef $lr
 
-... 
+...
 ---
 #
 # CHECK-LABEL: name: ldst-no-reg-available
@@ -650,7 +650,7 @@ body:             |
     STRQui killed renamable $q0, $sp, 2 :: (store 16, align 32)
     RET undef $lr
 
-... 
+...
 ---
 #
 # CHECK-LABEL: name: ldst-basereg-modified
@@ -677,7 +677,7 @@ body:             |
     STRQui killed renamable $q0, $sp, 2 :: (store 16, align 32)
     RET undef $lr
 
-... 
+...
 ---
 #
 # CHECK-LABEL: name: ldr-dest-reg-implicit-killed
@@ -700,3 +700,115 @@ body:             |
     renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
     STRSui renamable $s0, $sp, 10, implicit killed $q0 :: (store (s32))
     RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: bundled
+# CHECK: renamable $q0, $q1 = LDPQi $sp, 0 :: (load (s128)), (load (s128), align 32)
+# CHECK-NEXT: STPSi $s1, renamable $s0, $sp, 9 :: (store (s32))
+# CHECK-NEXT: BUNDLE implicit-def $z3
+# CHECK-NEXT:  $z3 = MOVPRFX_ZZ $z19
+# CHECK-NEXT:  $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+# CHECK-NEXT: }
+# CHECK-NEXT: RET undef $lr
+#
+name:            bundled
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $z3, $z19, $p0, $z16
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRSui renamable $s0, $sp, 9, implicit killed $q0 :: (store (s32))
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z16 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+    }
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRSui renamable $s0, $sp, 10, implicit killed $q0 :: (store (s32))
+    RET undef $lr
+...
+---
+#
+# CHECK-LABEL: name: bundled_use
+# CHECK: renamable $q0 = LDRQui $sp, 1
+# CHECK-NEXT: STRQui renamable $q0, $sp, 3, implicit-def $z0
+# CHECK-NEXT: BUNDLE implicit-def $z3
+# CHECK-NEXT:  $z3 = MOVPRFX_ZZ $z19
+# CHECK-NEXT:  $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z0
+# CHECK-NEXT: }
+# CHECK-NEXT: renamable $q0 = LDRQui $sp, 0
+# CHECK-NEXT: STRQui killed renamable $q0, $sp, 2
+# CHECK-NEXT: RET undef $lr
+#
+name:            bundled_use
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $z3, $z19, $p0, $z16
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRQui renamable $q0, $sp, 3, implicit-def $z0 :: (store 16, basealign 128)
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z0, implicit $q0 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z0
+    }
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 128)
+    STRQui killed renamable $q0, $sp, 2 :: (store 16, align 128)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: bundle_at_limit
+# CHECK: renamable $x3, $x4 = LDPXi $sp, 1 :: (load (s64))
+#
+name:            bundle_at_limit
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2, $z0, $p0, $z3, $z19
+    renamable $x3 = LDRXui $sp, 2 :: (load (s64))
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x3, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x2, 1, 0
+    $x2 = ADDXri renamable $x3, 1, 0
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z0 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z0
+    }
+    $x2 = ADDXri renamable $x3, 1, 0
+    renamable $x3 = LDRXui $sp, 1 :: (load (s64))
+    RET undef $lr
+
+...

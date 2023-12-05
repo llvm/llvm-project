@@ -1851,6 +1851,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandHashInMacro) {
+  auto Tokens = annotate("#define Foo(Bar) \\\n"
+                         "  { \\\n"
+                         "    #Bar \\\n"
+                         "  }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+
+  Tokens = annotate("#define Foo(Bar) \\\n"
+                    "  { #Bar }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
   // '__attribute__' has special handling.
   auto Tokens = annotate("__attribute__(X) void Foo(void);");
@@ -1980,17 +1996,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // joined operators, we don't have a separate type, so we only test for their
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
-      {prec::Comma, "<->"},       {prec::Assignment, "+="},
-      {prec::Assignment, "-="},   {prec::Assignment, "*="},
-      {prec::Assignment, "/="},   {prec::Assignment, "%="},
-      {prec::Assignment, "&="},   {prec::Assignment, "^="},
-      {prec::Assignment, "<<="},  {prec::Assignment, ">>="},
-      {prec::Assignment, "<<<="}, {prec::Assignment, ">>>="},
-      {prec::LogicalOr, "||"},    {prec::LogicalAnd, "&&"},
-      {prec::Equality, "=="},     {prec::Equality, "!="},
-      {prec::Equality, "==="},    {prec::Equality, "!=="},
-      {prec::Equality, "==?"},    {prec::Equality, "!=?"},
-      {prec::ExclusiveOr, "~^"},  {prec::ExclusiveOr, "^~"},
+      {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Assignment, "+="},   {prec::Assignment, "-="},
+      {prec::Assignment, "*="},   {prec::Assignment, "/="},
+      {prec::Assignment, "%="},   {prec::Assignment, "&="},
+      {prec::Assignment, "^="},   {prec::Assignment, "<<="},
+      {prec::Assignment, ">>="},  {prec::Assignment, "<<<="},
+      {prec::Assignment, ">>>="}, {prec::LogicalOr, "||"},
+      {prec::LogicalAnd, "&&"},   {prec::Equality, "=="},
+      {prec::Equality, "!="},     {prec::Equality, "==="},
+      {prec::Equality, "!=="},    {prec::Equality, "==?"},
+      {prec::Equality, "!=?"},    {prec::ExclusiveOr, "~^"},
+      {prec::ExclusiveOr, "^~"},
   };
   for (auto Operator : JoinedBinary) {
     auto Tokens = Annotate(std::string("x = x ") + Operator.second + " x;");
