@@ -15,19 +15,19 @@ constant, instead of changing the macro definition.
 
 The following list of constants from the ``numbers`` header are supported:
 
-* e
-* log2e
-* log10e
-* pi
-* inv_pi
-* inv_sqrtpi
-* ln2
-* ln10
-* sqrt2
-* sqrt3
-* inv_sqrt3
-* egamma
-* phi
+* ``e``
+* ``log2e``
+* ``log10e``
+* ``pi``
+* ``inv_pi``
+* ``inv_sqrtpi``
+* ``ln2``
+* ``ln10``
+* ``sqrt2``
+* ``sqrt3``
+* ``inv_sqrt3``
+* ``egamma``
+* ``phi``
 
 The list currently includes all constants as of C++20.
 
