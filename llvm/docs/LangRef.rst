@@ -21791,9 +21791,8 @@ The third argument is the explicit vector length of the operation.
 Semantics:
 """"""""""
 
-This intrinsic population counts first ``evl`` elements in a vector.
-The lanes in the result vector disabled by ``mask`` are ``poison``. The
-elements past ``evl`` are poison.
+This intrinsic population counts first ``evl`` elements actived by ``mask`` in a
+vector.
 
 .. _int_vp_load:
 
