@@ -45,8 +45,7 @@ concept __member_rend =
     { _LIBCPP_AUTO_CAST(__t.rend()) } -> sentinel_for<decltype(ranges::rbegin(__t))>;
   };
 
-void rend(auto&) = delete;
-void rend(const auto&) = delete;
+void rend() = delete;
 
 template <class _Tp>
 concept __unqualified_rend =

@@ -12,6 +12,10 @@
 
 // template<class T> constexpr strong_ordering strong_order(const T& a, const T& b);
 
+// Note: this header is intentionally included before any other header.
+// Comparison functions defined there must be visible to CPOs from `<compare>` header.
+#include "ordinary_unqualified_lookup_helpers.h"
+
 #include <compare>
 
 #include <cassert>
@@ -447,6 +451,11 @@ constexpr bool test_1_4()
 
     return true;
 }
+
+// Ordinary unqualified lookup should not be performed.
+static_assert(!std::is_invocable_v<decltype(std::strong_order),
+                                   nest::StructWithGlobalCmpFunctions,
+                                   nest::StructWithGlobalCmpFunctions>);
 
 int main(int, char**)
 {

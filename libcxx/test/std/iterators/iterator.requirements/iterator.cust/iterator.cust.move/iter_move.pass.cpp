@@ -11,6 +11,14 @@
 // template<class I>
 // unspecified iter_move;
 
+// Note: this struct is intentionally defined before any other header is included.
+// Custom `iter_move` must be visible to `std::ranges::iter_move` CPO from `<iterator>` header.
+namespace nest {
+struct StructWithGlobalIterMove {};
+} // namespace nest
+
+int&& iter_move(nest::StructWithGlobalIterMove);
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -185,6 +193,9 @@ struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(std::is_invocable_v<IterMoveT, Holder<Incomplete>**>);
 static_assert(std::is_invocable_v<IterMoveT, Holder<Incomplete>**&>);
+
+// Ordinary unqualified lookup should not be performed.
+static_assert(!std::is_invocable_v<IterMoveT, nest::StructWithGlobalIterMove&>);
 
 int main(int, char**)
 {

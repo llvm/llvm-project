@@ -41,8 +41,7 @@ namespace ranges {
 
 namespace ranges {
 namespace __size {
-void size(auto&) = delete;
-void size(const auto&) = delete;
+void size() = delete;
 
 template <class _Tp>
 concept __size_enabled = !disable_sized_range<remove_cvref_t<_Tp>>;

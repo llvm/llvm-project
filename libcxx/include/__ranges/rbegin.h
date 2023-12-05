@@ -43,8 +43,7 @@ concept __member_rbegin =
     { _LIBCPP_AUTO_CAST(__t.rbegin()) } -> input_or_output_iterator;
   };
 
-void rbegin(auto&) = delete;
-void rbegin(const auto&) = delete;
+void rbegin() = delete;
 
 template <class _Tp>
 concept __unqualified_rbegin =

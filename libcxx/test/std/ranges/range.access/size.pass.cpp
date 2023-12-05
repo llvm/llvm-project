@@ -10,6 +10,10 @@
 
 // std::ranges::size
 
+// Note: this header is intentionally included before any other header.
+// Access functions defined here must be visible to accessors from `<ranges>` header.
+#include "ordinary_unqualified_lookup_helpers.h"
+
 #include <ranges>
 
 #include <cassert>
@@ -219,7 +223,7 @@ inline constexpr bool std::ranges::disable_sized_range<const ImproperlyDisabledF
 
 static_assert( std::is_invocable_v<RangeSizeT, ImproperlyDisabledMember&>);
 static_assert( std::is_invocable_v<RangeSizeT, const ImproperlyDisabledMember&>);
-static_assert(!std::is_invocable_v<RangeSizeT, ImproperlyDisabledFunction&>);
+static_assert( std::is_invocable_v<RangeSizeT, ImproperlyDisabledFunction&>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeSizeT, const ImproperlyDisabledFunction&>);
 
 // No begin end.
@@ -317,6 +321,9 @@ struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*&>);
+
+// Ordinary unqualified lookup should not be performed.
+static_assert(!std::is_invocable_v<RangeSizeT, nest::StructWithGlobalAccess&>);
 
 int main(int, char**) {
   testArrayType();

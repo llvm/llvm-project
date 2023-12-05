@@ -11,6 +11,10 @@
 // std::ranges::begin
 // std::ranges::cbegin
 
+// Note: this header is intentionally included before any other header.
+// Access functions defined here must be visible to accessors from `<ranges>` header.
+#include "ordinary_unqualified_lookup_helpers.h"
+
 #include <ranges>
 
 #include <cassert>
@@ -192,7 +196,7 @@ struct BeginFunction {
 };
 static_assert( std::is_invocable_v<RangeBeginT,  BeginFunction const&>);
 static_assert(!std::is_invocable_v<RangeBeginT,  BeginFunction &&>);
-static_assert(!std::is_invocable_v<RangeBeginT,  BeginFunction &>);
+static_assert( std::is_invocable_v<RangeBeginT,  BeginFunction &>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeCBeginT, BeginFunction const&>);
 static_assert( std::is_invocable_v<RangeCBeginT, BeginFunction &>);
 
@@ -245,7 +249,7 @@ private:
 constexpr bool testBeginFunction() {
   BeginFunction a{};
   const BeginFunction aa{};
-  static_assert(!std::invocable<RangeBeginT, decltype((a))>);
+  assert(std::ranges::begin(a) == &a.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cbegin(a) == &a.x);
   assert(std::ranges::begin(aa) == &aa.x);
   assert(std::ranges::cbegin(aa) == &aa.x);
@@ -266,21 +270,21 @@ constexpr bool testBeginFunction() {
 
   BeginFunctionReturnsEmptyPtr d{};
   const BeginFunctionReturnsEmptyPtr dd{};
-  static_assert(!std::invocable<RangeBeginT, decltype((d))>);
+  assert(std::ranges::begin(d) == &d.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cbegin(d) == &d.x);
   assert(std::ranges::begin(dd) == &dd.x);
   assert(std::ranges::cbegin(dd) == &dd.x);
 
   BeginFunctionWithDataMember e{};
   const BeginFunctionWithDataMember ee{};
-  static_assert(!std::invocable<RangeBeginT, decltype((e))>);
+  assert(std::ranges::begin(e) == &e.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::begin(ee) == &ee.x);
   assert(std::ranges::cbegin(e) == &e.x);
   assert(std::ranges::cbegin(ee) == &ee.x);
 
   BeginFunctionWithPrivateBeginMember f{};
   const BeginFunctionWithPrivateBeginMember ff{};
-  static_assert(!std::invocable<RangeBeginT, decltype((f))>);
+  assert(std::ranges::begin(f) == &f.y); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::cbegin(f) == &f.y);
   assert(std::ranges::begin(ff) == &ff.y);
   assert(std::ranges::cbegin(ff) == &ff.y);
@@ -324,6 +328,10 @@ static_assert(!std::is_invocable_v<RangeBeginT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeBeginT, Holder<Incomplete>*&>);
 static_assert(!std::is_invocable_v<RangeCBeginT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeCBeginT, Holder<Incomplete>*&>);
+
+// Ordinary unqualified lookup should not be performed.
+static_assert(!std::is_invocable_v<RangeBeginT, nest::StructWithGlobalAccess&>);
+static_assert(!std::is_invocable_v<RangeCBeginT, nest::StructWithGlobalAccess&>);
 
 int main(int, char**) {
   static_assert(testReturnTypes());

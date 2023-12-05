@@ -11,6 +11,10 @@
 // std::ranges::rend
 // std::ranges::crend
 
+// Note: this header is intentionally included before any other header.
+// Access functions defined here must be visible to accessors from `<ranges>` header.
+#include "ordinary_unqualified_lookup_helpers.h"
+
 #include <ranges>
 
 #include <cassert>
@@ -196,7 +200,7 @@ static_assert(!std::is_invocable_v<RangeREndT, REndFunction &&>);
 
 static_assert( std::is_invocable_v<RangeREndT,  REndFunction const&>);
 static_assert(!std::is_invocable_v<RangeREndT,  REndFunction &&>);
-static_assert(!std::is_invocable_v<RangeREndT,  REndFunction &>);
+static_assert( std::is_invocable_v<RangeREndT,  REndFunction &>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeCREndT, REndFunction const&>);
 static_assert( std::is_invocable_v<RangeCREndT, REndFunction &>);
 
@@ -272,7 +276,7 @@ constexpr bool testREndFunction() {
   assert(std::ranges::rend(a) == &a.x);
   assert(std::ranges::crend(a) == &a.x);
   REndFunction aa{};
-  static_assert(!std::is_invocable_v<RangeREndT, decltype((aa))>);
+  assert(std::ranges::rend(aa) == &aa.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crend(aa) == &aa.x);
 
   REndFunctionByValue b;
@@ -287,28 +291,28 @@ constexpr bool testREndFunction() {
   assert(std::ranges::rend(d) == &d.x);
   assert(std::ranges::crend(d) == &d.x);
   REndFunctionReturnsEmptyPtr dd{};
-  static_assert(!std::is_invocable_v<RangeREndT, decltype((dd))>);
+  assert(std::ranges::rend(dd) == &dd.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crend(dd) == &dd.x);
 
   const REndFunctionWithDataMember e{};
   assert(std::ranges::rend(e) == &e.x);
   assert(std::ranges::crend(e) == &e.x);
   REndFunctionWithDataMember ee{};
-  static_assert(!std::is_invocable_v<RangeREndT, decltype((ee))>);
+  assert(std::ranges::rend(ee) == &ee.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crend(ee) == &ee.x);
 
   const REndFunctionWithPrivateEndMember f{};
   assert(std::ranges::rend(f) == &f.y);
   assert(std::ranges::crend(f) == &f.y);
   REndFunctionWithPrivateEndMember ff{};
-  static_assert(!std::is_invocable_v<RangeREndT, decltype((ff))>);
+  assert(std::ranges::rend(ff) == &ff.y); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crend(ff) == &ff.y);
 
   const RBeginMemberEndFunction g{};
   assert(std::ranges::rend(g) == &g.x);
   assert(std::ranges::crend(g) == &g.x);
   RBeginMemberEndFunction gg{};
-  static_assert(!std::is_invocable_v<RangeREndT, decltype((gg))>);
+  assert(std::ranges::rend(gg) == &gg.x); // Ill-formed before P2602R2 Poison Pills are Too Toxic
   assert(std::ranges::crend(gg) == &gg.x);
 
   return true;
@@ -529,6 +533,10 @@ static_assert(!std::is_invocable_v<RangeREndT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeREndT, Holder<Incomplete>*&>);
 static_assert(!std::is_invocable_v<RangeCREndT, Holder<Incomplete>*>);
 static_assert(!std::is_invocable_v<RangeCREndT, Holder<Incomplete>*&>);
+
+// Ordinary unqualified lookup should not be performed.
+static_assert(!std::is_invocable_v<RangeREndT, nest::StructWithGlobalAccess&>);
+static_assert(!std::is_invocable_v<RangeCREndT, nest::StructWithGlobalAccess&>);
 
 int main(int, char**) {
   static_assert(testReturnTypes());
