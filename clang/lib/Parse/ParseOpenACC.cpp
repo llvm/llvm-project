@@ -270,6 +270,14 @@ ExprResult Parser::ParseOpenACCIDExpression() {
   return getActions().CorrectDelayedTyposInExpr(Res);
 }
 
+/// OpenACC 3.3, section 2.10:
+/// A 'var' in a cache directive must be a single array element or a simple
+/// subarray.  In C and C++, a simple subarray is an array name followed by an
+/// extended array range specification in brackets, with a start and length such
+/// as:
+///
+/// arr[lower:length]
+///
 void Parser::ParseOpenACCCacheVar() {
   ExprResult ArrayName = ParseOpenACCIDExpression();
   // FIXME: Pass this to Sema.
@@ -307,6 +315,10 @@ void Parser::ParseOpenACCCacheVar() {
   SquareBrackets.consumeClose();
 }
 
+/// OpenACC 3.3, section 2.10:
+/// In C and C++, the syntax of the cache directive is:
+///
+/// #pragma acc cache ([readonly:]var-list) new-line
 void Parser::ParseOpenACCCacheVarList() {
   // If this is the end of the line, just return 'false' and count on the close
   // paren diagnostic to catch the issue.
