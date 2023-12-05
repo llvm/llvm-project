@@ -669,17 +669,6 @@ public:
     return PointerType::get(C, 0);
   }
 
-  /// This constructs a pointer type with the same pointee type as input
-  /// PointerType (or opaque pointer if the input PointerType is opaque) and the
-  /// given address space. This is only useful during the opaque pointer
-  /// transition.
-  /// TODO: remove after opaque pointer transition is complete.
-  [[deprecated("Use PointerType::get() with LLVMContext argument instead")]]
-  static PointerType *getWithSamePointeeType(PointerType *PT,
-                                             unsigned AddressSpace) {
-    return get(PT->getContext(), AddressSpace);
-  }
-
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
 
