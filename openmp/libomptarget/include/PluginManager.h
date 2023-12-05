@@ -14,6 +14,7 @@
 #define OMPTARGET_PLUGIN_MANAGER_H
 
 #include "DeviceImage.h"
+#include "ExclusiveAccess.h"
 #include "Shared/APITypes.h"
 #include "Shared/PluginAPI.h"
 #include "Shared/Requirements.h"
@@ -25,6 +26,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Error.h"
 
 #include <cstdint>
 #include <list>
@@ -75,6 +77,13 @@ struct PluginAdaptorTy {
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
+  /// Type of the devices container. We hand out DeviceTy& to queries which are
+  /// stable addresses regardless if the container changes.
+  using DeviceContainerTy = llvm::SmallVector<std::unique_ptr<DeviceTy>>;
+
+  /// Exclusive accessor type for the device container.
+  using ExclusiveDevicesAccessorTy = Accessor<DeviceContainerTy>;
+
   PluginManager() {}
 
   void init();
@@ -89,12 +98,18 @@ struct PluginManager {
     DeviceImages.emplace_back(std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
+  /// Return the device presented to the user as device \p DeviceNo if it is
+  /// initialized and ready. Otherwise return an error explaining the problem.
+  llvm::Expected<DeviceTy &> getDevice(uint32_t DeviceNo);
+
+  /// Iterate over all initialized and ready devices registered with this
+  /// plugin.
+  auto devices(ExclusiveDevicesAccessorTy &DevicesAccessor) {
+    return llvm::make_pointee_range(*DevicesAccessor);
+  }
+
   /// Iterate over all device images registered with this plugin.
   auto deviceImages() { return llvm::make_pointee_range(DeviceImages); }
-
-  /// Devices associated with RTLs
-  llvm::SmallVector<std::unique_ptr<DeviceTy>> Devices;
-  std::mutex RTLsMtx; ///< For RTLs and Devices
 
   /// Translation table retreived from the binary
   HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
@@ -124,9 +139,12 @@ struct PluginManager {
     DelayedBinDesc.clear();
   }
 
-  int getNumDevices() {
-    std::lock_guard<decltype(RTLsMtx)> Lock(RTLsMtx);
-    return Devices.size();
+  /// Return the number of usable devices.
+  int getNumDevices() { return getExclusiveDevicesAccessor()->size(); }
+
+  /// Return an exclusive handle to access the devices container.
+  ExclusiveDevicesAccessorTy getExclusiveDevicesAccessor() {
+    return Devices.getExclusiveAccessor();
   }
 
   int getNumUsedPlugins() const {
@@ -166,6 +184,11 @@ private:
 
   /// The user provided requirements.
   RequirementCollection Requirements;
+
+  std::mutex RTLsMtx; ///< For RTLs
+
+  /// Devices associated with plugins, accesses to the container are exclusive.
+  ProtectedObj<DeviceContainerTy> Devices;
 };
 
 extern PluginManager *PM;
