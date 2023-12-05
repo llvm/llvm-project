@@ -637,6 +637,12 @@ appropriate fencing is inserted.  Since the appropriate fencing is
 implementation defined, the optimizer can't do the latter.  The former is
 challenging as many commonly expected properties, such as
 ``ptrtoint(v)-ptrtoint(v) == 0``, don't hold for non-integral types.
+Similar restrictions apply to intrinsics that might examine the pointer bits,
+such as :ref:`llvm.ptrmask<int_ptrmask>`. 
+
+The alignment information provided by the frontend for a non-integral pointer
+(typically using attributes or metadata) must be valid for every possible 
+representation of the pointer.
 
 .. _globalvars:
 
