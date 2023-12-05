@@ -38,40 +38,9 @@ if (NOT WIN32 AND NOT APPLE)
     )
 endif()
 
-if (WIN32)
-  set(ASAN_CXX_SOURCES asan_win_new_delete.cpp)
-else()
-  set(ASAN_CXX_SOURCES asan_new_delete.cpp)
-endif()
-
-if (APPLE)
-  set(ASAN_SOURCES ASAN_CXX_SOURCES)
-endif()
-
-if (WIN32)
-  set(ASAN_STATIC_IMPLIB_SOURCES
-    asan_win_delete_array_thunk.cpp
-    asan_win_delete_array_align_thunk.cpp
-    asan_win_delete_array_align_nothrow_thunk.cpp
-    asan_win_delete_array_nothrow_thunk.cpp
-    asan_win_delete_array_size_thunk.cpp
-    asan_win_delete_array_size_align_thunk.cpp
-    asan_win_delete_scalar_thunk.cpp
-    asan_win_delete_scalar_align_thunk.cpp
-    asan_win_delete_scalar_align_nothrow_thunk.cpp
-    asan_win_delete_scalar_nothrow_thunk.cpp
-    asan_win_delete_scalar_size_thunk.cpp
-    asan_win_delete_scalar_size_align_thunk.cpp
-    asan_win_new_array_thunk.cpp
-    asan_win_new_array_align_thunk.cpp
-    asan_win_new_array_align_nothrow_thunk.cpp
-    asan_win_new_array_nothrow_thunk.cpp
-    asan_win_new_scalar_thunk.cpp
-    asan_win_new_scalar_align_thunk.cpp
-    asan_win_new_scalar_align_nothrow_thunk.cpp
-    asan_win_new_scalar_nothrow_thunk.cpp
-    )
-endif()
+set(ASAN_CXX_SOURCES
+  asan_new_delete.cpp
+  )
 
 set(ASAN_STATIC_SOURCES
   asan_rtl_static.cpp
@@ -114,20 +83,12 @@ SET(ASAN_HEADERS
   asan_thread.h
   )
 
-if (WIN32)
-  list(APPEND ASAN_HEADERS
-    asan_win_new_delete_thunk_common.h
-    asan_win_thunk_common.h
-    )
-endif()
-
 include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 set(ASAN_COMMON_DEFINITIONS ${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
 
 append_rtti_flag(OFF ASAN_CFLAGS)
-append_list_if(MSVC /EHsc ASAN_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
 if(NOT CLANG_CL)
@@ -177,15 +138,6 @@ add_compiler_rt_object_libraries(RTAsan_dynamic
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CFLAGS}
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
-
-if (WIN32)
-  add_compiler_rt_object_libraries(RTAsan_static_implib
-    ARCHS ${ASAN_SUPPORTED_ARCH}
-    SOURCES ${ASAN_STATIC_IMPLIB_SOURCES}
-    ADDITIONAL_HEADERS ${ASAN_HEADERS}
-    CFLAGS ${ASAN_CFLAGS} ${NO_DEFAULT_LIBS_OPTION}
-    DEFS ${ASAN_COMMON_DEFINITIONS})
-endif()
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
@@ -287,16 +239,6 @@ else()
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
 
-if(WIN32)
-  add_compiler_rt_runtime(clang_rt.asan_static
-    STATIC
-    ARCHS ${ASAN_SUPPORTED_ARCH}
-    OBJECT_LIBS RTAsan_static
-      RTAsan_static_implib
-    CFLAGS ${ASAN_CFLAGS}
-    DEFS ${ASAN_COMMON_DEFINITIONS}
-    PARENT_TARGET asan)
-else()
   add_compiler_rt_runtime(clang_rt.asan_static
     STATIC
     ARCHS ${ASAN_SUPPORTED_ARCH}
@@ -304,7 +246,6 @@ else()
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
-endif()
 
   add_compiler_rt_runtime(clang_rt.asan-preinit
     STATIC
@@ -313,13 +254,6 @@ endif()
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
-
-
-  if (MSVC AND COMPILER_RT_DEBUG)
-    set(MSVC_DBG_SUFFIX _dbg)
-  else()
-    set(MSVC_DBG_SUFFIX )
-  endif()
 
   foreach(arch ${ASAN_SUPPORTED_ARCH})
     if (COMPILER_RT_HAS_VERSION_SCRIPT)
@@ -376,27 +310,6 @@ endif()
       LINK_LIBS ${ASAN_DYNAMIC_LIBS}
       DEFS ${ASAN_DYNAMIC_DEFINITIONS}
       PARENT_TARGET asan)
-
-    if(WIN32)
-      set_target_properties(clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch}
-        PROPERTIES ARCHIVE_OUTPUT_NAME clang_rt.asan_dynamic-${arch}_implib
-                  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-      add_library(clang_rt.asan-${arch}_implib STATIC)
-      target_link_libraries(clang_rt.asan-${arch}_implib RTAsan_static_implib.${arch})
-      add_dependencies(asan clang_rt.asan-${arch}_implib)
-      add_dependencies(clang_rt.asan-${arch}_implib clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch})
-      get_compiler_rt_output_dir(${arch} IMPLIB_OUTPUT_DIR)
-      set_target_properties(clang_rt.asan-${arch}_implib
-        PROPERTIES ARCHIVE_OUTPUT_NAME clang_rt.asan${MSVC_DBG_SUFFIX}_dynamic-${arch}
-                    ARCHIVE_OUTPUT_DIRECTORY ${IMPLIB_OUTPUT_DIR}
-                    STATIC_LIBRARY_OPTIONS "$<TARGET_LINKER_FILE:clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch}>")
-      get_compiler_rt_install_dir(${arch} IMPLIB_INSTALL_DIR)
-      install(TARGETS clang_rt.asan-${arch}_implib
-        ARCHIVE DESTINATION ${IMPLIB_INSTALL_DIR}
-        LIBRARY DESTINATION ${IMPLIB_INSTALL_DIR}
-        RUNTIME DESTINATION ${IMPLIB_INSTALL_DIR})
-    endif()
 
     if (SANITIZER_USE_SYMBOLS AND NOT ${arch} STREQUAL "i386")
       add_sanitizer_rt_symbols(clang_rt.asan_cxx

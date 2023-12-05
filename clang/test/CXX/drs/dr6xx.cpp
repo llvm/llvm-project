@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
-namespace dr600 { // dr600: yes
+namespace dr600 { // dr600: 2.8
 struct S {
   void f(int);
 
@@ -82,7 +82,7 @@ namespace dr603 { // dr603: yes
 // dr604: na
 // dr605 needs IRGen test
 
-namespace dr606 { // dr606: yes
+namespace dr606 { // dr606: 3.0
 #if __cplusplus >= 201103L
   template<typename T> struct S {};
   template<typename T> void f(S<T> &&); // expected-note {{expects an rvalue}}
@@ -266,7 +266,7 @@ namespace dr627 { // dr627: yes
 
 // dr628: na
 
-namespace dr629 { // dr629: yes
+namespace dr629 { // dr629: 2.9
   typedef int T;
   int n = 1;
   void f() {
@@ -399,7 +399,7 @@ namespace dr638 { // dr638: no
   };
 }
 
-namespace dr639 { // dr639: yes
+namespace dr639 { // dr639: 3.3
   void f(int i) {
     void((i = 0) + (i = 0)); // expected-warning {{unsequenced}}
   }
@@ -462,7 +462,7 @@ namespace dr642 { // dr642: yes
 }
 
 #if __cplusplus >= 201103L
-namespace dr643 { // dr643: yes
+namespace dr643 { // dr643: 3.2
   struct A {
     int x;
     auto f() -> decltype(this->x);
@@ -522,7 +522,7 @@ namespace dr646 { // dr646: sup 981
 #endif
 
 #if __cplusplus >= 201103L
-namespace dr647 { // dr647: yes
+namespace dr647 { // dr647: 3.1
   // This is partially superseded by dr1358.
   struct A {
     constexpr virtual void f() const;
@@ -594,7 +594,7 @@ namespace dr648 { // dr648: yes
 #endif
 
 #if __cplusplus >= 201103L
-namespace dr649 { // dr649: yes
+namespace dr649 { // dr649: 3.5
 alignas(0x200000000) int n;       // expected-error {{requested alignment}}1
 struct alignas(0x200000000) X {}; // expected-error {{requested alignment}}
 struct Y {
@@ -728,7 +728,7 @@ namespace dr657 { // dr657: partial
 // dr658 FIXME: add codegen test
 
 #if __cplusplus >= 201103L
-namespace dr659 { // dr659: yes
+namespace dr659 { // dr659: 3.0
   static_assert(alignof(char) == alignof(char&), "");
   static_assert(alignof(int) == alignof(int&), "");
   int n = alignof(int(&)()); // expected-error {{application of 'alignof' to a function type}}
@@ -738,7 +738,7 @@ namespace dr659 { // dr659: yes
 #endif
 
 #if __cplusplus >= 201103L
-namespace dr660 { // dr660: yes
+namespace dr660 { // dr660: 3.0
   enum : int { a };
   enum class { b }; // expected-error {{requires a name}}
   auto x = a;
@@ -779,7 +779,7 @@ namespace dr664 { // dr664: yes
 }
 #endif
 
-namespace dr665 { // dr665: yes
+namespace dr665 { // dr665: 2.8
   struct A { virtual ~A(); };
   struct B : A {} *b;
   struct C : private A {} *c; // expected-note {{here}}
@@ -799,7 +799,7 @@ namespace dr665 { // dr665: yes
   }
 }
 
-namespace dr666 { // dr666: yes
+namespace dr666 { // dr666: 2.8
   struct P { friend P operator*(P, P); P(int); } p(0);
 
   template<int> int f();
@@ -816,7 +816,7 @@ namespace dr666 { // dr666: yes
 
 // Triviality is entirely different in C++98.
 #if __cplusplus >= 201103L
-namespace dr667 { // dr667: yes
+namespace dr667 { // dr667: 8
   struct A {
     A() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}} expected-note{{replace 'default'}}
     int &r; // expected-note {{because field 'r' of reference type 'int &' would not be initialized}}
@@ -868,7 +868,7 @@ namespace dr669 { // dr669: yes
 }
 #endif
 
-namespace dr671 { // dr671: yes
+namespace dr671 { // dr671: 2.9
   enum class E { e }; // expected-error 0-1 {{C++11}}
   E e = static_cast<E>(0);
   int n = static_cast<int>(E::e); // expected-error 0-1 {{C++11}}
@@ -1064,7 +1064,7 @@ namespace dr685 { // dr685: yes
   int x = k(g);
 }
 
-namespace dr686 { // dr686: yes
+namespace dr686 { // dr686: 3.0
   void f() {
     (void)dynamic_cast<struct A*>(0); // expected-error {{incomplete}} expected-note {{forward}}
     (void)dynamic_cast<struct A{}*>(0); // expected-error {{cannot be defined in a type specifier}}
@@ -1190,7 +1190,7 @@ namespace dr692 { // dr692: 16
   }
 }
 
-namespace dr696 { // dr696: yes
+namespace dr696 { // dr696: 3.1
   void f(const int*);
   void g() {
     const int N = 10; // expected-note 1+{{here}}

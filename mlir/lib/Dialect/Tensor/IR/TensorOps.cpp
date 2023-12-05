@@ -605,7 +605,7 @@ ConcatOp::reifyResultShapes(OpBuilder &builder,
   // Take the sum of the input sizes along the concatenated dim.
   AffineExpr sum = builder.getAffineDimExpr(0);
   SmallVector<OpFoldResult> sizes = {
-      builder.create<tensor::DimOp>(init.getLoc(), init, 0).getResult()};
+      builder.createOrFold<tensor::DimOp>(init.getLoc(), init, dim)};
   for (auto [idx, input] : llvm::enumerate(inputs.drop_front())) {
     sum = sum + builder.getAffineDimExpr(idx + 1);
     sizes.push_back(
@@ -686,8 +686,9 @@ Speculation::Speculatability DimOp::getSpeculatability() {
   if (!rankedSourceType)
     return Speculation::NotSpeculatable;
 
-  // The verifier rejects operations that violate this assertion.
-  assert(constantIndex < rankedSourceType.getRank());
+  if (rankedSourceType.getRank() <= constantIndex)
+    return Speculation::NotSpeculatable;
+
   return Speculation::Speculatable;
 }
 

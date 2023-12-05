@@ -50,10 +50,10 @@ int main(int argc, char **argv) {
   // CHECK: {{allocated by thread T0 here:}}
   // CHECK-Linux:  {{    #0 0x.* in operator new}}
   // CHECK-SunOS:  {{    #0 0x.* in operator new}}
-  // CHECK-Windows:{{    #0 0x.* in __asan_new_array}}
+  // CHECK-Windows:{{    #0 0x.* in operator new}}
   // CHECK-FreeBSD:{{    #0 0x.* in operator new}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zna}}
-  // CHECK:   {{    0x.* in main .*large_func_test.cpp:}}[[@LINE-10]]
+  // CHECK-NEXT:   {{    #1 0x.* in main .*large_func_test.cpp:}}[[@LINE-10]]
   int y = x[argc];
   delete[] x;
   return y;

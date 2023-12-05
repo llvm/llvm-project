@@ -423,10 +423,6 @@ bool RISCVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-static const MCPhysReg ArgGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
-                                    RISCV::X13, RISCV::X14, RISCV::X15,
-                                    RISCV::X16, RISCV::X17};
-
 /// If there are varargs that were passed in a0-a7, the data in those registers
 /// must be copied to the varargs save area on the stack.
 void RISCVCallLowering::saveVarArgRegisters(
@@ -435,20 +431,20 @@ void RISCVCallLowering::saveVarArgRegisters(
   MachineFunction &MF = MIRBuilder.getMF();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
-  ArrayRef<MCPhysReg> ArgRegs(ArgGPRs);
+  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs();
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
 
   // Offset of the first variable argument from stack pointer, and size of
   // the vararg save area. For now, the varargs save area is either zero or
   // large enough to hold a0-a7.
-  int VaArgOffset, VarArgsSaveSize;
+  int VaArgOffset;
+  int VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
+
   // If all registers are allocated, then all varargs must be passed on the
   // stack and we don't need to save any argregs.
-  if (ArgRegs.size() == Idx) {
+  if (VarArgsSaveSize == 0) {
     VaArgOffset = Assigner.StackSize;
-    VarArgsSaveSize = 0;
   } else {
-    VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
     VaArgOffset = -VarArgsSaveSize;
   }
 

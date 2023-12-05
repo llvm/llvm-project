@@ -388,10 +388,9 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   }
 
   bool SelfMultiply = Op0 == Op1;
-  // TODO: SelfMultiply can be poison, but not undef.
   if (SelfMultiply)
     SelfMultiply &=
-        isGuaranteedNotToBeUndefOrPoison(Op0, Q.AC, Q.CxtI, Q.DT, Depth + 1);
+        isGuaranteedNotToBeUndef(Op0, Q.AC, Q.CxtI, Q.DT, Depth + 1);
   Known = KnownBits::mul(Known, Known2, SelfMultiply);
 
   // Only make use of no-wrap flags if we failed to compute the sign bit
@@ -1564,7 +1563,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       case Intrinsic::riscv_vsetvli:
       case Intrinsic::riscv_vsetvlimax:
-        // Assume that VL output is >= 65536.
+        // Assume that VL output is <= 65536.
         // TODO: Take SEW and LMUL into account.
         if (BitWidth > 17)
           Known.Zero.setBitsFrom(17);
@@ -4162,147 +4161,6 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
   return {Src, Mask};
 }
 
-std::tuple<Value *, FPClassTest, FPClassTest>
-llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                       const APFloat *ConstRHS, bool LookThroughSrc) {
-  auto [Val, ClassMask] =
-      fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
-  if (Val)
-    return {Val, ClassMask, ~ClassMask};
-
-  FPClassTest RHSClass = ConstRHS->classify();
-
-  // If we see a zero here, we are using dynamic denormal-fp-math, and can't
-  // treat comparisons to 0 as an exact class test.
-  //
-  // TODO: We could do better and still recognize non-equality cases.
-  if (RHSClass == fcPosZero || RHSClass == fcNegZero)
-    return {nullptr, fcAllFlags, fcAllFlags};
-
-  assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal ||
-          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal) &&
-         "should have been recognized as an exact class test");
-
-  const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
-  const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
-
-  assert(IsNegativeRHS == ConstRHS->isNegative());
-  assert(IsPositiveRHS == !ConstRHS->isNegative());
-
-  Value *Src = LHS;
-  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
-
-  if (IsFabs)
-    RHSClass = llvm::inverse_fabs(RHSClass);
-
-  if (Pred == FCmpInst::FCMP_OEQ)
-    return {Src, RHSClass, fcAllFlags};
-
-  if (Pred == FCmpInst::FCMP_UEQ) {
-    FPClassTest Class = RHSClass | fcNan;
-    return {Src, Class, ~fcNan};
-  }
-
-  if (Pred == FCmpInst::FCMP_ONE)
-    return {Src, ~fcNan, RHSClass};
-
-  if (Pred == FCmpInst::FCMP_UNE)
-    return {Src, fcAllFlags, RHSClass};
-
-  if (IsNegativeRHS) {
-    // TODO: Handle fneg(fabs)
-    if (IsFabs) {
-      // fabs(x) o> -k -> fcmp ord x, x
-      // fabs(x) u> -k -> true
-      // fabs(x) o< -k -> false
-      // fabs(x) u< -k -> fcmp uno x, x
-      switch (Pred) {
-      case FCmpInst::FCMP_OGT:
-      case FCmpInst::FCMP_OGE:
-        return {Src, ~fcNan, fcNan};
-      case FCmpInst::FCMP_UGT:
-      case FCmpInst::FCMP_UGE:
-        return {Src, fcAllFlags, fcNone};
-      case FCmpInst::FCMP_OLT:
-      case FCmpInst::FCMP_OLE:
-        return {Src, fcNone, fcAllFlags};
-      case FCmpInst::FCMP_ULT:
-      case FCmpInst::FCMP_ULE:
-        return {Src, fcNan, ~fcNan};
-      default:
-        break;
-      }
-
-      return {nullptr, fcAllFlags, fcAllFlags};
-    }
-
-    FPClassTest ClassesLE = fcNegInf | fcNegNormal;
-    FPClassTest ClassesGE = fcPositive | fcNegZero | fcNegSubnormal;
-
-    if (ConstRHS->isDenormal())
-      ClassesLE |= fcNegSubnormal;
-    else
-      ClassesGE |= fcNegNormal;
-
-    switch (Pred) {
-    case FCmpInst::FCMP_OGT:
-    case FCmpInst::FCMP_OGE:
-      return {Src, ClassesGE, ~ClassesGE | RHSClass};
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_UGE:
-      return {Src, ClassesGE | fcNan, ~(ClassesGE | fcNan) | RHSClass};
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_OLE:
-      return {Src, ClassesLE, ~ClassesLE | RHSClass};
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_ULE:
-      return {Src, ClassesLE | fcNan, ~(ClassesLE | fcNan) | RHSClass};
-    default:
-      break;
-    }
-  } else if (IsPositiveRHS) {
-    FPClassTest ClassesGE = fcPosNormal | fcPosInf;
-    FPClassTest ClassesLE = fcNegative | fcPosZero | fcPosNormal;
-    if (ConstRHS->isDenormal())
-      ClassesGE |= fcPosNormal;
-    else
-      ClassesLE |= fcPosSubnormal;
-
-    if (IsFabs) {
-      ClassesGE = llvm::inverse_fabs(ClassesGE);
-      ClassesLE = llvm::inverse_fabs(ClassesLE);
-    }
-
-    switch (Pred) {
-    case FCmpInst::FCMP_OGT:
-    case FCmpInst::FCMP_OGE:
-      return {Src, ClassesGE, ~ClassesGE | RHSClass};
-    case FCmpInst::FCMP_UGT:
-    case FCmpInst::FCMP_UGE:
-      return {Src, ClassesGE | fcNan, ~(ClassesGE | fcNan) | RHSClass};
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_OLE:
-      return {Src, ClassesLE, ~ClassesLE | RHSClass};
-    case FCmpInst::FCMP_ULT:
-    case FCmpInst::FCMP_ULE:
-      return {Src, ClassesLE | fcNan, ~(ClassesLE | fcNan) | RHSClass};
-    default:
-      break;
-    }
-  }
-
-  return {nullptr, fcAllFlags, fcAllFlags};
-}
-
-std::tuple<Value *, FPClassTest, FPClassTest>
-llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                       Value *RHS, bool LookThroughSrc) {
-  const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
-    return {nullptr, fcAllFlags, fcNone};
-  return fcmpImpliesClass(Pred, F, LHS, ConstRHS, LookThroughSrc);
-}
-
 static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
                                                   const SimplifyQuery &Q) {
   FPClassTest KnownFromAssume = fcAllFlags;
@@ -4327,21 +4185,18 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
     Value *LHS, *RHS;
     uint64_t ClassVal = 0;
     if (match(I->getArgOperand(0), m_FCmp(Pred, m_Value(LHS), m_Value(RHS)))) {
-      const APFloat *CRHS;
-      if (match(RHS, m_APFloat(CRHS))) {
-        // First see if we can fold in fabs/fneg into the test.
-        auto [CmpVal, MaskIfTrue, MaskIfFalse] =
-            fcmpImpliesClass(Pred, *F, LHS, CRHS, true);
-        if (CmpVal == V)
-          KnownFromAssume &= MaskIfTrue;
-        else {
-          // Try again without the lookthrough if we found a different source
-          // value.
-          auto [CmpVal, MaskIfTrue, MaskIfFalse] =
-              fcmpImpliesClass(Pred, *F, LHS, CRHS, false);
-          if (CmpVal == V)
-            KnownFromAssume &= MaskIfTrue;
-        }
+      auto [TestedValue, TestedMask] =
+          fcmpToClassTest(Pred, *F, LHS, RHS, true);
+      // First see if we can fold in fabs/fneg into the test.
+      if (TestedValue == V)
+        KnownFromAssume &= TestedMask;
+      else {
+        // Try again without the lookthrough if we found a different source
+        // value.
+        auto [TestedValue, TestedMask] =
+            fcmpToClassTest(Pred, *F, LHS, RHS, false);
+        if (TestedValue == V)
+          KnownFromAssume &= TestedMask;
       }
     } else if (match(I->getArgOperand(0),
                      m_Intrinsic<Intrinsic::is_fpclass>(
@@ -4489,8 +4344,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     FPClassTest FilterRHS = fcAllFlags;
 
     Value *TestedValue = nullptr;
-    FPClassTest MaskIfTrue = fcAllFlags;
-    FPClassTest MaskIfFalse = fcAllFlags;
+    FPClassTest TestedMask = fcNone;
     uint64_t ClassVal = 0;
     const Function *F = cast<Instruction>(Op)->getFunction();
     CmpInst::Predicate Pred;
@@ -4502,22 +4356,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       // TODO: In some degenerate cases we can infer something if we try again
       // without looking through sign operations.
       bool LookThroughFAbsFNeg = CmpLHS != LHS && CmpLHS != RHS;
-      std::tie(TestedValue, MaskIfTrue, MaskIfFalse) =
-          fcmpImpliesClass(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
+      std::tie(TestedValue, TestedMask) =
+          fcmpToClassTest(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
     } else if (match(Cond,
                      m_Intrinsic<Intrinsic::is_fpclass>(
                          m_Value(TestedValue), m_ConstantInt(ClassVal)))) {
-      FPClassTest TestedMask = static_cast<FPClassTest>(ClassVal);
-      MaskIfTrue = TestedMask;
-      MaskIfFalse = ~TestedMask;
+      TestedMask = static_cast<FPClassTest>(ClassVal);
     }
 
     if (TestedValue == LHS) {
       // match !isnan(x) ? x : y
-      FilterLHS = MaskIfTrue;
-    } else if (TestedValue == RHS) { // && IsExactClass
+      FilterLHS = TestedMask;
+    } else if (TestedValue == RHS) {
       // match !isnan(x) ? y : x
-      FilterRHS = MaskIfFalse;
+      FilterRHS = ~TestedMask;
     }
 
     KnownFPClass Known2;
@@ -6488,7 +6340,7 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
   //       See simplifyICmpWithBinOpOnLHS() for candidates.
   if (match(RHS, m_URem(m_Specific(LHS), m_Value())) ||
       match(RHS, m_NUWSub(m_Specific(LHS), m_Value())))
-    if (isGuaranteedNotToBeUndefOrPoison(LHS, SQ.AC, SQ.CxtI, SQ.DT))
+    if (isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT))
       return OverflowResult::NeverOverflows;
 
   // Checking for conditions implied by dominating conditions may be expensive.
@@ -6521,7 +6373,7 @@ OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,
   // then determining no-overflow may allow other transforms.
   if (match(RHS, m_SRem(m_Specific(LHS), m_Value())) ||
       match(RHS, m_NSWSub(m_Specific(LHS), m_Value())))
-    if (isGuaranteedNotToBeUndefOrPoison(LHS, SQ.AC, SQ.CxtI, SQ.DT))
+    if (isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CxtI, SQ.DT))
       return OverflowResult::NeverOverflows;
 
   // If LHS and RHS each have at least two sign bits, the subtraction
@@ -6980,6 +6832,13 @@ bool llvm::isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
                                      const Instruction *CtxI,
                                      const DominatorTree *DT, unsigned Depth) {
   return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth, true);
+}
+
+bool llvm::isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC,
+                                    const Instruction *CtxI,
+                                    const DominatorTree *DT, unsigned Depth) {
+  // TODO: This is currently equivalent to isGuaranteedNotToBeUndefOrPoison().
+  return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth, false);
 }
 
 /// Return true if undefined behavior would provably be executed on the path to
