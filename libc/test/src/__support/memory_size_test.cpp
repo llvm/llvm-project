@@ -81,5 +81,16 @@ TEST(LlvmLibcMemSizeTest, AlignUp) {
   auto max = SafeMemSize{SAFE_MEM_SIZE_TEST_LIMIT};
   ASSERT_FALSE(max.align_up(8).valid());
 }
+
+TEST(LlvmLibcBlockBitTest, OffsetTo) {
+  ASSERT_EQ(SafeMemSize::offset_to(0, 512), 0UL);
+  ASSERT_EQ(SafeMemSize::offset_to(1, 512), 511UL);
+  ASSERT_EQ(SafeMemSize::offset_to(2, 512), 510UL);
+  ASSERT_EQ(SafeMemSize::offset_to(13, 1), 0UL);
+  ASSERT_EQ(SafeMemSize::offset_to(13, 4), 3UL);
+  for (unsigned int i = 0; i < 31; ++i) {
+    ASSERT_EQ((SafeMemSize::offset_to(i, 1u << i) + i) % (1u << i), 0UL);
+  }
+}
 } // namespace internal
 } // namespace LIBC_NAMESPACE

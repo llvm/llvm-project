@@ -2361,6 +2361,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
   if (isArm64EC(config->machine)) {
+    ctx.symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
+    ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map", 0);
     ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
   }

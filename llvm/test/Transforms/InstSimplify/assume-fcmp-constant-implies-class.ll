@@ -17,7 +17,8 @@ define i1 @assume_olt_neg1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -30,7 +31,8 @@ define i1 @assume_olt_neg1__ogt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -43,7 +45,8 @@ define i1 @assume_olt_neg1__oge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -56,7 +59,8 @@ define i1 @assume_olt_neg1__olt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -69,7 +73,8 @@ define i1 @assume_olt_neg1__ole_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -82,7 +87,8 @@ define i1 @assume_olt_neg1__one_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -95,7 +101,8 @@ define i1 @assume_olt_neg1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -108,7 +115,8 @@ define i1 @assume_olt_neg1__ueq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -121,7 +129,8 @@ define i1 @assume_olt_neg1__ugt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -134,7 +143,8 @@ define i1 @assume_olt_neg1__uge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -147,7 +157,8 @@ define i1 @assume_olt_neg1__ult_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -160,7 +171,8 @@ define i1 @assume_olt_neg1__ule_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -173,7 +185,8 @@ define i1 @assume_olt_neg1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -186,7 +199,8 @@ define i1 @assume_olt_neg1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -203,7 +217,8 @@ define i1 @assume_ole_neg1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -216,7 +231,8 @@ define i1 @assume_ole_neg1__ogt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -229,7 +245,8 @@ define i1 @assume_ole_neg1__oge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -242,7 +259,8 @@ define i1 @assume_ole_neg1__olt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -255,7 +273,8 @@ define i1 @assume_ole_neg1__ole_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -268,7 +287,8 @@ define i1 @assume_ole_neg1__one_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -281,7 +301,8 @@ define i1 @assume_ole_neg1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -294,7 +315,8 @@ define i1 @assume_ole_neg1__ueq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -307,7 +329,8 @@ define i1 @assume_ole_neg1__ugt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -320,7 +343,8 @@ define i1 @assume_ole_neg1__uge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -333,7 +357,8 @@ define i1 @assume_ole_neg1__ult_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -346,7 +371,8 @@ define i1 @assume_ole_neg1__ule_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -359,7 +385,8 @@ define i1 @assume_ole_neg1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -372,7 +399,8 @@ define i1 @assume_ole_neg1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_NEG1:%.*]] = fcmp ole float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.neg1 = fcmp ole float %arg, -1.0
   call void @llvm.assume(i1 %ole.neg1)
@@ -473,7 +501,8 @@ define i1 @assume_ogt_neg1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_NEG1:%.*]] = fcmp ogt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.neg1 = fcmp ogt float %arg, -1.0
   call void @llvm.assume(i1 %ogt.neg1)
@@ -570,7 +599,8 @@ define i1 @assume_ogt_neg1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_NEG1:%.*]] = fcmp ogt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.neg1 = fcmp ogt float %arg, -1.0
   call void @llvm.assume(i1 %ogt.neg1)
@@ -671,7 +701,8 @@ define i1 @assume_oge_neg1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_NEG1:%.*]] = fcmp oge float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.neg1 = fcmp oge float %arg, -1.0
   call void @llvm.assume(i1 %oge.neg1)
@@ -768,7 +799,8 @@ define i1 @assume_oge_neg1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_NEG1:%.*]] = fcmp oge float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.neg1 = fcmp oge float %arg, -1.0
   call void @llvm.assume(i1 %oge.neg1)
@@ -1185,7 +1217,8 @@ define i1 @assume_ule_neg1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULE_NEG1:%.*]] = fcmp ule float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ule.neg1 = fcmp ule float %arg, -1.0
   call void @llvm.assume(i1 %ule.neg1)
@@ -1198,7 +1231,8 @@ define i1 @assume_ule_neg1__ogt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULE_NEG1:%.*]] = fcmp ule float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ule.neg1 = fcmp ule float %arg, -1.0
   call void @llvm.assume(i1 %ule.neg1)
@@ -1211,7 +1245,8 @@ define i1 @assume_ule_neg1__oge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULE_NEG1:%.*]] = fcmp ule float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ule.neg1 = fcmp ule float %arg, -1.0
   call void @llvm.assume(i1 %ule.neg1)
@@ -1322,7 +1357,8 @@ define i1 @assume_ule_neg1__ult_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULE_NEG1:%.*]] = fcmp ule float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ule.neg1 = fcmp ule float %arg, -1.0
   call void @llvm.assume(i1 %ule.neg1)
@@ -1335,7 +1371,8 @@ define i1 @assume_ule_neg1__ule_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULE_NEG1:%.*]] = fcmp ule float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ule.neg1 = fcmp ule float %arg, -1.0
   call void @llvm.assume(i1 %ule.neg1)
@@ -1348,7 +1385,8 @@ define i1 @assume_ule_neg1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULE_NEG1:%.*]] = fcmp ule float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULE_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ule.neg1 = fcmp ule float %arg, -1.0
   call void @llvm.assume(i1 %ule.neg1)
@@ -1379,7 +1417,8 @@ define i1 @assume_ult_neg1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULT_NEG1:%.*]] = fcmp ult float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ult.neg1 = fcmp ult float %arg, -1.0
   call void @llvm.assume(i1 %ult.neg1)
@@ -1392,7 +1431,8 @@ define i1 @assume_ult_neg1__ogt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULT_NEG1:%.*]] = fcmp ult float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ult.neg1 = fcmp ult float %arg, -1.0
   call void @llvm.assume(i1 %ult.neg1)
@@ -1405,7 +1445,8 @@ define i1 @assume_ult_neg1__oge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULT_NEG1:%.*]] = fcmp ult float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ult.neg1 = fcmp ult float %arg, -1.0
   call void @llvm.assume(i1 %ult.neg1)
@@ -1516,7 +1557,8 @@ define i1 @assume_ult_neg1__ult_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULT_NEG1:%.*]] = fcmp ult float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ult.neg1 = fcmp ult float %arg, -1.0
   call void @llvm.assume(i1 %ult.neg1)
@@ -1529,7 +1571,8 @@ define i1 @assume_ult_neg1__ule_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULT_NEG1:%.*]] = fcmp ult float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ult.neg1 = fcmp ult float %arg, -1.0
   call void @llvm.assume(i1 %ult.neg1)
@@ -1542,7 +1585,8 @@ define i1 @assume_ult_neg1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ULT_NEG1:%.*]] = fcmp ult float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ULT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ult.neg1 = fcmp ult float %arg, -1.0
   call void @llvm.assume(i1 %ult.neg1)
@@ -1780,7 +1824,8 @@ define i1 @assume_olt_pos1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_POS1:%.*]] = fcmp olt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.pos1 = fcmp olt float %arg, 1.0
   call void @llvm.assume(i1 %olt.pos1)
@@ -1877,7 +1922,8 @@ define i1 @assume_olt_pos1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_POS1:%.*]] = fcmp olt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.pos1 = fcmp olt float %arg, 1.0
   call void @llvm.assume(i1 %olt.pos1)
@@ -1978,7 +2024,8 @@ define i1 @assume_ole_pos1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_POS1:%.*]] = fcmp ole float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.pos1 = fcmp ole float %arg, 1.0
   call void @llvm.assume(i1 %ole.pos1)
@@ -2075,7 +2122,8 @@ define i1 @assume_ole_pos1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLE_POS1:%.*]] = fcmp ole float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ole.pos1 = fcmp ole float %arg, 1.0
   call void @llvm.assume(i1 %ole.pos1)
@@ -2092,7 +2140,8 @@ define i1 @assume_ogt_pos1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2105,7 +2154,8 @@ define i1 @assume_ogt_pos1__ogt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2118,7 +2168,8 @@ define i1 @assume_ogt_pos1__oge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2131,7 +2182,8 @@ define i1 @assume_ogt_pos1__olt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2144,7 +2196,8 @@ define i1 @assume_ogt_pos1__ole_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2157,7 +2210,8 @@ define i1 @assume_ogt_pos1__one_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2170,7 +2224,8 @@ define i1 @assume_ogt_pos1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2183,7 +2238,8 @@ define i1 @assume_ogt_pos1__ueq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2196,7 +2252,8 @@ define i1 @assume_ogt_pos1__ugt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2209,7 +2266,8 @@ define i1 @assume_ogt_pos1__uge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2222,7 +2280,8 @@ define i1 @assume_ogt_pos1__ult_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2235,7 +2294,8 @@ define i1 @assume_ogt_pos1__ule_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2248,7 +2308,8 @@ define i1 @assume_ogt_pos1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2261,7 +2322,8 @@ define i1 @assume_ogt_pos1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGT_POS1:%.*]] = fcmp ogt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ogt.pos1 = fcmp ogt float %arg, 1.0
   call void @llvm.assume(i1 %ogt.pos1)
@@ -2278,7 +2340,8 @@ define i1 @assume_oge_pos1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2291,7 +2354,8 @@ define i1 @assume_oge_pos1__ogt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2304,7 +2368,8 @@ define i1 @assume_oge_pos1__oge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2317,7 +2382,8 @@ define i1 @assume_oge_pos1__olt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2330,7 +2396,8 @@ define i1 @assume_oge_pos1__ole_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2343,7 +2410,8 @@ define i1 @assume_oge_pos1__one_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2356,7 +2424,8 @@ define i1 @assume_oge_pos1__ord_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2369,7 +2438,8 @@ define i1 @assume_oge_pos1__ueq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2382,7 +2452,8 @@ define i1 @assume_oge_pos1__ugt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2395,7 +2466,8 @@ define i1 @assume_oge_pos1__uge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2408,7 +2480,8 @@ define i1 @assume_oge_pos1__ult_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2421,7 +2494,8 @@ define i1 @assume_oge_pos1__ule_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2434,7 +2508,8 @@ define i1 @assume_oge_pos1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2447,7 +2522,8 @@ define i1 @assume_oge_pos1__uno_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OGE_POS1:%.*]] = fcmp oge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %oge.pos1 = fcmp oge float %arg, 1.0
   call void @llvm.assume(i1 %oge.pos1)
@@ -2464,7 +2540,8 @@ define i1 @assume_ugt_pos1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGT_POS1:%.*]] = fcmp ugt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ugt.pos1 = fcmp ugt float %arg, 1.0
   call void @llvm.assume(i1 %ugt.pos1)
@@ -2505,7 +2582,8 @@ define i1 @assume_ugt_pos1__olt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGT_POS1:%.*]] = fcmp ugt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ugt.pos1 = fcmp ugt float %arg, 1.0
   call void @llvm.assume(i1 %ugt.pos1)
@@ -2518,7 +2596,8 @@ define i1 @assume_ugt_pos1__ole_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGT_POS1:%.*]] = fcmp ugt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGT_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ugt.pos1 = fcmp ugt float %arg, 1.0
   call void @llvm.assume(i1 %ugt.pos1)
@@ -2573,7 +2652,8 @@ define i1 @assume_ugt_pos1__ugt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGT_POS1:%.*]] = fcmp ugt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ugt.pos1 = fcmp ugt float %arg, 1.0
   call void @llvm.assume(i1 %ugt.pos1)
@@ -2586,7 +2666,8 @@ define i1 @assume_ugt_pos1__uge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGT_POS1:%.*]] = fcmp ugt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ugt.pos1 = fcmp ugt float %arg, 1.0
   call void @llvm.assume(i1 %ugt.pos1)
@@ -2627,7 +2708,8 @@ define i1 @assume_ugt_pos1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGT_POS1:%.*]] = fcmp ugt float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGT_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ugt.pos1 = fcmp ugt float %arg, 1.0
   call void @llvm.assume(i1 %ugt.pos1)
@@ -2658,7 +2740,8 @@ define i1 @assume_uge_pos1__oeq_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGE_POS1:%.*]] = fcmp uge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %uge.pos1 = fcmp uge float %arg, 1.0
   call void @llvm.assume(i1 %uge.pos1)
@@ -2699,7 +2782,8 @@ define i1 @assume_uge_pos1__olt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGE_POS1:%.*]] = fcmp uge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %uge.pos1 = fcmp uge float %arg, 1.0
   call void @llvm.assume(i1 %uge.pos1)
@@ -2712,7 +2796,8 @@ define i1 @assume_uge_pos1__ole_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGE_POS1:%.*]] = fcmp uge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGE_POS1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %uge.pos1 = fcmp uge float %arg, 1.0
   call void @llvm.assume(i1 %uge.pos1)
@@ -2767,7 +2852,8 @@ define i1 @assume_uge_pos1__ugt_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGE_POS1:%.*]] = fcmp uge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %uge.pos1 = fcmp uge float %arg, 1.0
   call void @llvm.assume(i1 %uge.pos1)
@@ -2780,7 +2866,8 @@ define i1 @assume_uge_pos1__uge_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGE_POS1:%.*]] = fcmp uge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %uge.pos1 = fcmp uge float %arg, 1.0
   call void @llvm.assume(i1 %uge.pos1)
@@ -2821,7 +2908,8 @@ define i1 @assume_uge_pos1__une_0(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[UGE_POS1:%.*]] = fcmp uge float [[ARG]], 1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[UGE_POS1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ARG]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %uge.pos1 = fcmp uge float %arg, 1.0
   call void @llvm.assume(i1 %uge.pos1)
@@ -2852,7 +2940,8 @@ define i1 @assume_olt_neg1__oeq_inf(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
@@ -2865,7 +2954,8 @@ define i1 @assume_olt_neg1__one_inf(float %arg) {
 ; CHECK-SAME: float [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[OLT_NEG1:%.*]] = fcmp olt float [[ARG]], -1.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OLT_NEG1]])
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %olt.neg1 = fcmp olt float %arg, -1.0
   call void @llvm.assume(i1 %olt.neg1)
