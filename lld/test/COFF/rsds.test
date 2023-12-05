@@ -189,8 +189,8 @@
 # BUILDID:   }
 # BUILDID: ]
 
-# NO_BUILDID: DebugDirectory [
-# NO_BUILDID: ]
+# NO_BUILDID:      DebugDirectory [
+# NO_BUILDID-NEXT: ]
 
 # BUILDID_SEC: Name: .buildid
 --- !COFF
