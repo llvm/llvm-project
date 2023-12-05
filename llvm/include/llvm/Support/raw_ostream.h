@@ -641,43 +641,26 @@ public:
 class raw_socket_stream;
 class ListeningSocket {
   int FD;
-  ListeningSocket(int SocketFD);
+  StringRef SocketPath;
+  ListeningSocket(int SocketFD, StringRef SocketPath);
   // ...
 public:
   static Expected<ListeningSocket> createUnix(StringRef SocketPath);
   Expected<raw_socket_stream> accept();
+  ListeningSocket(ListeningSocket &&LS);
   ~ListeningSocket();
 };
 class raw_socket_stream : public raw_fd_stream {
   uint64_t current_pos() const override { return 0; }
 public:
   raw_socket_stream(int SocketFD);
+  raw_socket_stream(raw_socket_stream &&socket_stream);
 
   /// Create a \p raw_socket_stream connected to the Unix domain socket at \p
   /// SocketPath.
   static Expected<raw_socket_stream> createConnectedUnix(StringRef SocketPath);
   ~raw_socket_stream();
 };
-
-
-// class raw_socket_stream : public raw_fd_ostream {
-//   StringRef SocketPath;
-//   bool ShouldUnlink;
-
-//   uint64_t current_pos() const override { return 0; }
-
-// public:
-//   int get_socket() { return get_fd(); }
-
-//   static int MakeServerSocket(StringRef SocketPath, unsigned int MaxBacklog,
-//                               std::error_code &EC);
-
-//   raw_socket_stream(int SocketFD, StringRef SockPath, std::error_code &EC);
-//   raw_socket_stream(StringRef SockPath, std::error_code &EC);
-//   ~raw_socket_stream();
-
-//   Expected<std::string> read_impl();
-// };
 
 //===----------------------------------------------------------------------===//
 // Output Stream Adaptors

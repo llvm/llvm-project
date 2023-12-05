@@ -18,37 +18,28 @@ TEST(raw_socket_streamTest, CLIENT_TO_SERVER_AND_SERVER_TO_CLIENT) {
   SmallString<100> SocketPath("/tmp/test_raw_socket_stream.sock");
   std::error_code ECServer, ECClient;
 
-  int ServerFD = raw_socket_stream::MakeServerSocket(SocketPath, 3, ECServer);
+  char Bytes[8];
 
-  raw_socket_stream Client(SocketPath, ECClient);
-  EXPECT_TRUE(!ECClient);
+  Expected<ListeningSocket> MaybeServerListener = ListeningSocket::createUnix(SocketPath);
 
-  raw_socket_stream Client2(SocketPath, ECClient);
+  ListeningSocket ServerListener = std::move(*MaybeServerListener);
 
-  raw_socket_stream Server(ServerFD, SocketPath, ECServer);
-  EXPECT_TRUE(!ECServer);
+  Expected<raw_socket_stream> MaybeClient = raw_socket_stream::createConnectedUnix(SocketPath);
+
+  raw_socket_stream Client = std::move(*MaybeClient);
+
+  Expected<raw_socket_stream> MaybeServer = ServerListener.accept();
+
+  raw_socket_stream Server = std::move(*MaybeServer);
 
   Client << "01234567";
   Client.flush();
 
-  Client2 << "abcdefgh";
-  Client2.flush();
+  ssize_t BytesRead = Server.read(Bytes, 8);
 
-  Expected<std::string> from_client = Server.read_impl();
+  std::string string(reinterpret_cast<char *>(Bytes), 8);
 
-  if (auto E = from_client.takeError()) {
-    return; // FIXME: Do something.
-  }
-  EXPECT_EQ("01234567", (*from_client));
-
-  Server << "76543210";
-  Server.flush();
-
-  Expected<std::string> from_server = Client.read_impl();
-  if (auto E = from_server.takeError()) {
-    return;
-    // YIKES! 😩
-  }
-  EXPECT_EQ("76543210", (*from_server));
+  ASSERT_EQ(8, BytesRead);
+  ASSERT_EQ("01234567", string);
 }
 } // namespace

@@ -963,7 +963,9 @@ bool raw_fd_stream::classof(const raw_ostream *OS) {
 //  raw_socket_stream
 //===----------------------------------------------------------------------===//
 
-ListeningSocket::ListeningSocket(int SocketFD) : FD(SocketFD) {}
+ListeningSocket::ListeningSocket(int SocketFD, StringRef SocketPath) : FD(SocketFD), SocketPath(SocketPath) {}
+
+ListeningSocket::ListeningSocket(ListeningSocket &&LS) : FD(LS.FD), SocketPath(LS.SocketPath) {}
 
 Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath) {
 
@@ -977,7 +979,8 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath) {
 #endif
     return llvm::make_error<StringError>("socket create failed", inconvertibleErrorCode());
   }
-    struct sockaddr_un Addr;
+
+  struct sockaddr_un Addr;
   memset(&Addr, 0, sizeof(Addr));
   Addr.sun_family = AF_UNIX;
   strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
@@ -1000,7 +1003,7 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath) {
 #else
   UnixSocket = MaybeWinsocket;
 #endif // _WIN32
-  ListeningSocket ListenSocket(UnixSocket);
+  ListeningSocket ListenSocket(UnixSocket, SocketPath);
   return ListenSocket;
 }
 
@@ -1018,6 +1021,11 @@ Expected<raw_socket_stream> ListeningSocket::accept() {
   }
   Expected<raw_socket_stream> MaybeSocketStream(AcceptFD);
   return MaybeSocketStream;
+}
+
+ListeningSocket::~ListeningSocket() {
+  ::close(FD);
+  unlink(SocketPath.str().c_str());
 }
 
 // Expected?
@@ -1050,10 +1058,14 @@ int GetSocketFD(StringRef SocketPath) {
 
 raw_socket_stream::raw_socket_stream(int AcceptFD): raw_fd_stream(AcceptFD, false) {}
 
-Expected<raw_socket_stream> createConnectedUnix(StringRef SocketPath) {
+raw_socket_stream::raw_socket_stream(raw_socket_stream &&socket_stream) : raw_fd_stream(socket_stream.get_fd(), false) {}
+
+Expected<raw_socket_stream> raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
   Expected<raw_socket_stream> MaybeSocketStream(GetSocketFD(SocketPath));
   return MaybeSocketStream;
 }
+
+raw_socket_stream::~raw_socket_stream() {}
 
 /*
 int raw_socket_stream::MakeServerSocket(StringRef SocketPath,
