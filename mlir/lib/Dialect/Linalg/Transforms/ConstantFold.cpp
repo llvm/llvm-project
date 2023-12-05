@@ -148,7 +148,7 @@ public:
       SmallVector<unsigned> dims;
       dims.reserve(map.getNumResults());
       for (AffineExpr result : map.getResults()) {
-        dims.push_back(result.cast<AffineDimExpr>().getPosition());
+        dims.push_back(cast<AffineDimExpr>(result).getPosition());
       }
       return dims;
     };

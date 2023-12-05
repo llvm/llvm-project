@@ -156,6 +156,7 @@ static void ParseArgs(int argc, char **argv) {
         llvm::StringSwitch<std::optional<ScanningOptimizations>>(Arg)
             .Case("none", ScanningOptimizations::None)
             .Case("header-search", ScanningOptimizations::HeaderSearch)
+            .Case("system-warnings", ScanningOptimizations::SystemWarnings)
             .Case("all", ScanningOptimizations::All)
             .Default(std::nullopt);
     if (!Optimization) {

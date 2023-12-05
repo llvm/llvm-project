@@ -1087,6 +1087,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<SymbolRefAttr>:$comdat,
+    DefaultValuedAttr<LLVM_DIGlobalVariableExpressionAttr, "{}">:$dbg_expr,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
   let summary = "LLVM dialect global.";
@@ -1196,7 +1197,8 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       CArg<"bool", "false">:$dsoLocal,
       CArg<"bool", "false">:$thread_local_,
       CArg<"SymbolRefAttr", "{}">:$comdat,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"DIGlobalVariableExpressionAttr", "{}">:$dbgExpr)>
   ];
 
   let extraClassDeclaration = [{
@@ -1387,10 +1389,13 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     OptionalAttr<UnitAttr>:$arm_streaming,
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
+    OptionalAttr<UnitAttr>:$arm_new_za,
     OptionalAttr<StrAttr>:$section,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<I64Attr>:$alignment,
-    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range
+    OptionalAttr<LLVM_VScaleRangeAttr>:$vscale_range,
+    OptionalAttr<FramePointerKindAttr>:$frame_pointer,
+    OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features
   );
 
   let regions = (region AnyRegion:$body);
@@ -1792,6 +1797,35 @@ def LLVM_CallIntrinsicOp
   }];
   let assemblyFormat = [{
     $intrin `(` $args `)` `:` functional-type($args, $results) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def LLVM_LinkerOptionsOp
+    : LLVM_Op<"linker_options"> {
+  let summary = "Options to pass to the linker when the object file is linked";
+  let description = [{
+    Pass the given options to the linker when the resulting object file is linked.
+    This is used extensively on Windows to determine the C runtime that the object
+    files should link against.
+
+    Examples:
+    ```mlir
+    // Link against the MSVC static threaded CRT.
+    llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
+
+    // Link against aarch64 compiler-rt builtins
+    llvm.linker_options ["-l", "clang_rt.builtins-aarch64"]
+    ```
+  }];
+  let arguments  = (ins StrArrayAttr:$options);
+  let assemblyFormat = [{
+    $options attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertLinkerOptionsOp($options, builder, moduleTranslation);
   }];
 
   let hasVerifier = 1;

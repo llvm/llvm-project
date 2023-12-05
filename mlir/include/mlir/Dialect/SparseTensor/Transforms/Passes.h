@@ -74,16 +74,11 @@ std::unique_ptr<Pass> createPreSparsificationRewritePass();
 
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
-  SparsificationOptions(SparseParallelizationStrategy p, bool idxReduc,
-                        bool gpuLibgen, bool enableRT)
-      : parallelizationStrategy(p), enableIndexReduction(idxReduc),
-        enableGPULibgen(gpuLibgen), enableRuntimeLibrary(enableRT) {}
+  SparsificationOptions(SparseParallelizationStrategy p, bool enableRT)
+      : parallelizationStrategy(p), enableRuntimeLibrary(enableRT) {}
   SparsificationOptions()
-      : SparsificationOptions(SparseParallelizationStrategy::kNone, false,
-                              false, true) {}
+      : SparsificationOptions(SparseParallelizationStrategy::kNone, true) {}
   SparseParallelizationStrategy parallelizationStrategy;
-  bool enableIndexReduction;
-  bool enableGPULibgen;
   bool enableRuntimeLibrary;
 };
 
@@ -197,7 +192,8 @@ void populateSparseGPULibgenPatterns(RewritePatternSet &patterns,
                                      bool enableRT);
 
 std::unique_ptr<Pass> createSparseGPUCodegenPass();
-std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads);
+std::unique_ptr<Pass> createSparseGPUCodegenPass(unsigned numThreads,
+                                                 bool enableRT);
 
 //===----------------------------------------------------------------------===//
 // The SparseStorageSpecifierToLLVM pass.
@@ -226,7 +222,7 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     const SparsificationOptions &sparsificationOptions,
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
-    bool enableVLAVectorization, bool enableSIMDIndex32);
+    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
 
 //===----------------------------------------------------------------------===//
 // Registration.

@@ -839,8 +839,21 @@ and non-ownership qualification.
 object lvalue.
 
 * For ``__weak`` objects, the current pointee is retained and then released at
-  the end of the current full-expression.  This must execute atomically with
-  respect to assignments and to the final release of the pointee.
+  the end of the current full-expression. In particular, messaging a ``__weak``
+  object keeps the object retained until the end of the full expression.
+
+  .. code-block:: objc
+
+    __weak MyObject *weakObj;
+
+    void foo() {
+      // weakObj is retained before the message send and released at the end of
+      // the full expression.
+      [weakObj m];
+    }
+
+  This must execute atomically with respect to assignments and to the final
+  release of the pointee.
 * For all other objects, the lvalue is loaded with primitive semantics.
 
 :arc-term:`Assignment` occurs when evaluating an assignment operator.  The

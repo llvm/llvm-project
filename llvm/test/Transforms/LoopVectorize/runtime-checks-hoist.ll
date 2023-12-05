@@ -413,18 +413,18 @@ define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %ds
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[WIDE_M:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    [[WIDE_N:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[WIDE_N]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[SRC2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[WIDE_N]], 2
 ; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; CHECK:       outer.loop:
 ; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_OUTER_NEXT:%.*]], [[INNER_LOOP_EXIT:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], [[IV_OUTER]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[DST1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i64 [[IV_OUTER]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], [[IV_OUTER]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw i64 [[IV_OUTER]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP3]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 16
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_N]], 4
@@ -436,7 +436,7 @@ define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %ds
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP11]], align 4
@@ -453,7 +453,7 @@ define void @diff_checks_src_start_invariant(ptr nocapture noundef writeonly %ds
 ; CHECK-NEXT:    [[IV_INNER:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_INNER_NEXT:%.*]], [[INNER_LOOP]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV_INNER]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX_US]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[IV_INNER]], [[TMP4]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[IV_INNER]], [[TMP5]]
 ; CHECK-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[ARRAYIDX6_US]], align 4
 ; CHECK-NEXT:    [[IV_INNER_NEXT]] = add nuw nsw i64 [[IV_INNER]], 1

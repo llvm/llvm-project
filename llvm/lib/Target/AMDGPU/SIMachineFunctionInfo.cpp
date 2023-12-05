@@ -519,7 +519,7 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
     return *ScavengeFI;
-  if (isEntryFunction()) {
+  if (isEntryFunction() || isChainFunction()) {
     ScavengeFI = MFI.CreateFixedObject(
         TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
   } else {

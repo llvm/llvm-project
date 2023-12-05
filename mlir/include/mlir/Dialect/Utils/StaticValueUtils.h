@@ -141,13 +141,48 @@ getValuesSortedByKey(ArrayRef<Attribute> keys, ArrayRef<int64_t> values,
 
 /// Returns "success" when any of the elements in `ofrs` is a constant value. In
 /// that case the value is replaced by an attribute. Returns "failure" when no
-/// folding happened.
-LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs);
+/// folding happened. If `onlyNonNegative` is set, only non-negative constant
+/// values are folded.
+LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
+                                   bool onlyNonNegative = false);
 
 /// Return the number of iterations for a loop with a lower bound `lb`, upper
 /// bound `ub` and step `step`.
 std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
                                          OpFoldResult step);
+
+/// Idiomatic saturated operations on values like offsets, sizes, and strides.
+struct SaturatedInteger {
+  static SaturatedInteger wrap(int64_t v) {
+    return (ShapedType::isDynamic(v)) ? SaturatedInteger{true, 0}
+                                      : SaturatedInteger{false, v};
+  }
+  int64_t asInteger() { return saturated ? ShapedType::kDynamic : v; }
+  FailureOr<SaturatedInteger> desaturate(SaturatedInteger other) {
+    if (saturated && !other.saturated)
+      return other;
+    if (!saturated && !other.saturated && v != other.v)
+      return failure();
+    return *this;
+  }
+  bool operator==(SaturatedInteger other) {
+    return (saturated && other.saturated) ||
+           (!saturated && !other.saturated && v == other.v);
+  }
+  bool operator!=(SaturatedInteger other) { return !(*this == other); }
+  SaturatedInteger operator+(SaturatedInteger other) {
+    if (saturated || other.saturated)
+      return SaturatedInteger{true, 0};
+    return SaturatedInteger{false, other.v + v};
+  }
+  SaturatedInteger operator*(SaturatedInteger other) {
+    if (saturated || other.saturated)
+      return SaturatedInteger{true, 0};
+    return SaturatedInteger{false, other.v * v};
+  }
+  bool saturated = true;
+  int64_t v = 0;
+};
 
 } // namespace mlir
 

@@ -123,8 +123,7 @@ FOREVERY_BINOP(IMPL_BINOP_PATTERN)
 class MergerTestBase : public ::testing::Test {
 protected:
   MergerTestBase(unsigned numTensors, unsigned numLoops)
-      : merger(numTensors, numLoops, /*numFilterLoops=*/0,
-               /*maxRank=*/numLoops) {
+      : merger(numTensors, numLoops, /*maxRank=*/numLoops) {
     tensors.reserve(numTensors);
     for (unsigned t = 0; t < numTensors; t++)
       tensors.push_back(merger.addTensorExp(tid(t)));
@@ -314,11 +313,11 @@ protected:
   MergerTest3T1L() : MergerTestBase(3, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(2));
     // Tensor 0: sparse input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Compressed);
     // Tensor 1: sparse input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Compressed);
     // Tensor 2: dense output vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -328,13 +327,13 @@ protected:
   MergerTest4T1L() : MergerTestBase(4, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(3));
     // Tensor 0: sparse input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Compressed);
     // Tensor 1: sparse input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Compressed);
     // Tensor 2: sparse input vector
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Compressed);
     // Tensor 3: dense output vector
-    merger.setLevelAndType(tid(3), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(3), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -348,11 +347,11 @@ protected:
   MergerTest3T1LD() : MergerTestBase(3, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(2));
     // Tensor 0: sparse input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Compressed);
     // Tensor 1: dense input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Dense);
     // Tensor 2: dense output vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -366,13 +365,13 @@ protected:
   MergerTest4T1LU() : MergerTestBase(4, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == tid(3));
     // Tensor 0: undef input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Undef);
     // Tensor 1: dense input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Dense);
     // Tensor 2: undef input vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Undef);
     // Tensor 3: dense output vector.
-    merger.setLevelAndType(tid(3), lid(0), 0, DimLevelType::Dense);
+    merger.setLevelAndType(tid(3), lid(0), 0, LevelType::Dense);
   }
 };
 
@@ -388,11 +387,11 @@ protected:
     EXPECT_TRUE(merger.getSynTensorID() == tid(3));
     merger.setHasSparseOut(true);
     // Tensor 0: undef input vector.
-    merger.setLevelAndType(tid(0), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(0), lid(0), 0, LevelType::Undef);
     // Tensor 1: undef input vector.
-    merger.setLevelAndType(tid(1), lid(0), 0, DimLevelType::Undef);
+    merger.setLevelAndType(tid(1), lid(0), 0, LevelType::Undef);
     // Tensor 2: sparse output vector.
-    merger.setLevelAndType(tid(2), lid(0), 0, DimLevelType::Compressed);
+    merger.setLevelAndType(tid(2), lid(0), 0, LevelType::Compressed);
   }
 };
 

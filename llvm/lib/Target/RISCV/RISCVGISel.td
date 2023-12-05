@@ -21,8 +21,6 @@ def simm12Plus1 : ImmLeaf<XLenVT, [{
 def simm12Plus1i32 : ImmLeaf<i32, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
-def uimm5i32 : ImmLeaf<i32, [{return isUInt<5>(Imm);}]>;
-
 // FIXME: This doesn't check that the G_CONSTANT we're deriving the immediate
 // from is only used once
 def simm12Minus1Nonzero : ImmLeaf<XLenVT, [{
@@ -38,6 +36,11 @@ def ImmPlus1 : SDNodeXForm<imm, [{
 
 def GINegImm : GICustomOperandRenderer<"renderNegImm">,
   GISDNodeXFormEquiv<NegImm>;
+
+def GIImmSubFromXLen : GICustomOperandRenderer<"renderImmSubFromXLen">,
+  GISDNodeXFormEquiv<ImmSubFromXLen>;
+def GIImmSubFrom32 : GICustomOperandRenderer<"renderImmSubFrom32">,
+  GISDNodeXFormEquiv<ImmSubFrom32>;
 
 def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
@@ -58,9 +61,12 @@ def gi_trailing_zero : GICustomOperandRenderer<"renderTrailingZeros">,
 // parameter appears to be ignored so this pattern works for both, however we
 // should add a LowLevelTypeByHwMode, and use that to define our XLenLLT instead
 // here.
-def ShiftMaskGI :
+def GIShiftMaskXLen :
     GIComplexOperandMatcher<s32, "selectShiftMask">,
     GIComplexPatternEquiv<shiftMaskXLen>;
+def GIShiftMask32 :
+    GIComplexOperandMatcher<s32, "selectShiftMask">,
+    GIComplexPatternEquiv<shiftMask32>;
 
 def gi_sh1add_op : GIComplexOperandMatcher<s32, "selectSHXADDOp<1>">,
                    GIComplexPatternEquiv<sh1add_op>;
@@ -87,21 +93,7 @@ def : Pat<(i32 (sub GPR:$rs1, simm12Plus1i32:$imm)),
 def : Pat<(i32 (shl GPR:$rs1, (i32 GPR:$rs2))), (SLLW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (sra GPR:$rs1, (i32 GPR:$rs2))), (SRAW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i32 (srl GPR:$rs1, (i32 GPR:$rs2))), (SRLW GPR:$rs1, GPR:$rs2)>;
-
-def : Pat<(i32 (shl GPR:$rs1, uimm5i32:$imm)),
-          (SLLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (sra GPR:$rs1, uimm5i32:$imm)),
-          (SRAIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
-def : Pat<(i32 (srl GPR:$rs1, uimm5i32:$imm)),
-          (SRLIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
 }
-
-let Predicates = [HasStdExtZba, IsRV64] in {
-// This pattern is put here due to the fact that i32 is not a legal type
-// in SDISel for RV64, which is not the case in GISel.
-def : Pat<(shl (i64 (zext i32:$rs1)), uimm5:$shamt),
-          (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
-} // Predicates = [HasStdExtZba, IsRV64]
 
 // Ptr type used in patterns with GlobalISelEmitter
 def PtrVT : PtrValueTypeByHwMode<XLenVT, 0>;

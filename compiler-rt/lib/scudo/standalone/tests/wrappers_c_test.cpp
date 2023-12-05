@@ -83,9 +83,12 @@ protected:
       printf("Hooks are enabled but hooks tests are disabled.\n");
   }
 
-  void invalidateAllocHookPtrAs(UNUSED void *Ptr) {
-    if (SCUDO_ENABLE_HOOKS_TESTS)
-      AC.Ptr = Ptr;
+  void invalidateHookPtrs() {
+    if (SCUDO_ENABLE_HOOKS_TESTS) {
+      void *InvalidPtr = reinterpret_cast<void *>(0xdeadbeef);
+      AC.Ptr = InvalidPtr;
+      DC.Ptr = InvalidPtr;
+    }
   }
   void verifyAllocHookPtr(UNUSED void *Ptr) {
     if (SCUDO_ENABLE_HOOKS_TESTS)
@@ -258,6 +261,7 @@ TEST_F(ScudoWrappersCTest, AlignedAlloc) {
 }
 
 TEST_F(ScudoWrappersCDeathTest, Realloc) {
+  invalidateHookPtrs();
   // realloc(nullptr, N) is malloc(N)
   void *P = realloc(nullptr, Size);
   EXPECT_NE(P, nullptr);
@@ -266,6 +270,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   free(P);
   verifyDeallocHookPtr(P);
 
+  invalidateHookPtrs();
   P = malloc(Size);
   EXPECT_NE(P, nullptr);
   // realloc(P, 0U) is free(P) and returns nullptr
@@ -277,7 +282,7 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   EXPECT_LE(Size, malloc_usable_size(P));
   memset(P, 0x42, Size);
 
-  invalidateAllocHookPtrAs(reinterpret_cast<void *>(0xdeadbeef));
+  invalidateHookPtrs();
   void *OldP = P;
   P = realloc(P, Size * 2U);
   EXPECT_NE(P, nullptr);
@@ -285,14 +290,15 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   for (size_t I = 0; I < Size; I++)
     EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
   if (OldP == P) {
-    verifyAllocHookPtr(reinterpret_cast<void *>(0xdeadbeef));
+    verifyDeallocHookPtr(OldP);
+    verifyAllocHookPtr(OldP);
   } else {
     verifyAllocHookPtr(P);
     verifyAllocHookSize(Size * 2U);
     verifyDeallocHookPtr(OldP);
   }
 
-  invalidateAllocHookPtrAs(reinterpret_cast<void *>(0xdeadbeef));
+  invalidateHookPtrs();
   OldP = P;
   P = realloc(P, Size / 2U);
   EXPECT_NE(P, nullptr);
@@ -300,7 +306,8 @@ TEST_F(ScudoWrappersCDeathTest, Realloc) {
   for (size_t I = 0; I < Size / 2U; I++)
     EXPECT_EQ(0x42, (reinterpret_cast<uint8_t *>(P))[I]);
   if (OldP == P) {
-    verifyAllocHookPtr(reinterpret_cast<void *>(0xdeadbeef));
+    verifyDeallocHookPtr(OldP);
+    verifyAllocHookPtr(OldP);
   } else {
     verifyAllocHookPtr(P);
     verifyAllocHookSize(Size / 2U);

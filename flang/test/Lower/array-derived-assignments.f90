@@ -1,5 +1,5 @@
 ! Test derived type assignment lowering inside array expression
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 module array_derived_assign
   type simple_copy

@@ -69,7 +69,6 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           IntrinsicTypes = {ResultType, Ops[3]->getType()};
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
         Value *NewVL = Ops[2];
         Ops.erase(Ops.begin() + 2);
         llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
@@ -150,7 +149,6 @@ let HasMaskedOffOperand = false,
         // Builtin: (ptr, value, vl). Intrinsic: (value, ptr, vl)
         std::swap(Ops[0], Ops[1]);
       }
-      Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
       if (IsMasked)
         IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
       else
@@ -189,7 +187,6 @@ multiclass RVVVSSEBuiltin<list<string> types> {
           // Builtin: (ptr, stride, value, vl). Intrinsic: (value, ptr, stride, vl)
           std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         if (IsMasked)
           IntrinsicTypes = {Ops[0]->getType(), Ops[4]->getType()};
         else
@@ -215,7 +212,6 @@ multiclass RVVIndexedStore<string op> {
           // Builtin: (ptr, index, value, vl). Intrinsic: (value, ptr, index, vl)
           std::rotate(Ops.begin(), Ops.begin() + 2, Ops.begin() + 3);
         }
-        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         if (IsMasked)
           IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[4]->getType()};
         else

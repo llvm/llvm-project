@@ -50,7 +50,6 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugLoc.h"
 
 namespace llvm {
@@ -287,6 +286,7 @@ public:
   /// representation has been converted, and the ordering of DPValues is
   /// meaningful in the same was a dbg.values.
   simple_ilist<DPValue> StoredDPValues;
+  bool empty() const { return StoredDPValues.empty(); }
 
   const BasicBlock *getParent() const;
   BasicBlock *getParent();
@@ -309,6 +309,11 @@ public:
   /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
   /// is true, place them before existing DPValues, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
+  /// Transfer the DPValues in \p Range from \p Src into this DPMarker. If
+  /// \p InsertAtHead is true, place them before existing DPValues, otherwise
+  // afterwards.
+  void absorbDebugValues(iterator_range<DPValue::self_iterator> Range,
+                         DPMarker &Src, bool InsertAtHead);
   /// Insert a DPValue into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
   void insertDPValue(DPValue *New, bool InsertAtHead);

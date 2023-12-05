@@ -703,6 +703,27 @@ public:
   void writeTo(uint8_t *buf) const override {}
 };
 
+class ECCodeMapEntry {
+public:
+  ECCodeMapEntry(Chunk *first, Chunk *last, chpe_range_type type)
+      : first(first), last(last), type(type) {}
+  Chunk *first;
+  Chunk *last;
+  chpe_range_type type;
+};
+
+// This is a chunk containing CHPE code map on EC targets. It's a table
+// of address ranges and their types.
+class ECCodeMapChunk : public NonSectionChunk {
+public:
+  ECCodeMapChunk(std::vector<ECCodeMapEntry> &map) : map(map) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  std::vector<ECCodeMapEntry> &map;
+};
+
 // MinGW specific, for the "automatic import of variables from DLLs" feature.
 // This provides the table of runtime pseudo relocations, for variable
 // references that turned out to need to be imported from a DLL even though

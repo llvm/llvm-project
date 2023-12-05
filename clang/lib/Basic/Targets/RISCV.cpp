@@ -235,6 +235,46 @@ ArrayRef<Builtin::Info> RISCVTargetInfo::getTargetBuiltins() const {
                         clang::RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }
 
+static std::vector<std::string>
+collectNonISAExtFeature(ArrayRef<std::string> FeaturesNeedOverride, int XLen) {
+  auto ParseResult =
+      llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesNeedOverride);
+
+  if (!ParseResult) {
+    consumeError(ParseResult.takeError());
+    return std::vector<std::string>();
+  }
+
+  std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
+
+  std::vector<std::string> NonISAExtFeatureVec;
+
+  llvm::copy_if(FeaturesNeedOverride, std::back_inserter(NonISAExtFeatureVec),
+                [&](const std::string &Feat) {
+                  return !llvm::is_contained(ImpliedFeatures, Feat);
+                });
+
+  return NonISAExtFeatureVec;
+}
+
+static std::vector<std::string>
+resolveTargetAttrOverride(const std::vector<std::string> &FeaturesVec,
+                          int XLen) {
+  auto I = llvm::find(FeaturesVec, "__RISCV_TargetAttrNeedOverride");
+  if (I == FeaturesVec.end())
+    return FeaturesVec;
+
+  ArrayRef<std::string> FeaturesNeedOverride(&*FeaturesVec.begin(), &*I);
+  std::vector<std::string> NonISAExtFeature =
+      collectNonISAExtFeature(FeaturesNeedOverride, XLen);
+
+  std::vector<std::string> ResolvedFeature(++I, FeaturesVec.end());
+  ResolvedFeature.insert(ResolvedFeature.end(), NonISAExtFeature.begin(),
+                         NonISAExtFeature.end());
+
+  return ResolvedFeature;
+}
+
 bool RISCVTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
@@ -248,7 +288,10 @@ bool RISCVTargetInfo::initFeatureMap(
     Features["32bit"] = true;
   }
 
-  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesVec);
+  std::vector<std::string> NewFeaturesVec =
+      resolveTargetAttrOverride(FeaturesVec, XLen);
+
+  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, NewFeaturesVec);
   if (!ParseResult) {
     std::string Buffer;
     llvm::raw_string_ostream OutputErrMsg(Buffer);
@@ -262,7 +305,7 @@ bool RISCVTargetInfo::initFeatureMap(
   // RISCVISAInfo makes implications for ISA features
   std::vector<std::string> ImpliedFeatures = (*ParseResult)->toFeatureVector();
   // Add non-ISA features like `relax` and `save-restore` back
-  for (const std::string &Feature : FeaturesVec)
+  for (const std::string &Feature : NewFeaturesVec)
     if (!llvm::is_contained(ImpliedFeatures, Feature))
       ImpliedFeatures.push_back(Feature);
 
@@ -333,7 +376,7 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
     HasLegalHalfType = true;
 
-  FastUnalignedAccess = llvm::is_contained(Features, "+unaligned-scalar-mem");
+  FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
 
   return true;
 }
@@ -358,4 +401,82 @@ void RISCVTargetInfo::fillValidTuneCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   bool Is64Bit = getTriple().isArch64Bit();
   llvm::RISCV::fillValidTuneCPUArchList(Values, Is64Bit);
+}
+
+static void handleFullArchString(StringRef FullArchStr,
+                                 std::vector<std::string> &Features) {
+  Features.push_back("__RISCV_TargetAttrNeedOverride");
+  auto RII = llvm::RISCVISAInfo::parseArchString(
+      FullArchStr, /* EnableExperimentalExtension */ true);
+  if (!RII) {
+    consumeError(RII.takeError());
+    // Forward the invalid FullArchStr.
+    Features.push_back("+" + FullArchStr.str());
+  } else {
+    std::vector<std::string> FeatStrings = (*RII)->toFeatureVector();
+    Features.insert(Features.end(), FeatStrings.begin(), FeatStrings.end());
+  }
+}
+
+ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ";");
+  bool FoundArch = false;
+
+  for (auto &Feature : AttrFeatures) {
+    Feature = Feature.trim();
+    StringRef AttrString = Feature.split("=").second.trim();
+
+    if (Feature.startswith("arch=")) {
+      // Override last features
+      Ret.Features.clear();
+      if (FoundArch)
+        Ret.Duplicate = "arch=";
+      FoundArch = true;
+
+      if (AttrString.startswith("+")) {
+        // EXTENSION like arch=+v,+zbb
+        SmallVector<StringRef, 1> Exts;
+        AttrString.split(Exts, ",");
+        for (auto Ext : Exts) {
+          if (Ext.empty())
+            continue;
+
+          StringRef ExtName = Ext.substr(1);
+          std::string TargetFeature =
+              llvm::RISCVISAInfo::getTargetFeatureForExtension(ExtName);
+          if (!TargetFeature.empty())
+            Ret.Features.push_back(Ext.front() + TargetFeature);
+          else
+            Ret.Features.push_back(Ext.str());
+        }
+      } else {
+        // full-arch-string like arch=rv64gcv
+        handleFullArchString(AttrString, Ret.Features);
+      }
+    } else if (Feature.startswith("cpu=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "cpu=";
+
+      Ret.CPU = AttrString;
+
+      if (!FoundArch) {
+        // Update Features with CPU's features
+        StringRef MarchFromCPU = llvm::RISCV::getMArchFromMcpu(Ret.CPU);
+        if (MarchFromCPU != "") {
+          Ret.Features.clear();
+          handleFullArchString(MarchFromCPU, Ret.Features);
+        }
+      }
+    } else if (Feature.startswith("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+
+      Ret.Tune = AttrString;
+    }
+  }
+  return Ret;
 }

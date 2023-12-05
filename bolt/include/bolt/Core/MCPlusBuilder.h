@@ -1179,6 +1179,12 @@ public:
   /// is emitted to MCStreamer.
   bool setLabel(MCInst &Inst, MCSymbol *Label) const;
 
+  /// Get instruction size specified via annotation.
+  std::optional<uint32_t> getSize(const MCInst &Inst) const;
+
+  /// Set instruction size.
+  void setSize(MCInst &Inst, uint32_t Size) const;
+
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
   /// the operand - return nullptr.

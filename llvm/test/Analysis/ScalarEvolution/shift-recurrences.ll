@@ -211,7 +211,7 @@ define void @test_shl2() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -246,7 +246,7 @@ define void @test_shl3(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   %shiftamt = select i1 %c, i64 1, i64 0
@@ -280,7 +280,7 @@ define void @test_shl4() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 60
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 60
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 61
+; CHECK-NEXT:  Loop %loop: Trip multiple is 61
 ;
 entry:
   br label %loop
@@ -313,7 +313,7 @@ define void @test_shl5() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 61
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 61
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 62
+; CHECK-NEXT:  Loop %loop: Trip multiple is 62
 ;
 entry:
   br label %loop
@@ -348,7 +348,7 @@ define void @test_shl6(i1 %c) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -382,7 +382,7 @@ define void @test_shl7(i1 %c, i64 %shiftamt) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -529,7 +529,7 @@ define void @test_ashr_tc_positive() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -561,7 +561,7 @@ define void @test_ashr_tc_negative() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -595,7 +595,7 @@ define void @test_ashr_tc_either(i1 %a) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 60
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 60
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 61
+; CHECK-NEXT:  Loop %loop: Trip multiple is 61
 ;
 entry:
   %start = sext i1 %a to i8
@@ -628,7 +628,7 @@ define void @test_ashr_zero_shift() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -660,7 +660,7 @@ define void @test_lshr_tc_positive() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -692,7 +692,7 @@ define void @test_lshr_tc_negative() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -726,7 +726,7 @@ define void @test_lshr_tc_either(i1 %a) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   %start = sext i1 %a to i8
@@ -759,7 +759,7 @@ define void @test_lshr_zero_shift() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -792,7 +792,7 @@ define void @test_lshr_power_of_2_start() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -825,7 +825,7 @@ define void @test_lshr_arbitrary_start() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop
@@ -857,7 +857,7 @@ define void @test_lshr_start_power_of_2_plus_one() {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
 ;
 entry:
   br label %loop

@@ -66,7 +66,7 @@ llvm.mlir.global external @explicit_undef() : i32 {
 // CHECK: @int_gep = internal constant ptr getelementptr (i32, ptr @i32_global, i32 2)
 llvm.mlir.global internal constant @int_gep() : !llvm.ptr {
   %addr = llvm.mlir.addressof @i32_global : !llvm.ptr
-  %_c0 = llvm.mlir.constant(2: i32) :i32
+  %_c0 = llvm.mlir.constant(2: i32) : i32
   %gepinit = llvm.getelementptr %addr[%_c0] : (!llvm.ptr, i32) -> !llvm.ptr, i32
   llvm.return %gepinit : !llvm.ptr
 }
@@ -179,7 +179,7 @@ llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysec
 // CHECK: declare ptr @malloc(i64)
 llvm.func @malloc(i64) -> !llvm.ptr
 // CHECK: declare void @free(ptr)
-
+llvm.func @free(!llvm.ptr)
 
 //
 // Basic functionality: function and block conversion, function calls,
@@ -2324,3 +2324,9 @@ llvm.func @zeroinit_complex_local_aggregate() {
 
   llvm.return
 }
+
+//CHECK: !llvm.linker.options = !{![[MD0:[0-9]+]], ![[MD1:[0-9]+]]}
+//CHECK: ![[MD0]] = !{!"/DEFAULTLIB:", !"libcmt"}
+llvm.linker_options ["/DEFAULTLIB:", "libcmt"]
+//CHECK: ![[MD1]] = !{!"/DEFAULTLIB:", !"libcmtd"}
+llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
