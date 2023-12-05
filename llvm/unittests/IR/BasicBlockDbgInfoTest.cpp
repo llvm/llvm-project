@@ -1481,5 +1481,58 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
 
   UseNewDbgInfoFormat = false;
 }
+
+// What if we moveBefore end() -- there might be no debug-info there, in which
+// case we shouldn't crash.
+TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      br label %exit
+
+    exit:
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  Function &F = *M->getFunction("f");
+  BasicBlock &Entry = F.getEntryBlock();
+  BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
+
+  // Move the return to the end of the entry block.
+  Instruction *Br = Entry.getTerminator();
+  Instruction *Ret = Exit.getTerminator();
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+  Ret->moveBefore(Entry, Entry.end());
+  Br->eraseFromParent();
+
+  // There should continue to not be any debug-info anywhere.
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+  EXPECT_EQ(Exit.getTrailingDPValues(), nullptr);
+  EXPECT_FALSE(Ret->hasDbgValues());
+
+  UseNewDbgInfoFormat = false;
+}
+
 } // End anonymous namespace.
 #endif // EXPERIMENTAL_DEBUGINFO_ITERATORS
