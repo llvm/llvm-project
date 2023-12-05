@@ -41,6 +41,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.bit
 )
 
 add_header_library(
@@ -145,6 +146,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
+    libc.src.__support.bit
     libc.src.__support.uint128
 )
 
