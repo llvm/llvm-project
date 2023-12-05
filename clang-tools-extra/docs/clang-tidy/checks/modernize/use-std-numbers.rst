@@ -31,9 +31,10 @@ The following list of constants from the ``numbers`` header are supported:
 
 The list currently includes all constants as of C++20.
 
-The replacements use the type of the matched constant and can remove explicit casts,
-i.e., switching between ``std::numbers::e``, ``std::numbers::e_v<float>`` and ``std::numbers::e_v<long double>``
-where appropriate.
+The replacements use the type of the matched constant and can remove explicit
+casts, i.e., switching between ``std::numbers::e``,
+``std::numbers::e_v<float>`` and ``std::numbers::e_v<long double>`` where
+appropriate.
 
 .. code-block:: c++
 
@@ -64,8 +65,8 @@ Options
 
     A floating point value that sets the detection threshold for when literals
     match a constant. A literal matches a constant if
-    ``abs(literal - constant) < DiffThreshold`` evaluates to ``true``. Default is
-    `0.001`.
+    ``abs(literal - constant) < DiffThreshold`` evaluates to ``true``. Default
+    is `0.001`.
 
 .. option:: IncludeStyle
 
