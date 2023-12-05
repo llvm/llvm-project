@@ -2821,7 +2821,7 @@ Example output:
 
 The ``__builtin_dump_struct`` function is used to print the fields of a simple
 structure and their values for debugging purposes. The first argument of the
-builtin should be a pointer to the struct to dump. The second argument ``f``
+builtin should be a pointer to a complete record type to dump. The second argument ``f``
 should be some callable expression, and can be a function object or an overload
 set. The builtin calls ``f``, passing any further arguments ``args...``
 followed by a ``printf``-compatible format string and the corresponding
