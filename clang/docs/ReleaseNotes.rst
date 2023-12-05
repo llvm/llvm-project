@@ -652,7 +652,7 @@ Bug Fixes in This Version
   lookup and the current class instantiation has dependent bases.
   Fixes (`#13826 <https://github.com/llvm/llvm-project/issues/13826>`_)
 - Fixes compile error that double colon operator cannot resolve macro with parentheses.
-  Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)- Clang now properly diagnoses use of stand-alone OpenMP directives after a
+  Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
 
