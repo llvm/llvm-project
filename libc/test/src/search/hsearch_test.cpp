@@ -51,17 +51,21 @@ constexpr size_t CAP =
     LIBC_NAMESPACE::cpp::bit_ceil((GROUP_SIZE + 1) * 8 / 7) / 8 * 7;
 static_assert(CAP < sizeof(search_data), "CAP too large");
 
-TEST(LlvmLibcHSearchTest, InsertTooMany) {
+TEST(LlvmLibcHSearchTest, GrowFromZero) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  ASSERT_GT(LIBC_NAMESPACE::hcreate(GROUP_SIZE + 1), 0);
-
-  for (size_t i = 0; i < CAP; ++i) {
-    ASSERT_EQ(LIBC_NAMESPACE::hsearch({&search_data[i], nullptr}, ENTER)->key,
-              &search_data[i]);
+  ASSERT_GT(LIBC_NAMESPACE::hcreate(0), 0);
+  for (size_t i = 0; i < sizeof(search_data) - 1; ++i) {
+    ENTRY *inserted = LIBC_NAMESPACE::hsearch(
+        {&search_data[i], reinterpret_cast<void *>(i)}, ENTER);
+    ASSERT_NE(inserted, static_cast<ENTRY *>(nullptr));
+    ASSERT_EQ(inserted->key, &search_data[i]);
   }
-  ASSERT_THAT(static_cast<void *>(
-                  LIBC_NAMESPACE::hsearch({search_data2, nullptr}, ENTER)),
-              Fails(ENOMEM, static_cast<void *>(nullptr)));
+  for (size_t i = sizeof(search_data) - 1; i != 0; --i) {
+    ASSERT_EQ(
+        LIBC_NAMESPACE::hsearch({&search_data[i - 1], nullptr}, FIND)->data,
+        reinterpret_cast<void *>(i - 1));
+  }
+
   LIBC_NAMESPACE::hdestroy();
 }
 
@@ -85,10 +89,10 @@ TEST(LlvmLibcHSearchTest, Found) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   ASSERT_GT(LIBC_NAMESPACE::hcreate(GROUP_SIZE + 1), 0);
   for (size_t i = 0; i < CAP; ++i) {
-    ASSERT_EQ(LIBC_NAMESPACE::hsearch(
-                  {&search_data[i], reinterpret_cast<void *>(i)}, ENTER)
-                  ->key,
-              &search_data[i]);
+    ENTRY *inserted = LIBC_NAMESPACE::hsearch(
+        {&search_data[i], reinterpret_cast<void *>(i)}, ENTER);
+    ASSERT_NE(inserted, static_cast<ENTRY *>(nullptr));
+    ASSERT_EQ(inserted->key, &search_data[i]);
   }
   for (size_t i = 0; i < CAP; ++i) {
     ASSERT_EQ(LIBC_NAMESPACE::hsearch({&search_data[i], nullptr}, FIND)->data,
