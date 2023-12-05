@@ -18448,7 +18448,9 @@ bool Sema::CheckOverridingFunctionReturnType(const CXXMethodDecl *New,
     return true;
   }
 
-
+  // C++ [class.virtual]p8:
+  //   The return type of an overriding function shall be either identical to
+  //   the return type of the overridden function or [covariant]
   // The new class type must have the same or less qualifiers as the old type.
   if (!OldClassTy.isAtLeastAsQualifiedAs(NewClassTy)) {
     Diag(New->getLocation(),
