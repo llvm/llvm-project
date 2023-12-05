@@ -33,17 +33,18 @@
 #error 11
 #elif __has_embed(<media/art.txt> limit(0)) != __STDC_EMBED_EMPTY__
 #error 12
-// FIXME: It's debatable whether this test is correct or not; if we limit the
-// file to one character and then offset by one character, the file is empty.
-// But if we offset by one character and then limit the file to one character,
-// the file is not empty. We do not yet document this extension and so the
-// behavior of this might change.
-#elif __has_embed(<media/art.txt> limit(1) clang::offset(1)) != __STDC_EMBED_EMPTY__
+// Test that an offset past the end of the file produces an empty file.
+#elif __has_embed(<single_byte.txt> clang::offset(1)) != __STDC_EMBED_EMPTY__
 #error 13
+// Test that we apply the offset before we apply the limit. If we did this in
+// the reverse order, this would cause the file to be empty because we would
+// have limited it to 1 byte and then offset past it.
+#elif __has_embed(<media/art.txt> limit(1) clang::offset(12)) != __STDC_EMBED_FOUND__
+#error 14
 #elif __has_embed(<media/art.txt>) != __STDC_EMBED_FOUND__
-#error 14
+#error 15
 #elif __has_embed(<media/art.txt> if_empty(meow)) != __STDC_EMBED_FOUND__
-#error 14
+#error 16
 #endif
 
 // Ensure that when __has_embed returns true, the file can actually be
@@ -55,5 +56,5 @@ unsigned char buffer[] = {
 #embed "./embed___has_embed.c"
 };
 #else
-#error 15
+#error 17
 #endif

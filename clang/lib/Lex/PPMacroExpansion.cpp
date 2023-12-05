@@ -1352,18 +1352,28 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     return EmbedResult::NotFound;
 
   size_t FileSize = MaybeFileEntry->getSize();
+  // First, "offset" into the file (this reduces the amount of data we can read
+  // from the file).
+  if (Params->MaybeOffsetParam) {
+    if (Params->MaybeOffsetParam->Offset > FileSize)
+      FileSize = 0;
+    else
+      FileSize -= Params->MaybeOffsetParam->Offset;
+  }
+
+  // Second, limit the data from the file (this also reduces the amount of data
+  // we can read from the file).
   if (Params->MaybeLimitParam) {
-    if (FileSize > Params->MaybeLimitParam->Limit) {
+    if (Params->MaybeLimitParam->Limit > FileSize)
+      FileSize = 0;
+    else
       FileSize = Params->MaybeLimitParam->Limit;
-    }
   }
-  if (FileSize == 0) {
+
+  // If we have no data left to read, the file is empty, otherwise we have the
+  // expected resource.
+  if (FileSize == 0)
     return EmbedResult::Empty;
-  }
-  if (Params->MaybeOffsetParam &&
-      Params->MaybeOffsetParam->Offset >= FileSize) {
-    return EmbedResult::Empty;
-  }
   return EmbedResult::Found;
 }
 

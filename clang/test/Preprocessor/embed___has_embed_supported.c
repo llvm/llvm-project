@@ -14,7 +14,7 @@
 #error 6
 #elif __has_embed(__FILE__ suffix(x) limit(0) prefix(1)) != __STDC_EMBED_EMPTY__
 #error 7
-#elif __has_embed(__FILE__ suffix(x) limit(1) prefix(1) clang::offset(1)) != __STDC_EMBED_EMPTY__
+#elif __has_embed(__FILE__ suffix(x) limit(1) prefix(1) clang::offset(1)) != __STDC_EMBED_FOUND__
 #error 8
 #elif __has_embed(__FILE__ suffix(x) limit(0)) != __STDC_EMBED_EMPTY__
 #error 9
