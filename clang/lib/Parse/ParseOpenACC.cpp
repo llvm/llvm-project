@@ -330,7 +330,7 @@ void Parser::ParseOpenACCCacheVarList() {
   // treat it like the beginning of a reference to a potentially-existing
   // `readonly` variable.
   if (getCurToken().is(tok::identifier) &&
-      getCurToken().getIdentifierInfo()->getName() == "readonly" &&
+      getCurToken().getIdentifierInfo()->isStr("readonly") &&
       NextToken().is(tok::colon)) {
     // Consume both tokens.
     ConsumeToken();
