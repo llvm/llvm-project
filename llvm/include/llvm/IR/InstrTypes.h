@@ -344,6 +344,7 @@ public:
   static inline BinaryOperator *CreateDisjoint(BinaryOps Opc, Value *V1,
                                                Value *V2, const Twine &Name,
                                                Instruction *I);
+
 #define DEFINE_HELPERS(OPC, NUWNSWEXACT)                                       \
   static BinaryOperator *Create##NUWNSWEXACT##OPC(Value *V1, Value *V2,        \
                                                   const Twine &Name = "") {    \
