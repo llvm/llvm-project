@@ -230,8 +230,11 @@ public:
   //// Checks whether `target_base` is a virtual base of `type` (direct or
   /// indirect). If it is, stores the first virtual base type on the path from
   /// `type` to `target_type`. Parameter "virtual_base" is where the first
-  /// virtual base type gets stored. Note: This may only be defined in
-  /// TypeSystemClang.
+  /// virtual base type gets stored. Parameter "carry_virtual" is used to
+  /// denote that we're in a recursive check of virtual base classes and we
+  /// have already seen a virtual base class (so should only check direct
+  /// base classes).
+  /// Note: This may only be defined in TypeSystemClang.
   bool IsVirtualBase(CompilerType target_base, CompilerType *virtual_base,
                      bool carry_virtual = false) const;
 
