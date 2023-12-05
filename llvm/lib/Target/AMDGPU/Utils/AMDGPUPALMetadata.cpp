@@ -67,11 +67,10 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
 // must remain valid for the lifetime of the Metadata.
 void AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
   BlobType = Type;
-  if (Type == ELF::NT_AMD_PAL_METADATA) {
+  if (Type == ELF::NT_AMD_PAL_METADATA)
     setFromLegacyBlob(Blob);
-  } else {
+  else
     setFromMsgPackBlob(Blob);
-  }
 }
 
 // Set PAL metadata from legacy (array of key=value pairs) blob.

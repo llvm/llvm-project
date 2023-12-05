@@ -5965,9 +5965,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
       if (!N.Type.empty()) {
         OS << "    " << N.Type << ":\n        " << N.Value << '\n';
-        // Fallthrough to printing the description data blob on error.
         if (!N.IsError)
           return Error::success();
+        // Fallthrough to printing the description data blob on error.
       }
     } else if (Name == "LLVMOMPOFFLOAD") {
       if (printLLVMOMPOFFLOADNote<ELFT>(OS, Type, Descriptor))
@@ -7664,9 +7664,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
       if (!N.Type.empty()) {
         W.printString(N.Type, N.Value);
-        // Fallthrough to printing the description data blob on error.
         if (!N.IsError)
           return Error::success();
+        // Fallthrough to printing the description data blob on error.
       }
     } else if (Name == "LLVMOMPOFFLOAD") {
       if (printLLVMOMPOFFLOADNoteLLVMStyle<ELFT>(Type, Descriptor, W))

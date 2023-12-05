@@ -187,7 +187,7 @@ Error Document::readFromBlob(
       break;
     default:
       return make_error<StringError>(
-          "Raw and Extension not supported",
+          "Unsupported msgpack object type",
           std::make_error_code(std::errc::invalid_argument));
     }
 
