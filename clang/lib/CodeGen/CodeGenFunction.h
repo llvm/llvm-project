@@ -1411,6 +1411,9 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
+  /// ExprLValueMap - This keeps track of the \p LValue of emitted expressions.
+  /// It's useful when processing the \p counted_by attribute so that we don't
+  /// duplicate the calculations.
   llvm::SmallDenseMap<const Expr *, LValue, 32> ExprLValueMap;
 
   // Keep track of the cleanups for callee-destructed parameters pushed to the
