@@ -170,11 +170,14 @@ struct DeviceTy {
   // Copy data from host to device
   int32_t submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                      AsyncInfoTy &AsyncInfo,
-                     HostDataToTargetTy *Entry = nullptr);
+                     HostDataToTargetTy *Entry = nullptr,
+                     DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
   // Copy data from device back to host
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        AsyncInfoTy &AsyncInfo,
-                       HostDataToTargetTy *Entry = nullptr);
+                       HostDataToTargetTy *Entry = nullptr,
+                       DeviceTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
+
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
