@@ -10,6 +10,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-hardening-mode=none
 // XFAIL: availability-verbose_abort-missing
+// XFAIL: target=powerpc{{.*}}le-unknown-linux-gnu
 
 // <mdspan>
 

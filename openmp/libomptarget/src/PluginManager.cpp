@@ -11,6 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PluginManager.h"
+#include "Shared/Debug.h"
+
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -71,7 +75,12 @@ PluginAdaptorTy::PluginAdaptorTy(const std::string &Name) : Name(Name) {
 
 void PluginAdaptorTy::addOffloadEntries(DeviceImageTy &DI) {
   for (int32_t I = 0; I < NumberOfDevices; ++I) {
-    DeviceTy &Device = *PM->Devices[DeviceOffset + I];
+    auto DeviceOrErr = PM->getDevice(DeviceOffset + I);
+    if (!DeviceOrErr)
+      FATAL_MESSAGE(DeviceOffset + I, "%s",
+                    toString(DeviceOrErr.takeError()).c_str());
+
+    DeviceTy &Device = *DeviceOrErr;
     for (OffloadEntryTy &Entry : DI.entries())
       Device.addOffloadEntry(Entry);
   }
@@ -97,14 +106,15 @@ void PluginManager::initPlugin(PluginAdaptorTy &Plugin) {
     return;
 
   // Initialize the device information for the RTL we are about to use.
-  const size_t Start = Devices.size();
-  Devices.reserve(Start + Plugin.NumberOfDevices);
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  const size_t Start = ExclusiveDevicesAccessor->size();
+  ExclusiveDevicesAccessor->reserve(Start + Plugin.NumberOfDevices);
   for (int32_t DeviceId = 0; DeviceId < Plugin.NumberOfDevices; DeviceId++) {
-    Devices.push_back(std::make_unique<DeviceTy>(&Plugin));
+    ExclusiveDevicesAccessor->push_back(std::make_unique<DeviceTy>(&Plugin));
     // global device ID
-    Devices[Start + DeviceId]->DeviceID = Start + DeviceId;
+    (*ExclusiveDevicesAccessor)[Start + DeviceId]->DeviceID = Start + DeviceId;
     // RTL local device ID
-    Devices[Start + DeviceId]->RTLDeviceID = DeviceId;
+    (*ExclusiveDevicesAccessor)[Start + DeviceId]->RTLDeviceID = DeviceId;
   }
 
   // Initialize the index of this RTL and save it in the used RTLs.
@@ -254,7 +264,12 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
       // Execute dtors for static objects if the device has been used, i.e.
       // if its PendingCtors list has been emptied.
       for (int32_t I = 0; I < FoundRTL->NumberOfDevices; ++I) {
-        DeviceTy &Device = *PM->Devices[FoundRTL->DeviceOffset + I];
+        auto DeviceOrErr = PM->getDevice(FoundRTL->DeviceOffset + I);
+        if (!DeviceOrErr)
+          FATAL_MESSAGE(FoundRTL->DeviceOffset + I, "%s",
+                        toString(DeviceOrErr.takeError()).c_str());
+
+        DeviceTy &Device = *DeviceOrErr;
         Device.PendingGlobalsMtx.lock();
         if (Device.PendingCtorsDtors[Desc].PendingCtors.empty()) {
           AsyncInfoTy AsyncInfo(Device);
@@ -312,4 +327,27 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   PM->TblMapMtx.unlock();
 
   DP("Done unregistering library!\n");
+}
+
+Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  if (DeviceNo >= ExclusiveDevicesAccessor->size())
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Device number '%i' out of range, only %i devices available", DeviceNo,
+        ExclusiveDevicesAccessor->size());
+
+  DeviceTy &Device = *(*ExclusiveDevicesAccessor)[DeviceNo];
+
+  DP("Is the device %d (local ID %d) initialized? %d\n", DeviceNo,
+     Device.RTLDeviceID, Device.IsInit);
+
+  // Init the device if not done before
+  if (!Device.IsInit && Device.initOnce() != OFFLOAD_SUCCESS) {
+    return createStringError(inconvertibleErrorCode(),
+                             "Failed to init device %d\n", DeviceNo);
+  }
+
+  DP("Device %d is ready to use.\n", DeviceNo);
+  return Device;
 }

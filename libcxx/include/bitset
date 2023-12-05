@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_BITSET
 #define _LIBCPP_BITSET
 
+// clang-format off
+
 /*
     bitset synopsis
 
@@ -121,6 +123,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 }  // std
 
 */
+
+// clang-format on
 
 #include <__algorithm/count.h>
 #include <__algorithm/fill.h>

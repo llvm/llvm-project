@@ -2587,14 +2587,7 @@ static bool rewriteDebugUsers(
     }
 
     // DPValue implementation of the above.
-    // RemoveDIs misery: The above loop of intrinsic-users are ordered by the
-    // use-list of the corresponding metadata-as-value: in reverse order of when
-    // they were added. Wheras DPUsers are ordered by when they were added to
-    // the replaceable-metadata map, i.e., in the order they were added. Thus to
-    // have matching orders between the two, we have to reverse here. For
-    // RemoveDIs we might in the long run need to consider whether this implicit
-    // ordering is relied upon by any other part of LLVM.
-    for (auto *DPV : llvm::reverse(DPUsers)) {
+    for (auto *DPV : DPUsers) {
       Instruction *MarkedInstr = DPV->getMarker()->MarkedInstr;
       Instruction *NextNonDebug = MarkedInstr;
       // The next instruction might still be a dbg.declare, skip over it.

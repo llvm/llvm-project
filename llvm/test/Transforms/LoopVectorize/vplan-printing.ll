@@ -757,6 +757,55 @@ end:
   ret void
 }
 
+; FIXME: Preserve disjoint flag on OR recipe.
+define void @print_disjoint_flags(i64 %n, ptr noalias %x) {
+; CHECK-LABEL: Checking a loop in 'print_disjoint_flags'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
+; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.x>
+; CHECK-NEXT:   WIDEN ir<%or.1> = or ir<%lv>, ir<1>
+; CHECK-NEXT:   WIDEN ir<%or.2> = or ir<%lv>, ir<3>
+; CHECK-NEXT:   WIDEN ir<%add> = add nuw nsw ir<%or.1>, ir<%or.2>
+; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.x = getelementptr inbounds i32, ptr %x, i64 %iv
+  %lv = load i32, ptr %gep.x, align 4
+  %or.1 = or disjoint i32 %lv, 1
+  %or.2 = or i32 %lv, 3
+  %add = add nsw nuw i32 %or.1, %or.2
+  store i32 %add, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
