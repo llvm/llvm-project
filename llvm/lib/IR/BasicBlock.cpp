@@ -1000,7 +1000,7 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     OntoDest->absorbDebugValues(*FromLast, true);
     if (LastIsEnd) {
       FromLast->eraseFromParent();
-      deleteTrailingDPValues();
+      Src->deleteTrailingDPValues();
     }
   }
 
