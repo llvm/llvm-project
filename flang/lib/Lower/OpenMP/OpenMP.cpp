@@ -2682,6 +2682,15 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+static mlir::omp::CoexecuteOp
+genCoexecuteOp(Fortran::lower::AbstractConverter &converter,
+               Fortran::lower::pft::Evaluation &eval,
+               mlir::Location currentLocation,
+               const Fortran::parser::OmpClauseList &clauseList) {
+  return genOpWithBody<mlir::omp::CoexecuteOp>(
+      converter, eval, currentLocation, /*outerCombined=*/false, &clauseList);
+}
+
 //===----------------------------------------------------------------------===//
 // Code generation functions for the standalone version of constructs that can
 // also be a leaf of a composite construct
@@ -3295,6 +3304,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_teams:
     newOp = genTeamsOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue,
                        item);
+    break;
+  case llvm::omp::Directive::OMPD_coexecute:
+    newOp = genCoexecuteOp(converter, eval, currentLocation, beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_tile:
   case llvm::omp::Directive::OMPD_unroll: {
