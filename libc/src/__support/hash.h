@@ -153,9 +153,8 @@ public:
     }
   }
   LIBC_INLINE uint64_t finish() {
-    const uint64_t folded = folded_multiply(buffer, pad);
-    // Only keep the bottom bits of buffer that fits in an int.
-    const int rot = buffer & cpp::numeric_limits<int>::digits;
+    int rot = buffer & 63;
+    uint64_t folded = folded_multiply(buffer, pad);
     return cpp::rotl(folded, rot);
   }
 };
