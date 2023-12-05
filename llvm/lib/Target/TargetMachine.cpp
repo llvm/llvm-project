@@ -66,6 +66,16 @@ bool TargetMachine::isLargeGlobalObject(const GlobalObject *GO) const {
       return true;
   }
 
+  // For x86-64, we treat an explicit GlobalVariable small code model to mean
+  // that the global should be placed in a small section, and ditto for large.
+  // Well-known section names above take precedence for correctness.
+  if (auto CM = GV->getCodeModel()) {
+    if (*CM == CodeModel::Small)
+      return false;
+    if (*CM == CodeModel::Large)
+      return true;
+  }
+
   if (getCodeModel() == CodeModel::Medium ||
       getCodeModel() == CodeModel::Large) {
     const DataLayout &DL = GV->getParent()->getDataLayout();
