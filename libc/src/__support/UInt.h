@@ -121,6 +121,7 @@ template <size_t Bits, bool Signed> struct BigInt {
         return lo;
       }
     } else {
+      // TODO: silence shift warning
       return static_cast<T>((static_cast<T>(val[1]) << 64) + lo);
     }
   }
