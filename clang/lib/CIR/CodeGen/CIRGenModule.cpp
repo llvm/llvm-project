@@ -1586,8 +1586,6 @@ void CIRGenModule::buildAliasForGlobal(StringRef mangledName,
                                        mlir::Operation *op, GlobalDecl aliasGD,
                                        mlir::cir::FuncOp aliasee,
                                        mlir::cir::GlobalLinkageKind linkage) {
-
-  // Create the alias with no name.
   auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
   assert(aliasFD && "expected FunctionDecl");
   auto alias =
