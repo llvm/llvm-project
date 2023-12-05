@@ -1784,7 +1784,6 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // addresses should be provided as \a wp_addr.
           StringExtractor desc_extractor(description.c_str());
           addr_t wp_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
-          uint32_t wp_index = desc_extractor.GetU32(LLDB_INVALID_INDEX32);
           addr_t wp_hit_addr = desc_extractor.GetU64(LLDB_INVALID_ADDRESS);
           watch_id_t watch_id = LLDB_INVALID_WATCH_ID;
           bool silently_continue = false;
@@ -2243,7 +2242,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         // which is parsed in SetThreadStopInfo.
         reason = "watchpoint";
         StreamString ostr;
-        ostr.Printf("%" PRIu64 " %" PRIu32, wp_addr, wp_index);
+        ostr.Printf("%" PRIu64, wp_addr);
         description = std::string(ostr.GetString());
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
