@@ -2,10 +2,6 @@
 # RUN: llc -mtriple=riscv64 -run-pass=legalizer %s -o - | FileCheck --check-prefix=RV64 %s
 
 --- |
-  source_filename = "test.ll"
-  target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
-  target triple = "riscv64"
-
   declare void @llvm.va_start(ptr) #0
 
   define void @test_va_start(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ...) {
