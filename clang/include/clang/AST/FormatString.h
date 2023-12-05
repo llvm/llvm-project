@@ -801,8 +801,7 @@ bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
                                               const LangOptions &LO,
                                               const TargetInfo &Target);
 
-ArgType wToArgType(int Size, bool Fast, ASTContext &C);
-ArgType wToArgTypeUnsigned(int Size, bool Fast, ASTContext &C);
+ArgType wToArgType(int Size, bool IsSigned, bool Fast, ASTContext &C);
 
 } // end analyze_format_string namespace
 } // end clang namespace

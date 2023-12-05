@@ -267,7 +267,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
         case LengthModifier::AsWideFast:
           int S = getExplicitlyFixedSize();
           bool FAST = LM.getKind() == LengthModifier::AsWideFast ? true : false;
-          return clang::analyze_format_string::wToArgType(S, FAST, Ctx);
+          return clang::analyze_format_string::wToArgType(S, true, FAST, Ctx);
       }
       llvm_unreachable("Unsupported LengthModifier Type");
 
@@ -311,11 +311,11 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
           return ArgType::Invalid();
         case LengthModifier::AsWide:
         case LengthModifier::AsWideFast:
-          int s = getExplicitlyFixedSize();
-          bool fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
+          int S = getExplicitlyFixedSize();
+          bool Fast = LM.getKind() == LengthModifier::AsWideFast ? true : false;
           if (CS.getKind() == ConversionSpecifier::uArg or CS.getKind() == ConversionSpecifier::UArg)
-            return clang::analyze_format_string::wToArgTypeUnsigned(s, fast, Ctx);
-          return clang::analyze_format_string::wToArgType(s, fast, Ctx);
+            return clang::analyze_format_string::wToArgType(S, false, Fast, Ctx);
+          return clang::analyze_format_string::wToArgType(S, true, Fast, Ctx);
       }
       llvm_unreachable("Unsupported LengthModifier Type");
 
