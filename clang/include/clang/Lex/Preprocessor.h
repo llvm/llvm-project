@@ -2429,10 +2429,13 @@ public:
              bool OpenFile = true, bool CacheFailures = true);
 
   /// Given a "Filename" or \<Filename> reference, look up the indicated embed
-  /// resource.
+  /// resource. \p isAngled indicates whether the file reference is for
+  /// system \#include's or not (i.e. using <> instead of ""). If \p OpenFile
+  /// is true, the file looked up is opened for reading, otherwise it only
+  /// validates that the file exists. Quoted filenames are looked up relative
+  /// to \p LookupFromFile if it is nonnull.
   ///
-  /// Returns std::nullopt on failure.  \p isAngled indicates whether the file
-  /// reference is for system \#include's or not (i.e. using <> instead of "").
+  /// Returns std::nullopt on failure.
   OptionalFileEntryRef
   LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
                   const FileEntry *LookupFromFile = nullptr);
