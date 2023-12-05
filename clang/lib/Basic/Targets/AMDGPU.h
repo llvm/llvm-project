@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -99,7 +100,8 @@ public:
       return 32;
     unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (TargetAS == llvm::AMDGPU::Private || TargetAS == llvm::AMDGPU::Local)
+    if (TargetAS == static_cast<unsigned>(llvm::AMDGPU::AddrSpace::Private) ||
+        TargetAS == static_cast<unsigned>(llvm::AMDGPU::AddrSpace::Local))
       return 32;
 
     return 64;
@@ -369,7 +371,8 @@ public:
   }
 
   std::optional<LangAS> getConstantAddressSpace() const override {
-    return getLangASFromTargetAS(llvm::AMDGPU::Constant);
+    return getLangASFromTargetAS(
+        static_cast<unsigned>(llvm::AMDGPU::AddrSpace::Constant));
   }
 
   const llvm::omp::GV &getGridValue() const override {
@@ -385,7 +388,7 @@ public:
 
   /// \returns Target specific vtbl ptr address space.
   unsigned getVtblPtrAddressSpace() const override {
-    return static_cast<unsigned>(llvm::AMDGPU::Constant);
+    return static_cast<unsigned>(llvm::AMDGPU::AddrSpace::Constant);
   }
 
   /// \returns If a target requires an address within a target specific address
@@ -398,9 +401,11 @@ public:
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
-    if (AddressSpace == llvm::AMDGPU::Private) {
+    if (AddressSpace ==
+        static_cast<unsigned>(llvm::AMDGPU::AddrSpace::Private)) {
       return DWARF_Private;
-    } else if (AddressSpace == llvm::AMDGPU::Local) {
+    } else if (AddressSpace ==
+               static_cast<unsigned>(llvm::AMDGPU::AddrSpace::Local)) {
       return DWARF_Local;
     } else {
       return std::nullopt;
