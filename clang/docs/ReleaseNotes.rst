@@ -746,6 +746,9 @@ Bug Fixes in This Version
 - Fixes crash when trying to obtain the common sugared type of
   `decltype(instantiation-dependent-expr)`.
   Fixes (`#67603 <https://github.com/llvm/llvm-project/issues/67603>`_)
+- Fix the name of the ifunc symbol emitted for multiversion functions declared with the
+  ``target_clones`` attribute. This addresses a linker error that would otherwise occur
+  when these functions are referenced from other TUs.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

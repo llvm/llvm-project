@@ -4,13 +4,20 @@
 
 // DARWIN-NOT: comdat
 
+// Aliases for ifuncs
+// ITANIUM: @_Z10overloadedi.ifunc = weak_odr alias i32 (i32), ptr @_Z10overloadedi
+// ITANIUM: @_Z10overloadedPKc.ifunc = weak_odr alias i32 (ptr), ptr @_Z10overloadedPKc
+// ITANIUM: @_ZN1CIssE3fooEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN1CIssE3fooEv
+// ITANIUM: @_ZN1CIisE3fooEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN1CIisE3fooEv
+// ITANIUM: @_ZN1CIdfE3fooEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN1CIdfE3fooEv
+
 // Overloaded ifuncs
-// ITANIUM: @_Z10overloadedi.ifunc = weak_odr ifunc i32 (i32), ptr @_Z10overloadedi.resolver
-// ITANIUM: @_Z10overloadedPKc.ifunc = weak_odr ifunc i32 (ptr), ptr @_Z10overloadedPKc.resolver
+// ITANIUM: @_Z10overloadedi = weak_odr ifunc i32 (i32), ptr @_Z10overloadedi.resolver
+// ITANIUM: @_Z10overloadedPKc = weak_odr ifunc i32 (ptr), ptr @_Z10overloadedPKc.resolver
 // struct 'C' ifuncs, note the 'float, U' one doesn't get one.
-// ITANIUM: @_ZN1CIssE3fooEv.ifunc = weak_odr ifunc i32 (ptr), ptr @_ZN1CIssE3fooEv.resolver
-// ITANIUM: @_ZN1CIisE3fooEv.ifunc = weak_odr ifunc i32 (ptr), ptr @_ZN1CIisE3fooEv.resolver
-// ITANIUM: @_ZN1CIdfE3fooEv.ifunc = weak_odr ifunc i32 (ptr), ptr @_ZN1CIdfE3fooEv.resolver
+// ITANIUM: @_ZN1CIssE3fooEv = weak_odr ifunc i32 (ptr), ptr @_ZN1CIssE3fooEv.resolver
+// ITANIUM: @_ZN1CIisE3fooEv = weak_odr ifunc i32 (ptr), ptr @_ZN1CIisE3fooEv.resolver
+// ITANIUM: @_ZN1CIdfE3fooEv = weak_odr ifunc i32 (ptr), ptr @_ZN1CIdfE3fooEv.resolver
 
 int __attribute__((target_clones("sse4.2", "default"))) overloaded(int) { return 1; }
 // ITANIUM: define {{.*}}i32 @_Z10overloadedi.sse4.2.0(i32{{.+}})
@@ -42,10 +49,10 @@ int __attribute__((target_clones("arch=ivybridge", "default"))) overloaded(const
 
 void use_overloaded() {
   overloaded(1);
-  // ITANIUM: call noundef i32 @_Z10overloadedi.ifunc
+  // ITANIUM: call noundef i32 @_Z10overloadedi
   // WINDOWS: call noundef i32 @"?overloaded@@YAHH@Z"
   overloaded(nullptr);
-  // ITANIUM: call noundef i32 @_Z10overloadedPKc.ifunc 
+  // ITANIUM: call noundef i32 @_Z10overloadedPKc 
   // WINDOWS: call noundef i32 @"?overloaded@@YAHPEBD@Z"
 }
 
@@ -69,11 +76,11 @@ int __attribute__((target_clones("sse4.2", "default"))) foo(){ return 3;}
 void uses_specialized() {
   C<short, short> c;
   c.foo();
-  // ITANIUM: call noundef i32 @_ZN1CIssE3fooEv.ifunc(ptr
+  // ITANIUM: call noundef i32 @_ZN1CIssE3fooEv(ptr
   // WINDOWS: call noundef i32 @"?foo@?$C@FF@@QEAAHXZ"(ptr
   C<int, short> c2;
   c2.foo();
-  // ITANIUM: call noundef i32 @_ZN1CIisE3fooEv.ifunc(ptr
+  // ITANIUM: call noundef i32 @_ZN1CIisE3fooEv(ptr
   // WINDOWS: call noundef i32 @"?foo@?$C@HF@@QEAAHXZ"(ptr
   C<float, short> c3;
   c3.foo();
@@ -82,7 +89,7 @@ void uses_specialized() {
   // WINDOWS: call noundef i32 @"?foo@?$C@MF@@QEAAHXZ"(ptr
   C<double, float> c4;
   c4.foo();
-  // ITANIUM: call noundef i32 @_ZN1CIdfE3fooEv.ifunc(ptr
+  // ITANIUM: call noundef i32 @_ZN1CIdfE3fooEv(ptr
   // WINDOWS: call noundef i32 @"?foo@?$C@NM@@QEAAHXZ"(ptr
 }
 

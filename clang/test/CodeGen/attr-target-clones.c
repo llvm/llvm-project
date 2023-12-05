@@ -16,12 +16,12 @@
 // WINDOWS: $foo_inline = comdat any
 // WINDOWS: $foo_inline2 = comdat any
 
-// LINUX: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
-// LINUX: @foo_dupes.ifunc = weak_odr ifunc void (), ptr @foo_dupes.resolver
-// LINUX: @unused.ifunc = weak_odr ifunc void (), ptr @unused.resolver
-// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
-// LINUX: @foo_inline2.ifunc = weak_odr ifunc i32 (), ptr @foo_inline2.resolver
-// LINUX: @foo_used_no_defn.ifunc = weak_odr ifunc i32 (), ptr @foo_used_no_defn.resolver
+// LINUX: @foo = weak_odr ifunc i32 (), ptr @foo.resolver
+// LINUX: @foo_dupes = weak_odr ifunc void (), ptr @foo_dupes.resolver
+// LINUX: @unused = weak_odr ifunc void (), ptr @unused.resolver
+// LINUX: @foo_inline = weak_odr ifunc i32 (), ptr @foo_inline.resolver
+// LINUX: @foo_inline2 = weak_odr ifunc i32 (), ptr @foo_inline2.resolver
+// LINUX: @foo_used_no_defn = weak_odr ifunc i32 (), ptr @foo_used_no_defn.resolver
 
 int __attribute__((target_clones("sse4.2, default"))) foo(void) { return 0; }
 // LINUX: define {{.*}}i32 @foo.sse4.2.0()
@@ -66,8 +66,8 @@ void bar2(void) {
   // DARWIN: define {{.*}}void @bar2()
   // WINDOWS: define dso_local void @bar2()
   foo_dupes();
-  // LINUX: call void @foo_dupes.ifunc()
-  // DARWIN: call void @foo_dupes.ifunc()
+  // LINUX: call void @foo_dupes()
+  // DARWIN: call void @foo_dupes()
   // WINDOWS: call void @foo_dupes()
 }
 
@@ -76,8 +76,8 @@ int bar(void) {
   // DARWIN: define {{.*}}i32 @bar() #[[DEF:[0-9]+]]
   // WINDOWS: define dso_local i32 @bar() #[[DEF:[0-9]+]]
   return foo();
-  // LINUX: call i32 @foo.ifunc()
-  // DARWIN: call i32 @foo.ifunc()
+  // LINUX: call i32 @foo()
+  // DARWIN: call i32 @foo()
   // WINDOWS: call i32 @foo()
 }
 
@@ -111,10 +111,10 @@ int bar3(void) {
   // DARWIN: define {{.*}}i32 @bar3()
   // WINDOWS: define dso_local i32 @bar3()
   return foo_inline() + foo_inline2();
-  // LINUX: call i32 @foo_inline.ifunc()
-  // LINUX: call i32 @foo_inline2.ifunc()
-  // DARWIN: call i32 @foo_inline.ifunc()
-  // DARWIN: call i32 @foo_inline2.ifunc()
+  // LINUX: call i32 @foo_inline()
+  // LINUX: call i32 @foo_inline2()
+  // DARWIN: call i32 @foo_inline()
+  // DARWIN: call i32 @foo_inline2()
   // WINDOWS: call i32 @foo_inline()
   // WINDOWS: call i32 @foo_inline2()
 }
@@ -163,8 +163,8 @@ int test_foo_used_no_defn(void) {
   // DARWIN: define {{.*}}i32 @test_foo_used_no_defn()
   // WINDOWS: define dso_local i32 @test_foo_used_no_defn()
   return foo_used_no_defn();
-  // LINUX: call i32 @foo_used_no_defn.ifunc()
-  // DARWIN: call i32 @foo_used_no_defn.ifunc()
+  // LINUX: call i32 @foo_used_no_defn()
+  // DARWIN: call i32 @foo_used_no_defn()
   // WINDOWS: call i32 @foo_used_no_defn()
 }
 
