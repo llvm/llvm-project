@@ -3239,16 +3239,16 @@ multiclass sme2_luti2_vector_index<string mnemonic, SDPatternOperator intrinsic>
 
   def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))),
              (!cast<Instruction>(NAME # _B) $zt, nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))>;
-  def : Pat<(nxv8i16 (intrinsic (imm_to_zt untyped:$zt), nxv8i16:$zn, (i32 VectorIndexB32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _H) $zt, nxv8i16:$zn, (i32 VectorIndexB32b_timm:$imm))>;
-  def : Pat<(nxv4i32 (intrinsic (imm_to_zt untyped:$zt), nxv4i32:$zn, (i32 VectorIndexB32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _S) $zt, nxv4i32:$zn, (i32 VectorIndexB32b_timm:$imm))>;
-  def : Pat<(nxv8f16 (intrinsic (imm_to_zt untyped:$zt), nxv8f16:$zn, (i32 VectorIndexB32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _H) $zt, nxv8f16:$zn, (i32 VectorIndexB32b_timm:$imm))>;
-  def : Pat<(nxv8bf16 (intrinsic (imm_to_zt untyped:$zt), nxv8bf16:$zn, (i32 VectorIndexB32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _H) $zt, nxv8bf16:$zn, (i32 VectorIndexB32b_timm:$imm))>;
-  def : Pat<(nxv4f32 (intrinsic (imm_to_zt untyped:$zt), nxv4f32:$zn, (i32 VectorIndexB32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _S) $zt, nxv4f32:$zn, (i32 VectorIndexB32b_timm:$imm))>;
+  def : Pat<(nxv8i16 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _H) $zt, nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))>;
+  def : Pat<(nxv4i32 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _S) $zt, nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))>;
+  def : Pat<(nxv8f16 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _H) $zt, nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))>;
+  def : Pat<(nxv8bf16 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _H) $zt, nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))>;
+  def : Pat<(nxv4f32 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _S) $zt, nxv16i8:$zn, (i32 VectorIndexB32b_timm:$imm))>;
 }
 
 class sme2_luti4_vector_index<bits<2> sz, RegisterOperand vector_ty,
@@ -3265,16 +3265,16 @@ multiclass sme2_luti4_vector_index<string mnemonic, SDPatternOperator intrinsic>
 
   def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))),
              (!cast<Instruction>(NAME # _B) $zt, nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))>;
-  def : Pat<(nxv8i16 (intrinsic (imm_to_zt untyped:$zt), nxv8i16:$zn, (i32 VectorIndexH32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _H) $zt, nxv8i16:$zn, (i32 VectorIndexH32b_timm:$imm))>;
-  def : Pat<(nxv4i32 (intrinsic (imm_to_zt untyped:$zt), nxv4i32:$zn, (i32 VectorIndexH32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _S) $zt, nxv4i32:$zn, (i32 VectorIndexH32b_timm:$imm))>;
-  def : Pat<(nxv8f16 (intrinsic (imm_to_zt untyped:$zt), nxv8f16:$zn, (i32 VectorIndexH32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _H) $zt, nxv8f16:$zn, (i32 VectorIndexH32b_timm:$imm))>;
-  def : Pat<(nxv8bf16 (intrinsic (imm_to_zt untyped:$zt), nxv8bf16:$zn, (i32 VectorIndexH32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _H) $zt, nxv8bf16:$zn, (i32 VectorIndexH32b_timm:$imm))>;
-  def : Pat<(nxv4f32 (intrinsic (imm_to_zt untyped:$zt), nxv4f32:$zn, (i32 VectorIndexH32b_timm:$imm))),
-             (!cast<Instruction>(NAME # _S) $zt, nxv4f32:$zn, (i32 VectorIndexH32b_timm:$imm))>;
+  def : Pat<(nxv8i16 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _H) $zt, nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))>;
+  def : Pat<(nxv4i32 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _S) $zt, nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))>;
+  def : Pat<(nxv8f16 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _H) $zt, nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))>;
+  def : Pat<(nxv8bf16 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _H) $zt, nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))>;
+  def : Pat<(nxv4f32 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))),
+             (!cast<Instruction>(NAME # _S) $zt, nxv16i8:$zn, (i32 VectorIndexH32b_timm:$imm))>;
 }
 
 // SME2 lookup table expand two contiguous registers
