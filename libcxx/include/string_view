@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_STRING_VIEW
 #define _LIBCPP_STRING_VIEW
 
+// clang-format off
+
 /*
 
     string_view synopsis
@@ -199,8 +201,9 @@ namespace std {
 
 }  // namespace std
 
-
 */
+
+// clang-format on
 
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
