@@ -2658,17 +2658,20 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
 // `array` prefix to be consistent in the IR with `parseDynamicIndexList`.
 ParseResult parseOptionalInterchange(OpAsmParser &parser,
                                      OperationState &result) {
-  if (succeeded(parser.parseOptionalKeyword("interchange")))
-    result.addAttribute(
-        transform::TileUsingForOp::getInterchangeAttrName(result.name),
-        DenseI64ArrayAttr::parse(parser, Type{}));
+  if (failed(parser.parseOptionalKeyword("interchange")))
+    return success();
+  if (failed(parser.parseEqual()))
+    return failure();
+  result.addAttribute(
+      transform::TileUsingForOp::getInterchangeAttrName(result.name),
+      DenseI64ArrayAttr::parse(parser, Type{}));
   return success();
 }
 
 void printOptionalInterchange(OpAsmPrinter &p,
                               ArrayRef<int64_t> interchangeVals) {
   if (!interchangeVals.empty()) {
-    p << " interchange [";
+    p << " interchange = [";
     llvm::interleaveComma(interchangeVals, p,
                           [&](int64_t integer) { p << integer; });
     p << "]";
