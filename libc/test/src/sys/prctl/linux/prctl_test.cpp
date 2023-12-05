@@ -32,12 +32,12 @@ TEST(LlvmLibcSysPrctlTest, GetSetName) {
 }
 
 TEST(LlvmLibcSysPrctlTest, GetTHPDisable) {
-  // Manually check errno since the return value logic here is not 
+  // Manually check errno since the return value logic here is not
   // covered in ErrnoSetterMatcher.
   libc_errno = 0;
   int ret = LIBC_NAMESPACE::prctl(PR_GET_THP_DISABLE, 0, 0, 0, 0);
   ASSERT_EQ(libc_errno, 0);
-  // PR_GET_THP_DISABLE return (as the function result) the current 
+  // PR_GET_THP_DISABLE return (as the function result) the current
   // setting of the "THP disable" flag for the calling thread, which
   // is either 1, if the flag is set; or 0, if it is not.
   ASSERT_TRUE(ret == 0 || ret == 1);
