@@ -73,6 +73,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -3634,6 +3635,59 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
+bool hasUnrollHint(Instruction *TI) {
+  MDNode *MD = TI->getMetadata(LLVMContext::MD_loop);
+  if (!MD)
+    return false;
+
+  return GetUnrollMetadata(MD, "llvm.loop.unroll.enable") ||
+         GetUnrollMetadata(MD, "llvm.loop.unroll.full") ||
+         GetUnrollMetadata(MD, "llvm.loop.unroll.count");
+}
+
+// Escape folding "I < ConstNum" with "Cond2" when loops with constant
+// iterations and expected unroll.
+// #pragma unroll
+// for (int I = 0; I < ConstNum; ++I) { // ConstNum > 1
+//   if (Cond2) {
+//     break;
+//   }
+//    xxx loop body;
+//  }
+// Folding these conditional branches may break/affect loop unroll.
+static bool isConstantLoopWithUnrollHint(BranchInst *PBI) {
+  ICmpInst *ICmp = dyn_cast<ICmpInst>(PBI->getCondition());
+  if (!ICmp)
+    return false;
+
+  // Make sure ConstNum > 1
+  bool DoFold = true;
+  for (unsigned I = 0; I < ICmp->getNumOperands(); ++I) {
+    ConstantInt *Op = dyn_cast<ConstantInt>(ICmp->getOperand(I));
+    if (!Op)
+      continue;
+    if (Op->getSExtValue() > 1) {
+      DoFold = false;
+      break;
+    }
+  }
+  if (DoFold)
+    return false;
+
+  // Loop information has not been established yet, so here we easily judge
+  // whether it is a loop by backedge.
+  BasicBlock *PBB = PBI->getParent();
+  for (Function::iterator I = PBB->getIterator(), E = PBB->getParent()->end();
+       I != E; ++I) {
+    BasicBlock *BB = &*I;
+    if (is_contained(predecessors(PBB), BB)) {
+      if (hasUnrollHint(BB->getTerminator()))
+        return true;
+    }
+  }
+  return false;
+}
+
 /// Determine if the two branches share a common destination and deduce a glue
 /// that joins the branches' conditions to arrive at the common destination if
 /// that would be profitable.
@@ -3644,6 +3698,9 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
          "Both blocks must end with a conditional branches.");
   assert(is_contained(predecessors(BI->getParent()), PBI->getParent()) &&
          "PredBB must be a predecessor of BB.");
+
+  if (isConstantLoopWithUnrollHint(PBI))
+    return std::nullopt;
 
   // We have the potential to fold the conditions together, but if the
   // predecessor branch is predictable, we may not want to merge them.
