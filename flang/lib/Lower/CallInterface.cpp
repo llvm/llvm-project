@@ -91,7 +91,7 @@ bool Fortran::lower::CallerInterface::requireDispatchCall() const {
   // polymorphic.
   if (const Fortran::evaluate::Component *component =
           procRef.proc().GetComponent()) {
-    if (Fortran::semantics::IsPolymorphic(component->GetFirstSymbol()))
+    if (Fortran::semantics::IsPolymorphic(component->base().GetLastSymbol()))
       return true;
   }
   // calls with PASS attribute have the passed-object already set in its
