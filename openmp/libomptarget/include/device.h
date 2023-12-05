@@ -202,9 +202,8 @@ struct DeviceTy {
   /// completed and AsyncInfo.isDone() returns true.
   int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
-  /// Calls the corresponding print in the \p RTLDEVID
-  /// device RTL to obtain the information of the specific device.
-  bool printDeviceInfo(int32_t RTLDevID);
+  /// Calls the corresponding print device info function in the plugin.
+  bool printDeviceInfo();
 
   /// Event related interfaces.
   /// {
@@ -244,7 +243,5 @@ private:
   /// All offload entries available on this device.
   llvm::DenseMap<llvm::StringRef, OffloadEntryTy *> DeviceOffloadEntries;
 };
-
-extern bool deviceIsReady(int DeviceNum);
 
 #endif
