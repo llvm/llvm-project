@@ -604,7 +604,7 @@ static void UnpoisonFakeStack() {
 using namespace __asan;
 
 void NOINLINE __asan_handle_no_return() {
-  if (!TryAsanInitFromRtl())
+  if (UNLIKELY(!AsanInited()))
     return;
 
   if (!PlatformUnpoisonStacks())
