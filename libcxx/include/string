@@ -1898,18 +1898,15 @@ private:
         {return __is_long() ? __get_long_pointer() : __get_short_pointer();}
 
     // The following functions are no-ops outside of AddressSanitizer mode.
-#ifndef _LIBCPP_HAS_NO_ASAN
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_contiguous_container(
-        const void* __old_mid, const void* __new_mid) const {
+        [[__maybe_unused__]] const void* __old_mid, [[__maybe_unused__]] const void* __new_mid) const {
+#ifndef _LIBCPP_HAS_NO_ASAN
         const void* __begin = data();
         const void* __end = data() + capacity() + 1;
         if (!__libcpp_is_constant_evaluated() && __begin != nullptr && is_same<allocator_type, __default_allocator_type>::value)
           __sanitizer_annotate_contiguous_container(__begin, __end, __old_mid, __new_mid);
-    }
-#else
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-    __annotate_contiguous_container(const void*, const void*) const {}
 #endif
+    }
 
     // ASan: short string is poisoned if and only if this function returns true.
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __asan_short_string_is_annotated() const _NOEXCEPT {
