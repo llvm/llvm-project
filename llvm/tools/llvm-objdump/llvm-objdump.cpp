@@ -437,7 +437,8 @@ static Error getRelocationValueString(const RelocationRef &Rel,
   if (auto *MachO = dyn_cast<MachOObjectFile>(Obj))
     return getMachORelocationValueString(MachO, Rel, Result);
   if (auto *XCOFF = dyn_cast<XCOFFObjectFile>(Obj))
-    return getXCOFFRelocationValueString(*XCOFF, Rel, SymbolDescription, Result);
+    return getXCOFFRelocationValueString(*XCOFF, Rel, SymbolDescription,
+                                         Result);
   llvm_unreachable("unknown object file format");
 }
 
@@ -2456,8 +2457,8 @@ void Dumper::printRelocations() {
         if (Address < StartAddress || Address > StopAddress || getHidden(Reloc))
           continue;
         Reloc.getTypeName(RelocName);
-        if (Error E = getRelocationValueString(Reloc, SymbolDescription,
-                                               ValueStr))
+        if (Error E =
+            getRelocationValueString(Reloc, SymbolDescription, ValueStr))
           reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
