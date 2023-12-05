@@ -249,9 +249,8 @@ int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
 
 bool __tgt_rtl_requested_prepopulate_gpu_page_table();
 
-#if 1
-bool __tgt_rtl_exists_valid_binary_for_RTL(void*, void *);
-#endif
+bool __tgt_rtl_exists_valid_binary_for_RTL(void *, void *);
+
 bool __tgt_rtl_is_system_supporting_managed_memory();
 
 int32_t __tgt_rtl_launch_kernel_sync(int32_t, void *, void **, ptrdiff_t *,

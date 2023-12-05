@@ -1807,18 +1807,24 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
 }
 
 bool __tgt_rtl_exists_valid_binary_for_RTL(void *VImages, void *VValidImages) {
-  std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *Images =
-    (std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *) VImages;
-  std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *ValidImages =
-    (std::list<std::pair<__tgt_device_image, __tgt_image_info> *> *) VValidImages;
+  llvm::SmallVector<std::tuple<__tgt_device_image *, __tgt_image_info *,
+                               DeviceImageTy *>> *Images =
+      (llvm::SmallVector<std::tuple<__tgt_device_image *, __tgt_image_info *,
+                                    DeviceImageTy *>> *)VImages;
+  llvm::SmallVector<std::tuple<__tgt_device_image *, __tgt_image_info *,
+                               DeviceImageTy *>> *ValidImages =
+      (llvm::SmallVector<std::tuple<__tgt_device_image *, __tgt_image_info *,
+                                    DeviceImageTy *>> *)VValidImages;
 
   bool IsValidImageAvailable = false;
-  std::list<std::pair<__tgt_device_image, __tgt_image_info> *> InvalidImages;
+  llvm::SmallVector<
+      std::tuple<__tgt_device_image *, __tgt_image_info *, DeviceImageTy *>>
+      InvalidImages;
 
   auto It = std::begin(*Images);
   while (It != std::end(*Images)) {
-    __tgt_device_image *Img = &((*It)->first);
-    __tgt_image_info *Info = &((*It)->second);
+    __tgt_device_image *Img = (std::get<0>(*It));
+    __tgt_image_info *Info = (std::get<1>(*It));
 
     if (__tgt_rtl_is_valid_binary_info(Img, Info)) {
       ValidImages->push_back(*It);
@@ -1834,8 +1840,8 @@ bool __tgt_rtl_exists_valid_binary_for_RTL(void *VImages, void *VValidImages) {
   if (!IsValidImageAvailable)
     for (auto targetImage : InvalidImages) {
       // Check if the image was rejected because of conflicting XNACK modes.
-      Plugin::get().checkInvalidImage(&targetImage->second,
-                                      &targetImage->first);
+      Plugin::get().checkInvalidImage(std::get<1>(targetImage),
+                                      std::get<0>(targetImage));
     }
 
   return IsValidImageAvailable;
