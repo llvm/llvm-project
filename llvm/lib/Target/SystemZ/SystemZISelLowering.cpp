@@ -129,6 +129,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
 
+  setMaxAtomicSizeInBitsSupported(128);
+
   // Instructions are strings of 2-byte aligned 2-byte values.
   setMinFunctionAlignment(Align(2));
   // For performance reasons we prefer 16-byte alignment.
@@ -870,9 +872,11 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
 
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  // TODO: expand them all here instead of in backend.
   return (RMW->isFloatingPointOperation() ||
           RMW->getOperation() == AtomicRMWInst::UIncWrap ||
-          RMW->getOperation() == AtomicRMWInst::UDecWrap)
+          RMW->getOperation() == AtomicRMWInst::UDecWrap ||
+          RMW->getType()->isIntegerTy(128))
              ? AtomicExpansionKind::CmpXChg
              : AtomicExpansionKind::None;
 }

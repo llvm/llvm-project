@@ -372,10 +372,10 @@ static void splitCallSite(CallBase &CB,
     return;
   }
 
-  auto *OriginalBegin = &*TailBB->begin();
+  BasicBlock::iterator OriginalBegin = TailBB->begin();
   // Replace users of the original call with a PHI mering call-sites split.
   if (CallPN) {
-    CallPN->insertBefore(OriginalBegin);
+    CallPN->insertBefore(*TailBB, OriginalBegin);
     CB.replaceAllUsesWith(CallPN);
   }
 
@@ -399,13 +399,13 @@ static void splitCallSite(CallBase &CB,
       for (auto &Mapping : ValueToValueMaps)
         NewPN->addIncoming(Mapping[CurrentI],
                            cast<Instruction>(Mapping[CurrentI])->getParent());
-      NewPN->insertBefore(&*TailBB->begin());
+      NewPN->insertBefore(*TailBB, TailBB->begin());
       CurrentI->replaceAllUsesWith(NewPN);
     }
     CurrentI->dropDbgValues();
     CurrentI->eraseFromParent();
     // We are done once we handled the first original instruction in TailBB.
-    if (CurrentI == OriginalBegin)
+    if (CurrentI == &*OriginalBegin)
       break;
   }
 }

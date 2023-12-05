@@ -710,7 +710,7 @@ inline _SizeT _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
 __str_rfind(const _CharT *__p, _SizeT __sz,
         const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
-    __pos = _VSTD::min(__pos, __sz);
+    __pos = std::min(__pos, __sz);
     if (__n < __sz - __pos)
         __pos += __n;
     else
@@ -729,7 +729,7 @@ __str_find_first_of(const _CharT *__p, _SizeT __sz,
 {
     if (__pos >= __sz || __n == 0)
         return __npos;
-    const _CharT* __r = _VSTD::__find_first_of_ce
+    const _CharT* __r = std::__find_first_of_ce
         (__p + __pos, __p + __sz, __s, __s + __n, _Traits::eq );
     if (__r == __p + __sz)
         return __npos;

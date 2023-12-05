@@ -4787,6 +4787,18 @@ std::string CompilerInvocation::getModuleHash() const {
   if (getCodeGenOpts().DebugTypeExtRefs)
     HBuilder.addRange(getCodeGenOpts().DebugPrefixMap);
 
+  // Extend the signature with the affecting debug options.
+  if (getHeaderSearchOpts().ModuleFormat == "obj") {
+#define DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define VALUE_DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default)                               \
+  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
+#define BENIGN_DEBUGOPT(Name, Bits, Default)
+#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
+#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
+#include "clang/Basic/DebugOptions.def"
+  }
+
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
   SanitizerSet SanHash = getLangOpts().Sanitize;
@@ -4833,6 +4845,7 @@ std::vector<std::string> CompilerInvocationBase::getCC1CommandLine() const {
 void CompilerInvocation::resetNonModularOptions() {
   getLangOpts().resetNonModularOptions();
   getPreprocessorOpts().resetNonModularOptions();
+  getCodeGenOpts().resetNonModularOptions(getHeaderSearchOpts().ModuleFormat);
 }
 
 void CompilerInvocation::clearImplicitModuleBuildOptions() {

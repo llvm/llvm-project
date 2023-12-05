@@ -188,14 +188,14 @@ void
 piecewise_constant_distribution<_RealType>::param_type::__init()
 {
     // __densities_ contains non-normalized areas
-    result_type __total_area = _VSTD::accumulate(__densities_.begin(),
+    result_type __total_area = std::accumulate(__densities_.begin(),
                                                 __densities_.end(),
                                                 result_type());
     for (size_t __i = 0; __i < __densities_.size(); ++__i)
         __densities_[__i] /= __total_area;
     // __densities_ contains normalized areas
     __areas_.assign(__densities_.size(), result_type());
-    _VSTD::partial_sum(__densities_.begin(), __densities_.end() - 1,
+    std::partial_sum(__densities_.begin(), __densities_.end() - 1,
                                                           __areas_.begin() + 1);
     // __areas_ contains partial sums of normalized areas: [0, __densities_ - 1]
     __densities_.back() = 1 - __areas_.back();  // correct round off error
@@ -289,7 +289,7 @@ piecewise_constant_distribution<_RealType>::operator()(_URNG& __g, const param_t
     static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     typedef uniform_real_distribution<result_type> _Gen;
     result_type __u = _Gen()(__g);
-    ptrdiff_t __k = _VSTD::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),
+    ptrdiff_t __k = std::upper_bound(__p.__areas_.begin(), __p.__areas_.end(),
                                       __u) - __p.__areas_.begin() - 1;
     return (__u - __p.__areas_[__k]) / __p.__densities_[__k] + __p.__b_[__k];
 }

@@ -83,7 +83,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     result_type operator()(_URNG& __g)
     {
-        return _VSTD::exp(__nd_(__g));
+        return std::exp(__nd_(__g));
     }
 
     template<class _URNG>
@@ -91,7 +91,7 @@ public:
     result_type operator()(_URNG& __g, const param_type& __p)
     {
         typename normal_distribution<result_type>::param_type __pn(__p.m(), __p.s());
-        return _VSTD::exp(__nd_(__g, __pn));
+        return std::exp(__nd_(__g, __pn));
     }
 
     // property functions
