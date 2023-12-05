@@ -119,12 +119,13 @@ def testForSugar():
     memref_t = T.memref(10, T.index())
     range = affine.for_
 
+    # CHECK: #[[$ATTR_2:.+]] = affine_map<(d0) -> (d0)>
+
     # CHECK-LABEL:   func.func @range_loop_1(
     # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
-    # CHECK:           affine.for %[[VAL_3:.*]] = 1 to 1 iter_args() -> () {
+    # CHECK:           affine.for %[[VAL_3:.*]] = #[[$ATTR_2]](%[[VAL_0]]) to #[[$ATTR_2]](%[[VAL_1]]) {
     # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
     # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
-    # CHECK:             affine.yield
     # CHECK:           }
     # CHECK:           return
     # CHECK:         }
@@ -138,10 +139,9 @@ def testForSugar():
 
     # CHECK-LABEL:   func.func @range_loop_2(
     # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
-    # CHECK:           affine.for %[[VAL_3:.*]] = 1 to 10 iter_args() -> () {
+    # CHECK:           affine.for %[[VAL_3:.*]] = #[[$ATTR_2]](%[[VAL_0]]) to 10 {
     # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
     # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
-    # CHECK:             affine.yield
     # CHECK:           }
     # CHECK:           return
     # CHECK:         }
@@ -154,10 +154,9 @@ def testForSugar():
 
     # CHECK-LABEL:   func.func @range_loop_3(
     # CHECK-SAME:                            %[[VAL_0:.*]]: index, %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: memref<10xindex>) {
-    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to 1 iter_args() -> () {
+    # CHECK:           affine.for %[[VAL_3:.*]] = 0 to #[[$ATTR_2]](%[[VAL_1]]) {
     # CHECK:             %[[VAL_4:.*]] = arith.addi %[[VAL_3]], %[[VAL_3]] : index
     # CHECK:             memref.store %[[VAL_4]], %[[VAL_2]]{{\[}}%[[VAL_3]]] : memref<10xindex>
-    # CHECK:             affine.yield
     # CHECK:           }
     # CHECK:           return
     # CHECK:         }

@@ -61,18 +61,28 @@ class AffineForOp(AffineForOp):
 
         if isinstance(lower_bound, int):
             lower_bound = AffineMap.get_constant(lower_bound)
-        elif isinstance(lower_bound, _ResultValueT):
+        elif isinstance(lower_bound, (Operation, OpView, Value)):
+            if len(lower_bound_operands):
+                raise ValueError(
+                    f"Either a concrete lower bound or an AffineMap in combination "
+                    f"with lower bound operands, but not both, is supported."
+                )
             lower_bound_operands.append(lower_bound)
-            lower_bound = AffineMap.get_constant(1)
+            lower_bound = AffineMap.get_identity(1)
 
         if not isinstance(lower_bound, AffineMap):
             raise ValueError(f"{lower_bound=} must be int | ResultValueT | AffineMap")
 
         if isinstance(upper_bound, int):
             upper_bound = AffineMap.get_constant(upper_bound)
-        elif isinstance(upper_bound, _ResultValueT):
+        elif isinstance(upper_bound, (Operation, OpView, Value)):
+            if len(upper_bound_operands):
+                raise ValueError(
+                    f"Either a concrete upper bound or an AffineMap in combination "
+                    f"with upper bound operands, but not both, is supported."
+                )
             upper_bound_operands.append(upper_bound)
-            upper_bound = AffineMap.get_constant(1)
+            upper_bound = AffineMap.get_identity(1)
 
         if not isinstance(upper_bound, AffineMap):
             raise ValueError(f"{upper_bound=} must be int | ResultValueT | AffineMap")
