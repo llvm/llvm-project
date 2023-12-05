@@ -442,6 +442,7 @@ libc_support_library(
         ":__support_bit",
         ":__support_common",
         ":__support_cpp_type_traits",
+        ":__support_math_extras",
         ":__support_number_pair",
     ],
 )
