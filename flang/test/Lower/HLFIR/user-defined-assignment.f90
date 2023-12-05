@@ -80,7 +80,7 @@ end subroutine
 ! CHECK:    } to {
 ! CHECK:      hlfir.yield %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:    } user_defined_assign  (%[[VAL_5:.*]]: !fir.logical<4>) to (%[[VAL_6:.*]]: !fir.ref<i32>) {
-! CHECK:      %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {uniq_name = "adapt.valuebyref"} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
+! CHECK:      %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_5]] {adapt.valuebyref} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
 ! CHECK:      fir.call @_QPlogical_to_numeric(%[[VAL_6]], %[[VAL_7]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:      hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.logical<4>>, i1
 ! CHECK:    }
@@ -112,7 +112,7 @@ end subroutine
 ! CHECK:      hlfir.yield %[[VAL_1]]#0 : !fir.box<!fir.array<?xf32>>
 ! CHECK:    } user_defined_assign  (%[[VAL_13:.*]]: !hlfir.expr<?x!fir.logical<4>>) to (%[[VAL_14:.*]]: !fir.box<!fir.array<?xf32>>) {
 ! CHECK:      %[[VAL_15:.*]] = hlfir.shape_of %[[VAL_13]] : (!hlfir.expr<?x!fir.logical<4>>) -> !fir.shape<1>
-! CHECK:      %[[VAL_16:.*]]:3 = hlfir.associate %[[VAL_13]](%[[VAL_15]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.logical<4>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>, i1)
+! CHECK:      %[[VAL_16:.*]]:3 = hlfir.associate %[[VAL_13]](%[[VAL_15]]) {adapt.valuebyref} : (!hlfir.expr<?x!fir.logical<4>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>, i1)
 ! CHECK:      fir.call @_QPlogical_array_to_real(%[[VAL_14]], %[[VAL_16]]#0) {{.*}}: (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?x!fir.logical<4>>>) -> ()
 ! CHECK:      hlfir.end_associate %[[VAL_16]]#1, %[[VAL_16]]#2 : !fir.ref<!fir.array<?x!fir.logical<4>>>, i1
 ! CHECK:    }
@@ -154,7 +154,7 @@ end subroutine
 ! CHECK:      } to {
 ! CHECK:        hlfir.yield %[[VAL_3]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK:      } user_defined_assign  (%[[VAL_20:.*]]: !fir.logical<4>) to (%[[VAL_21:.*]]: !fir.ref<i32>) {
-! CHECK:        %[[VAL_22:.*]]:3 = hlfir.associate %[[VAL_20]] {uniq_name = "adapt.valuebyref"} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
+! CHECK:        %[[VAL_22:.*]]:3 = hlfir.associate %[[VAL_20]] {adapt.valuebyref} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
 ! CHECK:        fir.call @_QPlogical_to_numeric(%[[VAL_21]], %[[VAL_22]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:        hlfir.end_associate %[[VAL_22]]#1, %[[VAL_22]]#2 : !fir.ref<!fir.logical<4>>, i1
 ! CHECK:      }
@@ -327,7 +327,7 @@ end subroutine test_char_get_length
 ! CHECK:             hlfir.yield %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:           } user_defined_assign  (%[[VAL_10:.*]]: !hlfir.expr<!fir.char<1,?>>) to (%[[VAL_11:.*]]: !fir.ref<i32>) {
 ! CHECK:             %[[VAL_12:.*]] = hlfir.get_length %[[VAL_10]] : (!hlfir.expr<!fir.char<1,?>>) -> index
-! CHECK:             %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_10]] typeparams %[[VAL_12]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+! CHECK:             %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_10]] typeparams %[[VAL_12]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:             fir.call @_QPtest_char_get_length_callee(%[[VAL_11]], %[[VAL_13]]#0) fastmath<contract> : (!fir.ref<i32>, !fir.boxchar<1>) -> ()
 ! CHECK:             hlfir.end_associate %[[VAL_13]]#1, %[[VAL_13]]#2 : !fir.ref<!fir.char<1,?>>, i1
 ! CHECK:           }

@@ -22,11 +22,14 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -679,7 +682,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // We support using both GCC-style and MSVC-style exceptions on Windows, so
     // add both preparation passes. Each pass will only actually run if it
     // recognizes the personality function.
-    addPass(WinEHPass());
+    addPass(WinEHPreparePass());
     addPass(DwarfEHPass(getOptLevel()));
     break;
   case ExceptionHandling::Wasm:
@@ -687,7 +690,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addPass(WinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false));
     addPass(WasmEHPass());
     break;
   case ExceptionHandling::None:
@@ -715,10 +718,10 @@ template <typename Derived>
 void CodeGenPassBuilder<Derived>::addISelPrepare(AddIRPass &addPass) const {
   derived().addPreISel(addPass);
 
-  addPass(CallBrPrepare());
+  addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
-  addPass(SafeStackPass());
+  addPass(SafeStackPass(&TM));
   addPass(StackProtectorPass());
 
   if (Opt.PrintISelInput)

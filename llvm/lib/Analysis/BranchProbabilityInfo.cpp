@@ -1188,8 +1188,11 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
                                             const BasicBlock *Src,
                                             const BasicBlock *Dst) const {
   const BranchProbability Prob = getEdgeProbability(Src, Dst);
-  OS << "edge " << Src->getName() << " -> " << Dst->getName()
-     << " probability is " << Prob
+  OS << "edge ";
+  Src->printAsOperand(OS, false, Src->getModule());
+  OS << " -> ";
+  Dst->printAsOperand(OS, false, Dst->getModule());
+  OS << " probability is " << Prob
      << (isEdgeHot(Src, Dst) ? " [HOT edge]\n" : "\n");
 
   return OS;
@@ -1322,9 +1325,8 @@ BranchProbabilityAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
 
 PreservedAnalyses
 BranchProbabilityPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
-  OS << "Printing analysis results of BPI for function "
-     << "'" << F.getName() << "':"
-     << "\n";
+  OS << "Printing analysis 'Branch Probability Analysis' for function '"
+     << F.getName() << "':\n";
   AM.getResult<BranchProbabilityAnalysis>(F).print(OS);
   return PreservedAnalyses::all();
 }

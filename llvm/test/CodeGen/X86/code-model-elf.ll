@@ -9,6 +9,7 @@
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-SMALL-DATA-PIC
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
+; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  -large-data-threshold=1000 | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
 
 ; Generated from this C source:
 ;

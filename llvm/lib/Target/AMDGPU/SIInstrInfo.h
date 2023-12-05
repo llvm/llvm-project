@@ -241,7 +241,8 @@ public:
 
   bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                            ArrayRef<const MachineOperand *> BaseOps2,
-                           unsigned NumLoads, unsigned NumBytes) const override;
+                           unsigned ClusterSize,
+                           unsigned NumBytes) const override;
 
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,
                                int64_t Offset1, unsigned NumLoads) const override;
@@ -1217,7 +1218,8 @@ public:
   unsigned getLiveRangeSplitOpcode(Register Reg,
                                    const MachineFunction &MF) const override;
 
-  bool isBasicBlockPrologue(const MachineInstr &MI) const override;
+  bool isBasicBlockPrologue(const MachineInstr &MI,
+                            Register Reg = Register()) const override;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator InsPt,

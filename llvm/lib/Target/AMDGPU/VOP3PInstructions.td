@@ -424,8 +424,8 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
   // Dot-iu Intrinsics have extra operands and require separate codegen pattern.
-  def : GCNPat < (intrinsic_node (DotIUVOP3PMods i32:$src0_mods), i32:$src0,
-                                 (DotIUVOP3PMods i32:$src1_mods), i32:$src1,
+  def : GCNPat < (intrinsic_node (VOP3PModsNeg i32:$src0_mods), i32:$src0,
+                                 (VOP3PModsNeg i32:$src1_mods), i32:$src1,
                                  i32:$src2, (i1 timm:$clamp)),
                  (!cast<Instruction>(NAME) $src0_mods, i32:$src0,
                                            $src1_mods, i32:$src1,
@@ -652,7 +652,7 @@ let GISelPredicateCode = [{ return !MF.getInfo<SIMachineFunctionInfo>()->mayNeed
 class VgprMAIFrag<SDPatternOperator Op> :
   MAIFrag<Op, [{ return !MF->getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs(); }]>;
 
-let Predicates = [HasMAIInsts] in {
+let SubtargetPredicate = HasMAIInsts in {
 
 let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
   defm V_ACCVGPR_READ_B32  : VOP3Inst<"v_accvgpr_read_b32",  VOPProfileAccRead>;
@@ -743,7 +743,7 @@ let Predicates = [isGFX90APlus] in {
   }
 } // End Predicates = [isGFX90APlus]
 
-let Predicates = [isGFX940Plus], is_gfx940_xdl = 1 in {
+let SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1 in {
   defm V_MFMA_I32_32X32X16I8       : MAIInst<"v_mfma_i32_32x32x16i8",       "I32_I64_X32",    int_amdgcn_mfma_i32_32x32x16_i8>;
   defm V_MFMA_I32_16X16X32I8       : MAIInst<"v_mfma_i32_16x16x32i8",       "I32_I64_X16",    int_amdgcn_mfma_i32_16x16x32_i8>;
   defm V_MFMA_F32_16X16X8XF32      : MAIInst<"v_mfma_f32_16x16x8xf32",      "F32_V2F32_X16",  int_amdgcn_mfma_f32_16x16x8_xf32>;
@@ -756,7 +756,7 @@ let Predicates = [isGFX940Plus], is_gfx940_xdl = 1 in {
   defm V_MFMA_F32_32X32X16_BF8_FP8 : MAIInst<"v_mfma_f32_32x32x16_bf8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_bf8_fp8>;
   defm V_MFMA_F32_32X32X16_FP8_BF8 : MAIInst<"v_mfma_f32_32x32x16_fp8_bf8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_bf8>;
   defm V_MFMA_F32_32X32X16_FP8_FP8 : MAIInst<"v_mfma_f32_32x32x16_fp8_fp8", "F32_I64_X16",    int_amdgcn_mfma_f32_32x32x16_fp8_fp8>;
-} // End Predicates = [isGFX940Plus], is_gfx940_xdl = 1
+} // End SubtargetPredicate = isGFX940Plus, is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
   let Constraints = "$vdst = $src2", DisableEncoding = "$src2",
@@ -862,8 +862,8 @@ class WMMAOpSelPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
 
 class WMMAUIClampPat<Instruction Inst, SDPatternOperator node, VOPProfile P> :
   GCNPat < (P.DstVT (node
-                                (DotIUVOP3PMods i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
-                                (DotIUVOP3PMods i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
+                                (VOP3PModsNeg i32:$src0_modifiers), (P.Src0VT P.Src0VT:$src0),
+                                (VOP3PModsNeg i32:$src1_modifiers), (P.Src1VT P.Src1VT:$src1),
                                 (P.Src2VT P.Src2VT:$src2), (i1 timm:$clamp)
                    )),
                    (P.DstVT (Inst i32:$src0_modifiers, P.Src0VT:$src0, i32:$src1_modifiers, P.Src1VT:$src1, (i32 8), P.Src2VT:$src2, i1:$clamp))
@@ -1095,7 +1095,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
 
   dag Src0InPat  = !cond(IsAB_F16  : (ins (Src0VT (WMMAModsF16Neg Src0VT:$src0, i32:$src0_modifiers))),
                          IsAB_BF16 : (ins Src0VT:$src0),
-                         IsIU      : (ins (DotIUVOP3PMods i32:$src0_modifiers), Src0VT:$src0),
+                         IsIU      : (ins (VOP3PModsNeg i32:$src0_modifiers), Src0VT:$src0),
                          IsFP8BF8  : (ins Src0VT:$src0));
   dag Src0OutPat = !cond(IsAB_F16  : (ins i32:$src0_modifiers, Src0VT:$src0),
                          IsAB_BF16 : (ins (i32 8), Src0VT:$src0),
@@ -1103,7 +1103,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                          IsFP8BF8  : (ins Src0VT:$src0));
   dag Src1InPat  = !cond(IsAB_F16  : (ins (Src1VT (WMMAModsF16Neg Src1VT:$src1, i32:$src1_modifiers))),
                          IsAB_BF16 : (ins Src1VT:$src1),
-                         IsIU      : (ins (DotIUVOP3PMods i32:$src1_modifiers), Src1VT:$src1),
+                         IsIU      : (ins (VOP3PModsNeg i32:$src1_modifiers), Src1VT:$src1),
                          IsFP8BF8  : (ins Src1VT:$src1));
   dag Src1OutPat = !cond(IsAB_F16  : (ins i32:$src1_modifiers, Src1VT:$src1),
                          IsAB_BF16 : (ins (i32 8), Src1VT:$src1),
@@ -1615,25 +1615,23 @@ multiclass VOP3P_Real_MFMA_gfx940_aliases<string NameFrom, string NameTo, string
                                           VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(Op # "_vgprcd" # "_e64"),
                                           VOPProfile Pfl_ACD = PS_ACD.Pfl,
                                           VOPProfile Pfl_VCD = PS_VCD.Pfl> {
-  let Predicates = [isGFX940Plus] in {
-    if !ne(NameFrom, NameTo) then {
-      def : InstAlias <NameTo # " " # PS_ACD.AsmOperands,
-                       (!cast<VOP3P_Real>(Op # "_gfx940_acd") Pfl_ACD.DstRC:$vdst,
-                           Pfl_ACD.Src0RC64:$src0, Pfl_ACD.Src1RC64:$src1, Pfl_ACD.Src2RC64:$src2,
-                           cbsz:$cbsz, abid:$abid, blgp:$blgp)>, PredicateControl;
-      def : InstAlias <NameTo # " " # PS_VCD.AsmOperands,
-                       (!cast<VOP3P_Real>(Op # "_gfx940_vcd") Pfl_VCD.DstRC:$vdst,
-                           Pfl_VCD.Src0RC64:$src0, Pfl_VCD.Src1RC64:$src1, Pfl_VCD.Src2RC64:$src2,
-                           cbsz:$cbsz, abid:$abid, blgp:$blgp)>, PredicateControl;
-    }
-  } // End Predicates = [isGFX940Plus]
+  if !ne(NameFrom, NameTo) then {
+    def : InstAlias <NameTo # " " # PS_ACD.AsmOperands,
+                     (!cast<VOP3P_Real>(Op # "_gfx940_acd") Pfl_ACD.DstRC:$vdst,
+                         Pfl_ACD.Src0RC64:$src0, Pfl_ACD.Src1RC64:$src1, Pfl_ACD.Src2RC64:$src2,
+                         cbsz:$cbsz, abid:$abid, blgp:$blgp)>, PredicateControl;
+    def : InstAlias <NameTo # " " # PS_VCD.AsmOperands,
+                     (!cast<VOP3P_Real>(Op # "_gfx940_vcd") Pfl_VCD.DstRC:$vdst,
+                         Pfl_VCD.Src0RC64:$src0, Pfl_VCD.Src1RC64:$src1, Pfl_VCD.Src2RC64:$src2,
+                         cbsz:$cbsz, abid:$abid, blgp:$blgp)>, PredicateControl;
+  }
 }
 
 multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
   let SubtargetPredicate = isGFX940Plus,
-      AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940",
+      DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
   def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_ACD.Pfl, 1>;
@@ -1642,10 +1640,12 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
                     VOP3Pe_MAI <op, PS_VCD.Pfl, 0>;
   } // End AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940"
 
-  defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
+  let SubtargetPredicate = isGFX940Plus in {
+    defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
 
-  if !ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic) then
-  defm : VOP3P_Real_MFMA_gfx940_aliases<Name, !subst("_1k", "", PS_ACD.Mnemonic), NAME>;
+    if !ne(!subst("_1k", "", PS_ACD.Mnemonic), PS_ACD.Mnemonic) then
+    defm : VOP3P_Real_MFMA_gfx940_aliases<Name, !subst("_1k", "", PS_ACD.Mnemonic), NAME>;
+  }
 }
 
 multiclass VOP3P_Real_MFMA_vi<bits<7> op> {

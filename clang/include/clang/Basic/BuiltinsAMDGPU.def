@@ -150,8 +150,8 @@ BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiWUiUiV4Ui", "nc")
 // Ballot builtins.
 //===----------------------------------------------------------------------===//
 
-TARGET_BUILTIN(__builtin_amdgcn_ballot_w32, "Uib", "nc", "wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_ballot_w64, "LUib", "nc", "wavefrontsize64")
+TARGET_BUILTIN(__builtin_amdgcn_ballot_w32, "ZUib", "nc", "wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_ballot_w64, "WUib", "nc", "wavefrontsize64")
 
 // Deprecated intrinsics in favor of __builtin_amdgn_ballot_{w32|w64}
 BUILTIN(__builtin_amdgcn_uicmp, "WUiUiUiIi", "nc")

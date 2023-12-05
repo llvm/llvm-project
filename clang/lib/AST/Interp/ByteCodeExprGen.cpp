@@ -75,7 +75,7 @@ private:
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
-  auto *SubExpr = CE->getSubExpr();
+  const Expr *SubExpr = CE->getSubExpr();
   switch (CE->getCastKind()) {
 
   case CK_LValueToRValue: {
@@ -614,6 +614,29 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   return true;
 }
 
+/// Pointer to the array(not the element!) must be on the stack when calling
+/// this.
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitArrayElemInit(unsigned ElemIndex,
+                                                  const Expr *Init) {
+  if (std::optional<PrimType> T = classify(Init->getType())) {
+    // Visit the primitive element like normal.
+    if (!this->visit(Init))
+      return false;
+    return this->emitInitElem(*T, ElemIndex, Init);
+  }
+
+  // Advance the pointer currently on the stack to the given
+  // dimension.
+  if (!this->emitConstUint32(ElemIndex, Init))
+    return false;
+  if (!this->emitArrayElemPtrUint32(Init))
+    return false;
+  if (!this->visitInitializer(Init))
+    return false;
+  return this->emitPopPtr(Init);
+}
+
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   // Handle discarding first.
@@ -642,25 +665,8 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     // FIXME: Array fillers.
     unsigned ElementIndex = 0;
     for (const Expr *Init : E->inits()) {
-      if (std::optional<PrimType> T = classify(Init->getType())) {
-        // Visit the primitive element like normal.
-        if (!this->visit(Init))
-          return false;
-        if (!this->emitInitElem(*T, ElementIndex, Init))
-          return false;
-      } else {
-        // Advance the pointer currently on the stack to the given
-        // dimension.
-        if (!this->emitConstUint32(ElementIndex, Init))
-          return false;
-        if (!this->emitArrayElemPtrUint32(Init))
-          return false;
-        if (!this->visitInitializer(Init))
-          return false;
-        if (!this->emitPopPtr(Init))
-          return false;
-      }
-
+      if (!this->visitArrayElemInit(ElementIndex, Init))
+        return false;
       ++ElementIndex;
     }
     return true;
@@ -831,7 +837,6 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
   const Expr *SubExpr = E->getSubExpr();
   const Expr *CommonExpr = E->getCommonExpr();
   size_t Size = E->getArraySize().getZExtValue();
-  std::optional<PrimType> ElemT = classify(SubExpr->getType());
 
   // If the common expression is an opaque expression, we visit it
   // here once so we have its value cached.
@@ -848,22 +853,8 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitLoopExpr(
     ArrayIndexScope<Emitter> IndexScope(this, I);
     BlockScope<Emitter> BS(this);
 
-    if (ElemT) {
-      if (!this->visit(SubExpr))
-        return false;
-      if (!this->emitInitElem(*ElemT, I, E))
-        return false;
-    } else {
-      // Get to our array element and recurse into visitInitializer()
-      if (!this->emitConstUint64(I, SubExpr))
-        return false;
-      if (!this->emitArrayElemPtrUint64(SubExpr))
-        return false;
-      if (!visitInitializer(SubExpr))
-        return false;
-      if (!this->emitPopPtr(E))
-        return false;
-    }
+    if (!this->visitArrayElemInit(I, SubExpr))
+      return false;
   }
   return true;
 }
@@ -2231,10 +2222,12 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!Func)
     return false;
 
-  // Put arguments on the stack.
-  for (const auto *Arg : E->arguments()) {
-    if (!this->visit(Arg))
-      return false;
+  if (!Func->isUnevaluatedBuiltin()) {
+    // Put arguments on the stack.
+    for (const auto *Arg : E->arguments()) {
+      if (!this->visit(Arg))
+        return false;
+    }
   }
 
   if (!this->emitCallBI(Func, E, E))

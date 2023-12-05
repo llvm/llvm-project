@@ -1078,9 +1078,8 @@ class NamedBitOperand<string Id, string Name = NAME>
 
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
-    CustomOperandProps<1, Op.ParserMatchClass.Name> {
-  let PredicateMethod = Op.ParserMatchClass.PredicateMethod;
-  let ParserMethod = Op.ParserMatchClass.ParserMethod;
+    CustomOperandProps<1> {
+  let ParserMatchClass = Op.ParserMatchClass;
   let PrintMethod = Op.PrintMethod;
 }
 
@@ -1123,6 +1122,8 @@ def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
 def CPol_GLC : ValuePredicatedOperand<CPol, "Op.getImm() & CPol::GLC">;
 def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
+def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
+def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
 
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;
@@ -1399,7 +1400,7 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
 def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
-def DotIUVOP3PMods  : ComplexPattern<untyped, 1, "SelectDotIUVOP3PMods">;
+def VOP3PModsNeg  : ComplexPattern<untyped, 1, "SelectVOP3PModsNeg">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
 def WMMAModsF32NegAbs  : ComplexPattern<untyped, 2, "SelectWMMAModsF32NegAbs">;

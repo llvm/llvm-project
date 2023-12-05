@@ -151,6 +151,18 @@
 # define TEST_IS_CONSTANT_EVALUATED false
 #endif
 
+#if TEST_STD_VER >= 23
+#  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
+#if TEST_STD_VER >= 20
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED true
+#else
+#  define TEST_STD_AT_LEAST_20_OR_RUNTIME_EVALUATED (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+
 #if TEST_STD_VER >= 14
 # define TEST_CONSTEXPR_CXX14 constexpr
 #else
@@ -441,6 +453,12 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_WORKAROUND_BUG_109234844_WEAK __attribute__((weak))
 #else
 #  define TEST_WORKAROUND_BUG_109234844_WEAK /* nothing */
+#endif
+
+#ifdef _AIX
+#  define TEST_IF_AIX(arg_true, arg_false) arg_true
+#else
+#  define TEST_IF_AIX(arg_true, arg_false) arg_false
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

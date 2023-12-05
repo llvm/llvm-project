@@ -13,7 +13,7 @@ from mlir.dialects import sparse_tensor as st
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(_SCRIPT_PATH)
-from tools import sparse_compiler
+from tools import sparsifier
 
 
 def boilerplate(attr: st.EncodingAttr):
@@ -125,17 +125,17 @@ def main():
         # regular and loose compression and various metadata bitwidths.
         # For these simple orderings, dim2lvl and lvl2dim are the same.
         levels = [
-            [st.DimLevelType.compressed_nu, st.DimLevelType.singleton],
-            [st.DimLevelType.dense, st.DimLevelType.compressed],
-            [st.DimLevelType.dense, st.DimLevelType.loose_compressed],
-            [st.DimLevelType.compressed, st.DimLevelType.compressed],
+            [st.LevelType.compressed_nu, st.LevelType.singleton],
+            [st.LevelType.dense, st.LevelType.compressed],
+            [st.LevelType.dense, st.LevelType.loose_compressed],
+            [st.LevelType.compressed, st.LevelType.compressed],
         ]
         orderings = [
             (ir.AffineMap.get_permutation([0, 1]), 0),
             (ir.AffineMap.get_permutation([1, 0]), 1),
         ]
         bitwidths = [8, 64]
-        compiler = sparse_compiler.SparseCompiler(
+        compiler = sparsifier.Sparsifier(
             options="", opt_level=2, shared_libs=[support_lib]
         )
         for level in levels:
@@ -149,10 +149,10 @@ def main():
 
         # Now do the same for BSR.
         level = [
-            st.DimLevelType.dense,
-            st.DimLevelType.compressed,
-            st.DimLevelType.dense,
-            st.DimLevelType.dense,
+            st.LevelType.dense,
+            st.LevelType.compressed,
+            st.LevelType.dense,
+            st.LevelType.dense,
         ]
         d0 = ir.AffineDimExpr.get(0)
         d1 = ir.AffineDimExpr.get(1)

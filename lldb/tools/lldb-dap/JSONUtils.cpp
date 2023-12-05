@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -57,7 +58,7 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
                           llvm::StringRef defaultValue) {
   if (obj == nullptr)
     return defaultValue;
-  return GetString(*obj, key);
+  return GetString(*obj, key, defaultValue);
 }
 
 // Gets an unsigned integer from a JSON object using the key, or returns the
@@ -959,11 +960,10 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
       body.try_emplace("reason", "breakpoint");
-      char desc_str[64];
-      uint64_t bp_id = thread.GetStopReasonDataAtIndex(0);
-      uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
-      snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
-               bp_id, bp_loc_id);
+      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+      lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
+      std::string desc_str =
+          llvm::formatv("breakpoint {0}.{1}", bp_id, bp_loc_id);
       body.try_emplace("hitBreakpointIds",
                        llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);

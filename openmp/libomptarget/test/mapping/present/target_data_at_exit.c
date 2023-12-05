@@ -16,9 +16,9 @@ int main() {
 #pragma omp target exit data map(delete : i)
   }
 
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
   // CHECK: success
-  // CHECK-NOT: Libomptarget
+  // CHECK-NOT: omptarget
   fprintf(stderr, "success\n");
 
   return 0;

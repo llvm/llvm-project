@@ -55,7 +55,6 @@ static cl::opt<bool> CanonicalizeICmpPredicatesToUnsigned(
 STATISTIC(NumPhis,      "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
 STATISTIC(NumSelects,   "Number of selects propagated");
-STATISTIC(NumMemAccess, "Number of memory access targets propagated");
 STATISTIC(NumCmps,      "Number of comparisons propagated");
 STATISTIC(NumReturns,   "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
@@ -262,23 +261,6 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
     ++NumPhis;
 
   return Changed;
-}
-
-static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
-  Value *Pointer = nullptr;
-  if (LoadInst *L = dyn_cast<LoadInst>(I))
-    Pointer = L->getPointerOperand();
-  else
-    Pointer = cast<StoreInst>(I)->getPointerOperand();
-
-  if (isa<Constant>(Pointer)) return false;
-
-  Constant *C = LVI->getConstant(Pointer, I);
-  if (!C) return false;
-
-  ++NumMemAccess;
-  I->replaceUsesOfWith(Pointer, C);
-  return true;
 }
 
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
@@ -775,7 +757,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
     // NOTE: this transformation introduces two uses of X,
     //       but it may be undef so we must freeze it first.
     Value *FrozenX = X;
-    if (!isGuaranteedNotToBeUndefOrPoison(X))
+    if (!isGuaranteedNotToBeUndef(X))
       FrozenX = B.CreateFreeze(X, X->getName() + ".frozen");
     auto *AdjX = B.CreateNUWSub(FrozenX, Y, Instr->getName() + ".urem");
     auto *Cmp =
@@ -1158,10 +1140,6 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       case Instruction::ICmp:
       case Instruction::FCmp:
         BBChanged |= processCmp(cast<CmpInst>(&II), LVI);
-        break;
-      case Instruction::Load:
-      case Instruction::Store:
-        BBChanged |= processMemAccess(&II, LVI);
         break;
       case Instruction::Call:
       case Instruction::Invoke:

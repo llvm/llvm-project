@@ -1499,13 +1499,9 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
-  bool isGFX12() const {
-    return AMDGPU::isGFX12(getSTI());
-  }
+  bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 
-  bool isGFX12Plus() const {
-    return AMDGPU::isGFX12Plus(getSTI());
-  }
+  bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
 
   bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
 
@@ -3727,8 +3723,8 @@ bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
   return true;
 }
 
-constexpr uint64_t MIMGFlags = SIInstrFlags::MIMG | SIInstrFlags::VIMAGE |
-                               SIInstrFlags::VSAMPLE;
+constexpr uint64_t MIMGFlags =
+    SIInstrFlags::MIMG | SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE;
 
 bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
                                            const SMLoc &IDLoc) {
@@ -4866,8 +4862,7 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
     return true;
 
   if ((TID.TSFlags & SIInstrFlags::SMRD) &&
-      ((TH == AMDGPU::CPol::TH_NT_RT) ||
-       (TH == AMDGPU::CPol::TH_RT_NT) ||
+      ((TH == AMDGPU::CPol::TH_NT_RT) || (TH == AMDGPU::CPol::TH_RT_NT) ||
        (TH == AMDGPU::CPol::TH_NT_HT)))
     return PrintError("invalid th value for SMEM instruction");
 

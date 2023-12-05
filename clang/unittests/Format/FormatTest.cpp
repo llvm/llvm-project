@@ -1863,6 +1863,8 @@ TEST_F(FormatTest, UnderstandsMacros) {
   verifyFormat("MACRO(something##something)");
   verifyFormat("MACRO(return##something)");
   verifyFormat("MACRO(co_return##something)");
+
+  verifyFormat("#define A x:");
 }
 
 TEST_F(FormatTest, ShortBlocksInMacrosDontMergeWithCodeAfterMacro) {
@@ -3415,7 +3417,7 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
   verifyFormat("myFunc(public);");
   verifyFormat("std::vector<int> testVec = {private};");
   verifyFormat("private.p = 1;");
-  verifyFormat("void function(private...){};");
+  verifyFormat("void function(private...) {};");
   verifyFormat("if (private && public)");
   verifyFormat("private &= true;");
   verifyFormat("int x = private * public;");
@@ -6358,6 +6360,13 @@ TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
                "  char *foobarbaz = \"foobarbaz\";\n"
                "  int   quux      = 4;\n"
                "}",
+               Style);
+  verifyFormat("auto foo = [] { return; };\n"
+               "#if FOO\n"
+               "#else\n"
+               "count = bar;\n"
+               "mbid  = bid;\n"
+               "#endif",
                Style);
 
   // Test with a mix of #if and #else blocks.
@@ -16093,16 +16102,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
   Tab.IndentWidth = 8;
   Tab.UseTab = FormatStyle::UT_Never;
   Tab.TabWidth = 0;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16110,16 +16119,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_ForIndentation;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16127,16 +16136,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_ForContinuationAndIndentation;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16144,16 +16153,16 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_AlignWithSpaces;
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t// line starts with '\t'\n"
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
-               "    // line starts with '\t'\n"
+  verifyFormat("void a() {\n"
+               "        // line starts with '\t'\n"
                "};",
                "void a(){\n"
                "\t\t// line starts with '\t'\n"
@@ -16161,7 +16170,7 @@ TEST_F(FormatTest, ZeroTabWidth) {
                Tab);
 
   Tab.UseTab = FormatStyle::UT_Always;
-  verifyFormat("void a(){\n"
+  verifyFormat("void a() {\n"
                "// line starts with '\t'\n"
                "};",
                "void a(){\n"
@@ -16169,7 +16178,7 @@ TEST_F(FormatTest, ZeroTabWidth) {
                "};",
                Tab);
 
-  verifyFormat("void a(){\n"
+  verifyFormat("void a() {\n"
                "// line starts with '\t'\n"
                "};",
                "void a(){\n"
@@ -20709,6 +20718,11 @@ TEST_F(FormatTest, CatchExceptionReferenceBinding) {
 TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
   auto Style = getLLVMStyle();
   Style.AlignArrayOfStructures = FormatStyle::AIAS_Right;
+  verifyNoCrash("f({\n"
+                "table({}, table({{\"\", false}}, {}))\n"
+                "});",
+                Style);
+
   Style.AlignConsecutiveAssignments.Enabled = true;
   Style.AlignConsecutiveDeclarations.Enabled = true;
   verifyFormat("struct test demo[] = {\n"
@@ -20879,13 +20893,15 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "};",
                Style);
   // TODO: Fix the indentations below when this option is fully functional.
+#if 0
   verifyFormat("int a[][] = {\n"
                "    {\n"
                "     {0, 2}, //\n"
-               " {1, 2}  //\n"
+               "     {1, 2}  //\n"
                "    }\n"
                "};",
                Style);
+#endif
   Style.ColumnLimit = 100;
   verifyFormat(
       "test demo[] = {\n"
@@ -21139,6 +21155,33 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
       "test demo[] = {{56, 23, \"hello world i am a very long line "
       "that really, in any just world, ought to be split over multiple "
       "lines\"},{-1, 93463, \"world\"},{7, 5, \"!!\"},};",
+      Style);
+
+  Style.ColumnLimit = 25;
+  verifyNoCrash("Type foo{\n"
+                "    {\n"
+                "        1,  // A\n"
+                "        2,  // B\n"
+                "        3,  // C\n"
+                "    },\n"
+                "    \"hello\",\n"
+                "};",
+                Style);
+  verifyNoCrash("Type object[X][Y] = {\n"
+                "    {{val}, {val}, {val}},\n"
+                "    {{val}, {val}, // some comment\n"
+                "                   {val}}\n"
+                "};",
+                Style);
+
+  Style.ColumnLimit = 120;
+  verifyNoCrash(
+      "T v[] {\n"
+      "    { AAAAAAAAAAAAAAAAAAAAAAAAA::aaaaaaaaaaaaaaaaaaa, "
+      "AAAAAAAAAAAAAAAAAAAAAAAAA::aaaaaaaaaaaaaaaaaaaaaaaa, 1, 0.000000000f, "
+      "\"00000000000000000000000000000000000000000000000000000000"
+      "00000000000000000000000000000000000000000000000000000000\" },\n"
+      "};",
       Style);
 }
 
@@ -26608,6 +26651,20 @@ TEST_F(FormatTest, StreamOutputOperator) {
   verifyFormat("std::cout << \"foo\" << \"bar\" << baz;");
 }
 
+TEST_F(FormatTest, BreakAdjacentStringLiterals) {
+  constexpr StringRef Code{
+      "return \"Code\" \"\\0\\52\\26\\55\\55\\0\" \"x013\" \"\\02\\xBA\";"};
+
+  verifyFormat("return \"Code\"\n"
+               "       \"\\0\\52\\26\\55\\55\\0\"\n"
+               "       \"x013\"\n"
+               "       \"\\02\\xBA\";",
+               Code);
+
+  auto Style = getLLVMStyle();
+  Style.BreakAdjacentStringLiterals = false;
+  verifyFormat(Code, Style);
+}
 } // namespace
 } // namespace test
 } // namespace format

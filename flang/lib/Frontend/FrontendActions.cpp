@@ -175,6 +175,45 @@ getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
   return llvm::join(featuresVec, ",");
 }
 
+// Get feature string which represents combined explicit target features
+// for NVPTX and the target features specified by the user/
+// TODO: Have a more robust target conf like `clang/lib/Basic/Targets/NVPTX.cpp`
+static std::string
+getExplicitAndImplicitNVPTXTargetFeatures(CompilerInstance &ci,
+                                          const TargetOptions &targetOpts,
+                                          const llvm::Triple triple) {
+  llvm::StringRef cpu = targetOpts.cpu;
+  llvm::StringMap<bool> implicitFeaturesMap;
+  std::string errorMsg;
+  bool ptxVer = false;
+
+  // Add target features specified by the user
+  for (auto &userFeature : targetOpts.featuresAsWritten) {
+    llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
+    implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
+    // Check if the user provided a PTX version
+    if (userKeyString.startswith("ptx"))
+      ptxVer = true;
+  }
+
+  // Set the default PTX version to `ptx61` if none was provided.
+  // TODO: set the default PTX version based on the chip.
+  if (!ptxVer)
+    implicitFeaturesMap["ptx61"] = true;
+
+  // Set the compute capability.
+  implicitFeaturesMap[cpu.str()] = true;
+
+  llvm::SmallVector<std::string> featuresVec;
+  for (auto &implicitFeatureItem : implicitFeaturesMap) {
+    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
+                           implicitFeatureItem.first().str())
+                              .str());
+  }
+  llvm::sort(featuresVec);
+  return llvm::join(featuresVec, ",");
+}
+
 // Produces the string which represents target feature
 static std::string getTargetFeatures(CompilerInstance &ci) {
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
@@ -188,6 +227,8 @@ static std::string getTargetFeatures(CompilerInstance &ci) {
   // them to the target features specified by the user
   if (triple.isAMDGPU()) {
     return getExplicitAndImplicitAMDGPUTargetFeatures(ci, targetOpts, triple);
+  } else if (triple.isNVPTX()) {
+    return getExplicitAndImplicitNVPTXTargetFeatures(ci, targetOpts, triple);
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
@@ -201,6 +242,87 @@ static void setMLIRDataLayout(mlir::ModuleOp &mlirModule,
       mlir::StringAttr::get(context, dl.getStringRepresentation()));
   mlir::DataLayoutSpecInterface dlSpec = mlir::translateDataLayout(dl, context);
   mlirModule->setAttr(mlir::DLTIDialect::kDataLayoutAttrName, dlSpec);
+}
+
+static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
+  const std::vector<std::string> &libs =
+      ci.getInvocation().getCodeGenOpts().DependentLibs;
+  if (libs.empty()) {
+    return;
+  }
+  // dependent-lib is currently only supported on Windows, so the list should be
+  // empty on non-Windows platforms
+  assert(
+      llvm::Triple(ci.getInvocation().getTargetOpts().triple).isOSWindows() &&
+      "--dependent-lib is only supported on Windows");
+  // Add linker options specified by --dependent-lib
+  auto builder = mlir::OpBuilder(mlirModule.getRegion());
+  for (const std::string &lib : libs) {
+    builder.create<mlir::LLVM::LinkerOptionsOp>(
+        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
+  }
+}
+
+// Add to MLIR code target specific items which are dependent on target
+// configuration specified by the user.
+// Clang equivalent function: AMDGPUTargetCodeGenInfo::emitTargetGlobals
+static void addAMDGPUSpecificMLIRItems(mlir::ModuleOp &mlirModule,
+                                       CompilerInstance &ci) {
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
+  const llvm::Triple triple(targetOpts.triple);
+  const llvm::StringRef codeObjectVersionGlobalOpName = "__oclc_ABI_version";
+
+  // TODO: Share address spaces enumeration between Clang and Flang.
+  // Currently this enumeration is defined in Clang specific class
+  // defined in file: clang/lib/Basic/Targets/AMDGPU.h .
+  // and we need to move it to LLVM directory.
+  const int constantAddressSpace = 4;
+
+  if (!triple.isAMDGPU()) {
+    return;
+  }
+  const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
+  if (codeGenOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_None) {
+    return;
+  }
+
+  mlir::ConversionPatternRewriter builder(mlirModule.getContext());
+  unsigned oclcABIVERsion = codeGenOpts.CodeObjectVersion;
+  auto int32Type = builder.getI32Type();
+
+  std::optional<mlir::LLVM::GlobalOp> originalGV;
+
+  mlirModule.walk([&originalGV, codeObjectVersionGlobalOpName](
+                      mlir::LLVM::GlobalOp globalOp) {
+    if (globalOp.getName() == codeObjectVersionGlobalOpName)
+      originalGV = globalOp;
+  });
+  if (originalGV.has_value()) {
+    mlir::LLVM::GlobalOp originalGVOp = originalGV.value();
+    if (originalGVOp.getLinkage() != mlir::LLVM::Linkage::External) {
+      return;
+    }
+    // Update the variable if it is already present in MLIR but it was marked
+    // as external linkage variable
+    originalGVOp.setLinkage(mlir::LLVM::Linkage::WeakODR);
+    originalGVOp.setValueAttr(
+        builder.getIntegerAttr(int32Type, oclcABIVERsion));
+    originalGVOp.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
+    originalGVOp.setAddrSpace(constantAddressSpace);
+    originalGVOp.setVisibility_(mlir::LLVM::Visibility::Hidden);
+    return;
+  }
+
+  mlir::LLVM::GlobalOp covInfo = builder.create<mlir::LLVM::GlobalOp>(
+      /* Location */ mlirModule.getLoc(), /* Type */ int32Type,
+      /* IsConstant */ true, /* Linkage */ mlir::LLVM::Linkage::WeakODR,
+      /* Name */ codeObjectVersionGlobalOpName,
+      /* Value */ builder.getIntegerAttr(int32Type, oclcABIVERsion));
+  covInfo.setUnnamedAddr(mlir::LLVM::UnnamedAddr::Local);
+  covInfo.setAddrSpace(constantAddressSpace);
+  covInfo.setVisibility_(mlir::LLVM::Visibility::Hidden);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  builder.insert(covInfo);
 }
 
 bool CodeGenAction::beginSourceFileAction() {
@@ -269,13 +391,13 @@ bool CodeGenAction::beginSourceFileAction() {
 
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
-      ci.getInvocation().getSemanticsContext().defaultKinds();
+      ci.getSemanticsContext().defaultKinds();
   fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
                                               fir::fromDefaultKinds(defKinds)});
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
-      *mlirCtx, ci.getInvocation().getSemanticsContext(), defKinds,
-      ci.getInvocation().getSemanticsContext().intrinsics(),
-      ci.getInvocation().getSemanticsContext().targetCharacteristics(),
+      *mlirCtx, ci.getSemanticsContext(), defKinds,
+      ci.getSemanticsContext().intrinsics(),
+      ci.getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
@@ -302,7 +424,12 @@ bool CodeGenAction::beginSourceFileAction() {
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
-  lb.lower(parseTree, ci.getInvocation().getSemanticsContext());
+  lb.lower(parseTree, ci.getSemanticsContext());
+
+  // Add target specific items like dependent libraries, target specific
+  // constants etc.
+  addDependentLibs(*mlirModule, ci);
+  addAMDGPUSpecificMLIRItems(*mlirModule, ci);
 
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
@@ -570,8 +697,8 @@ void DebugPreFIRTreeAction::executeAction() {
   auto &parseTree{*ci.getParsing().parseTree()};
 
   // Dump pre-FIR tree
-  if (auto ast{Fortran::lower::createPFT(
-          parseTree, ci.getInvocation().getSemanticsContext())}) {
+  if (auto ast{
+          Fortran::lower::createPFT(parseTree, ci.getSemanticsContext())}) {
     Fortran::lower::dumpPFT(llvm::outs(), *ast);
   } else {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -609,10 +736,8 @@ void GetDefinitionAction::executeAction() {
 
   llvm::outs() << "String range: >" << charBlock->ToString() << "<\n";
 
-  auto *symbol{ci.getInvocation()
-                   .getSemanticsContext()
-                   .FindScope(*charBlock)
-                   .FindSymbol(*charBlock)};
+  auto *symbol{
+      ci.getSemanticsContext().FindScope(*charBlock).FindSymbol(*charBlock)};
   if (!symbol) {
     ci.getDiagnostics().Report(diagID);
     return;

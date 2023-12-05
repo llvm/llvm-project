@@ -718,6 +718,11 @@ public:
   /// cost should return false, otherwise return true.
   bool isNumRegsMajorCostOfLSR() const;
 
+  /// Return true if LSR should attempts to replace a use of an otherwise dead
+  /// primary IV in the latch condition with another IV available in the loop.
+  /// When successful, makes the primary IV dead.
+  bool shouldFoldTerminatingConditionAfterLSR() const;
+
   /// \returns true if LSR should not optimize a chain that includes \p I.
   bool isProfitableLSRChainElement(Instruction *I) const;
 
@@ -1786,6 +1791,7 @@ public:
   virtual bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                              const TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool isNumRegsMajorCostOfLSR() = 0;
+  virtual bool shouldFoldTerminatingConditionAfterLSR() const = 0;
   virtual bool isProfitableLSRChainElement(Instruction *I) = 0;
   virtual bool canMacroFuseCmp() = 0;
   virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
@@ -2238,6 +2244,9 @@ public:
   }
   bool isNumRegsMajorCostOfLSR() override {
     return Impl.isNumRegsMajorCostOfLSR();
+  }
+  bool shouldFoldTerminatingConditionAfterLSR() const override {
+    return Impl.shouldFoldTerminatingConditionAfterLSR();
   }
   bool isProfitableLSRChainElement(Instruction *I) override {
     return Impl.isProfitableLSRChainElement(I);

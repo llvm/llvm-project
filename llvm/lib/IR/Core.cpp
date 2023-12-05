@@ -2447,7 +2447,7 @@ void LLVMAddTargetDependentFunctionAttr(LLVMValueRef Fn, const char *A,
 
 unsigned LLVMCountParams(LLVMValueRef FnRef) {
   // This function is strictly redundant to
-  //   LLVMCountParamTypes(LLVMGetElementType(LLVMTypeOf(FnRef)))
+  //   LLVMCountParamTypes(LLVMGlobalGetValueType(FnRef))
   return unwrap<Function>(FnRef)->arg_size();
 }
 
@@ -3452,6 +3452,16 @@ LLVMBool LLVMGetExact(LLVMValueRef DivOrShrInst) {
 void LLVMSetExact(LLVMValueRef DivOrShrInst, LLVMBool IsExact) {
   Value *P = unwrap<Value>(DivOrShrInst);
   cast<Instruction>(P)->setIsExact(IsExact);
+}
+
+LLVMBool LLVMGetNNeg(LLVMValueRef NonNegInst) {
+  Value *P = unwrap<Value>(NonNegInst);
+  return cast<Instruction>(P)->hasNonNeg();
+}
+
+void LLVMSetNNeg(LLVMValueRef NonNegInst, LLVMBool IsNonNeg) {
+  Value *P = unwrap<Value>(NonNegInst);
+  cast<Instruction>(P)->setNonNeg(IsNonNeg);
 }
 
 /*--.. Memory ..............................................................--*/

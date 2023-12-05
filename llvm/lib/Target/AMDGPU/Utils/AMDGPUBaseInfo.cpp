@@ -2090,7 +2090,7 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   case CallingConv::AMDGPU_Gfx:
     return true;
   default:
-    return isEntryFunctionCC(CC);
+    return isEntryFunctionCC(CC) || isChainCC(CC);
   }
 }
 
@@ -2210,13 +2210,9 @@ bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }
 
-bool isGFX12Plus(const MCSubtargetInfo &STI) {
-  return isGFX12(STI);
-}
+bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
 
-bool isNotGFX12Plus(const MCSubtargetInfo &STI) {
-  return !isGFX12Plus(STI);
-}
+bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {
   return !isGFX11Plus(STI);
@@ -2691,6 +2687,16 @@ bool isInlinableIntLiteralV216(int32_t Literal) {
   if (!(Literal & 0xffff))
     return isInlinableIntLiteral(Hi16);
   return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
+}
+
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType) {
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    return isInlinableLiteralV216(Literal, HasInv2Pi);
+  default:
+    return isInlinableIntLiteralV216(Literal);
+  }
 }
 
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {

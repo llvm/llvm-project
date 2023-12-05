@@ -94,6 +94,12 @@ bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
 
       MachineInstr *MISegmentStart = SI->getInstructionFromIndex(Segment.start);
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);
+      if (!MISegmentEnd) {
+        // FIXME: The start and end can refer to deleted instructions. We should
+        // be able to handle this more gracefully by finding the closest real
+        // instructions.
+        continue;
+      }
       MachineBasicBlock *BB = MISegmentEnd->getParent();
 
       // Start iteration backwards from segment end until the start of basic

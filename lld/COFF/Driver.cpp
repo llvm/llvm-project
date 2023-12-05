@@ -1258,7 +1258,7 @@ static void findKeepUniqueSections(COFFLinkerContext &ctx) {
       const uint8_t *cur = contents.begin();
       while (cur != contents.end()) {
         unsigned size;
-        const char *err;
+        const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
         if (err)
           fatal(toString(obj) + ": could not decode addrsig section: " + err);
@@ -2314,6 +2314,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->lldmapFile.clear();
   }
 
+  // If should create PDB, use the hash of PDB content for build id. Otherwise,
+  // generate using the hash of executable content.
+  if (args.hasFlag(OPT_build_id, OPT_build_id_no, false))
+    config->buildIDHash = BuildIDHash::Binary;
+
   if (shouldCreatePDB) {
     // Put the PDB next to the image if no /pdb flag was passed.
     if (config->pdbPath.empty()) {
@@ -2335,6 +2340,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // Don't do this earlier, so that ctx.OutputFile is ready.
       parsePDBAltPath();
     }
+    config->buildIDHash = BuildIDHash::PDB;
   }
 
   // Set default image base if /base is not given.
@@ -2359,6 +2365,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Needed for MSVC 2019 16.8 CRT.
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
   ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
+
+  if (isArm64EC(config->machine)) {
+    ctx.symtab.addAbsolute("__arm64x_extra_rfe_table", 0);
+    ctx.symtab.addAbsolute("__arm64x_extra_rfe_table_size", 0);
+    ctx.symtab.addAbsolute("__hybrid_code_map", 0);
+    ctx.symtab.addAbsolute("__hybrid_code_map_count", 0);
+  }
 
   if (config->pseudoRelocs) {
     ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);

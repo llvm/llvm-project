@@ -4669,23 +4669,22 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL-LABEL: global_addr_64bit_lsr_iv:
 ; GFX12-GISEL:       ; %bb.0: ; %bb
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc, v2, v0
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc, v3, v1, vcc
-; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v0, 4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc, 0, v1, vcc
-; GFX12-GISEL-NEXT:    global_load_b32 v2, v[2:3], off scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v0, v2
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v5, vcc, v1, v3, vcc
+; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc, v2, 4
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc, 0, v3, vcc
+; GFX12-GISEL-NEXT:    global_load_b32 v4, v[4:5], off scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0x400, v0
+; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0x400, v2
 ; GFX12-GISEL-NEXT:    s_cbranch_vccz .LBB132_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -4794,27 +4793,26 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL-LABEL: global_addr_64bit_lsr_iv_multiload:
 ; GFX12-GISEL:       ; %bb.0: ; %bb
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[0:1], 0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s1
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc, v2, v0
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc, v3, v1, vcc
-; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc, v0, 4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc, 0, v1, vcc
-; GFX12-GISEL-NEXT:    global_load_b32 v4, v[2:3], off scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v0, v2
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v5, vcc, v1, v3, vcc
+; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc, v2, 4
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc, 0, v3, vcc
+; GFX12-GISEL-NEXT:    global_load_b32 v6, v[4:5], off scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    global_load_b32 v2, v[2:3], off scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    global_load_b32 v4, v[4:5], off scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0x400, v0
+; GFX12-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0x400, v2
 ; GFX12-GISEL-NEXT:    s_cbranch_vccz .LBB133_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-GISEL-NEXT:    s_endpgm

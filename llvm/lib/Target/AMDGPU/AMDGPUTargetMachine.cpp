@@ -280,10 +280,11 @@ static cl::opt<ScanOptions> AMDGPUAtomicOptimizerStrategy(
         clEnumValN(ScanOptions::None, "None", "Disable atomic optimizer")));
 
 // Enable Mode register optimization
-static cl::opt<bool>
-    EnableSIModeRegisterPass("amdgpu-mode-register",
-                             cl::desc("Enable mode register pass"),
-                             cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableSIModeRegisterPass(
+  "amdgpu-mode-register",
+  cl::desc("Enable mode register pass"),
+  cl::init(true),
+  cl::Hidden);
 
 // Enable GFX11.5+ s_singleuse_vdst insertion
 static cl::opt<bool>

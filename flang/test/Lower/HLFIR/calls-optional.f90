@@ -44,7 +44,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = fir.is_present %[[VAL_3]]#0 : (!fir.ref<!fir.array<100xf32>>) -> i1
 ! CHECK:  %[[VAL_5:.*]]:3 = fir.if %[[VAL_4]] -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1) {
 ! CHECK:    %[[VAL_6:.*]] = hlfir.as_expr %[[VAL_3]]#0 : (!fir.ref<!fir.array<100xf32>>) -> !hlfir.expr<100xf32>
-! CHECK:    %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_6]](%[[VAL_2]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<100xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1)
+! CHECK:    %[[VAL_7:.*]]:3 = hlfir.associate %[[VAL_6]](%[[VAL_2]]) {adapt.valuebyref} : (!hlfir.expr<100xf32>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1)
 ! CHECK:    fir.result %[[VAL_7]]#1, %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>, i1
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_8:.*]] = fir.absent !fir.ref<!fir.array<100xf32>>

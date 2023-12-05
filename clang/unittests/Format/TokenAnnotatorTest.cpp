@@ -1851,6 +1851,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandHashInMacro) {
+  auto Tokens = annotate("#define Foo(Bar) \\\n"
+                         "  { \\\n"
+                         "    #Bar \\\n"
+                         "  }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+
+  Tokens = annotate("#define Foo(Bar) \\\n"
+                    "  { #Bar }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
   // '__attribute__' has special handling.
   auto Tokens = annotate("__attribute__(X) void Foo(void);");
@@ -1980,17 +1996,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   // joined operators, we don't have a separate type, so we only test for their
   // precedence.
   std::pair<prec::Level, std::string> JoinedBinary[] = {
-      {prec::Comma, "<->"},       {prec::Assignment, "+="},
-      {prec::Assignment, "-="},   {prec::Assignment, "*="},
-      {prec::Assignment, "/="},   {prec::Assignment, "%="},
-      {prec::Assignment, "&="},   {prec::Assignment, "^="},
-      {prec::Assignment, "<<="},  {prec::Assignment, ">>="},
-      {prec::Assignment, "<<<="}, {prec::Assignment, ">>>="},
-      {prec::LogicalOr, "||"},    {prec::LogicalAnd, "&&"},
-      {prec::Equality, "=="},     {prec::Equality, "!="},
-      {prec::Equality, "==="},    {prec::Equality, "!=="},
-      {prec::Equality, "==?"},    {prec::Equality, "!=?"},
-      {prec::ExclusiveOr, "~^"},  {prec::ExclusiveOr, "^~"},
+      {prec::Comma, "->"},        {prec::Comma, "<->"},
+      {prec::Assignment, "+="},   {prec::Assignment, "-="},
+      {prec::Assignment, "*="},   {prec::Assignment, "/="},
+      {prec::Assignment, "%="},   {prec::Assignment, "&="},
+      {prec::Assignment, "^="},   {prec::Assignment, "<<="},
+      {prec::Assignment, ">>="},  {prec::Assignment, "<<<="},
+      {prec::Assignment, ">>>="}, {prec::LogicalOr, "||"},
+      {prec::LogicalAnd, "&&"},   {prec::Equality, "=="},
+      {prec::Equality, "!="},     {prec::Equality, "==="},
+      {prec::Equality, "!=="},    {prec::Equality, "==?"},
+      {prec::Equality, "!=?"},    {prec::ExclusiveOr, "~^"},
+      {prec::ExclusiveOr, "^~"},
   };
   for (auto Operator : JoinedBinary) {
     auto Tokens = Annotate(std::string("x = x ") + Operator.second + " x;");
@@ -2388,6 +2405,80 @@ TEST_F(TokenAnnotatorTest, UnderstandsDoWhile) {
   Tokens = annotate("do ++i; while ( i > 5 );");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::kw_while, TT_DoWhile);
+}
+
+TEST_F(TokenAnnotatorTest, StartOfName) {
+  auto Tokens = annotate("#pragma clang diagnostic push");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
+
+  Tokens = annotate("#pragma clang diagnostic ignored \"-Wzero-length-array\"");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
+
+  Tokens = annotate("#define FOO Foo foo");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_StartOfName);
+}
+
+TEST_F(TokenAnnotatorTest, BraceKind) {
+  auto Tokens = annotate("void f() {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+
+  Tokens = annotate("void f() override {};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("void f() noexcept(false) {};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[9], BK_Block);
+
+  Tokens = annotate("auto f() -> void {};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+
+  Tokens = annotate("void f() { /**/ };");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("void f() { //\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("void f() {\n"
+                    "  //\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
 }
 
 } // namespace

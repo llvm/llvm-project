@@ -186,6 +186,13 @@ New checks
 
   Replace ``enable_if`` with C++20 requires clauses.
 
+- New :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check.
+
+  Checks whether a ``find`` or ``rfind`` result is compared with 0 and suggests
+  replacing with ``starts_with`` when the method exists in the class. Notably,
+  this will work with ``std::string`` and ``std::string_view``.
+
 - New :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check.
 
@@ -211,6 +218,11 @@ Changes in existing checks
 - Improved :doc:`abseil-string-find-startswith
   <clang-tidy/checks/abseil/string-find-startswith>` check to also consider
   ``std::basic_string_view`` in addition to ``std::basic_string`` by default.
+
+- Improved :doc:`bugprone-assert-side-effect
+  <clang-tidy/checks/bugprone/assert-side-effect>` check to report usage of
+  non-const ``<<`` and ``>>`` operators in assertions and fixed some false-positives
+  with const operators.
 
 - Improved :doc:`bugprone-dangling-handle
   <clang-tidy/checks/bugprone/dangling-handle>` check to support functional
@@ -394,6 +406,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
   highlight the const location
 
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to correctly handle
+  interger literals with suffixes in fix-its.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check to
   detect comparison between string and empty string literals and support
@@ -411,7 +427,8 @@ Changes in existing checks
   ``Leading_upper_snake_case`` naming convention. The handling of ``typedef``
   has been enhanced, particularly within complex types like function pointers
   and cases where style checks were omitted when functions started with macros.
-  Added support for C++20 ``concept`` declarations.
+  Added support for C++20 ``concept`` declarations. ``Camel_Snake_Case`` and
+  ``camel_Snake_Case`` now detect more invalid identifier names.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take

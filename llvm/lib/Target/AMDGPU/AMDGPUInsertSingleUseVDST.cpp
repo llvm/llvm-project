@@ -48,6 +48,8 @@ public:
   AMDGPUInsertSingleUseVDST() : MachineFunctionPass(ID) {}
 
   void emitSingleUseVDST(MachineInstr &MI) const {
+    // Mark the following instruction as a single-use producer:
+    //   s_singleuse_vdst { supr0: 1 }
     BuildMI(*MI.getParent(), MI, DebugLoc(), SII->get(AMDGPU::S_SINGLEUSE_VDST))
         .addImm(0x1);
   }
@@ -58,7 +60,7 @@ public:
       return false;
 
     SII = ST.getInstrInfo();
-    const auto *TRI = MF.getSubtarget().getRegisterInfo();
+    const auto *TRI = &SII->getRegisterInfo();
     bool InstructionEmitted = false;
 
     for (MachineBasicBlock &MBB : MF) {

@@ -4,7 +4,7 @@
 // RUN: llvm-mc -triple riscv64 -mattr=+c -filetype obj -o %t.o %s
 // RUN: ld.lld --emit-relocs -o %t %t.o
 // RUN: llvm-bolt --enable-bat --print-cfg --print-fix-riscv-calls \
-// RUN:     -o /dev/null %t | FileCheck %s
+// RUN:     -o %t.null %t | FileCheck %s
 
   .text
   .option norvc

@@ -168,16 +168,20 @@ static unsigned findUseIdx(const MachineInstr *MI, unsigned UseOperIdx) {
   return UseIdx;
 }
 
-// Top-level API for clients that know the operand indices.
+// Top-level API for clients that know the operand indices. This doesn't need to
+// return std::optional<unsigned>, as it always returns a valid latency.
 unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *DefMI, unsigned DefOperIdx,
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
+  const unsigned InstrLatency = computeInstrLatency(DefMI);
+  const unsigned DefaultDefLatency = TII->defaultDefLatency(SchedModel, *DefMI);
+
   if (!hasInstrSchedModel() && !hasInstrItineraries())
-    return TII->defaultDefLatency(SchedModel, *DefMI);
+    return DefaultDefLatency;
 
   if (hasInstrItineraries()) {
-    int OperLatency = 0;
+    std::optional<unsigned> OperLatency;
     if (UseMI) {
       OperLatency = TII->getOperandLatency(&InstrItins, *DefMI, DefOperIdx,
                                            *UseMI, UseOperIdx);
@@ -186,21 +190,13 @@ unsigned TargetSchedModel::computeOperandLatency(
       unsigned DefClass = DefMI->getDesc().getSchedClass();
       OperLatency = InstrItins.getOperandCycle(DefClass, DefOperIdx);
     }
-    if (OperLatency >= 0)
-      return OperLatency;
 
-    // No operand latency was found.
-    unsigned InstrLatency = TII->getInstrLatency(&InstrItins, *DefMI);
-
-    // Expected latency is the max of the stage latency and itinerary props.
-    // Rather than directly querying InstrItins stage latency, we call a TII
-    // hook to allow subtargets to specialize latency. This hook is only
-    // applicable to the InstrItins model. InstrSchedModel should model all
-    // special cases without TII hooks.
-    InstrLatency =
-        std::max(InstrLatency, TII->defaultDefLatency(SchedModel, *DefMI));
-    return InstrLatency;
+    // Expected latency is the max of InstrLatency and DefaultDefLatency, if we
+    // didn't find an operand latency.
+    return OperLatency ? *OperLatency
+                       : std::max(InstrLatency, DefaultDefLatency);
   }
+
   // hasInstrSchedModel()
   const MCSchedClassDesc *SCDesc = resolveSchedClass(DefMI);
   unsigned DefIdx = findDefIdx(DefMI, DefOperIdx);
@@ -237,7 +233,7 @@ unsigned TargetSchedModel::computeOperandLatency(
   // FIXME: Automatically giving all implicit defs defaultDefLatency is
   // undesirable. We should only do it for defs that are known to the MC
   // desc like flags. Truly implicit defs should get 1 cycle latency.
-  return DefMI->isTransient() ? 0 : TII->defaultDefLatency(SchedModel, *DefMI);
+  return DefMI->isTransient() ? 0 : DefaultDefLatency;
 }
 
 unsigned

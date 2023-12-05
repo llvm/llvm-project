@@ -738,6 +738,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
 
   // AMDGCN-based processors.
+  // clang-format off
   EF_AMDGPU_MACH_AMDGCN_GFX600        = 0x020,
   EF_AMDGPU_MACH_AMDGCN_GFX601        = 0x021,
   EF_AMDGPU_MACH_AMDGCN_GFX700        = 0x022,
@@ -785,6 +786,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_GFX950        = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
+  // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,

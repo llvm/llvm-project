@@ -615,7 +615,7 @@ def RCCp {
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     defm PADDI8 :
-      MLS_DForm_R_SI34_RTA5_p<14, (outs g8rc:$RT), (ins g8rc:$RA, s34imm:$SI),
+      MLS_DForm_R_SI34_RTA5_p<14, (outs g8rc:$RT), (ins g8rc_nox0:$RA, s34imm:$SI),
                               (ins immZero:$RA, s34imm_pcrel:$SI),
                               "paddi $RT, $RA, $SI", IIC_LdStLFD>;
     let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
@@ -625,7 +625,7 @@ let Predicates = [PrefixInstrs] in {
     }
   }
   defm PADDI :
-    MLS_DForm_R_SI34_RTA5_p<14, (outs gprc:$RT), (ins gprc:$RA, s34imm:$SI),
+    MLS_DForm_R_SI34_RTA5_p<14, (outs gprc:$RT), (ins gprc_nor0:$RA, s34imm:$SI),
                             (ins immZero:$RA, s34imm_pcrel:$SI),
                             "paddi $RT, $RA, $SI", IIC_LdStLFD>;
   let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
