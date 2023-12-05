@@ -22,6 +22,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
@@ -1005,6 +1006,15 @@ void NVVM::WgmmaMmaAsyncOp::getAsmValues(
         {makeConstantI32(rewriter, static_cast<int>(getLayoutB())),
          mlir::NVVM::PTXRegisterMod::Read});
   }
+}
+LogicalResult NVVM::FenceProxyOp::verify() {
+  if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
+    return emitOpError() << "async_shared fence requires space attribute";
+  }
+  if (getKind() != NVVM::ProxyKind::async_shared && getSpace().has_value()) {
+    return emitOpError() << "only async_shared fence can have space attribute";
+  }
+  return success();
 }
 
 LogicalResult NVVM::SetMaxRegisterOp::verify() {

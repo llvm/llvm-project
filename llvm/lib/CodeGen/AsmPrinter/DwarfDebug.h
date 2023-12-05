@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"

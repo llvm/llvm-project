@@ -64,3 +64,6 @@ f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
 
 # [libc++][NFC] clang-format <shared_mutex>
 2d7eb9c9ea1a146412a83603d5c0c6339a5d8284
+
+# [libc++] Rename _LIBCPP_INLINE_VISIBILITY to _LIBCPP_HIDE_FROM_ABI
+4c198542226223f6a5c5511a1f89b37d15ee10b9

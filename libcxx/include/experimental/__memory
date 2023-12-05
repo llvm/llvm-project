@@ -82,7 +82,7 @@ struct __lfts_uses_alloc_ctor
 {};
 
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __user_alloc_construct_impl (integral_constant<int, 0>, _Tp *__storage, const _Allocator &, _Args &&... __args )
 {
     new (__storage) _Tp (_VSTD::forward<_Args>(__args)...);
@@ -90,7 +90,7 @@ void __user_alloc_construct_impl (integral_constant<int, 0>, _Tp *__storage, con
 
 // FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __user_alloc_construct_impl (integral_constant<int, 1>, _Tp *__storage, const _Allocator &__a, _Args &&... __args )
 {
     new (__storage) _Tp (allocator_arg_t(), __a, _VSTD::forward<_Args>(__args)...);
@@ -98,14 +98,14 @@ void __user_alloc_construct_impl (integral_constant<int, 1>, _Tp *__storage, con
 
 // FIXME: This should have a version which takes a non-const alloc.
 template <class _Tp, class _Allocator, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __user_alloc_construct_impl (integral_constant<int, 2>, _Tp *__storage, const _Allocator &__a, _Args &&... __args )
 {
     new (__storage) _Tp (_VSTD::forward<_Args>(__args)..., __a);
 }
 
 template <class _Tp, class _Alloc, class ..._Args>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __lfts_user_alloc_construct(
     _Tp * __store, const _Alloc & __a, _Args &&... __args)
 {
