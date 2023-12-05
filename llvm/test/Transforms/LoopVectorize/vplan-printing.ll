@@ -806,6 +806,47 @@ exit:
   ret void
 }
 
+define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
+; CHECK-LABEL: LV: Checking a loop in 'zext_nneg'
+; CHECK:       VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<%0> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<0> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT vp<%1> = CANONICAL-INDUCTION ir<0>, vp<%8>
+; CHECK-NEXT:    vp<%2>    = DERIVED-IV ir<0> + vp<%1> * ir<1> (truncated to i32)
+; CHECK-NEXT:    vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
+; CHECK-NEXT:    CLONE ir<%zext> = zext nneg vp<%3>
+; CHECK-NEXT:    CLONE ir<%idx2> = getelementptr ir<%p>, ir<%zext>
+; CHECK-NEXT:    WIDEN ir<%1> = load ir<%idx2>
+; CHECK-NEXT:    REPLICATE store ir<%1>, ir<%p1>
+; CHECK-NEXT:    EMIT vp<%8> = VF * UF + nuw vp<%1>
+; CHECK-NEXT:    EMIT branch-on-count vp<%8>, vp<%0>
+; CHECK-NEXT:  No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %body
+
+body:
+  %iv = phi i64 [ %next, %body ], [ 0, %entry ]
+  %0 = trunc i64 %iv to i32
+  %zext = zext nneg i32 %0 to i64
+  %idx2 = getelementptr double, ptr %p, i64 %zext
+  %1 = load double, ptr %idx2, align 8
+  store double %1, ptr %p1, align 8
+  %next = add i64 %iv, 1
+  %cmp = icmp eq i64 %next, 0
+  br i1 %cmp, label %exit, label %body
+
+exit:
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 

@@ -829,6 +829,7 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
     PossiblyExactOp,
     GEPOp,
     FPMathOp,
+    NonNegOp,
     Other
   };
 
@@ -846,6 +847,9 @@ private:
   };
   struct GEPFlagsTy {
     char IsInBounds : 1;
+  };
+  struct NonNegFlagsTy {
+    char NonNeg : 1;
   };
   struct FastMathFlagsTy {
     char AllowReassoc : 1;
@@ -866,6 +870,7 @@ private:
     WrapFlagsTy WrapFlags;
     ExactFlagsTy ExactFlags;
     GEPFlagsTy GEPFlags;
+    NonNegFlagsTy NonNegFlags;
     FastMathFlagsTy FMFs;
     unsigned AllFlags;
   };
@@ -893,6 +898,9 @@ public:
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
       OpType = OperationType::GEPOp;
       GEPFlags.IsInBounds = GEP->isInBounds();
+    } else if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(&I)) {
+      OpType = OperationType::NonNegOp;
+      NonNegFlags.NonNeg = PNNI->hasNonNeg();
     } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
       OpType = OperationType::FPMathOp;
       FMFs = Op->getFastMathFlags();
@@ -921,6 +929,7 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC;
   }
 
@@ -942,6 +951,9 @@ public:
     case OperationType::FPMathOp:
       FMFs.NoNaNs = false;
       FMFs.NoInfs = false;
+      break;
+    case OperationType::NonNegOp:
+      NonNegFlags.NonNeg = false;
       break;
     case OperationType::Cmp:
     case OperationType::Other:
@@ -970,6 +982,9 @@ public:
       I->setHasAllowReciprocal(FMFs.AllowReciprocal);
       I->setHasAllowContract(FMFs.AllowContract);
       I->setHasApproxFunc(FMFs.ApproxFunc);
+      break;
+    case OperationType::NonNegOp:
+      I->setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
     case OperationType::Other:
@@ -1177,7 +1192,7 @@ public:
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeBase, public VPValue {
+class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPValue {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1186,14 +1201,18 @@ class VPWidenCastRecipe : public VPRecipeBase, public VPValue {
 
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst *UI = nullptr)
-      : VPRecipeBase(VPDef::VPWidenCastSC, Op), VPValue(this, UI),
+                    CastInst &UI)
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), VPValue(this, &UI),
         Opcode(Opcode), ResultTy(ResultTy) {
-    assert((!UI || UI->getOpcode() == Opcode) &&
+    assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
-    assert((!UI || UI->getType() == ResultTy) &&
+    assert(UI.getType() == ResultTy &&
            "result type of underlying cast doesn't match");
   }
+
+  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), VPValue(this, nullptr),
+        Opcode(Opcode), ResultTy(ResultTy) {}
 
   ~VPWidenCastRecipe() override = default;
 
