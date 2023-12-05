@@ -1322,7 +1322,9 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   }
 }
 
-bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
+bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
+                                                 unsigned AddrSpace,
+                                                 uint64_t FlatVariant) const {
   if (!Subtarget->hasFlatInstOffsets()) {
     // Flat instructions do not have offsets, and only have the register
     // address.
@@ -1330,29 +1332,27 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
   }
 
   return AM.Scale == 0 &&
-         (AM.BaseOffs == 0 ||
-          Subtarget->getInstrInfo()->isLegalFLATOffset(
-              AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS, SIInstrFlags::FLAT));
+         (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                  AM.BaseOffs, AddrSpace, FlatVariant));
 }
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
   if (Subtarget->hasFlatGlobalInsts())
-    return AM.Scale == 0 &&
-           (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
-                                    AM.BaseOffs, AMDGPUAS::GLOBAL_ADDRESS,
-                                    SIInstrFlags::FlatGlobal));
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::GLOBAL_ADDRESS,
+                                     SIInstrFlags::FlatGlobal);
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
-      // Assume the we will use FLAT for all global memory accesses
-      // on VI.
-      // FIXME: This assumption is currently wrong.  On VI we still use
-      // MUBUF instructions for the r + i addressing mode.  As currently
-      // implemented, the MUBUF instructions only work on buffer < 4GB.
-      // It may be possible to support > 4GB buffers with MUBUF instructions,
-      // by setting the stride value in the resource descriptor which would
-      // increase the size limit to (stride * 4GB).  However, this is risky,
-      // because it has never been validated.
-    return isLegalFlatAddressingMode(AM);
+    // Assume the we will use FLAT for all global memory accesses
+    // on VI.
+    // FIXME: This assumption is currently wrong.  On VI we still use
+    // MUBUF instructions for the r + i addressing mode.  As currently
+    // implemented, the MUBUF instructions only work on buffer < 4GB.
+    // It may be possible to support > 4GB buffers with MUBUF instructions,
+    // by setting the stride value in the resource descriptor which would
+    // increase the size limit to (stride * 4GB).  However, this is risky,
+    // because it has never been validated.
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
+                                     SIInstrFlags::FLAT);
   }
 
   return isLegalMUBUFAddressingMode(AM);
@@ -1449,7 +1449,10 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return isLegalMUBUFAddressingMode(AM);
+    return Subtarget->enableFlatScratch()
+               ? isLegalFlatAddressingMode(AM, AMDGPUAS::PRIVATE_ADDRESS,
+                                           SIInstrFlags::FlatScratch)
+               : isLegalMUBUFAddressingMode(AM);
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS ||
       (AS == AMDGPUAS::REGION_ADDRESS && Subtarget->hasGDS())) {
@@ -1475,7 +1478,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // computation. We don't have instructions that compute pointers with any
     // addressing modes, so treat them as having no offset like flat
     // instructions.
-    return isLegalFlatAddressingMode(AM);
+    return isLegalFlatAddressingMode(AM, AMDGPUAS::FLAT_ADDRESS,
+                                     SIInstrFlags::FLAT);
   }
 
   // Assume a user alias of global for unknown address spaces.
