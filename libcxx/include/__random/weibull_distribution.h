@@ -86,7 +86,7 @@ public:
         _LIBCPP_HIDE_FROM_ABI
         result_type operator()(_URNG& __g, const param_type& __p)
         {return __p.b() *
-            _VSTD::pow(exponential_distribution<result_type>()(__g), 1/__p.a());}
+            std::pow(exponential_distribution<result_type>()(__g), 1/__p.a());}
 
     // property functions
     _LIBCPP_HIDE_FROM_ABI

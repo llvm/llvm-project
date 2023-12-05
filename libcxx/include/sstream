@@ -481,7 +481,7 @@ _LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__move_
         __eout = __rhs.epptr() - __p;
     }
     ptrdiff_t __hm = __rhs.__hm_ == nullptr ? -1 : __rhs.__hm_ - __p;
-    __str_ = _VSTD::move(__rhs.__str_);
+    __str_ = std::move(__rhs.__str_);
     __p = const_cast<char_type*>(__str_.data());
     if (__binp != -1)
         this->setg(__p + __binp, __p + __ninp, __p + __einp);
@@ -522,7 +522,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
         __eout = __rhs.epptr() - __p;
     }
     ptrdiff_t __hm = __rhs.__hm_ == nullptr ? -1 : __rhs.__hm_ - __p;
-    __str_ = _VSTD::move(__rhs.__str_);
+    __str_ = std::move(__rhs.__str_);
     __p = const_cast<char_type*>(__str_.data());
     if (__binp != -1)
         this->setg(__p + __binp, __p + __ninp, __p + __einp);
@@ -594,7 +594,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
         __leout = this->epptr() - __p;
     }
     ptrdiff_t __lhm = __hm_ == nullptr ? -1 : __hm_ - __p;
-    _VSTD::swap(__mode_, __rhs.__mode_);
+    std::swap(__mode_, __rhs.__mode_);
     __str_.swap(__rhs.__str_);
     __p = const_cast<char_type*>(__str_.data());
     if (__rbinp != -1)
@@ -762,7 +762,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
             }
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
         }
-        __hm_ = _VSTD::max(this->pptr() + 1, __hm_);
+        __hm_ = std::max(this->pptr() + 1, __hm_);
         if (__mode_ & ios_base::in)
         {
             char_type* __p = const_cast<char_type*>(__str_.data());
@@ -885,16 +885,16 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     basic_istringstream(basic_istringstream&& __rhs)
-        : basic_istream<_CharT, _Traits>(_VSTD::move(__rhs))
-        , __sb_(_VSTD::move(__rhs.__sb_))
+        : basic_istream<_CharT, _Traits>(std::move(__rhs))
+        , __sb_(std::move(__rhs.__sb_))
     {
         basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
     }
 
     // [istringstream.assign] Assign and swap:
     basic_istringstream& operator=(basic_istringstream&& __rhs) {
-        basic_istream<char_type, traits_type>::operator=(_VSTD::move(__rhs));
-        __sb_ = _VSTD::move(__rhs.__sb_);
+        basic_istream<char_type, traits_type>::operator=(std::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
         return *this;
     }
     _LIBCPP_HIDE_FROM_ABI
@@ -1009,16 +1009,16 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     basic_ostringstream(basic_ostringstream&& __rhs)
-        : basic_ostream<_CharT, _Traits>(_VSTD::move(__rhs))
-        , __sb_(_VSTD::move(__rhs.__sb_))
+        : basic_ostream<_CharT, _Traits>(std::move(__rhs))
+        , __sb_(std::move(__rhs.__sb_))
     {
         basic_ostream<_CharT, _Traits>::set_rdbuf(&__sb_);
     }
 
     // [ostringstream.assign] Assign and swap:
     basic_ostringstream& operator=(basic_ostringstream&& __rhs) {
-        basic_ostream<char_type, traits_type>::operator=(_VSTD::move(__rhs));
-        __sb_ = _VSTD::move(__rhs.__sb_);
+        basic_ostream<char_type, traits_type>::operator=(std::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
         return *this;
     }
 
@@ -1134,16 +1134,16 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     basic_stringstream(basic_stringstream&& __rhs)
-        : basic_iostream<_CharT, _Traits>(_VSTD::move(__rhs))
-        , __sb_(_VSTD::move(__rhs.__sb_))
+        : basic_iostream<_CharT, _Traits>(std::move(__rhs))
+        , __sb_(std::move(__rhs.__sb_))
     {
         basic_istream<_CharT, _Traits>::set_rdbuf(&__sb_);
     }
 
     // [stringstream.assign] Assign and swap:
     basic_stringstream& operator=(basic_stringstream&& __rhs) {
-        basic_iostream<char_type, traits_type>::operator=(_VSTD::move(__rhs));
-        __sb_ = _VSTD::move(__rhs.__sb_);
+        basic_iostream<char_type, traits_type>::operator=(std::move(__rhs));
+        __sb_ = std::move(__rhs.__sb_);
         return *this;
     }
     _LIBCPP_HIDE_FROM_ABI

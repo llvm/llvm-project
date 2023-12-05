@@ -186,10 +186,10 @@ template <class _Facet>
 locale
 locale::combine(const locale& __other) const
 {
-    if (!_VSTD::has_facet<_Facet>(__other))
+    if (!std::has_facet<_Facet>(__other))
         __throw_runtime_error("locale::combine: locale missing facet");
 
-    return locale(*this, &const_cast<_Facet&>(_VSTD::use_facet<_Facet>(__other)));
+    return locale(*this, &const_cast<_Facet&>(std::use_facet<_Facet>(__other)));
 }
 
 template <class _Facet>
@@ -348,7 +348,7 @@ bool
 locale::operator()(const basic_string<_CharT, _Traits, _Allocator>& __x,
                    const basic_string<_CharT, _Traits, _Allocator>& __y) const
 {
-    return _VSTD::use_facet<_VSTD::collate<_CharT> >(*this).compare(
+    return std::use_facet<std::collate<_CharT> >(*this).compare(
                                        __x.data(), __x.data() + __x.size(),
                                        __y.data(), __y.data() + __y.size()) < 0;
 }
