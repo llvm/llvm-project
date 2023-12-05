@@ -195,7 +195,7 @@ for.end:
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP10]], i32 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP14]], i32 [[TMP11]], i32 3
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[TMP17:%.*]] = or disjoint <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i64> [[TMP17]], i32 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i64> [[TMP17]], i32 1
