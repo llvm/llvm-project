@@ -54,7 +54,7 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction dir, std::optional<bool> isUnformatted,
     const Terminator &terminator) {
   // Make sure that the returned anonymous unit has been opened
-  // not just created in the unitmap.
+  // not just created in the unitMap.
   CriticalSection critical{createOpenLock};
   bool exists{false};
   ExternalFileUnit *result{
