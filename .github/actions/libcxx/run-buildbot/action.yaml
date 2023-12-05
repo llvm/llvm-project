@@ -20,7 +20,6 @@ inputs:
     required: false
     default: 'OFF'
 
-
 runs:
   using: "composite"
   steps:
