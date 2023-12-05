@@ -20,6 +20,13 @@ void check_fgetc(void) {
   fclose(fp);
 }
 
+void check_fgets(void) {
+  FILE *fp = tmpfile();
+  char buf[256];
+  fgets(buf, sizeof(buf), fp); // expected-warning {{Stream pointer might be NULL}}
+  fclose(fp);
+}
+
 void check_fputc(void) {
   FILE *fp = tmpfile();
   fputc('A', fp); // expected-warning {{Stream pointer might be NULL}}

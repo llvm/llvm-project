@@ -921,16 +921,20 @@ static Value *NegateValue(Value *V, Instruction *BI,
         TheNeg->getParent()->getParent() != BI->getParent()->getParent())
       continue;
 
-    Instruction *InsertPt;
+    BasicBlock::iterator InsertPt;
     if (Instruction *InstInput = dyn_cast<Instruction>(V)) {
-      InsertPt = InstInput->getInsertionPointAfterDef();
-      if (!InsertPt)
+      auto InsertPtOpt = InstInput->getInsertionPointAfterDef();
+      if (!InsertPtOpt)
         continue;
+      InsertPt = *InsertPtOpt;
     } else {
-      InsertPt = &*TheNeg->getFunction()->getEntryBlock().begin();
+      InsertPt = TheNeg->getFunction()
+                     ->getEntryBlock()
+                     .getFirstNonPHIOrDbg()
+                     ->getIterator();
     }
 
-    TheNeg->moveBefore(InsertPt);
+    TheNeg->moveBefore(*InsertPt->getParent(), InsertPt);
     if (TheNeg->getOpcode() == Instruction::Sub) {
       TheNeg->setHasNoUnsignedWrap(false);
       TheNeg->setHasNoSignedWrap(false);
@@ -2550,7 +2554,7 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   // Make a "pairmap" of how often each operand pair occurs.
   for (BasicBlock *BI : RPOT) {
     for (Instruction &I : *BI) {
-      if (!I.isAssociative())
+      if (!I.isAssociative() || !I.isBinaryOp())
         continue;
 
       // Ignore nodes that aren't at the root of trees.

@@ -611,6 +611,14 @@ public:
   /// Indicates if the binary contains split functions.
   bool HasSplitFunctions{false};
 
+  /// Indicates if the function ordering of the binary is finalized.
+  bool HasFinalizedFunctionOrder{false};
+
+  /// Indicates if a separate .text.warm section is needed that contains
+  /// function fragments with
+  /// FunctionFragment::getFragmentNum() == FragmentNum::warm()
+  bool HasWarmSection{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
@@ -926,6 +934,8 @@ public:
   /// @{
 
   const char *getMainCodeSectionName() const { return ".text"; }
+
+  const char *getWarmCodeSectionName() const { return ".text.warm"; }
 
   const char *getColdCodeSectionName() const { return ".text.cold"; }
 

@@ -45,5 +45,5 @@ end
 ! CHECK:    %[[VAL_17:.*]] = fir.call @_QPelem(%[[VAL_2]]#0, %[[VAL_16]]) {{.*}}: (!fir.class<!fir.type<_QMdef_some_typesTt{i:i32}>>, !fir.class<!fir.type<_QMdef_some_typesTt{i:i32}>>) -> i32
 ! CHECK:    hlfir.yield_element %[[VAL_17]] : i32
 ! CHECK:  }
-! CHECK:  %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_9]](%[[VAL_8]]) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
+! CHECK:  %[[VAL_18:.*]]:3 = hlfir.associate %[[VAL_9]](%[[VAL_8]]) {adapt.valuebyref} : (!hlfir.expr<?xi32>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>, i1)
 ! CHECK:  fir.call @_QPbar(%[[VAL_18]]#1) {{.*}}: (!fir.ref<!fir.array<?xi32>>) -> ()

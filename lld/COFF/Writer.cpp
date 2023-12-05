@@ -197,6 +197,10 @@ public:
   }
 };
 
+struct ChunkRange {
+  Chunk *first = nullptr, *last;
+};
+
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
@@ -243,11 +247,12 @@ private:
   void maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
                         StringRef countSym, bool hasFlag=false);
   void setSectionPermissions();
+  void setECSymbols();
   void writeSections();
   void writeBuildId();
   void writePEChecksum();
   void sortSections();
-  template <typename T> void sortExceptionTable(Chunk *first, Chunk *last);
+  template <typename T> void sortExceptionTable(ChunkRange &exceptionTable);
   void sortExceptionTables();
   void sortCRTSectionChunks(std::vector<Chunk *> &chunks);
   void addSyntheticIdata();
@@ -311,7 +316,7 @@ private:
   OutputSection *ctorsSec;
   OutputSection *dtorsSec;
 
-  // The first and last .pdata sections in the output file.
+  // The range of .pdata sections in the output file.
   //
   // We need to keep track of the location of .pdata in whichever section it
   // gets merged into so that we can sort its contents and emit a correct data
@@ -320,8 +325,10 @@ private:
   // are entirely linker-generated we can keep track of their locations using
   // the chunks that the linker creates. All .pdata chunks come from input
   // files, so we need to keep track of them separately.
-  Chunk *firstPdata = nullptr;
-  Chunk *lastPdata;
+  ChunkRange pdata;
+
+  // x86_64 .pdata sections on ARM64EC/ARM64X targets.
+  ChunkRange hybridPdata;
 
   COFFLinkerContext &ctx;
 };
@@ -738,6 +745,7 @@ void Writer::run() {
     removeEmptySections();
     assignOutputSectionIndices();
     setSectionPermissions();
+    setECSymbols();
     createSymbolAndStringTable();
 
     if (fileSize > UINT32_MAX)
@@ -1408,8 +1416,28 @@ void Writer::createSymbolAndStringTable() {
 void Writer::mergeSections() {
   llvm::TimeTraceScope timeScope("Merge sections");
   if (!pdataSec->chunks.empty()) {
-    firstPdata = pdataSec->chunks.front();
-    lastPdata = pdataSec->chunks.back();
+    if (isArm64EC(ctx.config.machine)) {
+      // On ARM64EC .pdata may contain both ARM64 and X64 data. Split them by
+      // sorting and store their regions separately.
+      llvm::stable_sort(pdataSec->chunks, [=](const Chunk *a, const Chunk *b) {
+        return (a->getMachine() == AMD64) < (b->getMachine() == AMD64);
+      });
+
+      for (auto chunk : pdataSec->chunks) {
+        if (chunk->getMachine() == AMD64) {
+          hybridPdata.first = chunk;
+          hybridPdata.last = pdataSec->chunks.back();
+          break;
+        }
+
+        if (!pdata.first)
+          pdata.first = chunk;
+        pdata.last = chunk;
+      }
+    } else {
+      pdata.first = pdataSec->chunks.front();
+      pdata.last = pdataSec->chunks.back();
+    }
   }
 
   for (auto &p : ctx.config.merge) {
@@ -1665,10 +1693,15 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[RESOURCE_TABLE].RelativeVirtualAddress = rsrcSec->getRVA();
     dir[RESOURCE_TABLE].Size = rsrcSec->getVirtualSize();
   }
-  if (firstPdata) {
-    dir[EXCEPTION_TABLE].RelativeVirtualAddress = firstPdata->getRVA();
-    dir[EXCEPTION_TABLE].Size =
-        lastPdata->getRVA() + lastPdata->getSize() - firstPdata->getRVA();
+  // ARM64EC (but not ARM64X) contains x86_64 exception table in data directory.
+  ChunkRange &exceptionTable =
+      ctx.config.machine == ARM64EC ? hybridPdata : pdata;
+  if (exceptionTable.first) {
+    dir[EXCEPTION_TABLE].RelativeVirtualAddress =
+        exceptionTable.first->getRVA();
+    dir[EXCEPTION_TABLE].Size = exceptionTable.last->getRVA() +
+                                exceptionTable.last->getSize() -
+                                exceptionTable.first->getRVA();
   }
   if (relocSec->getVirtualSize()) {
     dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = relocSec->getRVA();
@@ -2081,6 +2114,24 @@ void Writer::setSectionPermissions() {
   }
 }
 
+// Set symbols used by ARM64EC metadata.
+void Writer::setECSymbols() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
+  replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
+                                  pdata.first);
+
+  if (pdata.first) {
+    Symbol *rfeSizeSym =
+        ctx.symtab.findUnderscore("__arm64x_extra_rfe_table_size");
+    cast<DefinedAbsolute>(rfeSizeSym)
+        ->setVA(pdata.last->getRVA() + pdata.last->getSize() -
+                pdata.first->getRVA());
+  }
+}
+
 // Write section contents to a mmap'ed file.
 void Writer::writeSections() {
   llvm::TimeTraceScope timeScope("Write sections");
@@ -2166,15 +2217,18 @@ void Writer::writeBuildId() {
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.
 template <typename T>
-void Writer::sortExceptionTable(Chunk *first, Chunk *last) {
+void Writer::sortExceptionTable(ChunkRange &exceptionTable) {
+  if (!exceptionTable.first)
+    return;
+
   // We assume .pdata contains function table entries only.
   auto bufAddr = [&](Chunk *c) {
     OutputSection *os = ctx.getOutputSection(c);
     return buffer->getBufferStart() + os->getFileOff() + c->getRVA() -
            os->getRVA();
   };
-  uint8_t *begin = bufAddr(first);
-  uint8_t *end = bufAddr(last) + last->getSize();
+  uint8_t *begin = bufAddr(exceptionTable.first);
+  uint8_t *end = bufAddr(exceptionTable.last) + exceptionTable.last->getSize();
   if ((end - begin) % sizeof(T) != 0) {
     fatal("unexpected .pdata size: " + Twine(end - begin) +
           " is not a multiple of " + Twine(sizeof(T)));
@@ -2198,16 +2252,18 @@ void Writer::sortExceptionTables() {
 
   switch (ctx.config.machine) {
   case AMD64:
-    if (firstPdata)
-      sortExceptionTable<EntryX64>(firstPdata, lastPdata);
+    sortExceptionTable<EntryX64>(pdata);
     break;
+  case ARM64EC:
+  case ARM64X:
+    sortExceptionTable<EntryX64>(hybridPdata);
+    [[fallthrough]];
   case ARMNT:
   case ARM64:
-    if (firstPdata)
-      sortExceptionTable<EntryArm>(firstPdata, lastPdata);
+    sortExceptionTable<EntryArm>(pdata);
     break;
   default:
-    if (firstPdata)
+    if (pdata.first)
       lld::errs() << "warning: don't know how to handle .pdata.\n";
     break;
   }

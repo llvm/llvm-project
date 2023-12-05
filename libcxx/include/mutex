@@ -236,7 +236,7 @@ public:
 
     typedef __libcpp_recursive_mutex_t* native_handle_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     native_handle_type native_handle() {return &__m_;}
 };
 
@@ -256,7 +256,7 @@ public:
     void lock();
     bool try_lock() _NOEXCEPT;
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         bool try_lock_for(const chrono::duration<_Rep, _Period>& __d)
             {return try_lock_until(chrono::steady_clock::now() + __d);}
     template <class _Clock, class _Duration>
@@ -298,7 +298,7 @@ public:
     void lock();
     bool try_lock() _NOEXCEPT;
     template <class _Rep, class _Period>
-        _LIBCPP_INLINE_VISIBILITY
+        _LIBCPP_HIDE_FROM_ABI
         bool try_lock_for(const chrono::duration<_Rep, _Period>& __d)
             {return try_lock_until(chrono::steady_clock::now() + __d);}
     template <class _Clock, class _Duration>
@@ -446,7 +446,7 @@ __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
 }
 
 template <class _L0, class _L1, class _L2, class ..._L3>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
 {
@@ -454,24 +454,24 @@ lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
 }
 
 template <class _L0>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __unlock(_L0& __l0) {
     __l0.unlock();
 }
 
 template <class _L0, class _L1>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __unlock(_L0& __l0, _L1& __l1) {
     __l0.unlock();
     __l1.unlock();
 }
 
 template <class _L0, class _L1, class _L2, class ..._L3>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
     __l0.unlock();
     __l1.unlock();
-    _VSTD::__unlock(__l2, __l3...);
+    std::__unlock(__l2, __l3...);
 }
 
 #endif // _LIBCPP_CXX03_LANG
@@ -486,7 +486,7 @@ public:
     explicit scoped_lock() {}
     ~scoped_lock() = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit scoped_lock(adopt_lock_t) {}
 
     scoped_lock(scoped_lock const&) = delete;
@@ -505,7 +505,7 @@ public:
 
     ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) {__m_.unlock();}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit scoped_lock(adopt_lock_t, mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
         : __m_(__m) {}
 
@@ -520,20 +520,20 @@ class _LIBCPP_TEMPLATE_VIS scoped_lock
     typedef tuple<_MArgs&...> _MutexTuple;
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit scoped_lock(_MArgs&... __margs)
       : __t_(__margs...)
     {
-        _VSTD::lock(__margs...);
+        std::lock(__margs...);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     scoped_lock(adopt_lock_t, _MArgs&... __margs)
         : __t_(__margs...)
     {
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~scoped_lock() {
         typedef typename __make_tuple_indices<sizeof...(_MArgs)>::type _Indices;
         __unlock_unpack(_Indices{}, __t_);
@@ -544,9 +544,9 @@ public:
 
 private:
     template <size_t ..._Indx>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     static void __unlock_unpack(__tuple_indices<_Indx...>, _MutexTuple& __mt) {
-        _VSTD::__unlock(_VSTD::get<_Indx>(__mt)...);
+        std::__unlock(std::get<_Indx>(__mt)...);
     }
 
     _MutexTuple __t_;

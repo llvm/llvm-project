@@ -180,12 +180,13 @@ static int getItineraryLatency(LLVMDisasmContext *DC, const MCInst &Inst) {
   const MCInstrDesc& Desc = DC->getInstrInfo()->get(Inst.getOpcode());
   unsigned SCClass = Desc.getSchedClass();
 
-  int Latency = 0;
-  for (unsigned OpIdx = 0, OpIdxEnd = Inst.getNumOperands(); OpIdx != OpIdxEnd;
-       ++OpIdx)
-    Latency = std::max(Latency, IID.getOperandCycle(SCClass, OpIdx));
+  unsigned Latency = 0;
 
-  return Latency;
+  for (unsigned Idx = 0, IdxEnd = Inst.getNumOperands(); Idx != IdxEnd; ++Idx)
+    if (std::optional<unsigned> OperCycle = IID.getOperandCycle(SCClass, Idx))
+      Latency = std::max(Latency, *OperCycle);
+
+  return (int)Latency;
 }
 
 /// Gets latency information for \p Inst, based on \p DC information.

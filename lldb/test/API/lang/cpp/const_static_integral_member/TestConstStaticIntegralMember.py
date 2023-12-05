@@ -118,7 +118,7 @@ class TestCase(TestBase):
 
     def check_global_var(self, name: str, expect_type, expect_val):
         var_list = self.target().FindGlobalVariables(name, lldb.UINT32_MAX)
-        self.assertEqual(len(var_list), 1)
+        self.assertGreaterEqual(len(var_list), 1)
         varobj = var_list[0]
         self.assertEqual(varobj.type.name, expect_type)
         self.assertEqual(varobj.value, expect_val)

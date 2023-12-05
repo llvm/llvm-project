@@ -191,6 +191,13 @@ public:
   /// Translates the given location.
   llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
+  /// Translates the given LLVM DWARF expression metadata.
+  llvm::DIExpression *translateExpression(LLVM::DIExpressionAttr attr);
+
+  /// Translates the given LLVM global variable expression metadata.
+  llvm::DIGlobalVariableExpression *
+  translateGlobalVariableExpression(LLVM::DIGlobalVariableExpressionAttr attr);
+
   /// Translates the given LLVM debug info metadata.
   llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
 

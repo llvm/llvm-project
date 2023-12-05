@@ -89,11 +89,11 @@ constexpr bool test_index_type_combo() {
   test<int, int, Test>();
   test<int, size_t, Test>();
   test<unsigned, int, Test>();
-  test<char, size_t, Test>();
+  test<signed char, size_t, Test>();
   test<long long, unsigned, Test>();
   test<size_t, int, Test>();
   test<size_t, size_t, Test>();
   test<int, IntType, Test>();
-  test<char, IntType, Test>();
+  test<signed char, IntType, Test>();
   return true;
 }

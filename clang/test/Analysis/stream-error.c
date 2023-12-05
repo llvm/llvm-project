@@ -123,6 +123,29 @@ void error_fgetc(void) {
   fgetc(F); // expected-warning {{Stream might be already closed}}
 }
 
+void error_fgets(void) {
+  FILE *F = tmpfile();
+  char Buf[256];
+  if (!F)
+    return;
+  char *Ret = fgets(Buf, sizeof(Buf), F);
+  if (Ret == Buf) {
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{FALSE}}
+  } else {
+    clang_analyzer_eval(Ret == NULL);          // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F) || ferror(F)); // expected-warning {{TRUE}}
+    if (feof(F)) {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+      fgets(Buf, sizeof(Buf), F);     // expected-warning {{Read function called when stream is in EOF state}}
+    } else {
+      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
+      fgets(Buf, sizeof(Buf), F);     // expected-warning {{might be 'indeterminate'}}
+    }
+  }
+  fclose(F);
+  fgets(Buf, sizeof(Buf), F);         // expected-warning {{Stream might be already closed}}
+}
+
 void error_fputc(void) {
   FILE *F = tmpfile();
   if (!F)
