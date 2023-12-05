@@ -6,16 +6,15 @@ define amdgpu_gfx i32 @sink_scratch_pointer(ptr addrspace(5) %stack, i32 inreg %
 ; GCN-LABEL: sink_scratch_pointer:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_add_nc_u32_e32 v0, -4, v0
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb2
-; GCN-NEXT:    scratch_load_b32 v0, v0, off
+; GCN-NEXT:    scratch_load_b32 v0, v0, off offset:-4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-NEXT:  .LBB0_2: ; %bb1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-NEXT:    scratch_store_b32 v0, v1, off
+; GCN-NEXT:    scratch_store_b32 v0, v1, off offset:-4
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
