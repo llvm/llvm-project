@@ -191,12 +191,14 @@ public:
 
   void finish() {
     if (TotalFixes > 0) {
+      auto &VFS = Files.getVirtualFileSystem();
+      auto OriginalCWD = VFS.getCurrentWorkingDirectory();
       bool AnyNotWritten = false;
+
       for (const auto &FileAndReplacements : FileReplacements) {
         Rewriter Rewrite(SourceMgr, LangOpts);
         StringRef File = FileAndReplacements.first();
-        Files.getVirtualFileSystem().setCurrentWorkingDirectory(
-            FileAndReplacements.second.BuildDir);
+        VFS.setCurrentWorkingDirectory(FileAndReplacements.second.BuildDir);
         llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
             SourceMgr.getFileManager().getBufferForFile(File);
         if (!Buffer) {
@@ -240,6 +242,9 @@ public:
         llvm::errs() << "clang-tidy applied " << AppliedFixes << " of "
                      << TotalFixes << " suggested fixes.\n";
       }
+
+      if (OriginalCWD)
+        VFS.setCurrentWorkingDirectory(*OriginalCWD);
     }
   }
 
