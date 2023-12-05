@@ -179,3 +179,21 @@ void f() {
 #endif
 }
 }
+
+namespace GH71976 {
+struct A {
+  int b = 5;
+  int foo() {
+    return [b = b]() { return b; }();
+  }
+};
+
+struct B {
+  int a;
+  void foo() {
+    auto b = [a = this->a] {
+
+    };
+  }
+};
+}

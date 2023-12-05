@@ -8395,10 +8395,11 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
 
   unsigned WarningDiag = diag::warn_decl_shadow;
   SourceLocation CaptureLoc;
-  if (isa<VarDecl>(D) && isa<VarDecl>(ShadowedDecl) && NewDC &&
-      isa<CXXMethodDecl>(NewDC)) {
+  if (isa<VarDecl>(D) && NewDC && isa<CXXMethodDecl>(NewDC)) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(NewDC->getParent())) {
       if (RD->isLambda() && OldDC->Encloses(NewDC->getLexicalParent())) {
+        if (!isa<VarDecl>(ShadowedDecl))
+          return;
         if (RD->getLambdaCaptureDefault() == LCD_None) {
           // Try to avoid warnings for lambdas with an explicit capture list.
           const auto *LSI = cast<LambdaScopeInfo>(getCurFunction());
@@ -8416,7 +8417,8 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
         }
       }
 
-      if (cast<VarDecl>(ShadowedDecl)->hasLocalStorage()) {
+      if (const auto *VD = dyn_cast<VarDecl>(ShadowedDecl);
+          VD && VD->hasLocalStorage()) {
         // A variable can't shadow a local variable in an enclosing scope, if
         // they are separated by a non-capturing declaration context.
         for (DeclContext *ParentDC = NewDC;

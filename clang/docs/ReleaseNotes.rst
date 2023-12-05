@@ -655,6 +655,9 @@ Bug Fixes in This Version
   Fixes (`#64467 <https://github.com/llvm/llvm-project/issues/64467>`_)
 - Clang's ``-Wchar-subscripts`` no longer warns on chars whose values are known non-negative constants.
   Fixes (`#18763 <https://github.com/llvm/llvm-project/issues/18763>`_)
+- Clang's ``-Wshadow`` no longer warns when init-capture named same as class
+  field.
+  Fixes (`#71976 <https://github.com/llvm/llvm-project/issues/71976>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
