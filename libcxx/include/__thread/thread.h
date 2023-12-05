@@ -76,11 +76,11 @@ public:
 
     ~__thread_specific_ptr();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pointer get() const {return static_cast<_Tp*>(__libcpp_tls_get(__key_));}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pointer operator*() const {return *get();}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     pointer operator->() const {return get();}
     void set_pointer(pointer __p);
 };
@@ -123,7 +123,7 @@ template<>
 struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
     : public __unary_function<__thread_id, size_t>
 {
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t operator()(__thread_id __v) const _NOEXCEPT
     {
         return hash<__libcpp_thread_id>()(__v.__id_);
@@ -132,7 +132,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 template <class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
     // [thread.thread.id]/9
     //   Effects: Inserts the text representation for charT of id into out.
@@ -167,7 +167,7 @@ public:
     typedef __thread_id id;
     typedef __libcpp_thread_t native_handle_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Fp, class ..._Args,
@@ -181,12 +181,12 @@ public:
 #endif
     ~thread();
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) {
         __t.__t_ = _LIBCPP_NULL_THREAD;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     thread& operator=(thread&& __t) _NOEXCEPT {
         if (!__libcpp_thread_isnull(&__t_))
             terminate();
@@ -195,16 +195,16 @@ public:
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     void swap(thread& __t) _NOEXCEPT {_VSTD::swap(__t_, __t.__t_);}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool joinable() const _NOEXCEPT {return !__libcpp_thread_isnull(&__t_);}
     void join();
     void detach();
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     id get_id() const _NOEXCEPT {return __libcpp_thread_get_id(&__t_);}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     native_handle_type native_handle() _NOEXCEPT {return __t_;}
 
     static unsigned hardware_concurrency() _NOEXCEPT;
@@ -213,7 +213,7 @@ public:
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _TSp, class _Fp, class ..._Args, size_t ..._Indices>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void
 __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>)
 {
@@ -221,7 +221,7 @@ __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>)
 }
 
 template <class _Fp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 void* __thread_proxy(void* __vp)
 {
     // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
@@ -288,7 +288,7 @@ thread::thread(_Fp __f)
 
 #endif // _LIBCPP_CXX03_LANG
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 void swap(thread& __x, thread& __y) _NOEXCEPT {__x.swap(__y);}
 
 _LIBCPP_END_NAMESPACE_STD

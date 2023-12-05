@@ -428,6 +428,18 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasX87 = true;
     } else if (Feature == "+fullbf16") {
       HasFullBFloat16 = true;
+    } else if (Feature == "+egpr") {
+      HasEGPR = true;
+    } else if (Feature == "+push2pop2") {
+      HasPush2Pop2 = true;
+    } else if (Feature == "+ppx") {
+      HasPPX = true;
+    } else if (Feature == "+ndd") {
+      HasNDD = true;
+    } else if (Feature == "+ccmp") {
+      HasCCMP = true;
+    } else if (Feature == "+cf") {
+      HasCF = true;
     }
 
     X86SSEEnum Level = llvm::StringSwitch<X86SSEEnum>(Feature)
@@ -927,6 +939,18 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__USERMSR__");
   if (HasCRC32)
     Builder.defineMacro("__CRC32__");
+  if (HasEGPR)
+    Builder.defineMacro("__EGPR__");
+  if (HasPush2Pop2)
+    Builder.defineMacro("__PUSH2POP2__");
+  if (HasPPX)
+    Builder.defineMacro("__PPX__");
+  if (HasNDD)
+    Builder.defineMacro("__NDD__");
+  if (HasCCMP)
+    Builder.defineMacro("__CCMP__");
+  if (HasCF)
+    Builder.defineMacro("__CF__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1122,6 +1146,12 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("xsavec", true)
       .Case("xsaves", true)
       .Case("xsaveopt", true)
+      .Case("egpr", true)
+      .Case("push2pop2", true)
+      .Case("ppx", true)
+      .Case("ndd", true)
+      .Case("ccmp", true)
+      .Case("cf", true)
       .Default(false);
 }
 
@@ -1238,6 +1268,12 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("xsaves", HasXSAVES)
       .Case("xsaveopt", HasXSAVEOPT)
       .Case("fullbf16", HasFullBFloat16)
+      .Case("egpr", HasEGPR)
+      .Case("push2pop2", HasPush2Pop2)
+      .Case("ppx", HasPPX)
+      .Case("ndd", HasNDD)
+      .Case("ccmp", HasCCMP)
+      .Case("cf", HasCF)
       .Default(false);
 }
 

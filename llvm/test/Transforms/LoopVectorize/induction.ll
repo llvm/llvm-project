@@ -289,14 +289,14 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], [[OFFSET]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP8]], align 4, !alias.scope !4, !noalias !7
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP8]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP5]], [[OFFSET2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP11]], align 4, !alias.scope !7
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP11]], align 4, !alias.scope [[META7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x float> [[WIDE_LOAD]], [[TMP12]]
-; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP8]], align 4, !alias.scope !4, !noalias !7
+; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP8]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -350,13 +350,13 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; IND-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IND-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; IND-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
-; IND-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope !4, !noalias !7
+; IND-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; IND-NEXT:    [[TMP7:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; IND-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[TMP7]], i64 [[OFFSET2]]
-; IND-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP8]], align 4, !alias.scope !7
+; IND-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP8]], align 4, !alias.scope [[META7]]
 ; IND-NEXT:    [[TMP9:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD4]]
 ; IND-NEXT:    [[TMP10:%.*]] = fadd fast <2 x float> [[WIDE_LOAD]], [[TMP9]]
-; IND-NEXT:    store <2 x float> [[TMP10]], ptr [[TMP6]], align 4, !alias.scope !4, !noalias !7
+; IND-NEXT:    store <2 x float> [[TMP10]], ptr [[TMP6]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IND-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IND-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -410,20 +410,20 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; UNROLL-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
-; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope !4, !noalias !7
+; UNROLL-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; UNROLL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 2
-; UNROLL-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP7]], align 4, !alias.scope !4, !noalias !7
+; UNROLL-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; UNROLL-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[OFFSET2]]
-; UNROLL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x float>, ptr [[TMP9]], align 4, !alias.scope !7
+; UNROLL-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x float>, ptr [[TMP9]], align 4, !alias.scope [[META7]]
 ; UNROLL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 2
-; UNROLL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x float>, ptr [[TMP10]], align 4, !alias.scope !7
+; UNROLL-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x float>, ptr [[TMP10]], align 4, !alias.scope [[META7]]
 ; UNROLL-NEXT:    [[TMP11:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD5]]
 ; UNROLL-NEXT:    [[TMP12:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD6]]
 ; UNROLL-NEXT:    [[TMP13:%.*]] = fadd fast <2 x float> [[WIDE_LOAD]], [[TMP11]]
 ; UNROLL-NEXT:    [[TMP14:%.*]] = fadd fast <2 x float> [[WIDE_LOAD4]], [[TMP12]]
-; UNROLL-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP6]], align 4, !alias.scope !4, !noalias !7
-; UNROLL-NEXT:    store <2 x float> [[TMP14]], ptr [[TMP7]], align 4, !alias.scope !4, !noalias !7
+; UNROLL-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP6]], align 4, !alias.scope [[META4]], !noalias [[META7]]
+; UNROLL-NEXT:    store <2 x float> [[TMP14]], ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -483,23 +483,23 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
-; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP11]], align 4, !alias.scope !4, !noalias !7
+; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP11]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 2
-; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP12]], align 4, !alias.scope !4, !noalias !7
+; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x float>, ptr [[TMP12]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = add i64 [[TMP5]], [[OFFSET2]]
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = add i64 [[TMP6]], [[OFFSET2]]
 ; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP13]]
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP14]]
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i32 0
-; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x float>, ptr [[TMP17]], align 4, !alias.scope !7
+; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x float>, ptr [[TMP17]], align 4, !alias.scope [[META7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i32 2
-; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x float>, ptr [[TMP18]], align 4, !alias.scope !7
+; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x float>, ptr [[TMP18]], align 4, !alias.scope [[META7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD5]]
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = fmul fast <2 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD6]]
 ; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = fadd fast <2 x float> [[WIDE_LOAD]], [[TMP19]]
 ; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = fadd fast <2 x float> [[WIDE_LOAD4]], [[TMP20]]
-; UNROLL-NO-IC-NEXT:    store <2 x float> [[TMP21]], ptr [[TMP11]], align 4, !alias.scope !4, !noalias !7
-; UNROLL-NO-IC-NEXT:    store <2 x float> [[TMP22]], ptr [[TMP12]], align 4, !alias.scope !4, !noalias !7
+; UNROLL-NO-IC-NEXT:    store <2 x float> [[TMP21]], ptr [[TMP11]], align 4, !alias.scope [[META4]], !noalias [[META7]]
+; UNROLL-NO-IC-NEXT:    store <2 x float> [[TMP22]], ptr [[TMP12]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -553,20 +553,20 @@ define void @scalar_use(ptr %a, float %b, i64 %offset, i64 %offset2, i64 %n) {
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr [[TMP5]], i64 [[OFFSET]]
-; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope !4, !noalias !7
+; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4, !alias.scope [[META4:![0-9]+]], !noalias [[META7:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 4
-; INTERLEAVE-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP7]], align 4, !alias.scope !4, !noalias !7
+; INTERLEAVE-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[OFFSET2]]
-; INTERLEAVE-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope !7
+; INTERLEAVE-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META7]]
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 4
-; INTERLEAVE-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !alias.scope !7
+; INTERLEAVE-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP10]], align 4, !alias.scope [[META7]]
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD5]]
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD6]]
 ; INTERLEAVE-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[TMP11]]
 ; INTERLEAVE-NEXT:    [[TMP14:%.*]] = fadd fast <4 x float> [[WIDE_LOAD4]], [[TMP12]]
-; INTERLEAVE-NEXT:    store <4 x float> [[TMP13]], ptr [[TMP6]], align 4, !alias.scope !4, !noalias !7
-; INTERLEAVE-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP7]], align 4, !alias.scope !4, !noalias !7
+; INTERLEAVE-NEXT:    store <4 x float> [[TMP13]], ptr [[TMP6]], align 4, !alias.scope [[META4]], !noalias [[META7]]
+; INTERLEAVE-NEXT:    store <4 x float> [[TMP14]], ptr [[TMP7]], align 4, !alias.scope [[META4]], !noalias [[META7]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
@@ -1590,12 +1590,12 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP11]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP13]], align 1, !alias.scope !17
-; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP15]], align 1, !alias.scope !17
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP13]], align 1, !alias.scope [[META17:![0-9]+]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP15]], align 1, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P]], i64 [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP10]], i32 1
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP18]], align 1, !alias.scope !20, !noalias !17
-; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP19]], align 1, !alias.scope !20, !noalias !17
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP18]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP19]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1653,12 +1653,12 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; IND-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
 ; IND-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[TMP10]], i64 1
 ; IND-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP13]]
-; IND-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP12]], align 1, !alias.scope !17
-; IND-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP14]], align 1, !alias.scope !17
+; IND-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP12]], align 1, !alias.scope [[META17:![0-9]+]]
+; IND-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP14]], align 1, !alias.scope [[META17]]
 ; IND-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P]], i64 [[INDEX]], i32 1
 ; IND-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP9]], i32 1
-; IND-NEXT:    store i32 [[TMP15]], ptr [[TMP17]], align 1, !alias.scope !20, !noalias !17
-; IND-NEXT:    store i32 [[TMP16]], ptr [[TMP18]], align 1, !alias.scope !20, !noalias !17
+; IND-NEXT:    store i32 [[TMP15]], ptr [[TMP17]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; IND-NEXT:    store i32 [[TMP16]], ptr [[TMP18]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IND-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; IND-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1724,18 +1724,18 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP18]]
 ; UNROLL-NEXT:    [[TMP20:%.*]] = extractelement <2 x i64> [[TMP13]], i64 1
 ; UNROLL-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP20]]
-; UNROLL-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP15]], align 1, !alias.scope !17
-; UNROLL-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP17]], align 1, !alias.scope !17
-; UNROLL-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP19]], align 1, !alias.scope !17
-; UNROLL-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP21]], align 1, !alias.scope !17
+; UNROLL-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP15]], align 1, !alias.scope [[META17:![0-9]+]]
+; UNROLL-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP17]], align 1, !alias.scope [[META17]]
+; UNROLL-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP19]], align 1, !alias.scope [[META17]]
+; UNROLL-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP21]], align 1, !alias.scope [[META17]]
 ; UNROLL-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P]], i64 [[INDEX]], i32 1
 ; UNROLL-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP9]], i32 1
 ; UNROLL-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP10]], i32 1
 ; UNROLL-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP11]], i32 1
-; UNROLL-NEXT:    store i32 [[TMP22]], ptr [[TMP26]], align 1, !alias.scope !20, !noalias !17
-; UNROLL-NEXT:    store i32 [[TMP23]], ptr [[TMP27]], align 1, !alias.scope !20, !noalias !17
-; UNROLL-NEXT:    store i32 [[TMP24]], ptr [[TMP28]], align 1, !alias.scope !20, !noalias !17
-; UNROLL-NEXT:    store i32 [[TMP25]], ptr [[TMP29]], align 1, !alias.scope !20, !noalias !17
+; UNROLL-NEXT:    store i32 [[TMP22]], ptr [[TMP26]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; UNROLL-NEXT:    store i32 [[TMP23]], ptr [[TMP27]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; UNROLL-NEXT:    store i32 [[TMP24]], ptr [[TMP28]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; UNROLL-NEXT:    store i32 [[TMP25]], ptr [[TMP29]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 4, i64 4>
 ; UNROLL-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1803,18 +1803,18 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP19]]
 ; UNROLL-NO-IC-NEXT:    [[TMP21:%.*]] = extractelement <2 x i64> [[TMP14]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP21]]
-; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP16]], align 1, !alias.scope !17
-; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP18]], align 1, !alias.scope !17
-; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP20]], align 1, !alias.scope !17
-; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP22]], align 1, !alias.scope !17
+; UNROLL-NO-IC-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP16]], align 1, !alias.scope [[META17:![0-9]+]]
+; UNROLL-NO-IC-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP18]], align 1, !alias.scope [[META17]]
+; UNROLL-NO-IC-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP20]], align 1, !alias.scope [[META17]]
+; UNROLL-NO-IC-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP22]], align 1, !alias.scope [[META17]]
 ; UNROLL-NO-IC-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [[PAIR_I32:%.*]], ptr [[P]], i64 [[TMP9]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP10]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP11]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP12]], i32 1
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP23]], ptr [[TMP27]], align 1, !alias.scope !20, !noalias !17
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP24]], ptr [[TMP28]], align 1, !alias.scope !20, !noalias !17
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP25]], ptr [[TMP29]], align 1, !alias.scope !20, !noalias !17
-; UNROLL-NO-IC-NEXT:    store i32 [[TMP26]], ptr [[TMP30]], align 1, !alias.scope !20, !noalias !17
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP23]], ptr [[TMP27]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP24]], ptr [[TMP28]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP25]], ptr [[TMP29]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; UNROLL-NO-IC-NEXT:    store i32 [[TMP26]], ptr [[TMP30]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], <i64 2, i64 2>
 ; UNROLL-NO-IC-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1890,21 +1890,21 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP28:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP16]], i32 1
 ; INTERLEAVE-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [[PAIR_I32]], ptr [[P]], i64 [[TMP17]], i32 1
 ; INTERLEAVE-NEXT:    [[TMP30:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 0
-; INTERLEAVE-NEXT:    store i32 [[TMP30]], ptr [[TMP22]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP30]], ptr [[TMP22]], align 1, !alias.scope [[META17:![0-9]+]], !noalias [[META20:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[TMP31:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 4
-; INTERLEAVE-NEXT:    store i32 [[TMP31]], ptr [[TMP23]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP31]], ptr [[TMP23]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[TMP32:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 8
-; INTERLEAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP24]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP24]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[TMP33:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 12
-; INTERLEAVE-NEXT:    store i32 [[TMP33]], ptr [[TMP25]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP33]], ptr [[TMP25]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 0
-; INTERLEAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP26]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP26]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[TMP35:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 4
-; INTERLEAVE-NEXT:    store i32 [[TMP35]], ptr [[TMP27]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP35]], ptr [[TMP27]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[TMP36:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 8
-; INTERLEAVE-NEXT:    store i32 [[TMP36]], ptr [[TMP28]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP36]], ptr [[TMP28]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[TMP37:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 12
-; INTERLEAVE-NEXT:    store i32 [[TMP37]], ptr [[TMP29]], align 1, !alias.scope !17, !noalias !20
+; INTERLEAVE-NEXT:    store i32 [[TMP37]], ptr [[TMP29]], align 1, !alias.scope [[META17]], !noalias [[META20]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]

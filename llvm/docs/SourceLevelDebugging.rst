@@ -641,7 +641,7 @@ And has the following operands:
    operand of the ``DBG_VALUE`` instruction above. These variable location
    operands are inserted into the final DWARF Expression in positions indicated
    by the DW_OP_LLVM_arg operator in the `DIExpression
-   <LangRef.html#diexpression>`.
+   <LangRef.html#diexpression>`_.
 
 The position at which the DBG_VALUEs are inserted should correspond to the
 positions of their matching ``llvm.dbg.value`` intrinsics in the IR block.  As
@@ -841,7 +841,7 @@ presents several difficulties:
   falsebr:
     call void @llvm.dbg.value(metadata i32 %input, metadata !30, metadata !DIExpression()), !dbg !24
     call void @llvm.dbg.value(metadata i32 2, metadata !23, metadata !DIExpression()), !dbg !24
-    %value = add i32 %input, 2
+    %value2 = add i32 %input, 2
     br label %bb1
 
   exit:

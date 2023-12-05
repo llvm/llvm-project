@@ -10,6 +10,8 @@
 //     .byte (i.e., the one for the 3) would, it seems, also match
 //     the .byte line below for the 34.
 
+// REQUIRES: systemz-registered-target
+
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc -S -o - %s | FileCheck %s --check-prefix CHECK-C
 // CHECK-C:        [[PPA2:(.L)|(@@)PPA2]]:
 // CHECK-C-NEXT:   .byte        3{{[[:space:]]*}}.byte 0

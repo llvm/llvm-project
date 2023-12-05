@@ -1957,12 +1957,14 @@ bool hasGDS(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGDS);
 }
 
-unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
+unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
   auto Version = getIsaVersion(STI.getCPU());
   if (Version.Major == 10)
     return Version.Minor >= 3 ? 13 : 5;
   if (Version.Major == 11)
     return 5;
+  if (Version.Major >= 12)
+    return HasSampler ? 4 : 5;
   return 0;
 }
 
@@ -2505,6 +2507,16 @@ bool isInlinableIntLiteralV216(int32_t Literal) {
   if (!(Literal & 0xffff))
     return isInlinableIntLiteral(Hi16);
   return Lo16 == Hi16 && isInlinableIntLiteral(Lo16);
+}
+
+bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi, uint8_t OpType) {
+  switch (OpType) {
+  case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+    return isInlinableLiteralV216(Literal, HasInv2Pi);
+  default:
+    return isInlinableIntLiteralV216(Literal);
+  }
 }
 
 bool isFoldableLiteralV216(int32_t Literal, bool HasInv2Pi) {

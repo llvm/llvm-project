@@ -47,9 +47,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
 
         LINK_LIBS
         PRIVATE
-        elf_common
-        MemoryManager
-        PluginInterface
+        PluginCommon
         ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
         ${OPENMP_PTHREAD_LIB}
 

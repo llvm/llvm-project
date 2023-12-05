@@ -194,7 +194,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       valHeuristic =
           builder.create<arith::MulIOp>(loc, valHeuristic, lvlSizesValues[lvl]);
   } else if (sizeHint) {
-    if (getCOOStart(stt.getEncoding()) == 0) {
+    if (stt.getCOOStart() == 0) {
       posHeuristic = constantIndex(builder, loc, 2);
       crdHeuristic = builder.create<arith::MulIOp>(
           loc, constantIndex(builder, loc, lvlRank), sizeHint); // AOS
@@ -216,7 +216,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
       stt,
       [&builder, &fields, stt, loc, posHeuristic, crdHeuristic, valHeuristic,
        enableInit](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-                   Level /*lvl*/, DimLevelType /*lt*/) -> bool {
+                   Level /*lvl*/, LevelType /*lt*/) -> bool {
         assert(fields.size() == fIdx);
         Value field;
         switch (fKind) {
@@ -657,8 +657,7 @@ struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
 
     // Should have been verified.
     assert(dstStt.isAllOrdered() && !srcStt.isAllOrdered() &&
-           isUniqueCOOType(srcStt.getRankedTensorType()) &&
-           isUniqueCOOType(dstStt.getRankedTensorType()));
+           dstStt.isCOOType() && srcStt.isCOOType());
     assert(dstStt.hasSameDimToLvl(srcStt));
 
     // We don't need a mutable descriptor here as we perform sorting in-place.
@@ -1155,7 +1154,7 @@ public:
         SparseTensorType(cast<RankedTensorType>(op.getResult().getType())),
         [&rewriter, &fields, srcDesc,
          loc](Type fTp, FieldIndex fIdx, SparseTensorFieldKind fKind, Level lvl,
-              DimLevelType /*lt*/) -> bool {
+              LevelType /*lt*/) -> bool {
           // Simply reuses the storage specifier as it is an SSA value.
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(srcDesc.getSpecifier());
@@ -1284,7 +1283,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         stt,
         [&rewriter, &fields, &op, &stt,
          loc](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-              Level /*lvl*/, DimLevelType lt) -> bool {
+              Level /*lvl*/, LevelType lt) -> bool {
           assert(fields.size() == fIdx);
           if (fKind == SparseTensorFieldKind::StorageSpec) {
             fields.push_back(
@@ -1317,7 +1316,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Value posBack = c0; // index to the last value in the position array
     Value memSize = c1; // memory size for current array
 
-    Level trailCOOStart = getCOOStart(stt.getEncoding());
+    Level trailCOOStart = stt.getCOOStart();
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
@@ -1333,7 +1332,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
         continue;
 
       // Sets up the memory size by reading the last value in position array.
-      DimLevelType lt = stt.getLvlType(lvl);
+      LevelType lt = stt.getLvlType(lvl);
       // Simply forwards the position index when this is a dense level.
       if (isDenseLT(lt)) {
         memSize = rewriter.create<arith::MulIOp>(loc, lvlSize, memSize);
@@ -1387,10 +1386,10 @@ struct SparseDisassembleOpConverter
     Location loc = op.getLoc();
     SmallVector<Value> retMem;
     SmallVector<Value> retLen;
-    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem, &retLen](
-                                      FieldIndex fid,
-                                      SparseTensorFieldKind fKind, Level lvl,
-                                      DimLevelType lt) -> bool {
+    desc.getLayout().foreachField([desc, loc, &rewriter, &op, &retMem,
+                                   &retLen](FieldIndex fid,
+                                            SparseTensorFieldKind fKind,
+                                            Level lvl, LevelType lt) -> bool {
       if (fKind == SparseTensorFieldKind::StorageSpec)
         return true;
       SparseTensorType stt(desc.getRankedTensorType());
@@ -1454,7 +1453,7 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     const auto dstTp = getSparseTensorType(op.getResult());
     // Creating COO with NewOp is handled by direct IR codegen. All other cases
     // are handled by rewriting.
-    if (!dstTp.hasEncoding() || getCOOStart(dstTp.getEncoding()) != 0)
+    if (!dstTp.hasEncoding() || dstTp.getCOOStart() != 0)
       return failure();
 
     // Implement as follows:

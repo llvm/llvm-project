@@ -16,6 +16,7 @@
 #include "src/__support/CPP/type_traits/is_pointer.h"
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/utility/forward.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 
 namespace LIBC_NAMESPACE::cpp {
 
@@ -26,7 +27,7 @@ template <class FunctionPtrType> struct invoke_dispatcher {
   template <class T, class... Args,
             typename = cpp::enable_if_t<
                 cpp::is_same_v<cpp::decay_t<T>, FunctionPtrType>>>
-  static decltype(auto) call(T &&fun, Args &&...args) {
+  LIBC_INLINE static decltype(auto) call(T &&fun, Args &&...args) {
     return cpp::forward<T>(fun)(cpp::forward<Args>(args)...);
   }
 };
@@ -37,7 +38,8 @@ struct invoke_dispatcher<FunctionReturnType Class::*> {
   using FunctionPtrType = FunctionReturnType Class::*;
 
   template <class T, class... Args, class DecayT = cpp::decay_t<T>>
-  static decltype(auto) call(FunctionPtrType fun, T &&t1, Args &&...args) {
+  LIBC_INLINE static decltype(auto) call(FunctionPtrType fun, T &&t1,
+                                         Args &&...args) {
     if constexpr (cpp::is_base_of_v<Class, DecayT>) {
       // T is a (possibly cv ref) type.
       return (cpp::forward<T>(t1).*fun)(cpp::forward<Args>(args)...);

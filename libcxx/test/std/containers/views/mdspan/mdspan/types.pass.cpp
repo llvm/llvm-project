@@ -136,9 +136,9 @@ template <class T, class L, class A>
 void mixin_extents() {
   constexpr size_t D = std::dynamic_extent;
   test_mdspan_types<T, std::extents<int>, L, A>();
-  test_mdspan_types<T, std::extents<char, D>, L, A>();
-  test_mdspan_types<T, std::dextents<char, 7>, L, A>();
-  test_mdspan_types<T, std::dextents<char, 9>, L, A>();
+  test_mdspan_types<T, std::extents<signed char, D>, L, A>();
+  test_mdspan_types<T, std::dextents<signed char, 7>, L, A>();
+  test_mdspan_types<T, std::dextents<signed char, 9>, L, A>();
   test_mdspan_types<T, std::extents<unsigned, 7>, L, A>();
   test_mdspan_types<T, std::extents<unsigned, D, D, D>, L, A>();
   test_mdspan_types<T, std::extents<size_t, D, 7, D>, L, A>();

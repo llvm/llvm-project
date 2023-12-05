@@ -75,9 +75,11 @@ struct Context {
   std::unique_ptr<llvm::raw_fd_stream> OutStream;
   FileType WriteFT = FileType::TBD_V5;
   bool Compact = false;
+  Architecture Arch = AK_unknown;
 };
 
-std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename) {
+std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename,
+                                                bool ResetBanner = true) {
   ExitOnErr.setBanner(TOOLNAME + ": error: '" + Filename.str() + "' ");
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Filename);
@@ -87,8 +89,8 @@ std::unique_ptr<InterfaceFile> getInterfaceFile(const StringRef Filename) {
       TextAPIReader::get((*BufferOrErr)->getMemBufferRef());
   if (!IF)
     ExitOnErr(IF.takeError());
-  // Set Banner back.
-  ExitOnErr.setBanner(TOOLNAME + ": error: ");
+  if (ResetBanner)
+    ExitOnErr.setBanner(TOOLNAME + ": error: ");
   return std::move(*IF);
 }
 
@@ -139,6 +141,24 @@ bool handleMergeAction(const Context &Ctx) {
   return handleWriteAction(Ctx, std::move(Out));
 }
 
+using IFOperation =
+    std::function<llvm::Expected<std::unique_ptr<InterfaceFile>>(
+        const llvm::MachO::InterfaceFile &, Architecture)>;
+bool handleSingleFileAction(const Context &Ctx, const StringRef Action,
+                            IFOperation act) {
+  if (Ctx.Inputs.size() != 1)
+    reportError(Action + " only supports one input file");
+  if (Ctx.Arch == AK_unknown)
+    reportError(Action + " requires -arch <arch>");
+
+  auto IF = getInterfaceFile(Ctx.Inputs.front(), /*ResetBanner=*/false);
+  auto OutIF = act(*IF, Ctx.Arch);
+  if (!OutIF)
+    ExitOnErr(OutIF.takeError());
+
+  return handleWriteAction(Ctx, std::move(*OutIF));
+}
+
 } // anonymous namespace
 
 int main(int Argc, char **Argv) {
@@ -151,7 +171,9 @@ int main(int Argc, char **Argv) {
   opt::InputArgList Args = Tbl.parseArgs(
       Argc, Argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) { reportError(Msg); });
   if (Args.hasArg(OPT_help)) {
-    Tbl.printHelp(outs(), "llvm-readtapi [options] <inputs>",
+    Tbl.printHelp(outs(),
+                  "USAGE: llvm-readtapi [options] [-arch <arch>]* <inputs> [-o "
+                  "<output>]*",
                   "LLVM TAPI file reader and manipulator");
     return EXIT_SUCCESS;
   }
@@ -179,6 +201,12 @@ int main(int Argc, char **Argv) {
       reportError("unsupported filetype '" + FT + "'");
   }
 
+  if (opt::Arg *A = Args.getLastArg(OPT_arch_EQ)) {
+    StringRef Arch = A->getValue();
+    Ctx.Arch = getArchitectureFromName(Arch);
+    if (Ctx.Arch == AK_unknown)
+      reportError("unsupported architecture '" + Arch);
+  }
   // Handle top level and exclusive operation.
   SmallVector<opt::Arg *, 1> ActionArgs(Args.filtered(OPT_action_group));
 
@@ -200,6 +228,10 @@ int main(int Argc, char **Argv) {
     return handleCompareAction(Ctx);
   case OPT_merge:
     return handleMergeAction(Ctx);
+  case OPT_extract:
+    return handleSingleFileAction(Ctx, "extract", &InterfaceFile::extract);
+  case OPT_remove:
+    return handleSingleFileAction(Ctx, "remove", &InterfaceFile::remove);
   }
 
   return EXIT_SUCCESS;

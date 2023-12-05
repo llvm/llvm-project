@@ -69,8 +69,7 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
 
       // Peek through unary operators to find the source of the condition.
       Value *Op;
-      if (match(I, m_BitCast(m_Value(Op))) ||
-          match(I, m_PtrToInt(m_Value(Op))) || match(I, m_Not(m_Value(Op)))) {
+      if (match(I, m_PtrToInt(m_Value(Op)))) {
         if (isa<Instruction>(Op) || isa<Argument>(Op))
           Affected.push_back({Op, Idx});
       }
@@ -85,6 +84,8 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
 
   Value *Cond = CI->getArgOperand(0), *A, *B;
   AddAffected(Cond);
+  if (match(Cond, m_Not(m_Value(A))))
+    AddAffected(A);
 
   CmpInst::Predicate Pred;
   if (match(Cond, m_Cmp(Pred, m_Value(A), m_Value(B)))) {

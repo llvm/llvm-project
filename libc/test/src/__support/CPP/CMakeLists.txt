@@ -1,6 +1,17 @@
 add_custom_target(libc-cpp-utils-tests)
 
 add_libc_test(
+  bit_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    bit_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.uint
+)
+
+add_libc_test(
   bitset_test
   SUITE
     libc-cpp-utils-tests

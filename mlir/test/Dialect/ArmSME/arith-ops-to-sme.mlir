@@ -95,8 +95,7 @@ func.func @arith_constant_dense_2d_zero_f64() {
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: %[[C16:.*]] = arith.constant 16 : index
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[GET_TILE_ID:.*]] = arm_sme.get_tile_id : i8
-// CHECK: %[[TILE:.*]] = arm_sme.cast_tile_to_vector %[[GET_TILE_ID]] : i8 to vector<[16]x[16]xi8>
+// CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[16]x[16]xi8>
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C16]] : index
 // CHECK: scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
@@ -115,8 +114,7 @@ func.func @arith_constant_dense_2d_nonzero_i8() {
 // CHECK: %[[C1:.*]] = arith.constant 1 : index
 // CHECK: %[[C2:.*]] = arith.constant 2 : index
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
-// CHECK: %[[GET_TILE_ID:.*]] = arm_sme.get_tile_id : i64
-// CHECK: %[[TILE:.*]] = arm_sme.cast_tile_to_vector %[[GET_TILE_ID]] : i64 to vector<[2]x[2]xf64>
+// CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[2]x[2]xf64>
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C2]] : index
 // CHECK: scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {

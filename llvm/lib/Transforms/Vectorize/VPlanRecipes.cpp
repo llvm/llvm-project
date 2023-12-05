@@ -774,9 +774,14 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
   Type *DestTy = VectorType::get(getResultType(), State.VF);
-
+  VPValue *Op = getOperand(0);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *A = State.get(getOperand(0), Part);
+    if (Part > 0 && Op->isLiveIn()) {
+      // FIXME: Remove once explicit unrolling is implemented using VPlan.
+      State.set(this, State.get(this, 0), Part);
+      continue;
+    }
+    Value *A = State.get(Op, Part);
     Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
     State.set(this, Cast, Part);
     State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));

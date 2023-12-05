@@ -18,6 +18,8 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -38,6 +40,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#define DEBUG_TYPE "gpu-to-llvm"
+
 namespace mlir {
 #define GEN_PASS_DEF_GPUTOLLVMCONVERSIONPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -48,12 +52,14 @@ using namespace mlir;
 static constexpr const char *kGpuBinaryStorageSuffix = "_gpubin_cst";
 
 namespace {
-
 class GpuToLLVMConversionPass
     : public impl::GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
 public:
   using Base::Base;
-
+  void getDependentDialects(DialectRegistry &registry) const final {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
+  }
   // Run the dialect converter on the module.
   void runOnOperation() override;
 };
@@ -580,14 +586,24 @@ DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SetCsrPointersOp)
 } // namespace
 
 void GpuToLLVMConversionPass::runOnOperation() {
-  LowerToLLVMOptions options(&getContext());
-  options.useBarePtrCallConv = hostBarePtrCallConv;
-
-  LLVMTypeConverter converter(&getContext(), options);
-  RewritePatternSet patterns(&getContext());
-  LLVMConversionTarget target(getContext());
-
+  MLIRContext *context = &getContext();
   SymbolTable symbolTable = SymbolTable(getOperation());
+  LowerToLLVMOptions options(context);
+  options.useBarePtrCallConv = hostBarePtrCallConv;
+  RewritePatternSet patterns(context);
+  ConversionTarget target(*context);
+  target.addLegalDialect<LLVM::LLVMDialect>();
+  LLVMTypeConverter converter(context, options);
+
+  // Populate all patterns from all dialects that implement the
+  // `ConvertToLLVMPatternInterface` interface.
+  for (Dialect *dialect : context->getLoadedDialects()) {
+    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    if (!iface)
+      continue;
+    iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
+  }
+
   // Preserve GPU modules if they have target attributes.
   target.addDynamicallyLegalOp<gpu::GPUModuleOp>(
       [](gpu::GPUModuleOp module) -> bool {
@@ -605,11 +621,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
                 !module.getTargetsAttr().empty());
       });
 
-  mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
-  mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+  // These aren't covered by the ConvertToLLVMPatternInterface right now.
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
-  populateFuncToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation,
