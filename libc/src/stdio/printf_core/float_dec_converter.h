@@ -537,7 +537,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
   }
 
   if (exponent < MANT_WIDTH) {
-    const uint32_t blocks = static_cast<uint32_t>(precision / BLOCK_SIZE) + 1;
+    const uint32_t blocks = (precision / static_cast<uint32_t>(BLOCK_SIZE)) + 1;
     uint32_t i = 0;
     // if all the blocks we should write are zero
     if (blocks <= float_converter.zero_blocks_after_point()) {
