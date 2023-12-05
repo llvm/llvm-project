@@ -50472,11 +50472,14 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool F64IsLegal =
       !Subtarget.useSoftFloat() && !NoImplicitFloatOps && Subtarget.hasSSE2();
-  if ((VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit()) &&
-      isa<LoadSDNode>(St->getValue()) &&
+
+  if (!F64IsLegal || Subtarget.is64Bit())
+    return SDValue();
+
+  if (VT == MVT::i64 && isa<LoadSDNode>(St->getValue()) &&
       cast<LoadSDNode>(St->getValue())->isSimple() &&
       St->getChain().hasOneUse() && St->isSimple()) {
-    LoadSDNode *Ld = cast<LoadSDNode>(St->getValue().getNode());
+    auto *Ld = cast<LoadSDNode>(St->getValue());
 
     if (!ISD::isNormalLoad(Ld))
       return SDValue();
@@ -50503,7 +50506,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // to get past legalization. The execution dependencies fixup pass will
   // choose the optimal machine instruction for the store if this really is
   // an integer or v2f32 rather than an f64.
-  if (VT == MVT::i64 && F64IsLegal && !Subtarget.is64Bit() &&
+  if (VT == MVT::i64 &&
       St->getOperand(1).getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     SDValue OldExtract = St->getOperand(1);
     SDValue ExtOp0 = OldExtract.getOperand(0);
