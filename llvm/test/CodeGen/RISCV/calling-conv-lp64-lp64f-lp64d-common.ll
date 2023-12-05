@@ -140,11 +140,11 @@ define i64 @caller_large_scalars() nounwind {
 ; RV64I-NEXT:    sd a0, 0(sp)
 ; RV64I-NEXT:    sd zero, 56(sp)
 ; RV64I-NEXT:    sd zero, 48(sp)
-; RV64I-NEXT:    sd zero, 40(sp)
-; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    sd a0, 32(sp)
 ; RV64I-NEXT:    addi a0, sp, 32
 ; RV64I-NEXT:    mv a1, sp
-; RV64I-NEXT:    sd a2, 32(sp)
+; RV64I-NEXT:    sd zero, 40(sp)
 ; RV64I-NEXT:    call callee_large_scalars@plt
 ; RV64I-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 80
@@ -199,8 +199,8 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    sd a0, 16(sp)
 ; RV64I-NEXT:    sd zero, 72(sp)
 ; RV64I-NEXT:    sd zero, 64(sp)
-; RV64I-NEXT:    sd zero, 56(sp)
-; RV64I-NEXT:    li t0, 8
+; RV64I-NEXT:    li a0, 8
+; RV64I-NEXT:    sd a0, 48(sp)
 ; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    li a2, 3
@@ -209,7 +209,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    li a5, 6
 ; RV64I-NEXT:    li a6, 7
 ; RV64I-NEXT:    addi a7, sp, 48
-; RV64I-NEXT:    sd t0, 48(sp)
+; RV64I-NEXT:    sd zero, 56(sp)
 ; RV64I-NEXT:    call callee_large_scalars_exhausted_regs@plt
 ; RV64I-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 96
