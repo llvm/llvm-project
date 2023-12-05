@@ -1091,6 +1091,8 @@ const DebugLoc &Instruction::getStableDebugLoc() const {
 }
 
 bool Instruction::isAssociative() const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isAssociative();
   unsigned Opcode = getOpcode();
   if (isAssociative(Opcode))
     return true;
