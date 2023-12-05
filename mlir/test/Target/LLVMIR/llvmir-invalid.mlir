@@ -261,6 +261,27 @@ llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
 
 // -----
 
+// expected-error @below{{target features can not contain ','}}
+llvm.func @invalid_target_feature() attributes { target_features = #llvm.target_features<["+bad,feature", "+test"]> }
+{
+}
+
+// -----
+
+// expected-error @below{{target features must start with '+' or '-'}}
+llvm.func @missing_target_feature_prefix() attributes { target_features = #llvm.target_features<["sme"]> }
+{
+}
+
+// -----
+
+// expected-error @below{{target features can not be null or empty}}
+llvm.func @empty_target_feature() attributes { target_features = #llvm.target_features<["", "+sve"]> }
+{
+}
+
+// -----
+
 llvm.comdat @__llvm_comdat {
   llvm.comdat_selector @foo any
 }
