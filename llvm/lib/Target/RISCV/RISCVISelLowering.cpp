@@ -19766,14 +19766,8 @@ RISCVTargetLowering::lowerVPPopcountExperimental(SDValue N,
     Mask = convertToScalableVector(ContainerVT, Mask, DAG, Subtarget);
   }
 
-  if (IsUnMasked)
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Subtarget.getXLenVT(),
-                       DAG.getConstant(Intrinsic::riscv_vcpop, DL, XLenVT), Op,
-                       N->getOperand(2));
-
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Subtarget.getXLenVT(),
-                     DAG.getConstant(Intrinsic::riscv_vcpop_mask, DL, XLenVT),
-                     Op, Mask, N->getOperand(2));
+  return DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Op, Mask,
+                     N->getOperand(2));
 }
 
 MachineInstr *
